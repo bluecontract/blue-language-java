@@ -20,7 +20,7 @@ import blue.language.merge.processor.TypeAssigner;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.graph.NodeExpander;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -52,7 +52,7 @@ public class ListProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listANode = nodeProvider.findNodeByName("ListA").orElseThrow(() -> new IllegalStateException("No \"ListA\" available for NodeProvider."));
         // when
-        Node result = merger.resolve(listANode, Limits.NO_LIMITS);
+        Node result = merger.resolve(listANode, ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals("Integer", CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(result.getItemType().getBlueId()));
@@ -98,7 +98,7 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listOfBNode = nodeProvider.getNodeByName("ListOfB");
-        new NodeExpander(nodeProvider).expand(listOfBNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(listOfBNode, ResolutionLimits.NO_LIMITS);
         // when
         Node result = merger.resolve(listOfBNode);
 
@@ -143,7 +143,7 @@ public class ListProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listOfBNode = nodeProvider.findNodeByName("ListOfB").orElseThrow(() -> new IllegalStateException("No \"ListOfB\" available for NodeProvider."));
         // when
-        new NodeExpander(nodeProvider).expand(listOfBNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(listOfBNode, ResolutionLimits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(listOfBNode));
@@ -193,7 +193,7 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node inheritedListNode = nodeProvider.findNodeByName("InheritedList").orElseThrow(() -> new IllegalStateException("No \"InheritedList\" available for NodeProvider."));
-        new NodeExpander(nodeProvider).expand(inheritedListNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(inheritedListNode, ResolutionLimits.NO_LIMITS);
         // when
         Node result = merger.resolve(inheritedListNode);
 
@@ -244,7 +244,7 @@ public class ListProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node inheritedListNode = nodeProvider.findNodeByName("InheritedList").orElseThrow(() -> new IllegalStateException("No \"InheritedList\" available for NodeProvider."));
         // when
-        new NodeExpander(nodeProvider).expand(inheritedListNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(inheritedListNode, ResolutionLimits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(inheritedListNode));
@@ -275,7 +275,7 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listNode = nodeProvider.findNodeByName("ListWithNoItemType").orElseThrow(() -> new IllegalStateException("No \"ListWithNoItemType\" available for NodeProvider."));
-        new NodeExpander(nodeProvider).expand(listNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(listNode, ResolutionLimits.NO_LIMITS);
         // when
         Node result = merger.resolve(listNode);
 
@@ -310,7 +310,7 @@ public class ListProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node nonListNode = nodeProvider.findNodeByName("NonListWithItemType").orElseThrow(() -> new IllegalStateException("No \"NonListWithItemType\" available for NodeProvider."));
         // when
-        new NodeExpander(nodeProvider).expand(nonListNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(nonListNode, ResolutionLimits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nonListNode));

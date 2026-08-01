@@ -11,7 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;

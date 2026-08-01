@@ -7,7 +7,7 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 
 import java.math.BigInteger;
 import java.util.IdentityHashMap;

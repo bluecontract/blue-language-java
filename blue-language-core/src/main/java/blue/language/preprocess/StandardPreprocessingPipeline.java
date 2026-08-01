@@ -8,7 +8,7 @@ import blue.language.preprocess.InferBasicTypesForUntypedValues;
 import blue.language.preprocess.NormalizeListPlaceholders;
 import blue.language.preprocess.ReplaceInlineValuesForTypeAttributesWithImports;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;

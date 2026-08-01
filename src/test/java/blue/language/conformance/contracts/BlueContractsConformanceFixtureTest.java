@@ -5,7 +5,7 @@ import blue.language.model.Node;
 import blue.language.processor.CheckpointDomain;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

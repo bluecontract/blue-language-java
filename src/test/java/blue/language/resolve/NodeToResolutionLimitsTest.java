@@ -1,4 +1,4 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
@@ -8,7 +8,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class NodeToPathLimitsConverterTest {
+class NodeToResolutionLimitsTest {
 
     private final Node mockNode = new Node();
 
@@ -159,7 +159,7 @@ class NodeToPathLimitsConverterTest {
     }
 
     private boolean allows(Node node, String pointer) {
-        PathLimits limits = NodeToPathLimitsConverter.convert(node);
+        ResolutionLimits limits = ResolutionLimits.fromNode(node);
         List<String> segments = JsonPointer.split(pointer);
         if (segments.isEmpty()) {
             return limits.shouldExpandPathSegment("", mockNode);

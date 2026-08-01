@@ -3,7 +3,7 @@ package blue.language.matching;
 import blue.language.api.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 /**
  * Minimal Language runtime surface required by mutable and immutable matching.
@@ -21,10 +21,10 @@ public interface MatchingRuntime {
     Node preprocessForMatching(Node source);
 
     /** Expands the demanded part of a mutable candidate in place. */
-    void expandForMatching(Node source, Limits limits);
+    void expandForMatching(Node source, ResolutionLimits limits);
 
     /** Resolves a candidate under the supplied target-driven limits. */
-    Node resolveForMatching(Node source, Limits limits);
+    Node resolveForMatching(Node source, ResolutionLimits limits);
 
     /**
      * Materializes one pure type reference through a verified exact-content

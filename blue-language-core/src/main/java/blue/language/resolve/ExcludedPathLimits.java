@@ -1,4 +1,4 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * subtrees need to be preserved for later runtime processing; the language
  * resolver only skips those paths.</p>
  */
-public class ExcludedPathLimits implements Limits {
+final class ExcludedPathLimits implements ResolutionLimits {
     private final Set<String> excludedPaths;
     private final Stack<String> currentPath = new Stack<>();
     private final Stack<Boolean> enteredPathSegment = new Stack<>();
@@ -28,22 +28,12 @@ public class ExcludedPathLimits implements Limits {
      *
      * @param excludedPaths paths to exclude, or {@code null}
      */
-    public ExcludedPathLimits(Collection<String> excludedPaths) {
+    ExcludedPathLimits(Collection<String> excludedPaths) {
         this.excludedPaths = excludedPaths == null
                 ? new HashSet<>()
                 : excludedPaths.stream()
                     .map(JsonPointer::canonicalize)
                     .collect(Collectors.toSet());
-    }
-
-    /**
-     * Factory equivalent to {@link #ExcludedPathLimits(Collection)}.
-     *
-     * @param excludedPaths paths to exclude, or {@code null}
-     * @return new stateful limits instance
-     */
-    public static ExcludedPathLimits excluding(Collection<String> excludedPaths) {
-        return new ExcludedPathLimits(excludedPaths);
     }
 
     @Override

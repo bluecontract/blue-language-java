@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.identity;
 
 import blue.language.identity.Base58;
 import org.junit.jupiter.api.Test;
@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import static blue.language.utils.BlueIds.isPotentialBlueId;
+import static blue.language.identity.BlueIds.isPotentialBlueId;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BlueIdsTest {

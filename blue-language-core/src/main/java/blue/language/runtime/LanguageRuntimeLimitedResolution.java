@@ -13,7 +13,7 @@ import blue.language.model.Node;
 import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -168,7 +168,7 @@ final class LanguageRuntimeLimitedResolution {
         }
     }
 
-    private static final class SemanticDemandLimits implements Limits {
+    private static final class SemanticDemandLimits implements ResolutionLimits {
         private final List<List<String>> demands;
         private final List<String> currentPath = new ArrayList<>();
         private final List<Boolean> enteredSegments = new ArrayList<>();

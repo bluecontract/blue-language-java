@@ -1,10 +1,8 @@
-package blue.language.utils;
+package blue.language.model;
 
 import blue.language.model.wire.JsonPointer;
 
 import blue.language.model.wire.BlueLanguageConstants;
-
-import blue.language.model.Node;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,7 +19,7 @@ import java.util.function.Predicate;
  * or list index at one level. {@code -} matches every list item at one level,
  * which is useful for contract masks such as {@code /products/-/ean}.</p>
  */
-public final class NodePathSelector {
+final class NodePathSelector {
 
     private NodePathSelector() {
     }

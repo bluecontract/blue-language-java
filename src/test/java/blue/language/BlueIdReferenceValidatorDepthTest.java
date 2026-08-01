@@ -14,8 +14,8 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.provider.VerifyingNodeProvider;
-import blue.language.utils.BlueIdReferenceValidator;
-import blue.language.utils.limits.PathLimits;
+import blue.language.identity.BlueIdReferenceValidator;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -41,7 +41,7 @@ class BlueIdReferenceValidatorDepthTest {
 
         // when
         Node resolved = new Blue().resolve(
-                graph.root, PathLimits.withMaxDepth(2));
+                graph.root, ResolutionLimits.withMaxDepth(2));
 
         // then
         assertEquals(2, propertyDepth(resolved));
@@ -60,9 +60,9 @@ class BlueIdReferenceValidatorDepthTest {
 
         // when
         Throwable ordinaryFailure = captureFailure(
-                () -> ordinary.resolve(graph.root, PathLimits.withMaxDepth(2)));
+                () -> ordinary.resolve(graph.root, ResolutionLimits.withMaxDepth(2)));
         Throwable trustedFailure = captureFailure(
-                () -> trusted.resolve(graph.root, PathLimits.withMaxDepth(2)));
+                () -> trusted.resolve(graph.root, ResolutionLimits.withMaxDepth(2)));
 
         // then
         assertMalformedDeepFailure(ordinaryFailure);

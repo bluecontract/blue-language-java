@@ -21,7 +21,7 @@ import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.graph.NodeExpander;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -53,7 +53,7 @@ public class DictionaryProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictANode = nodeProvider.findNodeByName("DictA").orElseThrow(() -> new IllegalStateException("No \"DictA\" available for NodeProvider."));
         // when
-        Node result = merger.resolve(dictANode, Limits.NO_LIMITS);
+        Node result = merger.resolve(dictANode, ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals("Text", CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(result.getKeyType().getBlueId()));
@@ -95,7 +95,7 @@ public class DictionaryProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictOfAToBNode = nodeProvider.getNodeByName("DictOfAToB");
-        new NodeExpander(nodeProvider).expand(dictOfAToBNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(dictOfAToBNode, ResolutionLimits.NO_LIMITS);
         // when
         Node result = merger.resolve(dictOfAToBNode);
 
@@ -128,7 +128,7 @@ public class DictionaryProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictNode = nodeProvider.findNodeByName("DictWithInvalidKeyType").orElseThrow(() -> new IllegalStateException("No \"DictWithInvalidKeyType\" available for NodeProvider."));
         // when
-        new NodeExpander(nodeProvider).expand(dictNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(dictNode, ResolutionLimits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(dictNode));
@@ -161,7 +161,7 @@ public class DictionaryProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictNode = nodeProvider.findNodeByName("DictWithInvalidValue").orElseThrow(() -> new IllegalStateException("No \"DictWithInvalidValue\" available for NodeProvider."));
         // when
-        new NodeExpander(nodeProvider).expand(dictNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(dictNode, ResolutionLimits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(dictNode));
@@ -187,7 +187,7 @@ public class DictionaryProcessorTest {
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node nonDictNode = nodeProvider.findNodeByName("NonDictWithKeyType").orElseThrow(() -> new IllegalStateException("No \"NonDictWithKeyType\" available for NodeProvider."));
         // when
-        new NodeExpander(nodeProvider).expand(nonDictNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(nonDictNode, ResolutionLimits.NO_LIMITS);
 
         // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nonDictNode));

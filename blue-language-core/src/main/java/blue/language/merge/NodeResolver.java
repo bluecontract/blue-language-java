@@ -1,7 +1,7 @@
 package blue.language.merge;
 
 import blue.language.model.Node;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 /** Resolves mutable Blue content under an explicit traversal/reference budget. */
 public interface NodeResolver {
@@ -14,7 +14,7 @@ public interface NodeResolver {
      * @param limits traversal and reference-expansion budget
      * @return resolved graph, normally the supplied root
      */
-    Node resolve(Node node, Limits limits);
+    Node resolve(Node node, ResolutionLimits limits);
 
     /**
      * Resolves with no caller-imposed limits.
@@ -23,6 +23,6 @@ public interface NodeResolver {
      * @return resolved graph, normally the supplied root
      */
     default Node resolve(Node node) {
-        return resolve(node, Limits.NO_LIMITS);
+        return resolve(node, ResolutionLimits.NO_LIMITS);
     }
 }

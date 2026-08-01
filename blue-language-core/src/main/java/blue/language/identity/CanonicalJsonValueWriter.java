@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 /**
  * Writes deterministic RFC 8785 bytes for normalized identity values without

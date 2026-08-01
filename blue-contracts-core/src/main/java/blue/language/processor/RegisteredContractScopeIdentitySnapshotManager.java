@@ -11,7 +11,7 @@ import blue.language.provider.NodeProviderResult;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 
 import java.util.ArrayList;
 import java.util.Collection;

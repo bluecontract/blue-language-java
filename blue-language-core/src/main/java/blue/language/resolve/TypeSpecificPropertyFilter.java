@@ -1,4 +1,4 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.model.Node;
 
@@ -12,7 +12,7 @@ import java.util.Stack;
  * <p>Merging is never suppressed. The root path remains eligible even if its
  * segment name appears in the ignored-property set.</p>
  */
-public class TypeSpecificPropertyFilter implements Limits {
+final class TypeSpecificPropertyFilter implements ResolutionLimits {
     private final String typeBlueId;
     private final Set<String> ignoredProperties;
     private final Stack<String> currentPath = new Stack<>();
@@ -24,7 +24,7 @@ public class TypeSpecificPropertyFilter implements Limits {
      * @param typeBlueId exact declared type whose properties are filtered
      * @param ignoredProperties property names whose expansion is suppressed
      */
-    public TypeSpecificPropertyFilter(String typeBlueId, Set<String> ignoredProperties) {
+    TypeSpecificPropertyFilter(String typeBlueId, Set<String> ignoredProperties) {
         this.typeBlueId = typeBlueId;
         this.ignoredProperties = ignoredProperties;
     }

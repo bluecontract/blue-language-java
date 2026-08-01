@@ -12,7 +12,7 @@ import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.value.BlueNumbers;
 import blue.language.model.NodeWireForm;
-import blue.language.utils.ScalarNodeIdentity;
+import blue.language.identity.ScalarNodeIdentity;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE;
 import static blue.language.model.wire.SchemaPropertyConstants.*;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static java.lang.Boolean.TRUE;
 
 /**

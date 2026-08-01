@@ -14,7 +14,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.model.NodeWireForm;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.math.BigInteger;

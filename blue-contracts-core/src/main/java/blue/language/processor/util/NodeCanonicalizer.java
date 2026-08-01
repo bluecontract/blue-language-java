@@ -5,9 +5,9 @@ import blue.language.snapshot.FrozenCanonicalWriter;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.Base58Sha256Provider;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.NodeToBlueIdInput;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.NodeWireForm;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 /**

@@ -42,17 +42,14 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.CanonicalIdentityInputBuilder;
+import blue.language.identity.CanonicalIdentityInputBuilder;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.MinimizedOverlayBuilder;
-import blue.language.utils.NodePathEditor;
-import blue.language.utils.NodeToBlueIdInput;
+import blue.language.resolve.MinimizedOverlayBuilder;
+import blue.language.model.NodePathEditor;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.matching.NodeTypeMatcher;
 import blue.language.provider.Types;
-import blue.language.utils.limits.CompositeLimits;
-import blue.language.utils.limits.DeferredReferencePathLimits;
-import blue.language.utils.limits.ExcludedPathLimits;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,7 +65,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
-import static blue.language.utils.limits.Limits.NO_LIMITS;
+import static blue.language.resolve.ResolutionLimits.NO_LIMITS;
 
 /**
  * Immutable, Language-only runtime owned by the focused service composition.
@@ -388,14 +385,14 @@ public final class BlueLanguageRuntime implements NodeResolver,
 
     /** Expands a mutable matching candidate under target-driven limits. */
     @Override
-    public void expandForMatching(Node source, Limits limits) {
+    public void expandForMatching(Node source, ResolutionLimits limits) {
         run(() -> new blue.language.graph.NodeExpander(nodeProvider)
                 .expand(source, limits));
     }
 
     /** Resolves a matching candidate under target-driven limits. */
     @Override
-    public Node resolveForMatching(Node source, Limits limits) {
+    public Node resolveForMatching(Node source, ResolutionLimits limits) {
         return resolve(source, limits);
     }
 
@@ -408,7 +405,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
 
     /** Resolves already-preprocessed input under the supplied limits. */
     @Override
-    public Node resolve(Node source, Limits limits) {
+    public Node resolve(Node source, ResolutionLimits limits) {
         return call(() -> merger(nodeProvider).resolve(
                 Objects.requireNonNull(source, "source").clone(),
                 Objects.requireNonNull(limits, "limits")));
@@ -488,7 +485,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
             }
             Node resolved = rawResolve(
                     preprocessed.clone(),
-                    ExcludedPathLimits.excluding(paths));
+                    ResolutionLimits.excluding(paths));
             for (String path : paths) {
                 Node preserved = NodePathEditor.getOrNull(
                         preprocessed, path);
@@ -548,9 +545,9 @@ public final class BlueLanguageRuntime implements NodeResolver,
             }
             Node deferred = rawResolve(
                     preprocessed.clone(),
-                    new CompositeLimits(
+                    ResolutionLimits.allOf(
                             NO_LIMITS,
-                            new DeferredReferencePathLimits(paths)));
+                            ResolutionLimits.deferringReferencesAt(paths)));
             for (String path : paths) {
                 Node authored = NodePathEditor.getOrNull(
                         preprocessed, path);
@@ -698,7 +695,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 .preprocess(source);
     }
 
-    private Node rawResolve(Node source, Limits limits) {
+    private Node rawResolve(Node source, ResolutionLimits limits) {
         return merger(nodeProvider).resolve(source, limits);
     }
 

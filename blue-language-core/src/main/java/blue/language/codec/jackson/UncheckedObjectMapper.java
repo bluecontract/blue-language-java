@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.codec.jackson;
 
 import blue.language.model.value.BlueNumbers;
 

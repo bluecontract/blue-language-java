@@ -18,13 +18,13 @@ import blue.language.registry.BootstrapProvider;
 import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.merge.ResolvedReferenceCache;
-import blue.language.utils.NodePathEditor;
+import blue.language.model.NodePathEditor;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 

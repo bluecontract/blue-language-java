@@ -2,7 +2,7 @@ package blue.language.preprocess;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 
 import java.util.LinkedHashMap;
 import java.util.List;

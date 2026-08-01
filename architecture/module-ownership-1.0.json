@@ -84,9 +84,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 521,
+    "productionSourceCount": 556,
     "productionResourceCount": 356,
-    "productionSourcePathIdentity": "sha256:b01280f5222907a682e9fd6c79e6ba662699a14c0a631613b0fcfedb8e5ed242",
+    "productionSourcePathIdentity": "sha256:aee52a3d9239d72bfa3f677c05db77abc1ea39f996530e864c00f68afead3c72",
     "productionResourcePathIdentity": "sha256:afe876a276348cfba121fc0cf6834384216b0e23acb4fb97e7dcbbd1e4eceb78"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -169,10 +169,24 @@
       "targetPackage": "blue.language.conformance.api"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/package-info.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/package-info.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/cli/ReleaseConformanceCli.java",
       "currentPackage": "blue.language.conformance.cli",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/cli/ReleaseConformanceCli.java",
+      "targetPackage": "blue.language.conformance.cli"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/cli/package-info.java",
+      "currentPackage": "blue.language.conformance.cli",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/cli/package-info.java",
       "targetPackage": "blue.language.conformance.cli"
     },
     {
@@ -288,10 +302,24 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/package-info.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/package-info.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/runner/BlueContractsConformanceSuiteRunner.java",
       "currentPackage": "blue.language.conformance.runner",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/runner/BlueContractsConformanceSuiteRunner.java",
+      "targetPackage": "blue.language.conformance.runner"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/runner/package-info.java",
+      "currentPackage": "blue.language.conformance.runner",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/runner/package-info.java",
       "targetPackage": "blue.language.conformance.runner"
     },
     {
@@ -320,6 +348,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/BatchPatchTransaction.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/BlueContracts.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/BlueContracts.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1104,6 +1139,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/JfrProcessingObserver.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/LanguageProcessingSnapshotManager.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/LanguageProcessingSnapshotManager.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -2024,6 +2066,20 @@
       "targetPackage": "blue.language.processor.model"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/model/package-info.java",
+      "currentPackage": "blue.language.processor.model",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/model/package-info.java",
+      "targetPackage": "blue.language.processor.model"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/package-info.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/package-info.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/registry/BlueRuntimeTypeRegistry.java",
       "currentPackage": "blue.language.processor.registry",
       "targetModule": ":blue-contracts-core",
@@ -2052,6 +2108,13 @@
       "targetPackage": "blue.language.processor.registry"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/registry/package-info.java",
+      "currentPackage": "blue.language.processor.registry",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/registry/package-info.java",
+      "targetPackage": "blue.language.processor.registry"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/util/NodeCanonicalizer.java",
       "currentPackage": "blue.language.processor.util",
       "targetModule": ":blue-contracts-core",
@@ -2077,6 +2140,13 @@
       "currentPackage": "blue.language.processor.util",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/util/ProcessorPointerConstants.java",
+      "targetPackage": "blue.language.processor.util"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/util/package-info.java",
+      "currentPackage": "blue.language.processor.util",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/util/package-info.java",
       "targetPackage": "blue.language.processor.util"
     },
     {
@@ -2143,6 +2213,13 @@
       "targetPackage": "blue.language.api"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/api/package-info.java",
+      "currentPackage": "blue.language.api",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/api/package-info.java",
+      "targetPackage": "blue.language.api"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/codec/BlueCodec.java",
       "currentPackage": "blue.language.codec",
       "targetModule": ":blue-language-core",
@@ -2161,6 +2238,27 @@
       "currentPackage": "blue.language.codec",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/codec/StandardBlueCodec.java",
+      "targetPackage": "blue.language.codec"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/codec/jackson/UncheckedObjectMapper.java",
+      "currentPackage": "blue.language.codec.jackson",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/codec/jackson/UncheckedObjectMapper.java",
+      "targetPackage": "blue.language.codec.jackson"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/codec/jackson/package-info.java",
+      "currentPackage": "blue.language.codec.jackson",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/codec/jackson/package-info.java",
+      "targetPackage": "blue.language.codec.jackson"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/codec/package-info.java",
+      "currentPackage": "blue.language.codec",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/codec/package-info.java",
       "targetPackage": "blue.language.codec"
     },
     {
@@ -2199,6 +2297,13 @@
       "targetPackage": "blue.language.conformance"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/conformance/package-info.java",
+      "currentPackage": "blue.language.conformance",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/conformance/package-info.java",
+      "targetPackage": "blue.language.conformance"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/graph/BlueGraph.java",
       "currentPackage": "blue.language.graph",
       "targetModule": ":blue-language-core",
@@ -2227,6 +2332,13 @@
       "targetPackage": "blue.language.graph"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/graph/package-info.java",
+      "currentPackage": "blue.language.graph",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/graph/package-info.java",
+      "targetPackage": "blue.language.graph"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/identity/Base58.java",
       "currentPackage": "blue.language.identity",
       "targetModule": ":blue-language-core",
@@ -2248,10 +2360,45 @@
       "targetPackage": "blue.language.identity"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/BlueIdReferenceValidator.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/BlueIdReferenceValidator.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/identity/BlueIdentity.java",
       "currentPackage": "blue.language.identity",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/identity/BlueIdentity.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/BlueIds.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/BlueIds.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityConstants.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityConstants.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputBuilder.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputBuilder.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputReconstructor.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputReconstructor.java",
       "targetPackage": "blue.language.identity"
     },
     {
@@ -2290,6 +2437,13 @@
       "targetPackage": "blue.language.identity"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/NodeToBlueIdInput.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/NodeToBlueIdInput.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/identity/ObjectBlueIdHasher.java",
       "currentPackage": "blue.language.identity",
       "targetModule": ":blue-language-core",
@@ -2301,6 +2455,20 @@
       "currentPackage": "blue.language.identity",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/identity/ScalarIdentityEncoder.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/ScalarNodeIdentity.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/ScalarNodeIdentity.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/SchemaEnumCanonicalizer.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/SchemaEnumCanonicalizer.java",
       "targetPackage": "blue.language.identity"
     },
     {
@@ -2325,6 +2493,13 @@
       "targetPackage": "blue.language.identity"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/package-info.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/package-info.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/matching/BlueMatching.java",
       "currentPackage": "blue.language.matching",
       "targetModule": ":blue-language-core",
@@ -2332,10 +2507,31 @@
       "targetPackage": "blue.language.matching"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/matching/FrozenSchemaMatcher.java",
+      "currentPackage": "blue.language.matching",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/matching/FrozenSchemaMatcher.java",
+      "targetPackage": "blue.language.matching"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/matching/FrozenTypeMatcher.java",
       "currentPackage": "blue.language.matching",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/matching/FrozenTypeMatcher.java",
+      "targetPackage": "blue.language.matching"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/matching/LabelNeutralTypeIdentity.java",
+      "currentPackage": "blue.language.matching",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/matching/LabelNeutralTypeIdentity.java",
+      "targetPackage": "blue.language.matching"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/matching/MatchingPlanCache.java",
+      "currentPackage": "blue.language.matching",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/matching/MatchingPlanCache.java",
       "targetPackage": "blue.language.matching"
     },
     {
@@ -2353,25 +2549,11 @@
       "targetPackage": "blue.language.matching"
     },
     {
-      "currentPath": "blue-language-core/src/main/java/blue/language/matching/internal/FrozenSchemaMatcher.java",
-      "currentPackage": "blue.language.matching.internal",
+      "currentPath": "blue-language-core/src/main/java/blue/language/matching/package-info.java",
+      "currentPackage": "blue.language.matching",
       "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/matching/internal/FrozenSchemaMatcher.java",
-      "targetPackage": "blue.language.matching.internal"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/matching/internal/LabelNeutralTypeIdentity.java",
-      "currentPackage": "blue.language.matching.internal",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/matching/internal/LabelNeutralTypeIdentity.java",
-      "targetPackage": "blue.language.matching.internal"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/matching/internal/MatchingPlanCache.java",
-      "currentPackage": "blue.language.matching.internal",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/matching/internal/MatchingPlanCache.java",
-      "targetPackage": "blue.language.matching.internal"
+      "targetPath": "blue-language-core/src/main/java/blue/language/matching/package-info.java",
+      "targetPackage": "blue.language.matching"
     },
     {
       "currentPath": "blue-language-core/src/main/java/blue/language/merge/ActiveTypeStack.java",
@@ -2584,6 +2766,13 @@
       "targetPackage": "blue.language.merge"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/package-info.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/package-info.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/merge/processor/BasicTypesVerifier.java",
       "currentPackage": "blue.language.merge.processor",
       "targetModule": ":blue-language-core",
@@ -2602,6 +2791,13 @@
       "currentPackage": "blue.language.merge.processor",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/merge/processor/ExclusiveItemsOrValueChecker.java",
+      "targetPackage": "blue.language.merge.processor"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/processor/LeastCommonMultiple.java",
+      "currentPackage": "blue.language.merge.processor",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/processor/LeastCommonMultiple.java",
       "targetPackage": "blue.language.merge.processor"
     },
     {
@@ -2654,10 +2850,24 @@
       "targetPackage": "blue.language.merge.processor"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/processor/package-info.java",
+      "currentPackage": "blue.language.merge.processor",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/processor/package-info.java",
+      "targetPackage": "blue.language.merge.processor"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/patching/BluePatching.java",
       "currentPackage": "blue.language.patching",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/patching/BluePatching.java",
+      "targetPackage": "blue.language.patching"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/patching/package-info.java",
+      "currentPackage": "blue.language.patching",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/patching/package-info.java",
       "targetPackage": "blue.language.patching"
     },
     {
@@ -2693,6 +2903,13 @@
       "currentPackage": "blue.language.preprocess",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/preprocess/InferBasicTypesForUntypedValues.java",
+      "targetPackage": "blue.language.preprocess"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/preprocess/NodeTransformer.java",
+      "currentPackage": "blue.language.preprocess",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/preprocess/NodeTransformer.java",
       "targetPackage": "blue.language.preprocess"
     },
     {
@@ -2801,6 +3018,13 @@
       "targetPackage": "blue.language.preprocess"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/preprocess/package-info.java",
+      "currentPackage": "blue.language.preprocess",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/preprocess/package-info.java",
+      "targetPackage": "blue.language.preprocess"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/preprocess/provider/BasicNodeProvider.java",
       "currentPackage": "blue.language.preprocess.provider",
       "targetModule": ":blue-language-core",
@@ -2812,6 +3036,13 @@
       "currentPackage": "blue.language.preprocess.provider",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/preprocess/provider/DirectoryBasedNodeProvider.java",
+      "targetPackage": "blue.language.preprocess.provider"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/preprocess/provider/package-info.java",
+      "currentPackage": "blue.language.preprocess.provider",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/preprocess/provider/package-info.java",
       "targetPackage": "blue.language.preprocess.provider"
     },
     {
@@ -2997,6 +3228,13 @@
       "targetPackage": "blue.language.provider"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/provider/package-info.java",
+      "currentPackage": "blue.language.provider",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/provider/package-info.java",
+      "targetPackage": "blue.language.provider"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/registry/BlueCoreTypeRegistry.java",
       "currentPackage": "blue.language.registry",
       "targetModule": ":blue-language-core",
@@ -3032,6 +3270,13 @@
       "targetPackage": "blue.language.registry"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/registry/package-info.java",
+      "currentPackage": "blue.language.registry",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/registry/package-info.java",
+      "targetPackage": "blue.language.registry"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/resolve/BlueResolution.java",
       "currentPackage": "blue.language.resolve",
       "targetModule": ":blue-language-core",
@@ -3039,10 +3284,87 @@
       "targetPackage": "blue.language.resolve"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/CompositeLimits.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/CompositeLimits.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/DeferredReferencePathLimits.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/DeferredReferencePathLimits.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/ExcludedPathLimits.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/ExcludedPathLimits.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayBuilder.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayBuilder.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayReconstructor.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayReconstructor.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/NoLimits.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/NoLimits.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/NodeToPathLimitsConverter.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/NodeToPathLimitsConverter.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/PathLimits.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/PathLimits.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/resolve/ReferenceCacheAdmissionPolicy.java",
       "currentPackage": "blue.language.resolve",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/resolve/ReferenceCacheAdmissionPolicy.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/ResolutionLimits.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/ResolutionLimits.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/TypeSpecificPropertyFilter.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/TypeSpecificPropertyFilter.java",
+      "targetPackage": "blue.language.resolve"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/resolve/package-info.java",
+      "currentPackage": "blue.language.resolve",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/resolve/package-info.java",
       "targetPackage": "blue.language.resolve"
     },
     {
@@ -3064,6 +3386,13 @@
       "currentPackage": "blue.language.runtime",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/runtime/LanguageMatchingService.java",
+      "targetPackage": "blue.language.runtime"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/runtime/LanguageProcessing.java",
+      "currentPackage": "blue.language.runtime",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/runtime/LanguageProcessing.java",
       "targetPackage": "blue.language.runtime"
     },
     {
@@ -3095,10 +3424,24 @@
       "targetPackage": "blue.language.runtime"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/runtime/RuntimeLanguageProcessing.java",
+      "currentPackage": "blue.language.runtime",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/runtime/RuntimeLanguageProcessing.java",
+      "targetPackage": "blue.language.runtime"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/runtime/WeightedLruCache.java",
       "currentPackage": "blue.language.runtime",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/runtime/WeightedLruCache.java",
+      "targetPackage": "blue.language.runtime"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/runtime/package-info.java",
+      "currentPackage": "blue.language.runtime",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/runtime/package-info.java",
       "targetPackage": "blue.language.runtime"
     },
     {
@@ -3207,193 +3550,11 @@
       "targetPackage": "blue.language.snapshot"
     },
     {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/BlueIdReferenceValidator.java",
-      "currentPackage": "blue.language.utils",
+      "currentPath": "blue-language-core/src/main/java/blue/language/snapshot/package-info.java",
+      "currentPackage": "blue.language.snapshot",
       "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/BlueIdReferenceValidator.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/BlueIdResolver.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/BlueIdResolver.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/BlueIds.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/BlueIds.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/CanonicalIdentityConstants.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/CanonicalIdentityConstants.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/CanonicalIdentityInputBuilder.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/CanonicalIdentityInputBuilder.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/CanonicalIdentityInputReconstructor.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/CanonicalIdentityInputReconstructor.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/JacksonPropertyNames.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/JacksonPropertyNames.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/LeastCommonMultiple.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/LeastCommonMultiple.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/MinimizedOverlayBuilder.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/MinimizedOverlayBuilder.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/MinimizedOverlayReconstructor.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/MinimizedOverlayReconstructor.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/NodePathEditor.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/NodePathEditor.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/NodePathSelector.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/NodePathSelector.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/NodeToBlueIdInput.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/NodeToBlueIdInput.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/NodeTransformer.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/NodeTransformer.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/Nodes.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/Nodes.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/ParsedJsonPointer.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/ParsedJsonPointer.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/ScalarNodeIdentity.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/ScalarNodeIdentity.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/SchemaEnumCanonicalizer.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/SchemaEnumCanonicalizer.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/UncheckedObjectMapper.java",
-      "currentPackage": "blue.language.utils",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/UncheckedObjectMapper.java",
-      "targetPackage": "blue.language.utils"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/limits/CompositeLimits.java",
-      "currentPackage": "blue.language.utils.limits",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/limits/CompositeLimits.java",
-      "targetPackage": "blue.language.utils.limits"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/limits/DeferredReferencePathLimits.java",
-      "currentPackage": "blue.language.utils.limits",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/limits/DeferredReferencePathLimits.java",
-      "targetPackage": "blue.language.utils.limits"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/limits/ExcludedPathLimits.java",
-      "currentPackage": "blue.language.utils.limits",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/limits/ExcludedPathLimits.java",
-      "targetPackage": "blue.language.utils.limits"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/limits/Limits.java",
-      "currentPackage": "blue.language.utils.limits",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/limits/Limits.java",
-      "targetPackage": "blue.language.utils.limits"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/limits/NoLimits.java",
-      "currentPackage": "blue.language.utils.limits",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/limits/NoLimits.java",
-      "targetPackage": "blue.language.utils.limits"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/limits/NodeToPathLimitsConverter.java",
-      "currentPackage": "blue.language.utils.limits",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/limits/NodeToPathLimitsConverter.java",
-      "targetPackage": "blue.language.utils.limits"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/limits/PathLimits.java",
-      "currentPackage": "blue.language.utils.limits",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/limits/PathLimits.java",
-      "targetPackage": "blue.language.utils.limits"
-    },
-    {
-      "currentPath": "blue-language-core/src/main/java/blue/language/utils/limits/TypeSpecificPropertyFilter.java",
-      "currentPackage": "blue.language.utils.limits",
-      "targetModule": ":blue-language-core",
-      "targetPath": "blue-language-core/src/main/java/blue/language/utils/limits/TypeSpecificPropertyFilter.java",
-      "targetPackage": "blue.language.utils.limits"
+      "targetPath": "blue-language-core/src/main/java/blue/language/snapshot/package-info.java",
+      "targetPackage": "blue.language.snapshot"
     },
     {
       "currentPath": "blue-language-ipfs/src/main/java/blue/language/provider/ipfs/BlueIdToCid.java",
@@ -3424,10 +3585,24 @@
       "targetPackage": "blue.language.provider.ipfs"
     },
     {
+      "currentPath": "blue-language-ipfs/src/main/java/blue/language/provider/ipfs/package-info.java",
+      "currentPackage": "blue.language.provider.ipfs",
+      "targetModule": ":blue-language-ipfs",
+      "targetPath": "blue-language-ipfs/src/main/java/blue/language/provider/ipfs/package-info.java",
+      "targetPackage": "blue.language.provider.ipfs"
+    },
+    {
       "currentPath": "blue-language-java/src/main/java/blue/language/Blue.java",
       "currentPackage": "blue.language",
       "targetModule": ":blue-language-java",
       "targetPath": "blue-language-java/src/main/java/blue/language/Blue.java",
+      "targetPackage": "blue.language"
+    },
+    {
+      "currentPath": "blue-language-java/src/main/java/blue/language/BlueRuntime.java",
+      "currentPackage": "blue.language",
+      "targetModule": ":blue-language-java",
+      "targetPath": "blue-language-java/src/main/java/blue/language/BlueRuntime.java",
       "targetPackage": "blue.language"
     },
     {
@@ -3456,6 +3631,13 @@
       "currentPackage": "blue.language.dictionary",
       "targetModule": ":blue-language-mapping",
       "targetPath": "blue-language-mapping/src/main/java/blue/language/dictionary/TypeDictionary.java",
+      "targetPackage": "blue.language.dictionary"
+    },
+    {
+      "currentPath": "blue-language-mapping/src/main/java/blue/language/dictionary/package-info.java",
+      "currentPackage": "blue.language.dictionary",
+      "targetModule": ":blue-language-mapping",
+      "targetPath": "blue-language-mapping/src/main/java/blue/language/dictionary/package-info.java",
       "targetPackage": "blue.language.dictionary"
     },
     {
@@ -3599,10 +3781,24 @@
       "targetPackage": "blue.language.mapping"
     },
     {
+      "currentPath": "blue-language-mapping/src/main/java/blue/language/mapping/package-info.java",
+      "currentPackage": "blue.language.mapping",
+      "targetModule": ":blue-language-mapping",
+      "targetPath": "blue-language-mapping/src/main/java/blue/language/mapping/package-info.java",
+      "targetPackage": "blue.language.mapping"
+    },
+    {
       "currentPath": "blue-language-mapping/src/main/java/blue/language/mapping/provider/ClasspathBasedNodeProvider.java",
       "currentPackage": "blue.language.mapping.provider",
       "targetModule": ":blue-language-mapping",
       "targetPath": "blue-language-mapping/src/main/java/blue/language/mapping/provider/ClasspathBasedNodeProvider.java",
+      "targetPackage": "blue.language.mapping.provider"
+    },
+    {
+      "currentPath": "blue-language-mapping/src/main/java/blue/language/mapping/provider/package-info.java",
+      "currentPackage": "blue.language.mapping.provider",
+      "targetModule": ":blue-language-mapping",
+      "targetPath": "blue-language-mapping/src/main/java/blue/language/mapping/provider/package-info.java",
       "targetPackage": "blue.language.mapping.provider"
     },
     {
@@ -3669,6 +3865,20 @@
       "targetPackage": "blue.language.model"
     },
     {
+      "currentPath": "blue-language-model/src/main/java/blue/language/model/NodePathEditor.java",
+      "currentPackage": "blue.language.model",
+      "targetModule": ":blue-language-model",
+      "targetPath": "blue-language-model/src/main/java/blue/language/model/NodePathEditor.java",
+      "targetPackage": "blue.language.model"
+    },
+    {
+      "currentPath": "blue-language-model/src/main/java/blue/language/model/NodePathSelector.java",
+      "currentPackage": "blue.language.model",
+      "targetModule": ":blue-language-model",
+      "targetPath": "blue-language-model/src/main/java/blue/language/model/NodePathSelector.java",
+      "targetPackage": "blue.language.model"
+    },
+    {
       "currentPath": "blue-language-model/src/main/java/blue/language/model/NodeSerializer.java",
       "currentPackage": "blue.language.model",
       "targetModule": ":blue-language-model",
@@ -3680,6 +3890,13 @@
       "currentPackage": "blue.language.model",
       "targetModule": ":blue-language-model",
       "targetPath": "blue-language-model/src/main/java/blue/language/model/NodeWireForm.java",
+      "targetPackage": "blue.language.model"
+    },
+    {
+      "currentPath": "blue-language-model/src/main/java/blue/language/model/Nodes.java",
+      "currentPackage": "blue.language.model",
+      "targetModule": ":blue-language-model",
+      "targetPath": "blue-language-model/src/main/java/blue/language/model/Nodes.java",
       "targetPackage": "blue.language.model"
     },
     {
@@ -3704,6 +3921,13 @@
       "targetPackage": "blue.language.model"
     },
     {
+      "currentPath": "blue-language-model/src/main/java/blue/language/model/package-info.java",
+      "currentPackage": "blue.language.model",
+      "targetModule": ":blue-language-model",
+      "targetPath": "blue-language-model/src/main/java/blue/language/model/package-info.java",
+      "targetPackage": "blue.language.model"
+    },
+    {
       "currentPath": "blue-language-model/src/main/java/blue/language/model/value/BlueNumbers.java",
       "currentPackage": "blue.language.model.value",
       "targetModule": ":blue-language-model",
@@ -3715,6 +3939,13 @@
       "currentPackage": "blue.language.model.value",
       "targetModule": ":blue-language-model",
       "targetPath": "blue-language-model/src/main/java/blue/language/model/value/ScalarValues.java",
+      "targetPackage": "blue.language.model.value"
+    },
+    {
+      "currentPath": "blue-language-model/src/main/java/blue/language/model/value/package-info.java",
+      "currentPackage": "blue.language.model.value",
+      "targetModule": ":blue-language-model",
+      "targetPath": "blue-language-model/src/main/java/blue/language/model/value/package-info.java",
       "targetPackage": "blue.language.model.value"
     },
     {
@@ -3732,10 +3963,24 @@
       "targetPackage": "blue.language.model.wire"
     },
     {
+      "currentPath": "blue-language-model/src/main/java/blue/language/model/wire/ParsedJsonPointer.java",
+      "currentPackage": "blue.language.model.wire",
+      "targetModule": ":blue-language-model",
+      "targetPath": "blue-language-model/src/main/java/blue/language/model/wire/ParsedJsonPointer.java",
+      "targetPackage": "blue.language.model.wire"
+    },
+    {
       "currentPath": "blue-language-model/src/main/java/blue/language/model/wire/SchemaPropertyConstants.java",
       "currentPackage": "blue.language.model.wire",
       "targetModule": ":blue-language-model",
       "targetPath": "blue-language-model/src/main/java/blue/language/model/wire/SchemaPropertyConstants.java",
+      "targetPackage": "blue.language.model.wire"
+    },
+    {
+      "currentPath": "blue-language-model/src/main/java/blue/language/model/wire/package-info.java",
+      "currentPackage": "blue.language.model.wire",
+      "targetModule": ":blue-language-model",
+      "targetPath": "blue-language-model/src/main/java/blue/language/model/wire/package-info.java",
       "targetPackage": "blue.language.model.wire"
     }
   ],

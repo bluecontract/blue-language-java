@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

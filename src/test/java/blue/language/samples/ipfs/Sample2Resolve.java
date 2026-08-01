@@ -8,7 +8,7 @@ import blue.language.model.NodeWireForm;
 
 import java.io.IOException;
 
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 
 public class Sample2Resolve {
 

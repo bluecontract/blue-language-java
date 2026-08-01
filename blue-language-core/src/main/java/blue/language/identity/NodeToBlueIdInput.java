@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.identity;
 
 import blue.language.model.wire.SchemaPropertyConstants;
 
@@ -13,6 +13,7 @@ import blue.language.model.wire.JsonPointer;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 
 import java.math.BigDecimal;

@@ -5,7 +5,7 @@ import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.identity.CircularSetIdentityCalculator;
 
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 /**
  * Provider boundary that independently verifies returned content against the

@@ -1,4 +1,4 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.Blue;
 import blue.language.model.Node;
@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.Set;
 
 import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TypeSpecificPropertyFilterTest {
 
-    private TypeSpecificPropertyFilter typeSpecificPropertyFilter;
+    private ResolutionLimits typeSpecificPropertyFilter;
     private final Node mockNode = new Node();
     private Node typeNode;
     private String typeBlueId;
@@ -38,7 +38,8 @@ public class TypeSpecificPropertyFilterTest {
         typeBlueId = calculateBlueId(typeNode);
 
         Set<String> ignoredProperties = new HashSet<>(Collections.singletonList("y"));
-        typeSpecificPropertyFilter = new TypeSpecificPropertyFilter(typeBlueId, ignoredProperties);
+        typeSpecificPropertyFilter = ResolutionLimits
+                .filteringPropertiesForType(typeBlueId, ignoredProperties);
     }
 
     @Test

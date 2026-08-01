@@ -3,7 +3,7 @@ package blue.language.merge;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -38,10 +38,10 @@ final class MergerResolutionSessionTest {
         try {
             Future<Node> leftFuture = executor.submit(
                     () -> merger.resolve(new Node().value("left"),
-                            Limits.NO_LIMITS));
+                            ResolutionLimits.NO_LIMITS));
             Future<Node> rightFuture = executor.submit(
                     () -> merger.resolve(new Node().value("right"),
-                            Limits.NO_LIMITS));
+                            ResolutionLimits.NO_LIMITS));
             left = leftFuture.get(TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             right = rightFuture.get(TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } finally {
@@ -61,7 +61,7 @@ final class MergerResolutionSessionTest {
 
         // when
         Node resolved = merger.resolve(
-                new Node().value("outer"), Limits.NO_LIMITS);
+                new Node().value("outer"), ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals("inner", resolved.getValue());
@@ -76,7 +76,7 @@ final class MergerResolutionSessionTest {
 
         // when
         Merger.SnapshotResolution compatibility =
-                merger.resolveSnapshot(source, Limits.NO_LIMITS);
+                merger.resolveSnapshot(source, ResolutionLimits.NO_LIMITS);
         SnapshotResolution standalone = compatibility.asStandalone();
         VerifiedReferenceResolution evidence =
                 standalone.verifiedReferenceResolution();
@@ -143,7 +143,7 @@ final class MergerResolutionSessionTest {
                             NodeResolver nodeResolver) {
             if ("outer".equals(source.getRawValue())) {
                 Node inner = nodeResolver.resolve(
-                        new Node().value("inner"), Limits.NO_LIMITS);
+                        new Node().value("inner"), ResolutionLimits.NO_LIMITS);
                 target.value(inner.getRawValue());
                 return;
             }

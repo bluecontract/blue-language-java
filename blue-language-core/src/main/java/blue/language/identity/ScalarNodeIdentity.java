@@ -1,5 +1,6 @@
-package blue.language.utils;
+package blue.language.identity;
 
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import blue.language.model.Node;
 import blue.language.model.NodeIdentities;
 

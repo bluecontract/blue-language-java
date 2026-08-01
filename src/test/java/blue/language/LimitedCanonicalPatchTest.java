@@ -16,7 +16,7 @@ import blue.language.processor.DocumentProcessingRuntimeTestAccess;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.JsonPatch;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -91,7 +91,7 @@ class LimitedCanonicalPatchTest {
 
     private static Blue limitedBlue() {
         Blue blue = new Blue();
-        blue.setGlobalLimits(PathLimits.withSinglePath("/a"));
+        blue.setGlobalLimits(ResolutionLimits.withSinglePath("/a"));
         return blue;
     }
 

@@ -28,15 +28,15 @@ import blue.language.provider.SourceProviderEnvironment;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodePath;
 import blue.language.registry.NodeProviderWrapper;
 import blue.language.model.NodeWireForm;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.io.ByteArrayOutputStream;

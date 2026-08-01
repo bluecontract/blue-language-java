@@ -1,4 +1,4 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
@@ -13,7 +13,7 @@ import java.util.Set;
  * Defers reference expansion below selected paths while retaining ordinary
  * merge behavior at those paths.
  */
-public final class DeferredReferencePathLimits implements Limits {
+final class DeferredReferencePathLimits implements ResolutionLimits {
 
     private final Set<String> deferredPaths;
     private final List<String> currentPath = new ArrayList<>();
@@ -25,7 +25,7 @@ public final class DeferredReferencePathLimits implements Limits {
      * @param deferredPaths paths below which reference expansion is deferred;
      *                      {@code null} means no deferred paths
      */
-    public DeferredReferencePathLimits(Collection<String> deferredPaths) {
+    DeferredReferencePathLimits(Collection<String> deferredPaths) {
         this.deferredPaths = new LinkedHashSet<>();
         if (deferredPaths != null) {
             for (String path : deferredPaths) {

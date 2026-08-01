@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 public class PrintAllBlueIdsAndCanonicalJsons {
 

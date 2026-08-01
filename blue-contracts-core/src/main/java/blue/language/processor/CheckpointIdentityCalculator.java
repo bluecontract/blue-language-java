@@ -5,7 +5,7 @@ import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 /**

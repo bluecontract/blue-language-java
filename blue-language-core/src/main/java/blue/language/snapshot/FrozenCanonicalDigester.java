@@ -5,9 +5,9 @@ import blue.language.model.Schema;
 import blue.language.identity.Base58;
 import blue.language.identity.CanonicalJsonValueWriter;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.value.BlueNumbers;
-import blue.language.utils.SchemaEnumCanonicalizer;
+import blue.language.identity.SchemaEnumCanonicalizer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

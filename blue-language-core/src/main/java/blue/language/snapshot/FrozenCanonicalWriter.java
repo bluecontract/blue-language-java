@@ -5,7 +5,7 @@ import blue.language.model.NodeWireForm;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.SchemaEnumCanonicalizer;
+import blue.language.identity.SchemaEnumCanonicalizer;
 
 import java.math.BigInteger;
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
@@ -13,12 +13,12 @@ import static blue.language.model.wire.BlueLanguageConstants.OBJECT_CONTRACTS;
  * Converts the leaf shape of a node graph into exact path-based traversal
  * limits.
  */
-public class NodeToPathLimitsConverter {
+final class NodeToPathLimitsConverter {
 
     /**
      * Creates a node-to-path-limits converter.
      */
-    public NodeToPathLimitsConverter() {
+    private NodeToPathLimitsConverter() {
     }
 
     /**
@@ -27,13 +27,16 @@ public class NodeToPathLimitsConverter {
      * @param node graph root to inspect
      * @return exact path limits for the graph's terminal nodes
      */
-    public static PathLimits convert(Node node) {
-        PathLimits.Builder builder = new PathLimits.Builder();
+    static ResolutionLimits convert(Node node) {
+        ResolutionLimits.Builder builder = ResolutionLimits.builder();
         traverseNode(node, JsonPointer.ROOT, builder);
         return builder.build();
     }
 
-    private static void traverseNode(Node node, String currentPath, PathLimits.Builder builder) {
+    private static void traverseNode(
+            Node node,
+            String currentPath,
+            ResolutionLimits.Builder builder) {
         if (node == null) {
             return;
         }

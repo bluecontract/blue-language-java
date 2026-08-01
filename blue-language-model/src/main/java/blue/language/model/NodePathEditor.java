@@ -1,15 +1,15 @@
-package blue.language.utils;
+package blue.language.model;
 
 import blue.language.model.wire.JsonPointer;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
-import blue.language.model.Node;
-
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE;
 import static blue.language.model.wire.BlueLanguageConstants.OBJECT_CONTRACTS;
@@ -69,6 +69,21 @@ public final class NodePathEditor {
             parent = childAtOrCreate(parent, segments.get(i));
         }
         setChild(parent, segments.get(segments.size() - 1), value);
+    }
+
+    /**
+     * Selects concrete paths matching pointer patterns and a node predicate.
+     *
+     * @param root node graph to search
+     * @param patterns pointer patterns to expand
+     * @param predicate condition applied to nodes at matched paths
+     * @return selected canonical paths in deterministic encounter order
+     */
+    public static List<String> select(
+            Node root,
+            Collection<String> patterns,
+            Predicate<Node> predicate) {
+        return NodePathSelector.select(root, patterns, predicate);
     }
 
     private static Node childAtOrNull(Node node, String segment) {

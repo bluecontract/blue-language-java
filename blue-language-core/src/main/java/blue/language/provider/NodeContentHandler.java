@@ -5,7 +5,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -23,8 +23,8 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 
 /**
  * Parses provider source, preprocesses it, and calculates plain or cyclic-set

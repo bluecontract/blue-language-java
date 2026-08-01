@@ -2,7 +2,7 @@ package blue.language.conformance.api;
 
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.registry.RegistryManifestConstants;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

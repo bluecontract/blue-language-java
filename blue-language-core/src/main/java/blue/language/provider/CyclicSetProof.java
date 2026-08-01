@@ -2,7 +2,7 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 
 import java.util.ArrayList;
 import java.util.Collections;

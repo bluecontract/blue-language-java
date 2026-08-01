@@ -7,7 +7,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

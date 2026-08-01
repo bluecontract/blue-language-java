@@ -4,7 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.NodeToBlueIdInput;
+import blue.language.identity.NodeToBlueIdInput;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

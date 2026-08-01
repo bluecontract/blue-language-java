@@ -27,7 +27,7 @@ import java.util.Map;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.model.NodeWireForm.Strategy.SIMPLE;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class NodeWireFormTest {

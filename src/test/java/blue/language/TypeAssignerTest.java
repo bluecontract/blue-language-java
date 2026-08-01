@@ -17,7 +17,7 @@ import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TypeAssignerTest {
@@ -62,7 +62,7 @@ public class TypeAssignerTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         // when
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals("C", node.getProperties().get("a").getType().getName());
@@ -97,7 +97,7 @@ public class TypeAssignerTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         // when
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals("B", node.getProperties().get("a").getType().getName());

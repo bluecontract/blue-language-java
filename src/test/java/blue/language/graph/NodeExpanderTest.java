@@ -5,8 +5,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
-import blue.language.utils.limits.Limits;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,7 +91,7 @@ public class NodeExpanderTest {
         // given
         Node node = nodes.get("Y").clone();
         String expectedBlueId = node.getAsNode("/forA").getBlueId();
-        Limits limits = new PathLimits.Builder()
+        ResolutionLimits limits = ResolutionLimits.builder()
                 .addPath("/forA")
                 .build();
 
@@ -111,7 +110,7 @@ public class NodeExpanderTest {
     public void shouldExpandNestedProperty() {
         // given
         Node node = nodes.get("Y").clone();
-        Limits limits = new PathLimits.Builder()
+        ResolutionLimits limits = ResolutionLimits.builder()
                 .addPath("/forX/a")
                 .build();
         // when
@@ -127,7 +126,7 @@ public class NodeExpanderTest {
     public void shouldExpandListItem() {
         // given
         Node node = nodes.get("Y").clone();
-        Limits limits = new PathLimits.Builder()
+        ResolutionLimits limits = ResolutionLimits.builder()
                 .addPath("/forX/d/0")
                 .build();
         // when
@@ -144,7 +143,7 @@ public class NodeExpanderTest {
     public void shouldExpandWithMultiplePaths() {
         // given
         Node node = nodes.get("Y").clone();
-        Limits limits = new PathLimits.Builder()
+        ResolutionLimits limits = ResolutionLimits.builder()
                 .addPath("/forA")
                 .addPath("/forX/b")
                 .build();
@@ -187,7 +186,7 @@ public class NodeExpanderTest {
 
         NodeExpander nodeExpander = new NodeExpander(nodeProvider);
 
-        Limits limits = new PathLimits.Builder()
+        ResolutionLimits limits = ResolutionLimits.builder()
                 .addPath("/*")
                 .build();
         // when
@@ -235,7 +234,7 @@ public class NodeExpanderTest {
 
         NodeExpander nodeExpander = new NodeExpander(nodeProvider);
 
-        Limits limits = new PathLimits.Builder()
+        ResolutionLimits limits = ResolutionLimits.builder()
                 .addPath("/*")
                 .build();
         // when
@@ -264,7 +263,7 @@ public class NodeExpanderTest {
                 nodeProvider, NodeExpander.MissingElementStrategy.RETURN_EMPTY);
 
         // when
-        lenientExpander.expand(reference, Limits.NO_LIMITS);
+        lenientExpander.expand(reference, ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals(missingBlueId, reference.getBlueId());
@@ -275,7 +274,7 @@ public class NodeExpanderTest {
     public void shouldExposeLimitedExpansionThroughBlueFacade() {
         // given
         Node node = nodes.get("Y").clone();
-        Limits limits = new PathLimits.Builder()
+        ResolutionLimits limits = ResolutionLimits.builder()
                 .addPath("/forA")
                 .build();
 

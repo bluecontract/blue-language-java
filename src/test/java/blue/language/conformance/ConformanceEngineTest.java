@@ -4,12 +4,12 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.CanonicalIdentityInputBuilder;
-import blue.language.utils.MinimizedOverlayBuilder;
+import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;

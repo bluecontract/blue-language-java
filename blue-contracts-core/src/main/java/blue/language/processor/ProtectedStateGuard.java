@@ -5,8 +5,8 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.NodeToBlueIdInput;
-import blue.language.utils.Nodes;
+import blue.language.identity.NodeToBlueIdInput;
+import blue.language.model.Nodes;
 
 import java.util.ArrayDeque;
 import java.util.Collections;

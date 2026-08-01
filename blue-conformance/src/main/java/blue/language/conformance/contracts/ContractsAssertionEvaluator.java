@@ -4,8 +4,8 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.identity.BlueIds;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.math.BigDecimal;

@@ -7,7 +7,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.NodePathEditor;
+import blue.language.model.NodePathEditor;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

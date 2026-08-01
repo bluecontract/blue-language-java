@@ -14,8 +14,8 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.CanonicalIdentityInputBuilder;
-import blue.language.utils.MinimizedOverlayBuilder;
+import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 

@@ -6,7 +6,7 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

@@ -10,7 +10,7 @@ import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
 import blue.language.registry.NodeProviderWrapper;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -183,7 +183,7 @@ public final class ConformanceEngine implements AutoCloseable {
             return ConformanceResult.conformant();
         }
         try {
-            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(node.clone(), Limits.NO_LIMITS);
+            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(node.clone(), ResolutionLimits.NO_LIMITS);
             return ConformanceResult.conformant();
         } catch (RuntimeException ex) {
             return ConformanceResult.nonConformant(ex.getMessage());

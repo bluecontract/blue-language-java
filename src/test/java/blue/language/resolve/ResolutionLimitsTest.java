@@ -1,4 +1,4 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.Blue;
 import blue.language.model.Node;
@@ -12,17 +12,17 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class PathLimitsTest {
+public class ResolutionLimitsTest {
 
-    private PathLimits pathLimits;
+    private ResolutionLimits pathLimits;
     private final Node mockNode = new Node();
 
     @BeforeEach
     public void setup() {
-        pathLimits = new PathLimits.Builder()
+        pathLimits = ResolutionLimits.builder()
                 .addPath("/x/*")
                 .addPath("/y")
                 .addPath("/a/b/*/c")
@@ -146,7 +146,7 @@ public class PathLimitsTest {
     @Test
     public void shouldMatchPathWithIndex() {
         // given
-        PathLimits limits = pathLimits;
+        ResolutionLimits limits = pathLimits;
 
         // when
         limits.enterPathSegment("d");
@@ -168,7 +168,7 @@ public class PathLimitsTest {
     @Test
     public void shouldMatchMultipleWildcards() {
         // given
-        PathLimits limits = pathLimits;
+        ResolutionLimits limits = pathLimits;
 
         // when
         limits.enterPathSegment("e");
@@ -186,7 +186,7 @@ public class PathLimitsTest {
     @Test
     public void shouldMatchSpecificIndexPath() {
         // given
-        pathLimits = new PathLimits.Builder()
+        pathLimits = ResolutionLimits.builder()
                 .addPath("/forX/d/0")
                 .build();
 
@@ -217,7 +217,7 @@ public class PathLimitsTest {
     @Test
     public void shouldMatchEscapedJsonPointerSegments() {
         // given
-        pathLimits = new PathLimits.Builder()
+        pathLimits = ResolutionLimits.builder()
                 .addPath("/x/a~1b/c~0d")
                 .build();
 
@@ -328,7 +328,8 @@ public class PathLimitsTest {
 
         String typeBlueId = calculateBlueId(bNode);
         Set<String> ignoredProperties = new HashSet<>(Collections.singletonList("x"));
-        Limits globalLimits = new TypeSpecificPropertyFilter(typeBlueId, ignoredProperties);
+        ResolutionLimits globalLimits = ResolutionLimits
+                .filteringPropertiesForType(typeBlueId, ignoredProperties);
 
         // when
         boolean result =

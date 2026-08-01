@@ -5,11 +5,11 @@ import blue.language.model.wire.SchemaPropertyConstants;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Schema;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.value.BlueNumbers;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.NodeToBlueIdInput;
-import blue.language.utils.SchemaEnumCanonicalizer;
+import blue.language.identity.NodeToBlueIdInput;
+import blue.language.identity.SchemaEnumCanonicalizer;
 import blue.language.model.SchemaWireForm;
 
 import java.math.BigDecimal;

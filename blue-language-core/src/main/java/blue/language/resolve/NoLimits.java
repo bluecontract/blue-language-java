@@ -1,9 +1,14 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.model.Node;
 
-/** Stateless {@link Limits} implementation that permits every operation. */
-class NoLimits implements Limits {
+/** Stateless {@link ResolutionLimits} implementation that permits every operation. */
+final class NoLimits implements ResolutionLimits {
+
+    static final NoLimits INSTANCE = new NoLimits();
+
+    private NoLimits() {
+    }
 
     @Override
     public boolean shouldExpandPathSegment(String pathSegment, Node currentNode) {

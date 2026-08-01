@@ -5,7 +5,7 @@ import blue.language.model.Node;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;

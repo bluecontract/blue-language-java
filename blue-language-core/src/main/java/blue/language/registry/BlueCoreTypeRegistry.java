@@ -6,8 +6,8 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.identity.BlueIds;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.io.IOException;

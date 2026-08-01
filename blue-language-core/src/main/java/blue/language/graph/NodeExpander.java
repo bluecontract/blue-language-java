@@ -5,7 +5,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.provider.NodeProvider;
 import blue.language.registry.NodeProviderWrapper;
 import blue.language.model.Node;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.List;
 import java.util.Map;
@@ -20,7 +20,7 @@ import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
  *
  * <p>Expansion materializes verified content for an existing node and
  * therefore preserves that node's BlueId. It mutates the supplied graph in
- * place, follows caller-provided {@link Limits}, and can reconstruct
+ * place, follows caller-provided {@link ResolutionLimits}, and can reconstruct
  * list-history fragments before traversing their elements.</p>
  */
 public final class NodeExpander {
@@ -65,18 +65,18 @@ public final class NodeExpander {
      * @throws IllegalArgumentException when fail-fast lookup cannot resolve a
      *                                  reference
      */
-    public void expand(Node node, Limits limits) {
+    public void expand(Node node, ResolutionLimits limits) {
         Objects.requireNonNull(node, "node");
         Objects.requireNonNull(limits, "limits");
         expandNode(node, limits, "");
     }
 
-    private void expandNode(Node currentNode, Limits currentLimits, String currentSegment) {
+    private void expandNode(Node currentNode, ResolutionLimits currentLimits, String currentSegment) {
         expandNode(currentNode, currentLimits, currentSegment, false);
     }
 
     private void expandNode(Node currentNode,
-                            Limits currentLimits,
+                            ResolutionLimits currentLimits,
                             String currentSegment,
                             boolean skipLimitCheck) {
         if (!skipLimitCheck) {
@@ -111,7 +111,7 @@ public final class NodeExpander {
         }
     }
 
-    private void expandSemanticChildren(Node currentNode, Limits currentLimits) {
+    private void expandSemanticChildren(Node currentNode, ResolutionLimits currentLimits) {
         if (currentNode.getType() != null) {
             expandNode(currentNode.getType(), currentLimits, BlueLanguageConstants.OBJECT_TYPE, true);
         }

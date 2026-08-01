@@ -3,8 +3,8 @@ package blue.language.merge;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
-import blue.language.utils.CanonicalIdentityInputBuilder;
-import blue.language.utils.limits.Limits;
+import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.Objects;
 
@@ -21,7 +21,7 @@ final class ResolutionSnapshotFactory {
         this.resolvedReferenceCache = resolvedReferenceCache;
     }
 
-    SnapshotResolution resolve(Node preprocessedSource, Limits limits) {
+    SnapshotResolution resolve(Node preprocessedSource, ResolutionLimits limits) {
         Objects.requireNonNull(preprocessedSource, "preprocessedSource");
         Objects.requireNonNull(limits, "limits");
         Node resolved = engine.resolve(preprocessedSource.clone(), limits);
@@ -30,7 +30,7 @@ final class ResolutionSnapshotFactory {
         return snapshot(FrozenNode.fromNode(canonical), resolved, limits);
     }
 
-    SnapshotResolution resolve(FrozenNode canonicalRoot, Limits limits) {
+    SnapshotResolution resolve(FrozenNode canonicalRoot, ResolutionLimits limits) {
         Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         Objects.requireNonNull(limits, "limits");
         if (!canonicalRoot.isStrictCanonical()) {
@@ -42,10 +42,10 @@ final class ResolutionSnapshotFactory {
     }
 
     private SnapshotResolution snapshot(
-            FrozenNode canonicalRoot, Node resolved, Limits limits) {
+            FrozenNode canonicalRoot, Node resolved, ResolutionLimits limits) {
         FrozenNode frozenResolved = freezeResolved(resolved);
         VerifiedReferenceResolution verification = null;
-        if (limits == Limits.NO_LIMITS
+        if (limits == ResolutionLimits.NO_LIMITS
                 && canonicalRoot.isStrictBlueIdValidation()
                 && !canonicalRoot.isReferenceOnly()
                 && !frozenResolved.isReferenceOnly()) {

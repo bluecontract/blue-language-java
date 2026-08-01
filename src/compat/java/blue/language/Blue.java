@@ -77,11 +77,13 @@ import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.*;
-import blue.language.utils.limits.CompositeLimits;
-import blue.language.utils.limits.DeferredReferencePathLimits;
-import blue.language.utils.limits.ExcludedPathLimits;
-import blue.language.utils.limits.Limits;
+import blue.language.identity.BlueIdReferenceValidator;
+import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.identity.NodeToBlueIdInput;
+import blue.language.model.NodePathEditor;
+import blue.language.resolve.MinimizedOverlayBuilder;
+import blue.language.resolve.ResolutionLimits;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -104,9 +106,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static blue.language.utils.limits.Limits.NO_LIMITS;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.resolve.ResolutionLimits.NO_LIMITS;
 
 /**
  * Primary facade for parsing, resolving, canonicalizing, matching, snapshotting,
@@ -143,7 +145,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     private MergingProcessor mergingProcessor;
     private TypeClassResolver typeClassResolver;
     private Map<String, String> preprocessingAliases = new HashMap<>();
-    private Limits globalLimits = NO_LIMITS;
+    private ResolutionLimits globalLimits = NO_LIMITS;
     private DocumentProcessor documentProcessor;
     private boolean documentProcessorOwned;
     private final BlueCachePolicy cachePolicy;
@@ -338,10 +340,10 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @return a newly materialized resolved node
      */
     @Override
-    public Node resolve(Node node, Limits limits) {
+    public Node resolve(Node node, ResolutionLimits limits) {
         beginDirectCacheOperation();
         try {
-            Limits effectiveLimits = combineWithGlobalLimits(limits);
+            ResolutionLimits effectiveLimits = combineWithGlobalLimits(limits);
             Merger merger = languageMerger(
                     mergingProcessor, nodeProvider, resolvedReferenceCache);
             return merger.resolve(node.clone(), effectiveLimits);
@@ -371,7 +373,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @param preservedPaths paths to retain; null or empty preserves none
      * @return an independent partially resolved graph
      */
-    public Node resolvePreservingPaths(Node node, Limits limits, Collection<String> preservedPaths) {
+    public Node resolvePreservingPaths(Node node, ResolutionLimits limits, Collection<String> preservedPaths) {
         beginDirectCacheOperation();
         try {
             if (node == null) {
@@ -385,10 +387,10 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                 return node.clone();
             }
 
-            Limits preservingLimits = limits == NO_LIMITS
-                    ? ExcludedPathLimits.excluding(canonicalPreservedPaths)
-                    : new CompositeLimits(
-                    limits, ExcludedPathLimits.excluding(canonicalPreservedPaths));
+            ResolutionLimits preservingLimits = limits == NO_LIMITS
+                    ? ResolutionLimits.excluding(canonicalPreservedPaths)
+                    : ResolutionLimits.allOf(
+                    limits, ResolutionLimits.excluding(canonicalPreservedPaths));
             Node resolved = resolve(node.clone(), preservingLimits);
             for (String path : canonicalPreservedPaths) {
                 Node preserved = NodePathEditor.getOrNull(node, path);
@@ -408,13 +410,14 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      *
      * @param node graph to inspect; null yields an empty result
      * @param pathPatterns selector patterns understood by
-     *                     {@link NodePathSelector}; null or empty yields no paths
+     *                     {@link NodePathEditor#select(Node, Collection, Predicate)};
+     *                     null or empty yields no paths
      * @param predicate non-null additional node predicate
      * @return matching paths in deterministic traversal order
      * @throws IllegalArgumentException if a non-empty selection has a null predicate
      */
     public List<String> selectPaths(Node node, Collection<String> pathPatterns, Predicate<Node> predicate) {
-        return NodePathSelector.select(node, pathPatterns, predicate);
+        return NodePathEditor.select(node, pathPatterns, predicate);
     }
 
     /**
@@ -443,7 +446,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @return an independent partially resolved graph
      */
     public Node resolvePreservingMatchingPaths(Node node,
-                                               Limits limits,
+                                               ResolutionLimits limits,
                                                Collection<String> pathPatterns,
                                                Predicate<Node> predicate) {
         beginDirectCacheOperation();
@@ -642,7 +645,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             Node resolved;
             try {
                 Node preprocessed = preprocess(node.clone());
-                Limits demandLimits = new SemanticDemandLimits(limits.demandedSegments());
+                ResolutionLimits demandLimits = new SemanticDemandLimits(limits.demandedSegments());
                 resolved = languageMerger(
                         mergingProcessor, budgetedProvider, null)
                         .resolve(preprocessed, demandLimits);
@@ -737,7 +740,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         beginDirectCacheOperation();
         try {
             Node preprocessed = preprocess(node.clone());
-            Limits limits = combineWithGlobalLimits(NO_LIMITS);
+            ResolutionLimits limits = combineWithGlobalLimits(NO_LIMITS);
             Merger merger = languageMerger(
                     mergingProcessor, nodeProvider, resolvedReferenceCache);
             return cacheSnapshot(ResolvedSnapshot.fromResolverResult(
@@ -1221,13 +1224,13 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
 
     /** Expands only paths admitted by the target-driven matching limits. */
     @Override
-    public void expandForMatching(Node source, Limits limits) {
+    public void expandForMatching(Node source, ResolutionLimits limits) {
         expand(source, limits);
     }
 
     /** Resolves a matching candidate under target-driven limits. */
     @Override
-    public Node resolveForMatching(Node source, Limits limits) {
+    public Node resolveForMatching(Node source, ResolutionLimits limits) {
         return resolve(source, limits);
     }
 
@@ -1275,10 +1278,10 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @param node mutable graph to modify in place
      * @param limits non-null per-call traversal limits
      */
-    public void expand(Node node, Limits limits) {
+    public void expand(Node node, ResolutionLimits limits) {
         beginDirectCacheOperation();
         try {
-            Limits effectiveLimits = combineWithGlobalLimits(limits);
+            ResolutionLimits effectiveLimits = combineWithGlobalLimits(limits);
             new NodeExpander(nodeProvider).expand(node, effectiveLimits);
         } finally {
             endDirectCacheOperation();
@@ -1380,11 +1383,11 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     /**
      * Replaces runtime-wide traversal limits, invalidating configuration-bound
      * caches and Blue-owned processor state. An injected borrowed processor is
-     * not replaced. Null restores {@link Limits#NO_LIMITS}.
+     * not replaced. Null restores {@link ResolutionLimits#NO_LIMITS}.
      *
      * @param globalLimits new limits, or {@code null}
      */
-    public void setGlobalLimits(Limits globalLimits) {
+    public void setGlobalLimits(ResolutionLimits globalLimits) {
         ConfigurationRefresh refresh = refreshRuntimeConfiguration(() ->
                 this.globalLimits = globalLimits != null ? globalLimits : NO_LIMITS,
                 false);
@@ -1398,7 +1401,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      *
      * @return active global limits
      */
-    public Limits getGlobalLimits() {
+    public ResolutionLimits getGlobalLimits() {
         return globalLimits;
     }
 
@@ -2471,7 +2474,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         MergingProcessor capturedMergingProcessor = mergingProcessor;
         Map<String, String> capturedAliases = Collections.unmodifiableMap(
                 new HashMap<>(preprocessingAliases));
-        Limits capturedLimits = globalLimits;
+        ResolutionLimits capturedLimits = globalLimits;
         return DocumentProcessor.builder()
                 .withConformanceEngine(processorConformanceEngine(
                         capturedSnapshotProvider, capturedMergingProcessor))
@@ -2637,7 +2640,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             MergingProcessor capturedMergingProcessor = mergingProcessor;
             Map<String, String> capturedAliases = Collections.unmodifiableMap(
                     new HashMap<>(preprocessingAliases));
-            Limits capturedLimits = globalLimits;
+            ResolutionLimits capturedLimits = globalLimits;
             documentProcessor = DocumentProcessor.Builder.from(previous)
                     .withConformanceEngine(processorConformanceEngine(
                             capturedSnapshotProvider, capturedMergingProcessor))
@@ -2698,7 +2701,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         private final NodeProvider snapshotNodeProvider;
         private final MergingProcessor snapshotMergingProcessor;
         private final Map<String, String> aliases;
-        private final Limits limits;
+        private final ResolutionLimits limits;
         private final ResolvedReferenceCache sequenceReferenceCache;
         private final CacheGenerationStamp fixedStamp;
         private final ThreadLocal<CacheGenerationStamp> directOperationStamp = new ThreadLocal<>();
@@ -2708,7 +2711,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                                               NodeProvider snapshotNodeProvider,
                                               MergingProcessor snapshotMergingProcessor,
                                               Map<String, String> aliases,
-                                              Limits limits,
+                                              ResolutionLimits limits,
                                               ResolvedReferenceCache sequenceReferenceCache,
                                               CacheGenerationStamp fixedStamp) {
             this.ownerToken = ownerToken;
@@ -3077,7 +3080,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             Map<String, String> aliases,
             NodeProvider snapshotNodeProvider,
             MergingProcessor snapshotMergingProcessor,
-            Limits limits) {
+            ResolutionLimits limits) {
         Node preprocessed = preprocess(node.clone(), preprocessingNodeProvider, aliases);
         Node resolved = languageMerger(snapshotMergingProcessor,
                 snapshotNodeProvider,
@@ -3097,7 +3100,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             Map<String, String> aliases,
             NodeProvider snapshotNodeProvider,
             MergingProcessor snapshotMergingProcessor,
-            Limits limits,
+            ResolutionLimits limits,
             Collection<String> preservedPaths) {
         Set<String> canonicalPaths =
                 canonicalPreservedPaths(preservedPaths);
@@ -3113,9 +3116,9 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         }
         Node preprocessed = preprocess(
                 node.clone(), preprocessingNodeProvider, aliases);
-        Limits preservingLimits = new CompositeLimits(
+        ResolutionLimits preservingLimits = ResolutionLimits.allOf(
                 limits,
-                new DeferredReferencePathLimits(
+                ResolutionLimits.deferringReferencesAt(
                         canonicalPaths));
         Node resolved = languageMerger(
                 snapshotMergingProcessor,
@@ -3139,7 +3142,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             JsonPatch patch,
             NodeProvider snapshotNodeProvider,
             MergingProcessor snapshotMergingProcessor,
-            Limits limits,
+            ResolutionLimits limits,
             ResolvedReferenceCache resolutionCache) {
         return applyCanonicalPatch(snapshot, patch,
                 canonicalRoot -> snapshotFromCanonical(
@@ -3210,7 +3213,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             FrozenNode canonicalRoot,
             NodeProvider snapshotNodeProvider,
             MergingProcessor snapshotMergingProcessor,
-            Limits limits,
+            ResolutionLimits limits,
             ResolvedReferenceCache resolutionCache) {
         Merger merger = languageMerger(
                 snapshotMergingProcessor, snapshotNodeProvider, resolutionCache);
@@ -4202,7 +4205,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         return cacheSnapshot(snapshot);
     }
 
-    private Limits combineWithGlobalLimits(Limits methodLimits) {
+    private ResolutionLimits combineWithGlobalLimits(ResolutionLimits methodLimits) {
         if (globalLimits == NO_LIMITS) {
             return methodLimits;
         }
@@ -4211,7 +4214,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             return globalLimits;
         }
 
-        return new CompositeLimits(globalLimits, methodLimits);
+        return ResolutionLimits.allOf(globalLimits, methodLimits);
     }
 
     private MergingProcessor createDefaultNodeProcessor() {
@@ -4256,7 +4259,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * paths. This prevents a limited resolution from spending provider budget
      * on an unrelated sibling while still completing the demanded subtree.
      */
-    private static final class SemanticDemandLimits implements Limits {
+    private static final class SemanticDemandLimits implements ResolutionLimits {
         private final List<List<String>> demands;
         private final List<String> currentPath = new ArrayList<>();
         private final List<Boolean> enteredSegments = new ArrayList<>();

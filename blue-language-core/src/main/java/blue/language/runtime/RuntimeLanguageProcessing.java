@@ -21,12 +21,10 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ImmutableBluePatch;
-import blue.language.utils.BlueIds;
-import blue.language.utils.CanonicalIdentityInputBuilder;
-import blue.language.utils.NodePathEditor;
-import blue.language.utils.limits.CompositeLimits;
-import blue.language.utils.limits.DeferredReferencePathLimits;
-import blue.language.utils.limits.Limits;
+import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.model.NodePathEditor;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -471,11 +469,11 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
             Set<String> preservedPaths,
             ResolvedReferenceCache cache) {
         Node preprocessed = preprocessor().preprocess(document.clone());
-        Limits limits = preservedPaths.isEmpty()
-                ? Limits.NO_LIMITS
-                : new CompositeLimits(
-                Limits.NO_LIMITS,
-                new DeferredReferencePathLimits(preservedPaths));
+        ResolutionLimits limits = preservedPaths.isEmpty()
+                ? ResolutionLimits.NO_LIMITS
+                : ResolutionLimits.allOf(
+                ResolutionLimits.NO_LIMITS,
+                ResolutionLimits.deferringReferencesAt(preservedPaths));
         Node resolved = merger(cache).resolve(
                 preprocessed.clone(), limits);
         if (!preservedPaths.isEmpty()) {
@@ -534,7 +532,7 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
             ResolvedReferenceCache cache) {
         Node canonical = canonicalRoot.toNode();
         Node resolved = merger(cache).resolve(
-                canonical.clone(), Limits.NO_LIMITS);
+                canonical.clone(), ResolutionLimits.NO_LIMITS);
         return new ResolvedSnapshot(
                 canonicalRoot,
                 cache.freezeResolved(resolved),

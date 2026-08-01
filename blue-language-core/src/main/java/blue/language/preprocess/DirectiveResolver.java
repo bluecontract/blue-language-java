@@ -5,7 +5,7 @@ import blue.language.model.Node;
 import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.ProviderUnavailableException;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 
 import java.util.ArrayList;
 import java.util.Collections;

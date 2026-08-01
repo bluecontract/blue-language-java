@@ -4,7 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -89,7 +89,7 @@ final class CompletedValueValidator {
                 || (presenceGates != null && presenceGates.containsKey(path));
     }
 
-    void observeCompletedPath(Node target, Node source, Limits limits) {
+    void observeCompletedPath(Node target, Node source, ResolutionLimits limits) {
         ResolutionEngine.ResolutionState state = engine.activeResolutionState();
         if (state == null || state.contribution == ResolutionEngine.Contribution.TYPE_METADATA) {
             return;
@@ -314,7 +314,7 @@ final class CompletedValueValidator {
         state.path.addAll(JsonPointer.split(pointer));
     }
 
-    private int enterLimitPath(Limits limits, String pointer, Node node) {
+    private int enterLimitPath(ResolutionLimits limits, String pointer, Node node) {
         List<String> segments = JsonPointer.split(pointer);
         for (int index = 0; index < segments.size(); index++) {
             Node current = index == segments.size() - 1 ? node : null;
@@ -323,7 +323,7 @@ final class CompletedValueValidator {
         return segments.size();
     }
 
-    private void exitLimitPath(Limits limits, int enteredSegments) {
+    private void exitLimitPath(ResolutionLimits limits, int enteredSegments) {
         for (int index = 0; index < enteredSegments; index++) {
             limits.exitPathSegment();
         }
@@ -421,7 +421,7 @@ final class CompletedValueValidator {
         private final List<PresenceGate> ancestorPresence = new ArrayList<>();
         private boolean complete = true;
         private String pendingReferenceBlueId;
-        private Limits pendingReferenceLimits;
+        private ResolutionLimits pendingReferenceLimits;
     }
 
     private static final class PresenceGate {

@@ -4,7 +4,7 @@ import blue.language.api.BlueViewPath;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.wire.BlueLanguageConstants;
 

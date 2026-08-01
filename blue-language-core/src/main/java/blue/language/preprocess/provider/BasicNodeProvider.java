@@ -8,9 +8,9 @@ import blue.language.provider.CyclicSetProofResult;
 import blue.language.provider.NodeContentHandler;
 import blue.language.provider.PreloadedNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.identity.CircularSetIdentityCalculator;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -18,8 +18,8 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 /**
  * Mutable in-memory provider for tests, local tooling, and bootstrap assembly.

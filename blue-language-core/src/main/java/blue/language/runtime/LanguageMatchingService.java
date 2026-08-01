@@ -9,7 +9,7 @@ import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.matching.NodeTypeMatcher;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -20,13 +20,13 @@ import java.util.function.BiFunction;
 public final class LanguageMatchingService implements BlueMatching {
 
     private final MatchingRuntime runtime;
-    private final Limits defaultLimits;
+    private final ResolutionLimits defaultLimits;
     private final BiFunction<Node, BlueOperationLimits,
             BlueOperationResult<Node>> limitedResolver;
 
     public LanguageMatchingService(
             MatchingRuntime runtime,
-            Limits defaultLimits,
+            ResolutionLimits defaultLimits,
             BiFunction<Node, BlueOperationLimits,
                     BlueOperationResult<Node>> limitedResolver) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");

@@ -11,7 +11,7 @@ import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.NodeContentHandler;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -488,10 +488,10 @@ public class NodeTypeMatcherTest {
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
 
         // then
-        assertFalse(matcher.matchesType(candidate, pattern, PathLimits.withSinglePath("/other")));
+        assertFalse(matcher.matchesType(candidate, pattern, ResolutionLimits.withSinglePath("/other")));
         assertEquals(0, provider.fetchesFor(delegate.getBlueIdByName("Branch")));
 
-        assertTrue(matcher.matchesType(candidate, pattern, PathLimits.withSinglePath("/x/y")));
+        assertTrue(matcher.matchesType(candidate, pattern, ResolutionLimits.withSinglePath("/x/y")));
         assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Branch")));
     }
 
@@ -543,7 +543,7 @@ public class NodeTypeMatcherTest {
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
 
         // then
-        assertTrue(matcher.matchesType(candidate, pattern, PathLimits.withSinglePath("/x/a~1b/c~0d")));
+        assertTrue(matcher.matchesType(candidate, pattern, ResolutionLimits.withSinglePath("/x/a~1b/c~0d")));
         assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Escaped Branch")));
         assertEquals(0, provider.fetchesFor(delegate.getBlueIdByName("Unchecked Escaped Huge")));
     }

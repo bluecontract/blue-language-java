@@ -24,8 +24,8 @@ import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class NodeDeserializerTest {

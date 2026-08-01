@@ -15,11 +15,11 @@ import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.NodeContentHandler;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.graph.NodeExpander;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class SelfReferenceTest {
@@ -76,7 +76,7 @@ public class SelfReferenceTest {
         // when
         IllegalArgumentException failure = captureFailure(
                 () -> new NodeExpander(nodeProvider).expand(
-                        expanded, PathLimits.withSinglePath("/x/x/x/x")));
+                        expanded, ResolutionLimits.withSinglePath("/x/x/x/x")));
 
         // then
         assertTrue(failure instanceof IllegalArgumentException);
@@ -135,10 +135,10 @@ public class SelfReferenceTest {
         // when
         new NodeExpander(fixture.provider).expand(
                 expandedA,
-                PathLimits.withSinglePath("/x/y/x/y"));
+                ResolutionLimits.withSinglePath("/x/y/x/y"));
         new NodeExpander(fixture.provider).expand(
                 expandedB,
-                PathLimits.withSinglePath("/y/x/y/x"));
+                ResolutionLimits.withSinglePath("/y/x/y/x"));
 
         // then
         assertEquals(fixture.bBlueId, expandedA.getAsNode("/x/type").getBlueId());
@@ -163,7 +163,7 @@ public class SelfReferenceTest {
         // when
         Node result = fixture.blue.resolve(
                 fixture.blue.preprocess(fixture.blue.yamlToNode(instance)),
-                PathLimits.withSinglePath("/*/*/*"));
+                ResolutionLimits.withSinglePath("/*/*/*"));
 
         // then
         assertEquals(INTERCONNECTED_CONSTANT_VALUE, result.getAsText("/a/x/bConst"));
@@ -187,7 +187,7 @@ public class SelfReferenceTest {
         IllegalArgumentException failure = captureFailure(
                 () -> fixture.blue.resolve(
                         fixture.blue.preprocess(fixture.blue.yamlToNode(errorInstance)),
-                        PathLimits.withSinglePath("/*/*/*/*")));
+                        ResolutionLimits.withSinglePath("/*/*/*/*")));
 
         // then
         assertTrue(failure instanceof IllegalArgumentException);

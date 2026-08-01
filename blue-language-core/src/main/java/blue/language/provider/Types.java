@@ -3,7 +3,7 @@ package blue.language.provider;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 
 import java.util.List;
 import java.util.Map;

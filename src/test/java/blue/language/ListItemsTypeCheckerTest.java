@@ -18,7 +18,7 @@ import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import blue.language.provider.Types;
 import org.junit.jupiter.api.Test;
 
@@ -69,7 +69,7 @@ public class ListItemsTypeCheckerTest {
         Node node = new Node();
         // when
         merger.merge(node, nodeProvider.fetchByBlueId(
-                nodeProvider.getBlueIdByName("Y")).get(0), Limits.NO_LIMITS);
+                nodeProvider.getBlueIdByName("Y")).get(0), ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals("B", node.getProperties().get("a").getType().getName());
@@ -118,7 +118,7 @@ public class ListItemsTypeCheckerTest {
         // then
         assertThrows(IllegalArgumentException.class, () -> {
             merger.merge(node, nodeProvider.fetchByBlueId(
-                    nodeProvider.getBlueIdByName("Y")).get(0), Limits.NO_LIMITS);
+                    nodeProvider.getBlueIdByName("Y")).get(0), ResolutionLimits.NO_LIMITS);
         });
     }
 

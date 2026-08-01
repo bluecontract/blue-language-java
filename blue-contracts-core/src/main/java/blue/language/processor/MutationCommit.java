@@ -10,7 +10,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.NodePathEditor;
+import blue.language.model.NodePathEditor;
 
 import java.util.ArrayList;
 import java.util.List;

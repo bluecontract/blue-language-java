@@ -2,13 +2,13 @@ package blue.language.codec;
 
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIdReferenceValidator;
+import blue.language.identity.BlueIdReferenceValidator;
 import blue.language.model.NodeWireForm;
 
 import java.util.Objects;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 
 /** Default strict JSON/YAML implementation of {@link BlueCodec}. */
 public final class StandardBlueCodec implements BlueCodec {
@@ -42,7 +42,7 @@ public final class StandardBlueCodec implements BlueCodec {
                         NodeWireForm.Strategy.SIMPLE));
     }
 
-    private blue.language.utils.UncheckedObjectMapper mapper(
+    private blue.language.codec.jackson.UncheckedObjectMapper mapper(
             BlueFormat format) {
         switch (Objects.requireNonNull(format, "format")) {
             case JSON:

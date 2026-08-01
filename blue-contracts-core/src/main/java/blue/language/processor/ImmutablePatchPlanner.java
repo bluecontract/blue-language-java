@@ -11,7 +11,7 @@ import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.BluePatchOperation;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.wire.ParsedJsonPointer;
 

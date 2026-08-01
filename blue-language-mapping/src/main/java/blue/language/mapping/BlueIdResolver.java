@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 
 /** Resolves annotation-owned type BlueIds for the optional mapping module. */
 final class BlueIdResolver {

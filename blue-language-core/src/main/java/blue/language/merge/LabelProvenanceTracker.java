@@ -4,7 +4,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -407,7 +407,7 @@ final class LabelProvenanceTracker {
     }
 
     LabelProvenanceScope pushLabelProvenanceScope(Node source,
-                                                          Limits limits,
+                                                          ResolutionLimits limits,
                                                           boolean includeRootLabel) {
         ResolutionEngine.ResolutionState state = activeResolutionState();
         if (state == null) {
@@ -441,7 +441,7 @@ final class LabelProvenanceTracker {
 
     private void collectAuthoredLabelPaths(Node source,
                                            LabelPath path,
-                                           Limits limits,
+                                           ResolutionLimits limits,
                                            boolean includeRootLabel,
                                            Set<LabelPath> labelPaths,
                                            Set<Node> activeNodes) {
@@ -471,7 +471,7 @@ final class LabelProvenanceTracker {
 
     private void collectAuthoredListLabelPaths(List<Node> children,
                                                LabelPath parentPath,
-                                               Limits limits,
+                                               ResolutionLimits limits,
                                                Set<LabelPath> labelPaths,
                                                Set<Node> activeNodes) {
         boolean hasPositionControls = children.stream()
@@ -506,7 +506,7 @@ final class LabelProvenanceTracker {
     private void collectAuthoredLabelPath(Node child,
                                           String segment,
                                           LabelPath parentPath,
-                                          Limits limits,
+                                          ResolutionLimits limits,
                                           Set<LabelPath> labelPaths,
                                           Set<Node> activeNodes) {
         if (child == null || !limits.shouldMergePathSegment(segment, child)) {

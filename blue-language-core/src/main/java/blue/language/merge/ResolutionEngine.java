@@ -9,10 +9,10 @@ import blue.language.merge.ResolvedReferenceCache;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.registry.NodeProviderWrapper;
 import blue.language.provider.Types;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIdReferenceValidator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIdReferenceValidator;
+import blue.language.identity.BlueIds;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
 
@@ -141,7 +141,7 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     blue.language.merge.SnapshotResolution resolveSnapshot(
-            Node preprocessedSource, Limits limits) {
+            Node preprocessedSource, ResolutionLimits limits) {
         if (requiresFreshInvocation()) {
             return invocationMerger().resolveSnapshot(
                     preprocessedSource, limits);
@@ -150,7 +150,7 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     blue.language.merge.SnapshotResolution resolveSnapshot(
-            FrozenNode canonicalRoot, Limits limits) {
+            FrozenNode canonicalRoot, ResolutionLimits limits) {
         if (requiresFreshInvocation()) {
             return invocationMerger().resolveSnapshot(canonicalRoot, limits);
         }
@@ -166,7 +166,7 @@ final class ResolutionEngine implements NodeResolver {
      * @param source source contribution to merge
      * @param limits limits governing reference and path resolution
      */
-    public void merge(Node target, Node source, Limits limits) {
+    public void merge(Node target, Node source, ResolutionLimits limits) {
         if (requiresFreshInvocation()) {
             invocationMerger().merge(target, source, limits);
             return;
@@ -222,7 +222,7 @@ final class ResolutionEngine implements NodeResolver {
         }
     }
 
-    private void mergeInternal(Node target, Node source, Limits limits) {
+    private void mergeInternal(Node target, Node source, ResolutionLimits limits) {
         if (source.getBlue() != null) {
             throw new IllegalArgumentException("Document contains \"blue\" attribute. Preprocess document before merging.");
         }
@@ -396,7 +396,7 @@ final class ResolutionEngine implements NodeResolver {
         activeTypeStack.finish(key);
     }
 
-    private void mergeObject(Node target, Node source, Limits limits) {
+    private void mergeObject(Node target, Node source, ResolutionLimits limits) {
         referenceResolver.materializeReferenceBackedSchema(source);
         referenceResolver.materializeReferenceBackedContracts(source);
         ResolutionState state = activeResolutionState();
@@ -415,7 +415,7 @@ final class ResolutionEngine implements NodeResolver {
             }
 
             if (source.getContracts() != null && limits.shouldMergePathSegment(BlueLanguageConstants.OBJECT_CONTRACTS, source.getContracts())) {
-                boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
+                boolean referenceExpansionAllowed = limits == ResolutionLimits.NO_LIMITS
                         || limits.shouldExpandPathSegment(
                                 BlueLanguageConstants.OBJECT_CONTRACTS, source.getContracts());
                 limits.enterPathSegment(BlueLanguageConstants.OBJECT_CONTRACTS, source.getContracts());
@@ -434,7 +434,7 @@ final class ResolutionEngine implements NodeResolver {
             if (properties != null) {
                 properties.forEach((key, value) -> {
                     if (limits.shouldMergePathSegment(key, value)) {
-                        boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
+                        boolean referenceExpansionAllowed = limits == ResolutionLimits.NO_LIMITS
                                 || limits.shouldExpandPathSegment(key, value);
                         boolean trackValidationPath = shouldTrackValidationPath(target, key, value);
                         limits.enterPathSegment(key, value);
@@ -483,7 +483,7 @@ final class ResolutionEngine implements NodeResolver {
         return contribution;
     }
 
-    private void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
+    private void mergeChildren(Node target, List<Node> sourceChildren, ResolutionLimits limits) {
         listOverlayMerger.mergeChildren(target, sourceChildren, limits);
     }
 
@@ -525,7 +525,7 @@ final class ResolutionEngine implements NodeResolver {
         return listOverlayMerger.hasReplacement(node);
     }
 
-    private void mergeProperty(Node target, String sourceKey, Node sourceValue, Limits limits) {
+    private void mergeProperty(Node target, String sourceKey, Node sourceValue, ResolutionLimits limits) {
         if (target.getProperties() == null)
             target.properties(new LinkedHashMap<>());
         Node targetValue = target.getProperties().get(sourceKey);
@@ -549,7 +549,7 @@ final class ResolutionEngine implements NodeResolver {
         }
     }
 
-    void mergeInstanceObject(Node target, Node source, Limits limits) {
+    void mergeInstanceObject(Node target, Node source, ResolutionLimits limits) {
         LabelProvenanceTracker.MergeMode labelMergeMode =
                 labelProvenanceTracker.mergeMode(
                         activeResolutionState().contribution);
@@ -573,7 +573,7 @@ final class ResolutionEngine implements NodeResolver {
     private void mergePropertyWithContribution(Node target,
                                                String sourceKey,
                                                Node sourceValue,
-                                               Limits limits,
+                                               ResolutionLimits limits,
                                                Contribution contribution) {
         ResolutionState state = activeResolutionState();
         Contribution previous = state.contribution;
@@ -585,7 +585,7 @@ final class ResolutionEngine implements NodeResolver {
         }
     }
 
-    private void mergeContracts(Node target, Node sourceContracts, Limits limits) {
+    private void mergeContracts(Node target, Node sourceContracts, ResolutionLimits limits) {
         if (target.getContracts() == null) {
             target.contracts(resolve(sourceContracts, limits));
             return;
@@ -596,7 +596,7 @@ final class ResolutionEngine implements NodeResolver {
 
     private void mergeContractsWithContribution(Node target,
                                                 Node sourceContracts,
-                                                Limits limits) {
+                                                ResolutionLimits limits) {
         ResolutionState state = activeResolutionState();
         Contribution previous = state.contribution;
         state.contribution = previous == Contribution.MATERIALIZED_REFERENCE
@@ -615,7 +615,7 @@ final class ResolutionEngine implements NodeResolver {
 
     void mergeObjectWithContribution(Node target,
                                              Node source,
-                                             Limits limits,
+                                             ResolutionLimits limits,
                                              Contribution contribution) {
         ResolutionState state = activeResolutionState();
         Contribution previous = state.contribution;
@@ -629,7 +629,7 @@ final class ResolutionEngine implements NodeResolver {
 
     private void mergeWithContribution(Node target,
                                        Node source,
-                                       Limits limits,
+                                       ResolutionLimits limits,
                                        Contribution contribution) {
         ResolutionState state = activeResolutionState();
         Contribution previous = state.contribution;
@@ -641,7 +641,7 @@ final class ResolutionEngine implements NodeResolver {
         }
     }
 
-    Node resolveWithContribution(Node node, Limits limits, Contribution contribution) {
+    Node resolveWithContribution(Node node, ResolutionLimits limits, Contribution contribution) {
         ResolutionState state = activeResolutionState();
         Contribution previous = state.contribution;
         state.contribution = contribution;
@@ -679,13 +679,13 @@ final class ResolutionEngine implements NodeResolver {
         return completedValueValidator.currentPath(state);
     }
 
-    private void resolveTypeMetadata(Node source, Limits limits) {
+    private void resolveTypeMetadata(Node source, ResolutionLimits limits) {
         source.itemType(resolveTypeMetadataNode(source.getItemType(), limits));
         source.keyType(resolveTypeMetadataNode(source.getKeyType(), limits));
         source.valueType(resolveTypeMetadataNode(source.getValueType(), limits));
     }
 
-    private Node resolveTypeMetadataNode(Node metadataType, Limits limits) {
+    private Node resolveTypeMetadataNode(Node metadataType, ResolutionLimits limits) {
         if (metadataType == null || metadataType.getBlueId() == null) {
             return metadataType;
         }
@@ -717,7 +717,7 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     @Override
-    public Node resolve(Node node, Limits limits) {
+    public Node resolve(Node node, ResolutionLimits limits) {
         if (requiresFreshInvocation()) {
             return invocationMerger().resolve(node, limits);
         }
@@ -752,7 +752,7 @@ final class ResolutionEngine implements NodeResolver {
         }
     }
 
-    private Node resolveInternal(Node node, Limits limits) {
+    private Node resolveInternal(Node node, ResolutionLimits limits) {
         LabelProvenanceTracker.LabelProvenanceScope labelScope =
                 labelProvenanceTracker.pushLabelProvenanceScope(
                         node, limits, false);

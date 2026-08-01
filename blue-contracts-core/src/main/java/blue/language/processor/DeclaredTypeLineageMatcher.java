@@ -5,7 +5,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.api.BlueCachePolicy;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;

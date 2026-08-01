@@ -7,7 +7,7 @@ import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 
 import java.lang.reflect.*;
 import java.util.*;

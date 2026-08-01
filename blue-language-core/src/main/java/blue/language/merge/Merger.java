@@ -5,7 +5,7 @@ import blue.language.model.Node;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 /**
  * Public facade for one deterministic Blue Language merge configuration.
@@ -46,19 +46,19 @@ public final class Merger implements NodeResolver {
 
     /** Resolves a mutable source into a completed value. */
     @Override
-    public Node resolve(Node node, Limits limits) {
+    public Node resolve(Node node, ResolutionLimits limits) {
         return engine.resolve(node, limits);
     }
 
     /** Merges one source contribution into a mutable target. */
-    public void merge(Node target, Node source, Limits limits) {
+    public void merge(Node target, Node source, ResolutionLimits limits) {
         engine.merge(target, source, limits);
     }
 
     /** Resolves and binds canonical and completed representations. */
     public SnapshotResolution resolveSnapshot(
             Node preprocessedSource,
-            Limits limits) {
+            ResolutionLimits limits) {
         return new SnapshotResolution(
                 engine.resolveSnapshot(preprocessedSource, limits));
     }
@@ -66,7 +66,7 @@ public final class Merger implements NodeResolver {
     /** Resolves an already strict-canonical source. */
     public SnapshotResolution resolveSnapshot(
             FrozenNode canonicalRoot,
-            Limits limits) {
+            ResolutionLimits limits) {
         return new SnapshotResolution(
                 engine.resolveSnapshot(canonicalRoot, limits));
     }

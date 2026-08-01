@@ -7,11 +7,11 @@ import blue.language.model.Schema;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 /**
  * Resolves exact provider content and owns the invocation-local canonical and
@@ -130,14 +130,14 @@ final class ReferenceResolver {
         return canonical;
     }
 
-    FrozenNode cachedResolvedReference(String blueId, Limits limits) {
-        if (blueId == null || resolvedReferenceCache == null || limits != Limits.NO_LIMITS) {
+    FrozenNode cachedResolvedReference(String blueId, ResolutionLimits limits) {
+        if (blueId == null || resolvedReferenceCache == null || limits != ResolutionLimits.NO_LIMITS) {
             return null;
         }
         return resolvedReferenceCache.getVerifiedResolved(blueId).orElse(null);
     }
 
-    FrozenNode cachedResolvedType(String blueId, Limits limits) {
+    FrozenNode cachedResolvedType(String blueId, ResolutionLimits limits) {
         FrozenNode cached = cachedResolvedReference(blueId, limits);
         if (cached == null) {
             return null;
@@ -194,8 +194,8 @@ final class ReferenceResolver {
     }
 
 
-    void cacheResolvedReference(String blueId, Node resolvedType, Limits limits) {
-        if (blueId == null || resolvedReferenceCache == null || limits != Limits.NO_LIMITS) {
+    void cacheResolvedReference(String blueId, Node resolvedType, ResolutionLimits limits) {
+        if (blueId == null || resolvedReferenceCache == null || limits != ResolutionLimits.NO_LIMITS) {
             return;
         }
         CanonicalReference local = localCanonicalReference(
@@ -317,7 +317,7 @@ final class ReferenceResolver {
 
     private void materializeReference(Node target,
                                       String blueId,
-                                      Limits limits,
+                                      ResolutionLimits limits,
                                       ResolutionEngine.ResolutionState state) {
         CanonicalReference canonicalReference = canonicalReference(blueId, state);
         if (canonicalReference.canonical.containsCyclicSetReference()) {
@@ -337,7 +337,7 @@ final class ReferenceResolver {
 
     private void materializeCyclicSetReference(Node target,
                                                String blueId,
-                                               Limits limits,
+                                               ResolutionLimits limits,
                                                ResolutionEngine.ResolutionState state,
                                                CanonicalReference canonicalReference) {
         if (materializingReferences == null) {
@@ -365,7 +365,7 @@ final class ReferenceResolver {
 
     void materializeReferenceAtCurrentPath(Node target,
                                                    String blueId,
-                                                   Limits limits,
+                                                   ResolutionLimits limits,
                                                    ResolutionEngine.ResolutionState state) {
         String path = engine.currentPath(state);
         try {
@@ -377,17 +377,17 @@ final class ReferenceResolver {
     }
 
     private Node materializedReference(String blueId,
-                                       Limits limits,
+                                       ResolutionLimits limits,
                                        ResolutionEngine.ResolutionState state,
                                        CanonicalReference canonicalReference) {
-        if (limits == Limits.NO_LIMITS && fullyResolvedReferences != null) {
+        if (limits == ResolutionLimits.NO_LIMITS && fullyResolvedReferences != null) {
             Node existing = fullyResolvedReferences.get(blueId);
             if (existing != null) {
                 return existing.clone();
             }
         }
 
-        FrozenNode cached = resolvedReferenceCache != null && limits == Limits.NO_LIMITS
+        FrozenNode cached = resolvedReferenceCache != null && limits == ResolutionLimits.NO_LIMITS
                 ? resolvedReferenceCache.getVerifiedResolved(blueId).orElse(null)
                 : null;
         if (cached != null) {
@@ -410,13 +410,13 @@ final class ReferenceResolver {
                     canonical.toNode(), limits, ResolutionEngine.Contribution.INSTANCE);
             resolved.blueId(blueId);
             if (canonicalReference.directlyVerified
-                    && resolvedReferenceCache != null && limits == Limits.NO_LIMITS) {
+                    && resolvedReferenceCache != null && limits == ResolutionLimits.NO_LIMITS) {
                 resolvedReferenceCache.putVerifiedResolved(
                         new blue.language.merge.VerifiedReferenceResolution(
                                 blueId, canonical,
                                 resolvedReferenceCache.freezeResolved(resolved)));
             }
-            if (limits == Limits.NO_LIMITS) {
+            if (limits == ResolutionLimits.NO_LIMITS) {
                 rememberFullyResolved(state, blueId, resolved);
             }
             return resolved.clone();

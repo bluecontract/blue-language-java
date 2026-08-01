@@ -2,7 +2,7 @@ package blue.language.identity;
 
 import blue.language.model.Node;
 import blue.language.model.NodeIdentityProvider;
-import blue.language.utils.NodeToBlueIdInput;
+import blue.language.identity.NodeToBlueIdInput;
 
 import java.util.List;
 

@@ -13,7 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 /** Fresh-JVM probe because the shared mapper is intentionally process-global and mutable. */
 public final class Base58Sha256ProviderMapperCustomizationProbe {

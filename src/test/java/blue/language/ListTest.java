@@ -20,7 +20,7 @@ import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.processor.FailureCapture;
 import blue.language.graph.NodeExpander;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -92,7 +92,7 @@ public class ListTest {
 
         nodeProvider.addSingleNodes(x, y);
         // when
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals(3, node.getItems().size());
@@ -121,7 +121,7 @@ public class ListTest {
         // when
         nodeProvider.addSingleNodes(x, y);
         // then
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), ResolutionLimits.NO_LIMITS));
     }
 
     @Test
@@ -145,7 +145,7 @@ public class ListTest {
 
         nodeProvider.addSingleNodes(x, y);
         // when
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), ResolutionLimits.NO_LIMITS);
 
         // then
         assertEquals(2, node.getItems().size());
@@ -258,7 +258,7 @@ public class ListTest {
 
     private Node preprocessAndExpand(Node node) {
         Node result = preprocessor.preprocess(node);
-        expander.expand(result, Limits.NO_LIMITS);
+        expander.expand(result, ResolutionLimits.NO_LIMITS);
         return result;
     }
 

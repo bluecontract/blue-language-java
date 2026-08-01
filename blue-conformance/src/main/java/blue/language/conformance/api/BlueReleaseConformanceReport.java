@@ -1,6 +1,6 @@
 package blue.language.conformance.api;
 
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 
 import java.util.ArrayList;
 import java.util.Collections;

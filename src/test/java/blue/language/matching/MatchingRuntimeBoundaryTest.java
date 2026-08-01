@@ -6,7 +6,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.matching.FrozenTypeMatcher;
 import blue.language.matching.NodeTypeMatcher;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -81,12 +81,12 @@ class MatchingRuntimeBoundaryTest {
         }
 
         @Override
-        public void expandForMatching(Node source, Limits limits) {
+        public void expandForMatching(Node source, ResolutionLimits limits) {
             expandCalls++;
         }
 
         @Override
-        public Node resolveForMatching(Node source, Limits limits) {
+        public Node resolveForMatching(Node source, ResolutionLimits limits) {
             resolveCalls++;
             return source;
         }

@@ -4,7 +4,7 @@ import blue.language.model.wire.SchemaPropertyConstants;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import java.lang.reflect.Array;

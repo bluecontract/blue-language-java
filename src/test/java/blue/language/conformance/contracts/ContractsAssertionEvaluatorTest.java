@@ -3,7 +3,7 @@ package blue.language.conformance.contracts;
 import blue.language.model.Node;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 

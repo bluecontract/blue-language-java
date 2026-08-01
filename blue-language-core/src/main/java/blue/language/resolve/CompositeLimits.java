@@ -1,8 +1,9 @@
-package blue.language.utils.limits;
+package blue.language.resolve;
 
 import blue.language.model.Node;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -12,16 +13,17 @@ import java.util.List;
  * exit notifications are forwarded in declaration order, so this composite
  * must be balanced exactly like an individual limit.</p>
  */
-public class CompositeLimits implements blue.language.utils.limits.Limits {
-    private List<blue.language.utils.limits.Limits> limitsList;
+final class CompositeLimits implements ResolutionLimits {
+    private final List<ResolutionLimits> limitsList;
 
     /**
      * Creates an intersection over supplied limits.
      *
      * @param limits policies consulted in order
      */
-    public CompositeLimits(blue.language.utils.limits.Limits... limits) {
-        this.limitsList = Arrays.asList(limits);
+    CompositeLimits(ResolutionLimits... limits) {
+        this.limitsList = Collections.unmodifiableList(
+                Arrays.asList(limits.clone()));
     }
 
     @Override
@@ -53,6 +55,6 @@ public class CompositeLimits implements blue.language.utils.limits.Limits {
 
     @Override
     public void exitPathSegment() {
-        limitsList.forEach(Limits::exitPathSegment);
+        limitsList.forEach(ResolutionLimits::exitPathSegment);
     }
 }

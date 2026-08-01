@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.identity;
 
 import blue.language.model.Node;
 

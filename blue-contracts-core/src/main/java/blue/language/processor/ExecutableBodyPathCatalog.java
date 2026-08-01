@@ -6,9 +6,9 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.NodePathEditor;
+import blue.language.model.NodePathEditor;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;

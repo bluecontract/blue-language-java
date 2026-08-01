@@ -2,7 +2,7 @@ package blue.language.provider;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Collections;
@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 /**
  * Base provider that converts stored JSON content into Blue nodes and resolves

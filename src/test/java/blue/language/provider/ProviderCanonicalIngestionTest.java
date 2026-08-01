@@ -7,7 +7,7 @@ import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ProviderCanonicalIngestionTest {

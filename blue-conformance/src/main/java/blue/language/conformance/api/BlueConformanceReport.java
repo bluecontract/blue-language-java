@@ -2,7 +2,7 @@ package blue.language.conformance.api;
 
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.registry.RegistryManifestConstants;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

@@ -9,10 +9,10 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.NodePathEditor;
-import blue.language.utils.Nodes;
+import blue.language.model.NodePathEditor;
+import blue.language.model.Nodes;
 import blue.language.mapping.TypeClassResolver;
 
 import java.nio.charset.StandardCharsets;

@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 
 class ResolvedInstanceSchemaValidationTest {
 
@@ -339,7 +339,7 @@ class ResolvedInstanceSchemaValidationTest {
         // when
         IllegalArgumentException failure = captureFailure(
                 () -> merger.merge(target, reference(unavailableId),
-                        blue.language.utils.limits.Limits.NO_LIMITS));
+                        blue.language.resolve.ResolutionLimits.NO_LIMITS));
         boolean verifiedCanonicalPresent = cache.getVerifiedCanonical(unavailableId).isPresent();
         int fetchCount = provider.fetches(unavailableId);
 

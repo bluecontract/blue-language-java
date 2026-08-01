@@ -13,7 +13,7 @@ import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.NodeToBlueIdInput;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;

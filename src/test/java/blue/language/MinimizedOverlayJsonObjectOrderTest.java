@@ -18,9 +18,9 @@ import blue.language.model.Schema;
 import blue.language.merge.Merger;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.MinimizedOverlayBuilder;
+import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -38,10 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
-import static blue.language.utils.limits.Limits.NO_LIMITS;
+import static blue.language.resolve.ResolutionLimits.NO_LIMITS;
 
 class MinimizedOverlayJsonObjectOrderTest {
 
@@ -338,7 +338,7 @@ class MinimizedOverlayJsonObjectOrderTest {
         // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(
-                source, PathLimits.withSinglePath("/visible")));
+                source, ResolutionLimits.withSinglePath("/visible")));
 
         assertEquals("Specific Value", resolved.getProperties().get("visible").getName());
         assertEquals("shown", resolved.getAsText("/visible"));
@@ -381,7 +381,7 @@ class MinimizedOverlayJsonObjectOrderTest {
         IllegalArgumentException limitedFailure = assertThrows(
                 IllegalArgumentException.class,
                 () -> blue.resolve(
-                        source.clone(), PathLimits.withSinglePath("/item/visible")));
+                        source.clone(), ResolutionLimits.withSinglePath("/item/visible")));
 
         assertEquals(BlueLanguageErrorCategory.FixedValueConflict,
                 BlueLanguageErrorClassifier.classify(fullFailure));
@@ -432,7 +432,7 @@ class MinimizedOverlayJsonObjectOrderTest {
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,
                 () -> blue.resolve(
-                        source, PathLimits.withSinglePath("/item/visible")));
+                        source, ResolutionLimits.withSinglePath("/item/visible")));
 
         assertEquals(BlueLanguageErrorCategory.FixedValueConflict,
                 BlueLanguageErrorClassifier.classify(failure));
@@ -640,7 +640,7 @@ class MinimizedOverlayJsonObjectOrderTest {
         // then
 
         Node resolved = assertDoesNotThrow(() -> new Blue().resolve(
-                source, PathLimits.withSinglePath("/item")));
+                source, ResolutionLimits.withSinglePath("/item")));
 
         assertEquals("Specific Item", resolved.getAsNode("/item").getName());
     }

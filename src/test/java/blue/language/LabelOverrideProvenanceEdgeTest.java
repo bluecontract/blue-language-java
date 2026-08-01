@@ -17,14 +17,14 @@ import blue.language.merge.Merger;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
-import static blue.language.utils.limits.Limits.NO_LIMITS;
+import static blue.language.resolve.ResolutionLimits.NO_LIMITS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -155,7 +155,7 @@ class LabelOverrideProvenanceEdgeTest {
 
         assertDoesNotThrow(() -> new Merger(
                 blue.getMergingProcessor(), provider).merge(
-                target, overlay, PathLimits.withSinglePath("/item")));
+                target, overlay, ResolutionLimits.withSinglePath("/item")));
 
         assertEquals("Specific Item", target.getAsNode("/item").getName());
     }
@@ -522,8 +522,8 @@ class LabelOverrideProvenanceEdgeTest {
         return new Node().blueId(blueId);
     }
 
-    private static PathLimits limitedSecondEntryField() {
-        return new PathLimits.Builder()
+    private static ResolutionLimits limitedSecondEntryField() {
+        return ResolutionLimits.builder()
                 .addPath("/entries/0")
                 .addPath("/entries/1/field")
                 .build();

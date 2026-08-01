@@ -16,7 +16,7 @@ import blue.language.processor.model.ProcessingTerminatedMarker;
 import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.model.TypeGeneralizationPolicy;
 import blue.language.processor.model.TypeGeneralizationRule;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 

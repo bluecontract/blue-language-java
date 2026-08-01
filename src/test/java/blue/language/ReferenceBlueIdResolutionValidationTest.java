@@ -23,11 +23,11 @@ import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.provider.CyclicSetProofResult;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIdReferenceValidator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIdReferenceValidator;
+import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.registry.NodeProviderWrapper;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -174,7 +174,7 @@ class ReferenceBlueIdResolutionValidationTest {
 
         // when
         RuntimeException failure = captureFailure(
-                () -> blue.resolve(source, PathLimits.withSinglePath("/included")));
+                () -> blue.resolve(source, ResolutionLimits.withSinglePath("/included")));
         int fetchCount = fetches.get();
 
         // then

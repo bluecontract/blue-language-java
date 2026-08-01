@@ -4,9 +4,8 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.NodeToBlueIdInput;
-import blue.language.utils.limits.CompositeLimits;
-import blue.language.utils.limits.Limits;
+import blue.language.identity.NodeToBlueIdInput;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.List;
 import java.util.Map;
@@ -44,7 +43,7 @@ public class NodeTypeMatcher {
      * @return {@code true} when the resolved candidate satisfies the pattern
      */
     public boolean matchesType(Node node, Node targetType) {
-        return matchesType(node, targetType, Limits.NO_LIMITS);
+        return matchesType(node, targetType, ResolutionLimits.NO_LIMITS);
     }
 
     /**
@@ -55,7 +54,7 @@ public class NodeTypeMatcher {
      * @param globalLimits caller-supplied resolution limits
      * @return {@code true} when the resolved candidate satisfies the pattern
      */
-    public boolean matchesType(Node node, Node targetType, Limits globalLimits) {
+    public boolean matchesType(Node node, Node targetType, ResolutionLimits globalLimits) {
         if (targetType == null) {
             return true;
         }
@@ -66,7 +65,7 @@ public class NodeTypeMatcher {
         try {
             Node targetPatternNode = runtime.preprocessForMatching(
                     targetType.clone());
-            Limits matchingLimits = matchingLimits(globalLimits, targetPatternNode);
+            ResolutionLimits matchingLimits = matchingLimits(globalLimits, targetPatternNode);
             FrozenNode resolvedNode = FrozenNode.fromResolvedNode(resolveForMatching(node, matchingLimits));
             FrozenNode targetPattern = FrozenNode.fromResolvedNode(targetPatternNode);
             return matcherFor(globalLimits).matchesType(resolvedNode, targetPattern);
@@ -101,7 +100,7 @@ public class NodeTypeMatcher {
         return matchesResolvedType(snapshot.resolvedAt(pointer), resolvedTargetType);
     }
 
-    private Node resolveForMatching(Node node, Limits limits) {
+    private Node resolveForMatching(Node node, ResolutionLimits limits) {
         /*
          * Mutable compatibility callers may supply a verified materialization
          * produced by a provider or snapshot. Its attached identity is
@@ -117,13 +116,13 @@ public class NodeTypeMatcher {
         return resolved;
     }
 
-    private Limits matchingLimits(Limits globalLimits, Node targetPattern) {
-        Limits effectiveGlobalLimits = globalLimits != null ? globalLimits : Limits.NO_LIMITS;
-        return new CompositeLimits(effectiveGlobalLimits, new TargetPatternLimits(targetPattern));
+    private ResolutionLimits matchingLimits(ResolutionLimits globalLimits, Node targetPattern) {
+        ResolutionLimits effectiveGlobalLimits = globalLimits != null ? globalLimits : ResolutionLimits.NO_LIMITS;
+        return ResolutionLimits.allOf(effectiveGlobalLimits, new TargetPatternLimits(targetPattern));
     }
 
-    private FrozenTypeMatcher matcherFor(Limits globalLimits) {
-        if (globalLimits == null || globalLimits == Limits.NO_LIMITS) {
+    private FrozenTypeMatcher matcherFor(ResolutionLimits globalLimits) {
+        if (globalLimits == null || globalLimits == ResolutionLimits.NO_LIMITS) {
             return frozenMatcher;
         }
         return new FrozenTypeMatcher(runtime, false);
@@ -197,7 +196,7 @@ public class NodeTypeMatcher {
         return cloned;
     }
 
-    private static final class TargetPatternLimits implements Limits {
+    private static final class TargetPatternLimits implements ResolutionLimits {
         private final Node targetPattern;
         private final Stack<String> currentPath = new Stack<>();
         private final Stack<Boolean> enteredPathSegment = new Stack<>();

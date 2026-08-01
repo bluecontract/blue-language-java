@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 
 /**
  * Size-bounded least-recently-used acceleration cache for provider outcomes.

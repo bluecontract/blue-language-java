@@ -2,7 +2,7 @@ package blue.language.conformance.contracts;
 
 import blue.language.model.Node;
 import blue.language.model.NodeWireForm;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 

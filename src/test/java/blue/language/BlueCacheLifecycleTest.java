@@ -29,7 +29,7 @@ import blue.language.processor.model.MarkerContract;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -154,7 +154,7 @@ class BlueCacheLifecycleTest {
 
         // when
         blue.preprocessingAliases(Collections.singletonMap("alias", authoritative.blueId()));
-        blue.setGlobalLimits(Limits.NO_LIMITS);
+        blue.setGlobalLimits(ResolutionLimits.NO_LIMITS);
         blue.nodeProvider(node -> null);
         ResolvedSnapshot loaded = blue.loadSnapshot(authoritative.blueId());
         int pinnedEntries =
@@ -301,7 +301,7 @@ class BlueCacheLifecycleTest {
         DocumentProcessor afterAliasAddition = blue.getDocumentProcessor();
         blue.preprocessingAliases(Collections.singletonMap("two", "value"));
         DocumentProcessor afterAliasReplacement = blue.getDocumentProcessor();
-        blue.setGlobalLimits(Limits.NO_LIMITS);
+        blue.setGlobalLimits(ResolutionLimits.NO_LIMITS);
         DocumentProcessor afterLimitReplacement = blue.getDocumentProcessor();
         blue.close();
         boolean borrowedClosed = borrowed.isClosed();
@@ -569,7 +569,7 @@ class BlueCacheLifecycleTest {
                 () -> blue.isInitialized(document(2)),
                 () -> blue.isInitialized(snapshot),
                 () -> blue.resolvePreservingPaths(document(2),
-                        Limits.NO_LIMITS,
+                        ResolutionLimits.NO_LIMITS,
                         Collections.singletonList("/")),
                 () -> blue.nodeMatchesType(new Node(), new Node()),
                 () -> blue.nodeMatchesType(
@@ -577,7 +577,7 @@ class BlueCacheLifecycleTest {
                         snapshot.frozenResolvedRoot()),
                 () -> blue.nodeMatchesType(
                         snapshot, "/", snapshot.frozenResolvedRoot()),
-                () -> blue.expand(document(2), Limits.NO_LIMITS),
+                () -> blue.expand(document(2), ResolutionLimits.NO_LIMITS),
                 () -> blue.preprocess(document(2)),
                 () -> blue.yamlToNode("value: 2"),
                 () -> blue.jsonToNode("{\"value\":2}"),

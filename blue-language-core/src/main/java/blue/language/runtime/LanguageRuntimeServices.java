@@ -268,7 +268,7 @@ final class RuntimeBlueMatching implements BlueMatching {
         this.runtime = runtime;
         this.delegate = new LanguageMatchingService(
                 runtime,
-                blue.language.utils.limits.Limits.NO_LIMITS,
+                blue.language.resolve.ResolutionLimits.NO_LIMITS,
                 runtime::resolveLimited);
     }
 

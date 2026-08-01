@@ -5,7 +5,7 @@ import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.provider.Types;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -36,7 +36,7 @@ final class ListOverlayMerger {
         this.nodeProvider = nodeProvider;
     }
 
-    void mergeChildren(Node target, List<Node> sourceChildren, Limits limits) {
+    void mergeChildren(Node target, List<Node> sourceChildren, ResolutionLimits limits) {
         List<Node> targetChildren = target.getItems();
         String mergePolicy = effectiveMergePolicy(target);
         validateListControlScope(target, sourceChildren);
@@ -70,7 +70,7 @@ final class ListOverlayMerger {
     }
 
     private List<Node> resolveInitialChildren(
-            List<Node> sourceChildren, Limits limits, Node itemType) {
+            List<Node> sourceChildren, ResolutionLimits limits, Node itemType) {
         List<Node> result = new ArrayList<>();
         int start = startsWithPrevious(sourceChildren) ? 1 : 0;
         for (int index = start; index < sourceChildren.size(); index++) {
@@ -95,7 +95,7 @@ final class ListOverlayMerger {
     private void mergeAppendOnlyChildren(
             List<Node> targetChildren,
             List<Node> sourceChildren,
-            Limits limits,
+            ResolutionLimits limits,
             Node itemType) {
         appendChildren(targetChildren, sourceChildren,
                 startsWithPrevious(sourceChildren) ? 1 : 0, limits, itemType);
@@ -104,7 +104,7 @@ final class ListOverlayMerger {
     private void mergePositionalChildren(
             List<Node> targetChildren,
             List<Node> sourceChildren,
-            Limits limits,
+            ResolutionLimits limits,
             Node itemType) {
         boolean hasPositionControls = sourceChildren.stream()
                 .anyMatch(child -> child.getPosition() != null);
@@ -148,7 +148,7 @@ final class ListOverlayMerger {
             List<Node> targetChildren,
             List<Node> sourceChildren,
             int start,
-            Limits limits,
+            ResolutionLimits limits,
             Node itemType) {
         int sourceLength = sourceChildren.size() - start;
         if (sourceLength < targetChildren.size()) {
@@ -184,12 +184,12 @@ final class ListOverlayMerger {
     }
 
     private void mergeExistingPosition(
-            Node target, Node source, String segment, Limits limits) {
+            Node target, Node source, String segment, ResolutionLimits limits) {
         if (!limits.shouldMergePathSegment(segment, source)) {
             engine.markIncomplete(segment);
             return;
         }
-        boolean expansionAllowed = limits == Limits.NO_LIMITS
+        boolean expansionAllowed = limits == ResolutionLimits.NO_LIMITS
                 || limits.shouldExpandPathSegment(segment, source);
         limits.enterPathSegment(segment, source);
         engine.enterValidationPath(segment, expansionAllowed);
@@ -205,7 +205,7 @@ final class ListOverlayMerger {
             List<Node> targetChildren,
             int position,
             Node overlay,
-            Limits limits,
+            ResolutionLimits limits,
             Node itemType) {
         Node inherited = targetChildren.get(position);
         Node effectiveItemType = inherited.getType() != null
@@ -244,7 +244,7 @@ final class ListOverlayMerger {
             List<Node> targetChildren,
             int position,
             Node source,
-            Limits limits,
+            ResolutionLimits limits,
             Node itemType) {
         Node resolved = resolveListChild(
                 source, limits, String.valueOf(position), itemType);
@@ -254,9 +254,9 @@ final class ListOverlayMerger {
     }
 
     private void mergeTypedPosition(
-            Node inherited, Node resolved, int position, Limits limits) {
+            Node inherited, Node resolved, int position, ResolutionLimits limits) {
         String segment = String.valueOf(position);
-        boolean expansionAllowed = limits == Limits.NO_LIMITS
+        boolean expansionAllowed = limits == ResolutionLimits.NO_LIMITS
                 || limits.shouldExpandPathSegment(segment, resolved);
         limits.enterPathSegment(segment, resolved);
         engine.enterValidationPath(segment, expansionAllowed);
@@ -284,7 +284,7 @@ final class ListOverlayMerger {
             List<Node> targetChildren,
             List<Node> sourceChildren,
             int start,
-            Limits limits,
+            ResolutionLimits limits,
             Node itemType) {
         for (int index = start; index < sourceChildren.size(); index++) {
             Node resolved = resolveListChild(sourceChildren.get(index), limits,
@@ -296,7 +296,7 @@ final class ListOverlayMerger {
     }
 
     private List<Node> resolvePreviousAnchor(
-            Node previousAnchor, Limits limits, Node itemType) {
+            Node previousAnchor, ResolutionLimits limits, Node itemType) {
         List<Node> fetched = nodeProvider.fetchByBlueId(
                 previousAnchor.getPreviousBlueId());
         if (fetched == null || fetched.isEmpty()) {
@@ -346,7 +346,7 @@ final class ListOverlayMerger {
     }
 
     private Node resolveListChild(
-            Node child, Limits limits, String segment, Node itemType) {
+            Node child, ResolutionLimits limits, String segment, Node itemType) {
         if (child.getPreviousBlueId() != null || child.getPosition() != null) {
             throw new IllegalArgumentException(
                     "List control items must be consumed before resolving list children.");
@@ -355,7 +355,7 @@ final class ListOverlayMerger {
             engine.markIncomplete(segment);
             return null;
         }
-        boolean expansionAllowed = limits == Limits.NO_LIMITS
+        boolean expansionAllowed = limits == ResolutionLimits.NO_LIMITS
                 || limits.shouldExpandPathSegment(segment, child);
         limits.enterPathSegment(segment, child);
         engine.enterValidationPath(segment, expansionAllowed);

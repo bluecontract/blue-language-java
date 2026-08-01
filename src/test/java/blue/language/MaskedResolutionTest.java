@@ -15,7 +15,7 @@ import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -27,7 +27,7 @@ import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -136,7 +136,7 @@ class MaskedResolutionTest {
         // when
         Node resolved = blue.resolvePreservingPaths(
                 document,
-                PathLimits.withSinglePath("/contracts/apply"),
+                ResolutionLimits.withSinglePath("/contracts/apply"),
                 Collections.singleton("/contracts/apply/payload"));
         Node apply = resolved.getAsNode("/contracts/apply");
 

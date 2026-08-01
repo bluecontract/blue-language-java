@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 
 import java.io.IOException;
 import java.math.BigDecimal;

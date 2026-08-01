@@ -3,9 +3,9 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.utils.CanonicalIdentityInputBuilder;
+import blue.language.identity.CanonicalIdentityInputBuilder;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.Nodes;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;

@@ -8,12 +8,11 @@ import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
-import blue.language.utils.CanonicalIdentityInputBuilder;
+import blue.language.identity.CanonicalIdentityInputBuilder;
 import blue.language.model.wire.JsonPointer;
-import blue.language.utils.MinimizedOverlayBuilder;
+import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.registry.NodeProviderWrapper;
-import blue.language.utils.limits.DeferredReferencePathLimits;
-import blue.language.utils.limits.Limits;
+import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,7 +34,7 @@ final class FrozenConformancePlanner {
     private final NodeProvider nodeProvider;
     private final MergingProcessor mergingProcessor;
     private final ResolvedReferenceCache resolvedReferenceCache;
-    private final Limits resolutionLimits;
+    private final ResolutionLimits resolutionLimits;
 
     FrozenConformancePlanner(NodeProvider nodeProvider,
                              MergingProcessor mergingProcessor,
@@ -55,8 +54,8 @@ final class FrozenConformancePlanner {
         this.resolvedReferenceCache = resolvedReferenceCache;
         this.resolutionLimits = deferredReferencePaths == null
                 || deferredReferencePaths.isEmpty()
-                ? Limits.NO_LIMITS
-                : new DeferredReferencePathLimits(deferredReferencePaths);
+                ? ResolutionLimits.NO_LIMITS
+                : ResolutionLimits.deferringReferencesAt(deferredReferencePaths);
     }
 
     ConformancePlan plan(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {

@@ -1,8 +1,6 @@
-package blue.language.utils;
+package blue.language.model;
 
 import blue.language.model.wire.BlueLanguageConstants;
-
-import blue.language.model.Node;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

@@ -26,7 +26,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.MinimizedOverlayBuilder;
+import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.Test;
 

@@ -10,8 +10,8 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.registry.NodeProviderWrapper;
-import blue.language.utils.BlueIds;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.identity.BlueIds;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

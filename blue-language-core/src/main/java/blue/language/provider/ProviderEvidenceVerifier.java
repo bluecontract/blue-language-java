@@ -9,7 +9,7 @@ import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodeWireForm;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 import java.io.IOException;

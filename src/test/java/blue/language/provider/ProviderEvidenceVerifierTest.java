@@ -6,7 +6,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.runtime.BlueLanguageRuntime;
-import blue.language.utils.UncheckedObjectMapper;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;

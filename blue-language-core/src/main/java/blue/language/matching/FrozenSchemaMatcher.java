@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
 import blue.language.model.value.BlueNumbers;
-import blue.language.utils.ScalarNodeIdentity;
+import blue.language.identity.ScalarNodeIdentity;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

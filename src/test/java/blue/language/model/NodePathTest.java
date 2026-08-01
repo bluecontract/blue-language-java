@@ -1,7 +1,7 @@
 package blue.language.model;
 
-import blue.language.utils.NodePathEditor;
-import blue.language.utils.NodePathSelector;
+import blue.language.model.NodePathEditor;
+import blue.language.model.NodePathSelector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.junit.jupiter.api.BeforeEach;

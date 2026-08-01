@@ -7,7 +7,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.ListBlueIdFold;
 import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.value.BlueNumbers;
 import blue.language.model.NodeWireForm;
 import blue.language.model.SchemaWireForm;

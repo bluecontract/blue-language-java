@@ -7,7 +7,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
-import blue.language.utils.SchemaEnumCanonicalizer;
+import blue.language.identity.SchemaEnumCanonicalizer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

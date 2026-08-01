@@ -2,7 +2,7 @@ package blue.language.preprocess;
 
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.BlueIds;
+import blue.language.identity.BlueIds;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.resolve;
 
 import blue.language.model.Node;
 

@@ -25,7 +25,7 @@ import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.preprocess.provider.BasicNodeProvider;
-import blue.language.utils.limits.PathLimits;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -116,7 +116,10 @@ class ResolvedSchemaValidationLifecycleTest {
         // given
         Fixture fixture = new Fixture();
         Node missing = new Node().type(reference(fixture.holderTypeId));
-        PathLimits skipRequired = new PathLimits(Collections.singleton("/unrelated"), 8);
+        ResolutionLimits skipRequired = ResolutionLimits.builder()
+                .addPaths(Collections.singleton("/unrelated"))
+                .setMaxDepth(8)
+                .build();
 
         // when
         Node partial = fixture.blue.resolve(missing, skipRequired);
@@ -132,7 +135,10 @@ class ResolvedSchemaValidationLifecycleTest {
     void shouldRunRequiredValidationInsideIncludedPath() {
         // given
         Fixture fixture = new Fixture();
-        PathLimits includeRequired = new PathLimits(Collections.singleton("/field"), 8);
+        ResolutionLimits includeRequired = ResolutionLimits.builder()
+                .addPaths(Collections.singleton("/field"))
+                .setMaxDepth(8)
+                .build();
 
         // when
         IllegalArgumentException failure = captureFailure(
@@ -160,7 +166,10 @@ class ResolvedSchemaValidationLifecycleTest {
 
         // when
         Node partial = fixture.blue.resolve(
-                instance, new PathLimits(Collections.singleton("*"), 2));
+                instance, ResolutionLimits.builder()
+                        .addPaths(Collections.singleton("*"))
+                        .setMaxDepth(2)
+                        .build());
         Node complete = fixture.blue.resolve(instance);
 
         // then
@@ -290,7 +299,7 @@ class ResolvedSchemaValidationLifecycleTest {
         // when
         IllegalArgumentException failure = captureFailure(
                 () -> new blue.language.merge.Merger(processor(new SchemaVerifier()), provider)
-                        .merge(target, reference(payloadlessId), blue.language.utils.limits.Limits.NO_LIMITS));
+                        .merge(target, reference(payloadlessId), blue.language.resolve.ResolutionLimits.NO_LIMITS));
         Node emptyList = new Blue(new BasicNodeProvider()).resolve(new Node()
                 .properties("values", new Node().schema(new Schema()
                         .minItems(0).maxItems(0).uniqueItems(true))
@@ -501,11 +510,14 @@ class ResolvedSchemaValidationLifecycleTest {
                     .properties("broad", reference(contentId));
         }
 
-        private PathLimits limits() {
+        private ResolutionLimits limits() {
             Set<String> paths = new LinkedHashSet<>();
             paths.add("/narrow");
             paths.add("/broad/nested");
-            return new PathLimits(paths, 8);
+            return ResolutionLimits.builder()
+                    .addPaths(paths)
+                    .setMaxDepth(8)
+                    .build();
         }
     }
 
