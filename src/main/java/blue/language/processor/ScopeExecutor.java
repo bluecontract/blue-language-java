@@ -1031,9 +1031,6 @@ final class ScopeExecutor {
                         deliverEmbeddedOccurrence(
                                 ancestor, occurrence);
                     }
-                    if (execution.rootIsTerminated()) {
-                        break;
-                    }
                 }
             }
             quiescent = !runtime.hasPendingEventOccurrences()

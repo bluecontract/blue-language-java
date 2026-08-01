@@ -281,6 +281,8 @@ class DocumentProcessorSnapshotTransactionTest {
         Node document = YAML_MAPPER.readValue(
                 "profile:\n" +
                 "  label: Ana\n" +
+                "  location:\n" +
+                "    existing: true\n" +
                 "tags:\n" +
                 "  - old\n" +
                 "obsolete: true", Node.class);

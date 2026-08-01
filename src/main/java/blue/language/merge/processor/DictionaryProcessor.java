@@ -26,6 +26,16 @@ public class DictionaryProcessor implements MergingProcessor {
 
     @Override
     public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+        Node effectiveCollectionType =
+                source.getType() != null
+                        ? source.getType()
+                        : target.getType();
+        if (Types.isDictionaryType(effectiveCollectionType, nodeProvider)
+                && (source.getValue() != null
+                || source.getItems() != null)) {
+            throw new IllegalArgumentException(
+                    "Dictionary-compatible values must use object encoding");
+        }
         if (source.getKeyType() != null
                 || source.getValueType() != null) {
             /*
@@ -34,10 +44,6 @@ public class DictionaryProcessor implements MergingProcessor {
              * still wins for validation and cannot borrow Dictionary
              * compatibility from the target.
              */
-            Node effectiveCollectionType =
-                    source.getType() != null
-                            ? source.getType()
-                            : target.getType();
             if (!Types.isDictionaryType(
                     effectiveCollectionType,
                     nodeProvider)) {

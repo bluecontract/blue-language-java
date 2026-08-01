@@ -521,7 +521,7 @@ class FrozenCanonicalDigesterTest {
         assertInstanceOf(RuntimeException.class,
                 schemaFailure);
         assertEquals("\"blue\" is a preprocessing directive and must not be present in BlueId input. "
-                        + "Call preprocess/canonicalize/calculateSemanticBlueId first. Path: /",
+                        + "Call preprocess/canonicalize/calculateSourceDocumentBlueId first. Path: /",
                 schemaFailure.getMessage(),
                 "rc.11 FrozenNode schema diagnostics use the nested-node root path");
         assertSameFailure(enumFailure);

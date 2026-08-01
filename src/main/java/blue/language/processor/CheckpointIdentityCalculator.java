@@ -53,7 +53,7 @@ final class CheckpointIdentityCalculator {
             }
             long contentStart = System.nanoTime();
             try {
-                String identity = blue.calculateSemanticBlueId(
+                String identity = blue.calculateSourceDocumentBlueId(
                         sourceProjection.clone());
                 sink.addCheckpointContentBlueIdNanos(System.nanoTime() - contentStart);
                 return identity;

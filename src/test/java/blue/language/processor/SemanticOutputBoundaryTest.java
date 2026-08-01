@@ -44,7 +44,7 @@ final class SemanticOutputBoundaryTest {
                                             text("b")));
             long before = invocation.totalGas();
             String expectedBlueId =
-                    invocation.blue.calculateSemanticBlueId(
+                    invocation.blue.calculateSourceDocumentBlueId(
                             output);
 
             // when

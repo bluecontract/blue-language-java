@@ -132,6 +132,61 @@ final class InternalEventOccurrenceFifoTest {
     }
 
     @Test
+    void shouldDeliverAlreadyEmittedOccurrenceToFrozenActiveAncestorsAfterRootTerminates() {
+        // given
+        ProbeProcessor probe = new ProbeProcessor();
+        try (Blue blue = configuredBlue(probe)) {
+            ProcessorEngine.Execution execution =
+                    new ProcessorEngine.Execution(
+                            blue.getDocumentProcessor(),
+                            frozenRootTerminationDocument());
+            execution.preflightScope("/");
+            execution.preflightScope("/top");
+            execution.preflightScope("/top/mid");
+            execution.preflightScope("/top/mid/leaf");
+            execution.runtime().attachScopeOccurrence(
+                    "/", "/top");
+            execution.runtime().attachScopeOccurrence(
+                    "/top", "/top/mid");
+            execution.runtime().attachScopeOccurrence(
+                    "/top/mid", "/top/mid/leaf");
+            ScopeRuntimeContext source = execution.runtime()
+                    .existingScope("/top/mid/leaf");
+            execution.runtime().enqueueEventOccurrence(
+                    new EventOccurrence(
+                            EVENT_A.clone(),
+                            EVENT_A_BLUE_ID,
+                            source,
+                            source.freezeAncestorChain(),
+                            EventOccurrence.SourceMode.TRIGGERED,
+                            "alreadyEmitted"));
+            execution.runtime().existingScope("/")
+                    .finalizeTermination("root-finished");
+
+            // when
+            execution.drainInternalEvents();
+
+            // then
+            assertEquals(
+                    Arrays.asList(
+                            "nested-mid:E:A",
+                            "top:E:A"),
+                    probe.order);
+            assertEquals(2, probe.embeddedDeliveries.size());
+            assertEmbeddedDelivery(
+                    probe.embeddedDeliveries.get(0),
+                    "/top/mid",
+                    "/leaf",
+                    EVENT_A_BLUE_ID);
+            assertEmbeddedDelivery(
+                    probe.embeddedDeliveries.get(1),
+                    "/top",
+                    "/mid/leaf",
+                    EVENT_A_BLUE_ID);
+        }
+    }
+
+    @Test
     void shouldExposeRootApplicationEventsPubliclyInOrderWithMultiplicity() {
         // given
         ProbeProcessor probe = new ProbeProcessor();
@@ -245,6 +300,33 @@ final class InternalEventOccurrenceFifoTest {
                         .properties(
                                 "observeDuplicates",
                                 handler("triggered")));
+    }
+
+    private static Node frozenRootTerminationDocument() {
+        Node leaf = new Node().name("Frozen Leaf");
+        Node middle = new Node()
+                .name("Frozen Middle")
+                .properties("leaf", leaf)
+                .contracts(new Node()
+                        .properties(
+                                "descendantEvents",
+                                embeddedChannel("/leaf"))
+                        .properties(
+                                "middleObserve",
+                                handler("descendantEvents")));
+        Node top = new Node()
+                .name("Frozen Top")
+                .properties("mid", middle)
+                .contracts(new Node()
+                        .properties(
+                                "descendantEvents",
+                                embeddedChannel("/mid/leaf"))
+                        .properties(
+                                "middleObserve",
+                                handler("descendantEvents")));
+        return new Node()
+                .name("Frozen Root")
+                .properties("top", top);
     }
 
     private static Node typed(String blueId) {
@@ -397,6 +479,14 @@ final class InternalEventOccurrenceFifoTest {
                             "middle-stop",
                             "after A");
                 }
+                return;
+            }
+            if ("/top/mid".equals(context.scopePath())) {
+                order.add("nested-mid:E:" + label);
+                return;
+            }
+            if ("/top".equals(context.scopePath())) {
+                order.add("top:E:" + label);
                 return;
             }
             order.add("root:E:" + label);

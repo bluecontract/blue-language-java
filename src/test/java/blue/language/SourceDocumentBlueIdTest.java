@@ -17,10 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class SemanticCanonicalizationTest {
+class SourceDocumentBlueIdTest {
 
     @Test
-    void shouldCalculateEquivalentSemanticBlueIdForSourceTypedIntegerValueOne() {
+    void shouldCalculateEquivalentSourceDocumentBlueIdForSourceTypedIntegerValueOne() {
         // given
         Blue blue = new Blue();
         Node source = YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class);
@@ -30,8 +30,8 @@ class SemanticCanonicalizationTest {
                         "value: 1", Node.class);
 
         // when
-        String sourceBlueId = blue.calculateSemanticBlueId(source);
-        String canonicalBlueId = blue.calculateSemanticBlueId(canonical);
+        String sourceBlueId = blue.calculateSourceDocumentBlueId(source);
+        String canonicalBlueId = blue.calculateSourceDocumentBlueId(canonical);
 
         // then
         assertEquals(canonicalBlueId, sourceBlueId);
@@ -81,7 +81,7 @@ class SemanticCanonicalizationTest {
     }
 
     @Test
-    void shouldRemoveRedundantInheritedOverridesBeforeSemanticHashing() {
+    void shouldRemoveRedundantInheritedOverridesBeforeSourceDocumentIdentity() {
         // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
@@ -106,8 +106,8 @@ class SemanticCanonicalizationTest {
 
         // when
         Node canonical = blue.canonicalize(noisy);
-        String minimalBlueId = blue.calculateSemanticBlueId(minimal);
-        String noisyBlueId = blue.calculateSemanticBlueId(noisy);
+        String minimalBlueId = blue.calculateSourceDocumentBlueId(minimal);
+        String noisyBlueId = blue.calculateSourceDocumentBlueId(noisy);
         String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
 
         // then
@@ -119,7 +119,7 @@ class SemanticCanonicalizationTest {
     }
 
     @Test
-    void shouldResolveTypesWhenCalculatingSemanticBlueId() {
+    void shouldResolveTypesWhenCalculatingSourceDocumentBlueId() {
         // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
@@ -137,15 +137,15 @@ class SemanticCanonicalizationTest {
         // when
         Node canonical = blue.canonicalize(source);
         String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
-        String semanticBlueId = blue.calculateSemanticBlueId(source);
+        String sourceDocumentBlueId = blue.calculateSourceDocumentBlueId(source);
 
         // then
         assertFalse(canonical.getProperties().containsKey("inherited"));
-        assertEquals(canonicalBlueId, semanticBlueId);
+        assertEquals(canonicalBlueId, sourceDocumentBlueId);
     }
 
     @Test
-    void shouldPreprocessRootBlueWhenCalculatingSemanticBlueId() {
+    void shouldPreprocessRootBlueWhenCalculatingSourceDocumentBlueId() {
         // given
         Blue blue = new Blue();
         Node aliased = YAML_MAPPER.readValue(
@@ -162,8 +162,8 @@ class SemanticCanonicalizationTest {
 
         // when
         Node canonical = blue.canonicalize(aliased);
-        String directBlueId = blue.calculateSemanticBlueId(direct);
-        String aliasedBlueId = blue.calculateSemanticBlueId(aliased);
+        String directBlueId = blue.calculateSourceDocumentBlueId(direct);
+        String aliasedBlueId = blue.calculateSourceDocumentBlueId(aliased);
 
         // then
         assertNull(canonical.getBlue());
@@ -171,28 +171,28 @@ class SemanticCanonicalizationTest {
     }
 
     @Test
-    void shouldRejectInvalidProviderContentWhenCalculatingSemanticBlueId() {
+    void shouldRejectInvalidProviderContentWhenCalculatingSourceDocumentBlueId() {
         // given
         String requestedBlueId = BlueIdCalculator.calculateBlueId(new Node().value("expected"));
         Blue blue = new Blue(blueId -> Collections.singletonList(new Node().value("actual")));
         Node source = new Node().type(new Node().blueId(requestedBlueId)).value("x");
 
         // when
-        Throwable failure = captureFailure(() -> blue.calculateSemanticBlueId(source));
+        Throwable failure = captureFailure(() -> blue.calculateSourceDocumentBlueId(source));
 
         // then
         assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void shouldRejectUnresolvableProviderReferencesWhenCalculatingSemanticBlueId() {
+    void shouldRejectUnresolvableProviderReferencesWhenCalculatingSourceDocumentBlueId() {
         // given
         String missingBlueId = BlueIdCalculator.calculateBlueId(new Node().value("missing"));
         Blue blue = new Blue(blueId -> null);
         Node source = new Node().type(new Node().blueId(missingBlueId)).value("x");
 
         // when
-        Throwable failure = captureFailure(() -> blue.calculateSemanticBlueId(source));
+        Throwable failure = captureFailure(() -> blue.calculateSourceDocumentBlueId(source));
 
         // then
         assertInstanceOf(IllegalArgumentException.class, failure);
@@ -224,11 +224,11 @@ class SemanticCanonicalizationTest {
         // when
         Node canonical = blue.canonicalize(source);
         String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
-        String semanticBlueId = blue.calculateSemanticBlueId(source);
+        String sourceDocumentBlueId = blue.calculateSourceDocumentBlueId(source);
 
         // then
         assertNoPreviousOrPos(canonical);
-        assertEquals(canonicalBlueId, semanticBlueId);
+        assertEquals(canonicalBlueId, sourceDocumentBlueId);
     }
 
     @Test
@@ -244,13 +244,13 @@ class SemanticCanonicalizationTest {
         // when
         Node canonical = blue.canonicalize(source);
         String canonicalBlueId = BlueIdCalculator.calculateBlueId(canonical);
-        String semanticBlueId = blue.calculateSemanticBlueId(source);
+        String sourceDocumentBlueId = blue.calculateSourceDocumentBlueId(source);
 
         // then
         assertEquals("x", canonical.getValue());
         assertEquals(Boolean.TRUE, canonical.get("/contracts/audit/enabled/value"));
         assertFalse(canonical.getProperties() != null && canonical.getProperties().containsKey("contracts"));
-        assertEquals(canonicalBlueId, semanticBlueId);
+        assertEquals(canonicalBlueId, sourceDocumentBlueId);
     }
 
     private void assertNoPreviousOrPos(Node node) {

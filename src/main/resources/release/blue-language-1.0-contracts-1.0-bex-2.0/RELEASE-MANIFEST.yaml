@@ -1979,8 +1979,8 @@ files:
   sha256: b25d6d255f84c584ed7a484411430fab50c18142a1bb6c08cfb104acf09d6f69
   bytes: 96656
 - path: specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: 3a318322eebd95b47e51d9c6ef51babe07959fdee293767bf0e32cc07ab9dbe0
-  bytes: 122662
+  sha256: d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1
+  bytes: 123886
 - path: specifications/blue-coordination-specification-1.0.md
   sha256: b227e6add4d35bf26eb3b9a9f643979f7e4a642d6da8d9e587f9964492a156cc
   bytes: 48652
@@ -2001,4 +2001,4 @@ packageIdentityAlgorithm:
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
   lineEndings: LF
-packageIdentity: sha256:1290ef331b58c9a5074deef30a6f5bf59afa573dd3446bb4131e10b6508ffd70
+packageIdentity: sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa

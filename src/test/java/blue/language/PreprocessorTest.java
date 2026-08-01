@@ -103,7 +103,7 @@ public class PreprocessorTest {
     }
 
     @Test
-    public void shouldApplyDefaultBaselineWhenBlueIsOmittedDuringPreprocessing() {
+    public void shouldApplyMandatoryBaselineWhenBlueIsOmittedDuringPreprocessing() {
         // given
         Node raw = YAML_MAPPER.readValue("x: 1", Node.class);
 
@@ -112,33 +112,6 @@ public class PreprocessorTest {
 
         // then
         assertEquals(INTEGER_TYPE_BLUE_ID, result.getAsText("/x/type/blueId"));
-    }
-
-    @Test
-    public void shouldMakeLegacyWithDefaultBlueBridgeMatchCanonicalPreprocess() {
-        // given
-        Node raw = YAML_MAPPER.readValue("x: 1", Node.class);
-
-        // when
-        Node direct = new Preprocessor(BootstrapProvider.INSTANCE).preprocessWithDefaultBlue(raw);
-        Node viaBlue = new Blue().preprocess(raw.clone());
-
-        // then
-        assertEquals(BlueIdCalculator.calculateBlueId(direct), BlueIdCalculator.calculateBlueId(viaBlue));
-    }
-
-    @Test
-    public void shouldApplyMandatoryBaselineThroughLegacyWithoutDefaultBlueBridge() {
-        // given
-        Node raw = YAML_MAPPER.readValue("x: 1", Node.class);
-
-        // when
-        Node result = new Preprocessor(BootstrapProvider.INSTANCE).preprocessWithoutDefaultBlue(raw);
-
-        // then
-        assertEquals(INTEGER_TYPE_BLUE_ID,
-                result.getAsText("/x/type/blueId"));
-        assertEquals(BigInteger.ONE, result.getProperties().get("x").getValue());
     }
 
     @Test

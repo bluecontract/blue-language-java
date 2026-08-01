@@ -54,7 +54,7 @@ public class BlueIdCalculator {
      * Calculates legacy structural identity without strict validation.
      *
      * @param node source node
-     * @return unchecked structural BlueId
+     * @return unchecked direct BlueId
      */
     public static String calculateUncheckedBlueId(Node node) {
         return BlueIdCalculator.INSTANCE.calculate(NodeToMapListOrValue.get(node));
@@ -193,6 +193,14 @@ public class BlueIdCalculator {
         return hashProvider.apply(hashes);
     }
 
+    /**
+     * Applies the single normative list fold: {@code L0 = id([])} and
+     * {@code Ln = fold(Ln-1, id(elementN))}. A leading {@code $previous}
+     * supplies an already established prefix accumulator, so appending
+     * {@code k} elements performs exactly {@code k} fold steps. Earlier edits
+     * are represented by rebuilding the affected suffix before this method is
+     * called; they are not a second identity algorithm.
+     */
     private String calculateList(List<Object> list) {
         String accumulator = hashProvider.apply(
                 Collections.singletonMap(LIST_SEED_KEY, LIST_SEED_VALUE));

@@ -167,7 +167,12 @@ class DocumentProcessorGeneralizationTest {
     void shouldVerifyApplicationBatchCannotWriteProcessorManagedInitializedMarker() {
         // given
         Blue blue = ProcessorTestSupport.blue();
-        Node document = new Node();
+        Node document = new Node().contracts(
+                new Node().properties(
+                        "application",
+                        new Node().properties(
+                                "enabled",
+                                new Node().value(true))));
         Node original = document.clone();
         DocumentProcessingRuntime runtime = runtime(blue, document);
 

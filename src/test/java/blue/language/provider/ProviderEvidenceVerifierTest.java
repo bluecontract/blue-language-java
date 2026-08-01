@@ -20,7 +20,7 @@ class ProviderEvidenceVerifierTest {
                         + "value: wanted",
                 Node.class);
         Blue blue = new Blue();
-        String requested = blue.calculateSemanticBlueId(source);
+        String requested = blue.calculateSourceDocumentBlueId(source);
         String preprocessing =
                 ProviderEvidenceVerifier.preprocessingEnvironmentIdentity(blue);
         String evidence =

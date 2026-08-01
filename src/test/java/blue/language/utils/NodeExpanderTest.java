@@ -253,23 +253,6 @@ public class NodeExpanderTest {
         assertEquals(3, nodeABC.getAsInteger("/2/value"));
     }
 
-    @SuppressWarnings("deprecation")
-    @Test
-    public void shouldRetainLegacyNodeExtenderAsCompatibilityBridge() {
-        // given
-        Node node = nodes.get("Y").clone();
-        Limits limits = new PathLimits.Builder()
-                .addPath("/forA")
-                .build();
-
-        // when
-        new NodeExtender(nodeProvider).extend(node, limits);
-
-        // then
-        assertEquals("A", node.get("/forA/name"));
-        assertEquals(BigInteger.valueOf(1), node.get("/forA/x"));
-    }
-
     @Test
     public void shouldLeaveMissingReferenceCollapsedWhenConfigured() {
         // given
@@ -298,25 +281,6 @@ public class NodeExpanderTest {
         // when
         try (Blue blue = new Blue(nodeProvider)) {
             blue.expand(node, limits);
-        }
-
-        // then
-        assertEquals("A", node.get("/forA/name"));
-        assertThrows(IllegalArgumentException.class, () -> node.get("/forX/a"));
-    }
-
-    @SuppressWarnings("deprecation")
-    @Test
-    public void shouldRetainLegacyBlueExtendAsCompatibilityBridge() {
-        // given
-        Node node = nodes.get("Y").clone();
-        Limits limits = new PathLimits.Builder()
-                .addPath("/forA")
-                .build();
-
-        // when
-        try (Blue blue = new Blue(nodeProvider)) {
-            blue.extend(node, limits);
         }
 
         // then

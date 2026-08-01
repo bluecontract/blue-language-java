@@ -91,6 +91,44 @@ final class FragmentedProcessingLocalityIntegrationTest {
         assertNotNull(baseline);
         assertEquals(ProcessorStatus.SUCCESS, baseline.status);
         assertEquals(8, variants.size());
+        SemanticLocalityEvidenceWriter.write(
+                "fragmented-matrix.json",
+                localityEvidence(runs));
+    }
+
+    private static Map<String, Object> localityEvidence(List<Run> runs) {
+        Map<String, Object> evidence = new LinkedHashMap<>();
+        evidence.put("schema", "blue-language-locality-evidence/1.0");
+        List<Map<String, Object>> observations = new ArrayList<>();
+        for (Run run : runs) {
+            Map<String, Object> observation = new LinkedHashMap<>();
+            observation.put("variant", run.variant.toString());
+            observation.put("requiredBlueIds", Arrays.asList(
+                    run.scenario.rootBlueId,
+                    run.scenario.eventBlueId,
+                    run.scenario.selectedBodyBlueId));
+            observation.put("forbiddenBlueIds",
+                    new ArrayList<>(run.scenario.forbiddenBlueIds));
+            observation.put("primaryRequestedBlueIds",
+                    run.primaryMetrics.requestedBlueIds);
+            observation.put("primarySemanticDemands",
+                    run.debug.trace().semanticDemands());
+            observation.put("primaryBackendLoadedBlueIds",
+                    new ArrayList<>(run.primaryMetrics.backendLoadedBlueIds));
+            observation.put("primaryBackendBytes",
+                    run.primaryMetrics.backendBytes);
+            observation.put("replayRequestedBlueIds",
+                    run.replayMetrics.requestedBlueIds);
+            observation.put("replaySemanticDemands",
+                    run.replay.trace().semanticDemands());
+            observation.put("replayBackendLoadedBlueIds",
+                    new ArrayList<>(run.replayMetrics.backendLoadedBlueIds));
+            observation.put("replayBackendBytes",
+                    run.replayMetrics.backendBytes);
+            observations.add(observation);
+        }
+        evidence.put("observations", observations);
+        return evidence;
     }
 
     @Test

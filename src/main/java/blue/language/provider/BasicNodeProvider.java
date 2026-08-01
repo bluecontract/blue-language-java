@@ -19,7 +19,7 @@ import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 /**
  * Mutable in-memory provider for tests, local tooling, and bootstrap assembly.
  *
- * <p>Added documents are preprocessed, assigned their structural BlueIds, and
+ * <p>Added documents are preprocessed, assigned their direct BlueIds, and
  * indexed by optional names. Multi-document cyclic sets retain complete
  * placeholder-set proof for independent verification.</p>
  */

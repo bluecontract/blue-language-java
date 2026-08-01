@@ -46,10 +46,10 @@ resolve <-> minimize
   preserving an overlay that resolves back to the same meaning.
 
 Canonicalization is related to minimization but is not its synonym.
-`canonicalize` retains source provenance needed for strict Content BlueId
+`canonicalize` retains source provenance needed for strict Source Document BlueId
 identity; `minimize` produces a compact author-facing overlay. Likewise,
-`calculateBlueId` hashes already valid structural content, while
-`calculateSemanticBlueId` first canonicalizes meaning so redundant authored
+`calculateBlueId` hashes already valid exact BlueId Input, while
+`calculateSourceDocumentBlueId` first canonicalizes meaning so redundant authored
 forms can converge.
 
 Blue Contracts and Processor 1.0 is a runtime layered on those language
@@ -67,7 +67,7 @@ authored YAML/JSON
     -> raw parse (`parseSource*`)
     -> preprocessing (verified `blue` plan + mandatory Language baseline)
     -> resolution (provider references, type merge, schema/list semantics)
-    -> canonical overlay + resolved runtime view
+    -> Canonical Identity Input + resolved runtime view
     -> immutable `ResolvedSnapshot`
     -> BlueId / canonical patching / contract processing
 ```
@@ -80,7 +80,7 @@ construct raw nodes must invoke `preprocess`, whereas `canonicalize`,
 
 A `ResolvedSnapshot` keeps two immutable `FrozenNode` graphs together:
 
-- the **canonical root**, which is the minimized identity/storage source; and
+- the **canonical root**, which is the unique Canonical Identity Input; and
 - the **resolved root**, which is the completed runtime read/conformance view.
 
 The snapshot BlueId belongs to the canonical root. Snapshot APIs are therefore
@@ -96,7 +96,7 @@ the preferred boundary for repeated processing and patching, while mutable
 | 33–44 | Canonical patches and caches | Immutable patch entry points, authoritative snapshot pinning, bounded derived caches, statistics, and invalidation |
 | 45–51 | Conformance | Language/Contracts version metadata, fixture reports, isolated engines, and suite execution |
 | 52–59 | Expansion, conversion, matching, limits | In-place reference expansion, Java conversion, type matching, and global resolution limits |
-| 60–85 | Parsing, export, dictionaries, identity | YAML/JSON boundaries, dictionary-aware export, cloning, and structural/semantic BlueIds |
+| 60–85 | Parsing, export, dictionaries, identity | YAML/JSON boundaries, dictionary-aware export, cloning, and direct/Source Document BlueId paths |
 | 86–101 | Preprocessing and Contracts runtime | Aliases, processor/type registration, document initialize/process operations, and object/type bridges |
 | 102–111 | Configuration and lifecycle | Runtime dependencies, fluent reconfiguration, defensive configuration views, and close semantics |
 
@@ -839,17 +839,17 @@ was split into purpose-specific canonical and minimization builders.
 
 **Purpose and library role.** Clones and preprocesses source, resolves a second
 clone, then reconstructs a strict canonical overlay using both resolved meaning
-and source provenance. This is the facade’s canonical Content BlueId input
+and source provenance. This is the facade’s Canonical Identity Input
 operation.
 
 **Direct test callers.** `RecursiveTypeResolutionTest`,
-`ResolvedInstanceSchemaValidationTest`, `SemanticCanonicalizationTest`, and
+`ResolvedInstanceSchemaValidationTest`, `SourceDocumentBlueIdTest`, and
 `utils.BlueIdCalculatorTest`.
 
 ### 18. `public Node canonicalize(Object object)`
 
 **Purpose and library role.** Converts a Java object to a `Node` and delegates
-to node canonicalization. It connects application objects to semantic identity
+to node canonicalization. It connects application objects to Source Document identity
 without duplicating the language pipeline.
 
 **Direct test caller.** No direct test caller found in current compiled
@@ -874,6 +874,18 @@ allows application models to be rendered as compact Blue overlays.
 
 **Direct test caller.** No direct Blue-facade test caller found in current
 compiled `src/test` bytecode.
+
+### 20a. `public Node specialize(Node type, Node overlay)`
+
+**Purpose and library role.** Creates an independent authored node whose
+`type` is the supplied type and whose instance content is the compatible
+overlay. `NodeSpecializer` validates the completed specialization through the
+configured resolver before the facade returns the authored form. This normally
+creates a new BlueId and must not be confused with identity-preserving
+reference expansion.
+
+**Direct test callers.** `BlueIdentityAndSpecializationTest` exercises the
+facade and `utils.NodeSpecializerTest` pins the focused operation boundary.
 
 ### 21. `public Node canonicalize(BlueOperationResult<Node> result)`
 
@@ -929,7 +941,7 @@ reference expansion. It provides the object-facing half of the expansion API.
 
 ### 26. `public Node collapse(Node node)`
 
-**Purpose and library role.** Calculates the node’s structural BlueId and
+**Purpose and library role.** Calculates the node’s direct BlueId and
 returns a pure reference node containing that ID. It implements the reference
 creation side of expand/collapse; it does not persist the original content.
 
@@ -1247,10 +1259,6 @@ eligible references with provider content under combined global/per-call
 limits, including list reconstruction where requested. It is the bounded,
 in-place expansion utility and is distinct from merge-based `resolve`.
 
-The former `extend(Node, Limits)` descriptor remains as a deprecated 1.x
-compatibility bridge and delegates to this method; it is scheduled for removal
-in 2.0.
-
 **Direct test callers.** `BlueCacheLifecycleTest` and `NodeExpanderTest`.
 
 ### 53. `public Node objectToNode(Object object)`
@@ -1400,7 +1408,7 @@ normalization.
 **Purpose and library role.** Parses YAML intended as direct BlueId input,
 validates pure-reference rules, and runs BlueId calculation to force full
 canonical identity validation before returning the node. It prevents source
-directives or malformed identity shapes from entering structural hashing.
+directives or malformed identity shapes from entering direct hashing.
 
 **Direct test callers.** `ReferenceBlueIdResolutionValidationTest`,
 `SelfReferenceTest`, and `utils.BlueIdCalculatorTest`.
@@ -1409,7 +1417,7 @@ directives or malformed identity shapes from entering structural hashing.
 
 **Purpose and library role.** JSON counterpart to
 `parseBlueIdInputYaml`: parse, validate reference form, and prove that the node
-is valid structural BlueId input.
+is valid exact BlueId Input.
 
 **Direct test caller.** `ReferenceBlueIdResolutionValidationTest`.
 
@@ -1569,8 +1577,8 @@ compiled `src/test` bytecode.
 
 ### 82. `public String calculateBlueId(Node node)`
 
-**Purpose and library role.** Calculates the structural BlueId of already valid
-canonical identity input. It is sensitive to authored structure and rejects
+**Purpose and library role.** Calculates the BlueId of already valid exact
+BlueId Input. It rejects
 invalid reference/source forms rather than silently canonicalizing them.
 
 **Direct test callers.** `BlueCacheLifecycleTest`,
@@ -1578,7 +1586,7 @@ invalid reference/source forms rather than silently canonicalizing them.
 `ProcessingSnapshotProviderProvenanceTest`,
 `ResolvedInstanceSchemaValidationTest`, `RootReferenceSnapshotTest`,
 `SelectedProcessingStateCacheIsolationFailFirstTest`,
-`SemanticCanonicalizationTest`, `TrustedProviderResolutionTest`,
+`SourceDocumentBlueIdTest`, `TrustedProviderResolutionTest`,
 `VerifiedReferenceMaterializationTest`,
 `snapshot.FrozenNodeStructuralInternerTest`,
 `snapshot.ResolvedReferenceCacheContractTest`, and
@@ -1587,13 +1595,13 @@ invalid reference/source forms rather than silently canonicalizing them.
 ### 83. `public String calculateBlueId(Object object)`
 
 **Purpose and library role.** Converts an object to a Blue node and calculates
-its structural identity. It extends content addressing to Java models while
-retaining the structural—not semantic-equivalence—contract.
+its direct identity. It extends content addressing to Java models without
+running the Source Document pipeline.
 
 **Direct test caller.** No direct Blue-facade test caller found in current
 compiled `src/test` bytecode.
 
-### 84. `public String calculateSemanticBlueId(Node node)`
+### 84. `public String calculateSourceDocumentBlueId(Node node)`
 
 **Purpose and library role.** Canonicalizes the node’s completed meaning and
 hashes that canonical overlay. It lets different authored forms share identity
@@ -1603,7 +1611,7 @@ semantically equivalent.
 **Direct test callers.** `DictionaryProcessorTest`, `ListProcessorTest`,
 `MaterializedSelectedProcessingDocumentFailFirstTest`, `OverlayBuildersTest`,
 `ResolvedInstanceSchemaValidationTest`,
-`ResolvedProcessingSelectionCorrectnessTest`, `SemanticCanonicalizationTest`,
+`ResolvedProcessingSelectionCorrectnessTest`, `SourceDocumentBlueIdTest`,
 `TrustedProviderResolutionTest`, `processor.CheckpointIdentityCalculatorTest`,
 `processor.DocumentProcessorInitializationTest`,
 `processor.ResolvedSnapshotPatchTransactionTest`,
@@ -1611,10 +1619,10 @@ semantically equivalent.
 `provider.ProviderEvidenceVerifierTest`, and
 `utils.BlueIdCalculatorTest`.
 
-### 85. `public String calculateSemanticBlueId(Object object)`
+### 85. `public String calculateSourceDocumentBlueId(Object object)`
 
 **Purpose and library role.** Converts a Java object and calculates identity
-from its canonicalized Blue meaning. It is the object-facing semantic identity
+from its Canonical Identity Input. It is the object-facing Source Document identity
 API.
 
 **Direct test caller.** No direct Blue-facade test caller found in current
@@ -1989,7 +1997,7 @@ caller, so no public test route can execute it without reflection.
 
 | ID | Source | Exact declaration | Purpose | Public owner and representative coverage |
 |---|---|---|---|---|
-| P10 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Node preprocess(Node node, NodeProvider preprocessingNodeProvider, Map<String, String> aliases)` | Normalizes textual `blue` directives through aliases or BlueIds and applies the default-blue preprocessor with captured dependencies. | `preprocess`, parse/resolve/canonicalize/snapshot/process routes; `PreprocessorTest`, `OverlayBuildersTest`. |
+| P10 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private Node preprocess(Node node, NodeProvider preprocessingNodeProvider, Map<String, String> aliases)` | Resolves textual `blue` directives through aliases or BlueIds and applies the mandatory Language baseline with captured dependencies. | `preprocess`, parse/resolve/canonicalize/snapshot/process routes; `PreprocessorTest`, `OverlayBuildersTest`. |
 | P11 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private DocumentProcessor ensureDocumentProcessor()` | Enforces open state and lazily creates an owned default document processor. | `getDocumentProcessor`, registration, processing, initialization, and initialization checks; `BlueCacheLifecycleTest`, `DocumentProcessorInitializationTest`. |
 | P12 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private DocumentProcessor beginDocumentProcessorMutation()` | Opens an exclusive invalidation window and returns the processor used for registry mutation. | `registerContractProcessor(...)`, `registerExternalContractType(...)`; `RegisteredContractProviderEvidenceTest`. |
 | P13 | [Blue.java](../src/main/java/blue/language/Blue.java) | `private void endDocumentProcessorMutation()` | Closes the exclusive invalidation window after processor registry mutation. | Same registration routes as P12; `RegisteredContractProviderEvidenceTest`. |

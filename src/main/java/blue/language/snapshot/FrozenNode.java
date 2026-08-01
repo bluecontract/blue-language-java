@@ -367,7 +367,7 @@ public final class FrozenNode {
      * <p>Construction-mode fields and object-property insertion order are
      * intentionally ignored. Object payloads are keyed maps in the Language
      * model, while list-element order remains significant. This comparison is
-     * therefore stricter than semantic BlueId equality but may be less strict
+     * therefore stricter than direct BlueId equality but may be less strict
      * than {@link #resolvedStructuralKey()}, which preserves representation
      * details needed by the structural interner.</p>
      *

@@ -2631,12 +2631,6 @@ final class ProcessorEngine {
                     && !context.isCutOff();
         }
 
-        boolean rootIsTerminated() {
-            ScopeRuntimeContext root =
-                    runtime.existingScope(JsonPointer.ROOT);
-            return root != null && root.isTerminated();
-        }
-
         boolean canCompleteTermination(String scopePath) {
             String normalized = ProcessorEngine.normalizeScope(scopePath);
             ScopeRuntimeContext context = runtime.existingScope(normalized);
@@ -2710,6 +2704,9 @@ final class ProcessorEngine {
 
         void markCutOff(String scopePath) {
             String normalized = ProcessorEngine.normalizeScope(scopePath);
+            if (JsonPointer.ROOT.equals(normalized)) {
+                return;
+            }
             if (cutOffScopes.add(normalized)) {
                 runtime.recordTrace(ProcessingTraceRecord.Kind.SCOPE_CUT_OFF,
                         normalized,

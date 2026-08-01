@@ -534,7 +534,7 @@ Removing and later re-adding a channel starts a new interval unless the exact ch
 
 The feeder MUST not process event `E` until the concrete external-source ecosystem has supplied completeness evidence that no active subscribed source can later produce an eligible event ordered before `E`.
 
-The concrete source specification MUST publish one exact total-order key and completeness rule. Contracts core treats that key as opaque ordered evidence. It does not define clocks, timelines, providers, or source-specific tie-breakers.
+The concrete source specification MUST publish one exact strict total-order key and completeness rule. The order MUST preserve the order of each source, MUST be independent of arrival order, and MUST use a stable identity-bound tie-breaker when source-local positions alone do not determine a cross-source order. Contracts core treats that key as opaque ordered evidence. It does not define clocks, timelines, providers, or source-specific tie-breakers.
 
 No later external event may interleave with the retained deliveries of the current event. The complete canonical delivery set of `E` reaches one terminal progress record before the feeder begins `E2`.
 
@@ -903,6 +903,8 @@ Replacing a child root with the exact same current Node BlueId is a semantic no-
 
 The processor MUST check cut-off after every nested cascade and before every marker or checkpoint write.
 
+Root is the authoritative invocation boundary and cannot be cut off. Root termination prevents new Root-local handlers, but it does not erase occurrences emitted earlier; those occurrences continue through any nonterminating descendant or intermediate recipients on their frozen chains.
+
 ### 5.9 Frozen propagation chains
 
 Every emitted event and every Document Update freezes its source scope and active ancestor chain when the occurrence is created. Later changes to Process Embedded declarations do not redirect an already-created occurrence. A removed or terminated receiving ancestor may stop its own local reaction, but an event that already happened is not silently rewritten to have a different source.
@@ -954,7 +956,9 @@ after: <exact snapshot when present>
 sourceScopePath: <path of patch origin relative to receiving scope>
 ```
 
-`before` and `after` are omitted when the corresponding presence Boolean is false. Null is not used as an absence sentinel.
+`before` and `after` are omitted when the corresponding presence Boolean is false. Null is not used as an absence sentinel. The semantic operation is derived from presence: absent-to-present is `add`, present-to-present is `replace`, and present-to-absent is `remove`. Consequently, an object-member patch authored with `op: replace` but applied as an upsert to an absent member produces a Document Update with `op: add`.
+
+There is one underlying Document Update occurrence for one committed mutation. It retains the absolute changed path, absolute source scope, presence flags, and exact before/after values. Each receiving scope gets a deterministic scope-relative rendering of that same occurrence; rendering does not create another mutation occurrence or change its identity.
 
 A Document Update Channel declares a scope-relative watched `path`. It matches when the changed path is equal to or below the watched path.
 
@@ -1193,7 +1197,7 @@ The accepted channel may have no matching Handler. It is still a successful deli
 
 ```text
 function DRAIN_INTERNAL_EVENTS():
-    while RUN.eventQueue is not empty and Root is not cut off:
+    while RUN.eventQueue is not empty:
         occurrence = dequeue FIFO
 
         if source occurrence is active and not terminating and not terminated:
@@ -1203,8 +1207,6 @@ function DRAIN_INTERNAL_EVENTS():
             if receivingAncestor is active and not terminating and not terminated:
                 DELIVER_EMBEDDED_EVENT(receivingAncestor, occurrence)
 
-            if Root is terminated:
-                break
 ```
 
 Each delivery performs fresh channel and Handler discovery at that receiving scope, applies results synchronously, and may enqueue later occurrences.
@@ -1303,7 +1305,7 @@ val: <Blue node>      # required for add/replace; absent for remove
 
 Operations are applied in result order. A later patch observes all earlier tentative patches and cascades.
 
-`replace` on an object member is an upsert. `remove` of a missing member is invalid. Intermediate object nodes MAY be materialized only where the patch semantics explicitly permit; arrays are never silently invented.
+`replace` on an object member is an upsert. `remove` of a missing member is invalid. The final parent container MUST already exist. Core patching never silently synthesizes a missing intermediate object or array; an earlier explicit operation must create that container before a later operation may address one of its children.
 
 ### 8.3 Insertion normalization
 
@@ -2289,6 +2291,7 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-INIT-03.** Accepted Channel/payload/checkpoint snapshot remains frozen across initialization.
 - **C-INIT-04.** Handler discovery after initialization sees post-initialization contracts.
 - **C-INIT-05.** Initialization marker writes do not create Document Updates.
+- **C-INIT-06.** The initialization marker and initiated event carry the exact initial scope document; inline and pure-reference forms yield the same Root, lifecycle behavior, gas, and trace.
 
 ### 15.4 Embedded scopes, updates, and events
 
@@ -2307,6 +2310,12 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-EVT-03.** Child emissions are not returned unless Root explicitly emits.
 - **C-EVT-04.** Duplicate equal event nodes remain distinct occurrences and Root outputs.
 - **C-EVT-05.** The internal queue is drained exactly once by the normative owner.
+- **C-ROUTE-01.** The default handler Channel equals the accepted source Channel and preserves existing one-source behavior.
+- **C-ROUTE-02.** A declared peer same-scope Channel may be frozen as handler target without being externally evaluated or checkpointed.
+- **C-ROUTE-03.** Exact absent and present-non-Channel target lookups remain distinguishable; unavailable or undeclared evidence fails closed.
+- **C-ROUTE-04.** Several fresh sources with the same logical delivery key, target, and payload execute handlers once and checkpoint every source only after success.
+- **C-ROUTE-05.** A stale source does not piggyback on a fresh source in the same logical group.
+- **C-ROUTE-06.** Group target or payload disagreement fails atomically before mutation.
 
 ### 15.5 Checkpoints, lifecycle, and protected state
 
@@ -2341,8 +2350,15 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-FAIL-03.** Gas exhaustion returns the canonical trace prefix and is deterministic on retry.
 - **C-FAIL-04.** Compare-and-swap conflict commits nothing and is outside portable gas.
 - **C-FAIL-05.** `PROCESS_ATTEMPT` may return `NeedsResources`, but no completed `ProcessResult` uses `needs-resources` as a status.
+- **C-LOOP-01.** An internal event cycle is stopped by the shared gas limit and rolls back Root and Root events.
 
-### 15.7 Gas and runtime
+### 15.7 End-to-end processing
+
+- **C-E2E-01.** A complete successful Root transition fixture asserts exact status, resulting document, Root event order, named trace, total gas, and semantic demands.
+- **C-E2E-02.** A deep embedded delivery fixture asserts the same complete result dimensions and returns an empty public event sequence when Root emits nothing.
+- **C-E2E-03.** An inline/reference representation matrix produces the exact same complete end-to-end result and trace.
+
+### 15.8 Gas and runtime
 
 - **C-GAS-01.** Every processor and semantic counter has an exact weight and microfixture.
 - **C-GAS-02.** Charges are admitted before work and the failing charge is absent on exhaustion.
@@ -2351,24 +2367,13 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-GAS-05.** Direct identity blocks charge only new/changed direct identity, never unchanged transitive content.
 - **C-GAS-06.** Runtime child ledgers are live-bounded and merged exactly once.
 - **C-GAS-07.** Executable-runtime representation state is unobservable and recursive boundary-size charging is absent.
-- **C-ROUTE-01.** The default handler Channel equals the accepted source Channel and preserves existing one-source behavior.
-- **C-ROUTE-02.** A declared peer same-scope Channel may be frozen as handler target without being externally evaluated or checkpointed.
-- **C-ROUTE-03.** Exact absent and present-non-Channel target lookups remain distinguishable; unavailable or undeclared evidence fails closed.
-- **C-ROUTE-04.** Several fresh sources with the same logical delivery key, target, and payload execute handlers once and checkpoint every source only after success.
-- **C-ROUTE-05.** A stale source does not piggyback on a fresh source in the same logical group.
-- **C-ROUTE-06.** Group target or payload disagreement fails atomically before mutation.
-- **C-INIT-06.** The initialization marker and initiated event carry the exact initial scope document; inline and pure-reference forms yield the same Root, lifecycle behavior, gas, and trace.
-- **C-LOOP-01.** An internal event cycle is stopped by the shared gas limit and rolls back Root and Root events.
 - **C-GAS-08.** Provider verification and transport are outside portable gas.
-- **C-E2E-01.** A complete successful Root transition fixture asserts exact status, resulting document, Root event order, named trace, total gas, and semantic demands.
-- **C-E2E-02.** A deep embedded delivery fixture asserts the same complete result dimensions and returns an empty public event sequence when Root emits nothing.
-- **C-E2E-03.** An inline/reference representation matrix produces the exact same complete end-to-end result and trace.
 
-### 15.8 Machine-readable fixture package
+### 15.9 Machine-readable fixture package
 
 The implementation-baseline fixture package is bound to the exact runtime registry manifest and the exact `blue-contracts/gas/1.0` manifest. It publishes:
 
-- 69 executable behavior fixtures covering all 78 vectors in §§15.1–15.7;
+- 82 executable behavior fixtures covering all 90 vectors in §§15.1–15.8;
 - feeder/platform and revision-bound commit fixtures;
 - locality semantic-demand assertions;
 - 58 exact gas microfixtures and composite gas fixtures;
@@ -2402,7 +2407,7 @@ The implementation-baseline fixture-package identity is:
 sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18
 ```
 
-The package contains 78 normative vectors, 69 behavior fixtures, and 58 gas fixtures. The behavior-fixture count is not required to equal the vector count because one executable fixture may cover several inseparable normative assertions.
+The package contains 90 normative vectors, 82 behavior fixtures, and 58 gas fixtures. The behavior-fixture count is not required to equal the vector count because one executable fixture may cover several inseparable normative assertions.
 
 
 ---

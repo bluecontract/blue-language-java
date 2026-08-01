@@ -766,7 +766,7 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
-        public void shouldRejectLegacyBlueItemsForSemanticBlueId() {
+        public void shouldRejectLegacyBlueItemsForSourceDocumentBlueId() {
                 // given
                 Node node = YAML_MAPPER.readValue(
                                 "blue:\n" +
@@ -775,7 +775,7 @@ public class BlueIdCalculatorTest {
 
                 // when
                 IllegalArgumentException failure = captureFailure(
-                                () -> new Blue().calculateSemanticBlueId(node));
+                                () -> new Blue().calculateSourceDocumentBlueId(node));
 
                 // then
                 assertTrue(failure.getMessage().contains(
@@ -789,12 +789,13 @@ public class BlueIdCalculatorTest {
                 Node source = YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class);
 
                 // when
-                String semanticBlueId = blue.calculateSemanticBlueId(source);
+                String sourceDocumentBlueId =
+                        blue.calculateSourceDocumentBlueId(source);
                 Node canonical = blue.canonicalize(source);
                 String directBlueId = BlueIdCalculator.calculateBlueId(canonical);
 
                 // then
-                assertTrue(semanticBlueId != null);
+                assertTrue(sourceDocumentBlueId != null);
                 assertEquals(INTEGER_TYPE_BLUE_ID, canonical.getType().getBlueId());
                 assertTrue(directBlueId != null);
         }

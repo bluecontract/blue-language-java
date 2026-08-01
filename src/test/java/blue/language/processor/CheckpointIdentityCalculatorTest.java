@@ -42,7 +42,7 @@ final class CheckpointIdentityCalculatorTest {
         Throwable failure = captureFailure(
                 () -> CheckpointIdentityCalculator.identity(source));
         String expectedIdentity =
-                blue.calculateSemanticBlueId(source.clone());
+                blue.calculateSourceDocumentBlueId(source.clone());
         String actualIdentity =
                 CheckpointIdentityCalculator.identity(source, blue);
 

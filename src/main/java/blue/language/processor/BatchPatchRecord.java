@@ -20,12 +20,14 @@ final class BatchPatchRecord {
     private final ImmutablePatchPlanner.PatchPlan resolvedPlan;
     private final FrozenNode beforeAtPatchTime;
     private final FrozenNode afterAtPatchTime;
+    private final boolean objectMemberTarget;
     private final PatchImpact impact;
     private final boolean processorManagedConformanceBypass;
 
     BatchPatchRecord(ImmutableJsonPatch patch,
                      ImmutablePatchPlanner.PatchPlan canonicalPlan,
                      ImmutablePatchPlanner.PatchPlan resolvedPlan,
+                     boolean objectMemberTarget,
                      PatchImpact impact,
                      boolean processorManagedConformanceBypass) {
         this.parsedPath = patch.path();
@@ -33,6 +35,7 @@ final class BatchPatchRecord {
         this.resolvedPlan = resolvedPlan;
         this.beforeAtPatchTime = resolvedPlan.before();
         this.afterAtPatchTime = resolvedPlan.after();
+        this.objectMemberTarget = objectMemberTarget;
         this.impact = impact;
         this.processorManagedConformanceBypass = processorManagedConformanceBypass;
     }
@@ -71,6 +74,10 @@ final class BatchPatchRecord {
 
     FrozenNode afterAtPatchTime() {
         return afterAtPatchTime;
+    }
+
+    boolean objectMemberTarget() {
+        return objectMemberTarget;
     }
 
     PatchImpact impact() {

@@ -169,15 +169,16 @@ items:
   - C
 ```
 
-## Structural And Semantic BlueId APIs
+## One BlueId, Two Calculation Paths
 
-There are now two explicit identity paths:
+Both paths return the same BlueId representation and use the same direct
+algorithm:
 
 ```java
 Blue blue = new Blue(provider);
 
-String structural = blue.calculateBlueId(node);
-String semantic = blue.calculateSemanticBlueId(node);
+String direct = blue.calculateBlueId(exactBlueIdInput);
+String fromSource = blue.calculateSourceDocumentBlueId(sourceDocument);
 ```
 
 `blue` is a preprocessing directive, not semantic content. It is not valid
@@ -188,24 +189,24 @@ rejects nodes containing `blue` because silently dropping the directive would
 hash unprocessed authored content. It also rejects `blueId` with sibling
 content; resolved runtime metadata must be minimized before canonical hashing.
 
-`calculateSemanticBlueId(node)` runs:
+`calculateSourceDocumentBlueId(sourceDocument)` runs:
 
 ```text
-preprocess -> resolve -> minimize -> hash canonical
+preprocess -> complete resolve -> canonicalize -> direct BlueId
 ```
 
-Use semantic BlueId when authoring noise should not matter. Use structural
-BlueId when the node is already known to be canonical and you want direct Merkle
-hashing.
+Use the Source Document path for authored input. Use direct calculation only
+when the node is already valid exact BlueId Input. “Content BlueId” may describe
+the result of the Source Document path, but it is not a second identifier kind.
 
 The BlueId algorithm removes nulls and empty maps at any depth. Empty lists are
 preserved. If a list element normalizes to an empty map, that element is removed.
 Use `$empty: true` when a placeholder must remain as content.
 
-A leading `$previous` list-control item is a list accumulator seed in the pure
-BlueId algorithm. The hash algorithm itself does not verify the seed against an
-inherited prefix. Semantic resolution validates that the inherited list prefix
-hashes to `$previous.blueId`; if it does not, resolution fails.
+A leading `$previous` list-control item is a list accumulator seed in the BlueId
+algorithm. The hash algorithm itself does not verify the seed against an
+inherited prefix. Resolution validates that the inherited list prefix hashes to
+`$previous.blueId`; if it does not, resolution fails.
 
 ## Provider Ingestion
 

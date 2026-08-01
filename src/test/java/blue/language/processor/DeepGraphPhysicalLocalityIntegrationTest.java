@@ -110,6 +110,33 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                 baseline.rootEventBlueIds.get(0),
                 baseline.rootEventBlueIds.get(1),
                 "the Root event ordering proof must contain distinct identities");
+        SemanticLocalityEvidenceWriter.write(
+                "deep-graph-matrix.json",
+                localityEvidence(runs));
+    }
+
+    private static Map<String, Object> localityEvidence(List<Run> runs) {
+        Map<String, Object> evidence = new LinkedHashMap<>();
+        evidence.put("schema", "blue-language-locality-evidence/1.0");
+        List<Map<String, Object>> observations = new ArrayList<>();
+        for (Run run : runs) {
+            Map<String, Object> observation = new LinkedHashMap<>();
+            observation.put("variant", run.variant.toString());
+            observation.put("selectedClosureBlueIds",
+                    new ArrayList<>(run.scenario.selectedClosureBlueIds));
+            observation.put("forbiddenBlueIds",
+                    new ArrayList<>(run.scenario.unrelatedBodyBlueIds));
+            observation.put("requestedBlueIds",
+                    new ArrayList<>(run.providerMetrics.requestedBlueIds));
+            observation.put("semanticDemands",
+                    run.debug.trace().semanticDemands());
+            observation.put("backendLoadedBlueIds",
+                    new ArrayList<>(run.providerMetrics.backendLoadedBlueIds));
+            observation.put("backendBytes", run.providerMetrics.backendBytes);
+            observations.add(observation);
+        }
+        evidence.put("observations", observations);
+        return evidence;
     }
 
     @Test
@@ -443,6 +470,21 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                         .EXTERNAL_DELIVERY)
                         .get(0)
                         .scopePath());
+        Map<String, Object> evidence = new LinkedHashMap<>();
+        evidence.put("schema", "blue-language-locality-evidence/1.0");
+        evidence.put("requiredBlueIds", new ArrayList<>(allowed));
+        Set<String> forbidden = new LinkedHashSet<>(embeddedChildBlueIds);
+        forbidden.addAll(scenario.unrelatedBodyBlueIds);
+        evidence.put("forbiddenBlueIds", new ArrayList<>(forbidden));
+        evidence.put("requestedBlueIds",
+                new ArrayList<>(providerMetrics.requestedBlueIds));
+        evidence.put("semanticDemands",
+                debug.trace().semanticDemands());
+        evidence.put("backendLoadedBlueIds",
+                new ArrayList<>(providerMetrics.backendLoadedBlueIds));
+        evidence.put("backendBytes", providerMetrics.backendBytes);
+        SemanticLocalityEvidenceWriter.write(
+                "root-only-event.json", evidence);
     }
 
     private static Run execute(Variant variant) {

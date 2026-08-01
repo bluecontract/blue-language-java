@@ -40,7 +40,7 @@ class CanonicalOverlayPatchEngineTest {
     }
 
     @Test
-    void shouldCreateMissingObjectAncestorsWithoutMutatingOriginalRootOnAdd() {
+    void shouldCreateCanonicalOverlayAncestorsWithoutMutatingOriginalRoot() {
         // given
         FrozenNode root = FrozenNode.empty();
 

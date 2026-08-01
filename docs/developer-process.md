@@ -70,7 +70,7 @@ into the smallest owning package.
 | --- | --- |
 | `src/main/java/blue/language/Blue.java` | Main facade, configuration, lifecycle, language operations, snapshots, and processor registration |
 | `model/` | Mutable Blue node model, schema model, parsing, and serialization boundaries |
-| `preprocess/` | Blue directives, aliases, and default preprocessing |
+| `preprocess/` | Blue directives, aliases, and mandatory baseline preprocessing |
 | `provider/` | Verified content-addressed lookup, ingestion, and cyclic-set proof |
 | `merge/` | Resolution, inheritance, list controls, and canonical/minimized reconstruction |
 | `snapshot/` | Immutable `FrozenNode`, `ResolvedSnapshot`, reference evidence, and structural reuse |
@@ -125,8 +125,9 @@ application effects while retaining the admitted ordered gas trace.
 
 For identity work, distinguish:
 
-- structural BlueId calculation over authored canonical content;
-- semantic BlueId calculation after preprocess, resolve, and minimization;
+- direct BlueId calculation over exact valid BlueId Input;
+- Source Document BlueId calculation after preprocessing, complete resolution,
+  and canonicalization;
 - verified provider evidence for an exact requested BlueId; and
 - opaque finalized cyclic-member identity, which requires a cyclic-set proof.
   Proof acquisition uses `CyclicSetProofResult`; preserve its `NOT_FOUND`,

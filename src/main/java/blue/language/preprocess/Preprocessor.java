@@ -26,15 +26,6 @@ import java.util.Optional;
  */
 public class Preprocessor {
 
-    /**
-     * Legacy structural identity retained for API compatibility.
-     *
-     * <p>This identity is not part of the final preprocessing environment and
-     * is never loaded, resolved, or injected into a Source Document.</p>
-     */
-    public static final String DEFAULT_BLUE_BLUE_ID =
-            "Dme8eKnAKW54HrUeCuzKkhURFbDsLd2BsD7b9JCwcYRB";
-
     private static final String REPLACE_INLINE_TYPES_BLUE_ID =
             "27B7fuxQCS1VAptiCPc2RMkKoutP5qxkh3uDxZ7dr6Eo";
     private static final String LEGACY_REPLACE_INLINE_TYPES_BLUE_ID =
@@ -148,45 +139,6 @@ public class Preprocessor {
         PreprocessingLimits.requireGraphWithinBounds(
                 preprocessed, "Preprocessed Document");
         return preprocessed;
-    }
-
-    /**
-     * Compatibility bridge for the former baseline-disabling entry point.
-     *
-     * <p>Blue Language 1.0 has no mode that disables mandatory baseline
-     * preprocessing, so this method is equivalent to {@link #preprocess(Node)}.</p>
-     *
-     * @param document parsed Source Document
-     * @return independent validated Preprocessed Document
-     */
-    public Node preprocessWithoutDefaultBlue(Node document) {
-        return preprocess(document);
-    }
-
-    /**
-     * Compatibility bridge for the former injected-Default-Blue entry point.
-     *
-     * @param document parsed Source Document
-     * @return independent validated Preprocessed Document
-     */
-    public Node preprocessWithDefaultBlue(Node document) {
-        return preprocess(document);
-    }
-
-    /**
-     * Compatibility bridge for the former nullable Default Blue switch.
-     *
-     * <p>The second argument is intentionally ignored. Mandatory baseline
-     * behavior cannot be replaced or disabled by caller-supplied content.</p>
-     *
-     * @param document parsed Source Document
-     * @param ignoredDefaultBlue legacy argument with no Language 1.0 meaning
-     * @return independent validated Preprocessed Document
-     */
-    public Node preprocess(
-            Node document,
-            Node ignoredDefaultBlue) {
-        return preprocess(document);
     }
 
     /**

@@ -540,7 +540,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldVerifyEscapedPointerKeysWorkInBatch() {
         // given
-        Node document = new Node();
+        Node document = new Node().properties("tilde", new Node());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -559,7 +559,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldVerifyBatchPatchAvoidsRepeatedSnapshotCommitCost() {
         // given
-        Node document = new Node();
+        Node document = new Node().properties("values", new Node());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
         List<JsonPatch> patches = new ArrayList<>();
         for (int i = 0; i < 100; i++) {

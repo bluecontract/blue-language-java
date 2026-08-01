@@ -58,7 +58,7 @@ public final class BlueContractsConformanceReport {
             "blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline";
     /** Exact combined release package identity. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:1290ef331b58c9a5074deef30a6f5bf59afa573dd3446bb4131e10b6508ffd70";
+            "sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
@@ -80,7 +80,7 @@ public final class BlueContractsConformanceReport {
             "1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f";
     /** Published SHA-256 digest of the Contracts specification. */
     public static final String CONTRACTS_SPECIFICATION_SHA256 =
-            "3a318322eebd95b47e51d9c6ef51babe07959fdee293767bf0e32cc07ab9dbe0";
+            "d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1";
     /** Published SHA-256 digest of the Language specification. */
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
             "41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e";

@@ -819,7 +819,7 @@ public final class DocumentProcessingRuntime {
      * reference already carries it, while inline resolved-view content is
      * calculated with the canonical Language identity algorithm. The
      * resolved structural cache identity is deliberately not used as the
-     * semantic Node BlueId. The body identity was pre-admitted and bound in
+     * exact body BlueId. The body identity was pre-admitted and bound in
      * the immutable run snapshot, so carrying it into execution is zero
      * generic kernel work. Runtime-specific body inspections, if any, belong
      * in the registered runtime child ledger.</p>
@@ -2144,17 +2144,35 @@ public final class DocumentProcessingRuntime {
     }
 
     private void preflightPatchInputsWithoutResolution(List<PatchInput> patches) {
-        FrozenNode workingRoot = canonicalRootWithoutResolution();
+        FrozenNode workingCanonical = canonicalRootWithoutResolution();
+        FrozenNode workingResolved = resolvedRootWithoutResolution();
         boolean exactReplacement = !selectedDocumentBacked;
         for (PatchInput input : patches) {
             if (input == null) {
                 continue;
             }
-            ImmutablePatchPlanner planner = ImmutablePatchPlanner.forFrozen(workingRoot);
-            workingRoot = planner.applyMutationPreflight(
+            ImmutablePatchPlanner canonicalPlanner =
+                    ImmutablePatchPlanner.forFrozen(workingCanonical);
+            ImmutablePatchPlanner resolvedPlanner =
+                    ImmutablePatchPlanner.forFrozen(workingResolved);
+            ParsedJsonPointer path =
+                    ParsedJsonPointer.parse(input.authoredPath());
+            canonicalPlanner.validateMutationPath(path);
+            if (!path.isRoot()
+                    && resolvedPlanner.read(path.parent()) == null) {
+                throw new IllegalStateException(
+                        "Final parent does not exist for patch path: "
+                                + path.pointer());
+            }
+            workingCanonical = canonicalPlanner.applyMutationPreflight(
                     input.op(),
-                    ParsedJsonPointer.parse(input.authoredPath()),
-                    preflightValue(input, workingRoot),
+                    path,
+                    preflightValue(input, workingCanonical),
+                    exactReplacement);
+            workingResolved = resolvedPlanner.applyMutationPreflight(
+                    input.op(),
+                    path,
+                    preflightValue(input, workingResolved),
                     exactReplacement);
         }
     }
@@ -2182,6 +2200,13 @@ public final class DocumentProcessingRuntime {
         ResolvedSnapshot current = snapshot;
         return current != null
                 ? current.frozenCanonicalRoot()
+                : FrozenNode.fromResolvedNode(materializedView.root());
+    }
+
+    private FrozenNode resolvedRootWithoutResolution() {
+        ResolvedSnapshot current = snapshot;
+        return current != null
+                ? current.frozenResolvedRoot()
                 : FrozenNode.fromResolvedNode(materializedView.root());
     }
 

@@ -146,6 +146,74 @@ final class LogicalDeliveryRoutingTest {
     }
 
     @Test
+    void shouldPreserveSourceOrderAcrossTiedSourceArrivalPermutations() {
+        // given
+        Node event = event("topic", "event-arrival-permutation");
+        try (Fixture fixture = new Fixture(event)) {
+            Node document = fixture.initialize(root(
+                    routingChannel(
+                            "source-a", 0, "topic", "domain-a",
+                            "target", "logical", "shared-payload"),
+                    routingChannel(
+                            "source-b", 0, "topic", "domain-b",
+                            "target", "logical", "shared-payload"),
+                    routingChannel(
+                            "target", 2, "other", "domain-target",
+                            "target", "target", "target"),
+                    handler(
+                            "handler",
+                            "target",
+                            fixture.selectedBodyBlueId)));
+            PreparedRun sourceOrder = fixture.prepare(
+                    document,
+                    event,
+                    "source-a",
+                    "source-b");
+            PreparedRun reversedArrival = fixture.prepare(
+                    document,
+                    event,
+                    "source-b",
+                    "source-a");
+
+            // when
+            ProcessingDebugResult sourceOrderResult = fixture.process(
+                    document.clone(),
+                    event,
+                    sourceOrder);
+            fixture.handlers.reset();
+            ProcessingDebugResult reversedArrivalResult = fixture.process(
+                    document.clone(),
+                    event,
+                    reversedArrival);
+
+            // then
+            assertEquals(
+                    planProjection(sourceOrder.plan),
+                    planProjection(reversedArrival.plan));
+            assertEquals(
+                    ProcessorStatus.SUCCESS,
+                    sourceOrderResult.processResult().status());
+            assertEquals(
+                    sourceOrderResult.processResult().status(),
+                    reversedArrivalResult.processResult().status());
+            assertEquals(
+                    BlueIdCalculator.calculateBlueId(
+                            sourceOrderResult.processResult().document()),
+                    BlueIdCalculator.calculateBlueId(
+                            reversedArrivalResult.processResult().document()));
+            assertEquals(
+                    sourceOrderResult.processResult().totalGas(),
+                    reversedArrivalResult.processResult().totalGas());
+            assertEquals(
+                    traceProjection(sourceOrderResult.trace()),
+                    traceProjection(reversedArrivalResult.trace()));
+            assertEquals(
+                    Arrays.asList("source-a", "source-b"),
+                    checkpointWrites(reversedArrivalResult.trace()));
+        }
+    }
+
+    @Test
     void shouldVerifyStaleMemberIsExcludedAndOnlyFreshSourceAdvances() {
         // given
         Node event = event("topic", "event-stale");

@@ -1314,7 +1314,7 @@ public final class BlueConformanceSuiteRunner {
         Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
         Node resolved = blue.resolve(blue.preprocess(source.clone()));
         Node canonical = blue.canonicalize(source);
-        String contentBlueId = blue.calculateSemanticBlueId(source);
+        String contentBlueId = blue.calculateSourceDocumentBlueId(source);
         String canonicalIdentityInputBlueId =
                 BlueIdCalculator.calculateBlueId(canonical);
         String directResolvedBlueId = BlueIdCalculator.calculateBlueId(resolved);
@@ -1371,8 +1371,8 @@ public final class BlueConformanceSuiteRunner {
                 FixtureField.EXPECTED_SAME_CONTENT_BLUE_ID_THROUGH_PIPELINE)
                 .asBoolean(false)) {
             assertEquals(
-                    blue.calculateSemanticBlueId(originalSource.clone()),
-                    blue.calculateSemanticBlueId(minimized.clone()));
+                    blue.calculateSourceDocumentBlueId(originalSource.clone()),
+                    blue.calculateSourceDocumentBlueId(minimized.clone()));
         }
     }
 

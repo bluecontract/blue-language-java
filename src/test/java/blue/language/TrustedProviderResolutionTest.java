@@ -179,7 +179,7 @@ class TrustedProviderResolutionTest {
         Node source = new Node()
                 .blue(new Node().properties("imports", new Node()))
                 .properties("payload", new Node().value("source document"));
-        String requestedBlueId = blue.calculateSemanticBlueId(source);
+        String requestedBlueId = blue.calculateSourceDocumentBlueId(source);
         SourceProviderEnvironment exact = new SourceProviderEnvironment(
                 blue.languageVersion(),
                 SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY,

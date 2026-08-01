@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.processor.util.PointerUtils;
+import blue.language.utils.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -170,6 +171,37 @@ public final class ExternalDeliverySnapshot {
                 || eventOrderKey.compareTo(activationStartExclusive) > 0)
                 && (activationEndInclusive == null
                 || eventOrderKey.compareTo(activationEndInclusive) <= 0);
+    }
+
+    /**
+     * Compares two occurrences using the Contracts canonical delivery order.
+     * The final identity-bound fields make equal authored source positions
+     * independent of discovery or arrival order.
+     */
+    static int compareCanonical(ExternalDeliverySnapshot left,
+                                ExternalDeliverySnapshot right) {
+        int comparison = Integer.compare(
+                JsonPointer.split(right.scopePath()).size(),
+                JsonPointer.split(left.scopePath()).size());
+        if (comparison != 0) {
+            return comparison;
+        }
+        comparison = ExternalOrderKey.compareTextCodePoints(
+                left.scopePath(), right.scopePath());
+        if (comparison != 0) {
+            return comparison;
+        }
+        comparison = Integer.compare(left.order(), right.order());
+        if (comparison != 0) {
+            return comparison;
+        }
+        comparison = ExternalOrderKey.compareTextCodePoints(
+                left.channelKey(), right.channelKey());
+        return comparison != 0
+                ? comparison
+                : ExternalOrderKey.compareTextCodePoints(
+                left.effectiveTypeBlueId(),
+                right.effectiveTypeBlueId());
     }
 
     private static String requireText(String value, String label) {

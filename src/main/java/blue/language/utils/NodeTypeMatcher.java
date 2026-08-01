@@ -278,7 +278,7 @@ public class NodeTypeMatcher {
             return targetAt(targetPattern, path, 0, false, false);
         }
 
-        private TargetLookup targetAt(Node current, List<String> path, int offset, boolean forExtension, boolean fromCollectionType) {
+        private TargetLookup targetAt(Node current, List<String> path, int offset, boolean forExpansion, boolean fromCollectionType) {
             if (current == null) {
                 return null;
             }
@@ -289,29 +289,29 @@ public class NodeTypeMatcher {
             String segment = path.get(offset);
             Map<String, Node> properties = current.getProperties();
             if (properties != null && properties.containsKey(segment)) {
-                return targetAt(properties.get(segment), path, offset + 1, forExtension, false);
+                return targetAt(properties.get(segment), path, offset + 1, forExpansion, false);
             }
 
             Integer index = integerSegment(segment);
             List<Node> items = current.getItems();
             if (index != null && items != null && index >= 0 && index < items.size()) {
-                return targetAt(items.get(index), path, offset + 1, forExtension, false);
+                return targetAt(items.get(index), path, offset + 1, forExpansion, false);
             }
 
             if (index != null && current.getItemType() != null) {
-                return targetAt(current.getItemType(), path, offset + 1, forExtension, true);
+                return targetAt(current.getItemType(), path, offset + 1, forExpansion, true);
             }
-            if (index != null && !forExtension && schemaNeedsItems(current.getSchema())) {
+            if (index != null && !forExpansion && schemaNeedsItems(current.getSchema())) {
                 return new TargetLookup(new Node(), false);
             }
 
             if (current.getValueType() != null) {
-                return targetAt(current.getValueType(), path, offset + 1, forExtension, true);
+                return targetAt(current.getValueType(), path, offset + 1, forExpansion, true);
             }
-            if (!forExtension && current.getKeyType() != null) {
+            if (!forExpansion && current.getKeyType() != null) {
                 return new TargetLookup(new Node(), false);
             }
-            if (!forExtension && schemaNeedsFields(current.getSchema())) {
+            if (!forExpansion && schemaNeedsFields(current.getSchema())) {
                 return new TargetLookup(new Node(), false);
             }
 

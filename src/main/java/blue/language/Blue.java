@@ -453,6 +453,26 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     /**
+     * Creates a validated specialization by using {@code type} as the new
+     * node's type and applying {@code overlay} as authored instance content.
+     *
+     * <p>Specialization creates a new node; it is distinct from
+     * {@link #expand(Node)}, which only reveals verified content of an existing
+     * exact node. The supplied nodes are never mutated. The overlay must not
+     * already declare a type because replacing one authored type silently
+     * would make the operation ambiguous.</p>
+     *
+     * @param type non-null type node or pure type reference
+     * @param overlay non-null compatible authored overlay without a type
+     * @return an independent authored specialization
+     * @throws IllegalArgumentException when the overlay already has a type or
+     *                                  does not resolve compatibly
+     */
+    public Node specialize(Node type, Node overlay) {
+        return new NodeSpecializer(this).specialize(type, overlay);
+    }
+
+    /**
      * Canonicalization is valid only for an established, complete operation
      * result. Absence, incomplete evidence, and invalid content fail closed.
      *
@@ -1388,18 +1408,6 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     /**
-     * Compatibility name for {@link #expand(Node, Limits)}.
-     *
-     * @param node mutable graph to modify in place
-     * @param limits non-null per-call traversal limits
-     * <p>New code should use {@link #expand(Node, Limits)}. This descriptor is
-     * retained only for the frozen 1.x binary API.</p>
-     */
-    public void extend(Node node, Limits limits) {
-        expand(node, limits);
-    }
-
-    /**
      * Serializes an object through the Language JSON model and applies
      * preprocessing.
      *
@@ -1820,45 +1828,80 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     /**
-     * Maps and preprocesses an object, then calculates its direct strict
-     * Content BlueId without semantic resolution.
+     * Maps an object and calculates its direct strict Content BlueId without
+     * preprocessing, resolution, or canonicalization.
      *
-     * @param object non-null serializable object
+     * <p>Source-only constructs remain visible to strict identity validation
+     * and are rejected. Use {@link #calculateSourceDocumentBlueId(Object)}
+     * when the object is an authored Source Document.</p>
+     *
+     * @param object non-null serializable direct BlueId input
      * @return canonical Base58 SHA-256 BlueId
      */
     public String calculateBlueId(Object object) {
         beginDirectCacheOperation();
         try {
-            return calculateBlueId(objectToNode(object));
+            String json = JSON_MAPPER.writeValueAsString(object);
+            return calculateBlueId(parseSourceJson(json));
         } finally {
             endDirectCacheOperation();
         }
     }
 
     /**
-     * Preprocesses, resolves, canonicalizes, and calculates semantic identity.
+     * Calculates the BlueId of a Source Document through the complete
+     * Language identity pipeline.
      *
-     * @param node non-null authored source; it is not mutated
-     * @return canonical Base58 SHA-256 BlueId of completed meaning
+     * <p>The input is preprocessed, completely resolved, and canonicalized.
+     * The resulting Canonical Identity Input is then passed to
+     * {@link #calculateBlueId(Node)}. Minimization is deliberately not part
+     * of this path.</p>
+     *
+     * @param node non-null authored Source Document; it is not mutated
+     * @return canonical Base58 SHA-256 BlueId of the Source Document
      */
-    public String calculateSemanticBlueId(Node node) {
+    public String calculateSourceDocumentBlueId(Node node) {
         return BlueIdCalculator.calculateBlueId(canonicalize(node));
     }
 
     /**
-     * Maps an object and calculates the semantic identity of its completed
-     * meaning.
+     * Maps an object and calculates its Source Document BlueId through the
+     * complete Language identity pipeline.
      *
      * @param object non-null serializable object
-     * @return canonical Base58 SHA-256 semantic BlueId
+     * @return canonical Base58 SHA-256 Source Document BlueId
      */
-    public String calculateSemanticBlueId(Object object) {
+    public String calculateSourceDocumentBlueId(Object object) {
         beginDirectCacheOperation();
         try {
-            return calculateSemanticBlueId(objectToNode(object));
+            return calculateSourceDocumentBlueId(objectToNode(object));
         } finally {
             endDirectCacheOperation();
         }
+    }
+
+    /**
+     * Compatibility name for {@link #calculateSourceDocumentBlueId(Node)}.
+     *
+     * <p>Blue has one BlueId format and algorithm. This descriptor is retained
+     * only for consumers of the frozen 1.x binary API; new code must use the
+     * Source Document terminology.</p>
+     *
+     * @param node non-null authored Source Document; it is not mutated
+     * @return the Source Document BlueId
+     */
+    public String calculateSemanticBlueId(Node node) {
+        return calculateSourceDocumentBlueId(node);
+    }
+
+    /**
+     * Compatibility name for {@link #calculateSourceDocumentBlueId(Object)}.
+     *
+     * @param object non-null serializable object
+     * @return the Source Document BlueId
+     */
+    public String calculateSemanticBlueId(Object object) {
+        return calculateSourceDocumentBlueId(object);
     }
 
     /**
@@ -2147,7 +2190,7 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     /**
-     * Applies default and declared preprocessing transformations to a
+     * Applies the mandatory baseline and declared preprocessing transformations to a
      * defensive clone.
      *
      * @param node non-null authored source

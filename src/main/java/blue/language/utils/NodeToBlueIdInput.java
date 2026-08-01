@@ -304,7 +304,7 @@ public final class NodeToBlueIdInput {
         if (node.getBlue() != null) {
             throw new IllegalArgumentException(
                     "\"blue\" is a preprocessing directive and must not be present in BlueId input. " +
-                            "Call preprocess/canonicalize/calculateSemanticBlueId first. Path: " + path);
+                            "Call preprocess/canonicalize/calculateSourceDocumentBlueId first. Path: " + path);
         }
         if (node.getPosition() != null) {
             throw new IllegalArgumentException("\"$pos\" overlays are not valid direct BlueId input. Path: " + path);

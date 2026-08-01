@@ -45,5 +45,8 @@ bin/
 __pycache__/
 *.py[cod]
 
+# Local repository snapshots and downloaded release bundles.
+/*.zip
+
 .cicd
 .fake

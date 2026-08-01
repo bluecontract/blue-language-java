@@ -200,6 +200,43 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
+    void shouldNeverCutOffRootAndShouldContinueItsBufferedEffects() {
+        // given
+        Node document = new Node().properties(
+                "counter",
+                new Node().value(0));
+        ProcessorEngine.Execution execution =
+                new ProcessorEngine.Execution(
+                        new DocumentProcessor(), document);
+        execution.preflightScope("/");
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                new Node(),
+                false);
+        context.applyPatch(JsonPatch.replace(
+                "/counter",
+                new Node().value(1)));
+
+        // when
+        execution.markCutOff("/");
+        context.applyBufferedEffects();
+
+        // then
+        assertFalse(execution.runtime().scope("/").isCutOff());
+        assertEquals(
+                "1",
+                String.valueOf(
+                        execution.runtime()
+                                .nodeAt("/counter")
+                                .getValue()));
+        assertTrue(execution.runtime()
+                .conformanceTrace()
+                .records(ProcessingTraceRecord.Kind.SCOPE_CUT_OFF)
+                .isEmpty());
+    }
+
+    @Test
     void shouldVerifyInvalidEmitEventAbortsBeforeQueueOrPortableGas() {
         // given
         DocumentProcessor owner = new DocumentProcessor();

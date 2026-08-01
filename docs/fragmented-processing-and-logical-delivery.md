@@ -14,14 +14,14 @@ representations; none is a third authored input.
 
 An exact fragment is ordinary Blue content whose preserved child subtrees may
 be pure references. Replacing an inline child with a pure reference to that
-child's exact Node BlueId preserves the identity of every ancestor, including
+child's exact BlueId preserves the identity of every ancestor, including
 Root. There is no partial-node identity and no second graph model.
 
 `ExactNodeGraphFragments` accepts one or more exact ordinary Blue roots and
 exposes:
 
 - the original, direct-fragment, and pure-reference form of each Root;
-- immutable exact fragments keyed by their calculated Node BlueIds;
+- immutable exact fragments keyed by their calculated BlueIds;
 - a verified in-memory `NodeProvider`; and
 - the canonically ordered fragment identity set.
 

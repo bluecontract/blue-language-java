@@ -11,7 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Canonicalizes schema enum values for semantic identity.
+ * Canonicalizes schema enum values for Source Document identity.
  *
  * <p>Schema enums are sets: declaration order and duplicate spellings do not
  * contribute to a BlueId. Values are reduced to scalar identity, ordered by

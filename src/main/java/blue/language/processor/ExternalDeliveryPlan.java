@@ -41,8 +41,12 @@ public final class ExternalDeliveryPlan {
         this.indexedRootRevision = builder.indexedRootRevision;
         this.eventOrderKey = Objects.requireNonNull(
                 builder.eventOrderKey, "eventOrderKey");
+        List<ExternalDeliverySnapshot> canonicalDeliveries =
+                new ArrayList<>(builder.deliveries);
+        canonicalDeliveries.sort(
+                ExternalDeliverySnapshot::compareCanonical);
         this.deliveries = Collections.unmodifiableList(
-                new ArrayList<>(builder.deliveries));
+                canonicalDeliveries);
         this.activeSubscriptionIntervals =
                 Collections.unmodifiableList(
                         new ArrayList<>(
@@ -107,7 +111,7 @@ public final class ExternalDeliveryPlan {
     /**
      * Returns the complete preselected delivery surface.
      *
-     * @return immutable delivery snapshots in derivation order
+     * @return immutable delivery snapshots in canonical order
      */
     public List<ExternalDeliverySnapshot> deliveries() {
         return deliveries;
@@ -240,7 +244,8 @@ public final class ExternalDeliveryPlan {
         }
 
         /**
-         * Appends one preselected delivery in deterministic derivation order.
+         * Adds one preselected delivery. Build canonicalizes all supplied
+         * deliveries independently of their discovery or arrival order.
          *
          * @param snapshot immutable preselected delivery
          * @return this builder

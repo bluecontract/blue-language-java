@@ -28,7 +28,7 @@ public class ListProcessorTest {
                 .type("List")
                 .itemType("Integer");
         Node listB = new Node().name("ListB")
-                .type(new Node().blueId(new Blue().calculateSemanticBlueId(listA)));
+                .type(new Node().blueId(new Blue().calculateSourceDocumentBlueId(listA)));
 
         List<Node> nodes = Arrays.asList(listA, listB);
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(

@@ -15,27 +15,30 @@ import static org.junit.jupiter.api.Assertions.*;
 class DocumentProcessingRuntimeJsonPatchTest {
 
     @Test
-    void shouldCreateIntermediateObjectsWhenAddingNestedProperty() {
+    void shouldRejectMissingIntermediateParentsWithoutMutation() {
         // given
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
-        JsonPatch patch = JsonPatch.add("/foo/bar/baz", new Node().value("qux"));
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
-        Node baz = property(property(property(document, "foo"), "bar"), "baz");
+        IllegalStateException failure = captureFailure(
+                () -> runtime.applyPatch(
+                        "/",
+                        JsonPatch.add(
+                                "/foo/bar/baz",
+                                new Node().value("qux"))));
 
         // then
-        assertNull(data.before());
-        assertEquals("qux", data.after().getValue());
-        assertEquals("/foo/bar/baz", data.path());
-        assertEquals("qux", baz.getValue());
+        assertEquals(
+                "Final parent does not exist for patch path: /foo/bar/baz",
+                failure.getMessage());
+        assertNull(document.getProperties());
     }
 
     @Test
     void shouldUpsertObjectPropertyOnReplace() {
         // given
-        Node document = new Node();
+        Node document = new Node().properties("alpha", new Node());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         JsonPatch replace = JsonPatch.replace("/alpha/beta", new Node().value("v1"));
@@ -48,10 +51,41 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         // then
         assertNull(upsert.before());
+        assertEquals(JsonPatch.Op.ADD, upsert.op());
         assertEquals("v1", upsert.after().getValue());
         assertEquals("v1", update.before().getValue());
+        assertEquals(JsonPatch.Op.REPLACE, update.op());
         assertEquals("v2", update.after().getValue());
         assertEquals("v2", beta.getValue());
+    }
+
+    @Test
+    void shouldRenderAuthoredAddToExistingObjectPropertyAsReplace() {
+        // given
+        Node document = new Node().properties(
+                "alpha",
+                new Node().properties(
+                        "beta",
+                        new Node().value("v1")));
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document);
+
+        // when
+        DocumentProcessingRuntime.DocumentUpdateData update =
+                runtime.applyPatch(
+                        "/",
+                        JsonPatch.add(
+                                "/alpha/beta",
+                                new Node().value("v2")));
+
+        // then
+        assertEquals("v1", update.before().getValue());
+        assertEquals(JsonPatch.Op.REPLACE, update.op());
+        assertEquals("v2", update.after().getValue());
+        assertEquals(
+                "v2",
+                property(property(document, "alpha"), "beta")
+                        .getValue());
     }
 
     @Test
@@ -99,6 +133,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         // then
         assertEquals(2, intValue(data.before()));
+        assertEquals(JsonPatch.Op.ADD, data.op());
         assertEquals(99, intValue(data.after()));
         assertEquals(4, items.size());
         assertEquals(1, intValue(items.get(0)));
@@ -120,6 +155,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         // then
         assertNull(data.before());
+        assertEquals(JsonPatch.Op.ADD, data.op());
         assertEquals(6, intValue(data.after()));
         assertEquals(3, items.size());
         assertEquals(6, intValue(items.get(2)));
@@ -136,6 +172,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         // then
         assertEquals(8, intValue(data.before()));
+        assertEquals(JsonPatch.Op.REPLACE, data.op());
         assertEquals(80, intValue(data.after()));
         assertEquals(80, intValue(array(document, "nums").get(1)));
     }
@@ -196,7 +233,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
-    void shouldRejectArrayElementSubpathWhenElementDoesNotExist() {
+    void shouldRejectMissingArrayElementParentWithoutMutation() {
         // given
         Node array = new Node().items(new ArrayList<>());
         Node document = new Node().properties("arr", array);
@@ -209,7 +246,9 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         // then
         assertEquals(IllegalStateException.class, ex.getClass());
-        assertTrue(ex.getMessage().toLowerCase().contains("array index"), ex.getMessage());
+        assertEquals(
+                "Final parent does not exist for patch path: /arr/0/name",
+                ex.getMessage());
         assertTrue(array.getItems().isEmpty());
         assertTrue(arrProps == null || arrProps.isEmpty());
     }
@@ -217,7 +256,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
     @Test
     void shouldFailAndRollBackWhenUsingAppendTokenOnObject() {
         // given
-        Node document = new Node();
+        Node document = new Node().properties("foo", new Node());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -227,13 +266,18 @@ class DocumentProcessingRuntimeJsonPatchTest {
         // then
         assertEquals(IllegalStateException.class, ex.getClass());
         assertTrue(ex.getMessage().contains("Append token"));
-        assertNull(document.getProperties());
+        assertNotNull(document.getProperties());
+        assertNull(document.getProperties().get("foo").getProperties());
     }
 
     @Test
     void shouldMaintainLiteralPointerWhenAddingPropertyWithEmptySegments() {
         // given
-        Node document = new Node();
+        Node document = new Node().properties(
+                "foo",
+                new Node().properties(
+                        "",
+                        new Node().properties("bar", new Node())));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -250,7 +294,9 @@ class DocumentProcessingRuntimeJsonPatchTest {
     @Test
     void shouldCleanUpLeafWhenRemovingPropertyWithEmptySegments() {
         // given
-        Node document = new Node();
+        Node document = new Node().properties(
+                "foo",
+                new Node().properties("", new Node()));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -267,7 +313,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
     @Test
     void shouldAddressLiteralSlashAndTildeKeysUsingJsonPointerEscapes() {
         // given
-        Node document = new Node();
+        Node document = new Node().properties("tilde", new Node());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when

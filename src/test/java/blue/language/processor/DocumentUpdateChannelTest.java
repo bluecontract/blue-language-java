@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class DocumentUpdateChannelTest {
 
     @Test
-    void shouldVerifyDocumentUpdatePathsAreRelativeToEveryReceivingScope() {
+    void shouldRenderOneUnderlyingDocumentUpdateRelativeToEveryReceivingScope() {
         // given
         DocumentProcessingRuntime.DocumentUpdateData update =
                 new DocumentProcessingRuntime.DocumentUpdateData(
@@ -45,6 +45,10 @@ class DocumentUpdateChannelTest {
                         update, "/");
 
         // then
+        assertEquals("/a/b/x", update.path());
+        assertEquals("add", sourceEvent.getAsText("/op"));
+        assertEquals("add", ancestorEvent.getAsText("/op"));
+        assertEquals("add", rootEvent.getAsText("/op"));
         assertEquals("/x",
                 sourceEvent.getAsText("/path"));
         assertEquals("/",
@@ -126,6 +130,9 @@ class DocumentUpdateChannelTest {
     void shouldVerifyNestedUpdatesPropagateToParentWatchers() {
         // given
         String yaml = "name: Nested Doc\n" +
+                "a:\n" +
+                "  b:\n" +
+                "    existing: true\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +

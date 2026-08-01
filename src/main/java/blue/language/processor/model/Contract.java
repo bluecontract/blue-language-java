@@ -1,7 +1,8 @@
 package blue.language.processor.model;
 
 /**
- * Base type for all contract representations extracted from a document tree.
+ * Base type for all contract representations extracted from a rooted document
+ * graph slice.
  *
  * <p>Instances are mutable loader models. The contract loader assigns the
  * declaration metadata after constructing a concrete subtype, so callers

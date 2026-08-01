@@ -229,7 +229,7 @@ class BlueContractsConformanceReportTest {
         // then
         assertEquals(expectedReleaseName, report.getReleaseName());
         assertEquals(
-                "sha256:1290ef331b58c9a5074deef30a6f5bf59afa573dd3446bb4131e10b6508ffd70",
+                "sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa",
                 report.getReleasePackageIdentity());
         assertEquals(
                 "sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18",
@@ -260,7 +260,7 @@ class BlueContractsConformanceReportTest {
                 nested(report.toMachineReadableMap(),
                         "language", "specificationSha256"));
         assertEquals(
-                "3a318322eebd95b47e51d9c6ef51babe07959fdee293767bf0e32cc07ab9dbe0",
+                "d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1",
                 nested(report.toMachineReadableMap(),
                         "contracts", "specificationSha256"));
 

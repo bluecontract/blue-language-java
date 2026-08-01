@@ -262,7 +262,7 @@ public final class Merger implements NodeResolver {
                         }
                     } else {
                         if (typeBlueId != null) {
-                            extendTypeReference(typeNode, typeBlueId);
+                            expandTypeReference(typeNode, typeBlueId);
                         }
 
                         Node resolvedType = resolveWithContribution(
@@ -335,7 +335,7 @@ public final class Merger implements NodeResolver {
         return resolvedType.clone();
     }
 
-    private void extendTypeReference(Node typeNode, String blueId) {
+    private void expandTypeReference(Node typeNode, String blueId) {
         if (CORE_TYPE_BLUE_IDS.contains(blueId)) {
             return;
         }
@@ -2356,7 +2356,7 @@ public final class Merger implements NodeResolver {
         TypeResolutionKey key = new TypeResolutionKey(typeBlueId, resolutionState.path.size());
         beginResolvingType(key);
         try {
-            extendTypeReference(metadataType, typeBlueId);
+            expandTypeReference(metadataType, typeBlueId);
             Node resolved = resolveWithContribution(metadataType, limits, Contribution.TYPE_METADATA);
             cacheResolvedReference(typeBlueId, resolved, limits);
             return resolved;

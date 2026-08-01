@@ -661,6 +661,8 @@ tasks.register('runtimeTraceEvidence', JavaExec) {
 
 def fragmentedProcessingTestResults = layout.buildDirectory.dir(
         'test-results/fragmentedProcessingTest')
+def semanticLocalityEvidenceDirectory = layout.buildDirectory.dir(
+        'reports/semantic-baseline/locality')
 def fragmentedProcessingJson = layout.buildDirectory.file(
         'reports/fragmented-processing/fragmented-processing.json')
 def fragmentedProcessingJar = tasks.named('jar', Jar).flatMap {
@@ -712,6 +714,9 @@ tasks.register('fragmentedProcessingTest', Test) {
         junitXml.outputLocation = fragmentedProcessingTestResults
         html.required = true
     }
+    systemProperty 'blue.semantic.locality.evidence.dir',
+            semanticLocalityEvidenceDirectory.get().asFile.absolutePath
+    outputs.dir(semanticLocalityEvidenceDirectory)
     filter {
         includeTestsMatching 'blue.language.provider.ExactNodeGraphFragmentsTest'
         includeTestsMatching 'blue.language.utils.NodeProviderWrapperCompatibilityTest'
@@ -764,6 +769,7 @@ tasks.register('fragmentedProcessingReport') {
     inputs.file(jarRepeatabilityJson)
     inputs.file(sourceArchiveRepeatabilityJson)
     inputs.files(representationEvidenceSources)
+    inputs.dir(semanticLocalityEvidenceDirectory)
     inputs.files(releaseEvidenceSourceInputs)
     inputs.file(cleanBuildEvidenceFile).optional()
     inputs.property('sourceCommit', fragmentedProcessingSourceCommit)
@@ -2400,6 +2406,89 @@ tasks.register('verifySourceReleaseArchive') {
     }
 }
 
+def semanticBaselineFile = layout.projectDirectory.file(
+        'api/semantic-baseline-1.0.json')
+def semanticApiInventory = layout.buildDirectory.file(
+        'reports/semantic-baseline/current-api.json')
+def semanticBaselineVerificationJson = layout.buildDirectory.file(
+        'reports/semantic-baseline/verification.json')
+def semanticContractsFixtureRoot = layout.projectDirectory.dir(
+        'src/test/resources/blue-contracts-1.0/fixtures')
+
+tasks.register('generateSemanticApiInventory', Exec) {
+    group = 'verification'
+    description = 'Generates the deterministic current public/protected JVM API inventory.'
+    dependsOn tasks.named('jar')
+    inputs.file(tasks.named('jar').flatMap { it.archiveFile })
+    inputs.file('tools/generate_api_inventory.py')
+    inputs.file('tools/check_binary_api.py')
+    outputs.file(semanticApiInventory)
+    doFirst {
+        commandLine 'python3',
+                'tools/generate_api_inventory.py',
+                tasks.named('jar').get().archiveFile.get().asFile.absolutePath,
+                semanticApiInventory.get().asFile.absolutePath
+    }
+}
+
+tasks.register('semanticBaselineCapture', JavaExec) {
+    group = 'verification'
+    description = 'Deliberately captures the commit-bound pre-refactor semantic characterization.'
+    dependsOn tasks.named('fragmentedProcessingReport')
+    dependsOn tasks.named('testClasses')
+    dependsOn tasks.named('generateSemanticApiInventory')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'blue.language.conformance.SemanticBaselineCaptureCli'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    args releaseConformanceJson.get().asFile.absolutePath,
+            fragmentedProcessingJson.get().asFile.absolutePath,
+            semanticApiInventory.get().asFile.absolutePath,
+            semanticContractsFixtureRoot.asFile.absolutePath,
+            semanticBaselineFile.asFile.absolutePath,
+            semanticLocalityEvidenceDirectory.get().asFile.absolutePath
+    inputs.file(releaseConformanceJson)
+    inputs.file(fragmentedProcessingJson)
+    inputs.file(semanticApiInventory)
+    inputs.dir(semanticContractsFixtureRoot)
+    inputs.dir(semanticLocalityEvidenceDirectory)
+    outputs.file(semanticBaselineFile)
+}
+
+tasks.register('semanticBaselineVerify', JavaExec) {
+    group = 'verification'
+    description = 'Verifies exact Language/Contracts semantics against the tracked pre-refactor characterization.'
+    dependsOn tasks.named('fragmentedProcessingReport')
+    dependsOn tasks.named('testClasses')
+    dependsOn tasks.named('generateSemanticApiInventory')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'blue.language.conformance.SemanticBaselineVerifierCli'
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    args semanticBaselineFile.asFile.absolutePath,
+            releaseConformanceJson.get().asFile.absolutePath,
+            fragmentedProcessingJson.get().asFile.absolutePath,
+            semanticApiInventory.get().asFile.absolutePath,
+            semanticContractsFixtureRoot.asFile.absolutePath,
+            semanticBaselineVerificationJson.get().asFile.absolutePath,
+            semanticLocalityEvidenceDirectory.get().asFile.absolutePath
+    inputs.file(semanticBaselineFile)
+    inputs.file(releaseConformanceJson)
+    inputs.file(fragmentedProcessingJson)
+    inputs.file(semanticApiInventory)
+    inputs.dir(semanticContractsFixtureRoot)
+    inputs.files(fileTree('src/main/resources/specifications'))
+    inputs.files(fileTree('src/test/resources/language/1.0'))
+    inputs.files(fileTree('src/test/resources/contract/1.0'))
+    inputs.files(fileTree('src/main/java'))
+    inputs.files(fileTree('docs'))
+    inputs.dir(semanticLocalityEvidenceDirectory)
+    inputs.file('README.md')
+    outputs.file(semanticBaselineVerificationJson)
+}
+
 tasks.register('rcVerify') {
     group = 'verification'
     description = 'Runs incremental release-candidate gates; first run clean build with the same SOURCE_DATE_EPOCH.'
@@ -2414,6 +2503,7 @@ tasks.register('rcVerify') {
     dependsOn tasks.named('verifyReleaseEvidenceReport')
     dependsOn tasks.named('verifySourceReleaseArchive')
     dependsOn tasks.named('jmhClasses')
+    dependsOn tasks.named('semanticBaselineVerify')
 }
 
 publishing {

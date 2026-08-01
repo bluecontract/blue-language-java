@@ -19,8 +19,9 @@ import static blue.language.utils.Properties.OBJECT_VALUE;
  * tree using structural sharing.
  *
  * <p>The original root is never modified. Root replacement is forbidden;
- * object paths may create missing intermediate containers, while list and
- * scalar traversal remain strict.</p>
+ * canonical overlay paths may create absent containers because an effective
+ * parent can be inherited, while the processor boundary separately requires
+ * that the final effective parent already exists.</p>
  */
 public final class CanonicalOverlayPatchEngine {
 
@@ -182,7 +183,8 @@ public final class CanonicalOverlayPatchEngine {
         FrozenNode child = node.property(segment);
         if (child == null) {
             if (JsonPointer.isArrayIndexSegment(segment)) {
-                throw new IllegalStateException("Expected array element to exist at path: " + path);
+                throw new IllegalStateException(
+                        "Expected array element to exist at path: " + path);
             }
             child = emptyNodeForRootMode();
         }

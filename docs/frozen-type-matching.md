@@ -72,7 +72,7 @@ lookup from bypassing the caller's `Limits`.
 `matchesResolvedType(FrozenNode resolvedNode, FrozenNode resolvedTargetType)` is
 the direct path. It assumes the caller already has a resolved immutable view.
 
-This path does not run `extend(...)`, does not rebuild a mutable document, and
+This path does not run reference expansion, does not rebuild a mutable document, and
 does not traverse unobserved mutable state. It compares immutable nodes and only
 uses provider lookups for type/reference definitions that are not already
 available in the frozen graph.

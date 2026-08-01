@@ -12,6 +12,7 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.JsonPointer;
+import blue.language.utils.ParsedJsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -232,6 +233,9 @@ final class PatchPlanningEngine {
             ImmutableJsonPatch resolvedPatch = resolveProcessorManagedValue(
                     prepared, canonicalPlan);
             ImmutablePatchPlanner resolvedPlanner = ImmutablePatchPlanner.forFrozen(workingResolved);
+            boolean objectMemberTarget = targetsObjectMember(
+                    resolvedPlanner,
+                    resolvedPatch.path());
             ImmutablePatchPlanner.PatchPlan resolvedPlan = exactReplacement
                     ? resolvedPlanner.planWithExactReplacement(originScopePath, resolvedPatch)
                     : resolvedPlanner.plan(originScopePath, resolvedPatch);
@@ -253,6 +257,7 @@ final class PatchPlanningEngine {
             BatchPatchRecord record = new BatchPatchRecord(resolvedPatch,
                     canonicalPlan,
                     resolvedPlan,
+                    objectMemberTarget,
                     impact,
                     isProcessorManagedConformanceBypass(canonicalPlan));
             records.add(record);
@@ -352,6 +357,27 @@ final class PatchPlanningEngine {
             }
         }
         return false;
+    }
+
+    /**
+     * Captures the target container shape before the patch mutates it so
+     * Document Update rendering can distinguish object-member upsert
+     * semantics from positional list semantics.
+     */
+    private boolean targetsObjectMember(
+            ImmutablePatchPlanner planner,
+            ParsedJsonPointer path) {
+        if (path.isRoot()) {
+            return false;
+        }
+        FrozenNode parent = planner.read(path.parent());
+        if (parent == null || !parent.hasItems()) {
+            return parent != null;
+        }
+        String member = path.segments().get(
+                path.segments().size() - 1);
+        return Properties.OBJECT_VALUE.equals(member)
+                || ProcessorContractConstants.KEY_CONTRACTS.equals(member);
     }
 
     private Set<String> wholeEmbeddedChildApplicationPatches(

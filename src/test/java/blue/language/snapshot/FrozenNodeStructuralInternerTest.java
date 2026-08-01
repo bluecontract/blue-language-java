@@ -160,7 +160,7 @@ class FrozenNodeStructuralInternerTest {
     }
 
     @Test
-    void shouldDistinguishExactRepresentationsWithSameSemanticBlueIdInMatcherCache() {
+    void shouldDistinguishExactRepresentationsWithSameSourceDocumentBlueIdInMatcherCache() {
         // given
         Node directNode = new Node().name("Matcher Candidate");
         String targetId = new Blue().calculateBlueId(new Node().name("Target Identity"));

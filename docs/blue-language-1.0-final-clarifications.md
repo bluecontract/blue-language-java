@@ -13,26 +13,26 @@ This page is an implementation-oriented guide to the revised surface.
 Expansion and collapse change how much of the same exact node is materialized:
 
 ```text
-expand   -> reveal verified content; preserve Node BlueId
-collapse -> replace verified content with its pure reference; preserve Node BlueId
+expand   -> reveal verified content; preserve BlueId
+collapse -> replace verified content with its pure reference; preserve BlueId
 ```
 
 Specialization creates a new node by naming another node as its `type` and
-adding a compatible overlay. It normally creates a different Node BlueId.
+adding a compatible overlay. It normally creates a different BlueId.
 Opening a referenced type is expansion; creating a more specific instance of
 that type is specialization.
 
-## Node BlueId And Content BlueId
+## One BlueId, Two Calculation Paths
 
-A Node BlueId identifies one exact immutable Blue node:
+Direct calculation identifies one exact immutable Blue node:
 
 ```text
-valid exact BlueId Input -> Node BlueId algorithm -> Node BlueId
+valid exact BlueId Input -> BlueId algorithm -> BlueId
 ```
 
 A Source Document may contain aliases, preprocessing configuration, inherited
-content, and authoring controls. Its Content BlueId therefore follows the full
-semantic pipeline:
+content, and authoring controls. Its BlueId therefore follows the full Source
+Document pipeline:
 
 ```text
 Source Document
@@ -40,14 +40,14 @@ Source Document
   -> complete resolve
   -> canonicalize
   -> Canonical Identity Input
-  -> Node BlueId algorithm
-  -> Content BlueId
+  -> BlueId algorithm
+  -> BlueId
 ```
 
-Content BlueId is not another digest format. It is the Node BlueId of the
-unique Canonical Identity Input. Directly hashing a Source Document, a
-noncanonical Resolved Form, or a Minimized Overlay does not establish its
-Content BlueId.
+“Content BlueId” is permitted shorthand for the result of this path, not a
+second identifier kind or algorithm. Directly hashing a Source Document, a
+noncanonical Resolved Form, or a Minimized Overlay does not establish that
+Source Document's BlueId.
 
 ## Canonicalization And Minimization
 
@@ -59,16 +59,66 @@ different purposes:
 | Result | Unique Canonical Identity Input | One convenient Source overlay |
 | Direct BlueId input | Yes | Not necessarily |
 | May contain `$previous`, `$pos`, `$replace` | No | Yes |
-| Part of Content BlueId calculation | Yes | No |
+| Part of Source Document BlueId calculation | Yes | No |
 
-A Minimized Overlay reaches the same Content BlueId only after it is processed
-again through preprocessing, complete resolution, canonicalization, and Node
+A Minimized Overlay reaches the same BlueId only after it is processed again
+through preprocessing, complete resolution, canonicalization, and direct
 BlueId calculation.
 
 Blue semantic canonicalization determines which exact node is hashed. RFC 8785
 canonical JSON serialization determines deterministic bytes for helper values
-inside the Node BlueId algorithm. Sorting JSON keys is not a replacement for
+inside the BlueId algorithm. Sorting JSON keys is not a replacement for
 semantic canonicalization.
+
+For an append-only list, the distinction is visible:
+
+```text
+Inherited: [A, B]
+Resolved:  [A, B, C]
+Minimized: $previous(id([A, B])) + C
+Canonical: [A, B, C]
+```
+
+The Minimized Overlay retains an authoring shortcut. The Canonical Identity
+Input contains the final list payload that is directly hashed.
+
+## Incremental List Identity
+
+Lists use one recursive fold, both for full calculation and incremental append:
+
+```text
+L0 = id([])
+Ln = fold(Ln-1, id(elementN))
+id(prefix + [x]) = fold(id(prefix), id(x))
+```
+
+When the exact prefix BlueId is already established, appending one element does
+not require the earlier element bodies. Replacing, inserting, or removing an
+element at index `i` changes the accumulator at that position, so the suffix
+from `i` onward must be folded again. This identity rule does not prescribe how
+or where earlier list content is stored.
+
+## Unconstrained Fields
+
+A field declaration with descriptive metadata but no `type` accepts any valid
+Blue node when the field is present:
+
+```yaml
+payload:
+  description: Optional application-defined Blue value.
+```
+
+That includes scalar, list, object, specialized, and pure-reference values. An
+omitted type does not mean `Dictionary`, and Blue Language 1.0 does not define
+an `Any` type. To require a Dictionary-compatible value, declare it explicitly:
+
+```yaml
+payload:
+  type: Dictionary
+```
+
+`schema.required: true` controls presence independently of whether the value is
+otherwise unconstrained.
 
 ## Final `blue` Directive
 

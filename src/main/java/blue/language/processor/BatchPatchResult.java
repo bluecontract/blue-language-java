@@ -257,6 +257,7 @@ final class BatchPatchResult {
                     Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
             for (int recordIndex = 0; recordIndex < records.size(); recordIndex++) {
                 BatchPatchRecord record = records.get(recordIndex);
+                FrozenNode before = record.beforeAtPatchTime();
                 FrozenNode after = null;
                 if (record.op() != JsonPatch.Op.REMOVE) {
                     after = laterOverlaps[recordIndex]
@@ -264,9 +265,9 @@ final class BatchPatchResult {
                             : finalResolvedPlanner.read(record.path());
                 }
                 built.add(new DocumentProcessingRuntime.DocumentUpdateData(record.path(),
-                        record.beforeAtPatchTime(),
+                        before,
                         after,
-                        record.op(),
+                        semanticOperation(record, before),
                         record.originScope(),
                         record.cascadeScopes(),
                         materializationMetrics));
@@ -287,6 +288,22 @@ final class BatchPatchResult {
                 }
             }
             return Collections.unmodifiableList(built);
+        }
+
+        /**
+         * Renders object-member writes from their patch-time existence while
+         * preserving authored positional list and root operations.
+         */
+        private JsonPatch.Op semanticOperation(BatchPatchRecord record,
+                                               FrozenNode before) {
+            JsonPatch.Op authored = record.op();
+            if (authored == JsonPatch.Op.REMOVE
+                    || !record.objectMemberTarget()) {
+                return authored;
+            }
+            return before == null
+                    ? JsonPatch.Op.ADD
+                    : JsonPatch.Op.REPLACE;
         }
 
         private String originScopeForGeneratedUpdate() {

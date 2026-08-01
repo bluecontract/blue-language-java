@@ -56,7 +56,7 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
         assertTrue(hasContract(snapshot.resolvedRoot(), "audit"));
         assertEquals("materialized",
                 snapshot.resolvedRoot().getAsText("/materializedField"));
-        assertEquals(snapshot.blueId(), blue.calculateSemanticBlueId(source));
+        assertEquals(snapshot.blueId(), blue.calculateSourceDocumentBlueId(source));
     }
 
     @Test

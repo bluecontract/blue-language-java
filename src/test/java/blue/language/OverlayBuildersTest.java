@@ -460,10 +460,10 @@ public class OverlayBuildersTest {
         assertEquals("Same Label", canonical.getName());
         assertEquals("Same Description", canonical.getDescription());
         assertEquals(BlueIdCalculator.calculateBlueId(expectedCanonical),
-                blue.calculateSemanticBlueId(source));
-        assertNotEquals(blue.calculateSemanticBlueId(
+                blue.calculateSourceDocumentBlueId(source));
+        assertNotEquals(blue.calculateSourceDocumentBlueId(
                         new Node().type(new Node().blueId(typeBlueId))),
-                blue.calculateSemanticBlueId(source));
+                blue.calculateSourceDocumentBlueId(source));
     }
 
     @Test

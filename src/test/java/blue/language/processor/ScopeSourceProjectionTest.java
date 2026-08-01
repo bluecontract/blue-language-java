@@ -93,7 +93,7 @@ class ScopeSourceProjectionTest {
                         + "    - $pos: 1\n"
                         + "      value: C");
         ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
-        String expected = blue.calculateSemanticBlueId(source);
+        String expected = blue.calculateSourceDocumentBlueId(source);
 
         // when
         ScopeSourceProjection nodeProjection = ScopeSourceProjection.project(
@@ -158,7 +158,7 @@ class ScopeSourceProjectionTest {
                         + "    - $pos: 1\n"
                         + "      value: C");
         ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
-        String expected = blue.calculateSemanticBlueId(source);
+        String expected = blue.calculateSourceDocumentBlueId(source);
 
         // when
         ScopeSourceProjection nodeProjection = ScopeSourceProjection.project(
@@ -221,7 +221,7 @@ class ScopeSourceProjectionTest {
                         + "      $replace:\n"
                         + "        blueId: " + referencedBlueId);
         ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
-        String expected = blue.calculateSemanticBlueId(source);
+        String expected = blue.calculateSourceDocumentBlueId(source);
 
         // when
         ScopeSourceProjection projection = ScopeSourceProjection.project(
@@ -311,7 +311,7 @@ class ScopeSourceProjectionTest {
                         .type(reference(RuntimeBlueIds.PROCESS_EMBEDDED))
                         .properties("paths", new Node().items(Arrays.asList(text("/child"))))));
         Node standaloneChild = selectedChild.clone().type(reference(childTypeBlueId));
-        String expected = blue.calculateSemanticBlueId(standaloneChild);
+        String expected = blue.calculateSourceDocumentBlueId(standaloneChild);
         ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
 
         // when
@@ -390,7 +390,7 @@ class ScopeSourceProjectionTest {
 
         Blue oracle = ProcessorTestSupport.blue(referenceProvider(
                 referencedPayload, referencedLifecycleChannel));
-        String expected = oracle.calculateSemanticBlueId(source.clone());
+        String expected = oracle.calculateSourceDocumentBlueId(source.clone());
 
         Blue projectionBlue = ProcessorTestSupport.blue(referenceProvider(
                 referencedPayload, referencedLifecycleChannel));
@@ -578,7 +578,7 @@ class ScopeSourceProjectionTest {
                 .contracts(new Node().properties("referenceEvidence", reference(referencedBlueId)));
         Blue blue = ProcessorTestSupport.blue(provider);
         ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
-        String expected = blue.calculateSemanticBlueId(source);
+        String expected = blue.calculateSourceDocumentBlueId(source);
 
         // when
         ScopeSourceProjection projection = ScopeSourceProjection.project(

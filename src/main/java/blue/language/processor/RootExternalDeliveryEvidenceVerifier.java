@@ -1701,29 +1701,7 @@ public final class RootExternalDeliveryEvidenceVerifier
     private int compareDeliveries(
             ExternalDeliverySnapshot left,
             ExternalDeliverySnapshot right) {
-        int comparison = Integer.compare(
-                depth(right.scopePath()),
-                depth(left.scopePath()));
-        if (comparison != 0) {
-            return comparison;
-        }
-        comparison = ExternalOrderKey.compareTextCodePoints(
-                left.scopePath(), right.scopePath());
-        if (comparison != 0) {
-            return comparison;
-        }
-        comparison = Integer.compare(
-                left.order(), right.order());
-        if (comparison != 0) {
-            return comparison;
-        }
-        comparison = ExternalOrderKey.compareTextCodePoints(
-                left.channelKey(), right.channelKey());
-        return comparison != 0
-                ? comparison
-                : ExternalOrderKey.compareTextCodePoints(
-                left.effectiveTypeBlueId(),
-                right.effectiveTypeBlueId());
+        return ExternalDeliverySnapshot.compareCanonical(left, right);
     }
 
     private int depth(String scopePath) {

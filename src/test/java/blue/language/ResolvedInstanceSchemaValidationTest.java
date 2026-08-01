@@ -793,9 +793,9 @@ class ResolvedInstanceSchemaValidationTest {
 
         // when
         String materializedBlueId =
-                fixture.blue.calculateSemanticBlueId(materializedInstance);
+                fixture.blue.calculateSourceDocumentBlueId(materializedInstance);
         String referencedBlueId =
-                fixture.blue.calculateSemanticBlueId(referencedInstance);
+                fixture.blue.calculateSourceDocumentBlueId(referencedInstance);
         Node canonical = fixture.blue.canonicalize(referencedInstance);
         Node canonicalSubject = canonical.getProperties().get("subject");
 

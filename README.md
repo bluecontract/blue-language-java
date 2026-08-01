@@ -54,7 +54,9 @@ Maven:
 
 ### Nodes
 
-A Blue document is a tree of nodes. A node has one payload kind:
+A Blue document is a rooted graph slice. References and shared type nodes make
+the complete Blue value a graph, even though one serialized document shows a
+finite rooted slice. A node has one payload kind:
 
 - scalar value;
 - list items;
@@ -121,18 +123,25 @@ type:
 
 This keeps reference identity unambiguous.
 
-### Canonical Versus Resolved
+### Source, Resolved, Canonical, And Minimized Forms
 
-Blue distinguishes two useful views:
+Blue keeps four purposes distinct:
 
-- canonical content: minimized content used for identity and storage;
-- resolved content: runtime view with inherited type state available.
+- Source Document: authored input, including aliases and list controls;
+- Resolved Form: complete runtime meaning with inherited state available;
+- Canonical Identity Input: unique direct BlueId input;
+- Minimized Overlay: a smaller author-facing Source form that resolves to the
+  same meaning.
+
+Canonicalization, not minimization, produces identity input. Blue semantic
+canonicalization is also separate from RFC 8785 canonical JSON serialization,
+which determines the bytes of helper values inside the BlueId algorithm.
 
 `ResolvedSnapshot` contains both views as immutable `FrozenNode` graphs:
 
 ```text
 ResolvedSnapshot
-  canonicalRoot  -> minimized identity source
+  canonicalRoot  -> unique Canonical Identity Input
   resolvedRoot   -> runtime view
   blueId         -> canonicalRoot.blueId()
 ```
@@ -161,30 +170,35 @@ System.out.println(json);
 System.out.println(yaml);
 ```
 
-### Compute A Structural BlueId
+### Calculate A BlueId Directly
 
-Use `calculateBlueId` when the node itself is the content you want to address.
+Use `calculateBlueId` when the node is already valid exact BlueId Input.
 
 ```java
 String blueId = blue.calculateBlueId(node);
 System.out.println(blueId);
 ```
 
-Structural BlueIds are sensitive to authored content. If a document contains a
-redundant inherited override, that override is part of the structural input.
+Direct calculation does not preprocess, resolve, canonicalize, or minimize the
+input. Source-only content such as a root `blue` directive is rejected.
 
-### Compute A Semantic BlueId
+### Calculate A Source Document BlueId
 
-Use `calculateSemanticBlueId` when you want identity after preprocess, resolve,
-and minimization.
+Use `calculateSourceDocumentBlueId` for authored Source Documents. It executes
+the complete identity path:
 
-```java
-String semanticBlueId = blue.calculateSemanticBlueId(node);
-System.out.println(semanticBlueId);
+```text
+Source -> preprocess -> complete resolve -> canonicalize -> direct BlueId
 ```
 
-Semantic identity is useful when different authored forms should be treated as
-the same document because they resolve to the same minimized meaning.
+```java
+String sourceDocumentBlueId = blue.calculateSourceDocumentBlueId(node);
+System.out.println(sourceDocumentBlueId);
+```
+
+There is one BlueId format and algorithm. “Content BlueId” is only shorthand
+for the BlueId reached through the Source Document path, not another identifier
+kind or namespace.
 
 ## Reference Providers
 
@@ -919,7 +933,7 @@ Primary facade:
 - `objectToNode(Object)`
 - `nodeToObject(Node, Class<T>)`
 - `calculateBlueId(Node)`
-- `calculateSemanticBlueId(Node)`
+- `calculateSourceDocumentBlueId(Node)`
 - `exportNode(Node, ExportContext)`
 - `resolve(Node)`
 - `canonicalize(Node)`
@@ -944,7 +958,7 @@ Primary facade:
 
 ### `Node`
 
-Mutable Blue document tree. Best for parsing, authoring, compatibility, and
+Mutable Blue document graph slice. Best for parsing, authoring, compatibility, and
 serialization boundaries.
 
 ### `FrozenNode`
@@ -1141,11 +1155,11 @@ bound release records 153/153 Language passes and 140/140 Contracts passes:
 The bound final implementation baseline is
 `blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline`,
 with release package identity
-`sha256:1290ef331b58c9a5074deef30a6f5bf59afa573dd3446bb4131e10b6508ffd70`.
+`sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa`.
 The vendored Language and Contracts specifications have SHA-256 digests
 `41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e`
 and
-`3a318322eebd95b47e51d9c6ef51babe07959fdee293767bf0e32cc07ab9dbe0`,
+`d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1`,
 respectively.
 
 Run the hard release gate:
