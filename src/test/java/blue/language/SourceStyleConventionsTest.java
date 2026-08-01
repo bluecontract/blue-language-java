@@ -21,7 +21,7 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.registry.RegistryManifestConstants;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.testing.RepositoryLayout;
-import blue.language.utils.CanonicalIdentityConstants;
+import blue.language.identity.CanonicalIdentityConstants;
 import blue.language.model.wire.SchemaPropertyConstants;
 import org.junit.jupiter.api.Test;
 

@@ -20,11 +20,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_ELEMENT_KEY;
-import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_KEY;
-import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
-import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_KEY;
-import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_VALUE;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_CONS_ELEMENT_KEY;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_CONS_KEY;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_SEED_KEY;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_SEED_VALUE;
 import static blue.language.model.wire.BlueLanguageConstants.*;
 import static blue.language.model.wire.SchemaPropertyConstants.*;
 

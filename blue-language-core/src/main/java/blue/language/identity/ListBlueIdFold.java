@@ -9,11 +9,11 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Function;
 
-import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_ELEMENT_KEY;
-import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_KEY;
-import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
-import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_KEY;
-import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_VALUE;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_CONS_ELEMENT_KEY;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_CONS_KEY;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_SEED_KEY;
+import static blue.language.identity.CanonicalIdentityConstants.LIST_SEED_VALUE;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_EMPTY;
 import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_PREVIOUS;
 import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;

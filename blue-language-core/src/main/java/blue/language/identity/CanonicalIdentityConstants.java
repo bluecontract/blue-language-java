@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.identity;
 
 /**
  * Wire tokens used by the recursive canonical identity representation of a
