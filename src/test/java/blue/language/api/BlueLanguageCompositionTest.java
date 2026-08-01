@@ -10,6 +10,8 @@ import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class BlueLanguageCompositionTest {
 
@@ -77,5 +79,36 @@ final class BlueLanguageCompositionTest {
                     result.root().property("left").getValue());
             assertFalse(result.blueId().isEmpty());
         }
+    }
+
+    @Test
+    void shouldReleaseOwnedStateAndRejectSemanticWorkAfterClose() {
+        // given
+        BlueLanguage language = BlueLanguage.builder().build();
+        Node source = new Node().value("before-close");
+
+        // when
+        language.snapshots().resolve(source);
+        language.close();
+
+        // then
+        assertTrue(language.snapshots().stats().isClosed());
+        assertThrows(IllegalStateException.class,
+                () -> language.resolution().resolve(source));
+        assertEquals("\"before-close\"",
+                language.codec().writeSimple(source, BlueFormat.JSON));
+    }
+
+    @Test
+    void shouldCloseIdempotently() {
+        // given
+        BlueLanguage language = BlueLanguage.builder().build();
+
+        // when
+        language.close();
+        language.close();
+
+        // then
+        assertTrue(language.snapshots().stats().isClosed());
     }
 }

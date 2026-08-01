@@ -1,19 +1,11 @@
 package blue.language.api;
 
-import blue.language.Blue;
 import blue.language.BlueCachePolicy;
+import blue.language.BlueLanguageRuntime;
 import blue.language.NodeProvider;
-import blue.language.api.internal.LegacyBlueGraph;
-import blue.language.api.internal.LegacyBlueMatching;
-import blue.language.api.internal.LegacyBluePatching;
-import blue.language.api.internal.LegacyBluePreprocessing;
-import blue.language.api.internal.LegacyBlueResolution;
-import blue.language.api.internal.LegacyBlueSnapshots;
 import blue.language.codec.BlueCodec;
-import blue.language.codec.StandardBlueCodec;
 import blue.language.graph.BlueGraph;
 import blue.language.identity.BlueIdentity;
-import blue.language.identity.StandardBlueIdentity;
 import blue.language.matching.BlueMatching;
 import blue.language.patching.BluePatching;
 import blue.language.preprocess.BluePreprocessing;
@@ -37,7 +29,7 @@ public final class BlueLanguage implements AutoCloseable {
 
     private static final NodeProvider EMPTY_PROVIDER = blueId -> null;
 
-    private final Blue compatibilityRuntime;
+    private final BlueLanguageRuntime runtime;
     private final BlueCodec codec;
     private final BluePreprocessing preprocessing;
     private final BlueGraph graph;
@@ -48,27 +40,18 @@ public final class BlueLanguage implements AutoCloseable {
     private final BluePatching patching;
 
     private BlueLanguage(Builder builder) {
-        this.compatibilityRuntime = new Blue(
+        this.runtime = BlueLanguageRuntime.create(
                 builder.nodeProvider,
-                null,
-                null,
-                builder.cachePolicy);
-        if (!builder.preprocessingAliases.isEmpty()) {
-            compatibilityRuntime.preprocessingAliases(
-                    builder.preprocessingAliases);
-        }
-        this.codec = new StandardBlueCodec();
-        this.preprocessing = new LegacyBluePreprocessing(
-                compatibilityRuntime, builder.preprocessingAliases);
-        this.graph = new LegacyBlueGraph(compatibilityRuntime);
-        this.resolution = new LegacyBlueResolution(
-                compatibilityRuntime);
-        this.identity = new StandardBlueIdentity(
-                compatibilityRuntime::canonicalize);
-        this.snapshots = new LegacyBlueSnapshots(
-                compatibilityRuntime);
-        this.matching = new LegacyBlueMatching(compatibilityRuntime);
-        this.patching = new LegacyBluePatching(compatibilityRuntime);
+                builder.cachePolicy,
+                builder.preprocessingAliases);
+        this.codec = runtime.codec();
+        this.preprocessing = runtime.preprocessing();
+        this.graph = runtime.graph();
+        this.resolution = runtime.resolution();
+        this.identity = runtime.identity();
+        this.snapshots = runtime.snapshots();
+        this.matching = runtime.matching();
+        this.patching = runtime.patching();
     }
 
     /** Returns a new independently configurable runtime builder. */
@@ -119,7 +102,7 @@ public final class BlueLanguage implements AutoCloseable {
     /** Releases bounded caches and rejects later admitted runtime operations. */
     @Override
     public void close() {
-        compatibilityRuntime.close();
+        runtime.close();
     }
 
     /** Mutable single-threaded configuration scope for one runtime. */

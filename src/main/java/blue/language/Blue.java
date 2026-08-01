@@ -9,6 +9,7 @@ import blue.language.dictionary.DictionaryRegistry;
 import blue.language.dictionary.ExportContext;
 import blue.language.dictionary.TypeDictionary;
 import blue.language.graph.StandardBlueGraph;
+import blue.language.identity.StandardBlueIdentity;
 import blue.language.merge.Merger;
 import blue.language.merge.IncrementalMergingProcessorCapability;
 import blue.language.merge.IncrementalValueResolutionRequest;
@@ -38,6 +39,7 @@ import blue.language.patching.BluePatch;
 import blue.language.patching.BluePatchOperation;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.preprocess.Preprocessor;
+import blue.language.preprocess.StandardBluePreprocessing;
 import blue.language.provider.BootstrapProvider;
 import blue.language.provider.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
@@ -1384,7 +1386,7 @@ public class Blue implements NodeResolver,
     public boolean nodeMatchesType(Node node, Node type) {
         beginDirectCacheOperation();
         try {
-            return new NodeTypeMatcher(this).matchesType(node, type, globalLimits);
+            return matchingService().matches(node, type);
         } finally {
             endDirectCacheOperation();
         }
@@ -1400,7 +1402,8 @@ public class Blue implements NodeResolver,
     public boolean nodeMatchesType(FrozenNode resolvedNode, FrozenNode resolvedType) {
         beginDirectCacheOperation();
         try {
-            return new NodeTypeMatcher(this).matchesResolvedType(resolvedNode, resolvedType);
+            return matchingService().matches(
+                    resolvedNode, resolvedType);
         } finally {
             endDirectCacheOperation();
         }
@@ -1417,10 +1420,17 @@ public class Blue implements NodeResolver,
     public boolean nodeMatchesType(ResolvedSnapshot snapshot, String pointer, FrozenNode resolvedType) {
         beginDirectCacheOperation();
         try {
-            return new NodeTypeMatcher(this).matchesResolvedType(snapshot, pointer, resolvedType);
+            return matchingService().matches(
+                    snapshot, pointer, resolvedType);
         } finally {
             endDirectCacheOperation();
         }
+    }
+
+    /** Creates the focused matcher for the current runtime generation. */
+    private LanguageMatchingService matchingService() {
+        return new LanguageMatchingService(
+                this, globalLimits, this::resolveLimited);
     }
 
     /**
@@ -1755,7 +1765,7 @@ public class Blue implements NodeResolver,
      * @return canonical Base58 SHA-256 BlueId
      */
     public String calculateBlueId(Node node) {
-        return BlueIdCalculator.calculateBlueId(node);
+        return identityService().directBlueId(node);
     }
 
     /**
@@ -1792,7 +1802,12 @@ public class Blue implements NodeResolver,
      * @return canonical Base58 SHA-256 BlueId of the Source Document
      */
     public String calculateSourceDocumentBlueId(Node node) {
-        return BlueIdCalculator.calculateBlueId(canonicalize(node));
+        return identityService().sourceDocumentBlueId(node);
+    }
+
+    /** Creates the focused identity service over the current generation. */
+    private StandardBlueIdentity identityService() {
+        return new StandardBlueIdentity(this::canonicalize);
     }
 
     /**
@@ -2128,11 +2143,15 @@ public class Blue implements NodeResolver,
     private Node preprocess(Node node,
                             NodeProvider preprocessingNodeProvider,
                             Map<String, String> aliases) {
-        return new Preprocessor(
+        Preprocessor configured = new Preprocessor(
                 Preprocessor.getStandardProvider(),
                 preprocessingNodeProvider,
                 aliases,
-                RuntimeTypeAliases.NAME_TO_BLUE_ID)
+                RuntimeTypeAliases.NAME_TO_BLUE_ID);
+        return new StandardBluePreprocessing(
+                configured,
+                LanguageRuntimeServices
+                        .preprocessingEnvironmentIdentity(aliases))
                 .preprocess(node);
     }
 
