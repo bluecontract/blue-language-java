@@ -151,6 +151,13 @@ where you parse, serialize, or build documents programmatically.
 
 ## Quick Start
 
+New Language integrations should compose the focused `BlueLanguage` services.
+The legacy `Blue` facade remains a compatibility entry point while physical
+module decomposition is completed. Start with the complete Java 8 program in
+[Language pipeline architecture](docs/architecture/language-pipeline.md), then
+use the concept guides below for the identity, preprocessing, graph, and
+resolution contracts.
+
 ### Parse YAML And Serialize It Back
 
 ```java
@@ -1065,8 +1072,20 @@ verification and release-evidence workflow.
 
 The retained documents describe distinct parts of the final implementation:
 
+Each of the eight focused Language pages contains one complete Java 8 program.
+`LanguageDocumentationExamplesTest` compiles and executes those exact fenced
+examples so documentation changes cannot silently drift from the public API.
+
 | Document | Purpose |
 | --- | --- |
+| [Nodes and BlueIds](docs/concepts/nodes-and-blueids.md) | Mutable authoring nodes, immutable runtime values, and the one BlueId representation |
+| [Direct versus Source Document BlueId](docs/concepts/direct-vs-source-blueid.md) | Exact direct input versus preprocess/resolve/canonicalize Source identity |
+| [Preprocessing](docs/concepts/preprocessing.md) | Directive resolution, frozen imports, transformation preflight/order, and mandatory baseline |
+| [Expansion, Collapse, and Specialization](docs/concepts/expansion-collapse-specialization.md) | Same-identity graph revelation versus creation of a new typed node |
+| [Resolution, Canonicalization, and Minimization](docs/concepts/resolution-canonicalization-minimization.md) | Complete meaning, unique identity input, and author-facing overlays |
+| [Lists and Incremental BlueId](docs/concepts/lists-and-incremental-blueid.md) | Normative recursive-prefix fold, append, and suffix recomputation |
+| [Building a NodeProvider](docs/guides/building-a-node-provider.md) | Typed outcomes, defensive values, environment binding, and evidence boundaries |
+| [Language pipeline architecture](docs/architecture/language-pipeline.md) | Focused `BlueLanguage` services, ownership, immutability, and dependency direction |
 | [Developer process](docs/developer-process.md) | Step-by-step setup, implementation, test, fixture, verification, review, and contribution workflow |
 | [Canonical Language Core](docs/canonical-language-core.md) | Canonical node rules, BlueId calculation, strict references, schemas, and provider ingestion |
 | [Blue Language 1.0 Final Clarifications](docs/blue-language-1.0-final-clarifications.md) | Final preprocessing directive, specialization terminology, identity pipeline, canonicalization/minimization, and conformance bindings |

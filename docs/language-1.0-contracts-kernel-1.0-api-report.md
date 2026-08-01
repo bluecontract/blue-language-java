@@ -322,8 +322,8 @@ The pre-Phase-B class-file comparison identifies 30 additions:
 | 2 | Subject-aware `ChannelCheckpointContext.of(...)` overload and `currentSubject()` | Supply the exact current checkpoint subject alongside the exact prior subject to `isNewerEvent(...)`. |
 | 1 | `FrozenTypeMatcher.withVerifiedReferenceMaterializer(Function)` | Opens an independent matcher whose non-core reference lookup is supplied by an explicit verified exact-materialization boundary, with no ambient `Blue` fallback. |
 
-The package-private `OverlayReconstruction` implementation is not a JVM API
-addition.
+The package-private canonical and minimized reconstruction implementations are
+implementation details and do not add JVM API.
 
 ### Additive Phase-B and fragmentation surface
 

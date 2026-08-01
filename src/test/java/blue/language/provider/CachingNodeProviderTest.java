@@ -3,10 +3,12 @@ package blue.language.provider;
 import blue.language.model.Node;
 import blue.language.NodeProvider;
 import blue.language.utils.BlueIdCalculator;
+import blue.language.utils.NodeToMapListOrValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,16 +32,22 @@ class CachingNodeProviderTest {
         Node node = new Node().name("Test1");
         String blueId = BlueIdCalculator.calculateBlueId(node);
         List<Node> nodes = Arrays.asList(node);
-        when(mockDelegate.fetchByBlueId(blueId)).thenReturn(nodes);
+        when(mockDelegate.fetchResultByBlueId(blueId))
+                .thenReturn(NodeProviderResult.found(nodes));
 
         // when
         List<Node> result1 = cachingProvider.fetchByBlueId(blueId);
         List<Node> result2 = cachingProvider.fetchByBlueId(blueId);
 
         // then
-        assertEquals(nodes, result1);
-        assertEquals(nodes, result2);
-        verify(mockDelegate, times(1)).fetchByBlueId(blueId);
+        assertEquals(
+                NodeToMapListOrValue.get(node),
+                NodeToMapListOrValue.get(result1.get(0)));
+        assertEquals(
+                NodeToMapListOrValue.get(node),
+                NodeToMapListOrValue.get(result2.get(0)));
+        assertNotSame(result1.get(0), result2.get(0));
+        verify(mockDelegate, times(1)).fetchResultByBlueId(blueId);
     }
 
     @Test
@@ -47,13 +55,58 @@ class CachingNodeProviderTest {
         // given
         Node node = new Node().name("Test2");
         String blueId = BlueIdCalculator.calculateBlueId(node);
-        when(mockDelegate.fetchByBlueId(blueId)).thenReturn(null);
+        when(mockDelegate.fetchResultByBlueId(blueId))
+                .thenReturn(NodeProviderResult.notFound());
 
         // when
         List<Node> result = cachingProvider.fetchByBlueId(blueId);
         // then
         assertNull(result);
-        verify(mockDelegate, times(1)).fetchByBlueId(blueId);
+        verify(mockDelegate, times(1)).fetchResultByBlueId(blueId);
+    }
+
+    @Test
+    void shouldReturnDefensiveCopiesFromCachedFoundResult() {
+        // given
+        Node original = new Node().name("Original");
+        String blueId = BlueIdCalculator.calculateBlueId(original);
+        when(mockDelegate.fetchResultByBlueId(blueId))
+                .thenReturn(NodeProviderResult.found(
+                        Collections.singletonList(original)));
+
+        // when
+        List<Node> first = cachingProvider
+                .fetchResultByBlueId(blueId).nodes();
+        first.get(0).name("Mutated by caller");
+        List<Node> second = cachingProvider
+                .fetchResultByBlueId(blueId).nodes();
+
+        // then
+        assertEquals("Original", second.get(0).getName());
+        assertNotSame(first.get(0), second.get(0));
+        verify(mockDelegate, times(1)).fetchResultByBlueId(blueId);
+    }
+
+    @Test
+    void shouldNotCacheUnavailableAsNotFound() {
+        // given
+        String blueId = "temporarily-unavailable";
+        when(mockDelegate.fetchResultByBlueId(blueId))
+                .thenReturn(NodeProviderResult.unavailable("offline"))
+                .thenReturn(NodeProviderResult.found(Collections.singletonList(
+                        new Node().value("available"))));
+
+        // when
+        NodeProviderResult first =
+                cachingProvider.fetchResultByBlueId(blueId);
+        NodeProviderResult second =
+                cachingProvider.fetchResultByBlueId(blueId);
+
+        // then
+        assertEquals(NodeProviderOutcome.UNAVAILABLE, first.outcome());
+        assertEquals(NodeProviderOutcome.FOUND, second.outcome());
+        assertEquals("available", second.nodes().get(0).getValue());
+        verify(mockDelegate, times(2)).fetchResultByBlueId(blueId);
     }
 
     @Test
@@ -65,8 +118,12 @@ class CachingNodeProviderTest {
         String blueId1 = BlueIdCalculator.calculateBlueId(largeNode1);
         String blueId2 = BlueIdCalculator.calculateBlueId(largeNode2);
 
-        when(mockDelegate.fetchByBlueId(blueId1)).thenReturn(Arrays.asList(largeNode1));
-        when(mockDelegate.fetchByBlueId(blueId2)).thenReturn(Arrays.asList(largeNode2));
+        when(mockDelegate.fetchResultByBlueId(blueId1))
+                .thenReturn(NodeProviderResult.found(
+                        Arrays.asList(largeNode1)));
+        when(mockDelegate.fetchResultByBlueId(blueId2))
+                .thenReturn(NodeProviderResult.found(
+                        Arrays.asList(largeNode2)));
 
         // when
         cachingProvider.fetchByBlueId(blueId1);
@@ -123,7 +180,10 @@ class CachingNodeProviderTest {
         assertEquals(1, result1.size());
         assertEquals("DictOfAToB", result1.get(0).getName());
         assertNotNull(result2);
-        assertEquals(result1, result2);
+        assertEquals(
+                NodeToMapListOrValue.get(result1.get(0)),
+                NodeToMapListOrValue.get(result2.get(0)));
+        assertNotSame(result1.get(0), result2.get(0));
         assertTrue(currentSize > 0);
         assertTrue(cacheSize > 0);
     }
@@ -139,9 +199,15 @@ class CachingNodeProviderTest {
         String blueId2 = BlueIdCalculator.calculateBlueId(smallNode2);
         String blueId3 = BlueIdCalculator.calculateBlueId(smallNode3);
 
-        when(mockDelegate.fetchByBlueId(blueId1)).thenReturn(Arrays.asList(smallNode1));
-        when(mockDelegate.fetchByBlueId(blueId2)).thenReturn(Arrays.asList(smallNode2));
-        when(mockDelegate.fetchByBlueId(blueId3)).thenReturn(Arrays.asList(smallNode3));
+        when(mockDelegate.fetchResultByBlueId(blueId1))
+                .thenReturn(NodeProviderResult.found(
+                        Arrays.asList(smallNode1)));
+        when(mockDelegate.fetchResultByBlueId(blueId2))
+                .thenReturn(NodeProviderResult.found(
+                        Arrays.asList(smallNode2)));
+        when(mockDelegate.fetchResultByBlueId(blueId3))
+                .thenReturn(NodeProviderResult.found(
+                        Arrays.asList(smallNode3)));
 
         // when
         cachingProvider.fetchByBlueId(blueId1);

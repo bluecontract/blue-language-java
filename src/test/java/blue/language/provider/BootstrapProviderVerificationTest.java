@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeTypeKey;
+import blue.language.processor.registry.RuntimeTypeAliases;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
@@ -13,11 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP;
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
 import static blue.language.utils.Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP;
-import static blue.language.utils.Properties.DEFAULT_BLUE_TYPE_BLUE_ID_TO_NAME_MAP;
-import static blue.language.utils.Properties.DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP;
 import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
 import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
@@ -68,11 +66,11 @@ class BootstrapProviderVerificationTest {
 
         // when
         Map<String, String> actualRuntimeAliases =
-                new LinkedHashMap<>(BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP);
+                new LinkedHashMap<>(RuntimeTypeAliases.NAME_TO_BLUE_ID);
         Map<String, String> actualDefaultAliases =
-                new LinkedHashMap<>(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP);
+                new LinkedHashMap<>(RuntimeTypeAliases.AGGREGATE_NAME_TO_BLUE_ID);
         Map<String, String> actualDefaultNames =
-                new LinkedHashMap<>(DEFAULT_BLUE_TYPE_BLUE_ID_TO_NAME_MAP);
+                new LinkedHashMap<>(RuntimeTypeAliases.AGGREGATE_BLUE_ID_TO_NAME);
 
         // then
         assertEquals(expectedRuntimeAliases, actualRuntimeAliases);

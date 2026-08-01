@@ -46,7 +46,14 @@ public final class NodeToBlueIdInput {
         return get(node, JsonPointer.ROOT, Context.ROOT, -1, true);
     }
 
-    static Object getListElement(Node node, int index) {
+    /**
+     * Projects one node using list-element validation rules.
+     *
+     * @param node list element
+     * @param index zero-based list position
+     * @return canonical element identity input
+     */
+    public static Object getListElement(Node node, int index) {
         return get(
                 node,
                 JsonPointer.ROOT + index,
@@ -55,7 +62,14 @@ public final class NodeToBlueIdInput {
                 false);
     }
 
-    static Object getListElementAllowingCyclicPlaceholders(Node node, int index) {
+    /**
+     * Projects one cyclic-set member using list-element validation rules.
+     *
+     * @param node list element
+     * @param index zero-based list position
+     * @return canonical element identity input
+     */
+    public static Object getListElementAllowingCyclicPlaceholders(Node node, int index) {
         return get(
                 node,
                 JsonPointer.ROOT + index,

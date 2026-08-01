@@ -17,11 +17,13 @@ import java.util.stream.Stream;
  * Verifies that a modernization candidate still satisfies the exact semantic
  * characterization captured before structural refactoring.
  *
- * <p>Verification compares exact API, gas-fixture, and locality behavior.
- * Source and artifact identities remain immutable provenance for the clean
- * characterization commit: later refactors necessarily produce different
- * bytes, so current identities are validated and reported without being
- * mistaken for semantic equality constraints.</p>
+ * <p>Verification compares exact gas-fixture and locality behavior. The JVM
+ * API is compared with the captured inventory through a checked-in exact
+ * migration ledger, so an intentional refactor does not weaken any non-API
+ * semantic assertion. Source and artifact identities remain immutable
+ * provenance for the clean characterization commit: later refactors
+ * necessarily produce different bytes, so current identities are validated
+ * and reported without being mistaken for semantic equality constraints.</p>
  */
 public final class SemanticBaselineVerifierCli {
 
@@ -43,14 +45,17 @@ public final class SemanticBaselineVerifierCli {
      *
      * @param args baseline JSON, release-conformance JSON, fragmented-evidence
      *             JSON, generated API inventory, Contracts fixture root,
-     *             output report, and locality JSON files/directories
+     *             output report, migration ledger, binary API baseline,
+     *             binary API report, and locality JSON files/directories
      * @throws Exception when an invariant is missing or changed
      */
     public static void main(String[] args) throws Exception {
-        if (args.length < 7) {
+        if (args.length < 10) {
             throw new IllegalArgumentException(
                     "Expected baseline, conformance, evidence, API, Contracts "
-                            + "fixture root, output, and locality evidence paths");
+                            + "fixture root, output, API migration ledger, "
+                            + "binary baseline, binary report, and locality "
+                            + "evidence paths");
         }
         Path baselinePath = Paths.get(args[0]);
         Path conformancePath = Paths.get(args[1]);
@@ -58,8 +63,11 @@ public final class SemanticBaselineVerifierCli {
         Path apiPath = Paths.get(args[3]);
         Path fixtureRoot = Paths.get(args[4]);
         Path outputPath = Paths.get(args[5]);
+        Path apiMigrationLedgerPath = Paths.get(args[6]);
+        Path binaryApiBaselinePath = Paths.get(args[7]);
+        Path binaryApiReportPath = Paths.get(args[8]);
         List<Path> localityInputs =
-                SemanticBaselineSupport.localityArguments(args, 6);
+                SemanticBaselineSupport.localityArguments(args, 9);
 
         JsonNode baseline = SemanticBaselineSupport.readJson(baselinePath);
         JsonNode conformance =
@@ -91,7 +99,13 @@ public final class SemanticBaselineVerifierCli {
                 baseline,
                 evidence,
                 localityInputs);
-        verifyApiInventory(baseline, apiPath, api);
+        ObjectNode apiMigrationEvidence = ApiMigrationLedgerVerifier.verify(
+                baseline,
+                api,
+                apiPath,
+                apiMigrationLedgerPath,
+                binaryApiBaselinePath,
+                binaryApiReportPath);
         verifyRecordedProvenance(baseline);
         ObjectNode currentEvidence = currentEvidence(evidence);
         verifySourceTerminologyAndIdentityPath();
@@ -110,6 +124,7 @@ public final class SemanticBaselineVerifierCli {
         report.put(
                 "apiInventorySha256",
                 SemanticBaselineSupport.sha256(apiPath));
+        report.set("apiMigration", apiMigrationEvidence);
         report.put(
                 "languageFixtures",
                 SemanticBaselineSupport.LANGUAGE_FIXTURE_COUNT);
@@ -364,24 +379,6 @@ public final class SemanticBaselineVerifierCli {
                         "/locality/requiredAssertionCount"),
                 requiredTests.size());
         return payloads.size();
-    }
-
-    private static void verifyApiInventory(
-            JsonNode baseline,
-            Path apiPath,
-            JsonNode api) throws IOException {
-        SemanticBaselineSupport.requireEquals(
-                "public API inventory SHA-256",
-                SemanticBaselineSupport.text(
-                        baseline,
-                        "/publicApi/inventorySha256"),
-                SemanticBaselineSupport.sha256(apiPath));
-        SemanticBaselineSupport.requireEquals(
-                "exact public API inventory",
-                SemanticBaselineSupport.required(
-                        baseline,
-                        "/publicApi/inventory"),
-                api);
     }
 
     private static void verifyRecordedProvenance(JsonNode baseline) {

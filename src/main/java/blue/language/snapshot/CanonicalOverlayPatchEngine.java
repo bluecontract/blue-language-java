@@ -3,7 +3,8 @@ package blue.language.snapshot;
 import blue.language.utils.Properties;
 
 import blue.language.model.Node;
-import blue.language.processor.model.JsonPatch;
+import blue.language.patching.BluePatch;
+import blue.language.patching.BluePatchOperation;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
 
@@ -62,11 +63,12 @@ public final class CanonicalOverlayPatchEngine {
      * @throws IllegalArgumentException for malformed/root paths
      * @throws IllegalStateException for shape or existence violations
      */
-    public CanonicalPatchResult apply(JsonPatch patch) {
+    public CanonicalPatchResult apply(BluePatch patch) {
         Objects.requireNonNull(patch, "patch");
-        ParsedJsonPointer path = ParsedJsonPointer.parse(patch.getPath());
-        FrozenNode value = patch.getOp() == JsonPatch.Op.REMOVE ? null : freezePatchValue(patch.getVal());
-        return apply(patch.getOp(), path, value);
+        ParsedJsonPointer path = ParsedJsonPointer.parse(patch.path());
+        FrozenNode value = patch.operation() == BluePatchOperation.REMOVE
+                ? null : freezePatchValue(patch.value());
+        return apply(patch.operation(), path, value);
     }
 
     /**
@@ -79,7 +81,7 @@ public final class CanonicalOverlayPatchEngine {
      * @param value frozen value, or {@code null} for REMOVE
      * @return immutable patch result
      */
-    public CanonicalPatchResult apply(JsonPatch.Op op,
+    public CanonicalPatchResult apply(BluePatchOperation op,
                                       ParsedJsonPointer parsedPath,
                                       FrozenNode value) {
         Objects.requireNonNull(op, "op");
@@ -89,11 +91,12 @@ public final class CanonicalOverlayPatchEngine {
         if (segments.isEmpty()) {
             throw new IllegalArgumentException("Canonical overlay patches cannot target the root document");
         }
-        if (op != JsonPatch.Op.REMOVE) {
+        if (op != BluePatchOperation.REMOVE) {
             Objects.requireNonNull(value, Properties.OBJECT_VALUE);
         }
 
-        FrozenNode before = read(root, segments, op == JsonPatch.Op.ADD, path);
+        FrozenNode before = read(
+                root, segments, op == BluePatchOperation.ADD, path);
         FrozenNode nextRoot;
         switch (op) {
             case ADD:
@@ -109,7 +112,8 @@ public final class CanonicalOverlayPatchEngine {
                 throw new UnsupportedOperationException("Unsupported patch op: " + op);
         }
 
-        FrozenNode after = op == JsonPatch.Op.REMOVE ? null : read(nextRoot, segments, false, path);
+        FrozenNode after = op == BluePatchOperation.REMOVE
+                ? null : read(nextRoot, segments, false, path);
         return new CanonicalPatchResult(nextRoot, before, after, op, path);
     }
 

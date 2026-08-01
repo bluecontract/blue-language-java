@@ -448,13 +448,17 @@ tasks.register('verifyNoAmbiguousReverseApi') {
 
 def finalApiBaseline = layout.projectDirectory.file(
         'api/blue-language-java-1.0.json')
+def modernizationApiMigrationLedger = layout.projectDirectory.file(
+        'api/modernization-api-migration-ledger-1.0.json')
 def finalApiReport = layout.buildDirectory.file(
         'reports/binary-api/final-1.0-baseline-to-candidate.txt')
 tasks.register('verifyFinalApiBaseline', Exec) {
     group = 'verification'
-    description = 'Checks the candidate JAR against the final Language 1.0 and Contracts kernel 1.0 JVM API baseline.'
+    description = 'Checks the candidate JAR against the final JVM API baseline and exact approved modernization ledger.'
     dependsOn tasks.named('jar')
     inputs.file(finalApiBaseline)
+    inputs.file(modernizationApiMigrationLedger)
+    inputs.file('tools/check_binary_api.py')
     inputs.file(tasks.named('jar').flatMap { it.archiveFile })
     outputs.file(finalApiReport)
     doFirst {
@@ -462,7 +466,8 @@ tasks.register('verifyFinalApiBaseline', Exec) {
                 'tools/check_binary_api.py',
                 finalApiBaseline.asFile.absolutePath,
                 tasks.named('jar').get().archiveFile.get().asFile.absolutePath,
-                finalApiReport.get().asFile.absolutePath
+                finalApiReport.get().asFile.absolutePath,
+                modernizationApiMigrationLedger.asFile.absolutePath
     }
 }
 
@@ -2385,6 +2390,7 @@ tasks.register('verifySourceReleaseArchive') {
         def required = [
                 root + '.cz.toml',
                 root + 'api/blue-language-java-1.0.json',
+                root + 'api/modernization-api-migration-ledger-1.0.json',
                 root + 'api/semantic-baseline-1.0.json',
                 root + 'build.gradle',
                 root + 'settings.gradle.kts',
@@ -2459,10 +2465,11 @@ tasks.register('semanticBaselineCapture', JavaExec) {
 
 tasks.register('semanticBaselineVerify', JavaExec) {
     group = 'verification'
-    description = 'Verifies exact Language/Contracts semantics against the tracked pre-refactor characterization.'
+    description = 'Verifies exact non-API semantics and the approved API migration ledger against the tracked characterization.'
     dependsOn tasks.named('fragmentedProcessingReport')
     dependsOn tasks.named('testClasses')
     dependsOn tasks.named('generateSemanticApiInventory')
+    dependsOn tasks.named('verifyFinalApiBaseline')
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'blue.language.conformance.SemanticBaselineVerifierCli'
     javaLauncher = javaToolchains.launcherFor {
@@ -2474,11 +2481,17 @@ tasks.register('semanticBaselineVerify', JavaExec) {
             semanticApiInventory.get().asFile.absolutePath,
             semanticContractsFixtureRoot.asFile.absolutePath,
             semanticBaselineVerificationJson.get().asFile.absolutePath,
+            modernizationApiMigrationLedger.asFile.absolutePath,
+            finalApiBaseline.asFile.absolutePath,
+            finalApiReport.get().asFile.absolutePath,
             semanticLocalityEvidenceDirectory.get().asFile.absolutePath
     inputs.file(semanticBaselineFile)
     inputs.file(releaseConformanceJson)
     inputs.file(fragmentedProcessingJson)
     inputs.file(semanticApiInventory)
+    inputs.file(modernizationApiMigrationLedger)
+    inputs.file(finalApiBaseline)
+    inputs.file(finalApiReport)
     inputs.dir(semanticContractsFixtureRoot)
     inputs.files(fileTree('src/main/resources/specifications'))
     inputs.files(fileTree('src/test/resources/language/1.0'))

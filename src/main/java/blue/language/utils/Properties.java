@@ -1,10 +1,6 @@
 package blue.language.utils;
 
-import blue.language.processor.registry.RuntimeBlueIds;
-
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -128,108 +124,9 @@ public class Properties {
             .collect(Collectors.toMap(CORE_TYPE_BLUE_IDS::get, CORE_TYPES::get));
 
     /**
-     * Released Blue Contracts runtime type names in BlueId-list order. The
-     * exposed compatibility list must be treated as read-only.
-     */
-    public static final List<String> BLUE_CONTRACTS_RUNTIME_TYPES = Arrays.asList(
-            "Channel",
-            "Channel Event Checkpoint",
-            "Channel Checkpoint Entry",
-            "Contract",
-            "Contract Execution Result",
-            "Document Processing Initiated",
-            "Document Processing Terminated",
-            "Document Update",
-            "Document Update Channel",
-            "Embedded Event Delivery",
-            "Embedded Node Channel",
-            "External Channel",
-            "Contracts Fixture Event",
-            "Handler",
-            "Json Patch Entry",
-            "Lifecycle Event Channel",
-            "Marker",
-            "Process Embedded",
-            "Processing Initialized Marker",
-            "Processing Terminated Marker",
-            "Runtime Counter Entry",
-            "Runtime Ledger",
-            "Scripted External Channel",
-            "Scripted Handler",
-            "Triggered Event Channel",
-            "Type Generalization Policy",
-            "Type Generalization Rule"
-    );
-
-    /**
-     * Released Blue Contracts runtime BlueIds in type-name-list order. The
-     * exposed compatibility list must be treated as read-only.
-     */
-    public static final List<String> BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_IDS = Arrays.asList(
-            RuntimeBlueIds.CHANNEL,
-            RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT,
-            RuntimeBlueIds.CHECKPOINT_ENTRY,
-            RuntimeBlueIds.CONTRACT,
-            RuntimeBlueIds.CONTRACT_EXECUTION_RESULT,
-            RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
-            RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED,
-            RuntimeBlueIds.DOCUMENT_UPDATE,
-            RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL,
-            RuntimeBlueIds.EMBEDDED_EVENT_DELIVERY,
-            RuntimeBlueIds.EMBEDDED_NODE_CHANNEL,
-            RuntimeBlueIds.EXTERNAL_CHANNEL,
-            RuntimeBlueIds.FIXTURE_EVENT,
-            RuntimeBlueIds.HANDLER,
-            RuntimeBlueIds.JSON_PATCH_ENTRY,
-            RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL,
-            RuntimeBlueIds.MARKER,
-            RuntimeBlueIds.PROCESS_EMBEDDED,
-            RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
-            RuntimeBlueIds.PROCESSING_TERMINATED_MARKER,
-            RuntimeBlueIds.RUNTIME_COUNTER_ENTRY,
-            RuntimeBlueIds.RUNTIME_LEDGER,
-            RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL,
-            RuntimeBlueIds.SCRIPTED_HANDLER,
-            RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL,
-            RuntimeBlueIds.TYPE_GENERALIZATION_POLICY,
-            RuntimeBlueIds.TYPE_GENERALIZATION_RULE
-    );
-
-    /** Released mutable compatibility lookup maps; callers must treat them as read-only. */
-    public static final Map<String, String> BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP =
-            IntStream.range(0, BLUE_CONTRACTS_RUNTIME_TYPES.size())
-                    .boxed()
-                    .collect(Collectors.toMap(BLUE_CONTRACTS_RUNTIME_TYPES::get, BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_IDS::get));
-
-    /** Mutable compatibility lookup from Contracts runtime BlueId to type name. */
-    public static final Map<String, String> BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_ID_TO_NAME_MAP =
-            IntStream.range(0, BLUE_CONTRACTS_RUNTIME_TYPES.size())
-                    .boxed()
-                    .collect(Collectors.toMap(BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_IDS::get, BLUE_CONTRACTS_RUNTIME_TYPES::get));
-
-    /** Combined core and Contracts runtime type maps exposed by default. */
-    public static final Map<String, String> DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP = buildDefaultBlueTypeNameToBlueIdMap();
-    /** Combined released BlueId-to-name lookup exposed by default. */
-    public static final Map<String, String> DEFAULT_BLUE_TYPE_BLUE_ID_TO_NAME_MAP = buildDefaultBlueTypeBlueIdToNameMap();
-
-    /**
      * Creates a Language property and type-identity constants holder.
      */
     public Properties() {
-    }
-
-    private static Map<String, String> buildDefaultBlueTypeNameToBlueIdMap() {
-        Map<String, String> result = new LinkedHashMap<>();
-        result.putAll(CORE_TYPE_NAME_TO_BLUE_ID_MAP);
-        result.putAll(BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP);
-        return Collections.unmodifiableMap(result);
-    }
-
-    private static Map<String, String> buildDefaultBlueTypeBlueIdToNameMap() {
-        Map<String, String> result = new LinkedHashMap<>();
-        result.putAll(CORE_TYPE_BLUE_ID_TO_NAME_MAP);
-        result.putAll(BLUE_CONTRACTS_RUNTIME_TYPE_BLUE_ID_TO_NAME_MAP);
-        return Collections.unmodifiableMap(result);
     }
 
 }

@@ -8,6 +8,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
+import blue.language.patching.BluePatchOperation;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIds;
@@ -98,7 +99,8 @@ final class ImmutablePatchPlanner {
                 : FrozenNode.fromResolvedNode(preservedNode);
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
         CanonicalPatchResult replaced = new CanonicalOverlayPatchEngine(root)
-                .apply(JsonPatch.Op.REPLACE, patch.path(), preserved);
+                .apply(BluePatchOperation.REPLACE,
+                        patch.path(), preserved);
         return new PatchPlan(replaced.root(),
                 replaced.before(),
                 replaced.after(),
@@ -127,7 +129,7 @@ final class ImmutablePatchPlanner {
         return new PatchPlan(result.root(),
                 result.before(),
                 result.after(),
-                result.op(),
+                JsonPatch.Op.fromBlueOperation(result.op()),
                 result.path(),
                 normalizedScope,
                 computeCascadeScopes(normalizedScope));
@@ -150,11 +152,12 @@ final class ImmutablePatchPlanner {
             return planExactValueWrite(normalizedScope, patch);
         }
         CanonicalPatchResult result = new CanonicalOverlayPatchEngine(root)
-                .apply(patch.op(), patch.path(), patch.valueFor(root));
+                .apply(patch.blueOperation(),
+                        patch.path(), patch.valueFor(root));
         return new PatchPlan(result.root(),
                 result.before(),
                 result.after(),
-                result.op(),
+                JsonPatch.Op.fromBlueOperation(result.op()),
                 result.path(),
                 normalizedScope,
                 computeCascadeScopes(normalizedScope));
@@ -167,7 +170,7 @@ final class ImmutablePatchPlanner {
             return new PatchPlan(result.root(),
                     result.before(),
                     result.after(),
-                    result.op(),
+                    JsonPatch.Op.fromBlueOperation(result.op()),
                     result.path(),
                     normalizedScope,
                     computeCascadeScopes(normalizedScope));
@@ -200,11 +203,12 @@ final class ImmutablePatchPlanner {
         String path = patch.normalizedPath();
         if (patch.op() == JsonPatch.Op.ADD && targetsListMember(patch.path())) {
             CanonicalPatchResult result = new CanonicalOverlayPatchEngine(root)
-                    .apply(patch.op(), patch.path(), patch.valueFor(root));
+                    .apply(patch.blueOperation(),
+                            patch.path(), patch.valueFor(root));
             return new PatchPlan(result.root(),
                     result.before(),
                     result.after(),
-                    result.op(),
+                    JsonPatch.Op.fromBlueOperation(result.op()),
                     result.path(),
                     normalizedScope,
                     computeCascadeScopes(normalizedScope));
@@ -212,7 +216,8 @@ final class ImmutablePatchPlanner {
         FrozenNode existing = read(patch.path());
         if (existing == null) {
             CanonicalPatchResult added = new CanonicalOverlayPatchEngine(root)
-                    .apply(JsonPatch.Op.ADD, patch.path(), patch.valueFor(root));
+                    .apply(BluePatchOperation.ADD,
+                            patch.path(), patch.valueFor(root));
             return new PatchPlan(added.root(),
                     null,
                     added.after(),
@@ -222,9 +227,11 @@ final class ImmutablePatchPlanner {
                     computeCascadeScopes(normalizedScope));
         }
         CanonicalPatchResult removed = new CanonicalOverlayPatchEngine(root)
-                .apply(JsonPatch.Op.REMOVE, patch.path(), null);
+                .apply(BluePatchOperation.REMOVE,
+                        patch.path(), null);
         CanonicalPatchResult added = new CanonicalOverlayPatchEngine(removed.root())
-                .apply(JsonPatch.Op.ADD, patch.path(), patch.valueFor(root));
+                .apply(BluePatchOperation.ADD,
+                        patch.path(), patch.valueFor(root));
         return new PatchPlan(added.root(),
                 removed.before(),
                 added.after(),
@@ -407,19 +414,20 @@ final class ImmutablePatchPlanner {
                 new CanonicalOverlayPatchEngine(root);
         if (!exactReplacement
                 || op == JsonPatch.Op.REMOVE) {
-            return engine.apply(op, path, value).root();
+            return engine.apply(op.blueOperation(), path, value).root();
         }
         if (op == JsonPatch.Op.ADD && targetsListMember(path)) {
-            return engine.apply(op, path, value).root();
+            return engine.apply(op.blueOperation(), path, value).root();
         }
         if (read(path) == null) {
-            return engine.apply(JsonPatch.Op.ADD, path, value).root();
+            return engine.apply(
+                    BluePatchOperation.ADD, path, value).root();
         }
         FrozenNode removed = engine
-                .apply(JsonPatch.Op.REMOVE, path, null)
+                .apply(BluePatchOperation.REMOVE, path, null)
                 .root();
         return new CanonicalOverlayPatchEngine(removed)
-                .apply(JsonPatch.Op.ADD, path, value)
+                .apply(BluePatchOperation.ADD, path, value)
                 .root();
     }
 

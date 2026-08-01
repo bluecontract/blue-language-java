@@ -2,6 +2,8 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.patching.BluePatch;
+import blue.language.patching.BluePatchOperation;
 import blue.language.processor.registry.RuntimeBlueIds;
 
 import java.util.Objects;
@@ -16,7 +18,7 @@ import java.util.Objects;
  * isolated from caller mutation.</p>
  */
 @TypeBlueId(RuntimeBlueIds.JSON_PATCH_ENTRY)
-public class JsonPatch {
+public class JsonPatch implements BluePatch {
 
     /** Supported patch operations. */
     public enum Op {
@@ -25,7 +27,39 @@ public class JsonPatch {
         /** Replace the value at the addressed location. */
         REPLACE,
         /** Remove the value at the addressed location. */
-        REMOVE
+        REMOVE;
+
+        /** Returns the equivalent Language-owned patch operation. */
+        public BluePatchOperation blueOperation() {
+            switch (this) {
+                case ADD:
+                    return BluePatchOperation.ADD;
+                case REPLACE:
+                    return BluePatchOperation.REPLACE;
+                case REMOVE:
+                    return BluePatchOperation.REMOVE;
+                default:
+                    throw new IllegalStateException(
+                            "Unsupported Contracts patch operation: " + this);
+            }
+        }
+
+        /** Reconstructs the Contracts operation at the module boundary. */
+        public static Op fromBlueOperation(
+                BluePatchOperation operation) {
+            switch (Objects.requireNonNull(operation, "operation")) {
+                case ADD:
+                    return ADD;
+                case REPLACE:
+                    return REPLACE;
+                case REMOVE:
+                    return REMOVE;
+                default:
+                    throw new IllegalArgumentException(
+                            "Unsupported Language patch operation: "
+                                    + operation);
+            }
+        }
     }
 
     private final Op op;
@@ -103,6 +137,21 @@ public class JsonPatch {
      * @return retained mutable value reference, or {@code null} for remove
      */
     public Node getVal() {
+        return val;
+    }
+
+    @Override
+    public BluePatchOperation operation() {
+        return op.blueOperation();
+    }
+
+    @Override
+    public String path() {
+        return path;
+    }
+
+    @Override
+    public Node value() {
         return val;
     }
 }

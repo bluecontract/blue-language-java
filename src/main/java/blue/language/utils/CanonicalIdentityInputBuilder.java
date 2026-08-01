@@ -29,7 +29,7 @@ public final class CanonicalIdentityInputBuilder {
     public Node build(Node resolvedNode, Node preprocessedSource) {
         Objects.requireNonNull(resolvedNode, "resolvedNode");
         Objects.requireNonNull(preprocessedSource, "preprocessedSource");
-        return new OverlayReconstruction()
-                .canonicalIdentityInput(resolvedNode, preprocessedSource);
+        return new CanonicalIdentityInputReconstructor()
+                .reconstruct(resolvedNode, preprocessedSource);
     }
 }

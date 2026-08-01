@@ -8,15 +8,15 @@ import blue.language.dictionary.DictionaryAwareExporter;
 import blue.language.dictionary.DictionaryRegistry;
 import blue.language.dictionary.ExportContext;
 import blue.language.dictionary.TypeDictionary;
+import blue.language.graph.StandardBlueGraph;
 import blue.language.merge.Merger;
 import blue.language.merge.IncrementalMergingProcessorCapability;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.merge.processor.*;
+import blue.language.matching.MatchingRuntime;
 import blue.language.model.Node;
-import blue.language.model.NodeDeserializer;
-import blue.language.model.Schema;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractMatchingService;
@@ -28,12 +28,18 @@ import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
+import blue.language.processor.registry.RuntimeTypeAliases;
+import blue.language.patching.BluePatch;
+import blue.language.patching.BluePatchOperation;
+import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.preprocess.Preprocessor;
 import blue.language.provider.BootstrapProvider;
 import blue.language.provider.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;
+import blue.language.provider.SourceContentVerificationRuntime;
+import blue.language.provider.VerifiedNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
@@ -82,7 +88,8 @@ import static blue.language.utils.limits.Limits.NO_LIMITS;
  * is explicitly described as a pure serialization helper, admitted operations
  * throw {@link IllegalStateException} after close.</p>
  */
-public class Blue implements NodeResolver, AutoCloseable {
+public class Blue implements NodeResolver,
+        SourceContentVerificationRuntime, MatchingRuntime, AutoCloseable {
 
     private static final int RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT = 32;
     private static final String PINNED_SNAPSHOT_CACHE = "pinnedAuthoritativeSnapshots";
@@ -93,6 +100,10 @@ public class Blue implements NodeResolver, AutoCloseable {
     private static final String TRANSIENT_REFERENCE_CACHE = "transientTrustedReferences";
     private static final String STRUCTURAL_INTERNER_CACHE = "resolvedStructuralInterner";
     private static final String PROCESSOR_PLAN_CACHE = "processorPlans";
+    private static final ReferenceCacheAdmissionPolicy
+            PROCESSOR_REFERENCE_CACHE_ADMISSION = blueId ->
+            !BlueRuntimeTypeRegistry.getDefault()
+                    .isProcessorManagedTypeBlueId(blueId);
 
     private NodeProvider nodeProvider;
     private NodeProvider originalNodeProvider;
@@ -227,7 +238,7 @@ public class Blue implements NodeResolver, AutoCloseable {
                 TypeClassResolver typeClassResolver,
         BlueCachePolicy cachePolicy) {
         this.originalNodeProvider = nodeProvider;
-        this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
+        this.nodeProvider = wrapRuntimeProvider(nodeProvider);
         this.mergingProcessor = mergingProcessor != null ? mergingProcessor : createDefaultNodeProcessor();
         this.typeClassResolver = typeClassResolver;
         this.cachePolicy = Objects.requireNonNull(cachePolicy, "cachePolicy");
@@ -252,6 +263,29 @@ public class Blue implements NodeResolver, AutoCloseable {
         this.documentProcessorOwned = true;
     }
 
+    /** Creates a Language merger under the host's cache-safety boundary. */
+    private Merger languageMerger(
+            MergingProcessor processor,
+            NodeProvider provider,
+            ResolvedReferenceCache referenceCache) {
+        return new Merger(
+                processor,
+                provider,
+                referenceCache,
+                PROCESSOR_REFERENCE_CACHE_ADMISSION);
+    }
+
+    /** Composes the aggregate Contracts registry before Language verification. */
+    private static NodeProvider wrapRuntimeProvider(
+            NodeProvider callerProvider) {
+        return NodeProviderWrapper.wrap(new SequentialNodeProvider(
+                BootstrapProvider.INSTANCE,
+                new VerifiedNodeProvider(
+                        BlueRuntimeTypeRegistry.getDefault()
+                                .asProcessorSnapshotProvider()),
+                callerProvider));
+    }
+
     /**
      * Resolves a node under the current global limits.
      *
@@ -274,7 +308,8 @@ public class Blue implements NodeResolver, AutoCloseable {
         beginDirectCacheOperation();
         try {
             Limits effectiveLimits = combineWithGlobalLimits(limits);
-            Merger merger = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache);
+            Merger merger = languageMerger(
+                    mergingProcessor, nodeProvider, resolvedReferenceCache);
             return merger.resolve(node.clone(), effectiveLimits);
         } finally {
             endDirectCacheOperation();
@@ -469,7 +504,7 @@ public class Blue implements NodeResolver, AutoCloseable {
      *                                  does not resolve compatibly
      */
     public Node specialize(Node type, Node overlay) {
-        return new NodeSpecializer(this).specialize(type, overlay);
+        return graphService().specialize(type, overlay);
     }
 
     /**
@@ -500,10 +535,7 @@ public class Blue implements NodeResolver, AutoCloseable {
     public Node expand(Node node) {
         beginDirectCacheOperation();
         try {
-            if (node == null) {
-                throw new IllegalArgumentException("node must not be null");
-            }
-            return expandReferences(node);
+            return graphService().expand(node);
         } finally {
             endDirectCacheOperation();
         }
@@ -521,33 +553,7 @@ public class Blue implements NodeResolver, AutoCloseable {
     public BlueOperationResult<Node> expandLimited(Node node, BlueOperationLimits limits) {
         beginDirectCacheOperation();
         try {
-            Objects.requireNonNull(node, "node");
-            Objects.requireNonNull(limits, "limits");
-            LimitedExpansionContext context = new LimitedExpansionContext(
-                    limits.maxReferenceExpansions());
-            Node expanded = node.clone();
-            boolean anyEstablished = false;
-            boolean anyAbsent = false;
-            for (List<String> demand : limits.demandedSegments()) {
-                DemandExpansion result = expandDemand(expanded, demand, 0, context);
-                expanded = result.node;
-                if (result.outcome == BlueOperationOutcome.INVALID) {
-                    return BlueOperationResult.invalid(result.reason,
-                            context.providerOutcome == null
-                                    ? NodeProviderOutcome.INVALID_EVIDENCE
-                                    : context.providerOutcome);
-                }
-                if (result.outcome == BlueOperationOutcome.INCOMPLETE) {
-                    return BlueOperationResult.incomplete(expanded,
-                            context.outstandingBlueIds, context.providerOutcome, result.reason);
-                }
-                anyEstablished |= result.outcome == BlueOperationOutcome.ESTABLISHED;
-                anyAbsent |= result.outcome == BlueOperationOutcome.ABSENT;
-            }
-            if (!anyEstablished && anyAbsent) {
-                return BlueOperationResult.absent("Every demanded path is semantically absent.");
-            }
-            return BlueOperationResult.established(expanded);
+            return graphService().expandLimited(node, limits);
         } finally {
             endDirectCacheOperation();
         }
@@ -603,7 +609,8 @@ public class Blue implements NodeResolver, AutoCloseable {
             try {
                 Node preprocessed = preprocess(node.clone());
                 Limits demandLimits = new SemanticDemandLimits(limits.demandedSegments());
-                resolved = new Merger(mergingProcessor, budgetedProvider, null)
+                resolved = languageMerger(
+                        mergingProcessor, budgetedProvider, null)
                         .resolve(preprocessed, demandLimits);
             } catch (ReferenceExpansionLimitException limitReached) {
                 return BlueOperationResult.incomplete(null, budget.outstandingBlueIds,
@@ -661,10 +668,12 @@ public class Blue implements NodeResolver, AutoCloseable {
      * @return a new reference-only node
      */
     public Node collapse(Node node) {
-        if (node == null) {
-            throw new IllegalArgumentException("node must not be null");
-        }
-        return new Node().blueId(BlueIdCalculator.calculateBlueId(node));
+        return graphService().collapse(node);
+    }
+
+    /** Creates a calculation-only graph service for the admitted generation. */
+    private StandardBlueGraph graphService() {
+        return new StandardBlueGraph(nodeProvider, this);
     }
 
     /**
@@ -695,7 +704,8 @@ public class Blue implements NodeResolver, AutoCloseable {
         try {
             Node preprocessed = preprocess(node.clone());
             Limits limits = combineWithGlobalLimits(NO_LIMITS);
-            Merger merger = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache);
+            Merger merger = languageMerger(
+                    mergingProcessor, nodeProvider, resolvedReferenceCache);
             return cacheSnapshot(ResolvedSnapshot.fromResolverResult(
                     merger.resolveSnapshot(preprocessed, limits)));
         } finally {
@@ -815,228 +825,12 @@ public class Blue implements NodeResolver, AutoCloseable {
         return canonical;
     }
 
-    private Node expandReferences(Node node) {
-        if (node == null) {
-            return null;
-        }
-        if (node.isReferenceOnly()) {
-            List<Node> nodes = nodeProvider.fetchByBlueId(node.getBlueId());
-            if (nodes == null || nodes.isEmpty()) {
-                throw new IllegalArgumentException("No content found for blueId: " + node.getBlueId());
-            }
-            if (nodes.size() == 1) {
-                return expandReferences(providerContentWithoutRootIdentity(nodes.get(0)));
-            }
-            return new Node().items(expandReferences(providerContentWithoutRootIdentity(nodes)));
-        }
-
-        Node expanded = node.clone();
-        expanded.type(expandReferences(expanded.getType()));
-        expanded.itemType(expandReferences(expanded.getItemType()));
-        expanded.keyType(expandReferences(expanded.getKeyType()));
-        expanded.valueType(expandReferences(expanded.getValueType()));
-        expanded.blue(expandReferences(expanded.getBlue()));
-        expanded.contracts(expandReferences(expanded.getContracts()));
-        if (expanded.getItems() != null) {
-            expanded.items(expandReferences(expanded.getItems()));
-        }
-        if (expanded.getProperties() != null) {
-            Map<String, Node> expandedProperties = new LinkedHashMap<>();
-            expanded.getProperties().forEach((key, value) ->
-                    expandedProperties.put(key, expandReferences(value)));
-            expanded.properties(expandedProperties);
-        }
-        if (expanded.getSchema() != null) {
-            expanded.schema(expandReferences(expanded.getSchema()));
-        }
-        return expanded;
-    }
-
-    private DemandExpansion expandDemand(Node node,
-                                         List<String> segments,
-                                         int index,
-                                         LimitedExpansionContext context) {
-        Node current = node;
-        if (current != null && current.isReferenceOnly()) {
-            String blueId = current.getBlueId();
-            if (!context.tryAcquire(blueId)) {
-                return DemandExpansion.incomplete(current,
-                        "Reference expansion limit reached for " + blueId + ".");
-            }
-            NodeProviderResult providerResult = nodeProvider.fetchResultByBlueId(blueId);
-            context.providerOutcome = providerResult.outcome();
-            if (providerResult.outcome() == NodeProviderOutcome.UNAVAILABLE
-                    || providerResult.outcome() == NodeProviderOutcome.NOT_FOUND) {
-                context.outstandingBlueIds.add(blueId);
-                return DemandExpansion.incomplete(current,
-                        providerResult.diagnostic().orElse(
-                                "Required provider evidence was not available for " + blueId + "."));
-            }
-            if (providerResult.outcome() == NodeProviderOutcome.INVALID_EVIDENCE) {
-                return DemandExpansion.invalid(current,
-                        providerResult.diagnostic().orElse(
-                                "Provider returned invalid evidence for " + blueId + "."));
-            }
-            List<Node> nodes = providerResult.nodes();
-            current = nodes.size() == 1
-                    ? providerContentWithoutRootIdentity(nodes.get(0))
-                    : new Node().items(providerContentWithoutRootIdentity(nodes));
-        }
-
-        if (index == segments.size()) {
-            return DemandExpansion.established(current);
-        }
-        if (current == null) {
-            return DemandExpansion.absent(null);
-        }
-
-        String segment = segments.get(index);
-        if (Properties.OBJECT_BLUE_ID.equals(segment)) {
-            return DemandExpansion.absent(current);
-        }
-        if (Properties.OBJECT_ITEMS.equals(segment)) {
-            if (index + 1 >= segments.size() || current.getItems() == null) {
-                return DemandExpansion.absent(current);
-            }
-            int itemIndex;
-            try {
-                itemIndex = Integer.parseInt(segments.get(index + 1));
-            } catch (NumberFormatException invalidIndex) {
-                return DemandExpansion.absent(current);
-            }
-            if (itemIndex < 0 || itemIndex >= current.getItems().size()) {
-                return DemandExpansion.absent(current);
-            }
-            DemandExpansion child = expandDemand(
-                    current.getItems().get(itemIndex), segments, index + 2, context);
-            current.getItems().set(itemIndex, child.node);
-            return child.withNode(current);
-        }
-
-        Node child = semanticChild(current, segment);
-        if (child == null) {
-            return DemandExpansion.absent(current);
-        }
-        DemandExpansion expandedChild = expandDemand(child, segments, index + 1, context);
-        setSemanticChild(current, segment, expandedChild.node);
-        return expandedChild.withNode(current);
-    }
-
-    private Node semanticChild(Node node, String segment) {
-        if (Properties.OBJECT_NAME.equals(segment)) {
-            return node.getName() == null ? null : new Node().value(node.getName());
-        }
-        if (Properties.OBJECT_DESCRIPTION.equals(segment)) {
-            return node.getDescription() == null ? null : new Node().value(node.getDescription());
-        }
-        if (Properties.OBJECT_TYPE.equals(segment)) return node.getType();
-        if (Properties.OBJECT_ITEM_TYPE.equals(segment)) return node.getItemType();
-        if (Properties.OBJECT_KEY_TYPE.equals(segment)) return node.getKeyType();
-        if (Properties.OBJECT_VALUE_TYPE.equals(segment)) return node.getValueType();
-        if (Properties.OBJECT_VALUE.equals(segment)) {
-            return node.getRawValue() == null ? null : new Node().value(node.getRawValue());
-        }
-        if (Properties.OBJECT_SCHEMA.equals(segment)) {
-            return node.getSchema() == null
-                    ? null
-                    : JSON_MAPPER.convertValue(
-                    SchemaToMapListOrValue.get(node.getSchema(), NodeToMapListOrValue::get),
-                    Node.class);
-        }
-        if (Properties.OBJECT_CONTRACTS.equals(segment)) return node.getContracts();
-        return node.getProperties() == null ? null : node.getProperties().get(segment);
-    }
-
-    private void setSemanticChild(Node node, String segment, Node child) {
-        if (Properties.OBJECT_TYPE.equals(segment)) {
-            node.type(child);
-        } else if (Properties.OBJECT_ITEM_TYPE.equals(segment)) {
-            node.itemType(child);
-        } else if (Properties.OBJECT_KEY_TYPE.equals(segment)) {
-            node.keyType(child);
-        } else if (Properties.OBJECT_VALUE_TYPE.equals(segment)) {
-            node.valueType(child);
-        } else if (Properties.OBJECT_CONTRACTS.equals(segment)) {
-            node.contracts(child);
-        } else if (Properties.OBJECT_SCHEMA.equals(segment)) {
-            node.schema(child == null
-                    ? null
-                    : NodeDeserializer.parseSchema(
-                    JSON_MAPPER.valueToTree(NodeToMapListOrValue.get(child)),
-                    JsonPointer.append(
-                            JsonPointer.ROOT,
-                            Properties.OBJECT_SCHEMA)));
-        } else if (!Properties.OBJECT_NAME.equals(segment)
-                && !Properties.OBJECT_DESCRIPTION.equals(segment)
-                && !Properties.OBJECT_VALUE.equals(segment)) {
-            Map<String, Node> properties = node.getProperties();
-            if (properties != null) {
-                properties.put(segment, child);
-            }
-        }
-    }
-
     private boolean semanticPathExists(Node root, String path) {
         try {
             return BlueViewPath.select(root, path) != null;
         } catch (IllegalArgumentException absent) {
             return false;
         }
-    }
-
-    private List<Node> expandReferences(List<Node> nodes) {
-        List<Node> expanded = new ArrayList<>(nodes.size());
-        for (Node node : nodes) {
-            expanded.add(expandReferences(node));
-        }
-        return expanded;
-    }
-
-    private Schema expandReferences(Schema schema) {
-        if (schema == null) {
-            return null;
-        }
-        if (schema.isReferenceOnly()) {
-            NodeProviderResult result = nodeProvider.fetchResultByBlueId(schema.getBlueId());
-            if (result.outcome() != NodeProviderOutcome.FOUND) {
-                throw new IllegalArgumentException("Unable to expand schema reference "
-                        + schema.getBlueId() + ": " + result.outcome());
-            }
-            List<Node> nodes = result.nodes();
-            if (nodes.size() != 1) {
-                throw new IllegalArgumentException(
-                        "Schema references must materialize one object node: " + schema.getBlueId());
-            }
-            Schema materialized = NodeDeserializer.parseSchema(
-                    JSON_MAPPER.valueToTree(
-                            NodeToMapListOrValue.get(providerContentWithoutRootIdentity(nodes.get(0)))),
-                    JsonPointer.append(
-                            JsonPointer.ROOT,
-                            Properties.OBJECT_SCHEMA));
-            if (materialized.isReferenceOnly()) {
-                throw new IllegalArgumentException(
-                        "Schema provider returned a reference-only wrapper for " + schema.getBlueId());
-            }
-            return expandReferences(materialized);
-        }
-        Schema expanded = schema.clone();
-        expanded.required(expandReferences(expanded.getRequired()));
-        expanded.minLength(expandReferences(expanded.getMinLength()));
-        expanded.maxLength(expandReferences(expanded.getMaxLength()));
-        expanded.minimum(expandReferences(expanded.getMinimum()));
-        expanded.maximum(expandReferences(expanded.getMaximum()));
-        expanded.exclusiveMinimum(expandReferences(expanded.getExclusiveMinimum()));
-        expanded.exclusiveMaximum(expandReferences(expanded.getExclusiveMaximum()));
-        expanded.multipleOf(expandReferences(expanded.getMultipleOf()));
-        expanded.minItems(expandReferences(expanded.getMinItems()));
-        expanded.maxItems(expandReferences(expanded.getMaxItems()));
-        expanded.uniqueItems(expandReferences(expanded.getUniqueItems()));
-        expanded.minFields(expandReferences(expanded.getMinFields()));
-        expanded.maxFields(expandReferences(expanded.getMaxFields()));
-        if (expanded.getEnum() != null) {
-            expanded.enumValues(expandReferences(expanded.getEnum()));
-        }
-        return expanded;
     }
 
     /**
@@ -1062,6 +856,18 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     /**
+     * Applies one Language-owned patch to strict canonical content.
+     *
+     * @param canonical non-null strict canonical root
+     * @param patch non-null Language patch operation
+     * @return immutable patched root plus before/after evidence
+     */
+    public CanonicalPatchResult applyCanonicalPatch(
+            Node canonical, BluePatch patch) {
+        return applyCanonicalPatch(canonical, toJsonPatch(patch));
+    }
+
+    /**
      * Applies a patch to a snapshot's canonical lane and re-resolves the
      * resulting canonical root under the current runtime configuration.
      *
@@ -1075,6 +881,35 @@ public class Blue implements NodeResolver, AutoCloseable {
             return applyCanonicalPatch(snapshot, patch, this::snapshotFromVerifiedCanonical);
         } finally {
             endDirectCacheOperation();
+        }
+    }
+
+    /**
+     * Applies one Language-owned patch and re-resolves the resulting snapshot.
+     *
+     * @param snapshot non-null snapshot whose canonical lane is patchable
+     * @param patch non-null Language patch operation
+     * @return complete immutable snapshot for the patched identity
+     */
+    public ResolvedSnapshot applyCanonicalPatch(
+            ResolvedSnapshot snapshot, BluePatch patch) {
+        return applyCanonicalPatch(snapshot, toJsonPatch(patch));
+    }
+
+    private JsonPatch toJsonPatch(BluePatch patch) {
+        Objects.requireNonNull(patch, "patch");
+        BluePatchOperation operation = Objects.requireNonNull(
+                patch.operation(), "patch operation");
+        switch (operation) {
+            case ADD:
+                return JsonPatch.add(patch.path(), patch.value());
+            case REPLACE:
+                return JsonPatch.replace(patch.path(), patch.value());
+            case REMOVE:
+                return JsonPatch.remove(patch.path());
+            default:
+                throw new IllegalArgumentException(
+                        "Unsupported patch operation: " + operation);
         }
     }
 
@@ -1299,6 +1134,95 @@ public class Blue implements NodeResolver, AutoCloseable {
      */
     public String languageVersion() {
         return "1.0";
+    }
+
+    /**
+     * Returns the frozen alias snapshot used by Source-content verification.
+     *
+     * @return immutable point-in-time alias mapping
+     */
+    @Override
+    public Map<String, String> preprocessingAliases() {
+        return getPreprocessingAliases();
+    }
+
+    /**
+     * Applies the released Source identity strategy independently of custom
+     * merger and limit configuration.
+     *
+     * @param source exact authored Source content
+     * @return canonical direct BlueId input
+     */
+    @Override
+    public Node canonicalizeSourceContent(Node source) {
+        Objects.requireNonNull(source, "source");
+        try (Blue sourceBlue = new Blue(
+                getNodeProvider(),
+                createDefaultNodeProcessor(),
+                null,
+                cachePolicy())) {
+            sourceBlue.preprocessingAliases(
+                    getPreprocessingAliases());
+            return sourceBlue.canonicalize(source);
+        }
+    }
+
+    /** Returns matcher-owned cache bounds for this runtime generation. */
+    @Override
+    public BlueCachePolicy matchingCachePolicy() {
+        return cachePolicy();
+    }
+
+    /** Applies this runtime's exact preprocessing environment for matching. */
+    @Override
+    public Node preprocessForMatching(Node source) {
+        return preprocess(source);
+    }
+
+    /** Expands only paths admitted by the target-driven matching limits. */
+    @Override
+    public void expandForMatching(Node source, Limits limits) {
+        expand(source, limits);
+    }
+
+    /** Resolves a matching candidate under target-driven limits. */
+    @Override
+    public Node resolveForMatching(Node source, Limits limits) {
+        return resolve(source, limits);
+    }
+
+    /**
+     * Materializes a type reference through verified snapshots, with the
+     * released raw-definition compatibility fallback.
+     */
+    @Override
+    public FrozenNode materializeTypeReferenceForMatching(
+            FrozenNode reference) {
+        Objects.requireNonNull(reference, "reference");
+        if (!reference.isReferenceOnly()
+                || reference.getReferenceBlueId() == null) {
+            throw new IllegalArgumentException(
+                    "Matching materialization requires a pure reference");
+        }
+        String blueId = reference.getReferenceBlueId();
+        try {
+            return loadSnapshot(blueId).frozenResolvedRoot();
+        } catch (RuntimeException unavailableSnapshot) {
+            try {
+                List<Node> nodes = getNodeProvider()
+                        .fetchByBlueId(blueId);
+                if (nodes == null || nodes.size() != 1) {
+                    return null;
+                }
+                Node sourceProjection = NodeToBlueIdInput
+                        .stripResolvedBlueIdMetadata(
+                                nodes.get(0).clone());
+                return FrozenNode.fromResolvedNode(
+                        preprocess(sourceProjection));
+            } catch (RuntimeException unavailableDefinition) {
+                return null;
+            }
+        }
     }
 
     /**
@@ -1881,30 +1805,6 @@ public class Blue implements NodeResolver, AutoCloseable {
     }
 
     /**
-     * Compatibility name for {@link #calculateSourceDocumentBlueId(Node)}.
-     *
-     * <p>Blue has one BlueId format and algorithm. This descriptor is retained
-     * only for consumers of the frozen 1.x binary API; new code must use the
-     * Source Document terminology.</p>
-     *
-     * @param node non-null authored Source Document; it is not mutated
-     * @return the Source Document BlueId
-     */
-    public String calculateSemanticBlueId(Node node) {
-        return calculateSourceDocumentBlueId(node);
-    }
-
-    /**
-     * Compatibility name for {@link #calculateSourceDocumentBlueId(Object)}.
-     *
-     * @param object non-null serializable object
-     * @return the Source Document BlueId
-     */
-    public String calculateSemanticBlueId(Object object) {
-        return calculateSourceDocumentBlueId(object);
-    }
-
-    /**
      * Adds aliases to a defensive copy of current preprocessing configuration,
      * invalidating configuration-bound caches and processor state.
      *
@@ -2212,7 +2112,7 @@ public class Blue implements NodeResolver, AutoCloseable {
                 Preprocessor.getStandardProvider(),
                 preprocessingNodeProvider,
                 aliases,
-                Properties.BLUE_CONTRACTS_RUNTIME_TYPE_NAME_TO_BLUE_ID_MAP)
+                RuntimeTypeAliases.NAME_TO_BLUE_ID)
                 .preprocess(node);
     }
 
@@ -2326,7 +2226,7 @@ public class Blue implements NodeResolver, AutoCloseable {
     public Blue nodeProvider(NodeProvider nodeProvider) {
         ConfigurationRefresh refresh = refreshRuntimeConfiguration(() -> {
             this.originalNodeProvider = nodeProvider;
-            this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
+            this.nodeProvider = wrapRuntimeProvider(nodeProvider);
         }, true);
         closeProcessor(refresh.processorToClose);
         refresh.gauges.emit(refresh.metrics);
@@ -3152,7 +3052,7 @@ public class Blue implements NodeResolver, AutoCloseable {
             MergingProcessor snapshotMergingProcessor,
             Limits limits) {
         Node preprocessed = preprocess(node.clone(), preprocessingNodeProvider, aliases);
-        Node resolved = new Merger(snapshotMergingProcessor,
+        Node resolved = languageMerger(snapshotMergingProcessor,
                 snapshotNodeProvider,
                 resolutionCache)
                 .resolve(preprocessed.clone(), limits);
@@ -3190,7 +3090,7 @@ public class Blue implements NodeResolver, AutoCloseable {
                 limits,
                 new DeferredReferencePathLimits(
                         canonicalPaths));
-        Node resolved = new Merger(
+        Node resolved = languageMerger(
                 snapshotMergingProcessor,
                 snapshotNodeProvider,
                 resolutionCache)
@@ -3257,7 +3157,8 @@ public class Blue implements NodeResolver, AutoCloseable {
         if (cached != null && cached.verifiedReferenceResolution() != null) {
             return cached;
         }
-        Merger merger = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache);
+        Merger merger = languageMerger(
+                mergingProcessor, nodeProvider, resolvedReferenceCache);
         return cacheSnapshot(ResolvedSnapshot.fromResolverResult(
                 merger.resolveSnapshot(canonicalRoot, combineWithGlobalLimits(NO_LIMITS))));
     }
@@ -3269,7 +3170,9 @@ public class Blue implements NodeResolver, AutoCloseable {
         if (cached != null) {
             return cached;
         }
-        Merger merger = new Merger(mergingProcessor, snapshotNodeProvider, resolvedReferenceCache);
+        Merger merger = languageMerger(
+                mergingProcessor, snapshotNodeProvider,
+                resolvedReferenceCache);
         Node canonical = canonicalRoot.toNode();
         Node resolved = merger.resolve(canonical.clone(), combineWithGlobalLimits(NO_LIMITS));
         return snapshotFromResolved(canonical, resolved, canonicalRoot);
@@ -3281,7 +3184,7 @@ public class Blue implements NodeResolver, AutoCloseable {
             MergingProcessor snapshotMergingProcessor,
             Limits limits,
             ResolvedReferenceCache resolutionCache) {
-        Merger merger = new Merger(
+        Merger merger = languageMerger(
                 snapshotMergingProcessor, snapshotNodeProvider, resolutionCache);
         Node canonical = canonicalRoot.toNode();
         Node resolved = merger.resolve(canonical.clone(), limits);
@@ -4172,29 +4075,6 @@ public class Blue implements NodeResolver, AutoCloseable {
         );
     }
 
-    private static final class LimitedExpansionContext {
-        private final int maximum;
-        private final Set<String> expandedBlueIds = new LinkedHashSet<>();
-        private final Set<String> outstandingBlueIds = new LinkedHashSet<>();
-        private NodeProviderOutcome providerOutcome;
-
-        private LimitedExpansionContext(int maximum) {
-            this.maximum = maximum;
-        }
-
-        private boolean tryAcquire(String blueId) {
-            if (expandedBlueIds.contains(blueId)) {
-                return true;
-            }
-            if (expandedBlueIds.size() >= maximum) {
-                outstandingBlueIds.add(blueId);
-                return false;
-            }
-            expandedBlueIds.add(blueId);
-            return true;
-        }
-    }
-
     private static final class ReferenceBudget {
         private final int maximum;
         private final Set<String> requestedBlueIds = new LinkedHashSet<>();
@@ -4301,41 +4181,6 @@ public class Blue implements NodeResolver, AutoCloseable {
     private static final class ReferenceExpansionLimitException extends RuntimeException {
         private ReferenceExpansionLimitException(String blueId) {
             super("Reference expansion limit reached for " + blueId + ".");
-        }
-    }
-
-    private static final class DemandExpansion {
-        private final Node node;
-        private final BlueOperationOutcome outcome;
-        private final String reason;
-
-        private DemandExpansion(Node node,
-                                BlueOperationOutcome outcome,
-                                String reason) {
-            this.node = node;
-            this.outcome = outcome;
-            this.reason = reason;
-        }
-
-        private static DemandExpansion established(Node node) {
-            return new DemandExpansion(node, BlueOperationOutcome.ESTABLISHED, null);
-        }
-
-        private static DemandExpansion absent(Node node) {
-            return new DemandExpansion(node, BlueOperationOutcome.ABSENT,
-                    "Demanded path is semantically absent.");
-        }
-
-        private static DemandExpansion incomplete(Node node, String reason) {
-            return new DemandExpansion(node, BlueOperationOutcome.INCOMPLETE, reason);
-        }
-
-        private static DemandExpansion invalid(Node node, String reason) {
-            return new DemandExpansion(node, BlueOperationOutcome.INVALID, reason);
-        }
-
-        private DemandExpansion withNode(Node replacement) {
-            return new DemandExpansion(replacement, outcome, reason);
         }
     }
 

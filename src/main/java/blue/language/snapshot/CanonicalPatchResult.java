@@ -1,6 +1,6 @@
 package blue.language.snapshot;
 
-import blue.language.processor.model.JsonPatch;
+import blue.language.patching.BluePatchOperation;
 
 /**
  * Immutable evidence produced by one canonical overlay patch.
@@ -13,10 +13,14 @@ public final class CanonicalPatchResult {
     private final FrozenNode root;
     private final FrozenNode before;
     private final FrozenNode after;
-    private final JsonPatch.Op op;
+    private final BluePatchOperation op;
     private final String path;
 
-    CanonicalPatchResult(FrozenNode root, FrozenNode before, FrozenNode after, JsonPatch.Op op, String path) {
+    CanonicalPatchResult(FrozenNode root,
+                         FrozenNode before,
+                         FrozenNode after,
+                         BluePatchOperation op,
+                         String path) {
         this.root = root;
         this.before = before;
         this.after = after;
@@ -44,7 +48,7 @@ public final class CanonicalPatchResult {
 
     /** Returns the applied operation.
      * @return patch operation */
-    public JsonPatch.Op op() {
+    public BluePatchOperation op() {
         return op;
     }
 

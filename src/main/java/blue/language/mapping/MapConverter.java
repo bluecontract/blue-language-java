@@ -21,6 +21,7 @@ import java.util.Map;
 public class MapConverter implements Converter<Map<?, ?>> {
     private final ConverterFactory converterFactory;
     private final TypeClassResolver typeClassResolver;
+    private final ObjectFactoryRegistry objectFactories;
 
     /**
      * Creates a recursive map converter.
@@ -28,9 +29,29 @@ public class MapConverter implements Converter<Map<?, ?>> {
      * @param converterFactory factory for nested value converters
      * @param typeClassResolver resolver for Blue-declared Java types
      */
-    public MapConverter(ConverterFactory converterFactory, TypeClassResolver typeClassResolver) {
+    public MapConverter(
+            ConverterFactory converterFactory,
+            TypeClassResolver typeClassResolver) {
+        this(
+                converterFactory,
+                typeClassResolver,
+                ObjectFactoryRegistry.defaults());
+    }
+
+    /**
+     * Creates a recursive map converter with explicit factories.
+     *
+     * @param converterFactory factory for nested value converters
+     * @param typeClassResolver resolver for Blue-declared Java types
+     * @param objectFactories immutable object factory registry
+     */
+    public MapConverter(
+            ConverterFactory converterFactory,
+            TypeClassResolver typeClassResolver,
+            ObjectFactoryRegistry objectFactories) {
         this.converterFactory = converterFactory;
         this.typeClassResolver = typeClassResolver;
+        this.objectFactories = objectFactories;
     }
 
     @Override
@@ -42,7 +63,7 @@ public class MapConverter implements Converter<Map<?, ?>> {
         Class<?> rawType = getRawType(targetType);
         Map<Object, Object> result;
         try {
-            result = (Map<Object, Object>) TypeCreatorRegistry.createInstance(rawType);
+            result = (Map<Object, Object>) objectFactories.create(rawType);
         } catch (IllegalArgumentException e) {
             result = new HashMap<>();
         }

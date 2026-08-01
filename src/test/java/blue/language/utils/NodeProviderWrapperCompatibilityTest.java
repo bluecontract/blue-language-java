@@ -2,9 +2,11 @@ package blue.language.utils;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
+import blue.language.provider.BootstrapProvider;
 import blue.language.provider.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
 import blue.language.provider.SequentialNodeProvider;
+import blue.language.provider.VerifiedNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +16,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NodeProviderWrapperCompatibilityTest {
@@ -65,6 +68,35 @@ class NodeProviderWrapperCompatibilityTest {
         assertEquals(
                 NodeProviderOutcome.INVALID_EVIDENCE,
                 result.outcome());
+    }
+
+    @Test
+    void shouldRecognizeOnlyFinalLanguageOwnedVerificationBoundary() {
+        // given
+        Node expected = new Node().value("expected");
+        String requested =
+                BlueIdCalculator.calculateBlueId(expected);
+        VerifiedNodeProvider verified =
+                new VerifiedNodeProvider(blueId ->
+                        requested.equals(blueId)
+                                ? Collections.singletonList(
+                                expected.clone())
+                                : null);
+
+        // when
+        SequentialNodeProvider wrapped =
+                (SequentialNodeProvider)
+                        NodeProviderWrapper.wrap(verified);
+        NodeProviderResult result =
+                wrapped.fetchResultByBlueId(requested);
+
+        // then
+        assertEquals(2, wrapped.getNodeProviders().size());
+        assertSame(
+                BootstrapProvider.INSTANCE,
+                wrapped.getNodeProviders().get(0));
+        assertSame(verified, wrapped.getNodeProviders().get(1));
+        assertEquals(NodeProviderOutcome.FOUND, result.outcome());
     }
 
     @Test

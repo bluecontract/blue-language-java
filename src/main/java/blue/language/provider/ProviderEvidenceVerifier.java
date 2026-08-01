@@ -2,7 +2,6 @@ package blue.language.provider;
 
 import blue.language.utils.Properties;
 
-import blue.language.Blue;
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.model.Node;
 import blue.language.model.Schema;
@@ -82,7 +81,7 @@ public final class ProviderEvidenceVerifier {
      * @param requestedBlueId identity the supplied content must establish
      * @param supplied provider-returned node
      * @param mode ingestion mode
-     * @param blue active language runtime
+     * @param runtime exact source-content verification runtime
      * @param environment source environment binding, required only for
      *                    {@link ProviderMode#SOURCE_DOCUMENT}
      * @return canonical verified content
@@ -92,12 +91,12 @@ public final class ProviderEvidenceVerifier {
     public static Node verify(String requestedBlueId,
                               Node supplied,
                               ProviderMode mode,
-                              Blue blue,
+                              SourceContentVerificationRuntime runtime,
                               SourceProviderEnvironment environment) {
         Objects.requireNonNull(requestedBlueId, "requestedBlueId");
         Objects.requireNonNull(supplied, "supplied");
         Objects.requireNonNull(mode, "mode");
-        Objects.requireNonNull(blue, Properties.OBJECT_BLUE);
+        Objects.requireNonNull(runtime, "runtime");
 
         Node canonical;
         if (mode == ProviderMode.DIRECT_NODE) {
@@ -113,8 +112,8 @@ public final class ProviderEvidenceVerifier {
                     supplied, requestedBlueId,
                     "Bound source provider candidate");
             validateSourceEnvironment(
-                    blue, environment, sourceEvidenceIdentity(source));
-            canonical = canonicalizeSource(source, blue);
+                    runtime, environment, sourceEvidenceIdentity(source));
+            canonical = canonicalizeSource(source, runtime);
         }
 
         String actualBlueId;
@@ -141,18 +140,18 @@ public final class ProviderEvidenceVerifier {
      *
      * @param requestedBlueId identity the complete supplied value must establish
      * @param supplied complete ordered source-node value
-     * @param blue active language runtime
+     * @param runtime exact source-content verification runtime
      * @param environment immutable source verification environment
      * @return unmodifiable preprocessed node copies
      */
     public static List<Node> verifySourceContent(
             String requestedBlueId,
             List<Node> supplied,
-            Blue blue,
+            SourceContentVerificationRuntime runtime,
             SourceProviderEnvironment environment) {
         Objects.requireNonNull(requestedBlueId, "requestedBlueId");
         Objects.requireNonNull(supplied, "supplied");
-        Objects.requireNonNull(blue, Properties.OBJECT_BLUE);
+        Objects.requireNonNull(runtime, "runtime");
         if (supplied.isEmpty()) {
             throw new IllegalArgumentException(
                     "Bound source provider content must not be empty.");
@@ -161,9 +160,9 @@ public final class ProviderEvidenceVerifier {
                 supplied, requestedBlueId,
                 "Bound source provider candidate");
         validateSourceEnvironment(
-                blue, environment, sourceEvidenceIdentity(source));
+                runtime, environment, sourceEvidenceIdentity(source));
 
-        List<Node> canonical = canonicalizeSource(source, blue);
+        List<Node> canonical = canonicalizeSource(source, runtime);
         String actualBlueId;
         try {
             actualBlueId = canonical.size() == 1
@@ -266,19 +265,20 @@ public final class ProviderEvidenceVerifier {
      * Binds the Language release, canonical registry, and configured directive
      * aliases that define the active preprocessing environment.
      *
-     * @param blue active language runtime
+     * @param runtime exact source-content verification runtime
      * @return lowercase hexadecimal environment identity prefixed with
      *         {@code sha256:}
      */
-    public static String preprocessingEnvironmentIdentity(Blue blue) {
-        Objects.requireNonNull(blue, Properties.OBJECT_BLUE);
+    public static String preprocessingEnvironmentIdentity(
+            SourceContentVerificationRuntime runtime) {
+        Objects.requireNonNull(runtime, "runtime");
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put(FIELD_LANGUAGE_RELEASE_IDENTITY,
                 SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY);
         payload.put(FIELD_CANONICAL_REGISTRY_IDENTITY,
                 BlueCoreTypeRegistry.INSTANCE.packageIdentity());
         payload.put(FIELD_PREPROCESSING_ALIASES,
-                new TreeMap<>(blue.getPreprocessingAliases()));
+                new TreeMap<>(runtime.preprocessingAliases()));
         return sha256CanonicalIdentity(payload);
     }
 
@@ -318,7 +318,7 @@ public final class ProviderEvidenceVerifier {
     }
 
     private static void validateSourceEnvironment(
-            Blue blue,
+            SourceContentVerificationRuntime runtime,
             SourceProviderEnvironment environment,
             String actualSourceEvidenceIdentity) {
         if (environment == null) {
@@ -336,7 +336,7 @@ public final class ProviderEvidenceVerifier {
             throw new IllegalArgumentException(
                     "Source provider environment does not declare BOUND_SOURCE_CONTENT mode.");
         }
-        if (!blue.languageVersion().equals(
+        if (!runtime.languageVersion().equals(
                 environment.languageVersion())) {
             throw new IllegalArgumentException(
                     "Bound source provider language version does not match this Blue runtime.");
@@ -351,7 +351,7 @@ public final class ProviderEvidenceVerifier {
             throw new IllegalArgumentException(
                     "Bound source provider canonical registry identity does not match this Blue runtime.");
         }
-        if (!preprocessingEnvironmentIdentity(blue).equals(
+        if (!preprocessingEnvironmentIdentity(runtime).equals(
                 environment.preprocessingEnvironmentId())) {
             throw new IllegalArgumentException(
                     "Bound source provider preprocessing environment identity does not match this Blue runtime.");
@@ -376,17 +376,16 @@ public final class ProviderEvidenceVerifier {
 
     private static Node canonicalizeSource(
             Node source,
-            Blue blue) {
-        return ReleasedSourceContentStrategy.canonicalize(
-                source, blue);
+            SourceContentVerificationRuntime runtime) {
+        return runtime.canonicalizeSourceContent(source);
     }
 
     private static List<Node> canonicalizeSource(
             List<Node> source,
-            Blue blue) {
+            SourceContentVerificationRuntime runtime) {
         List<Node> canonical = new ArrayList<>(source.size());
         for (Node node : source) {
-            canonical.add(canonicalizeSource(node, blue));
+            canonical.add(canonicalizeSource(node, runtime));
         }
         return canonical;
     }

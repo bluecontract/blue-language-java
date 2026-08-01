@@ -1,10 +1,10 @@
 package blue.language.utils;
 
 import blue.language.NodeProvider;
-import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.provider.BootstrapProvider;
 import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;
+import blue.language.provider.VerifiedNodeProvider;
 import blue.language.provider.VerifyingNodeProvider;
 
 import java.util.ArrayList;
@@ -14,9 +14,10 @@ import java.util.List;
 /**
  * Builds the verified provider graph used by Language operations.
  *
- * <p>Bootstrap and runtime-type providers are inserted ahead of caller
- * providers, and every external result-producing leaf is independently
- * evidence-verified. Existing equivalent wrappers are retained.</p>
+ * <p>The Language bootstrap provider is inserted ahead of caller providers,
+ * and every external result-producing leaf is independently evidence-verified.
+ * Runtime-specific providers must be composed explicitly by the owning
+ * runtime before this Language boundary is applied.</p>
  */
 public class NodeProviderWrapper {
 
@@ -27,7 +28,7 @@ public class NodeProviderWrapper {
     }
 
     /**
-     * Returns a provider graph with bootstrap, runtime, and verification boundaries.
+     * Returns a provider graph with bootstrap and verification boundaries.
      *
      * @param originalProvider caller-supplied provider graph
      * @return secured provider graph
@@ -36,12 +37,11 @@ public class NodeProviderWrapper {
         NodeProvider verifiedProvider =
                 verifyProviderGraph(originalProvider);
         if (hasBootstrapAtTopLevel(verifiedProvider)) {
-            return withRuntimeProvider(verifiedProvider);
+            return verifiedProvider;
         }
         return new SequentialNodeProvider(
                 Arrays.asList(
                         BootstrapProvider.INSTANCE,
-                        BlueRuntimeTypeRegistry.getDefault().asProcessorSnapshotProvider(),
                         verifiedProvider
                 )
         );
@@ -85,13 +85,11 @@ public class NodeProviderWrapper {
         if (provider == null) {
             throw new NullPointerException("provider");
         }
-        NodeProvider runtimeProvider =
-                BlueRuntimeTypeRegistry.getDefault()
-                        .asProcessorSnapshotProvider();
         if (provider == BootstrapProvider.INSTANCE
-                || provider == runtimeProvider
                 || provider.getClass()
-                == VerifyingNodeProvider.class) {
+                == VerifyingNodeProvider.class
+                || provider.getClass()
+                == VerifiedNodeProvider.class) {
             return provider;
         }
         if (provider.getClass()
@@ -135,31 +133,6 @@ public class NodeProviderWrapper {
                 .getNodeProviders().stream()
                 .anyMatch(member ->
                         member == BootstrapProvider.INSTANCE);
-    }
-
-    private static NodeProvider withRuntimeProvider(NodeProvider originalProvider) {
-        if (originalProvider.getClass()
-                != SequentialNodeProvider.class) {
-            return originalProvider;
-        }
-        NodeProvider runtimeProvider = BlueRuntimeTypeRegistry.getDefault().asProcessorSnapshotProvider();
-        List<NodeProvider> providers = ((SequentialNodeProvider) originalProvider).getNodeProviders();
-        if (providers.stream().anyMatch(provider -> provider == runtimeProvider)) {
-            return originalProvider;
-        }
-        List<NodeProvider> wrapped = new ArrayList<>(providers.size() + 1);
-        boolean inserted = false;
-        for (NodeProvider provider : providers) {
-            wrapped.add(provider);
-            if (!inserted && provider == BootstrapProvider.INSTANCE) {
-                wrapped.add(runtimeProvider);
-                inserted = true;
-            }
-        }
-        if (!inserted) {
-            wrapped.add(0, runtimeProvider);
-        }
-        return new SequentialNodeProvider(wrapped);
     }
 
 }

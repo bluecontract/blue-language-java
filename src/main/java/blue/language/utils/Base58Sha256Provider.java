@@ -48,7 +48,17 @@ public class Base58Sha256Provider implements Function<Object, String> {
         return compatibilityHash(object);
     }
 
-    String applyCanonicalValue(Object object) {
+    /**
+     * Returns the normative hash for a JSON-compatible canonical value.
+     *
+     * <p>This entry point lets the focused identity service use the streaming
+     * canonical writer while {@link #apply(Object)} retains the wider legacy
+     * Jackson-serialization compatibility surface.</p>
+     *
+     * @param object canonical JSON-compatible value
+     * @return Base58-encoded SHA-256 digest
+     */
+    public String applyCanonicalValue(Object object) {
         if (FrozenCanonicalWriter.supportsCanonicalValue(object)) {
             return Base58.encode(sha256Bytes(FrozenCanonicalWriter.canonicalValueBytes(object)));
         }

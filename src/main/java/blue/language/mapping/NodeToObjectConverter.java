@@ -18,7 +18,21 @@ public class NodeToObjectConverter {
      * @param typeClassResolver resolver for Blue-declared Java types
      */
     public NodeToObjectConverter(TypeClassResolver typeClassResolver) {
-        this.converterFactory = new ConverterFactory(typeClassResolver);
+        this(typeClassResolver, ObjectFactoryRegistry.defaults());
+    }
+
+    /**
+     * Creates a mapping facade with an immutable object factory registry.
+     *
+     * @param typeClassResolver resolver for Blue-declared Java types
+     * @param objectFactories immutable object factory registry
+     */
+    public NodeToObjectConverter(
+            TypeClassResolver typeClassResolver,
+            ObjectFactoryRegistry objectFactories) {
+        this.converterFactory = new ConverterFactory(
+                typeClassResolver,
+                objectFactories);
     }
 
     /**

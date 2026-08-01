@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
+import blue.language.patching.BluePatchOperation;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.ParsedJsonPointer;
 
@@ -83,6 +84,11 @@ final class ImmutableJsonPatch {
 
     JsonPatch.Op op() {
         return op;
+    }
+
+    /** Returns the Language-owned operation used by the patch engine. */
+    BluePatchOperation blueOperation() {
+        return op.blueOperation();
     }
 
     String authoredPath() {

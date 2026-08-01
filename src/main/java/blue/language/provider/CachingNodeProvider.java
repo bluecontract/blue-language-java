@@ -1,114 +1,132 @@
 package blue.language.provider;
 
-import blue.language.model.Node;
 import blue.language.NodeProvider;
+import blue.language.model.Node;
 import blue.language.utils.NodeToMapListOrValue;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
+import static blue.language.utils.Properties.OBJECT_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 /**
- * Size-bounded compatibility cache in front of another {@link NodeProvider}.
+ * Size-bounded least-recently-used acceleration cache for provider outcomes.
  *
- * <p>The byte bound is an approximate serialized-character count. Cached lists
- * are returned directly, so this class is an acceleration adapter rather than
- * an immutable evidence store; verification must occur at the consuming
- * boundary.</p>
+ * <p>Found values are retained through {@link NodeProviderResult}, which
+ * defensively copies nodes on both insertion and access. A definitive miss may
+ * be cached, but transient unavailability and invalid evidence are never
+ * cached and therefore can never be rewritten as absence.</p>
  */
-public class CachingNodeProvider implements NodeProvider {
+public final class CachingNodeProvider implements NodeProvider {
+
+    private static final long OUTCOME_ENTRY_WEIGHT_BYTES = 32L;
+
     private final NodeProvider delegate;
-    private final Map<String, List<Node>> cache;
-    private final Queue<String> accessOrder;
-    private final AtomicLong currentSize;
     private final long maxSizeBytes;
+    private final Object cacheLock = new Object();
+    private final LinkedHashMap<String, CacheEntry> cache =
+            new LinkedHashMap<String, CacheEntry>(16, 0.75f, true);
+    private long currentSizeBytes;
 
     /**
      * Creates a cache with the requested approximate maximum retained size.
      *
      * @param delegate backing provider
-     * @param maxSizeBytes approximate maximum serialized retained size
+     * @param maxSizeBytes non-negative approximate retained-size bound
      */
     public CachingNodeProvider(NodeProvider delegate, long maxSizeBytes) {
-        this.delegate = delegate;
-        this.cache = new ConcurrentHashMap<>();
-        this.accessOrder = new LinkedList<>();
-        this.currentSize = new AtomicLong(0);
+        this.delegate = Objects.requireNonNull(delegate, "delegate");
+        if (maxSizeBytes < 0L) {
+            throw new IllegalArgumentException(
+                    "maxSizeBytes must be non-negative");
+        }
         this.maxSizeBytes = maxSizeBytes;
     }
 
     @Override
     public List<Node> fetchByBlueId(String blueId) {
-        List<Node> cachedNodes = cache.get(blueId);
-        if (cachedNodes != null) {
-            updateAccessOrder(blueId);
-            return cachedNodes;
-        }
-
-        List<Node> nodes = delegate.fetchByBlueId(blueId);
-        if (nodes != null) {
-            cacheNodes(blueId, nodes);
-        }
-        return nodes;
+        NodeProviderResult result = fetchResultByBlueId(blueId);
+        return result.outcome() == NodeProviderOutcome.FOUND
+                ? result.nodes()
+                : null;
     }
 
-    private void updateAccessOrder(String blueId) {
-        synchronized (accessOrder) {
-            accessOrder.remove(blueId);
-            accessOrder.offer(blueId);
-        }
-    }
-
-    private void cacheNodes(String blueId, List<Node> nodes) {
-        long nodeSize = estimateSize(nodes);
-        while (currentSize.get() + nodeSize > maxSizeBytes && !accessOrder.isEmpty()) {
-            removeOldestEntry();
-        }
-
-        if (currentSize.get() + nodeSize <= maxSizeBytes) {
-            cache.put(blueId, nodes);
-            currentSize.addAndGet(nodeSize);
-            synchronized (accessOrder) {
-                accessOrder.offer(blueId);
+    @Override
+    public NodeProviderResult fetchResultByBlueId(String blueId) {
+        Objects.requireNonNull(blueId, OBJECT_BLUE_ID);
+        synchronized (cacheLock) {
+            CacheEntry cached = cache.get(blueId);
+            if (cached != null) {
+                return cached.result;
             }
         }
+
+        NodeProviderResult result = Objects.requireNonNull(
+                delegate.fetchResultByBlueId(blueId),
+                "delegate provider result");
+        if (result.outcome() == NodeProviderOutcome.FOUND
+                || result.outcome() == NodeProviderOutcome.NOT_FOUND) {
+            cache(blueId, result);
+        }
+        return result;
     }
 
-    private void removeOldestEntry() {
-        String oldestBlueId;
-        synchronized (accessOrder) {
-            oldestBlueId = accessOrder.poll();
+    private void cache(String blueId, NodeProviderResult result) {
+        long weight = estimateWeight(result);
+        if (weight > maxSizeBytes) {
+            return;
         }
-        if (oldestBlueId != null) {
-            List<Node> removedNodes = cache.remove(oldestBlueId);
-            if (removedNodes != null) {
-                currentSize.addAndGet(-estimateSize(removedNodes));
+        synchronized (cacheLock) {
+            CacheEntry replaced = cache.remove(blueId);
+            if (replaced != null) {
+                currentSizeBytes -= replaced.weightBytes;
             }
+            while (currentSizeBytes + weight > maxSizeBytes
+                    && !cache.isEmpty()) {
+                Map.Entry<String, CacheEntry> oldest =
+                        cache.entrySet().iterator().next();
+                cache.remove(oldest.getKey());
+                currentSizeBytes -= oldest.getValue().weightBytes;
+            }
+            cache.put(blueId, new CacheEntry(result, weight));
+            currentSizeBytes += weight;
         }
     }
 
-    private long estimateSize(List<Node> nodes) {
-        return nodes.stream().mapToLong(node -> YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node)).length()).sum();
+    private long estimateWeight(NodeProviderResult result) {
+        long weight = OUTCOME_ENTRY_WEIGHT_BYTES;
+        for (Node node : result.nodes()) {
+            weight += YAML_MAPPER.writeValueAsString(
+                    NodeToMapListOrValue.get(node)).length();
+        }
+        return weight;
     }
 
-    /**
-     * Returns the current approximate retained size.
-     *
-     * @return approximate serialized size in bytes
-     */
+    /** Returns the current approximate retained size. */
     public long getCurrentSize() {
-        return currentSize.get();
+        synchronized (cacheLock) {
+            return currentSizeBytes;
+        }
     }
 
-    /**
-     * Returns the current cache entry count.
-     *
-     * @return number of cached identities
-     */
+    /** Returns the current cache entry count. */
     public int getCacheSize() {
-        return cache.size();
+        synchronized (cacheLock) {
+            return cache.size();
+        }
     }
 
+    /** One immutable cached conclusion and its precomputed retained weight. */
+    private static final class CacheEntry {
+        private final NodeProviderResult result;
+        private final long weightBytes;
+
+        private CacheEntry(NodeProviderResult result, long weightBytes) {
+            this.result = result;
+            this.weightBytes = weightBytes;
+        }
+    }
 }

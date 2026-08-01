@@ -2,18 +2,13 @@ package blue.language.preprocess;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
-import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
-import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
 import blue.language.provider.BootstrapProvider;
-import blue.language.utils.JsonPointer;
 import blue.language.utils.NodeProviderWrapper;
-import blue.language.utils.Properties;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Applies the complete Blue Language 1.0 Source preprocessing algorithm.
@@ -26,26 +21,12 @@ import java.util.Optional;
  */
 public class Preprocessor {
 
-    private static final String REPLACE_INLINE_TYPES_BLUE_ID =
-            "27B7fuxQCS1VAptiCPc2RMkKoutP5qxkh3uDxZ7dr6Eo";
-    private static final String LEGACY_REPLACE_INLINE_TYPES_BLUE_ID =
-            "53yFLQ3dpuGwa2svHubDyzyhYz9RQNmctiJRdi3gRYr7";
-    private static final String INFER_BASIC_TYPES_BLUE_ID =
-            "FGYuTXwaoSKfZmpTysLTLsb8WzSqf43384rKZDkXhxD4";
-    private static final String LEGACY_INFER_BASIC_TYPES_BLUE_ID =
-            "49hrWpkoXavNmK8PpZag11zB2vYwzhQZahwioz6vDk2i";
-    private static final String STANDARD_TYPE_BLUE_ID_POINTER =
-            JsonPointer.append(
-                    JsonPointer.append(
-                            JsonPointer.ROOT,
-                            Properties.OBJECT_TYPE),
-                    Properties.OBJECT_BLUE_ID);
-
     private final TransformationProcessorProvider processorProvider;
     private final NodeProvider nodeProvider;
     private final Map<String, String> directiveAliases;
     private final Map<String, String> environmentImports;
     private final StandardPreprocessingPipeline standardPipeline;
+    private final TransformationExecutor transformationExecutor;
 
     /**
      * Creates a preprocessor with an explicit transformation registry and
@@ -85,6 +66,8 @@ public class Preprocessor {
         this.directiveAliases = immutableCopy(directiveAliases);
         this.environmentImports = immutableCopy(environmentImports);
         this.standardPipeline = new StandardPreprocessingPipeline();
+        this.transformationExecutor = new TransformationExecutor(
+                standardPipeline);
     }
 
     /**
@@ -125,20 +108,7 @@ public class Preprocessor {
         PreprocessingContext context = new PreprocessingContext(
                 plan.effectiveImports(), nodeProvider);
 
-        Node working = document.clone();
-        working.blue(null);
-        for (TransformationSnapshot transformation
-                : plan.transformations()) {
-            working = transformation.apply(working, context);
-            PreprocessingLimits.requireGraphWithinBounds(
-                    working, "transformation output");
-            standardPipeline.rejectBlueDirective(working);
-        }
-        Node preprocessed = standardPipeline.apply(
-                working, plan.effectiveImports());
-        PreprocessingLimits.requireGraphWithinBounds(
-                preprocessed, "Preprocessed Document");
-        return preprocessed;
+        return transformationExecutor.execute(document, plan, context);
     }
 
     /**
@@ -152,38 +122,7 @@ public class Preprocessor {
      * @return standard explicit transformation registry
      */
     public static TransformationProcessorProvider getStandardProvider() {
-        return new TransformationProcessorProvider() {
-            @Override
-            public Optional<TransformationProcessor> getProcessor(
-                    Node transformation) {
-                if (transformation == null) {
-                    return Optional.empty();
-                }
-                String typeBlueId = transformation.getAsText(
-                        STANDARD_TYPE_BLUE_ID_POINTER);
-                return processorFor(typeBlueId, transformation);
-            }
-
-            @Override
-            public Optional<TransformationProcessor> processorFor(
-                    String exactTypeBlueId,
-                    Node exactTransformationNode) {
-                if (REPLACE_INLINE_TYPES_BLUE_ID.equals(exactTypeBlueId)
-                        || LEGACY_REPLACE_INLINE_TYPES_BLUE_ID
-                        .equals(exactTypeBlueId)) {
-                    return Optional.of(
-                            new ReplaceInlineValuesForTypeAttributesWithImports(
-                                    exactTransformationNode));
-                }
-                if (INFER_BASIC_TYPES_BLUE_ID.equals(exactTypeBlueId)
-                        || LEGACY_INFER_BASIC_TYPES_BLUE_ID
-                        .equals(exactTypeBlueId)) {
-                    return Optional.of(
-                            new InferBasicTypesForUntypedValues());
-                }
-                return Optional.empty();
-            }
-        };
+        return ReleasedTransformationCompatibilityRegistry.INSTANCE;
     }
 
     private static Map<String, String> immutableCopy(

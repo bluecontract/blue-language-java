@@ -1,6 +1,6 @@
 package blue.language.utils;
 
-import blue.language.Blue;
+import blue.language.matching.MatchingRuntime;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
@@ -23,17 +23,17 @@ import java.util.Stack;
  */
 public class NodeTypeMatcher {
 
-    private final Blue blue;
+    private final MatchingRuntime runtime;
     private final FrozenTypeMatcher frozenMatcher;
 
     /**
      * Creates a matcher bound to one Language runtime.
      *
-     * @param blue runtime used for preprocessing, resolution, and type lookup
+     * @param runtime runtime used for preprocessing, resolution, and type lookup
      */
-    public NodeTypeMatcher(Blue blue) {
-        this.blue = Objects.requireNonNull(blue, Properties.OBJECT_BLUE);
-        this.frozenMatcher = new FrozenTypeMatcher(blue);
+    public NodeTypeMatcher(MatchingRuntime runtime) {
+        this.runtime = Objects.requireNonNull(runtime, "runtime");
+        this.frozenMatcher = new FrozenTypeMatcher(runtime);
     }
 
     /**
@@ -64,7 +64,8 @@ public class NodeTypeMatcher {
         }
 
         try {
-            Node targetPatternNode = blue.preprocess(targetType.clone());
+            Node targetPatternNode = runtime.preprocessForMatching(
+                    targetType.clone());
             Limits matchingLimits = matchingLimits(globalLimits, targetPatternNode);
             FrozenNode resolvedNode = FrozenNode.fromResolvedNode(resolveForMatching(node, matchingLimits));
             FrozenNode targetPattern = FrozenNode.fromResolvedNode(targetPatternNode);
@@ -108,10 +109,10 @@ public class NodeTypeMatcher {
          */
         Node sourceProjection = NodeToBlueIdInput
                 .stripResolvedBlueIdMetadata(node.clone());
-        Node original = blue.preprocess(sourceProjection);
+        Node original = runtime.preprocessForMatching(sourceProjection);
         Node expanded = original.clone();
-        blue.expand(expanded, limits);
-        Node resolved = blue.resolve(expanded, limits);
+        runtime.expandForMatching(expanded, limits);
+        Node resolved = runtime.resolveForMatching(expanded, limits);
         restoreMissingStructure(resolved, expanded);
         return resolved;
     }
@@ -125,7 +126,7 @@ public class NodeTypeMatcher {
         if (globalLimits == null || globalLimits == Limits.NO_LIMITS) {
             return frozenMatcher;
         }
-        return new FrozenTypeMatcher(blue, false);
+        return new FrozenTypeMatcher(runtime, false);
     }
 
     private void restoreMissingStructure(Node target, Node source) {

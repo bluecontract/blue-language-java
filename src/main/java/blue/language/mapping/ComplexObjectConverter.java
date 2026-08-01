@@ -20,12 +20,14 @@ import java.util.*;
  * <p>The converter honors Blue metadata annotations, inherited fields,
  * Jackson property names, resolved Blue type mappings, and generic field
  * types. Static and compiler-generated fields are class metadata rather than
- * instance payload and are deliberately ignored. Target classes must have an
- * accessible no-argument constructor.</p>
+ * instance payload and are deliberately ignored. Target classes use their
+ * mapper-owned factory when registered, otherwise an accessible no-argument
+ * constructor is required.</p>
  */
 public class ComplexObjectConverter implements Converter<Object> {
     private final ConverterFactory converterFactory;
     private final TypeClassResolver typeClassResolver;
+    private final ObjectFactoryRegistry objectFactories;
 
     /**
      * Creates a reflective object converter.
@@ -33,9 +35,29 @@ public class ComplexObjectConverter implements Converter<Object> {
      * @param converterFactory factory for nested field converters
      * @param typeClassResolver resolver for Blue-declared Java types
      */
-    public ComplexObjectConverter(ConverterFactory converterFactory, TypeClassResolver typeClassResolver) {
+    public ComplexObjectConverter(
+            ConverterFactory converterFactory,
+            TypeClassResolver typeClassResolver) {
+        this(
+                converterFactory,
+                typeClassResolver,
+                ObjectFactoryRegistry.defaults());
+    }
+
+    /**
+     * Creates a reflective converter with explicit object factories.
+     *
+     * @param converterFactory factory for nested field converters
+     * @param typeClassResolver resolver for Blue-declared Java types
+     * @param objectFactories immutable object factory registry
+     */
+    public ComplexObjectConverter(
+            ConverterFactory converterFactory,
+            TypeClassResolver typeClassResolver,
+            ObjectFactoryRegistry objectFactories) {
         this.converterFactory = converterFactory;
         this.typeClassResolver = typeClassResolver;
+        this.objectFactories = objectFactories;
     }
 
     @Override
@@ -67,7 +89,7 @@ public class ComplexObjectConverter implements Converter<Object> {
         }
 
         try {
-            Object instance = classToInstantiate.getDeclaredConstructor().newInstance();
+            Object instance = objectFactories.create(classToInstantiate);
             convertFields(node, classToInstantiate, instance);
             return instance;
         } catch (Exception e) {

@@ -18,6 +18,7 @@ import java.util.*;
 public class CollectionConverter implements Converter<Object> {
     private final ConverterFactory converterFactory;
     private final TypeClassResolver typeClassResolver;
+    private final ObjectFactoryRegistry objectFactories;
 
     /**
      * Creates a recursive collection converter.
@@ -25,9 +26,29 @@ public class CollectionConverter implements Converter<Object> {
      * @param converterFactory factory for nested item converters
      * @param typeClassResolver resolver for Blue-declared Java types
      */
-    public CollectionConverter(ConverterFactory converterFactory, TypeClassResolver typeClassResolver) {
+    public CollectionConverter(
+            ConverterFactory converterFactory,
+            TypeClassResolver typeClassResolver) {
+        this(
+                converterFactory,
+                typeClassResolver,
+                ObjectFactoryRegistry.defaults());
+    }
+
+    /**
+     * Creates a recursive collection converter with explicit factories.
+     *
+     * @param converterFactory factory for nested item converters
+     * @param typeClassResolver resolver for Blue-declared Java types
+     * @param objectFactories immutable object factory registry
+     */
+    public CollectionConverter(
+            ConverterFactory converterFactory,
+            TypeClassResolver typeClassResolver,
+            ObjectFactoryRegistry objectFactories) {
         this.converterFactory = converterFactory;
         this.typeClassResolver = typeClassResolver;
+        this.objectFactories = objectFactories;
     }
 
     @Override
@@ -57,7 +78,7 @@ public class CollectionConverter implements Converter<Object> {
 
         Collection<Object> result;
         try {
-            result = (Collection<Object>) TypeCreatorRegistry.createInstance(rawType);
+            result = (Collection<Object>) objectFactories.create(rawType);
         } catch (IllegalArgumentException e) {
             result = new ArrayList<>();
         }

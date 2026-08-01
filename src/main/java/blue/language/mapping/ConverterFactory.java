@@ -14,6 +14,7 @@ import java.util.*;
  */
 public class ConverterFactory {
     private final TypeClassResolver typeClassResolver;
+    private final ObjectFactoryRegistry objectFactories;
     private final Map<Class<?>, Converter<?>> converters = new HashMap<>();
 
     /**
@@ -22,13 +23,35 @@ public class ConverterFactory {
      * @param typeClassResolver resolver for Blue-declared Java types
      */
     public ConverterFactory(TypeClassResolver typeClassResolver) {
-        this.typeClassResolver = typeClassResolver;
+        this(typeClassResolver, ObjectFactoryRegistry.defaults());
+    }
+
+    /**
+     * Creates a converter catalog with mapper-owned object factories.
+     *
+     * @param typeClassResolver resolver for Blue-declared Java types
+     * @param objectFactories immutable object factory registry
+     */
+    public ConverterFactory(
+            TypeClassResolver typeClassResolver,
+            ObjectFactoryRegistry objectFactories) {
+        this.typeClassResolver = typeClassResolver != null
+                ? typeClassResolver
+                : new TypeClassResolver();
+        this.objectFactories = Objects.requireNonNull(
+                objectFactories,
+                "objectFactories");
         registerConverters();
     }
 
     private void registerConverters() {
         PrimitiveConverter primitiveConverter = new PrimitiveConverter();
-        converters.put(Object.class, new ComplexObjectConverter(this, typeClassResolver));
+        converters.put(
+                Object.class,
+                new ComplexObjectConverter(
+                        this,
+                        this.typeClassResolver,
+                        objectFactories));
         converters.put(String.class, primitiveConverter);
         converters.put(Boolean.class, primitiveConverter);
         converters.put(Byte.class, primitiveConverter);
@@ -39,14 +62,22 @@ public class ConverterFactory {
         converters.put(Double.class, primitiveConverter);
         converters.put(BigInteger.class, primitiveConverter);
         converters.put(BigDecimal.class, primitiveConverter);
-        CollectionConverter collectionConverter = new CollectionConverter(this, typeClassResolver);
+        CollectionConverter collectionConverter = new CollectionConverter(
+                this,
+                this.typeClassResolver,
+                objectFactories);
         converters.put(Collection.class, collectionConverter);
         converters.put(List.class, collectionConverter);
         converters.put(Set.class, collectionConverter);
         converters.put(Queue.class, collectionConverter);
         converters.put(Deque.class, collectionConverter);
         converters.put(Enum.class, new EnumConverter());
-        converters.put(Map.class, new MapConverter(this, typeClassResolver));
+        converters.put(
+                Map.class,
+                new MapConverter(
+                        this,
+                        this.typeClassResolver,
+                        objectFactories));
         converters.put(Node.class, new NodeConverter());
 //        converters.put(AnnotatedField.class, new AnnotatedFieldConverter(this));
 
@@ -95,7 +126,10 @@ public class ConverterFactory {
         }
         Converter<?> converter = converters.get(rawType);
         if (converter == null) {
-            return new ComplexObjectConverter(this, typeClassResolver);
+            return new ComplexObjectConverter(
+                    this,
+                    this.typeClassResolver,
+                    objectFactories);
         }
         return converter;
     }
@@ -124,7 +158,10 @@ public class ConverterFactory {
      * @return converted map, or {@code null} for absent properties
      */
     public Map<?, ?> convertMap(Node node, Type mapType) {
-        MapConverter mapConverter = new MapConverter(this, typeClassResolver);
+        MapConverter mapConverter = new MapConverter(
+                this,
+                this.typeClassResolver,
+                objectFactories);
         return mapConverter.convert(node, mapType);
     }
 }

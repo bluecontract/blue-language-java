@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.TransformationProcessor;
 import blue.language.preprocess.TransformationProcessorProvider;
+import blue.language.processor.registry.RuntimeTypeAliases;
 import blue.language.provider.BootstrapProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeTransformer;
@@ -43,7 +44,7 @@ public class PreprocessorTest {
         assertEquals(CORE_TYPE_BLUE_ID_TO_NAME_MAP.get("Integer"), node.getProperties().get("a").getType().getName());
         assertEquals("Integer", node.getProperties().get("b").getType().getValue());
         assertEquals("84ZWw2aoqB6dWRM6N1qWwgcXGrjfeKexTNdWxxAEcECH", node.getProperties().get("c").getType().getBlueId());
-        assertEquals(DEFAULT_BLUE_TYPE_NAME_TO_BLUE_ID_MAP.get("Channel"), node.getProperties().get("d").getType().getBlueId());
+        assertEquals(RuntimeTypeAliases.AGGREGATE_NAME_TO_BLUE_ID.get("Channel"), node.getProperties().get("d").getType().getBlueId());
 
         assertFalse(node.getProperties().get("a").getType().isInlineValue());
         assertFalse(node.getProperties().get("b").getType().isInlineValue());

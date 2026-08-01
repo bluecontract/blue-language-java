@@ -28,6 +28,7 @@ public final class MinimizedOverlayBuilder {
      */
     public Node build(Node resolvedNode) {
         Objects.requireNonNull(resolvedNode, "resolvedNode");
-        return new OverlayReconstruction().minimizedOverlay(resolvedNode);
+        return new MinimizedOverlayReconstructor()
+                .reconstruct(resolvedNode);
     }
 }

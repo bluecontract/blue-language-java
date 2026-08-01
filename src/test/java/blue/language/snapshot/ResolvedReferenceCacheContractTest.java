@@ -3,8 +3,8 @@ package blue.language.snapshot;
 import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.merge.Merger;
-import blue.language.merge.Merger.SnapshotResolution;
-import blue.language.merge.Merger.VerifiedReferenceResolution;
+import blue.language.merge.SnapshotResolution;
+import blue.language.merge.VerifiedReferenceResolution;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.provider.BasicNodeProvider;
@@ -87,7 +87,8 @@ class ResolvedReferenceCacheContractTest {
             throws NoSuchMethodException {
         // given
         Class<?> mergerType = Merger.class;
-        Class<?> evidenceType = VerifiedReferenceResolution.class;
+        Class<?> evidenceType =
+                Merger.VerifiedReferenceResolution.class;
 
         // when
         int mergerModifiers = mergerType.getModifiers();
@@ -1036,8 +1037,14 @@ class ResolvedReferenceCacheContractTest {
         assertNotNull(verification);
         assertEquals(snapshot.blueId(), verification.requestedBlueId());
         assertEquals(verification.canonicalRoot().blueId(), verification.requestedBlueId());
-        assertSourceConstructorsArePrivate(VerifiedReferenceResolution.class);
-        assertSourceConstructorsArePrivate(SnapshotResolution.class);
+        assertSourceConstructorsArePrivate(
+                Merger.VerifiedReferenceResolution.class);
+        assertSourceConstructorsArePrivate(
+                Merger.SnapshotResolution.class);
+        assertSourceConstructorsAreNotPublic(
+                VerifiedReferenceResolution.class);
+        assertSourceConstructorsAreNotPublic(
+                SnapshotResolution.class);
         assertNoPublicArbitraryResolutionFactory(Merger.class);
         assertNoPublicArbitraryResolutionFactory(VerifiedReferenceResolution.class);
         assertNoPublicArbitraryResolutionFactory(SnapshotResolution.class);
@@ -1328,6 +1335,25 @@ class ResolvedReferenceCacheContractTest {
         }
         assertEquals(1, sourceConstructors,
                 type.getSimpleName() + " must have exactly one source constructor");
+    }
+
+    private void assertSourceConstructorsAreNotPublic(Class<?> type) {
+        int sourceConstructors = 0;
+        for (java.lang.reflect.Constructor<?> constructor
+                : type.getDeclaredConstructors()) {
+            if (constructor.isSynthetic()) {
+                assertFalse(Modifier.isPublic(constructor.getModifiers()),
+                        type.getSimpleName()
+                                + " compiler bridge must not be public");
+                continue;
+            }
+            sourceConstructors++;
+            assertFalse(Modifier.isPublic(constructor.getModifiers()),
+                    type.getSimpleName() + " constructor must not be public");
+        }
+        assertEquals(1, sourceConstructors,
+                type.getSimpleName()
+                        + " must have exactly one source constructor");
     }
 
     private void assertNoPublicArbitraryResolutionFactory(Class<?> type) {

@@ -5,7 +5,6 @@ import blue.language.utils.BlueNumbers;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
@@ -26,26 +25,24 @@ import static blue.language.utils.Properties.*;
 @JsonDeserialize(using = NodeDeserializer.class)
 @JsonSerialize(using = NodeSerializer.class)
 public class Node implements Cloneable {
-
-    private String name;
-    private String description;
-    private Node type;
-    private Node itemType;
-    private Node keyType;
-    private Node valueType;
-    private Object value;
-    private List<Node> items;
-    private Map<String, Node> properties;
-    private Node contracts;
-    private String blueId;
-    private Schema schema;
-    private String mergePolicy;
-    private String previousBlueId;
-    private Integer position;
-    private Node blue;
-    private boolean inlineValue;
-    private boolean preprocessingTransformationConfiguration;
-
+    String name;
+    String description;
+    Node type;
+    Node itemType;
+    Node keyType;
+    Node valueType;
+    Object value;
+    List<Node> items;
+    Map<String, Node> properties;
+    Node contracts;
+    String blueId;
+    Schema schema;
+    String mergePolicy;
+    String previousBlueId;
+    Integer position;
+    Node blue;
+    boolean inlineValue;
+    boolean preprocessingTransformationConfiguration;
     /**
      * Creates an empty mutable node.
      */
@@ -652,118 +649,15 @@ public class Node implements Cloneable {
             throw new IllegalArgumentException("source must not be null");
         }
 
-        Node stableSource = source == this ? copyGraph(source) : source;
-        copyGraphInto(stableSource, this);
+        Node stableSource = source == this
+                ? NodeGraphCopier.copy(source)
+                : source;
+        NodeGraphCopier.copyInto(stableSource, this);
         return this;
     }
 
-    /**
-     * Copies the complete Node/Schema graph without consuming the VM call stack.
-     * An active-path map terminates back-edges while still copying a shared acyclic
-     * child independently at each edge, matching the historical clone behavior.
-     */
-    private static Node copyGraph(Node source) {
-        Node root = source.shallowClone();
-        copyGraphInto(source, root);
-        return root;
-    }
-
-    private static void copyGraphInto(Node source, Node root) {
-        IdentityHashMap<Node, Node> activeCopies = new IdentityHashMap<>();
-        Deque<NodeCopy> pending = new ArrayDeque<>();
-        pending.addLast(NodeCopy.enter(source, root));
-
-        while (!pending.isEmpty()) {
-            NodeCopy copy = pending.removeLast();
-            if (copy.exit) {
-                activeCopies.remove(copy.source);
-                continue;
-            }
-
-            Node from = copy.source;
-            Node to = copy.target;
-            activeCopies.put(from, to);
-            pending.addLast(NodeCopy.exit(from, to));
-
-            to.name = from.name;
-            to.description = from.description;
-            to.value = copyValue(from.value, new IdentityHashMap<Object, Object>());
-            to.blueId = from.blueId;
-            to.mergePolicy = from.mergePolicy;
-            to.previousBlueId = from.previousBlueId;
-            to.position = from.position;
-            to.inlineValue = from.inlineValue;
-            to.preprocessingTransformationConfiguration =
-                    from.preprocessingTransformationConfiguration;
-
-            to.type = copyNodeReference(from.type, activeCopies, pending);
-            to.itemType = copyNodeReference(from.itemType, activeCopies, pending);
-            to.keyType = copyNodeReference(from.keyType, activeCopies, pending);
-            to.valueType = copyNodeReference(from.valueType, activeCopies, pending);
-            to.contracts = copyNodeReference(from.contracts, activeCopies, pending);
-            to.blue = copyNodeReference(from.blue, activeCopies, pending);
-
-            if (from.items != null) {
-                to.items = new ArrayList<>(from.items.size());
-                for (Node item : from.items) {
-                    to.items.add(copyRequiredNodeReference(
-                            item, activeCopies, pending));
-                }
-            } else {
-                to.items = null;
-            }
-            if (from.properties != null) {
-                to.properties = new LinkedHashMap<>();
-                for (Map.Entry<String, Node> entry : from.properties.entrySet()) {
-                    to.properties.put(entry.getKey(), copyRequiredNodeReference(
-                            entry.getValue(), activeCopies, pending));
-                }
-            } else {
-                to.properties = null;
-            }
-            to.schema = copySchemaReference(
-                    from.schema, activeCopies, pending);
-        }
-    }
-
-    private static Node copyNodeReference(
-            Node source,
-            IdentityHashMap<Node, Node> activeCopies,
-            Deque<NodeCopy> pending) {
-        if (source == null) {
-            return null;
-        }
-        Node existing = activeCopies.get(source);
-        if (existing != null) {
-            return existing;
-        }
-        Node target = source.shallowClone();
-        pending.addLast(NodeCopy.enter(source, target));
-        return target;
-    }
-
-    private static Node copyRequiredNodeReference(
-            Node source,
-            IdentityHashMap<Node, Node> activeCopies,
-            Deque<NodeCopy> pending) {
-        return copyNodeReference(
-                Objects.requireNonNull(source, "Node child must not be null"),
-                activeCopies,
-                pending);
-    }
-
-    private static Schema copySchemaReference(
-            Schema source,
-            IdentityHashMap<Node, Node> activeCopies,
-            Deque<NodeCopy> pending) {
-        if (source == null) {
-            return null;
-        }
-        return source.copyWithNodeMapper(node -> copyRequiredNodeReference(
-                node, activeCopies, pending));
-    }
-
-    private Node shallowClone() {
+    /** Preserves runtime subclasses while the package-local copier owns edges. */
+    final Node shallowCopyForGraph() {
         try {
             return (Node) super.clone();
         } catch (CloneNotSupportedException e) {
@@ -771,152 +665,32 @@ public class Node implements Cloneable {
         }
     }
 
-    private static final class NodeCopy {
-        private final Node source;
-        private final Node target;
-        private final boolean exit;
-
-        private NodeCopy(Node source, Node target, boolean exit) {
-            this.source = source;
-            this.target = target;
-            this.exit = exit;
-        }
-
-        private static NodeCopy enter(Node source, Node target) {
-            return new NodeCopy(source, target, false);
-        }
-
-        private static NodeCopy exit(Node source, Node target) {
-            return new NodeCopy(source, target, true);
-        }
-    }
-
-    /** Deep-copies JSON container values so a cloned Node owns its mutable payload graph. */
-    private static Object copyValue(Object source, IdentityHashMap<Object, Object> copies) {
-        if (source == null || source instanceof String || source instanceof Number
-                || source instanceof Boolean || source instanceof Character
-                || source instanceof Enum) {
-            return source;
-        }
-        Object existing = copies.get(source);
-        if (existing != null) {
-            return existing;
-        }
-        if (source instanceof List) {
-            List<?> values = (List<?>) source;
-            List<Object> copy = copyListLike(values);
-            copies.put(source, copy);
-            for (Object value : values) {
-                copy.add(copyValue(value, copies));
-            }
-            return copy;
-        }
-        if (source instanceof Map) {
-            Map<?, ?> values = (Map<?, ?>) source;
-            Map<Object, Object> copy = copyMapLike(values);
-            copies.put(source, copy);
-            for (Map.Entry<?, ?> entry : values.entrySet()) {
-                copy.put(entry.getKey(), copyValue(entry.getValue(), copies));
-            }
-            return copy;
-        }
-        if (source.getClass().isArray()) {
-            int length = Array.getLength(source);
-            Class<?> componentType = source.getClass().getComponentType();
-            Class<?> copyComponentType = canRetainArrayComponentType(
-                    source, componentType, new IdentityHashMap<Object, Boolean>())
-                    ? componentType
-                    : Object.class;
-            Object copy = Array.newInstance(copyComponentType, length);
-            copies.put(source, copy);
-            for (int index = 0; index < length; index++) {
-                Array.set(copy, index, copyValue(Array.get(source, index), copies));
-            }
-            return copy;
-        }
-        return source;
-    }
-
-    /**
-     * A container is copied to an owned standard implementation. That copy is not
-     * always assignable to a concrete array component such as a Jackson or JDK
-     * implementation class. Predict the copied element types before allocating the
-     * array so cycles point at the final array rather than an abandoned typed copy.
-     */
-    private static boolean canRetainArrayComponentType(
-            Object source,
-            Class<?> componentType,
-            IdentityHashMap<Object, Boolean> visitingArrays) {
-        if (componentType.isPrimitive()) {
-            return true;
-        }
-        if (visitingArrays.put(source, Boolean.TRUE) != null) {
-            return true;
-        }
-        try {
-            int length = Array.getLength(source);
-            for (int index = 0; index < length; index++) {
-                Class<?> copiedType = copiedValueType(
-                        Array.get(source, index), visitingArrays);
-                if (copiedType != null && !componentType.isAssignableFrom(copiedType)) {
-                    return false;
-                }
-            }
-            return true;
-        } finally {
-            visitingArrays.remove(source);
-        }
-    }
-
-    private static Class<?> copiedValueType(
-            Object source,
-            IdentityHashMap<Object, Boolean> visitingArrays) {
-        if (source == null) {
-            return null;
-        }
-        if (source instanceof List) {
-            return source instanceof LinkedList ? LinkedList.class : ArrayList.class;
-        }
-        if (source instanceof Map) {
-            if (source instanceof TreeMap) {
-                return TreeMap.class;
-            }
-            if (source instanceof LinkedHashMap) {
-                return LinkedHashMap.class;
-            }
-            if (source instanceof HashMap) {
-                return HashMap.class;
-            }
-            return LinkedHashMap.class;
-        }
-        if (source.getClass().isArray()) {
-            Class<?> componentType = source.getClass().getComponentType();
-            return canRetainArrayComponentType(source, componentType, visitingArrays)
-                    ? source.getClass()
-                    : Object[].class;
-        }
-        return source.getClass();
-    }
-
-    private static List<Object> copyListLike(List<?> source) {
-        if (source instanceof LinkedList) {
-            return new LinkedList<>();
-        }
-        return new ArrayList<>(source.size());
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static Map<Object, Object> copyMapLike(Map<?, ?> source) {
-        if (source instanceof TreeMap) {
-            return new TreeMap(((TreeMap) source).comparator());
-        }
-        if (source instanceof LinkedHashMap) {
-            return new LinkedHashMap<>();
-        }
-        if (source instanceof HashMap) {
-            return new HashMap<>();
-        }
-        return new LinkedHashMap<>();
+    /** Replaces scalar state and copied graph edges in one internal operation. */
+    final void replaceCopiedState(
+            Node source, Object copiedValue,
+            Node copiedType, Node copiedItemType,
+            Node copiedKeyType, Node copiedValueType,
+            List<Node> copiedItems, Map<String, Node> copiedProperties,
+            Node copiedContracts, Schema copiedSchema, Node copiedBlue) {
+        name = source.name;
+        description = source.description;
+        type = copiedType;
+        itemType = copiedItemType;
+        keyType = copiedKeyType;
+        valueType = copiedValueType;
+        value = copiedValue;
+        items = copiedItems;
+        properties = copiedProperties;
+        contracts = copiedContracts;
+        blueId = source.blueId;
+        schema = copiedSchema;
+        mergePolicy = source.mergePolicy;
+        previousBlueId = source.previousBlueId;
+        position = source.position;
+        blue = copiedBlue;
+        inlineValue = source.inlineValue;
+        preprocessingTransformationConfiguration =
+                source.preprocessingTransformationConfiguration;
     }
 
     /**
@@ -996,7 +770,7 @@ public class Node implements Cloneable {
     /** Returns a deep mutable copy, including nested Node and JSON containers. */
     @Override
     public Node clone() {
-        return copyGraph(this);
+        return NodeGraphCopier.copy(this);
     }
 
     @Override

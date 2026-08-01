@@ -2,10 +2,11 @@ package blue.language.snapshot;
 
 import blue.language.utils.Properties;
 
+import blue.language.merge.ResolutionProvenance;
+import blue.language.merge.ResolutionSnapshot;
+import blue.language.merge.VerifiedReferenceResolution;
 import blue.language.model.Node;
-import blue.language.merge.Merger.SnapshotResolution;
-import blue.language.merge.Merger.VerifiedReferenceResolution;
-import blue.language.processor.model.JsonPatch;
+import blue.language.patching.BluePatch;
 import blue.language.utils.JsonPointer;
 
 import java.util.Map;
@@ -26,7 +27,7 @@ public final class ResolvedSnapshot {
     private final FrozenNode resolvedRoot;
     private volatile Map<String, FrozenNode> canonicalIndex;
     private volatile Map<String, FrozenNode> resolvedIndex;
-    private final VerifiedReferenceResolution verifiedReferenceResolution;
+    private final ResolutionProvenance resolutionProvenance;
     private final boolean resolutionComplete;
     private volatile String blueId;
 
@@ -39,7 +40,7 @@ public final class ResolvedSnapshot {
      */
     public ResolvedSnapshot(Node canonicalRoot, Node resolvedRoot, String blueId) {
         this(FrozenNode.fromNode(canonicalRoot), FrozenNode.fromResolvedNode(resolvedRoot),
-                blueId, null, true);
+                blueId, ResolutionProvenance.none(), true);
     }
 
     /**
@@ -50,7 +51,8 @@ public final class ResolvedSnapshot {
      * @param blueId expected Content BlueId of {@code canonicalRoot}
      */
     public ResolvedSnapshot(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String blueId) {
-        this(canonicalRoot, resolvedRoot, blueId, null, true);
+        this(canonicalRoot, resolvedRoot, blueId,
+                ResolutionProvenance.none(), true);
     }
 
     /**
@@ -73,7 +75,7 @@ public final class ResolvedSnapshot {
         if (!this.canonicalRoot.isStrictCanonical()) {
             throw new IllegalArgumentException("Snapshot canonical root must be strict canonical FrozenNode.");
         }
-        this.verifiedReferenceResolution = null;
+        this.resolutionProvenance = ResolutionProvenance.none();
         this.resolutionComplete = resolutionComplete;
         this.blueId = null;
     }
@@ -81,7 +83,7 @@ public final class ResolvedSnapshot {
     private ResolvedSnapshot(FrozenNode canonicalRoot,
                              FrozenNode resolvedRoot,
                              String blueId,
-                             VerifiedReferenceResolution verifiedReferenceResolution,
+                             ResolutionProvenance resolutionProvenance,
                              boolean resolutionComplete) {
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
@@ -92,7 +94,8 @@ public final class ResolvedSnapshot {
         if (!expectedBlueId.equals(Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID))) {
             throw new IllegalArgumentException("Snapshot blueId must match canonical root blueId.");
         }
-        this.verifiedReferenceResolution = verifiedReferenceResolution;
+        this.resolutionProvenance = Objects.requireNonNull(
+                resolutionProvenance, "resolutionProvenance");
         this.resolutionComplete = resolutionComplete;
         this.blueId = expectedBlueId;
     }
@@ -103,13 +106,13 @@ public final class ResolvedSnapshot {
      * @param resolution authoritative resolver result
      * @return a complete immutable snapshot carrying the result's verification evidence
      */
-    public static ResolvedSnapshot fromResolverResult(SnapshotResolution resolution) {
+    public static ResolvedSnapshot fromResolverResult(ResolutionSnapshot resolution) {
         Objects.requireNonNull(resolution, "resolution");
         return new ResolvedSnapshot(
                 resolution.canonicalRoot(),
                 resolution.resolvedRoot(),
                 resolution.canonicalRoot().blueId(),
-                resolution.verifiedReferenceResolution(),
+                resolution.provenance(),
                 true);
     }
 
@@ -144,7 +147,7 @@ public final class ResolvedSnapshot {
         return new ResolvedSnapshot(strictCanonicalRoot,
                 resolvedRoot,
                 strictCanonicalRoot.blueId(),
-                verifiedReferenceResolution,
+                resolutionProvenance,
                 resolutionComplete);
     }
 
@@ -300,7 +303,16 @@ public final class ResolvedSnapshot {
      * @return verified resolution evidence, or {@code null} when unavailable
      */
     public VerifiedReferenceResolution verifiedReferenceResolution() {
-        return verifiedReferenceResolution;
+        return resolutionProvenance.verifiedReferenceResolution();
+    }
+
+    /**
+     * Returns immutable provenance captured by the authoritative resolver run.
+     *
+     * @return non-null resolution provenance
+     */
+    public ResolutionProvenance resolutionProvenance() {
+        return resolutionProvenance;
     }
 
     /**
@@ -328,7 +340,7 @@ public final class ResolvedSnapshot {
      * @param patch patch operation to apply
      * @return the canonical patch result
      */
-    public CanonicalPatchResult applyCanonicalPatch(JsonPatch patch) {
+    public CanonicalPatchResult applyCanonicalPatch(BluePatch patch) {
         return canonicalPatchEngine().apply(patch);
     }
 
