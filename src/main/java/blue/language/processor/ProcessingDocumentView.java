@@ -119,6 +119,12 @@ final class ProcessingDocumentView {
                 : FrozenNode.fromResolvedNode(runtime.materializedView.root());
     }
 
+    FrozenNode identityChargeCanonicalRoot() {
+        return runtime.snapshot != null
+                ? runtime.snapshot.frozenCanonicalRoot()
+                : FrozenNode.fromNode(runtime.materializedView.copyRoot());
+    }
+
     FrozenNode resolvedRootWithoutResolution() {
         return runtime.snapshot != null
                 ? runtime.snapshot.frozenResolvedRoot()

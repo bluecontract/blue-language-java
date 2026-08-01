@@ -544,6 +544,8 @@ final class DocumentProcessingRuntime {
         return mutationSession.updateMaterializationMetrics(); }
     FrozenNode canonicalRootWithoutResolution() {
         return documentView.canonicalRootWithoutResolution(); }
+    FrozenNode identityChargeCanonicalRoot() {
+        return documentView.identityChargeCanonicalRoot(); }
     FrozenNode resolvedRootWithoutResolution() {
         return documentView.resolvedRootWithoutResolution(); }
     PlanningContext planningContext(Node rollback) {

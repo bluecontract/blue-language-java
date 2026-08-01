@@ -30,7 +30,7 @@ final class ProcessingMutationSession {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
         this.gasCharger = new MutationGasCharger(
                 runtime.gasMeter(),
-                runtime::canonicalRootWithoutResolution);
+                runtime::identityChargeCanonicalRoot);
         this.commit = new MutationCommit(runtime);
     }
 
