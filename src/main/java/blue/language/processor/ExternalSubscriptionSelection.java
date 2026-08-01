@@ -131,9 +131,7 @@ final class ExternalSubscriptionSelection {
             return false;
         }
         Class<?> contractType = processor.contractType();
-        for (Class<?> managed
-                : ProcessorContractConstants
-                .PROCESSOR_MANAGED_CHANNEL_TYPES) {
+        for (Class<?> managed : ProcessorManagedChannelTypes.TYPES) {
             if (managed.isAssignableFrom(contractType)) {
                 return false;
             }

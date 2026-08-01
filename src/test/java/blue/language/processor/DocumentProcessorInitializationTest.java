@@ -8,7 +8,6 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.processor.contracts.RemovePropertyContractProcessor;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
-import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;

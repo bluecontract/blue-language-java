@@ -580,8 +580,7 @@ final class ChannelRunner {
         Map<String, String> activeDomains = new LinkedHashMap<>();
         for (ContractBundle.ChannelBinding channel
                 : bundle.channelsOfType(ChannelContract.class)) {
-            if (blue.language.processor.util.ProcessorContractConstants
-                    .isProcessorManagedChannel(channel.contract())) {
+            if (ProcessorManagedChannelTypes.contains(channel.contract())) {
                 continue;
             }
             activeDomains.put(

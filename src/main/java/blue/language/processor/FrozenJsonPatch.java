@@ -1,9 +1,9 @@
-package blue.language.processor.model;
+package blue.language.processor;
 
 import blue.language.utils.Properties;
 
 import blue.language.model.Node;
-import blue.language.processor.ExactBlueValue;
+import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.ParsedJsonPointer;

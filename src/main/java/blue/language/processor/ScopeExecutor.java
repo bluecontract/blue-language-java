@@ -259,7 +259,7 @@ final class ScopeExecutor {
         ContractBundle.ChannelBinding channel =
                 bundle.channelBinding(channelKey);
         if (channel == null
-                || ProcessorContractConstants.isProcessorManagedChannel(
+                || ProcessorManagedChannelTypes.contains(
                 channel.contract())) {
             throw new InvalidExecutionEvidenceException(
                     "External delivery occurrence is not executable at "
@@ -358,8 +358,8 @@ final class ScopeExecutor {
                     bundle.channelBinding(
                             classification.sourceChannelKey());
             if (channel == null
-                    || ProcessorContractConstants
-                    .isProcessorManagedChannel(
+                    || ProcessorManagedChannelTypes
+                    .contains(
                             channel.contract())) {
                 throw new InvalidExecutionEvidenceException(
                         "External delivery occurrence changed before "

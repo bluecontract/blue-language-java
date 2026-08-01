@@ -2,7 +2,6 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
-import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.registry.RuntimeBlueIds;

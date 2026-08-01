@@ -1,10 +1,5 @@
 package blue.language.processor.util;
 
-import blue.language.processor.model.ChannelContract;
-import blue.language.processor.model.DocumentUpdateChannel;
-import blue.language.processor.model.EmbeddedNodeChannel;
-import blue.language.processor.model.LifecycleChannel;
-import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.utils.Properties;
 
 import java.util.Arrays;
@@ -98,15 +93,6 @@ public final class ProcessorContractConstants {
                     KEY_CHECKPOINT
             )));
 
-    /** Channel types whose lifecycle and delivery are controlled by the processor. */
-    public static final Set<Class<? extends ChannelContract>> PROCESSOR_MANAGED_CHANNEL_TYPES =
-            Collections.unmodifiableSet(new LinkedHashSet<Class<? extends ChannelContract>>(Arrays.<Class<? extends ChannelContract>>asList(
-                    DocumentUpdateChannel.class,
-                    TriggeredEventChannel.class,
-                    LifecycleChannel.class,
-                    EmbeddedNodeChannel.class
-            )));
-
     private ProcessorContractConstants() {
     }
 
@@ -120,21 +106,4 @@ public final class ProcessorContractConstants {
         return key != null && RESERVED_CONTRACT_KEYS.contains(key);
     }
 
-    /**
-     * Returns whether the supplied contract is a processor-managed channel.
-     *
-     * @param contract channel contract, or {@code null}
-     * @return {@code true} when the processor owns delivery for its type
-     */
-    public static boolean isProcessorManagedChannel(ChannelContract contract) {
-        if (contract == null) {
-            return false;
-        }
-        for (Class<? extends ChannelContract> type : PROCESSOR_MANAGED_CHANNEL_TYPES) {
-            if (type.isInstance(contract)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

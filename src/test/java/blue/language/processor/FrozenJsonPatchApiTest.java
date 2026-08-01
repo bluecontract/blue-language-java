@@ -2,7 +2,6 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.FrozenNode;

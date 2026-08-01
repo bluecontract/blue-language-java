@@ -3,7 +3,6 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
-import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;

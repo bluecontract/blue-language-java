@@ -23,7 +23,7 @@ final class SameScopeChannelCatalog {
         ContractBundle.ChannelBinding binding = bundle.channelBinding(
                 channelKey);
         return binding != null
-                && !ProcessorContractConstants.isProcessorManagedChannel(
+                && !ProcessorManagedChannelTypes.contains(
                 binding.contract())
                 ? binding
                 : null;

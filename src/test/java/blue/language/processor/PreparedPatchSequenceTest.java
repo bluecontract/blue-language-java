@@ -4,7 +4,6 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
-import blue.language.processor.model.FrozenJsonPatch;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.CanonicalPatchResult;

@@ -340,7 +340,7 @@ final class ContractHeaderLoader {
             ChannelContract channel,
             FrozenNode effectiveContract,
             String typeBlueId) {
-        if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
+        if (!ProcessorManagedChannelTypes.contains(channel)
                 && !registry.lookupChannel(channel).isPresent()) {
             throw new MustUnderstandFailureException(
                     "Unsupported contract type: " + typeBlueId,
@@ -348,7 +348,7 @@ final class ContractHeaderLoader {
         }
         bundle.addChannel(key, channel, effectiveContract);
         snapshot.role(
-                        ProcessorContractConstants.isProcessorManagedChannel(channel)
+                        ProcessorManagedChannelTypes.contains(channel)
                                 ? EffectiveContractSnapshotConstants.Role.PROCESSOR_CHANNEL
                                 : EffectiveContractSnapshotConstants.Role.EXTERNAL_CHANNEL)
                 .dispatchField(
@@ -611,7 +611,7 @@ final class ContractHeaderLoader {
         ChannelContract channel = (ChannelContract) converted;
         channel.setKey(channelKey);
         channel.setTypeBlueId(channelTypeBlueId);
-        return ProcessorContractConstants.isProcessorManagedChannel(channel)
+        return ProcessorManagedChannelTypes.contains(channel)
                 || registry.lookupChannel(channel).isPresent();
     }
 

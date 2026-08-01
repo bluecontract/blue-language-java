@@ -495,7 +495,7 @@ final class EvidenceDeliveryOrchestrator {
                 ? bundle.effectiveContractSnapshot(delivery.channelKey())
                 : null;
         if (binding == null
-                || ProcessorContractConstants.isProcessorManagedChannel(
+                || ProcessorManagedChannelTypes.contains(
                 binding.contract())
                 || snapshot == null
                 || !delivery.effectiveTypeBlueId().equals(
