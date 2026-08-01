@@ -6,9 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import blue.buildlogic.tasks.CompareApiBaselineTask;
+import blue.buildlogic.tasks.CompareArchiveReplicasTask;
+import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
 import blue.buildlogic.tasks.GenerateFileIdentityTask;
+import blue.buildlogic.tasks.GenerateJavaApiInventoryTask;
+import blue.buildlogic.tasks.GenerateJavaModuleInventoryTask;
 import blue.buildlogic.tasks.GenerateReleaseEvidenceTask;
+import blue.buildlogic.tasks.VerifyAggregateReleaseReceiptTask;
 import blue.buildlogic.tasks.VerifyInputIdentityTask;
+import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import blue.buildlogic.tasks.VerifyReleaseEnvironmentTask;
 import blue.buildlogic.tasks.VerifyReproducibleArchivesTask;
 import java.nio.file.Files;
@@ -48,6 +54,10 @@ final class ConventionPluginsTest {
         assertTrue(jar.isReproducibleFileOrder());
         assertTrue(project.getTasks().getByName("verifyReproducibleArchives")
                 instanceof VerifyReproducibleArchivesTask);
+        assertTrue(project.getTasks().getByName("compareArchiveReplicas")
+                instanceof CompareArchiveReplicasTask);
+        assertTrue(project.getTasks().getByName("generateModuleStructureInventory")
+                instanceof GenerateJavaModuleInventoryTask);
     }
 
     @Test
@@ -65,12 +75,22 @@ final class ConventionPluginsTest {
         // then
         assertTrue(project.getTasks().getByName("apiBaselineDiff")
                 instanceof CompareApiBaselineTask);
+        assertTrue(project.getTasks().getByName("generatePublicApiInventory")
+                instanceof GenerateJavaApiInventoryTask);
+        assertTrue(project.getTasks().getByName("generatePublicApiUnion")
+                instanceof GenerateJavaApiInventoryTask);
         assertTrue(project.getTasks().getByName("generateConformancePackageIdentity")
                 instanceof GenerateFileIdentityTask);
         assertTrue(project.getTasks().getByName("generateReleaseEvidence")
                 instanceof GenerateReleaseEvidenceTask);
         assertTrue(project.getTasks().getByName("verifyReleaseEvidenceInputs")
                 instanceof VerifyInputIdentityTask);
+        assertTrue(project.getTasks().getByName("generateAggregateReleaseReceipt")
+                instanceof GenerateAggregateReleaseReceiptTask);
+        assertTrue(project.getTasks().getByName("verifyAggregateReleaseReceipt")
+                instanceof VerifyAggregateReleaseReceiptTask);
+        assertTrue(project.getTasks().getByName("verifyModuleStructure")
+                instanceof VerifyJavaModuleStructureTask);
         assertNotNull(project.getTasks().getByName("generateReleaseEvidence")
                 .getGroup());
     }

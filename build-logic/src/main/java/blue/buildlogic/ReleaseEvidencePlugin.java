@@ -1,7 +1,10 @@
 package blue.buildlogic;
 
+import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
 import blue.buildlogic.tasks.GenerateReleaseEvidenceTask;
+import blue.buildlogic.tasks.VerifyAggregateReleaseReceiptTask;
 import blue.buildlogic.tasks.VerifyInputIdentityTask;
+import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileTree;
@@ -46,6 +49,25 @@ public final class ReleaseEvidencePlugin implements Plugin<Project> {
                 .orElse("0");
         Provider<RegularFile> evidenceFile = project.getLayout().getBuildDirectory()
                 .file("reports/release-evidence/source-input.json");
+        Provider<RegularFile> aggregateReceiptFile = project.getLayout().getBuildDirectory()
+                .file(BuildLogicConstants.REPORT_AGGREGATE_RELEASE_RECEIPT);
+
+        ConfigurableFileTree artifactInputs = project.fileTree(project.getRootDir());
+        artifactInputs.include("**/build/libs/*.jar", "**/build/libs/*.zip");
+        ConfigurableFileTree testEvidenceInputs = project.fileTree(project.getRootDir());
+        testEvidenceInputs.include(
+                "**/build/test-results/**/*.xml", "**/build/reports/tests/**/*.json");
+        ConfigurableFileTree fixtureEvidenceInputs = project.fileTree(project.getRootDir());
+        fixtureEvidenceInputs.include(
+                "**/build/reports/conformance/**/*.json",
+                "**/build/reports/fixtures/**/*.json");
+        ConfigurableFileTree apiEvidenceInputs = project.fileTree(project.getRootDir());
+        apiEvidenceInputs.include(
+                "**/api/public-api.txt",
+                "**/build/reports/api/current-api*.txt",
+                "**/build/reports/api/*.json");
+        ConfigurableFileTree moduleInventories = project.fileTree(project.getRootDir());
+        moduleInventories.include("**/build/reports/module/module-inventory.txt");
 
         project.getTasks().register("generateReleaseEvidence", GenerateReleaseEvidenceTask.class,
                 task -> {
@@ -70,6 +92,60 @@ public final class ReleaseEvidencePlugin implements Plugin<Project> {
                     task.getSourceRoot().set(project.getRootProject().getLayout()
                             .getProjectDirectory());
                     task.getEvidenceFile().set(evidenceFile);
+                });
+
+        project.getTasks().register(
+                BuildLogicConstants.TASK_GENERATE_AGGREGATE_RELEASE_RECEIPT,
+                GenerateAggregateReleaseReceiptTask.class,
+                task -> {
+                    task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
+                    task.setDescription(
+                            "Generates aggregate artifact, test, fixture, and API release evidence.");
+                    task.getReceiptRoot().set(project.getRootProject().getLayout()
+                            .getProjectDirectory());
+                    task.getArtifacts().from(artifactInputs);
+                    task.getTestEvidence().from(testEvidenceInputs);
+                    task.getFixtureEvidence().from(fixtureEvidenceInputs);
+                    task.getApiEvidence().from(apiEvidenceInputs);
+                    task.getSourceCommit().convention(gitCommit);
+                    task.getSourceDateEpoch().convention(sourceDateEpoch);
+                    task.getMetadata().put("projectPath", project.getPath());
+                    task.getMetadata().put("projectVersion", project.provider(
+                            () -> project.getVersion().toString()));
+                    task.getOutputFile().set(aggregateReceiptFile);
+                });
+
+        project.getTasks().register(
+                BuildLogicConstants.TASK_VERIFY_AGGREGATE_RELEASE_RECEIPT,
+                VerifyAggregateReleaseReceiptTask.class,
+                task -> {
+                    task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
+                    task.setDescription("Verifies that aggregate release evidence is current.");
+                    task.getReceiptRoot().set(project.getRootProject().getLayout()
+                            .getProjectDirectory());
+                    task.getArtifacts().from(artifactInputs);
+                    task.getTestEvidence().from(testEvidenceInputs);
+                    task.getFixtureEvidence().from(fixtureEvidenceInputs);
+                    task.getApiEvidence().from(apiEvidenceInputs);
+                    task.getSourceCommit().convention(gitCommit);
+                    task.getSourceDateEpoch().convention(sourceDateEpoch);
+                    task.getMetadata().put("projectPath", project.getPath());
+                    task.getMetadata().put("projectVersion", project.provider(
+                            () -> project.getVersion().toString()));
+                    task.getReceiptFile().set(aggregateReceiptFile);
+                    task.getVerificationReportFile().set(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.REPORT_AGGREGATE_RELEASE_VERIFICATION));
+                });
+
+        project.getTasks().register(
+                BuildLogicConstants.TASK_VERIFY_MODULE_STRUCTURE,
+                VerifyJavaModuleStructureTask.class,
+                task -> {
+                    task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
+                    task.setDescription("Verifies split packages and acyclic module dependencies.");
+                    task.getModuleInventories().from(moduleInventories);
+                    task.getReportFile().set(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.REPORT_MODULE_STRUCTURE));
                 });
     }
 }

@@ -39,6 +39,13 @@ public final class DeterministicHashing {
         return identity(digest.digest());
     }
 
+    /** Returns the SHA-256 identity of an in-memory deterministic artifact. */
+    public static String sha256(byte[] bytes) {
+        MessageDigest digest = sha256Digest();
+        digest.update(bytes);
+        return identity(digest.digest());
+    }
+
     /**
      * Creates an identity from normalized relative path/content-identity records sorted by path.
      */

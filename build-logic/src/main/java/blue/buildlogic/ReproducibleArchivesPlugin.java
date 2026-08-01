@@ -1,5 +1,6 @@
 package blue.buildlogic;
 
+import blue.buildlogic.tasks.CompareArchiveReplicasTask;
 import blue.buildlogic.tasks.VerifyReproducibleArchivesTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -18,6 +19,17 @@ public final class ReproducibleArchivesPlugin implements Plugin<Project> {
                 task -> {
                     task.setGroup("verification");
                     task.setDescription("Verifies deterministic archive ordering and timestamps.");
+                });
+
+        project.getTasks().register(
+                BuildLogicConstants.TASK_COMPARE_ARCHIVE_REPLICAS,
+                CompareArchiveReplicasTask.class,
+                task -> {
+                    task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
+                    task.setDescription(
+                            "Compares configured independent archive replicas byte for byte.");
+                    task.getReportFile().convention(project.getLayout().getBuildDirectory()
+                            .file(BuildLogicConstants.REPORT_ARCHIVE_REPLICAS));
                 });
 
         TaskCollection<AbstractArchiveTask> archives =
