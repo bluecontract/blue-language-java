@@ -10,12 +10,12 @@ matching and patching consume the same resolved/snapshot boundaries
 ```
 
 ```java
-import blue.language.BlueCachePolicy;
-import blue.language.NodeProvider;
-import blue.language.api.BlueLanguage;
+import blue.language.api.BlueCachePolicy;
 import blue.language.codec.BlueFormat;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.provider.NodeProvider;
+import blue.language.runtime.BlueLanguage;
 
 import java.util.Collections;
 
@@ -52,6 +52,7 @@ public final class LanguagePipelineExample {
 | `BlueSnapshots` | Resolve/load methods are strict | Immutable `ResolvedSnapshot`; mutable accessors return detached copies | Owns the bounded snapshot cache exposed by `cache`, `cached`, `clear`, and `stats` |
 | `BlueMatching` | Strict overloads require their inputs; `matchesLimited` preserves exhaustive outcomes | `boolean` or `BlueOperationResult<Boolean>`; inputs are unchanged | Authored matching may resolve and demand the provider |
 | `BluePatching` | Canonical patching is strict; snapshot patching re-establishes a complete snapshot | Immutable result/snapshot; inputs are unchanged | Snapshot application may resolve through the configured runtime |
+| `LanguageProcessing` | Opens one-shot or transient processing scopes over exact Language snapshots | Scope-owned immutable snapshots and exact provider outcomes | Sequence/fork caches are run-scoped and never change semantic results |
 
 The exhaustive limited-operation outcomes are `ESTABLISHED`, `ABSENT`,
 `INCOMPLETE`, and `INVALID`. `INCOMPLETE` means that more evidence or budget is
@@ -67,13 +68,10 @@ mutate a supplied `Node`. Returned mutable nodes are caller-owned, while
 clears runtime-owned state and does not close the borrowed provider.
 
 The enforced focused-core boundary prevents core packages from importing the
-Contracts processor, conformance implementation, or the root `Blue` aggregate.
-Contracts is intended to depend on these Language services, not the reverse.
-The current source tree still contains a documented compatibility bridge from
-`BlueLanguage` through `api.internal` adapters to the legacy `Blue` facade and
-known package strongly connected components. Those are explicit Phase 4
-physical-module decomposition tasks, not evidence that the focused API permits
-Contracts dependencies.
+Contracts processor, conformance implementation, or aggregate façade.
+Contracts depends on the public `LanguageProcessing` bridge; Language does not
+depend on Contracts. The distribution aggregate composes both without moving
+runtime-neutral Contracts behavior into the Language core.
 
 The Language-owned `BluePatch` interface is the patch boundary implemented by
 Contracts patch values.

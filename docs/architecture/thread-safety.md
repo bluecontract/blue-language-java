@@ -44,8 +44,6 @@ Shared collaborators must satisfy their declared contract:
   decisions or gas;
 - cache policy bounds processor-owned caches; cache hits cannot alter results.
 
-The legacy `with...` builder and live registration surface exists only for
-compatibility. New code should use the unprefixed immutable-generation methods
-shown above. Concurrency tests process distinct inputs through one generation
-and compare results, diagnostics, events, demands, and gas traces with serial
-execution.
+Configuration produces a new immutable processor generation. Concurrency tests
+process distinct inputs through one generation and compare results,
+diagnostics, events, demands, and gas traces with serial execution.
