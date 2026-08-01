@@ -1,464 +1,311 @@
 # Developer process
 
-This guide is the working agreement for changing `blue-language-java`. It
-covers local setup, code navigation, implementation conventions, tests,
-conformance fixtures, and the release-evidence path. The repository implements
-both the Blue Language 1.0 document layer and the generic Blue Contracts and
-Processor 1.0 kernel; application-specific BEX and Coordination behavior
-belongs in their own repositories.
+This is the working agreement for changing the Blue Language Java
+distribution. The repository owns Blue Language 1.0 and the runtime-neutral
+Blue Contracts and Processor 1.0 kernel. It does not own application-specific
+BEX or Coordination behavior.
 
-## 1. Prepare the workspace
+## Local prerequisites
 
-### Required tools
+- Git and a clean, reviewable worktree;
+- the checked-in Gradle wrapper;
+- a JVM capable of running Gradle (the build provisions/uses a Java 8 toolchain
+  for production bytecode, tests, Javadocs, examples, and smoke consumers);
+- Python 3 for the tracked binary API inventory scripts.
 
-The checked-in Gradle wrapper is the build entry point. It compiles Java
-8-compatible bytecode and runs tests on a Java 8 toolchain. The JVM that runs
-Gradle is recorded in generated release evidence rather than fixed by
-repository policy. Gradle can provision the Java 8 test toolchain through the
-configured Foojay resolver when it is not already installed.
-
-Before editing, check:
+Start with:
 
 ```bash
 java -version
 ./gradlew --version
 git status --short
+./gradlew help
 ```
 
-Do not upgrade the wrapper, Java target, dependency versions, registries, or
-release identities as part of an unrelated change. Treat an already-dirty
-working tree as user-owned work: identify the files relevant to the task and
-preserve everything else.
+All invocations in one checkout share module `build/` directories. Do not run
+report-producing or clean builds concurrently, including from a sibling
+composite build. Preserve unrelated user changes and ignored local files.
 
-All builds in one checkout share `build/`. Do not run a filtered `test` task in
-parallel with another report-producing build. Gradle test tasks
-replace their result directories, so concurrent runs can leave a complete
-implementation with incomplete report evidence.
+## Module map
 
-The same rule applies to sibling composite builds that use
-`includeBuild("../blue-language-java")`: they execute this checkout's tasks
-and write this checkout's `build/` directory. Keep those builds idle while
-collecting release evidence. If concurrent composite execution is unavoidable,
-give every invocation the same `SOURCE_DATE_EPOCH`, while recognizing that a
-shared output directory is still not a supported concurrency boundary.
-
-### Repository-independent provider integration
-
-`blue-language-java` has no dependency on a repository product, catalog
-artifact, or repository manifest. Applications provide content through the
-generic `NodeProvider` contract and may compose providers with
-`SequentialNodeProvider`.
-
-Provider tests must exercise the contract directly:
-
-- content returned for a BlueId is verified against that requested identity;
-- `NOT_FOUND`, `UNAVAILABLE`, and invalid evidence remain distinct outcomes;
-- source-content providers are bound to the active release and preprocessing
-  environment before their content is admitted; and
-- provider caches preserve those verification and outcome semantics.
-
-Do not add a concrete repository adapter or artifact coordinate to the
-Language build. Integration with an application's storage or catalog belongs
-in that application.
-
-## 2. Find the correct layer
-
-Start at the public boundary involved in the behavior, then follow the data
-into the smallest owning package.
-
-| Location | Responsibility |
+| Module | Change it for |
 | --- | --- |
-| `src/main/java/blue/language/Blue.java` | Main facade, configuration, lifecycle, language operations, snapshots, and processor registration |
-| `model/` | Mutable Blue node model, schema model, parsing, and serialization boundaries |
-| `preprocess/` | Blue directives, aliases, and mandatory baseline preprocessing |
-| `provider/` | Verified content-addressed lookup, ingestion, and cyclic-set proof |
-| `merge/` | Resolution, inheritance, list controls, and canonical/minimized reconstruction |
-| `snapshot/` | Immutable `FrozenNode`, `ResolvedSnapshot`, reference evidence, and structural reuse |
-| `utils/` | BlueId calculation, pointer operations, matching, limits, and shared language constants |
-| `dictionary/` and `mapping/` | Dictionary-aware export and Java object conversion |
-| `conformance/` | Type conformance and generalization |
-| `processor/` | Generic Contracts kernel, gas, phases, external evidence, handlers, checkpoints, and hosted-runtime boundaries |
-| `registry/` | Runtime-facing registry loaders and stable registry identities |
+| `blue-language-model` | stable values, wire vocabulary, annotations |
+| `blue-language-core` | preprocessing, graph/provider, identity, resolution, snapshots, matching, patching |
+| `blue-language-mapping` | Java object mapping and optional discovery |
+| `blue-language-ipfs` | CID conversion and HTTP-backed IPFS transport |
+| `blue-contracts-core` | generic Contracts API, SPI, gas, processor phases, lifecycle, checkpoints |
+| `blue-conformance` | exact Language/Contracts fixture engines and release CLI |
+| `blue-language-java` | aggregate composition and thin convenience facade only |
+| `examples` | executable programs used by documentation tests |
+| `build-logic` | typed Gradle conventions, evidence, documentation, and quality gates |
 
-The processor package has several deliberately separate boundaries:
+See [modules and dependencies](architecture/modules-and-dependencies.md) for
+the enforced edges.
 
-- `RuntimeWorkSession` owns hosted-runtime work ledgers and their lifecycle;
-- `SemanticOutputBoundary` admits exact hosted output and semantic gas;
-- `ExternalChannelFunctionContext` owns immutable same-scope dependencies;
-- `SelectedExecutableBody` opens only verified references reachable from the
-  selected body;
-- `ExecutableBodySourceDescriptor` records the exact contribution and pointer
-  from which a body came; and
-- `ExactNodeGraphFragments` models physical acquisition using ordinary exact
-  Blue content, without changing the two semantic `PROCESS` inputs.
+## Which repository owns this?
 
-Keep Language, Contracts-kernel, BEX, and Coordination responsibilities
-separate. This repository must not acquire application-specific parsing,
-authorization, expression evaluation, registry policy, or persistence.
-
-Resources are part of the implementation:
-
-| Location | Content |
+| Change | Owner |
 | --- | --- |
-| `src/main/resources/registry/blue-language-1.0/` | Canonical Language registry |
-| `src/main/resources/registry/blue-contracts-1.0/` | Canonical Contracts registry |
-| `src/main/resources/specifications/` | Vendored normative specifications |
-| `src/main/resources/release/` | Identity-bound release manifest |
-| `src/test/resources/blue-language-1.0/fixtures/` | Closed Language fixture package |
-| `src/test/resources/blue-contracts-1.0/fixtures/` | Closed Contracts and gas fixture package |
+| Blue values, Source pipeline, BlueId, providers, snapshots | this repository, Language modules |
+| Runtime-neutral Channel/Handler processing, gas, lifecycle, checkpoints | this repository, Contracts module |
+| Exact Language/Contracts conformance packages | this repository, conformance module |
+| BEX expressions, BEX-specific types or authorization | `blue-bex-java` |
+| Coordination workflows, protocol/application orchestration | Coordination repository |
+| Application storage, catalogs, accounts, APIs, persistence | the consuming application/repository |
+| Generic provider adapter for a transport such as IPFS | optional integration module here |
 
-## 3. Define the change before coding
+Do not add a dependency on a repository product to Language. Applications
+supply content through `NodeProvider` and typed evidence outcomes.
 
-Write down the behavior in one sentence and identify:
+## Change a Language feature
 
-1. the public or package boundary that owns it;
-2. the invariant that must remain true;
-3. the exact success and failure outcomes;
-4. whether the change affects identity, gas, provider evidence, lifecycle,
-   public API, fixtures, or release artifacts; and
-5. the smallest focused test class that can prove it.
+1. Identify the specification section and focused service that owns the rule.
+2. Write a characterization test before moving or changing an identity-bearing
+   algorithm.
+3. Preserve the distinction between direct BlueId input and Source Document
+   preparation.
+4. Preserve `FOUND`, `NOT_FOUND`, `UNAVAILABLE`, and `INVALID_EVIDENCE` at
+   provider boundaries.
+5. Keep caller `Node` values unchanged and retained runtime values immutable.
+6. Add or update the smallest focused tests, then run the owning module's
+   package-cycle and API tasks.
+7. If normative behavior changes, update the exact fixture and all bound
+   identities together.
 
-For processor work, also identify the deterministic phase. Read-only evidence
-acquisition, routing, mutation, output admission, ledger submission, and
-commit are not interchangeable. A failure after gas admission may roll back
-application effects while retaining the admitted ordered gas trace.
+Useful commands:
 
-For identity work, distinguish:
-
-- direct BlueId calculation over exact valid BlueId Input;
-- Source Document BlueId calculation after preprocessing, complete resolution,
-  and canonicalization;
-- verified provider evidence for an exact requested BlueId; and
-- opaque finalized cyclic-member identity, which requires a cyclic-set proof.
-  Proof acquisition uses `CyclicSetProofResult`; preserve its `NOT_FOUND`,
-  `UNAVAILABLE`, and `INVALID_EVIDENCE` distinctions instead of collapsing
-  them into a nullable proof.
-
-For hosted-runtime gas work, distinguish the parent invocation limit, each
-named ledger's live reservation, and an optional invocation-owned
-`RuntimeWorkBudget` shared by several ledgers. Check the shared cap before
-mutating either a child trace or the parent reservation, and route a local
-rejection through the session's canonical `RuntimeGasExhaustion` path.
-
-Document the reason when a change preserves a compatibility descriptor but
-tightens its behavior. Never restore a trust bypass to satisfy an old method
-name.
-
-## 4. Use comments to preserve intent
-
-Add comments where they help the next developer recover information that the
-Java syntax cannot express.
-
-### Public and extension APIs
-
-Use Javadoc on public classes, interfaces, constructors, methods, and constants
-when their contract is not already self-evident. Explain:
-
-- what the API represents or owns;
-- required inputs and returned guarantees;
-- lifecycle and thread-safety rules;
-- identity, verification, gas, and mutation effects;
-- whether returned collections and nodes are immutable or defensive copies;
-- important failure conditions; and
-- how the API differs from a nearby, easily confused operation.
-
-Document parameters and return values when their meaning is not obvious from
-the signature. Document exceptions that are part of the caller contract. A
-compatibility method should say which final method owns its semantics.
-
-### Internal implementation
-
-Use short comments for invariants, non-obvious ordering, phase boundaries,
-security or verification decisions, canonicalization rules, and deliberate
-failure behavior. A comment should explain *why* a step exists, not narrate
-`i++` or repeat a method name.
-
-Good:
-
-```java
-// Gas is admitted before effects so rollback cannot erase performed work.
-runtimeWorkSession.submit(ledger);
+```bash
+./gradlew :blue-language-core:compileJava
+./gradlew test --tests 'blue.language.identity.*Test'
+./gradlew :blue-language-core:verifyJavaPackageCycles
+./gradlew :blue-language-core:apiBaselineDiff
 ```
 
-Avoid:
+## Change a generic Contracts feature
 
-```java
-// Submit the ledger.
-runtimeWorkSession.submit(ledger);
+1. Place the rule in the exact processor phase: admission, evidence,
+   preflight, classification, initialization, delivery, internal drain, final
+   validation, subscription validation, or result assembly.
+2. Define immutable phase input/output and one deterministic failure boundary.
+3. Admit gas before corresponding work; rollback cannot erase admitted gas.
+4. Keep feeder/platform state outside the two semantic inputs.
+5. Test success, rollback, suspension/unavailability, exact diagnostic, gas
+   prefix, Root-only events, and representation parity.
+6. Run Contracts package cycles, focused tests, runtime trace, and exact
+   Contracts fixtures.
+
+```bash
+./gradlew :blue-contracts-core:compileJava
+./gradlew test --tests 'blue.language.processor.ProcessorEngine*Test'
+./gradlew runtimeTraceEvidence
+./gradlew releaseConformanceTest
 ```
 
-Keep comments synchronized with behavior. Remove comments that describe a
-superseded preview path. Prefer extracting a clearly named method when several
-lines of commentary are needed to explain basic control flow.
+Application-specific parsing or policy does not belong in the generic kernel.
 
-## 5. Replace magic values with named constants
+## Add a runtime type SPI implementation
 
-String keys, pointer fragments, type identities, counter names, modes, and
-stable diagnostic tokens must not be scattered as unexplained literals.
+1. Create canonical type evidence derived from the relevant runtime base type.
+2. Calculate its direct BlueId; never copy an unexplained literal from a test.
+3. Implement the focused Channel, Handler, or marker processor/functions.
+4. Register BlueId, canonical type, role, and processor in an immutable runtime
+   registry builder.
+5. Use only invocation-scoped contexts and typed effect/gas boundaries.
+6. Test inline/reference, source/target Channel authority, unavailable and
+   invalid evidence, rollback, exact gas, and concurrent reuse.
 
-Reuse the existing owner whenever possible:
+See [Custom runtime types](guides/custom-runtime-types.md) and the generated
+[runtime SPI registry](reference/runtime-spi.md).
 
-| Concern | Existing owner |
-| --- | --- |
-| Blue metadata and list-control keys | `blue.language.utils.Properties` |
-| Processor-managed contract keys | `ProcessorContractConstants` |
-| Processor JSON-pointer paths | `ProcessorPointerConstants` |
-| Contracts runtime type BlueIds | `RuntimeBlueIds` |
-| Gas schedule identity and counter lookup | `GasSchedule` and the gas manifest |
-| Release and conformance resources | The corresponding conformance report class |
+## Add or change fixtures
 
-For example:
+Fixture manifests are closed inventories. Unknown operations, fields,
+controls, projections, counters, and assertions fail closed; no fixture may be
+skipped.
 
-```java
-public final class ProcessorContractConstants {
+1. Cite the normative specification rule.
+2. Add the smallest deterministic fixture with a stable ID/category.
+3. Update its manifest path, byte count, and SHA-256.
+4. If the registry, gas manifest, specification, or fixture package changed,
+   regenerate every affected package identity and release binding together.
+5. Run the isolated fixture test and `releaseConformanceTest`.
+6. Inspect the generated per-fixture evidence and exact totals.
 
-    public static final String KEY_EMBEDDED = "embedded";
-    public static final String KEY_INITIALIZED = "initialized";
-    public static final String KEY_TERMINATED = "terminated";
-    public static final String KEY_CHECKPOINT = "checkpoint";
+Never edit a vendored specification merely to justify current code.
 
-    private ProcessorContractConstants() {
-    }
-}
-```
+## Change identity-bearing registry nodes
 
-Choose the narrowest useful ownership:
+Registry nodes, manifests, and generated runtime constants form one identity
+chain. Change them only in a dedicated review:
 
-- use a `private static final` constant when only one class owns the value;
-- use a package utility class when several collaborators share one vocabulary;
-- use a public constant only when callers must author or interpret that exact
-  stable value; and
-- derive pointers from key constants instead of duplicating both spellings.
+1. edit canonical registry Source;
+2. regenerate canonical node files using the repository-owned generator;
+3. verify each declared BlueId from the canonical node;
+4. update manifest identity and release binding;
+5. update affected fixtures and expected runtime constants;
+6. run registry integrity, package identity, exact conformance, and semantic
+   baseline verification.
 
-Name constants for meaning, not appearance: `KEY_CHECKPOINT`,
-`DEFAULT_RUNTIME_NAMESPACE`, or `TYPE_TEXT_BLUE_ID` is better than
-`CHECKPOINT_STRING` or `VALUE_1`. Keep one canonical declaration for a stable
-value and statically import it only when the call site remains unambiguous.
+Magic BlueId literals are not an acceptable shortcut. Production and tests
+use the registry/runtime constant owner when the identity is specification
+defined; scenario-specific exact IDs are derived from canonical nodes.
 
-Ordinary test data such as a person's display name need not become global
-production vocabulary. Repeated protocol values and values whose exact
-spelling controls behavior should be named in the test fixture or support
-class.
+## Comments and named constants
 
-## 6. Write tests as Given–When–Then
+Public APIs and SPIs explain immutability, thread safety, reuse scope,
+ownership/close behavior, deterministic failure versus transient
+unavailability, and representation invariance. Internal comments explain
+ordering, security, identity, gas, and transaction invariants—why the code
+exists, not what a visible statement does.
 
-Every JUnit `@Test` method should:
+Stable keys, pointer fragments, runtime type IDs, counter names, diagnostic
+tokens, and modes have one named owner. Prefer private constants for local
+protocol values and public constants only when callers must author or interpret
+the exact value. Ordinary test data does not need a global constant.
 
-- have a readable name beginning with `should`;
-- prove one behavior or one tightly coupled outcome;
-- show `// given`, `// when`, and `// then` sections in that order; and
-- keep assertions in the `then` section.
+## Test style
 
-Example:
+Every ordinary JUnit test has a readable `should...` name and visible sections:
 
 ```java
 @Test
-void shouldRejectUnverifiedSelectedBodyReference() {
+void shouldRejectInvalidEvidenceWithoutCommit() {
     // given
-    SelectedExecutableBody body = selectedBodyWithMissingReference();
+    Scenario scenario = invalidEvidenceScenario();
 
     // when
-    Throwable failure = captureFailure(
-            () -> body.materializeReference(MISSING_BODY_BLUE_ID));
+    DocumentProcessingResult result = scenario.process();
 
     // then
-    assertInstanceOf(RuntimeException.class, failure);
-    assertEquals(EXPECTED_FAILURE_MESSAGE, failure.getMessage());
+    assertFalse(result.commits());
+    assertEquals(scenario.inputRoot(), result.document());
+    assertTrue(result.events().isEmpty());
 }
 ```
 
-Setup shared by every test may remain in `@BeforeEach`, but each test's
-`given` section should make the behavior-specific inputs clear. Helper methods
-should describe domain intent rather than hide the entire scenario.
-`FailureCapture.captureFailure` is the shared test helper for executing an
-expected failure in `when` and asserting its type and details in `then`.
+One test proves one behavior or one tightly coupled atomic outcome. Tests do
+not depend on order, wall time, ambient network, shared mutable global state,
+or backend call count unless the latter is explicitly a host-locality test.
 
-Split a test when it has unrelated triggers, distinct failure modes, or
-multiple independent reasons to fail. It is reasonable for one test to assert
-several properties of one result—for example, an atomic rejection can assert
-the unchanged Root, no emitted events, and the retained gas trace—because
-those assertions together define one behavior.
+## Focused verification
 
-For parameterized or dynamic tests, use a `should...` factory/method name and
-make each generated display name describe the expected behavior. Conformance
-fixture runners may preserve fixture IDs as display evidence, but their
-ordinary unit tests still follow this convention.
-
-Keep tests deterministic:
-
-- do not depend on test order, wall-clock time, ambient network, or shared
-  mutable global state;
-- use exact canonical nodes and stable named constants;
-- assert provider demand or locality only where it is part of the contract;
-- test both inline and pure-reference representations where representation
-  parity matters; and
-- include rollback, suspension, and gas-exhaustion cases for phase-sensitive
-  processor changes.
-
-Run the smallest proving test while iterating:
+Run the smallest useful task while iterating, then the owning module and full
+distribution gates:
 
 ```bash
-./gradlew test --tests \
-  'blue.language.processor.RuntimeWorkSessionTest'
-```
-
-Then run the complete suite:
-
-```bash
-./gradlew test
-```
-
-Do not leave a change proved only by a filtered run.
-
-## 7. Change specifications or fixtures only deliberately
-
-The fixture manifests are closed inventories, not a collection of optional
-examples. Unknown operations, fields, controls, projections, counters, and
-assertions fail closed. There is no skipped conformance outcome.
-
-Before changing a fixture package:
-
-1. Read its `README.md`, `HARNESS.md`, and manifest.
-2. Identify the normative specification paragraph and registry entry that
-   require the change.
-3. Add or update the smallest fixture that proves the rule.
-4. Keep fixture IDs, categories, and manifest ordering deterministic.
-5. Update any exact expected gas using the manifest-defined counter names and
-   weights; never tune expected totals to match an accidental implementation
-   path.
-6. Recalculate every affected package/specification identity and update all
-   bound declarations together.
-7. Run the isolated fixture suite and then the complete release conformance
-   gate.
-8. Review the generated per-fixture evidence and confirm that every
-   manifest-listed fixture executed exactly once.
-
-The current final packages contain 153 Language fixtures and 140 Contracts
-fixtures (82 behavior and 58 gas), for 293 release results. A change to those
-counts or identities is release work and must not be hidden inside an ordinary
-refactor.
-
-Useful focused commands:
-
-```bash
-./gradlew test --tests '*BlueLanguageConformanceFixtureTest'
-./gradlew test --tests '*BlueContractsConformanceFixtureTest'
-./gradlew releaseConformanceTest
-```
-
-Do not edit vendored specification prose merely to justify current code. A
-normative update should arrive with its reviewed source, digest, fixtures,
-registries, migration note, and release-manifest update.
-
-## 8. Verify in increasing scope
-
-Use the following sequence. Stop at the first failure and determine whether it
-is a code defect, stale expectation, dependency problem, or contaminated build
-output.
-
-### Source and focused checks
-
-```bash
-git diff --check
 ./gradlew compileJava compileTestJava
 ./gradlew test --tests '<fully-qualified-test-class>'
-./gradlew runtimeTraceEvidence
+./gradlew identityDifferentialTest
+./gradlew patchSequenceDifferentialTest
+./gradlew fragmentedProcessingTest
+./gradlew cacheLifecycleTest
+./gradlew benchmarkClasses
 ```
 
-`runtimeTraceEvidence` executes the eight ordered-ledger scenarios and records
-only values read back from the live `RuntimeWorkSession`.
-Provider correctness is established by focused generic `NodeProvider` contract
-tests, including exact identity verification, cyclic-set proof, absence,
-temporary unavailability, invalid evidence, and cache lifecycle behavior.
+JMH compilation is a release gate. To run the complete benchmark set rather
+than just compile it:
 
-### Full project checks
+```bash
+./gradlew jmh
+```
+
+Use the module-local `:blue-language-core:jmh` or
+`:blue-contracts-core:jmh` task for benchmarks physically owned by those
+modules. See the README benchmark section for the repository-owned single-
+benchmark filter.
+
+## API baselines
+
+Each supported published module owns `api/public-api.txt`. Generate the current
+inventory and review the diff:
+
+```bash
+./gradlew :blue-language-core:generatePublicApiInventory
+./gradlew :blue-language-core:apiBaselineDiff
+./gradlew generatePublicApiUnion
+./gradlew verifySemanticApiMigration
+```
+
+For an intentional next-major change, classify every descriptor in the
+tracked migration ledger, review replacements in the migration guide, copy the
+reviewed module inventory to its baseline, and rerun all module/API gates.
+Never update a baseline only to silence a failure. Baseline capture is a
+manual action and cannot be a dependency of verification.
+
+## Documentation and examples
+
+Every public package has `package-info.java`. Every public API/SPI has useful
+Javadoc. Runnable examples live in `:examples`; guides link to those canonical
+sources rather than maintaining divergent copies.
+
+```bash
+./gradlew :examples:test
+./gradlew documentationVerify
+```
+
+Generated references are reproducible outputs. Regenerate them with the
+repository task, review their diff, and commit the exact result. Do not edit a
+generated reference by hand.
+
+## Complete conformance
 
 ```bash
 ./gradlew test
-./gradlew verifyNoDeprecatedProductionApi
-./gradlew verifyNoAmbiguousReverseApi
-./gradlew verifyFinalApiBaseline
 ./gradlew releaseConformanceTest
+./gradlew runtimeTraceEvidence
+./gradlew fragmentedProcessingReport
+./gradlew semanticBaselineVerify
 ```
 
-`verifyFinalApiBaseline` compares the candidate with
-`api/blue-language-java-1.0.json`, rejects binary incompatibilities and Java
-class versions above 52, and lists additive descriptors for review. Do not
-rewrite that baseline as an implementation shortcut.
+The Language fixture package contains 153 exact fixtures and the Contracts
+package contains 140. Generated fixture coverage is the source for category
+subtotals; avoid copying subtotals into authored docs.
 
-### Release evidence
+`semanticBaselineCapture` is manual and exceptional. Verification never
+captures or weakens a baseline automatically.
 
-Run a successful clean build and the project-owned evidence tasks as separate
-invocations:
+## Cut an RC
+
+Commit the complete candidate first. Choose one epoch from that commit and use
+it for both invocations:
 
 ```bash
 BLUE_RELEASE_EPOCH="$(git show -s --format=%ct HEAD)"
 SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew clean build
+SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew finalQualityVerify
 SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew rcVerify
 ```
 
-Keep `clean build` separate from `rcVerify`. The first
-invocation writes clean-build completion evidence only after `build` succeeds
-over the exact source fingerprint and `SOURCE_DATE_EPOCH` recorded by `clean`.
-Task exclusions such as `-x test` deliberately suppress that evidence.
+The first command writes clean-build evidence only after an exclusion-free
+successful build. The second invocation rejects a changed commit, source
+snapshot, epoch, or prior task exclusion.
 
-Review at least:
+Review:
 
-```text
-build/reports/conformance/release-conformance.json
-build/reports/conformance/release-conformance.txt
-build/reports/binary-api/final-1.0-baseline-to-candidate.txt
-build/reports/runtime-trace/runtime-work-session.json
-build/reports/reproducibility/jar-repeatability.json
-build/reports/reproducibility/source-archive-repeatability.json
-```
+- exact fixture totals and zero skips;
+- runtime/gas/locality evidence;
+- zero package/module cycles and forbidden dependencies;
+- final API ledger and module baselines;
+- Javadoc/documentation/example status;
+- JAR, source JAR, and complete source ZIP replicas/checksums;
+- independent staged Maven smoke;
+- aggregate release receipt and final quality report;
+- clean Git status and unchanged release automation metadata.
 
-The machine-readable report is authoritative. Confirm full test and fixture
-counts, zero skipped fixtures, binary compatibility, the maximum observed
-ordered runtime trace and its exact prefix semantics, archive repeatability,
-locality/hosted-runtime evidence, source fingerprint, and commit-automation
-status. Generic provider tests must also remain green for exact identities,
-cyclic evidence, absence, unavailability, invalid evidence, and cache
-lifecycle. A truthful report may distinguish passing implementation gates
-from release readiness when the working tree or reviewed baseline is not
-release-clean.
+Only then authorize tag/signing/publication. Publication credentials and
+external release actions are outside ordinary verification.
 
-## 9. Review the diff
+## Review checklist
 
-Before handoff:
-
-1. Read every changed production file from top to bottom.
-2. Confirm comments explain current intent and not an abandoned approach.
-3. Search for repeated protocol literals that should use an existing or new
-   constant.
-4. Confirm every changed `@Test` starts with `should` and has visible
-   Given–When–Then sections.
-5. Check that public additions have useful Javadoc and immutable/defensive-copy
-   behavior is explicit.
-6. Check failure ordering, especially gas versus suspension, lifecycle, and
-   rollback.
-7. Confirm generated reports match the exact current source fingerprint.
-8. Run `git status --short` and verify no sibling project, build cache, IDE
-   file, or unrelated user change entered the diff.
-
-## Contribution checklist
-
-- [ ] The change belongs to Blue Language or the generic Contracts kernel.
-- [ ] BEX, Coordination, and unrelated sibling repositories are untouched.
-- [ ] Existing dirty changes were preserved.
-- [ ] Public and non-obvious internal behavior is documented where it matters.
-- [ ] Stable keys, pointers, identities, modes, and counters use named
-      constants.
-- [ ] Every changed test name starts with `should`.
-- [ ] Every changed test uses `// given`, `// when`, and `// then`.
-- [ ] Tests are split by behavior and remain deterministic.
-- [ ] Focused and full test runs pass.
-- [ ] Fixture/specification changes, if any, update all bound identities and
-      execute every manifest entry.
-- [ ] Binary API additions are intentional and incompatibilities are zero.
-- [ ] `releaseConformanceTest` passes with zero skipped fixtures.
-- [ ] `clean build` and the subsequent `rcVerify` gate pass, and
-      the JSON evidence was reviewed.
-- [ ] Documentation and migration notes describe the final behavior.
-- [ ] Commit/release automation files remain unchanged unless the task
-      explicitly owns them.
+- [ ] The change belongs to the correct repository and module.
+- [ ] Language does not depend on Contracts, BEX, Coordination, or a repository product.
+- [ ] Public contracts document lifecycle, failure, and representation rules.
+- [ ] Stable protocol values use named owners.
+- [ ] Changed tests use `should...` and Given–When–Then.
+- [ ] Focused and complete tests pass.
+- [ ] Fixture/spec/registry identities are exactly bound when changed.
+- [ ] API changes are classified and documented.
+- [ ] Examples, links, generated references, and Javadocs pass.
+- [ ] Clean-build, reproducibility, conformance, smoke, and final quality gates pass.
+- [ ] No unrelated or sibling-project file entered the diff.
