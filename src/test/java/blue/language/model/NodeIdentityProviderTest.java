@@ -1,5 +1,7 @@
 package blue.language.model;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
 import org.junit.jupiter.api.Test;

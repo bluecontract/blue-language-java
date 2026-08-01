@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 
@@ -36,7 +38,7 @@ public final class NodeSpecializer {
      *                                  type or does not resolve compatibly
      */
     public Node specialize(Node type, Node overlay) {
-        Objects.requireNonNull(type, Properties.OBJECT_TYPE);
+        Objects.requireNonNull(type, BlueLanguageConstants.OBJECT_TYPE);
         Objects.requireNonNull(overlay, "overlay");
         if (overlay.getType() != null) {
             throw new IllegalArgumentException(

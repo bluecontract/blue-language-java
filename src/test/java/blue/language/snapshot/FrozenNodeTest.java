@@ -1,5 +1,7 @@
 package blue.language.snapshot;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;
@@ -29,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -90,7 +92,7 @@ class FrozenNodeTest {
         String referenceBlueId = BlueIdCalculator.calculateBlueId(new Node().value("reference"));
         Node withSchema = new Node()
                 .schema(new blue.language.model.Schema().minimum(new Node().type(new Node().blueId(
-                        blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID)).value("9007199254740992")));
+                        blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID)).value("9007199254740992")));
 
         // when
         for (Node node : Arrays.asList(

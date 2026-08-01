@@ -1,12 +1,12 @@
 package blue.language.provider;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -115,7 +115,7 @@ public final class DirectNodeManifest {
             StringBuilder prefix = new StringBuilder();
             for (String segment : segments) {
                 if (selected != null && selected.isReferenceOnly()) {
-                    if (Properties.OBJECT_BLUE_ID.equals(segment)) {
+                    if (BlueLanguageConstants.OBJECT_BLUE_ID.equals(segment)) {
                         return BlueOperationResult.absent(
                                 "pure reference wrapper is not a semantic "
                                         + "child of the referenced node");
@@ -156,7 +156,7 @@ public final class DirectNodeManifest {
 
     private boolean targetsReferenceWrapperBlueId(List<String> segments) {
         if (segments.isEmpty()
-                || !Properties.OBJECT_BLUE_ID.equals(segments.get(segments.size() - 1))) {
+                || !BlueLanguageConstants.OBJECT_BLUE_ID.equals(segments.get(segments.size() - 1))) {
             return false;
         }
         Node parent = directNode;

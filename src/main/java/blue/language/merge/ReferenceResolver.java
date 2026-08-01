@@ -8,9 +8,9 @@ import blue.language.resolve.ReferenceCacheAdmissionPolicy;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.utils.BlueIds;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.Properties;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.limits.Limits;
 
 import java.util.ArrayList;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 /**
@@ -223,12 +223,12 @@ final class ReferenceResolver {
         String blueId = schema.getBlueId();
         Node content = requiredProviderContent(
                 blueId, engine.activeResolutionState());
-        Object schemaValue = NodeToMapListOrValue.get(content);
+        Object schemaValue = NodeWireForm.get(content);
         Schema materialized = NodeDeserializer.parseSchema(
                 JSON_MAPPER.valueToTree(schemaValue),
                 JsonPointer.append(
                         engine.currentPath(engine.activeResolutionState()),
-                        Properties.OBJECT_SCHEMA));
+                        BlueLanguageConstants.OBJECT_SCHEMA));
         if (materialized.isReferenceOnly()) {
             throw new IllegalArgumentException(
                     "Provider returned reference-only schema content for required blueId: " + blueId);

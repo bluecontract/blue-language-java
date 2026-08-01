@@ -1,6 +1,6 @@
 package blue.language.registry;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 /**
  * Stable field names and categorical values used by released registry
@@ -38,7 +38,7 @@ public final class RegistryManifestConstants {
     public static final String FIELD_PATH = "path";
     /** Registry-entry field containing its published BlueId. */
     public static final String FIELD_BLUE_ID =
-            Properties.OBJECT_BLUE_ID;
+            BlueLanguageConstants.OBJECT_BLUE_ID;
     /** Registry-entry field containing its resource SHA-256. */
     public static final String FIELD_SHA256 = "sha256";
     /** Entry flag making description text identity-bearing. */

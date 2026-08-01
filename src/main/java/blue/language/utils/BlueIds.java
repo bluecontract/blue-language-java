@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.TypeBlueId;
 
 import java.util.Optional;
@@ -47,7 +49,7 @@ public class BlueIds {
         }
 
         try {
-            requireBlueIdOrCyclicMember(value, Properties.OBJECT_BLUE_ID);
+            requireBlueIdOrCyclicMember(value, BlueLanguageConstants.OBJECT_BLUE_ID);
             return true;
         } catch (IllegalArgumentException e) {
             return false;

@@ -1,13 +1,15 @@
 package blue.language.provider;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.SchemaPropertyConstants;
+
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.NodeWireForm;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
 
@@ -23,20 +25,20 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
-import static blue.language.utils.SchemaPropertyConstants.KEY_ENUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MULTIPLE_OF;
-import static blue.language.utils.SchemaPropertyConstants.KEY_REQUIRED;
-import static blue.language.utils.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MULTIPLE_OF;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_REQUIRED;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
 
 /**
  * Verifies provider content under an explicitly selected ingestion mode.
@@ -460,7 +462,7 @@ public final class ProviderEvidenceVerifier {
         Map<String, Object> evidence =
                 new LinkedHashMap<>();
         evidence.put(FIELD_SOURCE_CONTENT,
-                NodeToMapListOrValue.get(supplied));
+                NodeWireForm.get(supplied));
         List<String> inlinePaths = new ArrayList<>();
         collectInlineValuePaths(
                 supplied, JsonPointer.ROOT, inlinePaths);
@@ -481,7 +483,7 @@ public final class ProviderEvidenceVerifier {
             Node node = Objects.requireNonNull(
                     supplied.get(index),
                     "source evidence node");
-            content.add(NodeToMapListOrValue.get(node));
+            content.add(NodeWireForm.get(node));
             collectInlineValuePaths(
                     node,
                     JsonPointer.append(
@@ -510,41 +512,41 @@ public final class ProviderEvidenceVerifier {
         collectInlineValuePaths(
                 node.getType(),
                 JsonPointer.append(
-                        path, Properties.OBJECT_TYPE),
+                        path, BlueLanguageConstants.OBJECT_TYPE),
                 paths);
         collectInlineValuePaths(
                 node.getItemType(),
                 JsonPointer.append(
-                        path, Properties.OBJECT_ITEM_TYPE),
+                        path, BlueLanguageConstants.OBJECT_ITEM_TYPE),
                 paths);
         collectInlineValuePaths(
                 node.getKeyType(),
                 JsonPointer.append(
-                        path, Properties.OBJECT_KEY_TYPE),
+                        path, BlueLanguageConstants.OBJECT_KEY_TYPE),
                 paths);
         collectInlineValuePaths(
                 node.getValueType(),
                 JsonPointer.append(
-                        path, Properties.OBJECT_VALUE_TYPE),
+                        path, BlueLanguageConstants.OBJECT_VALUE_TYPE),
                 paths);
         collectInlineValuePaths(
                 node.getBlue(),
                 JsonPointer.append(
-                        path, Properties.OBJECT_BLUE),
+                        path, BlueLanguageConstants.OBJECT_BLUE),
                 paths);
         collectInlineValuePaths(
                 node.getContracts(),
                 JsonPointer.append(
-                        path, Properties.OBJECT_CONTRACTS),
+                        path, BlueLanguageConstants.OBJECT_CONTRACTS),
                 paths);
         collectInlineValuePaths(
                 node.getSchema(),
                 JsonPointer.append(
-                        path, Properties.OBJECT_SCHEMA),
+                        path, BlueLanguageConstants.OBJECT_SCHEMA),
                 paths);
         if (node.getItems() != null) {
             String itemsPath = JsonPointer.append(
-                    path, Properties.OBJECT_ITEMS);
+                    path, BlueLanguageConstants.OBJECT_ITEMS);
             for (int index = 0;
                  index < node.getItems().size();
                  index++) {

@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.Blue;
@@ -501,8 +503,7 @@ class ExecutableBodyFieldMetadataTest {
                                 "value",
                                 new Node().type(
                                         new Node().blueId(
-                                                blue.language.utils
-                                                        .Properties
+                                                BlueLanguageConstants
                                                         .TEXT_TYPE_BLUE_ID)));
         private final String programTypeBlueId =
                 BlueIdCalculator.calculateBlueId(
@@ -774,8 +775,7 @@ class ExecutableBodyFieldMetadataTest {
                                     "unrelated",
                                     new Node().type(
                                             new Node().blueId(
-                                                    blue.language.utils
-                                                            .Properties
+                                                    BlueLanguageConstants
                                                             .TEXT_TYPE_BLUE_ID)));
             String generalScopeTypeBlueId =
                     BlueIdCalculator.calculateBlueId(

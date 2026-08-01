@@ -1,6 +1,6 @@
 package blue.language.snapshot;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
 import blue.language.merge.VerifiedReferenceResolution;
@@ -290,7 +290,7 @@ public final class ResolvedReferenceCache
      */
     public Optional<FrozenNode> getTransientTrustedCanonical(
             String blueId) {
-        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
+        Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         ensureCurrentGeneration();
         return Optional.empty();
     }
@@ -306,7 +306,7 @@ public final class ResolvedReferenceCache
     public FrozenNode putTransientTrustedCanonical(
             String blueId,
             FrozenNode canonicalContent) {
-        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
+        Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         Objects.requireNonNull(
                 canonicalContent, "canonicalContent");
         ensureCurrentGeneration();
@@ -353,7 +353,7 @@ public final class ResolvedReferenceCache
      * @return the canonical instance retained for {@code blueId}
      */
     public FrozenNode putVerifiedCanonical(String blueId, FrozenNode canonicalContent) {
-        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
+        Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         requireCanonical(blueId, canonicalContent);
         synchronized (cacheGeneration.mutationLock) {
             ensureCurrentGeneration();
@@ -387,7 +387,7 @@ public final class ResolvedReferenceCache
      */
     public FrozenNode getOrLoadVerifiedCanonical(String blueId,
                                                  Supplier<FrozenNode> canonicalLoader) {
-        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
+        Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         Objects.requireNonNull(canonicalLoader, "canonicalLoader");
         return cacheGeneration.canonicalLoads.getOrLoad(
                 blueId, canonicalLoader, canonicalLoadAccess);
@@ -452,7 +452,7 @@ public final class ResolvedReferenceCache
     private FrozenNode retainVerifiedResolved(String blueId,
                                               FrozenNode canonicalContent,
                                               FrozenNode fullyResolvedContent) {
-        Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
+        Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         requireCanonical(blueId, canonicalContent);
         requireResolved(blueId, fullyResolvedContent);
         synchronized (cacheGeneration.mutationLock) {

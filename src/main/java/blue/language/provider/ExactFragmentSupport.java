@@ -5,8 +5,8 @@ import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.Properties;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;
 import java.util.Collection;

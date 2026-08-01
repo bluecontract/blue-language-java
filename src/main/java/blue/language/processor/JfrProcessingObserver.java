@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -96,7 +96,7 @@ public final class JfrProcessingObserver implements ProcessingObserver, AutoClos
                 fields.add(descriptor.newInstance(String.class, "kind"));
                 fields.add(descriptor.newInstance(
                         long.class,
-                        Properties.OBJECT_VALUE));
+                        BlueLanguageConstants.OBJECT_VALUE));
                 fields.add(descriptor.newInstance(String.class, "context"));
 
                 Class<?> factoryType = Class.forName("jdk.jfr.EventFactory");

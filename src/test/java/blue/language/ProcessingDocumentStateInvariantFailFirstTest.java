@@ -1,5 +1,7 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
@@ -27,7 +29,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.MinimizedOverlayBuilder;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -37,8 +39,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -297,7 +299,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
     }
 
     private static String firstDifference(Node expected, Node actual) {
-        return firstDifference(NodeToMapListOrValue.get(expected), NodeToMapListOrValue.get(actual), "");
+        return firstDifference(NodeWireForm.get(expected), NodeWireForm.get(actual), "");
     }
 
     private static String firstDifference(Object expected, Object actual, String path) {

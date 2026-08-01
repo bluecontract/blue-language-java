@@ -1,5 +1,11 @@
 package blue.language.utils;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
+import blue.language.model.wire.JsonPointer;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 
@@ -10,7 +16,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.SchemaPropertyConstants.*;
+import static blue.language.model.wire.SchemaPropertyConstants.*;
 
 /**
  * Validates the syntax of every BlueId reference in a complete input graph.
@@ -22,11 +28,11 @@ public final class BlueIdReferenceValidator {
     /** Node-valued schema constraints visited before schema enum entries. */
     private static final int FIXED_SCHEMA_CHILD_COUNT = 13;
 
-    private static final String BLUE_ID_PATH = "/" + Properties.OBJECT_BLUE_ID;
+    private static final String BLUE_ID_PATH = "/" + BlueLanguageConstants.OBJECT_BLUE_ID;
     private static final String PREVIOUS_BLUE_ID_PATH =
-            "/" + Properties.LIST_CONTROL_PREVIOUS + BLUE_ID_PATH;
+            "/" + BlueLanguageConstants.LIST_CONTROL_PREVIOUS + BLUE_ID_PATH;
     private static final String SCHEMA_BLUE_ID_PATH =
-            "/" + Properties.OBJECT_SCHEMA + BLUE_ID_PATH;
+            "/" + BlueLanguageConstants.OBJECT_SCHEMA + BLUE_ID_PATH;
 
     private BlueIdReferenceValidator() {
     }
@@ -143,7 +149,7 @@ public final class BlueIdReferenceValidator {
             try {
                 validateBlueId(frame.node.getBlueId(), BLUE_ID_PATH);
             } catch (IllegalArgumentException malformedReference) {
-                validateBlueId(frame.node.getBlueId(), pointer(frame.path, Properties.OBJECT_BLUE_ID));
+                validateBlueId(frame.node.getBlueId(), pointer(frame.path, BlueLanguageConstants.OBJECT_BLUE_ID));
                 throw malformedReference;
             }
         }
@@ -154,8 +160,8 @@ public final class BlueIdReferenceValidator {
                 BlueIds.requirePlainBlueId(frame.node.getPreviousBlueId(),
                         pointer(
                                 frame.path,
-                                Properties.LIST_CONTROL_PREVIOUS,
-                                Properties.OBJECT_BLUE_ID));
+                                BlueLanguageConstants.LIST_CONTROL_PREVIOUS,
+                                BlueLanguageConstants.OBJECT_BLUE_ID));
                 throw malformedReference;
             }
         }
@@ -165,7 +171,7 @@ public final class BlueIdReferenceValidator {
                 validateBlueId(schema.getBlueId(), SCHEMA_BLUE_ID_PATH);
             } catch (IllegalArgumentException malformedReference) {
                 validateBlueId(schema.getBlueId(),
-                        pointer(frame.path, Properties.OBJECT_SCHEMA, Properties.OBJECT_BLUE_ID));
+                        pointer(frame.path, BlueLanguageConstants.OBJECT_SCHEMA, BlueLanguageConstants.OBJECT_BLUE_ID));
                 throw malformedReference;
             }
         }
@@ -184,12 +190,12 @@ public final class BlueIdReferenceValidator {
 
     private static void appendChildrenInOrder(TraversalFrame frame,
                                               Deque<TraversalFrame> children) {
-        add(children, frame.node.getType(), frame.path, Properties.OBJECT_TYPE);
-        add(children, frame.node.getItemType(), frame.path, Properties.OBJECT_ITEM_TYPE);
-        add(children, frame.node.getKeyType(), frame.path, Properties.OBJECT_KEY_TYPE);
-        add(children, frame.node.getValueType(), frame.path, Properties.OBJECT_VALUE_TYPE);
-        add(children, frame.node.getBlue(), frame.path, Properties.OBJECT_BLUE);
-        add(children, frame.node.getContracts(), frame.path, Properties.OBJECT_CONTRACTS);
+        add(children, frame.node.getType(), frame.path, BlueLanguageConstants.OBJECT_TYPE);
+        add(children, frame.node.getItemType(), frame.path, BlueLanguageConstants.OBJECT_ITEM_TYPE);
+        add(children, frame.node.getKeyType(), frame.path, BlueLanguageConstants.OBJECT_KEY_TYPE);
+        add(children, frame.node.getValueType(), frame.path, BlueLanguageConstants.OBJECT_VALUE_TYPE);
+        add(children, frame.node.getBlue(), frame.path, BlueLanguageConstants.OBJECT_BLUE);
+        add(children, frame.node.getContracts(), frame.path, BlueLanguageConstants.OBJECT_CONTRACTS);
 
         List<Node> items = frame.node.getItems();
         if (items != null) {
@@ -212,7 +218,7 @@ public final class BlueIdReferenceValidator {
         if (schema == null) {
             return;
         }
-        PathSegment schemaPath = new PathSegment(parent, Properties.OBJECT_SCHEMA);
+        PathSegment schemaPath = new PathSegment(parent, BlueLanguageConstants.OBJECT_SCHEMA);
         add(children, schema.getRequired(), schemaPath, KEY_REQUIRED);
         add(children, schema.getMinLength(), schemaPath, KEY_MIN_LENGTH);
         add(children, schema.getMaxLength(), schemaPath, KEY_MAX_LENGTH);

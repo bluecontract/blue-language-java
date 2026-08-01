@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
@@ -28,8 +28,8 @@ public final class ExactBlueValue {
     ExactBlueValue(FrozenNode value,
                    String blueId,
                    Object admissionOwner) {
-        this.value = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
-        this.blueId = Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID);
+        this.value = Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
+        this.blueId = Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         this.admissionOwner = admissionOwner;
     }
 

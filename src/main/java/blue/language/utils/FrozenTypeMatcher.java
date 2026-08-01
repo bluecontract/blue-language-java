@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.api.BlueCachePolicy;
 import blue.language.matching.MatchingRuntime;
 import blue.language.matching.internal.FrozenSchemaMatcher;
@@ -24,7 +26,7 @@ import static blue.language.matching.internal.MatchingPlanCache.Region.RESOLVED_
 import static blue.language.matching.internal.MatchingPlanCache.Region.SUBTYPE;
 import static blue.language.matching.internal.MatchingPlanCache.Region.TYPE_COMPATIBILITY;
 import static blue.language.matching.internal.MatchingPlanCache.Region.UNRESOLVED_REFERENCE;
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 
 /**
  * Fast matcher for already-resolved immutable Blue nodes.
@@ -582,8 +584,8 @@ public final class FrozenTypeMatcher {
             }
         }
         if (isBooleanType(targetKeyType)) {
-            return Properties.BOOLEAN_TEXT_TRUE.equals(key)
-                    || Properties.BOOLEAN_TEXT_FALSE.equals(key);
+            return BlueLanguageConstants.BOOLEAN_TEXT_TRUE.equals(key)
+                    || BlueLanguageConstants.BOOLEAN_TEXT_FALSE.equals(key);
         }
         return false;
     }

@@ -1,6 +1,6 @@
 package blue.language.processor.util;
 
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
 
 import java.util.ArrayList;

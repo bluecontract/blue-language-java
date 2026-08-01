@@ -1,5 +1,7 @@
 package blue.language.preprocess;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.provider.BootstrapProvider;
 import org.junit.jupiter.api.Test;
@@ -11,8 +13,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;

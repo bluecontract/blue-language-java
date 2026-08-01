@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.ConformancePlan;
@@ -11,7 +11,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
 
 import java.util.ArrayList;
@@ -392,7 +392,7 @@ final class PatchPlanningEngine {
         }
         String member = path.segments().get(
                 path.segments().size() - 1);
-        return Properties.OBJECT_VALUE.equals(member)
+        return BlueLanguageConstants.OBJECT_VALUE.equals(member)
                 || ProcessorContractConstants.KEY_CONTRACTS.equals(member);
     }
 
@@ -488,16 +488,16 @@ final class PatchPlanningEngine {
         if (parent == null) {
             return null;
         }
-        if (Properties.OBJECT_TYPE.equals(field)) {
+        if (BlueLanguageConstants.OBJECT_TYPE.equals(field)) {
             return parent.getType();
         }
-        if (Properties.OBJECT_ITEM_TYPE.equals(field)) {
+        if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)) {
             return parent.getItemType();
         }
-        if (Properties.OBJECT_KEY_TYPE.equals(field)) {
+        if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)) {
             return parent.getKeyType();
         }
-        if (Properties.OBJECT_VALUE_TYPE.equals(field)) {
+        if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field)) {
             return parent.getValueType();
         }
         return null;
@@ -509,10 +509,10 @@ final class PatchPlanningEngine {
             return false;
         }
         String field = segments.get(segments.size() - 1);
-        return Properties.OBJECT_TYPE.equals(field)
-                || Properties.OBJECT_ITEM_TYPE.equals(field)
-                || Properties.OBJECT_KEY_TYPE.equals(field)
-                || Properties.OBJECT_VALUE_TYPE.equals(field);
+        return BlueLanguageConstants.OBJECT_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field);
     }
 
     private ConformancePlan planBatchConformance(FrozenNode canonicalRoot,

@@ -23,8 +23,7 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.registry.RegistryManifestConstants;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.CanonicalIdentityConstants;
-import blue.language.utils.Properties;
-import blue.language.utils.SchemaPropertyConstants;
+import blue.language.model.wire.SchemaPropertyConstants;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -66,18 +65,18 @@ final class SourceStyleConventionsTest {
             ));
     private static final Set<String> BLUE_WIRE_LITERALS =
             Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-                    Properties.OBJECT_BLUE_ID,
-                    Properties.OBJECT_ITEM_TYPE,
-                    Properties.OBJECT_KEY_TYPE,
-                    Properties.OBJECT_VALUE_TYPE,
-                    Properties.OBJECT_MERGE_POLICY,
-                    Properties.OBJECT_CONTRACTS,
-                    Properties.OBJECT_SCHEMA,
-                    Properties.OBJECT_ITEMS,
-                    Properties.OBJECT_VALUE,
-                    Properties.OBJECT_TYPE,
-                    Properties.OBJECT_BLUE,
-                    Properties.BLUE_DIRECTIVE_IMPORTS
+                    BlueLanguageConstants.OBJECT_BLUE_ID,
+                    BlueLanguageConstants.OBJECT_ITEM_TYPE,
+                    BlueLanguageConstants.OBJECT_KEY_TYPE,
+                    BlueLanguageConstants.OBJECT_VALUE_TYPE,
+                    BlueLanguageConstants.OBJECT_MERGE_POLICY,
+                    BlueLanguageConstants.OBJECT_CONTRACTS,
+                    BlueLanguageConstants.OBJECT_SCHEMA,
+                    BlueLanguageConstants.OBJECT_ITEMS,
+                    BlueLanguageConstants.OBJECT_VALUE,
+                    BlueLanguageConstants.OBJECT_TYPE,
+                    BlueLanguageConstants.OBJECT_BLUE,
+                    BlueLanguageConstants.BLUE_DIRECTIVE_IMPORTS
             )));
     private static final Set<String> CANONICAL_IDENTITY_LITERALS =
             Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
@@ -237,7 +236,7 @@ final class SourceStyleConventionsTest {
             publishedRuntimeIdentities();
     private static final Set<String> PUBLISHED_CORE_BLUE_IDS =
             Collections.unmodifiableSet(
-                    new HashSet<>(Properties.CORE_TYPE_BLUE_IDS));
+                    new HashSet<>(BlueLanguageConstants.CORE_TYPE_BLUE_IDS));
     private static final Set<String> PROCESSOR_TEST_TYPE_BLUE_IDS =
             Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
                     ProcessorTestTypeBlueIds.APPLY_BATCH_PATCH,
@@ -364,8 +363,7 @@ final class SourceStyleConventionsTest {
         List<String> violations = new ArrayList<>();
         for (Path source : productionSources) {
             String fileName = source.getFileName().toString();
-            if ("BlueLanguageConstants.java".equals(fileName)
-                    || "Properties.java".equals(fileName)) {
+            if ("BlueLanguageConstants.java".equals(fileName)) {
                 continue;
             }
             Set<String> stringLiterals =
@@ -566,8 +564,7 @@ final class SourceStyleConventionsTest {
         for (Path source : sources) {
             String fileName = source.getFileName().toString();
             String content = read(source);
-            if (!"BlueLanguageConstants.java".equals(fileName)
-                    && !"Properties.java".equals(fileName)) {
+            if (!"BlueLanguageConstants.java".equals(fileName)) {
                 rejectContainedLiterals(
                         source,
                         content,

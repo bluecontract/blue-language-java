@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

@@ -1,7 +1,7 @@
 package blue.language.processor.util;
 
-import blue.language.utils.JsonPointer;
-import blue.language.utils.Properties;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.wire.BlueLanguageConstants;
 
 /**
  * Shared relative pointer constants for processor-managed contract paths.
@@ -17,10 +17,10 @@ public final class ProcessorPointerConstants {
             "/" + ProcessorContractConstants.KEY_CONTRACTS;
     /** Relative pointer to a node's declared type. */
     public static final String RELATIVE_TYPE =
-            "/" + Properties.OBJECT_TYPE;
+            "/" + BlueLanguageConstants.OBJECT_TYPE;
     /** Relative pointer to a scalar payload. */
     public static final String RELATIVE_VALUE =
-            "/" + Properties.OBJECT_VALUE;
+            "/" + BlueLanguageConstants.OBJECT_VALUE;
     /** Relative pointer to the initialized marker. */
     public static final String RELATIVE_INITIALIZED =
             relativeContractsEntry(

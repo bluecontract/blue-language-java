@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.List;
 import java.util.Map;

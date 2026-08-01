@@ -1,13 +1,17 @@
 package blue.language.merge.processor;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.merge.MergingProcessor;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.BlueNumbers;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.value.BlueNumbers;
+import blue.language.model.NodeWireForm;
 import blue.language.utils.ScalarNodeIdentity;
 
 import java.math.BigDecimal;
@@ -19,9 +23,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.DICTIONARY_TYPE;
-import static blue.language.utils.SchemaPropertyConstants.*;
+import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE;
+import static blue.language.model.wire.SchemaPropertyConstants.*;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.lang.Boolean.TRUE;
 
@@ -325,7 +329,7 @@ public class SchemaVerifier implements MergingProcessor {
         List<Node> items = node.getItems();
         if (items != null) {
             int uniqueItemsCount = items.stream()
-                    .map(NodeToMapListOrValue::get)
+                    .map(NodeWireForm::get)
                     .map(doc -> YAML_MAPPER.convertValue(doc, Node.class))
                     .map(BlueIdCalculator::calculateBlueId)
                     .collect(Collectors.toSet())

@@ -1,5 +1,7 @@
 package blue.language.mapping;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 
 import java.math.BigDecimal;
@@ -7,7 +9,7 @@ import java.math.BigInteger;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 
 /**
  * Converts Blue scalar payloads to supported Java scalar classes.

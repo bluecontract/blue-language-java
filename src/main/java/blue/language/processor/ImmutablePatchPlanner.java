@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
@@ -12,7 +12,7 @@ import blue.language.patching.BluePatchOperation;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIds;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
 
 import java.util.ArrayList;
@@ -368,19 +368,19 @@ final class ImmutablePatchPlanner {
      */
     private static FrozenNode intrinsicMutationPathChild(FrozenNode node,
                                                          String segment) {
-        if (Properties.OBJECT_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_TYPE.equals(segment)) {
             return node.getType();
         }
-        if (Properties.OBJECT_ITEM_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(segment)) {
             return node.getItemType();
         }
-        if (Properties.OBJECT_KEY_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(segment)) {
             return node.getKeyType();
         }
-        if (Properties.OBJECT_VALUE_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(segment)) {
             return node.getValueType();
         }
-        if (Properties.OBJECT_BLUE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_BLUE.equals(segment)) {
             return node.getBlue();
         }
         if (ProcessorContractConstants.KEY_CONTRACTS.equals(segment)) {
@@ -391,11 +391,11 @@ final class ImmutablePatchPlanner {
     }
 
     private static boolean isIntrinsicMutationPathChild(String segment) {
-        return Properties.OBJECT_TYPE.equals(segment)
-                || Properties.OBJECT_ITEM_TYPE.equals(segment)
-                || Properties.OBJECT_KEY_TYPE.equals(segment)
-                || Properties.OBJECT_VALUE_TYPE.equals(segment)
-                || Properties.OBJECT_BLUE.equals(segment)
+        return BlueLanguageConstants.OBJECT_TYPE.equals(segment)
+                || BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(segment)
+                || BlueLanguageConstants.OBJECT_KEY_TYPE.equals(segment)
+                || BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(segment)
+                || BlueLanguageConstants.OBJECT_BLUE.equals(segment)
                 || ProcessorContractConstants.KEY_CONTRACTS.equals(segment);
     }
 
@@ -408,7 +408,7 @@ final class ImmutablePatchPlanner {
         validateMutationPath(path);
         if (path.isRoot()
                 && (op == JsonPatch.Op.ADD || op == JsonPatch.Op.REPLACE)) {
-            return Objects.requireNonNull(value, Properties.OBJECT_VALUE);
+            return Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
         }
         CanonicalOverlayPatchEngine engine =
                 new CanonicalOverlayPatchEngine(root);

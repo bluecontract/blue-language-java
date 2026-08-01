@@ -6,7 +6,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.utils.Base58Sha256Provider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
 
@@ -28,7 +28,7 @@ public final class NodeCanonicalizer {
         if (node == null) {
             return 0L;
         }
-        return canonicalSize(NodeToMapListOrValue.get(node));
+        return canonicalSize(NodeWireForm.get(node));
     }
 
     /**

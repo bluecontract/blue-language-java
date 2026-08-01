@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -20,13 +20,13 @@ import java.util.Set;
 public final class ProcessingDocumentValidator {
 
     private static final Set<String> INVALID_CONTRACT_KEYS = new LinkedHashSet<>(Arrays.asList(
-            Properties.OBJECT_TYPE,
-            Properties.OBJECT_VALUE,
-            Properties.OBJECT_ITEMS,
-            Properties.OBJECT_SCHEMA,
+            BlueLanguageConstants.OBJECT_TYPE,
+            BlueLanguageConstants.OBJECT_VALUE,
+            BlueLanguageConstants.OBJECT_ITEMS,
+            BlueLanguageConstants.OBJECT_SCHEMA,
             ProcessorContractConstants.KEY_CONTRACTS,
-            Properties.LEGACY_OBJECT_PROPERTIES,
-            Properties.LEGACY_OBJECT_CONSTRAINTS));
+            BlueLanguageConstants.LEGACY_OBJECT_PROPERTIES,
+            BlueLanguageConstants.LEGACY_OBJECT_CONSTRAINTS));
 
     private ProcessingDocumentValidator() {
     }
@@ -102,7 +102,7 @@ public final class ProcessingDocumentValidator {
             return node;
         }
         if (node.isObject()) {
-            JsonNode value = node.get(Properties.OBJECT_VALUE);
+            JsonNode value = node.get(BlueLanguageConstants.OBJECT_VALUE);
             if (value != null && (value.isObject() || value.isArray()) && node.size() == 1) {
                 return normalizeObjectValuedValueWrappers(value);
             }

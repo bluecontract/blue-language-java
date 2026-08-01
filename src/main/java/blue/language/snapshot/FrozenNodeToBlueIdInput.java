@@ -1,12 +1,16 @@
 package blue.language.snapshot;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Schema;
 import blue.language.utils.BlueIds;
-import blue.language.utils.BlueNumbers;
-import blue.language.utils.JsonPointer;
+import blue.language.model.value.BlueNumbers;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.NodeToBlueIdInput;
 import blue.language.utils.SchemaEnumCanonicalizer;
-import blue.language.utils.SchemaToMapListOrValue;
+import blue.language.model.SchemaWireForm;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -15,8 +19,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.*;
-import static blue.language.utils.SchemaPropertyConstants.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
+import static blue.language.model.wire.SchemaPropertyConstants.*;
 
 /**
  * Projects a {@link FrozenNode} into the exact map/list/scalar input consumed
@@ -151,7 +155,7 @@ public final class FrozenNodeToBlueIdInput {
                         SchemaEnumCanonicalizer.canonicalize(
                                 identitySchema.getEnum()));
             }
-            result.put(OBJECT_SCHEMA, SchemaToMapListOrValue.get(
+            result.put(OBJECT_SCHEMA, SchemaWireForm.get(
                     identitySchema,
                     child -> NodeToBlueIdInput.get(child)));
         }

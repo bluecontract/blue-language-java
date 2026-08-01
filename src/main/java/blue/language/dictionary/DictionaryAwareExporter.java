@@ -1,5 +1,7 @@
 package blue.language.dictionary;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 
@@ -11,7 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
 
 /**
  * Exports a defensive copy of a Blue document for a receiver's declared type

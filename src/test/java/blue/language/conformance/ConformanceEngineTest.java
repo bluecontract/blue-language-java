@@ -6,7 +6,7 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.utils.MinimizedOverlayBuilder;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
@@ -232,7 +232,7 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("European Basket") + "\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
                 "  items:\n" +
@@ -277,9 +277,9 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("European Catalog") + "\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID + "\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
                 "  sku1:\n" +
@@ -384,7 +384,7 @@ public class ConformanceEngineTest {
                 "name: Basket\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price"));
         nodeProvider.addSingleDocs(
@@ -393,7 +393,7 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Basket") + "\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR"));
         return nodeProvider;
@@ -405,9 +405,9 @@ public class ConformanceEngineTest {
                 "name: Catalog Type\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID + "\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price"));
         nodeProvider.addSingleDocs(
@@ -416,9 +416,9 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Catalog Type") + "\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID + "\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR"));
         return nodeProvider;

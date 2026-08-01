@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeTypeKey;
@@ -13,14 +15,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
-import static blue.language.utils.Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP;
-import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_NAME_TO_BLUE_ID_MAP;
+import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

@@ -1,7 +1,5 @@
-package blue.language.model.path;
+package blue.language.model;
 
-import blue.language.model.Node;
-import blue.language.model.NodeIdentities;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.List;

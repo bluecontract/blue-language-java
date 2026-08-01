@@ -1,5 +1,9 @@
 package blue.language.utils;
 
+import blue.language.model.wire.JsonPointer;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 
 import java.util.ArrayList;
@@ -7,12 +11,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.OBJECT_BLUE;
-import static blue.language.utils.Properties.OBJECT_CONTRACTS;
-import static blue.language.utils.Properties.OBJECT_ITEM_TYPE;
-import static blue.language.utils.Properties.OBJECT_KEY_TYPE;
-import static blue.language.utils.Properties.OBJECT_TYPE;
-import static blue.language.utils.Properties.OBJECT_VALUE_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_CONTRACTS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_ITEM_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_KEY_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE_TYPE;
 
 /**
  * Reads or writes structural children of a mutable node graph by RFC 6901

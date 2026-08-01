@@ -1,5 +1,7 @@
 package blue.language.snapshot;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
@@ -12,8 +14,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
-import static blue.language.utils.Properties.OBJECT_ITEMS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_ITEMS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 

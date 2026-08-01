@@ -1,6 +1,6 @@
 package blue.language.registry;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
@@ -41,12 +41,12 @@ public final class BlueCoreTypeRegistry {
     private static final String SHA_256_PREFIX = "sha256:";
     private static final Set<String> REQUIRED_KEYS = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList(
-                    Properties.TEXT_TYPE,
-                    Properties.INTEGER_TYPE,
-                    Properties.DOUBLE_TYPE,
-                    Properties.BOOLEAN_TYPE,
-                    Properties.DICTIONARY_TYPE,
-                    Properties.LIST_TYPE)));
+                    BlueLanguageConstants.TEXT_TYPE,
+                    BlueLanguageConstants.INTEGER_TYPE,
+                    BlueLanguageConstants.DOUBLE_TYPE,
+                    BlueLanguageConstants.BOOLEAN_TYPE,
+                    BlueLanguageConstants.DICTIONARY_TYPE,
+                    BlueLanguageConstants.LIST_TYPE)));
     /** Shared immutable verified core registry. */
     public static final BlueCoreTypeRegistry INSTANCE = new BlueCoreTypeRegistry();
 

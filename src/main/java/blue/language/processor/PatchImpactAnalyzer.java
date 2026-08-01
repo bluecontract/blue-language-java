@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.IncrementalValueResolutionRequest;
@@ -9,7 +9,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
 
 import java.util.ArrayList;
@@ -18,10 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 
 /**
  * Conservative dependency analysis for exact-replacement processor patches.
@@ -131,15 +131,15 @@ final class PatchImpactAnalyzer {
                 canonicalPlan.originScope(), path);
         boolean contractsChange = !processorManagedStateChange
                 && containsSegment(path, ProcessorContractConstants.KEY_CONTRACTS);
-        boolean typeChange = containsAnySegment(path, Properties.OBJECT_TYPE, Properties.OBJECT_ITEM_TYPE, Properties.OBJECT_KEY_TYPE, Properties.OBJECT_VALUE_TYPE);
-        boolean schemaChange = containsSegment(path, Properties.OBJECT_SCHEMA);
+        boolean typeChange = containsAnySegment(path, BlueLanguageConstants.OBJECT_TYPE, BlueLanguageConstants.OBJECT_ITEM_TYPE, BlueLanguageConstants.OBJECT_KEY_TYPE, BlueLanguageConstants.OBJECT_VALUE_TYPE);
+        boolean schemaChange = containsSegment(path, BlueLanguageConstants.OBJECT_SCHEMA);
         boolean referenceChange = containsAnySegment(
                 path,
-                Properties.OBJECT_BLUE_ID,
-                Properties.OBJECT_BLUE,
-                Properties.LIST_CONTROL_PREVIOUS,
-                Properties.LIST_CONTROL_POS);
-        boolean mergePolicyChange = containsSegment(path, Properties.OBJECT_MERGE_POLICY);
+                BlueLanguageConstants.OBJECT_BLUE_ID,
+                BlueLanguageConstants.OBJECT_BLUE,
+                BlueLanguageConstants.LIST_CONTROL_PREVIOUS,
+                BlueLanguageConstants.LIST_CONTROL_POS);
+        boolean mergePolicyChange = containsSegment(path, BlueLanguageConstants.OBJECT_MERGE_POLICY);
         boolean listIdentityChange = collectionChange
                 || patch.op() != JsonPatch.Op.REPLACE && path.hasArrayIndexLeaf();
         boolean safeBasicTypeDependency = typeDependency

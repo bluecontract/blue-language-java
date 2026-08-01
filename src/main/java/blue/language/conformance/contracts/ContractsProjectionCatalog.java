@@ -1,6 +1,6 @@
 package blue.language.conformance.contracts;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -100,7 +100,7 @@ final class ContractsProjectionCatalog {
             if (!catalog.isObject()
                     || catalog.size() != 2
                     || !"blue-contracts-projection-catalog/2.0".equals(
-                    catalog.path(Properties.OBJECT_SCHEMA).asText())) {
+                    catalog.path(BlueLanguageConstants.OBJECT_SCHEMA).asText())) {
                 throw new IllegalStateException("Invalid Contracts projection catalog envelope");
             }
             JsonNode entries = catalog.get("entries");
@@ -125,18 +125,18 @@ final class ContractsProjectionCatalog {
                 if (!fields.equals(
                         set("path", "definition"))
                         && !fields.equals(
-                        set("path", Properties.OBJECT_TYPE, "definition"))) {
+                        set("path", BlueLanguageConstants.OBJECT_TYPE, "definition"))) {
                     throw new IllegalStateException(source + " has unknown fields");
                 }
                 String path = requiredText(entry, "path", source);
-                if (entry.has(Properties.OBJECT_TYPE)) {
+                if (entry.has(BlueLanguageConstants.OBJECT_TYPE)) {
                     String type = requiredText(
-                            entry, Properties.OBJECT_TYPE, source);
+                            entry, BlueLanguageConstants.OBJECT_TYPE, source);
                     if (!set(
                             "scalar-or-node",
                             "integer",
                             "boolean",
-                            Properties.OBJECT_VALUE,
+                            BlueLanguageConstants.OBJECT_VALUE,
                             "sequence-or-value")
                             .contains(type)) {
                         throw new IllegalStateException(

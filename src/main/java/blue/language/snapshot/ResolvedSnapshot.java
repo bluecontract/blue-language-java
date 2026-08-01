@@ -1,13 +1,13 @@
 package blue.language.snapshot;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.merge.ResolutionProvenance;
 import blue.language.merge.ResolutionSnapshot;
 import blue.language.merge.VerifiedReferenceResolution;
 import blue.language.model.Node;
 import blue.language.patching.BluePatch;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.Map;
 import java.util.Objects;
@@ -91,7 +91,7 @@ public final class ResolvedSnapshot {
             throw new IllegalArgumentException("Snapshot canonical root must be strict canonical FrozenNode.");
         }
         String expectedBlueId = this.canonicalRoot.blueId();
-        if (!expectedBlueId.equals(Objects.requireNonNull(blueId, Properties.OBJECT_BLUE_ID))) {
+        if (!expectedBlueId.equals(Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID))) {
             throw new IllegalArgumentException("Snapshot blueId must match canonical root blueId.");
         }
         this.resolutionProvenance = Objects.requireNonNull(

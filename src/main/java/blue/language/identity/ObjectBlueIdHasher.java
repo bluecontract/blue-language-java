@@ -1,15 +1,17 @@
 package blue.language.identity;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Function;
 
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
-import static blue.language.utils.Properties.OBJECT_DESCRIPTION;
-import static blue.language.utils.Properties.OBJECT_NAME;
-import static blue.language.utils.Properties.OBJECT_VALUE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_DESCRIPTION;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_NAME;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE;
 
 /** Hashes one normalized Blue object from ordered field contributions. */
 public final class ObjectBlueIdHasher {

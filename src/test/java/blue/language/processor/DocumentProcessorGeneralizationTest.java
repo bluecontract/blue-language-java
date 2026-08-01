@@ -14,7 +14,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToBlueIdInput;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -395,9 +395,9 @@ class DocumentProcessorGeneralizationTest {
                 "name: Untyped Book\n" +
                 "orders:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID + "\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Open Order") + "\n" +
                 "  order-a:\n" +
@@ -434,7 +434,7 @@ class DocumentProcessorGeneralizationTest {
                 "name: Untyped List\n" +
                 "entries:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Open Item") + "\n" +
                 "  items:\n" +
@@ -604,11 +604,11 @@ class DocumentProcessorGeneralizationTest {
                                                 + "orders:\n"
                                                 + "  type:\n"
                                                 + "    blueId: "
-                                                + Properties.DICTIONARY_TYPE_BLUE_ID
+                                                + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID
                                                 + "\n"
                                                 + "  keyType:\n"
                                                 + "    blueId: "
-                                                + Properties.TEXT_TYPE_BLUE_ID
+                                                + BlueLanguageConstants.TEXT_TYPE_BLUE_ID
                                                 + "\n"
                                                 + "  valueType:\n"
                                                 + "    blueId: "
@@ -635,7 +635,7 @@ class DocumentProcessorGeneralizationTest {
                                                 + "entries:\n"
                                                 + "  type:\n"
                                                 + "    blueId: "
-                                                + Properties.LIST_TYPE_BLUE_ID
+                                                + BlueLanguageConstants.LIST_TYPE_BLUE_ID
                                                 + "\n"
                                                 + "  itemType:\n"
                                                 + "    blueId: "

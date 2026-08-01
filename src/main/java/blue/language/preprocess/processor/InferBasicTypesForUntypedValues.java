@@ -1,5 +1,7 @@
 package blue.language.preprocess.processor;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.preprocess.TransformationProcessor;
 import blue.language.utils.NodeTransformer;
@@ -7,7 +9,7 @@ import blue.language.utils.NodeTransformer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 
 /**
  * Assigns canonical core type references to untyped scalar values according to

@@ -65,6 +65,16 @@ class LanguageCoreArchitectureTest {
                     "preprocessWithDefaultBlue",
                     "preprocessWithoutDefaultBlue",
                     "DEFAULT_BLUE_BLUE_ID"));
+    private static final List<String> REMOVED_UTILS_FACADES =
+            Collections.unmodifiableList(Arrays.asList(
+                    "blue.language.utils.BlueNumbers",
+                    "blue.language.utils.JsonPointer",
+                    "blue.language.utils.NodePathAccessor",
+                    "blue.language.utils.NodeToMapListOrValue",
+                    "blue.language.utils.Properties",
+                    "blue.language.utils.SchemaPropertyConstants",
+                    "blue.language.utils.SchemaToMapListOrValue",
+                    "blue.language.utils.TypeUtils"));
 
     @Test
     void shouldKeepLanguageCoreIndependentFromRuntimeAndLegacyAggregate()
@@ -91,6 +101,34 @@ class LanguageCoreArchitectureTest {
                 "Language-core source must not import Contracts runtime, "
                         + "conformance, or the legacy Blue aggregate: "
                         + violations);
+    }
+
+    @Test
+    void shouldKeepConformanceApiIndependentFromFixtureImplementations()
+            throws IOException {
+        // given
+        List<SourceFile> sources = readProductionSources();
+        List<String> violations = new ArrayList<>();
+
+        // when
+        for (SourceFile source : sources) {
+            if (!source.packageName.equals(
+                    "blue.language.conformance.api")) {
+                continue;
+            }
+            for (String importedType : source.imports) {
+                if (importedType.startsWith(
+                        "blue.language.conformance.contracts.")) {
+                    violations.add(
+                            source.relativePath + " -> " + importedType);
+                }
+            }
+        }
+
+        // then
+        assertTrue(violations.isEmpty(),
+                "Conformance API must not depend on fixture "
+                        + "implementations: " + violations);
     }
 
     @Test
@@ -244,6 +282,26 @@ class LanguageCoreArchitectureTest {
                     .matcher(source.codeWithoutComments).find()) {
                 violations.add(
                         source.relativePath + " -> extend(...)");
+            }
+            for (String importedType : source.imports) {
+                for (String removedFacade : REMOVED_UTILS_FACADES) {
+                    if (importedType.equals(removedFacade)
+                            || importedType.startsWith(
+                            removedFacade + ".")) {
+                        violations.add(
+                                source.relativePath + " -> "
+                                        + importedType);
+                    }
+                }
+            }
+        }
+        for (String removedFacade : REMOVED_UTILS_FACADES) {
+            Path facadePath = PRODUCTION_ROOT.resolve(
+                    removedFacade.replace('.', '/') + ".java");
+            if (Files.exists(facadePath)) {
+                violations.add(
+                        PRODUCTION_ROOT.relativize(facadePath)
+                                .toString().replace('\\', '/'));
             }
         }
 
@@ -464,9 +522,6 @@ class LanguageCoreArchitectureTest {
                         "blue.language.matching",
                         "blue.language.matching.internal",
                         "blue.language.merge",
-                        "blue.language.model",
-                        "blue.language.model.path",
-                        "blue.language.model.wire",
                         "blue.language.patching",
                         "blue.language.preprocess",
                         "blue.language.preprocess.processor",
@@ -474,8 +529,7 @@ class LanguageCoreArchitectureTest {
                         "blue.language.registry",
                         "blue.language.resolve",
                         "blue.language.snapshot",
-                        "blue.language.utils",
-                        "blue.language.utils.limits")));
+                        "blue.language.utils")));
     }
 
     private static final class SourceFile {

@@ -13,7 +13,7 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -268,7 +268,7 @@ class ScopeSourceProjectionTest {
                 .name("Combined Embedded Child Type")
                 .description("Combined embedded description")
                 .properties("entries", new Node()
-                        .type(reference(Properties.LIST_TYPE_BLUE_ID))
+                        .type(reference(BlueLanguageConstants.LIST_TYPE_BLUE_ID))
                         .mergePolicy("positional")
                         .items(Arrays.asList(
                                 new Node()
@@ -292,7 +292,7 @@ class ScopeSourceProjectionTest {
         provider.addListAndItsItems(inheritedItems);
         Node selectedChild = new Node()
                 .properties("entries", new Node()
-                        .type(reference(Properties.LIST_TYPE_BLUE_ID))
+                        .type(reference(BlueLanguageConstants.LIST_TYPE_BLUE_ID))
                         .mergePolicy("positional")
                         .items(Arrays.asList(
                         new Node().previousBlueId(previousBlueId),
@@ -566,7 +566,7 @@ class ScopeSourceProjectionTest {
                 .position(0)
                 .properties("$replace", reference(referencedBlueId));
         Node controlledList = new Node()
-                .type(reference(Properties.LIST_TYPE_BLUE_ID))
+                .type(reference(BlueLanguageConstants.LIST_TYPE_BLUE_ID))
                 .items(Arrays.asList(
                         new Node().previousBlueId(previousBlueId),
                         replacement,
@@ -595,7 +595,7 @@ class ScopeSourceProjectionTest {
                 .sameResolvedStructure(captured.frozenResolvedRoot()));
         assertTrue(projectedSource.property("propertyReference").isReferenceOnly());
         assertTrue(projectedSource.getContracts().property("referenceEvidence").isReferenceOnly());
-        assertEquals(Properties.TEXT_TYPE_BLUE_ID,
+        assertEquals(BlueLanguageConstants.TEXT_TYPE_BLUE_ID,
                 projectedSource.property("preprocessed").getType().getReferenceBlueId());
         assertNotNull(projectedList);
         assertEquals(3, projectedList.getItems().size());

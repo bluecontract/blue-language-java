@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.mapping.NodeToObjectConverter;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.Map;
 import java.util.Set;

@@ -1,7 +1,7 @@
 package blue.language.conformance.contracts;
 
 import blue.language.processor.util.ProcessorContractConstants;
-import blue.language.utils.SchemaPropertyConstants;
+import blue.language.model.wire.SchemaPropertyConstants;
 
 /**
  * Stable vocabulary of the bundled Contracts 1.0 conformance fixture format.

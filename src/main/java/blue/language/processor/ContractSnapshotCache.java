@@ -4,7 +4,7 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.Nodes;
 
 import java.util.Iterator;

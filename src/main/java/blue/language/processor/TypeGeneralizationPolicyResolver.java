@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
@@ -8,8 +8,8 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.NodePathAccessor;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.NodePath;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -108,7 +108,7 @@ final class TypeGeneralizationPolicyResolver {
             return null;
         }
         try {
-            return NodePathAccessor.getNode(root, pointer);
+            return NodePath.getNode(root, pointer);
         } catch (RuntimeException ex) {
             return null;
         }
@@ -214,10 +214,10 @@ final class TypeGeneralizationPolicyResolver {
         }
 
         private static boolean isMetadataField(String field) {
-            return Properties.OBJECT_TYPE.equals(field)
-                    || Properties.OBJECT_ITEM_TYPE.equals(field)
-                    || Properties.OBJECT_KEY_TYPE.equals(field)
-                    || Properties.OBJECT_VALUE_TYPE.equals(field);
+            return BlueLanguageConstants.OBJECT_TYPE.equals(field)
+                    || BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)
+                    || BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)
+                    || BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field);
         }
     }
 
@@ -239,7 +239,7 @@ final class TypeGeneralizationPolicyResolver {
         if (value != null) {
             return String.valueOf(value);
         }
-        Node nested = field(field, Properties.OBJECT_BLUE_ID);
+        Node nested = field(field, BlueLanguageConstants.OBJECT_BLUE_ID);
         Object nestedValue = nested != null ? nested.getValue() : null;
         return nestedValue != null ? String.valueOf(nestedValue) : null;
     }

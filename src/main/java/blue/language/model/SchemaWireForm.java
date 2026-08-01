@@ -1,7 +1,6 @@
-package blue.language.model.wire;
+package blue.language.model;
 
-import blue.language.model.Node;
-import blue.language.model.Schema;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

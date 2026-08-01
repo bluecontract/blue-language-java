@@ -38,7 +38,7 @@ import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.CanonicalIdentityInputBuilder;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.MinimizedOverlayBuilder;
 import blue.language.utils.NodePathEditor;
 import blue.language.utils.NodeToBlueIdInput;

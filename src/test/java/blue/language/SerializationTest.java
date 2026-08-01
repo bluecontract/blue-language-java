@@ -1,5 +1,7 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
@@ -14,7 +16,7 @@ import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -22,7 +24,7 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class SerializationTest {
@@ -34,7 +36,7 @@ public class SerializationTest {
 
         // when
         Node node = new Blue().yamlToNode(yaml);
-        Object result = NodeToMapListOrValue.get(node);
+        Object result = NodeWireForm.get(node);
         Map<String, Object> resultMap = (Map<String, Object>) result;
 
         // then
@@ -54,7 +56,7 @@ public class SerializationTest {
 
         // when
         Node node = new Blue().yamlToNode(yaml);
-        Object result = NodeToMapListOrValue.get(node);
+        Object result = NodeWireForm.get(node);
         Map<String, Object> resultMap = (Map<String, Object>) result;
 
         // then
@@ -79,7 +81,7 @@ public class SerializationTest {
 
         // when
         Node node = new Blue().yamlToNode(yaml);
-        Object result = NodeToMapListOrValue.get(node);
+        Object result = NodeWireForm.get(node);
         Map<String, Object> resultMap = (Map<String, Object>) result;
         Map<String, Object> typeMap =
                 (Map<String, Object>) resultMap.get("type");
@@ -110,7 +112,7 @@ public class SerializationTest {
         // when
         Node node = new Blue().yamlToNode(yaml);
         Node aNode = node.getProperties().get("a");
-        Object result = NodeToMapListOrValue.get(node);
+        Object result = NodeWireForm.get(node);
         Map<String, Object> resultMap = (Map<String, Object>) result;
         Map<String, Object> aMap =
                 (Map<String, Object>) resultMap.get("a");
@@ -137,7 +139,7 @@ public class SerializationTest {
 
         // when
         Node node = new Blue().yamlToNode(yaml);
-        Object result = NodeToMapListOrValue.get(node);
+        Object result = NodeWireForm.get(node);
         Map<String, Object> resultMap = (Map<String, Object>) result;
 
         // then
@@ -160,7 +162,7 @@ public class SerializationTest {
 
         // when
         Node node = new Blue().yamlToNode(yaml);
-        Object result = NodeToMapListOrValue.get(node);
+        Object result = NodeWireForm.get(node);
         Map<String, Object> resultMap = (Map<String, Object>) result;
 
         // then
@@ -188,7 +190,7 @@ public class SerializationTest {
 
         // when
         Node node = new Blue().yamlToNode(yaml);
-        Object result = NodeToMapListOrValue.get(node);
+        Object result = NodeWireForm.get(node);
         Map<String, Object> resultMap = (Map<String, Object>) result;
         List<Map<String, Object>> items =
                 (List<Map<String, Object>>) resultMap.get("items");

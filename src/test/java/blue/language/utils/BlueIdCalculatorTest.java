@@ -1,5 +1,9 @@
 package blue.language.utils;
 
+import blue.language.model.NodeWireForm;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.model.Schema;
@@ -13,7 +17,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static blue.language.processor.FailureCapture.captureFailure;
@@ -430,7 +434,7 @@ public class BlueIdCalculatorTest {
                 String inferredDoubleBlueId = BlueIdCalculator.calculateBlueId(
                                 YAML_MAPPER.readValue(inferredDouble, Node.class));
                 Map<String, Object> serialized =
-                                (Map<String, Object>) NodeToMapListOrValue.get(computed);
+                                (Map<String, Object>) NodeWireForm.get(computed);
                 Map<String, Object> num =
                                 (Map<String, Object>) serialized.get("num");
 

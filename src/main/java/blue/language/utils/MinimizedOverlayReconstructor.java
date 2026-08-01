@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 
@@ -156,7 +158,7 @@ final class MinimizedOverlayReconstructor {
             Node inherited) {
         List<Node> inheritedItems = inherited.getItems();
         int inheritedSize = inheritedItems.size();
-        boolean appendOnly = Properties.LIST_MERGE_POLICY_APPEND_ONLY.equals(
+        boolean appendOnly = BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY.equals(
                 resolved.getMergePolicy() != null
                         ? resolved.getMergePolicy()
                         : inherited.getMergePolicy());

@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.JsonPointer;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

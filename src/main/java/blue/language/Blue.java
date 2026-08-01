@@ -1,5 +1,9 @@
 package blue.language;
 
+import blue.language.model.NodeWireForm;
+
+import blue.language.model.wire.JsonPointer;
+
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
@@ -13,7 +17,7 @@ import blue.language.api.LanguageMatchingService;
 import blue.language.api.LanguageRuntimeAccess;
 import blue.language.api.LanguageRuntimeServices;
 import blue.language.api.WeightedLruCache;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.mapping.BlueMapper;
 import blue.language.mapping.NodeToObjectConverter;
@@ -1477,7 +1481,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @return YAML text
      */
     public String nodeToYaml(Node node) {
-        return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
+        return YAML_MAPPER.writeValueAsString(NodeWireForm.get(node));
     }
 
     /**
@@ -1488,7 +1492,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @return YAML text
      */
     public String nodeToYaml(Node node, ExportContext exportContext) {
-        return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(exportNode(node, exportContext)));
+        return YAML_MAPPER.writeValueAsString(NodeWireForm.get(exportNode(node, exportContext)));
     }
 
     /**
@@ -1498,7 +1502,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @return simplified YAML text
      */
     public String nodeToSimpleYaml(Node node) {
-        return YAML_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node, NodeToMapListOrValue.Strategy.SIMPLE));
+        return YAML_MAPPER.writeValueAsString(NodeWireForm.get(node, NodeWireForm.Strategy.SIMPLE));
     }
 
     /**
@@ -1508,7 +1512,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @return JSON text
      */
     public String nodeToJson(Node node) {
-        return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
+        return JSON_MAPPER.writeValueAsString(NodeWireForm.get(node));
     }
 
     /**
@@ -1519,7 +1523,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @return JSON text
      */
     public String nodeToJson(Node node, ExportContext exportContext) {
-        return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(exportNode(node, exportContext)));
+        return JSON_MAPPER.writeValueAsString(NodeWireForm.get(exportNode(node, exportContext)));
     }
 
     /**
@@ -1529,7 +1533,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
      * @return simplified JSON text
      */
     public String nodeToSimpleJson(Node node) {
-        return JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node, NodeToMapListOrValue.Strategy.SIMPLE));
+        return JSON_MAPPER.writeValueAsString(NodeWireForm.get(node, NodeWireForm.Strategy.SIMPLE));
     }
 
     /**
@@ -3255,7 +3259,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         }
         if (node.getContracts() != null) {
             List<String> contractsPath = new ArrayList<>(path);
-            contractsPath.add(Properties.OBJECT_CONTRACTS);
+            contractsPath.add(BlueLanguageConstants.OBJECT_CONTRACTS);
             paths.add(JsonPointer.toPointer(contractsPath));
             collectProcessorContractPaths(node.getContracts(), contractsPath, paths);
         }

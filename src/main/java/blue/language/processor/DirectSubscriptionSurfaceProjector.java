@@ -4,7 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;

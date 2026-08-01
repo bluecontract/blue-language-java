@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.model.JsonPatch;
@@ -20,7 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;

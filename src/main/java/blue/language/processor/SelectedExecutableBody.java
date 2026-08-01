@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
@@ -122,7 +122,7 @@ public final class SelectedExecutableBody {
                 FrozenNode.fromNode(
                         new Node().blueId(
                                 requireText(
-                                        blueId, Properties.OBJECT_BLUE_ID))));
+                                        blueId, BlueLanguageConstants.OBJECT_BLUE_ID))));
     }
 
     /**

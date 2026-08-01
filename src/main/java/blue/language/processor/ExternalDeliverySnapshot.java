@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.processor.util.PointerUtils;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;

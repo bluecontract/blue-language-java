@@ -1,7 +1,7 @@
 package blue.language.mapping;
 
 import blue.language.model.Node;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.lang.reflect.*;
 import java.math.BigInteger;
@@ -72,10 +72,10 @@ public class MapConverter implements Converter<Map<?, ?>> {
         Type valueType = typeArguments[1];
 
         if (node.getName() != null) {
-            result.put(Properties.OBJECT_NAME, node.getName());
+            result.put(BlueLanguageConstants.OBJECT_NAME, node.getName());
         }
         if (node.getDescription() != null) {
-            result.put(Properties.OBJECT_DESCRIPTION, node.getDescription());
+            result.put(BlueLanguageConstants.OBJECT_DESCRIPTION, node.getDescription());
         }
 
         for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
@@ -90,7 +90,7 @@ public class MapConverter implements Converter<Map<?, ?>> {
     private Object convertKey(String key, Type keyType) {
         Class<?> keyClass = getRawType(keyType);
         Node keyNode = new Node().value(key);
-        keyNode.type(new Node().blueId(Properties.TEXT_TYPE_BLUE_ID));
+        keyNode.type(new Node().blueId(BlueLanguageConstants.TEXT_TYPE_BLUE_ID));
         return ValueConverter.convertValue(keyNode, keyClass);
     }
 

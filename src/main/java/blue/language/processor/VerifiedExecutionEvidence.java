@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;

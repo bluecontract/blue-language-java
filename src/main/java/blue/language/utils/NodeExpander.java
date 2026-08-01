@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.limits.Limits;
@@ -9,7 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
 
 /**
  * Expands non-core BlueId references in a mutable node graph through a
@@ -110,19 +112,19 @@ public final class NodeExpander {
 
     private void expandSemanticChildren(Node currentNode, Limits currentLimits) {
         if (currentNode.getType() != null) {
-            expandNode(currentNode.getType(), currentLimits, Properties.OBJECT_TYPE, true);
+            expandNode(currentNode.getType(), currentLimits, BlueLanguageConstants.OBJECT_TYPE, true);
         }
         if (currentNode.getItemType() != null) {
-            expandNode(currentNode.getItemType(), currentLimits, Properties.OBJECT_ITEM_TYPE, true);
+            expandNode(currentNode.getItemType(), currentLimits, BlueLanguageConstants.OBJECT_ITEM_TYPE, true);
         }
         if (currentNode.getKeyType() != null) {
-            expandNode(currentNode.getKeyType(), currentLimits, Properties.OBJECT_KEY_TYPE, true);
+            expandNode(currentNode.getKeyType(), currentLimits, BlueLanguageConstants.OBJECT_KEY_TYPE, true);
         }
         if (currentNode.getValueType() != null) {
-            expandNode(currentNode.getValueType(), currentLimits, Properties.OBJECT_VALUE_TYPE, true);
+            expandNode(currentNode.getValueType(), currentLimits, BlueLanguageConstants.OBJECT_VALUE_TYPE, true);
         }
         if (currentNode.getContracts() != null) {
-            expandNode(currentNode.getContracts(), currentLimits, Properties.OBJECT_CONTRACTS, false);
+            expandNode(currentNode.getContracts(), currentLimits, BlueLanguageConstants.OBJECT_CONTRACTS, false);
         }
 
         Map<String, Node> properties = currentNode.getProperties();

@@ -1,28 +1,30 @@
 package blue.language.preprocess;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static blue.language.utils.SchemaPropertyConstants.KEY_ENUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MULTIPLE_OF;
-import static blue.language.utils.SchemaPropertyConstants.KEY_REQUIRED;
-import static blue.language.utils.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MULTIPLE_OF;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_REQUIRED;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
 
 /** Validates the reserved preprocessing directive independently of fetching. */
 public final class DirectiveValidator {
@@ -36,7 +38,7 @@ public final class DirectiveValidator {
 
     /** Validates the portable shape of the resolved root directive. */
     public void validateDirective(Node directive) {
-        rejectAnyBlue(directive, Properties.OBJECT_BLUE);
+        rejectAnyBlue(directive, BlueLanguageConstants.OBJECT_BLUE);
         if (directive.getBlueId() != null
                 || directive.getValue() != null
                 || directive.getItems() != null
@@ -60,8 +62,8 @@ public final class DirectiveValidator {
             return;
         }
         for (String key : directive.getProperties().keySet()) {
-            if (!Properties.BLUE_DIRECTIVE_IMPORTS.equals(key)
-                    && !Properties.BLUE_DIRECTIVE_TRANSFORMATIONS
+            if (!BlueLanguageConstants.BLUE_DIRECTIVE_IMPORTS.equals(key)
+                    && !BlueLanguageConstants.BLUE_DIRECTIVE_TRANSFORMATIONS
                     .equals(key)) {
                 throw new IllegalArgumentException(
                         "Reserved \"blue\" directive field is unsupported: "
@@ -147,7 +149,7 @@ public final class DirectiveValidator {
         if (node.getProperties() != null) {
             for (Map.Entry<String, Node> entry
                     : node.getProperties().entrySet()) {
-                if (Properties.OBJECT_BLUE.equals(entry.getKey())) {
+                if (BlueLanguageConstants.OBJECT_BLUE.equals(entry.getKey())) {
                     throw nestedBlue(path + "/blue");
                 }
                 rejectChildBlue(entry.getValue(),

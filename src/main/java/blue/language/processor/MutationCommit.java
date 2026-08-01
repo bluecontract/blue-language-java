@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -9,7 +9,7 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.NodePathEditor;
 
 import java.util.ArrayList;
@@ -193,15 +193,15 @@ final class MutationCommit {
             return;
         }
         String leaf = segments.get(segments.size() - 1);
-        if (Properties.OBJECT_TYPE.equals(leaf)) {
+        if (BlueLanguageConstants.OBJECT_TYPE.equals(leaf)) {
             parent.type((Node) null);
-        } else if (Properties.OBJECT_ITEM_TYPE.equals(leaf)) {
+        } else if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(leaf)) {
             parent.itemType((Node) null);
-        } else if (Properties.OBJECT_KEY_TYPE.equals(leaf)) {
+        } else if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(leaf)) {
             parent.keyType((Node) null);
-        } else if (Properties.OBJECT_VALUE_TYPE.equals(leaf)) {
+        } else if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(leaf)) {
             parent.valueType((Node) null);
-        } else if (Properties.OBJECT_BLUE.equals(leaf)) {
+        } else if (BlueLanguageConstants.OBJECT_BLUE.equals(leaf)) {
             parent.blue(null);
         } else if (ProcessorContractConstants.KEY_CONTRACTS.equals(leaf)) {
             parent.contracts(null);

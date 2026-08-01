@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.LanguageRuntimeAccess;
 import blue.language.model.Node;
@@ -56,7 +56,7 @@ public final class SemanticOutputBoundary {
         this.workSession =
                 Objects.requireNonNull(workSession, "workSession");
         this.languageRuntime = Objects.requireNonNull(
-                languageRuntime, Properties.OBJECT_BLUE);
+                languageRuntime, BlueLanguageConstants.OBJECT_BLUE);
         this.snapshotManager = snapshotManager;
         this.semantic = Objects.requireNonNull(semantic, "semantic");
         this.admissionMemo =
@@ -583,7 +583,7 @@ public final class SemanticOutputBoundary {
                                 input, "input")
                                 .clone()),
                 Objects.requireNonNull(
-                        blueId, Properties.OBJECT_BLUE_ID),
+                        blueId, BlueLanguageConstants.OBJECT_BLUE_ID),
                 admissionMemo));
     }
 

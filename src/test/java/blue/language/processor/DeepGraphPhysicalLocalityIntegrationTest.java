@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.model.wire.JsonPointer;
+
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
@@ -1946,7 +1948,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                 String pointer) {
             Node current = root;
             for (String segment :
-                    blue.language.utils.JsonPointer.split(
+                    blue.language.model.wire.JsonPointer.split(
                             pointer)) {
                 if ("contracts".equals(segment)) {
                     current = current.getContracts();

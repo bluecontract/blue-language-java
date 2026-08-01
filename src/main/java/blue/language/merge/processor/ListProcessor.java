@@ -1,16 +1,18 @@
 package blue.language.merge.processor;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.*;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import blue.language.utils.Types;
 
 import static blue.language.utils.Types.isSubtype;
-import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
-import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_POSITIONAL;
 
 /**
  * Merges List item-type metadata and merge policy while enforcing subtype
@@ -43,7 +45,7 @@ public class ListProcessor implements MergingProcessor {
             boolean isSubtype = isSubtype(sourceItemType, targetItemType, nodeProvider);
             if (!isSubtype) {
                 String errorMessage = String.format("The source item type '%s' is not a subtype of the target item type '%s'.",
-                        NodeToMapListOrValue.get(sourceItemType), NodeToMapListOrValue.get(targetItemType));
+                        NodeWireForm.get(sourceItemType), NodeWireForm.get(targetItemType));
                 throw new IllegalArgumentException(errorMessage);
             }
             target.itemType(sourceItemType);
@@ -53,7 +55,7 @@ public class ListProcessor implements MergingProcessor {
             for (Node item : source.getItems()) {
                 if (item.getType() != null && !isSubtype(item.getType(), target.getItemType(), nodeProvider)) {
                     String errorMessage = String.format("Item of type '%s' is not a subtype of the list's item type '%s'.",
-                            NodeToMapListOrValue.get(item.getType()), NodeToMapListOrValue.get(target.getItemType()));
+                            NodeWireForm.get(item.getType()), NodeWireForm.get(target.getItemType()));
                     throw new IllegalArgumentException(errorMessage);
                 }
             }

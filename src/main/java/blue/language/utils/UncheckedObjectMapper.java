@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.value.BlueNumbers;
+
 import blue.language.model.*;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;

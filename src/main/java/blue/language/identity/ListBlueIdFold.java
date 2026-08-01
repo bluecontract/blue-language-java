@@ -1,5 +1,7 @@
 package blue.language.identity;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -12,9 +14,9 @@ import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_KEY;
 import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
 import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_KEY;
 import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_VALUE;
-import static blue.language.utils.Properties.LIST_CONTROL_EMPTY;
-import static blue.language.utils.Properties.LIST_CONTROL_PREVIOUS;
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_EMPTY;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_PREVIOUS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
 
 /** Implements the one normative recursive-prefix Blue list identity fold. */
 public final class ListBlueIdFold {

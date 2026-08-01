@@ -3,7 +3,7 @@ package blue.language.provider;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -41,11 +41,11 @@ class CachingNodeProviderTest {
 
         // then
         assertEquals(
-                NodeToMapListOrValue.get(node),
-                NodeToMapListOrValue.get(result1.get(0)));
+                NodeWireForm.get(node),
+                NodeWireForm.get(result1.get(0)));
         assertEquals(
-                NodeToMapListOrValue.get(node),
-                NodeToMapListOrValue.get(result2.get(0)));
+                NodeWireForm.get(node),
+                NodeWireForm.get(result2.get(0)));
         assertNotSame(result1.get(0), result2.get(0));
         verify(mockDelegate, times(1)).fetchResultByBlueId(blueId);
     }
@@ -181,8 +181,8 @@ class CachingNodeProviderTest {
         assertEquals("DictOfAToB", result1.get(0).getName());
         assertNotNull(result2);
         assertEquals(
-                NodeToMapListOrValue.get(result1.get(0)),
-                NodeToMapListOrValue.get(result2.get(0)));
+                NodeWireForm.get(result1.get(0)),
+                NodeWireForm.get(result2.get(0)));
         assertNotSame(result1.get(0), result2.get(0));
         assertTrue(currentSize > 0);
         assertTrue(cacheSize > 0);

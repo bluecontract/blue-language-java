@@ -1,5 +1,7 @@
 package blue.language.mapping;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import java.lang.reflect.Modifier;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,7 +20,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static blue.language.utils.Properties.OBJECT_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE;
 
 /**
  * Immutable per-mapper registry of Java object factories and interface

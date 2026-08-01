@@ -1,10 +1,10 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.snapshot.FrozenNode;
 import blue.language.processor.model.JsonPatch;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -207,7 +207,7 @@ final class BatchPatchResult {
 
         GeneralizationMetadataWrite(String path, FrozenNode value) {
             this.path = Objects.requireNonNull(path, "path");
-            this.value = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
+            this.value = Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
         }
 
         String path() {

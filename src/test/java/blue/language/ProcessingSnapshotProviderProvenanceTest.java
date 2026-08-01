@@ -1,5 +1,7 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
@@ -50,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
 
 class ProcessingSnapshotProviderProvenanceTest {
 

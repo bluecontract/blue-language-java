@@ -1,13 +1,15 @@
 package blue.language.preprocess;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
 import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
 
 import java.util.Optional;
 
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
-import static blue.language.utils.Properties.OBJECT_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE;
 
 /**
  * Immutable registry for explicitly authored, already-released transform IDs.

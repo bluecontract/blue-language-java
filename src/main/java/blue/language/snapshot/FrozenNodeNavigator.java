@@ -1,13 +1,15 @@
 package blue.language.snapshot;
 
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.model.wire.JsonPointer;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.OBJECT_CONTRACTS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_CONTRACTS;
 
 /** Performs read-only path and child navigation over immutable nodes. */
 public final class FrozenNodeNavigator {

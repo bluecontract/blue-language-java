@@ -15,7 +15,7 @@ import blue.language.provider.NodeProvider;
 
 import blue.language.model.Schema;
 import blue.language.model.Node;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
@@ -23,9 +23,9 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;

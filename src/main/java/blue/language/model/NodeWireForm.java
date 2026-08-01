@@ -1,6 +1,5 @@
-package blue.language.model.wire;
+package blue.language.model;
 
-import blue.language.model.Node;
 import blue.language.model.value.BlueNumbers;
 
 import java.math.BigDecimal;
@@ -11,8 +10,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static blue.language.model.wire.BlueLanguageConstants.*;
-import static blue.language.model.wire.NodeWireForm.Strategy.OFFICIAL;
-import static blue.language.model.wire.NodeWireForm.Strategy.SIMPLE;
+import static blue.language.model.NodeWireForm.Strategy.OFFICIAL;
+import static blue.language.model.NodeWireForm.Strategy.SIMPLE;
 
 /** Model-owned conversion from mutable nodes to Blue wire values. */
 public final class NodeWireForm {

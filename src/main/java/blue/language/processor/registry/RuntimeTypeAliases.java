@@ -1,6 +1,6 @@
 package blue.language.processor.registry;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -27,7 +27,7 @@ public final class RuntimeTypeAliases {
 
     /** Core and runtime aliases exposed by the aggregate compatibility API. */
     public static final Map<String, String> AGGREGATE_NAME_TO_BLUE_ID =
-            combine(Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP,
+            combine(BlueLanguageConstants.CORE_TYPE_NAME_TO_BLUE_ID_MAP,
                     NAME_TO_BLUE_ID);
 
     /** Core and runtime names indexed by BlueId for the aggregate API. */

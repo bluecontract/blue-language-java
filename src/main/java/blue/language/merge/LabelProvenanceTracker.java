@@ -2,8 +2,8 @@ package blue.language.merge;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.Properties;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.limits.Limits;
 
 import java.util.ArrayDeque;
@@ -17,9 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
-import static blue.language.utils.Properties.CORE_TYPES;
-import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPES;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_REPLACE;
 
 /**
  * Tracks whether authored labels refine declarations or conflict with fixed
@@ -202,7 +202,7 @@ final class LabelProvenanceTracker {
             }
         }
         scanDirectListChildLabelTasks(source, basePath, scan, pending);
-        LabelPath contractsPath = basePath.child(Properties.OBJECT_CONTRACTS);
+        LabelPath contractsPath = basePath.child(BlueLanguageConstants.OBJECT_CONTRACTS);
         if (source.getContracts() != null
                 && hasLabelPathAtOrBelow(scan.relevantLabelPaths, contractsPath)) {
             pending.push(LabelScanTask.source(source.getContracts(), contractsPath));
@@ -454,7 +454,7 @@ final class LabelProvenanceTracker {
                 labelPaths.add(path);
             }
             collectAuthoredLabelPath(
-                    source.getContracts(), Properties.OBJECT_CONTRACTS, path,
+                    source.getContracts(), BlueLanguageConstants.OBJECT_CONTRACTS, path,
                     limits, labelPaths, activeNodes);
             if (source.getItems() != null) {
                 collectAuthoredListLabelPaths(
@@ -565,7 +565,7 @@ final class LabelProvenanceTracker {
             if (current == null) {
                 return null;
             }
-            if (Properties.OBJECT_CONTRACTS.equals(segment) && current.getContracts() != null) {
+            if (BlueLanguageConstants.OBJECT_CONTRACTS.equals(segment) && current.getContracts() != null) {
                 current = current.getContracts();
                 continue;
             }
@@ -606,8 +606,8 @@ final class LabelProvenanceTracker {
         if (inheritedDeclarationOnly) {
             return;
         }
-        validateFixedValueLabel(Properties.OBJECT_NAME, inherited.getName(), source.getName());
-        validateFixedValueLabel(Properties.OBJECT_DESCRIPTION, inherited.getDescription(), source.getDescription());
+        validateFixedValueLabel(BlueLanguageConstants.OBJECT_NAME, inherited.getName(), source.getName());
+        validateFixedValueLabel(BlueLanguageConstants.OBJECT_DESCRIPTION, inherited.getDescription(), source.getDescription());
     }
 
     private void validateFixedValueLabel(String label, String inherited, String source) {

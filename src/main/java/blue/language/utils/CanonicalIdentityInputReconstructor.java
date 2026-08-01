@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 
@@ -11,7 +13,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_REPLACE;
 
 /** Reconstructs unique direct identity input from resolution and provenance. */
 final class CanonicalIdentityInputReconstructor {

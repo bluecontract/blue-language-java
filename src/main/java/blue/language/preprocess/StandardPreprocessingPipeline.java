@@ -1,11 +1,13 @@
 package blue.language.preprocess;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
 import blue.language.preprocess.processor.NormalizeListPlaceholders;
 import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.Nodes;
 
 import java.util.Collections;
@@ -13,20 +15,20 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static blue.language.utils.SchemaPropertyConstants.KEY_ENUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MULTIPLE_OF;
-import static blue.language.utils.SchemaPropertyConstants.KEY_REQUIRED;
-import static blue.language.utils.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MULTIPLE_OF;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_REQUIRED;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
 
 /**
  * Mandatory Blue Language 1.0 preprocessing baseline.
@@ -98,19 +100,19 @@ public final class StandardPreprocessingPipeline {
                             + path);
         }
         validatePayloadShape(node, path);
-        validateTypePosition(node.getType(), child(path, Properties.OBJECT_TYPE));
-        validateTypePosition(node.getItemType(), child(path, Properties.OBJECT_ITEM_TYPE));
-        validateTypePosition(node.getKeyType(), child(path, Properties.OBJECT_KEY_TYPE));
-        validateTypePosition(node.getValueType(), child(path, Properties.OBJECT_VALUE_TYPE));
-        validateNode(node.getType(), child(path, Properties.OBJECT_TYPE), visited);
-        validateNode(node.getItemType(), child(path, Properties.OBJECT_ITEM_TYPE), visited);
-        validateNode(node.getKeyType(), child(path, Properties.OBJECT_KEY_TYPE), visited);
-        validateNode(node.getValueType(), child(path, Properties.OBJECT_VALUE_TYPE), visited);
-        validateNode(node.getContracts(), child(path, Properties.OBJECT_CONTRACTS), visited);
-        validateSchema(node.getSchema(), child(path, Properties.OBJECT_SCHEMA), visited);
+        validateTypePosition(node.getType(), child(path, BlueLanguageConstants.OBJECT_TYPE));
+        validateTypePosition(node.getItemType(), child(path, BlueLanguageConstants.OBJECT_ITEM_TYPE));
+        validateTypePosition(node.getKeyType(), child(path, BlueLanguageConstants.OBJECT_KEY_TYPE));
+        validateTypePosition(node.getValueType(), child(path, BlueLanguageConstants.OBJECT_VALUE_TYPE));
+        validateNode(node.getType(), child(path, BlueLanguageConstants.OBJECT_TYPE), visited);
+        validateNode(node.getItemType(), child(path, BlueLanguageConstants.OBJECT_ITEM_TYPE), visited);
+        validateNode(node.getKeyType(), child(path, BlueLanguageConstants.OBJECT_KEY_TYPE), visited);
+        validateNode(node.getValueType(), child(path, BlueLanguageConstants.OBJECT_VALUE_TYPE), visited);
+        validateNode(node.getContracts(), child(path, BlueLanguageConstants.OBJECT_CONTRACTS), visited);
+        validateSchema(node.getSchema(), child(path, BlueLanguageConstants.OBJECT_SCHEMA), visited);
         if (node.getProperties() != null) {
             for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
-                if (Properties.OBJECT_BLUE.equals(entry.getKey())) {
+                if (BlueLanguageConstants.OBJECT_BLUE.equals(entry.getKey())) {
                     throw new IllegalArgumentException(
                             "Reserved \"blue\" is valid only on the root Source Document. Path: "
                                     + child(path, entry.getKey()));
@@ -159,7 +161,7 @@ public final class StandardPreprocessingPipeline {
         }
         if (node.getProperties() != null
                 && node.getProperties().containsKey(
-                Properties.LIST_CONTROL_EMPTY)) {
+                BlueLanguageConstants.LIST_CONTROL_EMPTY)) {
             Nodes.validateEmptyPlaceholder(node, path);
         }
     }
@@ -207,16 +209,16 @@ public final class StandardPreprocessingPipeline {
                     "Reserved \"blue\" directive was introduced by preprocessing at "
                             + path);
         }
-        rejectBlue(node.getType(), child(path, Properties.OBJECT_TYPE), visited);
-        rejectBlue(node.getItemType(), child(path, Properties.OBJECT_ITEM_TYPE), visited);
-        rejectBlue(node.getKeyType(), child(path, Properties.OBJECT_KEY_TYPE), visited);
-        rejectBlue(node.getValueType(), child(path, Properties.OBJECT_VALUE_TYPE), visited);
-        rejectBlue(node.getContracts(), child(path, Properties.OBJECT_CONTRACTS), visited);
+        rejectBlue(node.getType(), child(path, BlueLanguageConstants.OBJECT_TYPE), visited);
+        rejectBlue(node.getItemType(), child(path, BlueLanguageConstants.OBJECT_ITEM_TYPE), visited);
+        rejectBlue(node.getKeyType(), child(path, BlueLanguageConstants.OBJECT_KEY_TYPE), visited);
+        rejectBlue(node.getValueType(), child(path, BlueLanguageConstants.OBJECT_VALUE_TYPE), visited);
+        rejectBlue(node.getContracts(), child(path, BlueLanguageConstants.OBJECT_CONTRACTS), visited);
         rejectBlueInSchema(node.getSchema(),
-                child(path, Properties.OBJECT_SCHEMA), visited);
+                child(path, BlueLanguageConstants.OBJECT_SCHEMA), visited);
         if (node.getProperties() != null) {
             for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
-                if (Properties.OBJECT_BLUE.equals(entry.getKey())) {
+                if (BlueLanguageConstants.OBJECT_BLUE.equals(entry.getKey())) {
                     throw new IllegalArgumentException(
                             "Reserved \"blue\" directive was introduced by preprocessing at "
                                     + child(path, entry.getKey()));

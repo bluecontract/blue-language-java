@@ -7,7 +7,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.NodePathEditor;
 
 import java.util.ArrayList;

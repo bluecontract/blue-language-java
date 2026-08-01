@@ -1,10 +1,12 @@
 package blue.language.patching;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 
 import java.util.Objects;
 
-import static blue.language.utils.Properties.OBJECT_VALUE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE;
 
 /** Immutable, defensively copied patch value for Language API callers. */
 public final class ImmutableBluePatch implements BluePatch {

@@ -1,6 +1,6 @@
 package blue.language.conformance;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.provider.NodeProvider;
 import blue.language.merge.Merger;
@@ -9,7 +9,7 @@ import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.utils.CanonicalIdentityInputBuilder;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.MinimizedOverlayBuilder;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.DeferredReferencePathLimits;
@@ -129,16 +129,16 @@ final class FrozenConformancePlanner {
             }
             applyGeneralizationStep(canonical, step);
             switch (step.metadataField()) {
-                case Properties.OBJECT_TYPE:
+                case BlueLanguageConstants.OBJECT_TYPE:
                     type = step.parentType();
                     break;
-                case Properties.OBJECT_ITEM_TYPE:
+                case BlueLanguageConstants.OBJECT_ITEM_TYPE:
                     itemType = step.parentType();
                     break;
-                case Properties.OBJECT_KEY_TYPE:
+                case BlueLanguageConstants.OBJECT_KEY_TYPE:
                     keyType = step.parentType();
                     break;
-                case Properties.OBJECT_VALUE_TYPE:
+                case BlueLanguageConstants.OBJECT_VALUE_TYPE:
                     valueType = step.parentType();
                     break;
                 default:
@@ -191,35 +191,35 @@ final class FrozenConformancePlanner {
                                                       FrozenNode itemTypeNode,
                                                       FrozenNode keyTypeNode,
                                                       FrozenNode valueTypeNode) {
-        GeneralizationStep type = generalizationStep(Properties.OBJECT_TYPE, typeNode);
+        GeneralizationStep type = generalizationStep(BlueLanguageConstants.OBJECT_TYPE, typeNode);
         if (type != null) {
             return type;
         }
-        GeneralizationStep itemType = generalizationStep(Properties.OBJECT_ITEM_TYPE, itemTypeNode);
+        GeneralizationStep itemType = generalizationStep(BlueLanguageConstants.OBJECT_ITEM_TYPE, itemTypeNode);
         if (itemType != null) {
             return itemType;
         }
-        GeneralizationStep keyType = generalizationStep(Properties.OBJECT_KEY_TYPE, keyTypeNode);
+        GeneralizationStep keyType = generalizationStep(BlueLanguageConstants.OBJECT_KEY_TYPE, keyTypeNode);
         if (keyType != null) {
             return keyType;
         }
-        return generalizationStep(Properties.OBJECT_VALUE_TYPE, valueTypeNode);
+        return generalizationStep(BlueLanguageConstants.OBJECT_VALUE_TYPE, valueTypeNode);
     }
 
     private GeneralizationStep nextGeneralizationStep(FrozenNode node) {
-        GeneralizationStep type = generalizationStep(Properties.OBJECT_TYPE, node.getType());
+        GeneralizationStep type = generalizationStep(BlueLanguageConstants.OBJECT_TYPE, node.getType());
         if (type != null) {
             return type;
         }
-        GeneralizationStep itemType = generalizationStep(Properties.OBJECT_ITEM_TYPE, node.getItemType());
+        GeneralizationStep itemType = generalizationStep(BlueLanguageConstants.OBJECT_ITEM_TYPE, node.getItemType());
         if (itemType != null) {
             return itemType;
         }
-        GeneralizationStep keyType = generalizationStep(Properties.OBJECT_KEY_TYPE, node.getKeyType());
+        GeneralizationStep keyType = generalizationStep(BlueLanguageConstants.OBJECT_KEY_TYPE, node.getKeyType());
         if (keyType != null) {
             return keyType;
         }
-        return generalizationStep(Properties.OBJECT_VALUE_TYPE, node.getValueType());
+        return generalizationStep(BlueLanguageConstants.OBJECT_VALUE_TYPE, node.getValueType());
     }
 
     private GeneralizationStep generalizationStep(String metadataField, FrozenNode typeNode) {
@@ -230,16 +230,16 @@ final class FrozenConformancePlanner {
     private void applyGeneralizationStep(Node canonical, GeneralizationStep step) {
         Node parentType = new Node().blueId(typeReferenceBlueId(step.parentType()));
         switch (step.metadataField()) {
-            case Properties.OBJECT_TYPE:
+            case BlueLanguageConstants.OBJECT_TYPE:
                 canonical.type(parentType);
                 return;
-            case Properties.OBJECT_ITEM_TYPE:
+            case BlueLanguageConstants.OBJECT_ITEM_TYPE:
                 canonical.itemType(parentType);
                 return;
-            case Properties.OBJECT_KEY_TYPE:
+            case BlueLanguageConstants.OBJECT_KEY_TYPE:
                 canonical.keyType(parentType);
                 return;
-            case Properties.OBJECT_VALUE_TYPE:
+            case BlueLanguageConstants.OBJECT_VALUE_TYPE:
                 canonical.valueType(parentType);
                 return;
             default:

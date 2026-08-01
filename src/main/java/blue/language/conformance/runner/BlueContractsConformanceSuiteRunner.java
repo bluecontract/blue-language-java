@@ -1,15 +1,16 @@
-package blue.language.conformance.api;
+package blue.language.conformance.runner;
 
+import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.conformance.contracts.ContractsConformanceSuite;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Compatibility forwarding facade for the Contracts conformance suite.
+ * Public runner entry point for the Contracts conformance suite.
  *
- * @deprecated use {@link ContractsConformanceSuite}; this type remains only
- *             as a source migration aid and owns no fixture implementation
+ * <p>The runner owns no fixture implementation. It keeps orchestration above
+ * the report-only API package and delegates execution to the closed Contracts
+ * fixture suite.</p>
  */
-@Deprecated
 public final class BlueContractsConformanceSuiteRunner {
 
     private BlueContractsConformanceSuiteRunner() {

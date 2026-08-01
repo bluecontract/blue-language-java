@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 
@@ -8,7 +10,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static blue.language.utils.BlueIdCalculator.calculateUncheckedBlueId;
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 
 /**
  * Compatibility helpers for nominal Blue type identity and subtype traversal.

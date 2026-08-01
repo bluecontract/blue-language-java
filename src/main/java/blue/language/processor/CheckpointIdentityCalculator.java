@@ -3,8 +3,8 @@ package blue.language.processor;
 import blue.language.api.LanguageRuntimeAccess;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.Properties;
+import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
 
@@ -98,7 +98,7 @@ final class CheckpointIdentityCalculator {
         if (node == null) {
             return null;
         }
-        Object canonical = NodeToMapListOrValue.get(
+        Object canonical = NodeWireForm.get(
                 normalizeSignatureNode(node.clone()));
         try {
             String json = UncheckedObjectMapper.JSON_MAPPER
@@ -139,10 +139,10 @@ final class CheckpointIdentityCalculator {
     }
 
     private static boolean isTypeReferenceKey(String key) {
-        return Properties.OBJECT_TYPE.equals(key)
-                || Properties.OBJECT_ITEM_TYPE.equals(key)
-                || Properties.OBJECT_KEY_TYPE.equals(key)
-                || Properties.OBJECT_VALUE_TYPE.equals(key);
+        return BlueLanguageConstants.OBJECT_TYPE.equals(key)
+                || BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(key)
+                || BlueLanguageConstants.OBJECT_KEY_TYPE.equals(key)
+                || BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(key);
     }
 
     private static Node normalizeSignatureReference(Node reference) {

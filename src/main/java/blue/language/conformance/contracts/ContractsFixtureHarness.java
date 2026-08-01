@@ -1,6 +1,6 @@
 package blue.language.conformance.contracts;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueLanguageRuntime;
@@ -47,7 +47,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -454,7 +454,7 @@ final class ContractsFixtureHarness {
             value.put("details", record.details());
             if (record.node() != null) {
                 value.put("node",
-                        NodeToMapListOrValue.get(record.node()));
+                        NodeWireForm.get(record.node()));
             }
             records.add(value);
         }
@@ -813,7 +813,7 @@ final class ContractsFixtureHarness {
         ObjectNode rootJson = declaredRoot;
         if (previousRoot != null) {
             rootJson = (ObjectNode) UncheckedObjectMapper.JSON_MAPPER.valueToTree(
-                    NodeToMapListOrValue.get(previousRoot));
+                    NodeWireForm.get(previousRoot));
             materializeRetryContracts(rootJson, declaredRoot);
         }
         if (variant != null) {
@@ -1020,8 +1020,8 @@ final class ContractsFixtureHarness {
             } else {
                 checkpoint = contracts.putObject(
                         ProcessorContractConstants.KEY_CHECKPOINT);
-                checkpoint.putObject(Properties.OBJECT_TYPE).put(
-                        Properties.OBJECT_BLUE_ID,
+                checkpoint.putObject(BlueLanguageConstants.OBJECT_TYPE).put(
+                        BlueLanguageConstants.OBJECT_BLUE_ID,
                         registryId("ChannelEventCheckpoint"));
             }
             ObjectNode entries =
@@ -1033,10 +1033,10 @@ final class ContractsFixtureHarness {
                     entries.putObject(
                             delivery.snapshot.channelKey());
             stored.putObject("domain").put(
-                    Properties.OBJECT_BLUE_ID,
+                    BlueLanguageConstants.OBJECT_BLUE_ID,
                     delivery.snapshot.checkpointDomainBlueId());
             stored.putObject("subject").put(
-                    Properties.OBJECT_BLUE_ID,
+                    BlueLanguageConstants.OBJECT_BLUE_ID,
                     delivery.snapshot.checkpointSubjectBlueId());
         }
     }
@@ -1083,7 +1083,7 @@ final class ContractsFixtureHarness {
                 ((ObjectNode) stored)
                         .putObject("domain")
                         .put(
-                                Properties.OBJECT_BLUE_ID,
+                                BlueLanguageConstants.OBJECT_BLUE_ID,
                                 delivery
                                         .checkpointDomainBlueId);
             }
@@ -1137,7 +1137,7 @@ final class ContractsFixtureHarness {
                 if (!isPureReference(value)) {
                     continue;
                 }
-                String reference = value.path(Properties.OBJECT_BLUE_ID).asText();
+                String reference = value.path(BlueLanguageConstants.OBJECT_BLUE_ID).asText();
                 if (reference.equals(
                         BlueIdCalculator.calculateBlueId(readNode(exact)))) {
                     ((ObjectNode) currentContracts).set(
@@ -1167,7 +1167,7 @@ final class ContractsFixtureHarness {
         return value != null
                 && value.isObject()
                 && value.size() == 1
-                && value.path(Properties.OBJECT_BLUE_ID).isTextual();
+                && value.path(BlueLanguageConstants.OBJECT_BLUE_ID).isTextual();
     }
 
     private static boolean matchesResolvedMaterialization(
@@ -1181,7 +1181,7 @@ final class ContractsFixtureHarness {
         }
         if (declared.isValueNode()) {
             JsonNode resolvedValue =
-                    actual.isObject() ? actual.get(Properties.OBJECT_VALUE) : null;
+                    actual.isObject() ? actual.get(BlueLanguageConstants.OBJECT_VALUE) : null;
             return resolvedValue != null
                     && matchesResolvedMaterialization(
                     resolvedValue, declared);
@@ -1190,7 +1190,7 @@ final class ContractsFixtureHarness {
             JsonNode actualItems = actual.isArray()
                     ? actual
                     : actual.isObject()
-                    ? actual.get(Properties.OBJECT_ITEMS)
+                    ? actual.get(BlueLanguageConstants.OBJECT_ITEMS)
                     : null;
             if (actualItems == null
                     || !actualItems.isArray()
@@ -1420,12 +1420,12 @@ final class ContractsFixtureHarness {
                 contracts.putObject(
                         ProcessorContractConstants
                                 .KEY_INITIALIZED);
-        initialized.putObject(Properties.OBJECT_TYPE)
-                .put(Properties.OBJECT_BLUE_ID,
+        initialized.putObject(BlueLanguageConstants.OBJECT_TYPE)
+                .put(BlueLanguageConstants.OBJECT_BLUE_ID,
                         RuntimeBlueIds
                                 .PROCESSING_INITIALIZED_MARKER);
         initialized.putObject("document")
-                .put(Properties.OBJECT_BLUE_ID, preInitializationBlueId);
+                .put(BlueLanguageConstants.OBJECT_BLUE_ID, preInitializationBlueId);
     }
 
     private ExternalChannelDependencySnapshot.ChannelEntry
@@ -1438,8 +1438,8 @@ final class ContractsFixtureHarness {
             return null;
         }
         String typeBlueId =
-                contract.path(Properties.OBJECT_TYPE)
-                        .path(Properties.OBJECT_BLUE_ID)
+                contract.path(BlueLanguageConstants.OBJECT_TYPE)
+                        .path(BlueLanguageConstants.OBJECT_BLUE_ID)
                         .asText(null);
         String role;
         if (registry.isSubtype(
@@ -1570,8 +1570,8 @@ final class ContractsFixtureHarness {
             Map.Entry<String, JsonNode> entry = entries.next();
             JsonNode handler = entry.getValue();
             if (!MockTypeBlueIds.MOCK_HANDLER.equals(
-                    handler.path(Properties.OBJECT_TYPE).path(
-                            Properties.OBJECT_BLUE_ID).asText(null))
+                    handler.path(BlueLanguageConstants.OBJECT_TYPE).path(
+                            BlueLanguageConstants.OBJECT_BLUE_ID).asText(null))
                     || !channelKey.equals(
                     handler.path("channel").asText(null))) {
                 continue;
@@ -1608,7 +1608,7 @@ final class ContractsFixtureHarness {
                 ? result.get(field)
                 : null;
         if (value != null && value.isObject()) {
-            value = value.get(Properties.OBJECT_ITEMS);
+            value = value.get(BlueLanguageConstants.OBJECT_ITEMS);
         }
         return value != null
                 && value.isArray()
@@ -1758,8 +1758,8 @@ final class ContractsFixtureHarness {
         handler.put("channel", channelKey);
         if (eventTypeBlueId != null) {
             handler.putObject(ContractsFixtureConstants.Field.EVENT)
-                    .putObject(Properties.OBJECT_TYPE)
-                    .put(Properties.OBJECT_BLUE_ID, eventTypeBlueId);
+                    .putObject(BlueLanguageConstants.OBJECT_TYPE)
+                    .put(BlueLanguageConstants.OBJECT_BLUE_ID, eventTypeBlueId);
         }
         if (result != null) {
             handler.set(ContractsFixtureConstants.Field.RESULT, result.deepCopy());
@@ -1776,7 +1776,7 @@ final class ContractsFixtureHarness {
                     "Fixture runtime contract key collision: " + key);
         }
         ObjectNode contract = contracts.putObject(key);
-        contract.putObject(Properties.OBJECT_TYPE).put(Properties.OBJECT_BLUE_ID, typeBlueId);
+        contract.putObject(BlueLanguageConstants.OBJECT_TYPE).put(BlueLanguageConstants.OBJECT_BLUE_ID, typeBlueId);
         return contract;
     }
 
@@ -1796,7 +1796,7 @@ final class ContractsFixtureHarness {
                 for (int index = 0; index < count; index++) {
                     String suffix = String.format("%0" + width + "d", index);
                     object.set(builder.path("keyPrefix").asText() + suffix,
-                            builder.get(Properties.OBJECT_VALUE).deepCopy());
+                            builder.get(BlueLanguageConstants.OBJECT_VALUE).deepCopy());
                 }
                 value = object;
             } else if ("generated-list".equals(kind)) {
@@ -1919,7 +1919,7 @@ final class ContractsFixtureHarness {
             return;
         }
         if (node.isObject()) {
-            JsonNode type = node.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID);
+            JsonNode type = node.path(BlueLanguageConstants.OBJECT_TYPE).path(BlueLanguageConstants.OBJECT_BLUE_ID);
             if (MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL.equals(type.asText(null))) {
                 ((ObjectNode) node).put(ContractsFixtureConstants.Field.ACCEPT, accepted);
             }
@@ -1987,7 +1987,7 @@ final class ContractsFixtureHarness {
 
     private static void promoteFixtureScalarToObject(
             ObjectNode root) {
-        JsonNode scalar = root.remove(Properties.OBJECT_VALUE);
+        JsonNode scalar = root.remove(BlueLanguageConstants.OBJECT_VALUE);
         if (scalar == null) {
             return;
         }
@@ -2003,7 +2003,7 @@ final class ContractsFixtureHarness {
         }
         for (JsonNode contract : contracts) {
             if (!MockTypeBlueIds.MOCK_HANDLER.equals(
-                    contract.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID).asText(null))) {
+                    contract.path(BlueLanguageConstants.OBJECT_TYPE).path(BlueLanguageConstants.OBJECT_BLUE_ID).asText(null))) {
                 continue;
             }
             JsonNode patches =
@@ -2032,7 +2032,7 @@ final class ContractsFixtureHarness {
          * private field and patch-path rewrite instead of admitting a mixed
          * payload Node.
          */
-        if (root.has(Properties.OBJECT_VALUE)
+        if (root.has(BlueLanguageConstants.OBJECT_VALUE)
                 && hasAuthoredObjectField(root)) {
             promoteFixtureScalarToObject(root);
         }
@@ -2074,9 +2074,9 @@ final class ContractsFixtureHarness {
         if (embeddedPaths != null) {
             projection.put(
                     "result.document.contracts.embedded.paths",
-                    NodeToMapListOrValue.get(
+                    NodeWireForm.get(
                             embeddedPaths,
-                            NodeToMapListOrValue.Strategy.SIMPLE));
+                            NodeWireForm.Strategy.SIMPLE));
         }
         ProcessorDiagnostic diagnostic = result.diagnostic();
         if (diagnostic != null) {
@@ -2679,10 +2679,10 @@ final class ContractsFixtureHarness {
             DocumentProcessingResult result) {
         Map<String, Object> value = new LinkedHashMap<>();
         value.put("status", result.status().wireValue());
-        value.put("document", NodeToMapListOrValue.get(result.document()));
+        value.put("document", NodeWireForm.get(result.document()));
         List<Object> events = new ArrayList<>();
         for (Node event : result.events()) {
-            events.add(NodeToMapListOrValue.get(event));
+            events.add(NodeWireForm.get(event));
         }
         value.put(ContractsFixtureConstants.Field.EVENTS, events);
         value.put(ContractsFixtureConstants.Field.TOTAL_GAS, result.totalGas());
@@ -2771,7 +2771,7 @@ final class ContractsFixtureHarness {
                 Map.Entry<String, JsonNode> entry = fields.next();
                 JsonNode contract = entry.getValue();
                 if (!MockTypeBlueIds.MOCK_HANDLER.equals(
-                        contract.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID).asText(null))) {
+                        contract.path(BlueLanguageConstants.OBJECT_TYPE).path(BlueLanguageConstants.OBJECT_BLUE_ID).asText(null))) {
                     continue;
                 }
                 if (!delivery.snapshot.channelKey().equals(
@@ -2817,8 +2817,8 @@ final class ContractsFixtureHarness {
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> field = fields.next();
             String key = field.getKey();
-            if (Properties.OBJECT_BLUE_ID.equals(key)
-                    || Properties.OBJECT_TYPE.equals(key)
+            if (BlueLanguageConstants.OBJECT_BLUE_ID.equals(key)
+                    || BlueLanguageConstants.OBJECT_TYPE.equals(key)
                     || ProcessorContractConstants.KEY_CONTRACTS.equals(key)) {
                 throw new IllegalArgumentException(
                         "acceptanceStateVariants may change only mutable "
@@ -3180,20 +3180,20 @@ final class ContractsFixtureHarness {
     }
 
     private static boolean isReservedBlueField(String field) {
-        return Properties.OBJECT_NAME.equals(field)
-                || Properties.OBJECT_DESCRIPTION.equals(field)
-                || Properties.OBJECT_TYPE.equals(field)
-                || Properties.OBJECT_ITEM_TYPE.equals(field)
-                || Properties.OBJECT_KEY_TYPE.equals(field)
-                || Properties.OBJECT_VALUE_TYPE.equals(field)
-                || Properties.OBJECT_MERGE_POLICY.equals(field)
-                || Properties.OBJECT_VALUE.equals(field)
-                || Properties.OBJECT_BLUE_ID.equals(field)
-                || Properties.OBJECT_ITEMS.equals(field)
-                || Properties.OBJECT_BLUE.equals(field)
-                || Properties.LIST_CONTROL_PREVIOUS.equals(field)
-                || Properties.LIST_CONTROL_POS.equals(field)
-                || Properties.OBJECT_SCHEMA.equals(field)
+        return BlueLanguageConstants.OBJECT_NAME.equals(field)
+                || BlueLanguageConstants.OBJECT_DESCRIPTION.equals(field)
+                || BlueLanguageConstants.OBJECT_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_MERGE_POLICY.equals(field)
+                || BlueLanguageConstants.OBJECT_VALUE.equals(field)
+                || BlueLanguageConstants.OBJECT_BLUE_ID.equals(field)
+                || BlueLanguageConstants.OBJECT_ITEMS.equals(field)
+                || BlueLanguageConstants.OBJECT_BLUE.equals(field)
+                || BlueLanguageConstants.LIST_CONTROL_PREVIOUS.equals(field)
+                || BlueLanguageConstants.LIST_CONTROL_POS.equals(field)
+                || BlueLanguageConstants.OBJECT_SCHEMA.equals(field)
                 || ProcessorContractConstants.KEY_CONTRACTS.equals(field);
     }
 
@@ -3430,7 +3430,7 @@ final class ContractsFixtureHarness {
             JsonNode value = values.next();
             if (value.isObject()
                     && MockTypeBlueIds.MOCK_HANDLER.equals(
-                    value.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID).asText(null))) {
+                    value.path(BlueLanguageConstants.OBJECT_TYPE).path(BlueLanguageConstants.OBJECT_BLUE_ID).asText(null))) {
                 return (ObjectNode) value;
             }
         }
@@ -3539,7 +3539,7 @@ final class ContractsFixtureHarness {
             }
             for (JsonNode entry : entries) {
                 String key = entry.path("key").asText();
-                String blueId = entry.path(Properties.OBJECT_BLUE_ID).asText();
+                String blueId = entry.path(BlueLanguageConstants.OBJECT_BLUE_ID).asText();
                 String path = entry.path("path").asText();
                 Node node = readNode(readYaml(root + path));
                 String calculated = BlueIdCalculator.calculateBlueId(node);
@@ -3644,7 +3644,7 @@ final class ContractsFixtureHarness {
                         "Generalization controls require a valid candidate "
                                 + "from the declared ancestor chain");
             }
-            if (root.has(Properties.OBJECT_TYPE)) {
+            if (root.has(BlueLanguageConstants.OBJECT_TYPE)) {
                 throw new IllegalArgumentException(
                         "Generalization fixture root already declares a type");
             }
@@ -3669,8 +3669,8 @@ final class ContractsFixtureHarness {
                 orderedBlueIds.put(
                         candidate, blueIds.get(candidate));
             }
-            root.putObject(Properties.OBJECT_TYPE).put(
-                    Properties.OBJECT_BLUE_ID,
+            root.putObject(BlueLanguageConstants.OBJECT_TYPE).put(
+                    BlueLanguageConstants.OBJECT_BLUE_ID,
                     orderedBlueIds.get(candidates.get(0)));
             return new FixtureGeneralization(
                     candidates,
@@ -4041,7 +4041,7 @@ final class ContractsFixtureHarness {
             while (fields.hasNext()) {
                 Map.Entry<String, JsonNode> entry = fields.next();
                 JsonNode contract = entry.getValue();
-                String typeBlueId = contract.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID).asText(null);
+                String typeBlueId = contract.path(BlueLanguageConstants.OBJECT_TYPE).path(BlueLanguageConstants.OBJECT_BLUE_ID).asText(null);
                 if (!registry.isSubtype(typeBlueId, registryId("ExternalChannel"))) {
                     continue;
                 }
@@ -4251,7 +4251,7 @@ final class ContractsFixtureHarness {
                         fields.next();
                 JsonNode contract = entry.getValue();
                 String typeBlueId =
-                        contract.path(Properties.OBJECT_TYPE).path(Properties.OBJECT_BLUE_ID)
+                        contract.path(BlueLanguageConstants.OBJECT_TYPE).path(BlueLanguageConstants.OBJECT_BLUE_ID)
                                 .asText(null);
                 if (!registry.isSubtype(
                         typeBlueId,

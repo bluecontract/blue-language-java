@@ -2,7 +2,7 @@ package blue.language.conformance.contracts;
 
 import blue.language.conformance.api.BlueContractsFixtureCategory;
 import blue.language.processor.GasScheduleConstants;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Arrays;
@@ -29,7 +29,7 @@ final class ClosedContractsFixtureValidator {
             Pattern.compile("^C-[A-Z0-9]+-[0-9]{2}$");
 
     private static final Set<String> TOP = set(
-            Properties.OBJECT_SCHEMA,
+            BlueLanguageConstants.OBJECT_SCHEMA,
             ContractsFixtureConstants.Field.ID,
             ContractsFixtureConstants.Field.VECTORS,
             ContractsFixtureConstants.Field.CATEGORY,
@@ -64,7 +64,7 @@ final class ClosedContractsFixtureValidator {
             ContractsFixtureConstants.Field.APPEND);
     private static final Set<String> BUILDER = set(
             "kind", "target", "memberCount", "itemCount", "codePointCount",
-            "keyPrefix", Properties.OBJECT_VALUE, "item", "text");
+            "keyPrefix", BlueLanguageConstants.OBJECT_VALUE, "item", "text");
     private static final Set<String> PROVIDER = set(
             "mode", "semanticDemandsOnly", "nodes", "transientUnavailableAt");
     private static final Set<String> RUNTIME = set(
@@ -181,7 +181,7 @@ final class ClosedContractsFixtureValidator {
         requireFields(
                 fixture,
                 "$",
-                Properties.OBJECT_SCHEMA,
+                BlueLanguageConstants.OBJECT_SCHEMA,
                 ContractsFixtureConstants.Field.ID,
                 ContractsFixtureConstants.Field.VECTORS,
                 ContractsFixtureConstants.Field.CATEGORY,
@@ -191,7 +191,7 @@ final class ClosedContractsFixtureValidator {
         requireExactText(
                 fixture,
                 "$",
-                Properties.OBJECT_SCHEMA,
+                BlueLanguageConstants.OBJECT_SCHEMA,
                 "blue-contracts-fixture/1.0");
         requirePatternText(
                 fixture, "$", ContractsFixtureConstants.Field.ID, ID);
@@ -379,7 +379,7 @@ final class ClosedContractsFixtureValidator {
                 set("generated-object", "repeated-text", "generated-list"));
         requireText(builder, path, "target");
         if ("generated-object".equals(kind)) {
-            requireFields(builder, path, "memberCount", "keyPrefix", Properties.OBJECT_VALUE);
+            requireFields(builder, path, "memberCount", "keyPrefix", BlueLanguageConstants.OBJECT_VALUE);
             requireNonNegative(builder.get("memberCount"), path + ".memberCount");
             requireText(builder, path, "keyPrefix");
         } else if ("generated-list".equals(kind)) {

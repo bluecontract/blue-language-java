@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
@@ -15,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.utils.Properties.DICTIONARY_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1234,13 +1236,13 @@ public class NodeTypeMatcherTest {
                 "participantsState:\n" +
                 "  type: Dictionary\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Activation State"));
 
         Node matching = new Node().name("Container").properties("participantsState",
                 new Node().type(new Node().blueId(DICTIONARY_TYPE_BLUE_ID))
-                        .keyType(new Node().blueId(Properties.TEXT_TYPE_BLUE_ID))
+                        .keyType(new Node().blueId(BlueLanguageConstants.TEXT_TYPE_BLUE_ID))
                         .properties("alice",
                                 new Node()
                                         .blueId(nodeProvider.getBlueIdByName("Activation State"))
@@ -1271,10 +1273,10 @@ public class NodeTypeMatcherTest {
                 .type(new Node().blueId(
                         DICTIONARY_TYPE_BLUE_ID))
                 .keyType(new Node().blueId(
-                        Properties.BOOLEAN_TYPE_BLUE_ID));
+                        BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID));
         Node canonical = booleanDictionary.clone()
                 .properties(
-                        Properties.BOOLEAN_TEXT_TRUE,
+                        BlueLanguageConstants.BOOLEAN_TEXT_TRUE,
                         new Node().value("accepted"));
         Node noncanonical = booleanDictionary.clone()
                 .properties(

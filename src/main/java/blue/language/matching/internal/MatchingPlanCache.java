@@ -1,5 +1,7 @@
 package blue.language.matching.internal;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.api.BlueCachePolicy;
 import blue.language.snapshot.FrozenNode;
 
@@ -8,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import static blue.language.utils.Properties.OBJECT_VALUE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE;
 
 /**
  * Matcher-owned, access-ordered cache partitioned by semantic result region.

@@ -1,6 +1,6 @@
 package blue.language.merge;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
@@ -29,7 +29,7 @@ import java.util.Set;
 
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
 
 /**
  * Concrete Blue Language merge engine.
@@ -414,12 +414,12 @@ final class ResolutionEngine implements NodeResolver {
                 mergeChildren(target, children, limits);
             }
 
-            if (source.getContracts() != null && limits.shouldMergePathSegment(Properties.OBJECT_CONTRACTS, source.getContracts())) {
+            if (source.getContracts() != null && limits.shouldMergePathSegment(BlueLanguageConstants.OBJECT_CONTRACTS, source.getContracts())) {
                 boolean referenceExpansionAllowed = limits == Limits.NO_LIMITS
                         || limits.shouldExpandPathSegment(
-                                Properties.OBJECT_CONTRACTS, source.getContracts());
-                limits.enterPathSegment(Properties.OBJECT_CONTRACTS, source.getContracts());
-                enterValidationPath(Properties.OBJECT_CONTRACTS, referenceExpansionAllowed);
+                                BlueLanguageConstants.OBJECT_CONTRACTS, source.getContracts());
+                limits.enterPathSegment(BlueLanguageConstants.OBJECT_CONTRACTS, source.getContracts());
+                enterValidationPath(BlueLanguageConstants.OBJECT_CONTRACTS, referenceExpansionAllowed);
                 try {
                     mergeContractsWithContribution(target, source.getContracts(), limits);
                 } finally {
@@ -427,7 +427,7 @@ final class ResolutionEngine implements NodeResolver {
                     limits.exitPathSegment();
                 }
             } else if (source.getContracts() != null) {
-                markIncomplete(Properties.OBJECT_CONTRACTS);
+                markIncomplete(BlueLanguageConstants.OBJECT_CONTRACTS);
             }
 
             Map<String, Node> properties = source.getProperties();

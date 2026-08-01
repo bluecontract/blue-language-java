@@ -5,8 +5,8 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.Properties;
+import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.Types;
 
 import java.math.BigDecimal;
@@ -82,7 +82,7 @@ public class DictionaryProcessor implements MergingProcessor {
             boolean isSubtype = isSubtype(sourceKeyType, targetKeyType, nodeProvider);
             if (!isSubtype) {
                 String errorMessage = String.format("The source key type '%s' is not a subtype of the target key type '%s'.",
-                        NodeToMapListOrValue.get(sourceKeyType), NodeToMapListOrValue.get(targetKeyType));
+                        NodeWireForm.get(sourceKeyType), NodeWireForm.get(targetKeyType));
                 throw new IllegalArgumentException(errorMessage);
             }
             target.keyType(sourceKeyType);
@@ -101,7 +101,7 @@ public class DictionaryProcessor implements MergingProcessor {
             boolean isSubtype = isSubtype(sourceValueType, targetValueType, nodeProvider);
             if (!isSubtype) {
                 String errorMessage = String.format("The source value type '%s' is not a subtype of the target value type '%s'.",
-                        NodeToMapListOrValue.get(sourceValueType), NodeToMapListOrValue.get(targetValueType));
+                        NodeWireForm.get(sourceValueType), NodeWireForm.get(targetValueType));
                 throw new IllegalArgumentException(errorMessage);
             }
             target.valueType(sourceValueType);
@@ -141,8 +141,8 @@ public class DictionaryProcessor implements MergingProcessor {
                         + "' is not a canonical Double textual form.");
             }
         } else if (Types.isBooleanType(keyType, nodeProvider)) {
-            if (!Properties.BOOLEAN_TEXT_TRUE.equals(key)
-                    && !Properties.BOOLEAN_TEXT_FALSE.equals(key)) {
+            if (!BlueLanguageConstants.BOOLEAN_TEXT_TRUE.equals(key)
+                    && !BlueLanguageConstants.BOOLEAN_TEXT_FALSE.equals(key)) {
                 throw new IllegalArgumentException("Dictionary key '" + key
                         + "' is not a canonical Boolean textual form.");
             }
@@ -154,7 +154,7 @@ public class DictionaryProcessor implements MergingProcessor {
     private void validateValueType(Node value, Node valueType, NodeProvider nodeProvider) {
         if (value.getType() != null && !isSubtype(value.getType(), valueType, nodeProvider)) {
             String errorMessage = String.format("Value of type '%s' is not a subtype of the dictionary's value type '%s'.",
-                    NodeToMapListOrValue.get(value.getType()), NodeToMapListOrValue.get(valueType));
+                    NodeWireForm.get(value.getType()), NodeWireForm.get(valueType));
             throw new IllegalArgumentException(errorMessage);
         }
     }

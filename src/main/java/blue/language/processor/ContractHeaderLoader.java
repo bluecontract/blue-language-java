@@ -12,9 +12,9 @@ import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.Nodes;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.mapping.TypeClassResolver;
 
 import java.util.Collections;
@@ -38,15 +38,15 @@ final class ContractHeaderLoader {
     private static final Set<String> INVALID_CONTRACT_KEYS = new LinkedHashSet<>();
 
     static {
-        INVALID_CONTRACT_KEYS.add(Properties.OBJECT_TYPE);
-        INVALID_CONTRACT_KEYS.add(Properties.OBJECT_VALUE);
-        INVALID_CONTRACT_KEYS.add(Properties.OBJECT_ITEMS);
-        INVALID_CONTRACT_KEYS.add(Properties.OBJECT_SCHEMA);
+        INVALID_CONTRACT_KEYS.add(BlueLanguageConstants.OBJECT_TYPE);
+        INVALID_CONTRACT_KEYS.add(BlueLanguageConstants.OBJECT_VALUE);
+        INVALID_CONTRACT_KEYS.add(BlueLanguageConstants.OBJECT_ITEMS);
+        INVALID_CONTRACT_KEYS.add(BlueLanguageConstants.OBJECT_SCHEMA);
         INVALID_CONTRACT_KEYS.add(ProcessorContractConstants.KEY_CONTRACTS);
         INVALID_CONTRACT_KEYS.add(
-                Properties.LEGACY_OBJECT_PROPERTIES);
+                BlueLanguageConstants.LEGACY_OBJECT_PROPERTIES);
         INVALID_CONTRACT_KEYS.add(
-                Properties.LEGACY_OBJECT_CONSTRAINTS);
+                BlueLanguageConstants.LEGACY_OBJECT_CONSTRAINTS);
     }
 
     private final ContractProcessorRegistry registry;

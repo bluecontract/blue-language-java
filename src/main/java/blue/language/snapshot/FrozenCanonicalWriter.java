@@ -1,9 +1,13 @@
 package blue.language.snapshot;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
+import blue.language.model.NodeWireForm;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueNumbers;
-import blue.language.utils.Properties;
+import blue.language.model.value.BlueNumbers;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.SchemaEnumCanonicalizer;
 import blue.language.utils.UncheckedObjectMapper;
 import org.erdtman.jcs.NumberToJSON;
@@ -24,8 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import static blue.language.utils.Properties.*;
-import static blue.language.utils.SchemaPropertyConstants.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
+import static blue.language.model.wire.SchemaPropertyConstants.*;
 
 /**
  * Writes the exact JCS byte representation of a frozen node's direct BlueId
@@ -44,7 +48,7 @@ public final class FrozenCanonicalWriter {
     private static final int MAX_PLAIN_VALUE_DEPTH = 100;
     private static final int MAX_PLAIN_MAP_FIELDS = 256;
     private static final Class<?> SINGLETON_MAP_CLASS =
-            Collections.singletonMap("key", Properties.OBJECT_VALUE).getClass();
+            Collections.singletonMap("key", BlueLanguageConstants.OBJECT_VALUE).getClass();
     private static final ThreadLocal<Set<String>> MAP_KEYS = new ThreadLocal<Set<String>>() {
         @Override
         protected Set<String> initialValue() {
@@ -75,7 +79,7 @@ public final class FrozenCanonicalWriter {
         writeNode(node, sink, context, listIndex, Mode.BLUE_ID_INPUT);
     }
 
-    /** Streams the JCS form of {@code NodeToMapListOrValue.OFFICIAL}. */
+    /** Streams the JCS form of {@code NodeWireForm.OFFICIAL}. */
     static void writeOfficial(FrozenNode node, CanonicalByteSink sink) {
         if (node == null) {
             throw new IllegalArgumentException("node must not be null");

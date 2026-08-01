@@ -1,5 +1,7 @@
 package blue.language.merge.processor;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.merge.MergingProcessor;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
@@ -17,8 +19,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
 
 /**
  * Intersects inherited and authored schema constraints into the effective

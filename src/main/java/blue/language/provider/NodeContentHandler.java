@@ -1,5 +1,7 @@
 package blue.language.provider;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;
@@ -20,7 +22,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 

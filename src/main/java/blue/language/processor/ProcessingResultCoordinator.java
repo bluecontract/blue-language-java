@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;

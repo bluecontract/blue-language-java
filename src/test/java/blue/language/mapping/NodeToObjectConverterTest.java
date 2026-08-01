@@ -4,7 +4,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.mapping.model.*;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class NodeToObjectConverterTest {
@@ -61,7 +61,7 @@ public class NodeToObjectConverterTest {
                        "  value: \"123456789012345678901234567890\"\n" +
                        "bigDecimalField:\n" +
                        "  type:\n" +
-                       "    blueId: " + Properties.DOUBLE_TYPE_BLUE_ID + "\n" +
+                       "    blueId: " + BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID + "\n" +
                        "  value: \"3.14159265358979323846\"\n" +
                        "enumField: SOME_ENUM_VALUE";
 
@@ -103,22 +103,22 @@ public class NodeToObjectConverterTest {
                         "stringField: X1 String\n" +
                         "intArrayField:\n" +
                         "  type:\n" +
-                        "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                        "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                         "  itemType:\n" +
                         "    blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
                         "  items: [1, 2, 3, 4, 5]\n" +
                         "stringListField:\n" +
                         "  type:\n" +
-                        "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                        "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                         "  itemType:\n" +
-                        "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                        "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                         "  items:\n" +
                         "    - apple\n" +
                         "    - banana\n" +
                         "    - cherry\n" +
                         "integerSetField:\n" +
                         "  type:\n" +
-                        "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                        "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                         "  itemType:\n" +
                         "    blueId: " + INTEGER_TYPE_BLUE_ID + "\n" +
                         "  items: [10, 20, 30, 40, 50]";

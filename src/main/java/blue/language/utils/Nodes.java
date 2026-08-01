@@ -1,5 +1,7 @@
 package blue.language.utils;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 
 import java.math.BigDecimal;
@@ -7,7 +9,7 @@ import java.math.BigInteger;
 import java.util.EnumSet;
 import java.util.Set;
 
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 
 /**
  * Shape predicates and canonical scalar/placeholder factories for mutable

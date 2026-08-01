@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
@@ -24,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 
 class PatchImpactIncrementalResolutionTest {
 

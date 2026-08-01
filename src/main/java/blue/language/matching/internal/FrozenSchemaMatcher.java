@@ -3,7 +3,7 @@ package blue.language.matching.internal;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.BlueNumbers;
+import blue.language.model.value.BlueNumbers;
 import blue.language.utils.ScalarNodeIdentity;
 
 import java.math.BigDecimal;

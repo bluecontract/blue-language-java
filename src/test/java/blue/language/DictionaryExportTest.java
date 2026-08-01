@@ -1,5 +1,7 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
 import blue.language.api.BlueLanguageErrorCategory;
@@ -28,7 +30,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 

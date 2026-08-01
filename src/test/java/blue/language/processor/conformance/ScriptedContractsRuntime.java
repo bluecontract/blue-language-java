@@ -1,6 +1,6 @@
 package blue.language.processor.conformance;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.processor.GasMeter;
@@ -13,7 +13,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -147,7 +147,7 @@ final class ScriptedContractsRuntime {
                                       ProcessorExecutionContext context) {
         if (result != null) {
             JsonNode encoded = UncheckedObjectMapper.JSON_MAPPER.valueToTree(
-                    NodeToMapListOrValue.get(result));
+                    NodeWireForm.get(result));
             if (!isDefinitionOnlyResult(encoded)) {
                 executeResult(encoded, context);
             }
@@ -508,13 +508,13 @@ final class ScriptedContractsRuntime {
         if (value.isArray()) {
             return value;
         }
-        JsonNode items = value.isObject() ? value.get(Properties.OBJECT_ITEMS) : null;
+        JsonNode items = value.isObject() ? value.get(BlueLanguageConstants.OBJECT_ITEMS) : null;
         return items != null && items.isArray() ? items : null;
     }
 
     private static JsonNode scalarValue(JsonNode value) {
         if (value != null && value.isObject()) {
-            JsonNode scalar = value.get(Properties.OBJECT_VALUE);
+            JsonNode scalar = value.get(BlueLanguageConstants.OBJECT_VALUE);
             if (scalar != null) {
                 return scalar;
             }
@@ -523,10 +523,10 @@ final class ScriptedContractsRuntime {
     }
 
     private static boolean isDefinitionOnlyResult(JsonNode result) {
-        JsonNode type = result != null ? result.get(Properties.OBJECT_TYPE) : null;
+        JsonNode type = result != null ? result.get(BlueLanguageConstants.OBJECT_TYPE) : null;
         if (type == null
                 || !type.isObject()
-                || type.path(Properties.OBJECT_BLUE_ID).isTextual()) {
+                || type.path(BlueLanguageConstants.OBJECT_BLUE_ID).isTextual()) {
             return false;
         }
         return listItems(result.get(ContractsFixtureConstants.Field.PATCHES)) == null

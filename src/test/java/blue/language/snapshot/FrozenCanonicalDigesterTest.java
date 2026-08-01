@@ -1,5 +1,7 @@
 package blue.language.snapshot;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.processor.util.NodeCanonicalizer;
@@ -25,7 +27,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;

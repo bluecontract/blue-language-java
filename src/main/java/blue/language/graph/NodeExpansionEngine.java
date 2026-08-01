@@ -9,10 +9,10 @@ import blue.language.model.NodeDeserializer;
 import blue.language.model.Schema;
 import blue.language.provider.NodeProviderOutcome;
 import blue.language.provider.NodeProviderResult;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.Properties;
-import blue.language.utils.SchemaToMapListOrValue;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.SchemaWireForm;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -195,10 +195,10 @@ final class NodeExpansionEngine {
         }
 
         String segment = segments.get(index);
-        if (Properties.OBJECT_BLUE_ID.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_BLUE_ID.equals(segment)) {
             return DemandExpansion.absent(current);
         }
-        if (Properties.OBJECT_ITEMS.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_ITEMS.equals(segment)) {
             if (index + 1 >= segments.size()
                     || current.getItems() == null) {
                 return DemandExpansion.absent(current);
@@ -234,40 +234,40 @@ final class NodeExpansionEngine {
     }
 
     private Node semanticChild(Node node, String segment) {
-        if (Properties.OBJECT_NAME.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_NAME.equals(segment)) {
             return node.getName() == null
                     ? null : new Node().value(node.getName());
         }
-        if (Properties.OBJECT_DESCRIPTION.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_DESCRIPTION.equals(segment)) {
             return node.getDescription() == null
                     ? null : new Node().value(node.getDescription());
         }
-        if (Properties.OBJECT_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_TYPE.equals(segment)) {
             return node.getType();
         }
-        if (Properties.OBJECT_ITEM_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(segment)) {
             return node.getItemType();
         }
-        if (Properties.OBJECT_KEY_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(segment)) {
             return node.getKeyType();
         }
-        if (Properties.OBJECT_VALUE_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(segment)) {
             return node.getValueType();
         }
-        if (Properties.OBJECT_VALUE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_VALUE.equals(segment)) {
             return node.getRawValue() == null
                     ? null : new Node().value(node.getRawValue());
         }
-        if (Properties.OBJECT_SCHEMA.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_SCHEMA.equals(segment)) {
             return node.getSchema() == null
                     ? null
                     : JSON_MAPPER.convertValue(
-                    SchemaToMapListOrValue.get(
+                    SchemaWireForm.get(
                             node.getSchema(),
-                            NodeToMapListOrValue::get),
+                            NodeWireForm::get),
                     Node.class);
         }
-        if (Properties.OBJECT_CONTRACTS.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_CONTRACTS.equals(segment)) {
             return node.getContracts();
         }
         return node.getProperties() == null
@@ -276,28 +276,28 @@ final class NodeExpansionEngine {
 
     private void setSemanticChild(
             Node node, String segment, Node child) {
-        if (Properties.OBJECT_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_TYPE.equals(segment)) {
             node.type(child);
-        } else if (Properties.OBJECT_ITEM_TYPE.equals(segment)) {
+        } else if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(segment)) {
             node.itemType(child);
-        } else if (Properties.OBJECT_KEY_TYPE.equals(segment)) {
+        } else if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(segment)) {
             node.keyType(child);
-        } else if (Properties.OBJECT_VALUE_TYPE.equals(segment)) {
+        } else if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(segment)) {
             node.valueType(child);
-        } else if (Properties.OBJECT_CONTRACTS.equals(segment)) {
+        } else if (BlueLanguageConstants.OBJECT_CONTRACTS.equals(segment)) {
             node.contracts(child);
-        } else if (Properties.OBJECT_SCHEMA.equals(segment)) {
+        } else if (BlueLanguageConstants.OBJECT_SCHEMA.equals(segment)) {
             node.schema(child == null
                     ? null
                     : NodeDeserializer.parseSchema(
                     JSON_MAPPER.valueToTree(
-                            NodeToMapListOrValue.get(child)),
+                            NodeWireForm.get(child)),
                     JsonPointer.append(
                             JsonPointer.ROOT,
-                            Properties.OBJECT_SCHEMA)));
-        } else if (!Properties.OBJECT_NAME.equals(segment)
-                && !Properties.OBJECT_DESCRIPTION.equals(segment)
-                && !Properties.OBJECT_VALUE.equals(segment)) {
+                            BlueLanguageConstants.OBJECT_SCHEMA)));
+        } else if (!BlueLanguageConstants.OBJECT_NAME.equals(segment)
+                && !BlueLanguageConstants.OBJECT_DESCRIPTION.equals(segment)
+                && !BlueLanguageConstants.OBJECT_VALUE.equals(segment)) {
             Map<String, Node> properties = node.getProperties();
             if (properties != null) {
                 properties.put(segment, child);
@@ -335,12 +335,12 @@ final class NodeExpansionEngine {
             }
             Schema materialized = NodeDeserializer.parseSchema(
                     JSON_MAPPER.valueToTree(
-                            NodeToMapListOrValue.get(
+                            NodeWireForm.get(
                                     providerContentWithoutRootIdentity(
                                             nodes.get(0)))),
                     JsonPointer.append(
                             JsonPointer.ROOT,
-                            Properties.OBJECT_SCHEMA));
+                            BlueLanguageConstants.OBJECT_SCHEMA));
             if (materialized.isReferenceOnly()) {
                 throw new IllegalArgumentException(
                         "Schema provider returned a reference-only wrapper for "

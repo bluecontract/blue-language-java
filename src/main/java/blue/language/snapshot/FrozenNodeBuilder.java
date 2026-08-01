@@ -1,5 +1,7 @@
 package blue.language.snapshot;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Schema;
 
 import java.util.ArrayList;
@@ -9,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static blue.language.utils.Properties.OBJECT_CONTRACTS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_CONTRACTS;
 
 /**
  * Owns construction, mode normalization, and structurally sharing edits for

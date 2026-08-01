@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.model.wire.JsonPointer;
+
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Objects;
@@ -86,7 +88,7 @@ final class ExternalCandidateProjector {
         if (node == null || node.isReferenceOnly()) {
             return false;
         }
-        return blue.language.utils.JsonPointer.ROOT.equals(scopePath)
+        return blue.language.model.wire.JsonPointer.ROOT.equals(scopePath)
                 || (node.getValue() == null && !node.hasItems());
     }
 }

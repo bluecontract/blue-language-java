@@ -1,7 +1,7 @@
 package blue.language.utils.limits;
 
 import blue.language.model.Node;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.ArrayList;
 import java.util.HashSet;

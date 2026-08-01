@@ -27,7 +27,7 @@ import blue.language.provider.VerifyingNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.PathLimits;
 import org.junit.jupiter.api.Test;

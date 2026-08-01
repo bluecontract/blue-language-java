@@ -14,7 +14,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -225,7 +225,7 @@ class DocumentProcessorInitializationTest {
                 "name: Previous List Control Shape\n"
                         + "history:\n"
                         + "  type:\n"
-                        + "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n"
+                        + "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n"
                         + "  mergePolicy: append-only\n"
                         + "  items:\n"
                         + "    - $previous:\n"
@@ -688,7 +688,7 @@ class DocumentProcessorInitializationTest {
         String yaml = "name: Remove Doc\n" +
                 "x:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
@@ -924,7 +924,7 @@ class DocumentProcessorInitializationTest {
                         + "payload:\n"
                         + "  name: Metadata Bearing List\n"
                         + "  type:\n"
-                        + "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n"
+                        + "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n"
                         + "  items:\n"
                         + "    - alpha\n"
                         + "    - beta\n"

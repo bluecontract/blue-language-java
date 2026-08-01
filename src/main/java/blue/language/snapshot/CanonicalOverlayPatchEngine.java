@@ -1,19 +1,19 @@
 package blue.language.snapshot;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.patching.BluePatch;
 import blue.language.patching.BluePatchOperation;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.ParsedJsonPointer;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import static blue.language.utils.Properties.OBJECT_CONTRACTS;
-import static blue.language.utils.Properties.OBJECT_VALUE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_CONTRACTS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE;
 
 /**
  * Applies JSON Patch operations to an immutable canonical or resolved frozen
@@ -92,7 +92,7 @@ public final class CanonicalOverlayPatchEngine {
             throw new IllegalArgumentException("Canonical overlay patches cannot target the root document");
         }
         if (op != BluePatchOperation.REMOVE) {
-            Objects.requireNonNull(value, Properties.OBJECT_VALUE);
+            Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
         }
 
         FrozenNode before = read(

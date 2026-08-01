@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.api.BlueCachePolicy;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
@@ -12,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_IDS;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
 
 /**
  * Verifies same-or-descendant relationships from exact declared type edges.

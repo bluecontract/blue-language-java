@@ -1,6 +1,7 @@
-package blue.language.utils;
+package blue.language.model;
 
-import blue.language.model.Node;
+import blue.language.utils.NodePathEditor;
+import blue.language.utils.NodePathSelector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +14,7 @@ import java.util.List;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.*;
 
-class NodePathAccessorTest {
+class NodePathTest {
 
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
     private Node rootNode;
@@ -150,9 +151,9 @@ class NodePathAccessorTest {
         String unicodeDigitListPath = "/a/\u0660";
 
         // when
-        Object propertyValue = NodePathAccessor.get(node, unicodeDigitPropertyPath);
+        Object propertyValue = NodePath.get(node, unicodeDigitPropertyPath);
         Throwable listAccessFailure =
-                captureFailure(() -> NodePathAccessor.get(rootNode, unicodeDigitListPath));
+                captureFailure(() -> NodePath.get(rootNode, unicodeDigitListPath));
 
         // then
         assertEquals("property", propertyValue);
@@ -166,10 +167,10 @@ class NodePathAccessorTest {
         Node nodeWithoutValue = new Node().name("Test");
 
         // when
-        Object rootValue = NodePathAccessor.get(nodeWithValue, "/");
-        Object valueNodeName = NodePathAccessor.get(nodeWithValue, "/name");
-        Object rootNodeWithoutValue = NodePathAccessor.get(nodeWithoutValue, "/");
-        Object valuelessNodeName = NodePathAccessor.get(nodeWithoutValue, "/name");
+        Object rootValue = NodePath.get(nodeWithValue, "/");
+        Object valueNodeName = NodePath.get(nodeWithValue, "/name");
+        Object rootNodeWithoutValue = NodePath.get(nodeWithoutValue, "/");
+        Object valuelessNodeName = NodePath.get(nodeWithoutValue, "/name");
 
         // then
         assertEquals("TestValue", rootValue);
@@ -199,7 +200,7 @@ class NodePathAccessorTest {
     }
 
     @Test
-    void shouldReadContractsWithNodePathAccessor() throws Exception {
+    void shouldReadContractsWithNodePath() throws Exception {
         // given
         Node node = YAML_MAPPER.readValue(
                 "contracts:\n" +
@@ -208,7 +209,7 @@ class NodePathAccessorTest {
 
         // when
         Object enabled = node.get("/contracts/audit/enabled/value");
-        Node contracts = NodePathAccessor.getNode(node, "/contracts");
+        Node contracts = NodePath.getNode(node, "/contracts");
 
         // then
         assertEquals(Boolean.TRUE, enabled);

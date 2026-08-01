@@ -1,6 +1,6 @@
 package blue.language.conformance.contracts;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
@@ -26,13 +26,13 @@ import java.util.Objects;
 final class ContractsAssertionEvaluator {
 
     private static final String TEXT_BLUE_ID =
-            Properties.TEXT_TYPE_BLUE_ID;
+            BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
     private static final String INTEGER_BLUE_ID =
-            Properties.INTEGER_TYPE_BLUE_ID;
+            BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
     private static final String DOUBLE_BLUE_ID =
-            Properties.DOUBLE_TYPE_BLUE_ID;
+            BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
     private static final String BOOLEAN_BLUE_ID =
-            Properties.BOOLEAN_TYPE_BLUE_ID;
+            BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
 
     /**
      * Creates a stateless assertion evaluator.
@@ -530,10 +530,10 @@ final class ContractsAssertionEvaluator {
         }
         Map<String, Object> reference = (Map<String, Object>) value;
         if (reference.size() != 1
-                || !(reference.get(Properties.OBJECT_BLUE_ID) instanceof String)) {
+                || !(reference.get(BlueLanguageConstants.OBJECT_BLUE_ID) instanceof String)) {
             return null;
         }
-        String blueId = (String) reference.get(Properties.OBJECT_BLUE_ID);
+        String blueId = (String) reference.get(BlueLanguageConstants.OBJECT_BLUE_ID);
         try {
             return BlueIds.requirePlainBlueId(
                     blueId,
@@ -561,19 +561,19 @@ final class ContractsAssertionEvaluator {
         }
         Map<String, Object> wrapper = (Map<String, Object>) candidate;
         if (wrapper.size() != 2
-                || !wrapper.containsKey(Properties.OBJECT_TYPE)
-                || !wrapper.containsKey(Properties.OBJECT_VALUE)
-                || !(wrapper.get(Properties.OBJECT_TYPE) instanceof Map)) {
+                || !wrapper.containsKey(BlueLanguageConstants.OBJECT_TYPE)
+                || !wrapper.containsKey(BlueLanguageConstants.OBJECT_VALUE)
+                || !(wrapper.get(BlueLanguageConstants.OBJECT_TYPE) instanceof Map)) {
             return null;
         }
         Map<String, Object> type =
-                (Map<String, Object>) wrapper.get(Properties.OBJECT_TYPE);
+                (Map<String, Object>) wrapper.get(BlueLanguageConstants.OBJECT_TYPE);
         if (type.size() != 1
-                || !(type.get(Properties.OBJECT_BLUE_ID) instanceof String)) {
+                || !(type.get(BlueLanguageConstants.OBJECT_BLUE_ID) instanceof String)) {
             return null;
         }
-        String typeBlueId = (String) type.get(Properties.OBJECT_BLUE_ID);
-        Object value = wrapper.get(Properties.OBJECT_VALUE);
+        String typeBlueId = (String) type.get(BlueLanguageConstants.OBJECT_BLUE_ID);
+        Object value = wrapper.get(BlueLanguageConstants.OBJECT_VALUE);
         if ((TEXT_BLUE_ID.equals(typeBlueId) && value instanceof String)
                 || (INTEGER_BLUE_ID.equals(typeBlueId)
                 && isIntegralNumber(value))

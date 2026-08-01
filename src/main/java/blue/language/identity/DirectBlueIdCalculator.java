@@ -1,7 +1,7 @@
 package blue.language.identity;
 
 import blue.language.model.Node;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 
 import java.util.List;
 import java.util.Map;
@@ -88,7 +88,7 @@ public final class DirectBlueIdCalculator {
      * @return unchecked structural BlueId
      */
     public String uncheckedBlueId(Node node) {
-        return directBlueIdFromCanonicalInput(NodeToMapListOrValue.get(node));
+        return directBlueIdFromCanonicalInput(NodeWireForm.get(node));
     }
 
     /**
@@ -101,7 +101,7 @@ public final class DirectBlueIdCalculator {
         java.util.ArrayList<Object> values = new java.util.ArrayList<>(
                 nodes.size());
         for (Node node : nodes) {
-            values.add(NodeToMapListOrValue.get(node));
+            values.add(NodeWireForm.get(node));
         }
         return directBlueIdFromCanonicalInput(values);
     }

@@ -1,5 +1,9 @@
 package blue.language.utils;
 
+import blue.language.model.wire.JsonPointer;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 
 import java.util.ArrayList;
@@ -96,7 +100,7 @@ public final class NodePathSelector {
             }
         }
         if (current.getContracts() != null) {
-            currentPath.add(Properties.OBJECT_CONTRACTS);
+            currentPath.add(BlueLanguageConstants.OBJECT_CONTRACTS);
             select(current.getContracts(), pattern, index + 1, currentPath, predicate, selected);
             currentPath.remove(currentPath.size() - 1);
         }
@@ -119,22 +123,22 @@ public final class NodePathSelector {
     }
 
     private static Node childAtOrNull(Node node, String segment) {
-        if (Properties.OBJECT_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_TYPE.equals(segment)) {
             return node.getType();
         }
-        if (Properties.OBJECT_ITEM_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(segment)) {
             return node.getItemType();
         }
-        if (Properties.OBJECT_KEY_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(segment)) {
             return node.getKeyType();
         }
-        if (Properties.OBJECT_VALUE_TYPE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(segment)) {
             return node.getValueType();
         }
-        if (Properties.OBJECT_BLUE.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_BLUE.equals(segment)) {
             return node.getBlue();
         }
-        if (Properties.OBJECT_CONTRACTS.equals(segment)) {
+        if (BlueLanguageConstants.OBJECT_CONTRACTS.equals(segment)) {
             return node.getContracts();
         }
         if (node.getItems() != null && isListIndex(segment)) {

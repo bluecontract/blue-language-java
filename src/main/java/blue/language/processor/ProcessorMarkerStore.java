@@ -8,7 +8,7 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;

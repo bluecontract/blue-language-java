@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.ParsedJsonPointer;
@@ -9,10 +11,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 
 /**
  * Immutable evidence describing which semantic region one patch can affect.

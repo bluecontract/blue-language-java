@@ -21,7 +21,7 @@ import blue.language.processor.registry.RuntimeTypeAliases;
 import blue.language.provider.BootstrapProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeTransformer;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.Properties.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -110,9 +110,9 @@ public class PreprocessorTest {
         Node result = preprocessor.preprocess(node);
 
         // then
-        assertEquals(Properties.INTEGER_TYPE_BLUE_ID, result.getAsText("/x/type/blueId"));
+        assertEquals(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID, result.getAsText("/x/type/blueId"));
         assertEquals("XYZ", result.getAsText("/y/value"));
-        assertEquals(Properties.TEXT_TYPE_BLUE_ID,
+        assertEquals(BlueLanguageConstants.TEXT_TYPE_BLUE_ID,
                 result.getAsText("/y/type/blueId"));
     }
 

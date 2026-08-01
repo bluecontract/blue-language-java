@@ -1,6 +1,6 @@
 package blue.language.processor.util;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,7 +19,7 @@ public final class ProcessorContractConstants {
 
     /** Property containing the contracts attached to a Blue node. */
     public static final String KEY_CONTRACTS =
-            Properties.OBJECT_CONTRACTS;
+            BlueLanguageConstants.OBJECT_CONTRACTS;
     /** Reserved contract key for embedded-node processing configuration. */
     public static final String KEY_EMBEDDED = "embedded";
     /** Reserved contract key for the processing-initialized marker. */

@@ -1,8 +1,10 @@
 package blue.language.provider;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,20 +21,20 @@ import static blue.language.provider.ExactFragmentSupport.collectReferenceIds;
 import static blue.language.provider.ExactFragmentSupport.isPlainSchemaScalar;
 import static blue.language.provider.ExactFragmentSupport.pointerPath;
 import static blue.language.provider.ExactFragmentSupport.requireItemIndex;
-import static blue.language.utils.SchemaPropertyConstants.KEY_ENUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MULTIPLE_OF;
-import static blue.language.utils.SchemaPropertyConstants.KEY_REQUIRED;
-import static blue.language.utils.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MULTIPLE_OF;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_REQUIRED;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
 
 /** Assembles exact fragments only along selected root-to-cut paths. */
 final class SelectiveExactFragmentAssembler {
@@ -106,38 +108,38 @@ final class SelectiveExactFragmentAssembler {
             String parentPath) {
         String path = pointerPath(parentPath, segment);
         switch (segment) {
-            case Properties.OBJECT_TYPE:
+            case BlueLanguageConstants.OBJECT_TYPE:
                 direct.type(fragmentReference(
                         source.getType(), selection, path));
                 return;
-            case Properties.OBJECT_ITEM_TYPE:
+            case BlueLanguageConstants.OBJECT_ITEM_TYPE:
                 direct.itemType(fragmentReference(
                         source.getItemType(), selection, path));
                 return;
-            case Properties.OBJECT_KEY_TYPE:
+            case BlueLanguageConstants.OBJECT_KEY_TYPE:
                 direct.keyType(fragmentReference(
                         source.getKeyType(), selection, path));
                 return;
-            case Properties.OBJECT_VALUE_TYPE:
+            case BlueLanguageConstants.OBJECT_VALUE_TYPE:
                 direct.valueType(fragmentReference(
                         source.getValueType(), selection, path));
                 return;
-            case Properties.OBJECT_CONTRACTS:
+            case BlueLanguageConstants.OBJECT_CONTRACTS:
                 direct.contracts(fragmentReference(
                         source.getContracts(), selection, path));
                 return;
-            case Properties.OBJECT_BLUE:
+            case BlueLanguageConstants.OBJECT_BLUE:
                 direct.blue(fragmentReference(
                         source.getBlue(), selection, path));
                 return;
-            case Properties.OBJECT_SCHEMA:
+            case BlueLanguageConstants.OBJECT_SCHEMA:
                 applySchemaCuts(
                         source.getSchema(),
                         direct.getSchema(),
                         selection,
                         path);
                 return;
-            case Properties.OBJECT_ITEMS:
+            case BlueLanguageConstants.OBJECT_ITEMS:
                 applyItemCuts(source, direct, selection, path);
                 return;
             default:

@@ -1,6 +1,6 @@
 package blue.language.mapping;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.BlueDescription;
 import blue.language.model.BlueId;
@@ -138,9 +138,9 @@ public class ComplexObjectConverter implements Converter<Object> {
                                 fieldValue = fieldConverter.convert(fieldNode, fieldType);
                             }
                         }
-                    } else if (Properties.OBJECT_NAME.equals(propertyName)) {
+                    } else if (BlueLanguageConstants.OBJECT_NAME.equals(propertyName)) {
                         fieldValue = node.getName();
-                    } else if (Properties.OBJECT_DESCRIPTION.equals(
+                    } else if (BlueLanguageConstants.OBJECT_DESCRIPTION.equals(
                             propertyName)) {
                         fieldValue = node.getDescription();
                     }
@@ -180,7 +180,7 @@ public class ComplexObjectConverter implements Converter<Object> {
     }
 
     private Node propertyNode(Node node, String propertyName) {
-        if (Properties.OBJECT_CONTRACTS.equals(propertyName)) {
+        if (BlueLanguageConstants.OBJECT_CONTRACTS.equals(propertyName)) {
             return node.getContracts();
         }
         return node.getProperties() != null ? node.getProperties().get(propertyName) : null;

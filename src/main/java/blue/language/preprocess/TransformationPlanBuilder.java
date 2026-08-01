@@ -3,7 +3,7 @@ package blue.language.preprocess;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,7 +33,7 @@ public final class TransformationPlanBuilder {
     List<TransformationSnapshot> build(
             Node directive, List<String> dependencies) {
         Node transformations = property(
-                directive, Properties.BLUE_DIRECTIVE_TRANSFORMATIONS);
+                directive, BlueLanguageConstants.BLUE_DIRECTIVE_TRANSFORMATIONS);
         if (transformations == null) {
             return Collections.emptyList();
         }

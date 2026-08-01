@@ -21,7 +21,7 @@ import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.NodeExpander;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.limits.Limits;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static blue.language.utils.BlueIdCalculator.calculateBlueId;
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ListProcessorTest {
@@ -81,7 +81,7 @@ public class ListProcessorTest {
 
         String listOfB = "name: ListOfB\n" +
                          "type:\n" +
-                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "  blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                          "itemType:\n" +
                          "  blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                          "items:\n" +
@@ -171,7 +171,7 @@ public class ListProcessorTest {
 
         String listOfB = "name: ListOfB\n" +
                          "type:\n" +
-                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "  blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                          "itemType:\n" +
                          "  blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(listOfB);
@@ -221,7 +221,7 @@ public class ListProcessorTest {
 
         String listOfB = "name: ListOfB\n" +
                          "type:\n" +
-                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "  blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                          "itemType:\n" +
                          "  blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(listOfB);
@@ -262,7 +262,7 @@ public class ListProcessorTest {
 
         String listWithNoItemType = "name: ListWithNoItemType\n" +
                                     "type:\n" +
-                                    "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                                    "  blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                                     "items:\n" +
                                     "  - type:\n" +
                                     "      blueId: " + nodeProvider.getBlueIdByName("A");

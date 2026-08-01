@@ -1,11 +1,13 @@
 package blue.language.preprocess.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.SchemaPropertyConstants;
+
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.preprocess.TransformationProcessor;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.Nodes;
 
 import java.util.ArrayList;
@@ -13,8 +15,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.LIST_CONTROL_EMPTY;
-import static blue.language.utils.SchemaPropertyConstants.*;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_EMPTY;
+import static blue.language.model.wire.SchemaPropertyConstants.*;
 
 /**
  * Normalizes empty list elements to explicit {@code $empty: true}
@@ -72,31 +74,31 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
         }
 
         if (normalized.getType() != null) {
-            normalized.type(normalizeNode(normalized.getType(), false, append(path, Properties.OBJECT_TYPE)));
+            normalized.type(normalizeNode(normalized.getType(), false, append(path, BlueLanguageConstants.OBJECT_TYPE)));
         }
         if (normalized.getItemType() != null) {
-            normalized.itemType(normalizeNode(normalized.getItemType(), false, append(path, Properties.OBJECT_ITEM_TYPE)));
+            normalized.itemType(normalizeNode(normalized.getItemType(), false, append(path, BlueLanguageConstants.OBJECT_ITEM_TYPE)));
         }
         if (normalized.getKeyType() != null) {
-            normalized.keyType(normalizeNode(normalized.getKeyType(), false, append(path, Properties.OBJECT_KEY_TYPE)));
+            normalized.keyType(normalizeNode(normalized.getKeyType(), false, append(path, BlueLanguageConstants.OBJECT_KEY_TYPE)));
         }
         if (normalized.getValueType() != null) {
-            normalized.valueType(normalizeNode(normalized.getValueType(), false, append(path, Properties.OBJECT_VALUE_TYPE)));
+            normalized.valueType(normalizeNode(normalized.getValueType(), false, append(path, BlueLanguageConstants.OBJECT_VALUE_TYPE)));
         }
         if (normalized.getBlue() != null) {
-            normalized.blue(normalizeNode(normalized.getBlue(), false, append(path, Properties.OBJECT_BLUE)));
+            normalized.blue(normalizeNode(normalized.getBlue(), false, append(path, BlueLanguageConstants.OBJECT_BLUE)));
         }
         if (normalized.getContracts() != null) {
-            normalized.contracts(normalizeNode(normalized.getContracts(), false, append(path, Properties.OBJECT_CONTRACTS)));
+            normalized.contracts(normalizeNode(normalized.getContracts(), false, append(path, BlueLanguageConstants.OBJECT_CONTRACTS)));
         }
         if (normalized.getSchema() != null) {
-            normalizeSchema(normalized.getSchema(), append(path, Properties.OBJECT_SCHEMA));
+            normalizeSchema(normalized.getSchema(), append(path, BlueLanguageConstants.OBJECT_SCHEMA));
         }
 
         if (normalized.getItems() != null) {
             List<Node> items = new ArrayList<>(normalized.getItems().size());
             for (int i = 0; i < normalized.getItems().size(); i++) {
-                items.add(normalizeListElement(normalized.getItems().get(i), append(path, Properties.OBJECT_ITEMS, i)));
+                items.add(normalizeListElement(normalized.getItems().get(i), append(path, BlueLanguageConstants.OBJECT_ITEMS, i)));
             }
             normalized.items(items);
         }

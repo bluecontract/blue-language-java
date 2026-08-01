@@ -14,7 +14,7 @@ import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -195,9 +195,9 @@ final class FragmentedProcessingLocalityIntegrationTest {
                     BlueIdCalculator.calculateBlueId(expanded);
             recollapsedBlueId =
                     roundTripBlue.collapse(expanded).getBlueId();
-            expandedValue = NodeToMapListOrValue.get(expanded);
+            expandedValue = NodeWireForm.get(expanded);
             expandedFromRootValue =
-                    NodeToMapListOrValue.get(
+                    NodeWireForm.get(
                             roundTripBlue.expand(
                                     resultingRoot.clone()));
         }

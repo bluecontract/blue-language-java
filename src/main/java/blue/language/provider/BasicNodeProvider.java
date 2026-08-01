@@ -6,7 +6,7 @@ import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.CircularBlueIdCalculator;
 import blue.language.utils.Nodes;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.*;
@@ -89,7 +89,7 @@ public class BasicNodeProvider extends PreloadedNodeProvider implements CyclicAw
 
         IntStream.range(0, parsedContent.content.size()).forEach(i -> {
             JsonNode item = parsedContent.content.get(i);
-            JsonNode name = item.get(Properties.OBJECT_NAME);
+            JsonNode name = item.get(BlueLanguageConstants.OBJECT_NAME);
             if (name != null && !name.isNull()) {
                 addToNameMap(
                         name.asText(),

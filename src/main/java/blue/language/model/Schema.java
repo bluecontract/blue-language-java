@@ -1,5 +1,9 @@
 package blue.language.model;
 
+import blue.language.model.value.ScalarValues;
+
+import blue.language.model.wire.SchemaPropertyConstants;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;

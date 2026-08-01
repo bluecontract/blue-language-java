@@ -1,10 +1,12 @@
 package blue.language.merge;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
 
 /**
  * Tracks active type expansion by both BlueId and validation-path depth.

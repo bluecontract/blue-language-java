@@ -5,7 +5,7 @@ import blue.language.model.Schema;
 import blue.language.utils.Base58;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.BlueNumbers;
+import blue.language.model.value.BlueNumbers;
 import blue.language.utils.SchemaEnumCanonicalizer;
 
 import java.math.BigDecimal;
@@ -24,8 +24,8 @@ import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_KEY;
 import static blue.language.utils.CanonicalIdentityConstants.LIST_CONS_PREVIOUS_KEY;
 import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_KEY;
 import static blue.language.utils.CanonicalIdentityConstants.LIST_SEED_VALUE;
-import static blue.language.utils.Properties.*;
-import static blue.language.utils.SchemaPropertyConstants.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
+import static blue.language.model.wire.SchemaPropertyConstants.*;
 
 /**
  * Exact frozen-native BlueId calculator. It preserves the existing recursive

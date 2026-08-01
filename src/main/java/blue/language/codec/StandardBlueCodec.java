@@ -3,7 +3,7 @@ package blue.language.codec;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIdReferenceValidator;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 
 import java.util.Objects;
 
@@ -30,16 +30,16 @@ public final class StandardBlueCodec implements BlueCodec {
     @Override
     public String write(Node node, BlueFormat format) {
         return mapper(format).writeValueAsString(
-                NodeToMapListOrValue.get(
+                NodeWireForm.get(
                         Objects.requireNonNull(node, "node")));
     }
 
     @Override
     public String writeSimple(Node node, BlueFormat format) {
         return mapper(format).writeValueAsString(
-                NodeToMapListOrValue.get(
+                NodeWireForm.get(
                         Objects.requireNonNull(node, "node"),
-                        NodeToMapListOrValue.Strategy.SIMPLE));
+                        NodeWireForm.Strategy.SIMPLE));
     }
 
     private blue.language.utils.UncheckedObjectMapper mapper(

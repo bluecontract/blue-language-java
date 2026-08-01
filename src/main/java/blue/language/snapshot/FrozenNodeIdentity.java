@@ -1,14 +1,16 @@
 package blue.language.snapshot;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.identity.CanonicalJsonHasher;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.ListBlueIdFold;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.BlueNumbers;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.SchemaToMapListOrValue;
+import blue.language.model.value.BlueNumbers;
+import blue.language.model.NodeWireForm;
+import blue.language.model.SchemaWireForm;
 
 import java.math.BigInteger;
 import java.util.Collections;
@@ -16,27 +18,27 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
-import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.LIST_CONTROL_EMPTY;
-import static blue.language.utils.Properties.LIST_CONTROL_POS;
-import static blue.language.utils.Properties.LIST_CONTROL_PREVIOUS;
-import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
-import static blue.language.utils.Properties.OBJECT_BLUE;
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
-import static blue.language.utils.Properties.OBJECT_CONTRACTS;
-import static blue.language.utils.Properties.OBJECT_DESCRIPTION;
-import static blue.language.utils.Properties.OBJECT_ITEMS;
-import static blue.language.utils.Properties.OBJECT_ITEM_TYPE;
-import static blue.language.utils.Properties.OBJECT_KEY_TYPE;
-import static blue.language.utils.Properties.OBJECT_MERGE_POLICY;
-import static blue.language.utils.Properties.OBJECT_NAME;
-import static blue.language.utils.Properties.OBJECT_SCHEMA;
-import static blue.language.utils.Properties.OBJECT_TYPE;
-import static blue.language.utils.Properties.OBJECT_VALUE;
-import static blue.language.utils.Properties.OBJECT_VALUE_TYPE;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_EMPTY;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_POS;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_PREVIOUS;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_REPLACE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_CONTRACTS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_DESCRIPTION;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_ITEMS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_ITEM_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_KEY_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_MERGE_POLICY;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_NAME;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_SCHEMA;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 
 /**
  * Owns semantic identity and resolved-structure comparisons for immutable
@@ -180,9 +182,9 @@ public final class FrozenNodeIdentity {
     }
 
     static Map<String, Object> schemaObject(Schema schema) {
-        return SchemaToMapListOrValue.get(
+        return SchemaWireForm.get(
                 schema,
-                NodeToMapListOrValue::get);
+                NodeWireForm::get);
     }
 
     private String resolvedBlueId(FrozenNode node) {

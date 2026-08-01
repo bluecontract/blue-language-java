@@ -6,7 +6,7 @@ import blue.language.provider.NodeContentHandler;
 import blue.language.provider.PreloadedNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.io.IOException;
@@ -153,7 +153,7 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
     }
 
     private void addNodeToNameMap(JsonNode node, String blueId) {
-        JsonNode nameNode = node.get(Properties.OBJECT_NAME);
+        JsonNode nameNode = node.get(BlueLanguageConstants.OBJECT_NAME);
         if (nameNode != null && !nameNode.isNull()) {
             String name = nameNode.asText();
             addToNameMap(name, blueId);

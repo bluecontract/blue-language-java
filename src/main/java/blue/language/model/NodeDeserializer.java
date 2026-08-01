@@ -1,5 +1,7 @@
 package blue.language.model;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
 import blue.language.model.value.BlueNumbers;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.wire.JsonPointer;

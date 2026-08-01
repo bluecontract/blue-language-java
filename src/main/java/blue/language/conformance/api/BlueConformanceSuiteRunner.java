@@ -30,12 +30,12 @@ import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.CircularBlueIdCalculator;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.NodePathAccessor;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.NodePath;
 import blue.language.utils.NodeProviderWrapper;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import blue.language.utils.Nodes;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -1117,7 +1117,7 @@ public final class BlueConformanceSuiteRunner {
         for (JsonNode expected
                 : requireArray(spec, FixtureField.EXPECTED_OPAQUE_EDGES)) {
             String path = requireString(expected, FixtureField.PATH);
-            String blueId = requireText(expected, Properties.OBJECT_BLUE_ID);
+            String blueId = requireText(expected, BlueLanguageConstants.OBJECT_BLUE_ID);
             Node edge = selectFragmentReference(graph, path);
             assertTrue(edge != null && edge.isReferenceOnly(),
                     "Expected an opaque pure-reference edge at " + path + ".");
@@ -1208,7 +1208,7 @@ public final class BlueConformanceSuiteRunner {
     private static Node selectFragmentReference(
             ExactNodeGraphFragments graph,
             String path) {
-        Object selected = NodePathAccessor.get(
+        Object selected = NodePath.get(
                 graph.roots().get(0).directFragment(),
                 path,
                 node -> {
@@ -1429,7 +1429,7 @@ public final class BlueConformanceSuiteRunner {
                     "A resolved list cannot remove inherited items.");
         }
         List<Node> overlayItems = new ArrayList<>();
-        if (Properties.LIST_MERGE_POLICY_APPEND_ONLY.equals(
+        if (BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY.equals(
                 parent.getMergePolicy())) {
             for (int index = 0; index < parent.getItems().size(); index++) {
                 if (!BlueIdCalculator.calculateBlueId(
@@ -1457,7 +1457,7 @@ public final class BlueConformanceSuiteRunner {
             }
             overlayItems.add(new Node()
                     .position(index)
-                    .properties(Properties.LIST_CONTROL_REPLACE,
+                    .properties(BlueLanguageConstants.LIST_CONTROL_REPLACE,
                             desired.clone()));
         }
         for (int index = parent.getItems().size();
@@ -1636,7 +1636,7 @@ public final class BlueConformanceSuiteRunner {
         Node registryNode = registry.node(key);
         assertEquals(expected, BlueIdCalculator.calculateBlueId(registryNode));
         assertEquals(expected, registry.blueId(key));
-        assertEquals(expected, Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(key));
+        assertEquals(expected, BlueLanguageConstants.CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(key));
         if (spec.has(FixtureField.SEMANTIC_DESCRIPTION_IDENTITY_BEARING)) {
             Node withoutDescription = registryNode.clone().description(null);
             boolean identityBearing = !BlueIdCalculator.calculateBlueId(withoutDescription)
@@ -1652,7 +1652,7 @@ public final class BlueConformanceSuiteRunner {
                 requireText(spec, FixtureField.REGISTRY_KEY));
         Node mutated = original.clone();
         JsonNode mutation = requirePresent(spec, FixtureField.MUTATION);
-        if (!Properties.OBJECT_DESCRIPTION.equals(
+        if (!BlueLanguageConstants.OBJECT_DESCRIPTION.equals(
                 requireText(mutation, "field"))) {
             throw new IllegalArgumentException(
                     "Unsupported registry mutation field.");
@@ -1737,7 +1737,7 @@ public final class BlueConformanceSuiteRunner {
         }
         if (spec.has(FixtureField.EXPECTED_MERGE_POLICY)) {
             String effective = actual.getMergePolicy() == null
-                    ? Properties.LIST_MERGE_POLICY_POSITIONAL
+                    ? BlueLanguageConstants.LIST_MERGE_POLICY_POSITIONAL
                     : actual.getMergePolicy();
             assertEquals(requireText(spec, FixtureField.EXPECTED_MERGE_POLICY), effective);
         }
@@ -1829,7 +1829,7 @@ public final class BlueConformanceSuiteRunner {
         if (type == null) return null;
         String blueId = type.getBlueId();
         for (Map.Entry<String, String> entry :
-                Properties.CORE_TYPE_NAME_TO_BLUE_ID_MAP.entrySet()) {
+                BlueLanguageConstants.CORE_TYPE_NAME_TO_BLUE_ID_MAP.entrySet()) {
             if (entry.getValue().equals(blueId)) return entry.getKey();
         }
         return blueId;
@@ -1882,15 +1882,15 @@ public final class BlueConformanceSuiteRunner {
     private static void collectControls(Node node, Set<String> controls) {
         if (node == null) return;
         if (node.getPreviousBlueId() != null) {
-            controls.add(Properties.LIST_CONTROL_PREVIOUS);
+            controls.add(BlueLanguageConstants.LIST_CONTROL_PREVIOUS);
         }
         if (node.getPosition() != null) {
-            controls.add(Properties.LIST_CONTROL_POS);
+            controls.add(BlueLanguageConstants.LIST_CONTROL_POS);
         }
         if (node.getProperties() != null) {
             if (node.getProperties().containsKey(
-                    Properties.LIST_CONTROL_REPLACE)) {
-                controls.add(Properties.LIST_CONTROL_REPLACE);
+                    BlueLanguageConstants.LIST_CONTROL_REPLACE)) {
+                controls.add(BlueLanguageConstants.LIST_CONTROL_REPLACE);
             }
             for (Node child : node.getProperties().values()) {
                 collectControls(child, controls);
@@ -2020,9 +2020,9 @@ public final class BlueConformanceSuiteRunner {
 
     private static void assertNodeEquals(Node expected, Node actual) {
         JsonNode expectedTree = UncheckedObjectMapper.JSON_MAPPER.valueToTree(
-                NodeToMapListOrValue.get(expected));
+                NodeWireForm.get(expected));
         JsonNode actualTree = UncheckedObjectMapper.JSON_MAPPER.valueToTree(
-                NodeToMapListOrValue.get(actual));
+                NodeWireForm.get(actual));
         assertJsonNodeEquals(expectedTree, actualTree, "/");
     }
 
@@ -2154,16 +2154,16 @@ public final class BlueConformanceSuiteRunner {
         if (source == null || !source.isObject()) {
             return;
         }
-        JsonNode directive = source.get(Properties.OBJECT_BLUE);
+        JsonNode directive = source.get(BlueLanguageConstants.OBJECT_BLUE);
         if (directive == null || !directive.isObject()) {
             return;
         }
-        JsonNode blueId = directive.get(Properties.OBJECT_BLUE_ID);
+        JsonNode blueId = directive.get(BlueLanguageConstants.OBJECT_BLUE_ID);
         if (blueId != null && blueId.isTextual()) {
             destination.add(BlueIds.requirePlainBlueId(
                     blueId.asText(),
-                    Properties.OBJECT_BLUE + "."
-                            + Properties.OBJECT_BLUE_ID));
+                    BlueLanguageConstants.OBJECT_BLUE + "."
+                            + BlueLanguageConstants.OBJECT_BLUE_ID));
         }
     }
 
@@ -2190,7 +2190,7 @@ public final class BlueConformanceSuiteRunner {
             if (entry.has(FixtureField.OUTCOME)) return null;
             String symbolic = entry.has(FixtureField.REQUESTED_BLUE_ID)
                     ? requireText(entry, FixtureField.REQUESTED_BLUE_ID)
-                    : requireText(entry, Properties.OBJECT_BLUE_ID);
+                    : requireText(entry, BlueLanguageConstants.OBJECT_BLUE_ID);
             JsonNode returned = entry.has(FixtureField.NODE)
                     ? entry.get(FixtureField.NODE) : entry.get(FixtureField.RETURNED_NODE);
             if (returned == null) return null;
@@ -2254,7 +2254,7 @@ public final class BlueConformanceSuiteRunner {
             Set<String> preprocessingDirectiveBlueIds) {
         String requested = entry.has(FixtureField.REQUESTED_BLUE_ID)
                 ? entry.get(FixtureField.REQUESTED_BLUE_ID).asText()
-                : requireText(entry, Properties.OBJECT_BLUE_ID);
+                : requireText(entry, BlueLanguageConstants.OBJECT_BLUE_ID);
         if (entry.has(FixtureField.OUTCOME)) {
             String outcome = entry.get(FixtureField.OUTCOME).asText();
             if ("NotFound".equals(outcome)) {
@@ -2712,7 +2712,7 @@ public final class BlueConformanceSuiteRunner {
                 assertEquals(pathsByKey.get(key), path);
                 validateRelativePath(path);
                 String declaredBlueId = BlueIds.requirePlainBlueId(
-                        requireText(entry, Properties.OBJECT_BLUE_ID),
+                        requireText(entry, BlueLanguageConstants.OBJECT_BLUE_ID),
                         "preprocessing.registry." + key);
                 Node typeDefinition = readNode(readYamlResource(
                         PREPROCESSING_REGISTRY_ROOT + path));
@@ -2818,13 +2818,13 @@ public final class BlueConformanceSuiteRunner {
                     configuration,
                     immutableSet(
                             FixtureTransformationField.FIELD,
-                            Properties.OBJECT_VALUE));
+                            BlueLanguageConstants.OBJECT_VALUE));
             this.field = requireTextScalar(
                     configuration.getProperties().get(
                             FixtureTransformationField.FIELD),
                     FixtureTransformationField.FIELD);
             this.value = configuration.getProperties().get(
-                    Properties.OBJECT_VALUE).clone();
+                    BlueLanguageConstants.OBJECT_VALUE).clone();
         }
 
         @Override
@@ -2937,10 +2937,10 @@ public final class BlueConformanceSuiteRunner {
             return true;
         }
         if (type.isReferenceOnly()) {
-            return Properties.TEXT_TYPE_BLUE_ID.equals(
+            return BlueLanguageConstants.TEXT_TYPE_BLUE_ID.equals(
                     type.getBlueId());
         }
-        return Properties.TEXT_TYPE.equals(type.getRawValue())
+        return BlueLanguageConstants.TEXT_TYPE.equals(type.getRawValue())
                 && type.getItems() == null
                 && type.getProperties() == null
                 && type.getBlueId() == null;
@@ -2950,35 +2950,35 @@ public final class BlueConformanceSuiteRunner {
             Node root,
             String field) {
         switch (field) {
-            case Properties.OBJECT_NAME:
+            case BlueLanguageConstants.OBJECT_NAME:
                 return root.getName() != null;
-            case Properties.OBJECT_DESCRIPTION:
+            case BlueLanguageConstants.OBJECT_DESCRIPTION:
                 return root.getDescription() != null;
-            case Properties.OBJECT_TYPE:
+            case BlueLanguageConstants.OBJECT_TYPE:
                 return root.getType() != null;
-            case Properties.OBJECT_ITEM_TYPE:
+            case BlueLanguageConstants.OBJECT_ITEM_TYPE:
                 return root.getItemType() != null;
-            case Properties.OBJECT_KEY_TYPE:
+            case BlueLanguageConstants.OBJECT_KEY_TYPE:
                 return root.getKeyType() != null;
-            case Properties.OBJECT_VALUE_TYPE:
+            case BlueLanguageConstants.OBJECT_VALUE_TYPE:
                 return root.getValueType() != null;
-            case Properties.OBJECT_VALUE:
+            case BlueLanguageConstants.OBJECT_VALUE:
                 return root.getRawValue() != null;
-            case Properties.OBJECT_ITEMS:
+            case BlueLanguageConstants.OBJECT_ITEMS:
                 return root.getItems() != null;
-            case Properties.OBJECT_BLUE_ID:
+            case BlueLanguageConstants.OBJECT_BLUE_ID:
                 return root.getBlueId() != null;
-            case Properties.OBJECT_BLUE:
+            case BlueLanguageConstants.OBJECT_BLUE:
                 return root.getBlue() != null;
-            case Properties.OBJECT_SCHEMA:
+            case BlueLanguageConstants.OBJECT_SCHEMA:
                 return root.getSchema() != null;
-            case Properties.OBJECT_MERGE_POLICY:
+            case BlueLanguageConstants.OBJECT_MERGE_POLICY:
                 return root.getMergePolicy() != null;
-            case Properties.OBJECT_CONTRACTS:
+            case BlueLanguageConstants.OBJECT_CONTRACTS:
                 return root.getContracts() != null;
-            case Properties.LIST_CONTROL_PREVIOUS:
+            case BlueLanguageConstants.LIST_CONTROL_PREVIOUS:
                 return root.getPreviousBlueId() != null;
-            case Properties.LIST_CONTROL_POS:
+            case BlueLanguageConstants.LIST_CONTROL_POS:
                 return root.getPosition() != null;
             default:
                 return root.getProperties() != null
@@ -2990,35 +2990,35 @@ public final class BlueConformanceSuiteRunner {
             Node root,
             String field) {
         switch (field) {
-            case Properties.OBJECT_NAME:
+            case BlueLanguageConstants.OBJECT_NAME:
                 return inlineScalar(root.getName());
-            case Properties.OBJECT_DESCRIPTION:
+            case BlueLanguageConstants.OBJECT_DESCRIPTION:
                 return inlineScalar(root.getDescription());
-            case Properties.OBJECT_TYPE:
+            case BlueLanguageConstants.OBJECT_TYPE:
                 return cloneNode(root.getType());
-            case Properties.OBJECT_ITEM_TYPE:
+            case BlueLanguageConstants.OBJECT_ITEM_TYPE:
                 return cloneNode(root.getItemType());
-            case Properties.OBJECT_KEY_TYPE:
+            case BlueLanguageConstants.OBJECT_KEY_TYPE:
                 return cloneNode(root.getKeyType());
-            case Properties.OBJECT_VALUE_TYPE:
+            case BlueLanguageConstants.OBJECT_VALUE_TYPE:
                 return cloneNode(root.getValueType());
-            case Properties.OBJECT_VALUE:
+            case BlueLanguageConstants.OBJECT_VALUE:
                 return inlineScalar(root.getRawValue());
-            case Properties.OBJECT_ITEMS:
+            case BlueLanguageConstants.OBJECT_ITEMS:
                 return new Node().items(cloneNodes(root.getItems()));
-            case Properties.OBJECT_BLUE_ID:
+            case BlueLanguageConstants.OBJECT_BLUE_ID:
                 return inlineScalar(root.getBlueId());
-            case Properties.OBJECT_BLUE:
+            case BlueLanguageConstants.OBJECT_BLUE:
                 return cloneNode(root.getBlue());
-            case Properties.OBJECT_SCHEMA:
+            case BlueLanguageConstants.OBJECT_SCHEMA:
                 return new Node().schema(root.getSchema().clone());
-            case Properties.OBJECT_MERGE_POLICY:
+            case BlueLanguageConstants.OBJECT_MERGE_POLICY:
                 return inlineScalar(root.getMergePolicy());
-            case Properties.OBJECT_CONTRACTS:
+            case BlueLanguageConstants.OBJECT_CONTRACTS:
                 return cloneNode(root.getContracts());
-            case Properties.LIST_CONTROL_PREVIOUS:
+            case BlueLanguageConstants.LIST_CONTROL_PREVIOUS:
                 return new Node().blueId(root.getPreviousBlueId());
-            case Properties.LIST_CONTROL_POS:
+            case BlueLanguageConstants.LIST_CONTROL_POS:
                 return inlineScalar(BigInteger.valueOf(
                         root.getPosition()));
             default:
@@ -3030,49 +3030,49 @@ public final class BlueConformanceSuiteRunner {
             Node root,
             String field) {
         switch (field) {
-            case Properties.OBJECT_NAME:
+            case BlueLanguageConstants.OBJECT_NAME:
                 root.name(null);
                 return;
-            case Properties.OBJECT_DESCRIPTION:
+            case BlueLanguageConstants.OBJECT_DESCRIPTION:
                 root.description(null);
                 return;
-            case Properties.OBJECT_TYPE:
+            case BlueLanguageConstants.OBJECT_TYPE:
                 root.type((Node) null);
                 return;
-            case Properties.OBJECT_ITEM_TYPE:
+            case BlueLanguageConstants.OBJECT_ITEM_TYPE:
                 root.itemType((Node) null);
                 return;
-            case Properties.OBJECT_KEY_TYPE:
+            case BlueLanguageConstants.OBJECT_KEY_TYPE:
                 root.keyType((Node) null);
                 return;
-            case Properties.OBJECT_VALUE_TYPE:
+            case BlueLanguageConstants.OBJECT_VALUE_TYPE:
                 root.valueType((Node) null);
                 return;
-            case Properties.OBJECT_VALUE:
+            case BlueLanguageConstants.OBJECT_VALUE:
                 root.value((Object) null);
                 return;
-            case Properties.OBJECT_ITEMS:
+            case BlueLanguageConstants.OBJECT_ITEMS:
                 root.items((List<Node>) null);
                 return;
-            case Properties.OBJECT_BLUE_ID:
+            case BlueLanguageConstants.OBJECT_BLUE_ID:
                 root.blueId(null);
                 return;
-            case Properties.OBJECT_BLUE:
+            case BlueLanguageConstants.OBJECT_BLUE:
                 root.blue(null);
                 return;
-            case Properties.OBJECT_SCHEMA:
+            case BlueLanguageConstants.OBJECT_SCHEMA:
                 root.schema(null);
                 return;
-            case Properties.OBJECT_MERGE_POLICY:
+            case BlueLanguageConstants.OBJECT_MERGE_POLICY:
                 root.mergePolicy(null);
                 return;
-            case Properties.OBJECT_CONTRACTS:
+            case BlueLanguageConstants.OBJECT_CONTRACTS:
                 root.contracts(null);
                 return;
-            case Properties.LIST_CONTROL_PREVIOUS:
+            case BlueLanguageConstants.LIST_CONTROL_PREVIOUS:
                 root.previousBlueId(null);
                 return;
-            case Properties.LIST_CONTROL_POS:
+            case BlueLanguageConstants.LIST_CONTROL_POS:
                 root.position(null);
                 return;
             default:
@@ -3094,62 +3094,62 @@ public final class BlueConformanceSuiteRunner {
                             + field);
         }
         switch (field) {
-            case Properties.OBJECT_NAME:
+            case BlueLanguageConstants.OBJECT_NAME:
                 root.name(requireTextScalar(value, field));
                 return;
-            case Properties.OBJECT_DESCRIPTION:
+            case BlueLanguageConstants.OBJECT_DESCRIPTION:
                 root.description(requireTextScalar(value, field));
                 return;
-            case Properties.OBJECT_TYPE:
+            case BlueLanguageConstants.OBJECT_TYPE:
                 root.type(value.clone());
                 return;
-            case Properties.OBJECT_ITEM_TYPE:
+            case BlueLanguageConstants.OBJECT_ITEM_TYPE:
                 root.itemType(value.clone());
                 return;
-            case Properties.OBJECT_KEY_TYPE:
+            case BlueLanguageConstants.OBJECT_KEY_TYPE:
                 root.keyType(value.clone());
                 return;
-            case Properties.OBJECT_VALUE_TYPE:
+            case BlueLanguageConstants.OBJECT_VALUE_TYPE:
                 root.valueType(value.clone());
                 return;
-            case Properties.OBJECT_VALUE:
+            case BlueLanguageConstants.OBJECT_VALUE:
                 requireScalarPayload(value, field);
                 root.value(value.getRawValue());
                 return;
-            case Properties.OBJECT_ITEMS:
+            case BlueLanguageConstants.OBJECT_ITEMS:
                 if (value.getItems() == null) {
                     throw new IllegalArgumentException(
                             "Reserved fixture transformation items value must be a list.");
                 }
                 root.items(cloneNodes(value.getItems()));
                 return;
-            case Properties.OBJECT_BLUE_ID:
+            case BlueLanguageConstants.OBJECT_BLUE_ID:
                 root.blueId(requireTextScalar(value, field));
                 return;
-            case Properties.OBJECT_BLUE:
+            case BlueLanguageConstants.OBJECT_BLUE:
                 root.blue(value.clone());
                 return;
-            case Properties.OBJECT_SCHEMA:
+            case BlueLanguageConstants.OBJECT_SCHEMA:
                 if (value.getSchema() == null) {
                     throw new IllegalArgumentException(
                             "Reserved fixture transformation schema value must be a schema.");
                 }
                 root.schema(value.getSchema().clone());
                 return;
-            case Properties.OBJECT_MERGE_POLICY:
+            case BlueLanguageConstants.OBJECT_MERGE_POLICY:
                 root.mergePolicy(requireTextScalar(value, field));
                 return;
-            case Properties.OBJECT_CONTRACTS:
+            case BlueLanguageConstants.OBJECT_CONTRACTS:
                 root.contracts(value.clone());
                 return;
-            case Properties.LIST_CONTROL_PREVIOUS:
+            case BlueLanguageConstants.LIST_CONTROL_PREVIOUS:
                 if (!value.isReferenceOnly()) {
                     throw new IllegalArgumentException(
                             "Reserved fixture transformation $previous value must be a pure reference.");
                 }
                 root.previousBlueId(value.getBlueId());
                 return;
-            case Properties.LIST_CONTROL_POS:
+            case BlueLanguageConstants.LIST_CONTROL_POS:
                 root.position(requireNonNegativeInteger(value, field));
                 return;
             default:

@@ -1,10 +1,10 @@
 package blue.language.api;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.SchemaToMapListOrValue;
+import blue.language.model.NodeWireForm;
+import blue.language.model.SchemaWireForm;
 import blue.language.utils.UncheckedObjectMapper;
 
 import java.util.ArrayList;
@@ -66,7 +66,7 @@ public final class BlueViewPath {
             if (current == null) {
                 return null;
             }
-            if (Properties.OBJECT_ITEMS.equals(segments.get(i))) {
+            if (BlueLanguageConstants.OBJECT_ITEMS.equals(segments.get(i))) {
                 i++;
             }
         }
@@ -79,37 +79,37 @@ public final class BlueViewPath {
         }
         String segment = segments.get(index);
         switch (segment) {
-            case Properties.OBJECT_NAME:
+            case BlueLanguageConstants.OBJECT_NAME:
                 return node.getName() == null
                         ? null : new Node().value(node.getName());
-            case Properties.OBJECT_DESCRIPTION:
+            case BlueLanguageConstants.OBJECT_DESCRIPTION:
                 return node.getDescription() == null
                         ? null : new Node().value(node.getDescription());
-            case Properties.OBJECT_TYPE:
+            case BlueLanguageConstants.OBJECT_TYPE:
                 return node.getType();
-            case Properties.OBJECT_ITEM_TYPE:
+            case BlueLanguageConstants.OBJECT_ITEM_TYPE:
                 return node.getItemType();
-            case Properties.OBJECT_KEY_TYPE:
+            case BlueLanguageConstants.OBJECT_KEY_TYPE:
                 return node.getKeyType();
-            case Properties.OBJECT_VALUE_TYPE:
+            case BlueLanguageConstants.OBJECT_VALUE_TYPE:
                 return node.getValueType();
-            case Properties.OBJECT_VALUE:
+            case BlueLanguageConstants.OBJECT_VALUE:
                 return node.getRawValue() == null
                         ? null : new Node().value(node.getRawValue());
-            case Properties.OBJECT_BLUE_ID:
+            case BlueLanguageConstants.OBJECT_BLUE_ID:
                 // A pure-reference wrapper is representation, not a semantic
                 // A property child named blueId is distinct from the field.
                 return null;
-            case Properties.OBJECT_CONTRACTS:
+            case BlueLanguageConstants.OBJECT_CONTRACTS:
                 return node.getContracts();
-            case Properties.OBJECT_SCHEMA:
+            case BlueLanguageConstants.OBJECT_SCHEMA:
                 return node.getSchema() == null
                         ? null
                         : UncheckedObjectMapper.JSON_MAPPER.convertValue(
-                        SchemaToMapListOrValue.get(
-                                node.getSchema(), NodeToMapListOrValue::get),
+                        SchemaWireForm.get(
+                                node.getSchema(), NodeWireForm::get),
                         Node.class);
-            case Properties.OBJECT_ITEMS:
+            case BlueLanguageConstants.OBJECT_ITEMS:
                 if (node.getItems() == null) {
                     return null;
                 }

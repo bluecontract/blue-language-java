@@ -1,19 +1,21 @@
 package blue.language.identity;
 
-import blue.language.utils.BlueNumbers;
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.model.value.BlueNumbers;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.DOUBLE_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
-import static blue.language.utils.Properties.OBJECT_TYPE;
-import static blue.language.utils.Properties.OBJECT_VALUE;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 
 /** Encodes scalar-node sugar as its explicit typed identity representation. */
 public final class ScalarIdentityEncoder {

@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.model.NodePath;
+
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.Blue;
@@ -853,7 +855,7 @@ class DocumentProcessorGasTest {
         try {
             assertEquals(null, document.getAsNode(path));
         } catch (IllegalArgumentException ignored) {
-            // Missing properties throw in NodePathAccessor; either form means absent.
+            // Missing properties throw in NodePath; either form means absent.
         }
     }
 

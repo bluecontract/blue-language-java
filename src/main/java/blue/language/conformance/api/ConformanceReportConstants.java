@@ -1,6 +1,6 @@
 package blue.language.conformance.api;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 /**
  * Stable wire vocabulary and fixture cardinalities shared by conformance
@@ -20,7 +20,7 @@ final class ConformanceReportConstants {
 
     /** Machine-readable report field names. */
     static final class Field {
-        static final String SCHEMA = Properties.OBJECT_SCHEMA;
+        static final String SCHEMA = BlueLanguageConstants.OBJECT_SCHEMA;
         static final String ID = "id";
         static final String NAME = "name";
         static final String CATEGORY = "category";
@@ -50,7 +50,7 @@ final class ConformanceReportConstants {
         static final String RESULTS = "results";
         static final String RELEASE = "release";
         static final String LANGUAGE = "language";
-        static final String CONTRACTS = Properties.OBJECT_CONTRACTS;
+        static final String CONTRACTS = BlueLanguageConstants.OBJECT_CONTRACTS;
         static final String PACKAGES = "packages";
         static final String SPECIFICATIONS = "specifications";
         static final String SUMMARY = "summary";

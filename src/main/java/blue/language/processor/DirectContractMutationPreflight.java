@@ -5,8 +5,8 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.JsonPointer;
-import blue.language.utils.Properties;
+import blue.language.model.wire.JsonPointer;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.List;
 import java.util.Map;
@@ -104,7 +104,7 @@ final class DirectContractMutationPreflight {
         return targetSegments.size() == contractsSegments.size() + 2
                 && targetSegments.subList(
                 0, contractsSegments.size()).equals(contractsSegments)
-                && Properties.OBJECT_TYPE.equals(
+                && BlueLanguageConstants.OBJECT_TYPE.equals(
                 targetSegments.get(targetSegments.size() - 1));
     }
 }

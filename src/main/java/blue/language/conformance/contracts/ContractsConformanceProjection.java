@@ -1,7 +1,7 @@
 package blue.language.conformance.contracts;
 
 import blue.language.model.Node;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.model.NodeWireForm;
 import blue.language.utils.UncheckedObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -225,7 +225,7 @@ final class ContractsConformanceProjection {
     @SuppressWarnings("unchecked")
     static Object normalize(Object value) {
         if (value instanceof Node) {
-            return normalize(NodeToMapListOrValue.get((Node) value));
+            return normalize(NodeWireForm.get((Node) value));
         }
         if (value instanceof JsonNode) {
             return normalize(UncheckedObjectMapper.JSON_MAPPER.convertValue(

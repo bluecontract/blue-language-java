@@ -1,8 +1,8 @@
 package blue.language.api;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 
 import java.util.List;
 import java.util.Locale;
@@ -79,13 +79,13 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("type alias")) {
             return BlueLanguageErrorCategory.InvalidBlueIdInput;
         }
-        if (lower.contains(Properties.LIST_CONTROL_POS)
-                || lower.contains(Properties.LIST_CONTROL_REPLACE)
-                || lower.contains(Properties.LIST_CONTROL_PREVIOUS)
-                || lower.contains(Properties.LIST_CONTROL_EMPTY)
+        if (lower.contains(BlueLanguageConstants.LIST_CONTROL_POS)
+                || lower.contains(BlueLanguageConstants.LIST_CONTROL_REPLACE)
+                || lower.contains(BlueLanguageConstants.LIST_CONTROL_PREVIOUS)
+                || lower.contains(BlueLanguageConstants.LIST_CONTROL_EMPTY)
                 || lower.contains("list control")
-                || lower.contains(Properties.LIST_MERGE_POLICY_POSITIONAL)
-                || lower.contains(Properties.LIST_MERGE_POLICY_APPEND_ONLY)) {
+                || lower.contains(BlueLanguageConstants.LIST_MERGE_POLICY_POSITIONAL)
+                || lower.contains(BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY)) {
             return BlueLanguageErrorCategory.ListControlViolation;
         }
         if (lower.contains("wrong kind")) {
@@ -101,7 +101,7 @@ public final class BlueLanguageErrorClassifier {
                 || lower.contains("exclusiveminimum must")) {
             return BlueLanguageErrorCategory.SchemaVocabularyError;
         }
-        if (lower.contains(Properties.OBJECT_SCHEMA)
+        if (lower.contains(BlueLanguageConstants.OBJECT_SCHEMA)
                 || lower.contains("minimum")
                 || lower.contains("maximum")
                 || lower.contains("multiple of")
@@ -163,9 +163,9 @@ public final class BlueLanguageErrorClassifier {
         List<String> segments = JsonPointer.split(path);
         int size = segments.size();
         if (size >= 2
-                && Properties.LIST_CONTROL_PREVIOUS.equals(
+                && BlueLanguageConstants.LIST_CONTROL_PREVIOUS.equals(
                         segments.get(size - 2))
-                && Properties.OBJECT_BLUE_ID.equals(segments.get(size - 1))) {
+                && BlueLanguageConstants.OBJECT_BLUE_ID.equals(segments.get(size - 1))) {
             return BlueLanguageErrorCategory.ListControlViolation;
         }
         return BlueLanguageErrorCategory.InvalidBlueId;

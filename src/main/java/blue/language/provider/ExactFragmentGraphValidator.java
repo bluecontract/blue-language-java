@@ -1,9 +1,11 @@
 package blue.language.provider;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.utils.BlueIds;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.lang.reflect.Array;
 import java.util.IdentityHashMap;
@@ -11,20 +13,20 @@ import java.util.Map;
 
 import static blue.language.provider.ExactFragmentSupport.pointerPath;
 import static blue.language.provider.ExactFragmentSupport.requireFinalReference;
-import static blue.language.utils.SchemaPropertyConstants.KEY_ENUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAX_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_FIELDS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_ITEMS;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MIN_LENGTH;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MULTIPLE_OF;
-import static blue.language.utils.SchemaPropertyConstants.KEY_REQUIRED;
-import static blue.language.utils.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MULTIPLE_OF;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_REQUIRED;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
 
 /**
  * Validates the ordinary acyclic graph boundary accepted by exact fragment
@@ -57,7 +59,7 @@ final class ExactFragmentGraphValidator {
             if (node.getBlueId() != null) {
                 requireFinalReference(
                         node.getBlueId(),
-                        pointerPath(path, Properties.OBJECT_BLUE_ID));
+                        pointerPath(path, BlueLanguageConstants.OBJECT_BLUE_ID));
                 if (!node.isReferenceOnly()) {
                     throw new IllegalArgumentException(
                             "Mixed reference/object content at " + path
@@ -69,31 +71,31 @@ final class ExactFragmentGraphValidator {
             }
 
             validate(node.getType(),
-                    pointerPath(path, Properties.OBJECT_TYPE));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_TYPE));
             validate(node.getItemType(),
-                    pointerPath(path, Properties.OBJECT_ITEM_TYPE));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_ITEM_TYPE));
             validate(node.getKeyType(),
-                    pointerPath(path, Properties.OBJECT_KEY_TYPE));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_KEY_TYPE));
             validate(node.getValueType(),
-                    pointerPath(path, Properties.OBJECT_VALUE_TYPE));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_VALUE_TYPE));
             validate(node.getContracts(),
-                    pointerPath(path, Properties.OBJECT_CONTRACTS));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_CONTRACTS));
             validate(node.getBlue(),
-                    pointerPath(path, Properties.OBJECT_BLUE));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_BLUE));
             validateItems(node, path);
             validateProperties(node, path);
             validate(node.getSchema(),
-                    pointerPath(path, Properties.OBJECT_SCHEMA));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_SCHEMA));
             validateValue(node.getRawValue(),
-                    pointerPath(path, Properties.OBJECT_VALUE));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_VALUE));
             if (node.getPreviousBlueId() != null) {
                 BlueIds.requirePlainBlueId(
                         node.getPreviousBlueId(),
                         pointerPath(
                                 pointerPath(
                                         path,
-                                        Properties.LIST_CONTROL_PREVIOUS),
-                                Properties.OBJECT_BLUE_ID));
+                                        BlueLanguageConstants.LIST_CONTROL_PREVIOUS),
+                                BlueLanguageConstants.OBJECT_BLUE_ID));
             }
         } finally {
             activeNodes.remove(node);
@@ -109,7 +111,7 @@ final class ExactFragmentGraphValidator {
             validate(
                     node.getItems().get(index),
                     pointerPath(
-                            pointerPath(path, Properties.OBJECT_ITEMS),
+                            pointerPath(path, BlueLanguageConstants.OBJECT_ITEMS),
                             String.valueOf(index)));
         }
     }
@@ -133,7 +135,7 @@ final class ExactFragmentGraphValidator {
         if (schema.getBlueId() != null) {
             requireFinalReference(
                     schema.getBlueId(),
-                    pointerPath(path, Properties.OBJECT_BLUE_ID));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_BLUE_ID));
             if (!schema.isReferenceOnly()) {
                 throw new IllegalArgumentException(
                         "Mixed reference/object schema at " + path

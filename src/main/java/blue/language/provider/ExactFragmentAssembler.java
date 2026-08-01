@@ -1,8 +1,10 @@
 package blue.language.provider;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -19,12 +21,12 @@ import static blue.language.provider.ExactFragmentSupport.calculateExactBlueId;
 import static blue.language.provider.ExactFragmentSupport.isPlainSchemaScalar;
 import static blue.language.provider.ExactFragmentSupport.pointerPath;
 import static blue.language.provider.ExactFragmentSupport.requireFinalReference;
-import static blue.language.utils.SchemaPropertyConstants.KEY_ENUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MAXIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MINIMUM;
-import static blue.language.utils.SchemaPropertyConstants.KEY_MULTIPLE_OF;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MULTIPLE_OF;
 
 /** Assembles a shallow fragment at every semantic child boundary. */
 final class ExactFragmentAssembler {
@@ -80,34 +82,34 @@ final class ExactFragmentAssembler {
 
         direct.type(referenceFor(
                 node.getType(),
-                pointerPath(path, Properties.OBJECT_TYPE),
+                pointerPath(path, BlueLanguageConstants.OBJECT_TYPE),
                 directEdges));
         direct.itemType(referenceFor(
                 node.getItemType(),
-                pointerPath(path, Properties.OBJECT_ITEM_TYPE),
+                pointerPath(path, BlueLanguageConstants.OBJECT_ITEM_TYPE),
                 directEdges));
         direct.keyType(referenceFor(
                 node.getKeyType(),
-                pointerPath(path, Properties.OBJECT_KEY_TYPE),
+                pointerPath(path, BlueLanguageConstants.OBJECT_KEY_TYPE),
                 directEdges));
         direct.valueType(referenceFor(
                 node.getValueType(),
-                pointerPath(path, Properties.OBJECT_VALUE_TYPE),
+                pointerPath(path, BlueLanguageConstants.OBJECT_VALUE_TYPE),
                 directEdges));
         direct.contracts(referenceFor(
                 node.getContracts(),
-                pointerPath(path, Properties.OBJECT_CONTRACTS),
+                pointerPath(path, BlueLanguageConstants.OBJECT_CONTRACTS),
                 directEdges));
         direct.blue(referenceFor(
                 node.getBlue(),
-                pointerPath(path, Properties.OBJECT_BLUE),
+                pointerPath(path, BlueLanguageConstants.OBJECT_BLUE),
                 directEdges));
         fragmentItems(node, direct, path, directEdges);
         fragmentProperties(node, direct, path, directEdges);
         if (node.getSchema() != null) {
             direct.schema(fragmentSchema(
                     node.getSchema(),
-                    pointerPath(path, Properties.OBJECT_SCHEMA),
+                    pointerPath(path, BlueLanguageConstants.OBJECT_SCHEMA),
                     directEdges));
         }
         if (node.getPreviousBlueId() != null) {
@@ -144,7 +146,7 @@ final class ExactFragmentAssembler {
             directItems.add(referenceFor(
                     source.getItems().get(index),
                     pointerPath(
-                            pointerPath(path, Properties.OBJECT_ITEMS),
+                            pointerPath(path, BlueLanguageConstants.OBJECT_ITEMS),
                             String.valueOf(index)),
                     directEdges));
         }
@@ -183,7 +185,7 @@ final class ExactFragmentAssembler {
         String childBlueId = child.isReferenceOnly()
                 ? requireFinalReference(
                         child.getBlueId(),
-                        pointerPath(path, Properties.OBJECT_BLUE_ID))
+                        pointerPath(path, BlueLanguageConstants.OBJECT_BLUE_ID))
                 : record(child, path).blueId;
         directEdges.add(childBlueId);
         return new Node().blueId(childBlueId);
@@ -196,7 +198,7 @@ final class ExactFragmentAssembler {
         if (schema.isReferenceOnly()) {
             String schemaBlueId = requireFinalReference(
                     schema.getBlueId(),
-                    pointerPath(path, Properties.OBJECT_BLUE_ID));
+                    pointerPath(path, BlueLanguageConstants.OBJECT_BLUE_ID));
             directEdges.add(schemaBlueId);
             return new Schema().blueId(schemaBlueId);
         }

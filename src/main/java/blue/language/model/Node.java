@@ -1,6 +1,5 @@
 package blue.language.model;
 
-import blue.language.model.path.NodePath;
 import blue.language.model.value.BlueNumbers;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;

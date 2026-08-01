@@ -1,5 +1,17 @@
 package blue.language.utils;
 
+import blue.language.model.wire.SchemaPropertyConstants;
+
+import blue.language.model.SchemaWireForm;
+
+import blue.language.model.NodeWireForm;
+
+import blue.language.model.value.BlueNumbers;
+
+import blue.language.model.wire.JsonPointer;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 
@@ -10,8 +22,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.*;
-import static blue.language.utils.SchemaPropertyConstants.*;
+import static blue.language.model.wire.BlueLanguageConstants.*;
+import static blue.language.model.wire.SchemaPropertyConstants.*;
 
 /**
  * Projects mutable nodes into strict canonical BlueId identity input.
@@ -235,7 +247,7 @@ public final class NodeToBlueIdInput {
                         SchemaEnumCanonicalizer.canonicalize(
                                 identitySchema.getEnum()));
             }
-            result.put(OBJECT_SCHEMA, SchemaToMapListOrValue.get(
+            result.put(OBJECT_SCHEMA, SchemaWireForm.get(
                     identitySchema,
                     child -> get(child, appendPath(path, OBJECT_SCHEMA), Context.METADATA, -1, allowCyclicPlaceholders)));
         }
@@ -273,11 +285,11 @@ public final class NodeToBlueIdInput {
 
     private static Object transformationConfigurationValue(
             Node value) {
-        return NodeToMapListOrValue.get(
+        return NodeWireForm.get(
                 value,
                 value.isInlineValue()
-                        ? NodeToMapListOrValue.Strategy.SIMPLE
-                        : NodeToMapListOrValue.Strategy.OFFICIAL);
+                        ? NodeWireForm.Strategy.SIMPLE
+                        : NodeWireForm.Strategy.OFFICIAL);
     }
 
     private static boolean isPayloadOnlyList(Node node) {

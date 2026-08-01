@@ -1,4 +1,7 @@
-package blue.language;
+package blue.language.model;
+
+import blue.language.Blue;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
 import blue.language.api.BlueCacheStats;
@@ -13,9 +16,6 @@ import blue.language.api.LanguageRuntimeAccess;
 import blue.language.api.WeightedLruCache;
 import blue.language.provider.NodeProvider;
 
-import blue.language.model.Schema;
-import blue.language.model.Node;
-import blue.language.utils.NodeToMapListOrValue;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -27,12 +27,12 @@ import java.util.List;
 import java.util.Map;
 
 import static blue.language.processor.FailureCapture.captureFailure;
-import static blue.language.utils.NodeToMapListOrValue.Strategy.SIMPLE;
-import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
+import static blue.language.model.NodeWireForm.Strategy.SIMPLE;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class NodeToMapListOrValueTest {
+public class NodeWireFormTest {
 
     @Test
     public void shouldSerializeBasicNodeWithStandardStrategy() throws Exception {
@@ -48,7 +48,7 @@ public class NodeToMapListOrValueTest {
                 );
 
         // when
-        Object object = NodeToMapListOrValue.get(node);
+        Object object = NodeWireForm.get(node);
         Map<String, Object> result = (Map<String, Object>) object;
         Map<String, Object> type = (Map<String, Object>) result.get("type");
         Map<String, Object> propertyA = (Map<String, Object>) result.get("a");
@@ -84,7 +84,7 @@ public class NodeToMapListOrValueTest {
                 );
 
         // when
-        Object object = NodeToMapListOrValue.get(node, SIMPLE);
+        Object object = NodeWireForm.get(node, SIMPLE);
         Map<String, Object> result = (Map<String, Object>) object;
         Map<String, Object> type = (Map<String, Object>) result.get("type");
 
@@ -121,7 +121,7 @@ public class NodeToMapListOrValueTest {
                 );
 
         // when
-        Object object = NodeToMapListOrValue.get(node);
+        Object object = NodeWireForm.get(node);
         Map<String, Object> result = (Map<String, Object>) object;
         List<Map<String, Object>> items = (List<Map<String, Object>>) result.get("items");
         Map<String, Object> item1 = items.get(0);
@@ -179,7 +179,7 @@ public class NodeToMapListOrValueTest {
                 );
 
         // when
-        Object object = NodeToMapListOrValue.get(node, SIMPLE);
+        Object object = NodeWireForm.get(node, SIMPLE);
         List<Object> result = (List<Object>) object;
         List<?> thirdItemList = (List<?>) result.get(2);
         List<?> fourthItemList = (List<?>) result.get(3);
@@ -227,7 +227,7 @@ public class NodeToMapListOrValueTest {
                 .schema(schema);
 
         // when
-        Object object = NodeToMapListOrValue.get(node, SIMPLE);
+        Object object = NodeWireForm.get(node, SIMPLE);
         Node fromObject = JSON_MAPPER.convertValue(object, Node.class);
         Schema resultSchema = fromObject.getSchema();
 
@@ -255,7 +255,7 @@ public class NodeToMapListOrValueTest {
         Node reference = new Node().blueId("abc");
 
         // when
-        Object object = NodeToMapListOrValue.get(reference);
+        Object object = NodeWireForm.get(reference);
 
         // then
         assertEquals(Collections.singletonMap("blueId", "abc"), object);
@@ -276,9 +276,9 @@ public class NodeToMapListOrValueTest {
         previousReference.put("blueId", "prevHash");
 
         // when
-        Object previous = NodeToMapListOrValue.get(previousControl);
-        Object positioned = NodeToMapListOrValue.get(positionedControl);
-        Object list = NodeToMapListOrValue.get(listControl);
+        Object previous = NodeWireForm.get(previousControl);
+        Object positioned = NodeWireForm.get(positionedControl);
+        Object list = NodeWireForm.get(listControl);
 
         // then
         assertEquals(Collections.singletonMap("$previous", previousReference), previous);
@@ -296,7 +296,7 @@ public class NodeToMapListOrValueTest {
                 .value("hello");
 
         // when
-        Object object = NodeToMapListOrValue.get(node);
+        Object object = NodeWireForm.get(node);
         Map<String, Object> result = (Map<String, Object>) object;
         Map<String, Object> blue = (Map<String, Object>) result.get("blue");
 
@@ -318,8 +318,8 @@ public class NodeToMapListOrValueTest {
                 .properties("contracts", new Node().properties("audit", new Node().value("on")));
 
         // when
-        Map<String, Object> valueResult = (Map<String, Object>) NodeToMapListOrValue.get(valueWithContracts);
-        Map<String, Object> itemsResult = (Map<String, Object>) NodeToMapListOrValue.get(itemsWithContracts);
+        Map<String, Object> valueResult = (Map<String, Object>) NodeWireForm.get(valueWithContracts);
+        Map<String, Object> itemsResult = (Map<String, Object>) NodeWireForm.get(itemsWithContracts);
 
         // then
         assertEquals("abc", valueResult.get("value"));
@@ -338,7 +338,7 @@ public class NodeToMapListOrValueTest {
                 "    - blue");
 
         // when
-        String json = JSON_MAPPER.writeValueAsString(NodeToMapListOrValue.get(node));
+        String json = JSON_MAPPER.writeValueAsString(NodeWireForm.get(node));
 
         // then
         assertTrue(json.contains("\"enum\""));
@@ -356,7 +356,7 @@ public class NodeToMapListOrValueTest {
                         .contracts(new Node().properties("audit", new Node().value(true))))));
 
         // when
-        Map<String, Object> result = (Map<String, Object>) NodeToMapListOrValue.get(node);
+        Map<String, Object> result = (Map<String, Object>) NodeWireForm.get(node);
         Map<String, Object> schema = (Map<String, Object>) result.get("schema");
         List<Object> enumValues = (List<Object>) schema.get("enum");
 
@@ -374,7 +374,7 @@ public class NodeToMapListOrValueTest {
 
         // when
         Throwable failure = captureFailure(() ->
-                NodeToMapListOrValue.get(invalid));
+                NodeWireForm.get(invalid));
 
         // then
         assertEquals(IllegalArgumentException.class, failure.getClass());
@@ -387,7 +387,7 @@ public class NodeToMapListOrValueTest {
 
         // when
         Throwable failure = captureFailure(() ->
-                NodeToMapListOrValue.get(invalid));
+                NodeWireForm.get(invalid));
 
         // then
         assertEquals(IllegalArgumentException.class, failure.getClass());
@@ -405,9 +405,9 @@ public class NodeToMapListOrValueTest {
 
         // when
         Throwable valueAndPropertiesFailure = captureFailure(() ->
-                NodeToMapListOrValue.get(invalidValueAndProperties));
+                NodeWireForm.get(invalidValueAndProperties));
         Throwable itemsAndPropertiesFailure = captureFailure(() ->
-                NodeToMapListOrValue.get(invalidItemsAndProperties));
+                NodeWireForm.get(invalidItemsAndProperties));
 
         // then
         assertEquals(IllegalArgumentException.class,

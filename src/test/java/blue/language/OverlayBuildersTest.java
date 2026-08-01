@@ -18,7 +18,7 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.CanonicalIdentityInputBuilder;
 import blue.language.utils.MinimizedOverlayBuilder;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -68,8 +68,8 @@ public class OverlayBuildersTest {
         // then
         assertFalse(reversed.getProperties().containsKey("x"));
         assertEquals(2, reversed.getAsInteger("/y/value"));
-        assertEquals(Properties.LIST_TYPE_BLUE_ID, reversed.getAsText("/z/type/blueId"));
-        assertEquals(Properties.TEXT_TYPE_BLUE_ID, reversed.getAsText("/z/itemType/blueId"));
+        assertEquals(BlueLanguageConstants.LIST_TYPE_BLUE_ID, reversed.getAsText("/z/type/blueId"));
+        assertEquals(BlueLanguageConstants.TEXT_TYPE_BLUE_ID, reversed.getAsText("/z/itemType/blueId"));
     }
 
     @Test

@@ -3,7 +3,7 @@ package blue.language.merge;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.utils.Types;
 import blue.language.utils.limits.Limits;
 
@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
-import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
-import static blue.language.utils.Properties.LIST_MERGE_POLICY_POSITIONAL;
-import static blue.language.utils.Properties.LIST_TYPE;
-import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_REPLACE;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_POSITIONAL;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
 
 /**
  * Applies the positional, append-only, {@code $previous}, {@code $pos}, and
@@ -332,10 +332,10 @@ final class ListOverlayMerger {
     boolean isEmptyPlaceholder(Node node) {
         Map<String, Node> properties = node.getProperties();
         if (properties == null || properties.size() != 1
-                || !properties.containsKey(Properties.LIST_CONTROL_EMPTY)) {
+                || !properties.containsKey(BlueLanguageConstants.LIST_CONTROL_EMPTY)) {
             return false;
         }
-        Node marker = properties.get(Properties.LIST_CONTROL_EMPTY);
+        Node marker = properties.get(BlueLanguageConstants.LIST_CONTROL_EMPTY);
         return Boolean.TRUE.equals(marker.getValue())
                 && node.getValue() == null
                 && node.getItems() == null

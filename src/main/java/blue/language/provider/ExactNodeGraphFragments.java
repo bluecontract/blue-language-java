@@ -2,7 +2,7 @@ package blue.language.provider;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -229,7 +229,7 @@ public final class ExactNodeGraphFragments {
                 Node directFragment) {
             this.blueId = Objects.requireNonNull(
                     blueId,
-                    Properties.OBJECT_BLUE_ID);
+                    BlueLanguageConstants.OBJECT_BLUE_ID);
             this.original = Objects.requireNonNull(
                     original,
                     "original").clone();

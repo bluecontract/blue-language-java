@@ -1,5 +1,7 @@
 package blue.language.identity;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
 import blue.language.utils.NodeToBlueIdInput;
 
@@ -8,11 +10,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.Properties.LIST_CONTROL_EMPTY;
-import static blue.language.utils.Properties.LIST_CONTROL_POS;
-import static blue.language.utils.Properties.LIST_CONTROL_PREVIOUS;
-import static blue.language.utils.Properties.LIST_CONTROL_REPLACE;
-import static blue.language.utils.Properties.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_EMPTY;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_POS;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_PREVIOUS;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_REPLACE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
 
 /**
  * Projects nodes and sanitizes map/list/scalar inputs before direct identity

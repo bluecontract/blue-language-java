@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.Properties;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
@@ -43,7 +43,7 @@ public final class FrozenJsonPatch {
             this.exactValue = null;
             this.authoredCanonicalSizeBytes = 0L;
         } else {
-            FrozenNode checked = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
+            FrozenNode checked = Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
             if (!checked.isStrictCanonical()) {
                 throw new IllegalArgumentException(
                         "Frozen patch values must be authored canonical values, not resolved document views");
@@ -79,7 +79,7 @@ public final class FrozenJsonPatch {
      *         view rather than a strict canonical authored value
      */
     public static FrozenJsonPatch add(String path, FrozenNode value) {
-        FrozenNode checked = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
+        FrozenNode checked = Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
         return new FrozenJsonPatch(JsonPatch.Op.ADD, path, checked, null,
                 NodeCanonicalizer.canonicalFrozenSize(checked));
     }
@@ -116,7 +116,7 @@ public final class FrozenJsonPatch {
      *         view rather than a strict canonical authored value
      */
     public static FrozenJsonPatch replace(String path, FrozenNode value) {
-        FrozenNode checked = Objects.requireNonNull(value, Properties.OBJECT_VALUE);
+        FrozenNode checked = Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
         return new FrozenJsonPatch(JsonPatch.Op.REPLACE, path, checked, null,
                 NodeCanonicalizer.canonicalFrozenSize(checked));
     }
@@ -181,11 +181,11 @@ public final class FrozenJsonPatch {
     }
 
     private static FrozenNode freeze(Node value) {
-        return FrozenNode.fromNode(Objects.requireNonNull(value, Properties.OBJECT_VALUE));
+        return FrozenNode.fromNode(Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE));
     }
 
     private static FrozenJsonPatch freezeMutable(JsonPatch.Op op, String path, Node value) {
-        Node authored = Objects.requireNonNull(value, Properties.OBJECT_VALUE).clone();
+        Node authored = Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE).clone();
         return new FrozenJsonPatch(op,
                 path,
                 freeze(authored),

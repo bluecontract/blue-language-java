@@ -1,7 +1,9 @@
 package blue.language.merge;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import blue.language.model.Node;
-import blue.language.utils.JsonPointer;
+import blue.language.model.wire.JsonPointer;
 import blue.language.utils.limits.Limits;
 
 import java.util.ArrayList;
@@ -11,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static blue.language.utils.Properties.CORE_TYPES;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPES;
 
 /**
  * Tracks semantic presence and validates only values completed by the current
