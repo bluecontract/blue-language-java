@@ -59,22 +59,38 @@ public final class ProcessingObservation {
         return new ProcessingObservation(metricId, metricId.kind(), value, context);
     }
 
-    /** @return manifest metric identifier */
+    /**
+     * Returns the closed-manifest metric identity.
+     *
+     * @return manifest metric identifier
+     */
     public ProcessingMetricId metricId() {
         return metricId;
     }
 
-    /** @return fixed aggregation kind */
+    /**
+     * Returns the metric's fixed aggregation kind.
+     *
+     * @return fixed aggregation kind
+     */
     public ObservationKind kind() {
         return kind;
     }
 
-    /** @return signed observation value */
+    /**
+     * Returns the signed value admitted for this observation.
+     *
+     * @return signed observation value
+     */
     public long value() {
         return value;
     }
 
-    /** @return bounded immutable context */
+    /**
+     * Returns the bounded typed context attached to this observation.
+     *
+     * @return bounded immutable context
+     */
     public ProcessingObservationContext context() {
         return context;
     }

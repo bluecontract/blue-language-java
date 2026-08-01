@@ -9,35 +9,27 @@ codec -> preprocessing -> graph/provider -> resolution -> snapshots
 matching and patching consume the same resolved/snapshot boundaries
 ```
 
+<!-- blue-example: examples/src/main/java/blue/language/examples/SourceDocumentBlueIdExample.java#source-document-blueid -->
 ```java
-import blue.language.api.BlueCachePolicy;
-import blue.language.codec.BlueFormat;
-import blue.language.merge.ResolvedSnapshot;
-import blue.language.model.Node;
-import blue.language.provider.NodeProvider;
-import blue.language.runtime.BlueLanguage;
-
-import java.util.Collections;
-
-public final class LanguagePipelineExample {
-    public static void main(String[] args) {
-        NodeProvider provider = blueId -> Collections.emptyList();
-        try (BlueLanguage language = BlueLanguage.builder()
-                .nodeProvider(provider)
-                .cachePolicy(BlueCachePolicy.boundedDefaults())
-                .build()) {
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
             Node source = language.codec().parseSource(
-                    "type: Text\nvalue: hello", BlueFormat.YAML);
-            ResolvedSnapshot snapshot = language.snapshots().resolve(source);
-            String blueId = language.identity()
+                    SOURCE_YAML, BlueFormat.YAML);
+            Node canonical = language.identity()
+                    .canonicalIdentityInput(source);
+            String sourceBlueId = language.identity()
                     .sourceDocumentBlueId(source);
+            String directBlueId = language.identity()
+                    .directBlueId(canonical);
 
-            if (!blueId.equals(snapshot.blueId())) {
-                throw new AssertionError("Snapshot identity diverged");
-            }
+            ExampleSupport.require(canonical.getBlue() == null,
+                    "Canonical input must not retain the Source blue directive");
+            ExampleSupport.require(TEXT_TYPE_BLUE_ID.equals(
+                            canonical.getType().getBlueId()),
+                    "The imported alias must resolve to the exact Text type");
+            ExampleSupport.require(sourceBlueId.equals(directBlueId),
+                    "Source identity must finish on the direct identity path");
+            return new Result(canonical, sourceBlueId, directBlueId);
         }
-    }
-}
 ```
 
 ## Operation contracts

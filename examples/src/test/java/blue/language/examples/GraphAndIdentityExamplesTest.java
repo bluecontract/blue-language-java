@@ -30,6 +30,7 @@ final class GraphAndIdentityExamplesTest {
                 result.getSpecializationBlueId());
     }
 
+    // tag::given-when-then-test[]
     @Test
     void shouldExpandAndCollapseVerifiedProviderContent() {
         // given
@@ -45,6 +46,7 @@ final class GraphAndIdentityExamplesTest {
                 result.getCollapsed().getBlueId());
         assertTrue(result.getCollapsed().isReferenceOnly());
     }
+    // end::given-when-then-test[]
 
     @Test
     void shouldPreserveIdentityAcrossResolvedCanonicalAndMinimizedForms() {

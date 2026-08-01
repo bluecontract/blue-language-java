@@ -60,7 +60,13 @@ public final class FrozenNodeIdentity {
     private FrozenNodeIdentity() {
     }
 
-    /** Calculates the BlueId of one frozen node. */
+    /**
+     * Calculates the deterministic BlueId of one frozen node.
+     *
+     * @param node immutable node to identify
+     * @return the node's deterministic BlueId
+     * @throws NullPointerException when {@code node} is {@code null}
+     */
     public String blueId(FrozenNode node) {
         if (node.strictCanonical) {
             return node.strictBlueIdValidation
@@ -71,12 +77,27 @@ public final class FrozenNodeIdentity {
         return resolvedBlueId(node);
     }
 
-    /** Calculates the canonical BlueId of an ordered frozen sequence. */
+    /**
+     * Calculates the canonical BlueId of an ordered frozen sequence.
+     *
+     * @param nodes ordered canonical frozen nodes; {@code null} is treated as
+     *        an empty sequence
+     * @return the deterministic sequence BlueId
+     * @throws IllegalArgumentException when an element is {@code null} or is
+     *         not valid canonical list input
+     */
     public String blueId(java.util.List<FrozenNode> nodes) {
         return FrozenCanonicalDigester.calculateBlueId(nodes);
     }
 
-    /** Compares exact resolved graph content without mutable conversion. */
+    /**
+     * Compares exact resolved graph content without mutable conversion.
+     *
+     * @param left first resolved representation, or {@code null}
+     * @param right second resolved representation, or {@code null}
+     * @return {@code true} when both representations contain the same exact
+     *         resolved graph content
+     */
     public boolean sameResolvedStructure(
             FrozenNode left,
             FrozenNode right) {

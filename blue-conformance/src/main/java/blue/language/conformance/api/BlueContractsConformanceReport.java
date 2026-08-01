@@ -1175,22 +1175,46 @@ public final class BlueContractsConformanceReport {
             this.vectors = Collections.unmodifiableList(new ArrayList<>(vectors));
         }
 
-        /** Returns the stable fixture identity. */
+        /**
+         * Returns the stable fixture identity.
+         *
+         * @return manifest fixture identity
+         */
         public String id() { return id; }
 
-        /** Returns the manifest-relative fixture resource path. */
+        /**
+         * Returns the manifest-relative fixture resource path.
+         *
+         * @return fixture resource path
+         */
         public String path() { return path; }
 
-        /** Returns the manifest role. */
+        /**
+         * Returns the manifest role.
+         *
+         * @return fixture role
+         */
         public String role() { return role; }
 
-        /** Returns the closed fixture category. */
+        /**
+         * Returns the closed fixture category.
+         *
+         * @return fixture category
+         */
         public BlueContractsFixtureCategory category() { return category; }
 
-        /** Returns the fixture operation. */
+        /**
+         * Returns the fixture operation.
+         *
+         * @return fixture operation name
+         */
         public String operation() { return operation; }
 
-        /** Returns the immutable vector inventory. */
+        /**
+         * Returns the immutable vector inventory.
+         *
+         * @return immutable ordered vector names
+         */
         public List<String> vectors() { return vectors; }
     }
 }

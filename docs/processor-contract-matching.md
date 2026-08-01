@@ -41,7 +41,7 @@ evidence that no channel matches.
 `ChannelProcessor.evaluate(...)` performs read-only complete acceptance for
 the already preselected occurrence:
 
-```java
+```text
 ChannelEvaluation evaluate(
         T contract,
         ChannelEvaluationContext context)
@@ -110,7 +110,7 @@ revision-bound `ExternalDeliveryPlan` evidence.
 
 `HandlerProcessor` retains three contract-specific hooks:
 
-```java
+```text
 String deriveChannel(
         T contract,
         HandlerRegistrationContext context)
@@ -157,14 +157,14 @@ For a verified external occurrence the processor:
 8. executes each logical delivery once;
 9. writes every participating source checkpoint only after complete success.
 
-The checkpoint subject is an exact node. A Timeline runtime can freeze an inline
-minimal `{timeline, timestamp}` subject and compare
+The checkpoint subject is an exact node. A runtime-neutral ordered-stream
+Channel can freeze an inline minimal `{stream, sequence}` subject and compare
 `ChannelCheckpointContext.currentSubject()` with the exact prior
 `lastEvent()` in `isNewerEvent(...)`. Their BlueIds are available from
 `eventSignature()` and `lastEventSignature()`. The feeder `eventOrderKey`
-orders occurrence activation; it is not a replacement for per-Timeline
-timestamp newness. Composite/All functions can delegate the selected member's
-subject unchanged.
+orders occurrence activation; it is not a replacement for the source
+Channel's own sequence-newness rule. Composite functions can delegate the
+selected member's subject unchanged.
 
 Triggered and embedded-node events use the invocation-local deterministic
 queue. Root emissions are appended to `ProcessResult.events` immediately and

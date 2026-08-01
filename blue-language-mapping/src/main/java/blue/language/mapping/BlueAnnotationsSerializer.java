@@ -23,8 +23,14 @@ import java.util.Set;
 /** Serializes Blue-annotated Java objects into their Language wire shape. */
 public class BlueAnnotationsSerializer extends StdSerializer<Object> {
 
+    /** Serializer used when a value has no applicable Blue annotations. */
     private final BeanSerializerBase defaultSerializer;
 
+    /**
+     * Creates an annotation-aware serializer around Jackson's bean serializer.
+     *
+     * @param defaultSerializer serializer used for ordinary bean behavior
+     */
     public BlueAnnotationsSerializer(BeanSerializerBase defaultSerializer) {
         super(Object.class);
         this.defaultSerializer = defaultSerializer;

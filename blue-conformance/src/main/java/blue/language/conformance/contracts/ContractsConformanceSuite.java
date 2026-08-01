@@ -133,12 +133,20 @@ public final class ContractsConformanceSuite {
                 Collections.emptyList());
     }
 
-    /** Validates one parsed fixture envelope without executing it. */
+    /**
+     * Validates one parsed fixture envelope without executing it.
+     *
+     * @param fixture parsed fixture envelope
+     */
     public static void validateFixture(JsonNode fixture) {
         new ContractsFixtureHarness().validate(fixture);
     }
 
-    /** Executes one parsed fixture envelope for focused fixture tests. */
+    /**
+     * Executes one parsed fixture envelope for focused fixture tests.
+     *
+     * @param fixture parsed fixture envelope
+     */
     public static void runFixture(JsonNode fixture) {
         new ContractsFixtureHarness().execute(fixture, false);
     }

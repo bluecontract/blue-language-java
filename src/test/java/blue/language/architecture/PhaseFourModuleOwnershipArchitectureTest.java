@@ -46,7 +46,7 @@ final class PhaseFourModuleOwnershipArchitectureTest {
     private static final String MODULE_EXAMPLES = ":examples";
     private static final String MODULE_BUILD_LOGIC = ":build-logic";
 
-    private static final int EXPECTED_PRODUCTION_SOURCES = 521;
+    private static final int EXPECTED_PRODUCTION_SOURCES = 557;
     private static final int EXPECTED_PRODUCTION_RESOURCES = 356;
     private static final int ROOT_BUILD_MAX_LINES = 200;
     private static final int MODULE_BUILD_MAX_LINES = 150;
@@ -385,8 +385,7 @@ final class PhaseFourModuleOwnershipArchitectureTest {
         result.put(MODULE_AGGREGATE,
                 immutableSet(MODULE_MODEL, MODULE_CORE, MODULE_CONTRACTS,
                         MODULE_MAPPING, MODULE_IPFS));
-        result.put(MODULE_EXAMPLES,
-                immutableSet(MODULE_AGGREGATE, MODULE_CONFORMANCE));
+        result.put(MODULE_EXAMPLES, immutableSet(MODULE_AGGREGATE));
         result.put(MODULE_BUILD_LOGIC, immutableSet());
         return Collections.unmodifiableMap(result);
     }

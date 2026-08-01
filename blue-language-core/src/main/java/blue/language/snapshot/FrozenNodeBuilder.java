@@ -72,7 +72,17 @@ public final class FrozenNodeBuilder {
                 .previousAnchorContext(node.previousAnchorContext);
     }
 
-    /** Reframes authored canonical content for an immutable target mode. */
+    /**
+     * Reframes authored canonical content for an immutable target mode.
+     *
+     * @param authoredCanonicalValue strict canonical authored content
+     * @param modeTemplate node whose canonical and Blue ID validation modes
+     *        are applied
+     * @return the authored value in the template's construction mode
+     * @throws NullPointerException when either argument is {@code null}
+     * @throws IllegalArgumentException when {@code authoredCanonicalValue} is
+     *         not strict canonical content
+     */
     public static FrozenNode authoredValueInModeOf(
             FrozenNode authoredCanonicalValue,
             FrozenNode modeTemplate) {

@@ -17,7 +17,13 @@ public final class TransformationPlanBuilder {
     private final DirectiveResolver resolver;
     private final DirectiveValidator validator;
 
-    /** Creates a plan builder for one exact transformation registry. */
+    /**
+     * Creates a plan builder for one exact transformation registry.
+     *
+     * @param processorProvider registry used to resolve transformation types
+     * @param resolver resolver used to fetch exact transformation resources
+     * @param validator validator applied before any transformation executes
+     */
     public TransformationPlanBuilder(
             TransformationProcessorProvider processorProvider,
             DirectiveResolver resolver,

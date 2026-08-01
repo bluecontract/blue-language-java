@@ -21,7 +21,19 @@ public final class DirectiveResolver {
     private final NodeProvider verifiedProvider;
     private final Map<String, String> directiveAliases;
 
-    /** Creates a resolver at an identity-verifying provider boundary. */
+    /**
+     * Creates a resolver at an identity-verifying provider boundary.
+     *
+     * <p>The alias map is defensively copied and validated. A {@code null}
+     * map configures no aliases.</p>
+     *
+     * @param verifiedProvider provider that verifies returned content against
+     *                         the requested BlueId
+     * @param directiveAliases alias-to-BlueId mappings, or {@code null} for none
+     * @throws NullPointerException if {@code verifiedProvider} is {@code null}
+     * @throws IllegalArgumentException if an alias is empty or maps to a
+     *                                  non-canonical BlueId
+     */
     public DirectiveResolver(
             NodeProvider verifiedProvider,
             Map<String, String> directiveAliases) {

@@ -15,10 +15,18 @@ import java.util.Map;
  */
 public interface SourceContentVerificationRuntime {
 
-    /** Returns the exact Language version implemented by this runtime. */
+    /**
+     * Returns the exact Language version implemented by this runtime.
+     *
+     * @return Language specification version
+     */
     String languageVersion();
 
-    /** Returns an immutable snapshot of explicit preprocessing aliases. */
+    /**
+     * Returns an immutable snapshot of explicit preprocessing aliases.
+     *
+     * @return aliases keyed by authored directive name
+     */
     Map<String, String> preprocessingAliases();
 
     /**
@@ -26,12 +34,19 @@ public interface SourceContentVerificationRuntime {
      * environment.
      *
      * <p>The empty default preserves existing Language-only runtimes.</p>
+     *
+     * @return immutable host-import map
      */
     default Map<String, String> environmentImports() {
         return Collections.emptyMap();
     }
 
-    /** Canonicalizes one authored source under the released identity strategy. */
+    /**
+     * Canonicalizes one authored source under the released identity strategy.
+     *
+     * @param source authored Source content
+     * @return canonical identity input for {@code source}
+     */
     Node canonicalizeSourceContent(Node source);
 
     /**

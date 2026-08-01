@@ -34,5 +34,7 @@ final soundness, checkpoint, and subscription validation pass.
 Generalization chooses the specification-valid common type representation; it
 does not erase fixed values or schema obligations merely to make a patch fit.
 
-Run `PersistentPatchingExample` from `:examples`. See
+Run
+[`PersistentPatchingExample`](../../examples/src/main/java/blue/language/examples/PersistentPatchingExample.java)
+from `:examples`. See
 [transactional-state.md](../architecture/transactional-state.md).

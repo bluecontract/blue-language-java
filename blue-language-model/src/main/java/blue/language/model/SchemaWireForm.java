@@ -16,6 +16,21 @@ public final class SchemaWireForm {
     private SchemaWireForm() {
     }
 
+    /**
+     * Projects a schema into its deterministic Blue wire map.
+     *
+     * <p>Plain scalar constraints remain scalars. Constraints with explicit
+     * node metadata are projected through {@code nodeConverter}.</p>
+     *
+     * @param schema schema to project
+     * @param nodeConverter converter for non-plain constraint nodes
+     * @return insertion-ordered deterministic schema wire map
+     * @throws NullPointerException if {@code schema} is {@code null}, or if a
+     *                              required conversion is attempted with a
+     *                              {@code null} {@code nodeConverter}
+     * @throws IllegalArgumentException if a schema BlueId reference has
+     *                                  sibling constraint keywords
+     */
     public static Map<String, Object> get(
             Schema schema, Function<Node, Object> nodeConverter) {
         Map<String, Object> result = new LinkedHashMap<>();

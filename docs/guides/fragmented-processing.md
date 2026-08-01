@@ -35,5 +35,7 @@ to Root receive new exact identities; untouched siblings retain theirs.
 Patching below an opaque cyclic-member edge is rejected before provider demand,
 while replacement of the whole permitted edge remains possible.
 
-For the complete evidence and logical-delivery model, see
+Run
+[`PureReferenceFragmentsExample`](../../examples/src/main/java/blue/language/examples/PureReferenceFragmentsExample.java)
+from `:examples`. For the complete evidence and logical-delivery model, see
 [Fragmented processing and logical delivery](../fragmented-processing-and-logical-delivery.md).

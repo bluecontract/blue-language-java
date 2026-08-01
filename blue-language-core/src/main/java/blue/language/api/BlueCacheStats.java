@@ -16,6 +16,13 @@ public final class BlueCacheStats {
     private final Map<String, Region> regions;
     private final boolean closed;
 
+    /**
+     * Creates an immutable snapshot from named cache regions.
+     *
+     * @param regions cache regions keyed by runtime metric name
+     * @param closed whether the owning runtime has closed its cache lifecycle
+     * @throws NullPointerException if {@code regions} is {@code null}
+     */
     public BlueCacheStats(Map<String, Region> regions, boolean closed) {
         this.regions = Collections.unmodifiableMap(new LinkedHashMap<>(
                 Objects.requireNonNull(regions, "regions")));
@@ -94,6 +101,19 @@ public final class BlueCacheStats {
         private final long oversizedRejections;
         private final boolean pinned;
 
+        /**
+         * Creates an immutable snapshot of one cache region.
+         *
+         * @param entries current retained entry count
+         * @param currentWeightBytes current approximate retained weight in bytes
+         * @param highWaterWeightBytes highest approximate retained weight observed in bytes
+         * @param hits lifetime successful lookup count
+         * @param misses lifetime unsuccessful lookup count
+         * @param evictions lifetime bound-enforcement eviction count
+         * @param oversizedRejections lifetime oversized-candidate rejection count
+         * @param pinned whether authoritative entries in the region are pinned
+         * @throws IllegalArgumentException if a numeric statistic is negative
+         */
         public Region(int entries,
                long currentWeightBytes,
                long highWaterWeightBytes,

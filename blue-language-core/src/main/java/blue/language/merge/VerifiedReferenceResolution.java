@@ -28,17 +28,29 @@ public final class VerifiedReferenceResolution {
                 resolvedRoot, "resolvedRoot");
     }
 
-    /** Returns the exact BlueId requested from the resolver. */
+    /**
+     * Returns the exact BlueId requested from the resolver.
+     *
+     * @return requested exact BlueId
+     */
     public String requestedBlueId() {
         return requestedBlueId;
     }
 
-    /** Returns the strict canonical root covered by this evidence. */
+    /**
+     * Returns the strict canonical root covered by this evidence.
+     *
+     * @return immutable strict canonical root
+     */
     public FrozenNode canonicalRoot() {
         return canonicalRoot;
     }
 
-    /** Returns the completed resolved root covered by this evidence. */
+    /**
+     * Returns the completed resolved root covered by this evidence.
+     *
+     * @return immutable completed resolved root
+     */
     public FrozenNode resolvedRoot() {
         return resolvedRoot;
     }

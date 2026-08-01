@@ -136,16 +136,51 @@ Never edit a vendored specification merely to justify current code.
 
 ## Change identity-bearing registry nodes
 
-Registry nodes, manifests, and generated runtime constants form one identity
-chain. Change them only in a dedicated review:
+Registry nodes, manifests, named runtime constants, fixture bindings, and the
+release manifest form one identity chain. The repository deliberately has no
+task that rewrites canonical nodes or approves new identities. Work from the
+tracked inputs:
 
-1. edit canonical registry Source;
-2. regenerate canonical node files using the repository-owned generator;
-3. verify each declared BlueId from the canonical node;
-4. update manifest identity and release binding;
-5. update affected fixtures and expected runtime constants;
-6. run registry integrity, package identity, exact conformance, and semantic
-   baseline verification.
+- Language nodes and manifest:
+  `blue-language-core/src/main/resources/registry/blue-language-1.0/`;
+- Contracts nodes and manifest:
+  `blue-contracts-core/src/main/resources/registry/blue-contracts-1.0/`;
+- public identity owners:
+  `blue-language-model/src/main/java/blue/language/model/wire/BlueLanguageConstants.java`
+  and
+  `blue-contracts-core/src/main/java/blue/language/processor/registry/RuntimeBlueIds.java`;
+- release binding:
+  `blue-conformance/src/main/resources/release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml`.
+
+Use this manual, reviewable workflow:
+
+1. Edit the exact tracked `.blue` canonical-input file. Never rewrite unchanged
+   registry nodes or normalize them with an unrelated YAML tool.
+2. In a focused Given–When–Then registry test, load the exact bytes, call
+   `BlueCodec.parseBlueIdInput(..., BlueFormat.YAML)`, and calculate the direct
+   BlueId with `DirectBlueIdCalculator`. Review the parsed exact node and
+   proposed identity; do not paste an unexplained value into the manifest.
+3. Calculate the edited file's byte SHA-256 with `shasum -a 256 <exact-path>`.
+   Update only that entry's `blueId` and `sha256` after reviewing both values.
+4. Recalculate `packageIdentity` exactly as described by the
+   `packageIdentityAlgorithm` block in that manifest. Review the normalized
+   manifest input, then update the manifest, named Java owner, fixture manifest,
+   and release-manifest binding together. Use `rg -n '<old-identity>'` to find
+   every tracked binding; do not use search-and-replace as proof of correctness.
+5. Update affected fixtures and expected constants only when the specification
+   change requires them, and review the complete identity-chain diff.
+6. Run the registry validators, exact conformance, and semantic baseline:
+
+```bash
+./gradlew test \
+  --tests 'blue.language.registry.BlueCoreTypeRegistryTest' \
+  --tests '*BlueRuntimeTypeRegistryTest'
+./gradlew releaseConformanceTest semanticBaselineVerify
+```
+
+The validators independently recompute file digests, node BlueIds, package
+identities, named constants, fixture bindings, and release bindings. A failure
+means the chain is incomplete; never capture or weaken a baseline to accept it.
 
 Magic BlueId literals are not an acceptable shortcut. Production and tests
 use the registry/runtime constant owner when the identity is specification
@@ -168,20 +203,23 @@ the exact value. Ordinary test data does not need a global constant.
 
 Every ordinary JUnit test has a readable `should...` name and visible sections:
 
+<!-- blue-example: examples/src/test/java/blue/language/examples/GraphAndIdentityExamplesTest.java#given-when-then-test -->
 ```java
-@Test
-void shouldRejectInvalidEvidenceWithoutCommit() {
-    // given
-    Scenario scenario = invalidEvidenceScenario();
+    @Test
+    void shouldExpandAndCollapseVerifiedProviderContent() {
+        // given
+        String expectedValue = "provider content";
 
-    // when
-    DocumentProcessingResult result = scenario.process();
+        // when
+        ExpandCollapseProviderExample.Result result =
+                ExpandCollapseProviderExample.run();
 
-    // then
-    assertFalse(result.commits());
-    assertEquals(scenario.inputRoot(), result.document());
-    assertTrue(result.events().isEmpty());
-}
+        // then
+        assertEquals(expectedValue, result.getExpanded().getValue());
+        assertEquals(result.getBlueId(),
+                result.getCollapsed().getBlueId());
+        assertTrue(result.getCollapsed().isReferenceOnly());
+    }
 ```
 
 One test proves one behavior or one tightly coupled atomic outcome. Tests do
@@ -260,9 +298,9 @@ sources rather than maintaining divergent copies.
 ./gradlew documentationVerify
 ```
 
-Generated references are reproducible outputs. Regenerate them with the
-repository task, review their diff, and commit the exact result. Do not edit a
-generated reference by hand.
+Generated references are reproducible outputs. Regenerate them with
+`./gradlew updateGeneratedDocumentationReferences`, review their diff, and
+commit the exact result. Do not edit a generated reference by hand.
 
 ## Complete conformance
 
@@ -289,8 +327,7 @@ it for both invocations:
 ```bash
 BLUE_RELEASE_EPOCH="$(git show -s --format=%ct HEAD)"
 SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew clean build
-SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew finalQualityVerify
-SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew rcVerify
+SOURCE_DATE_EPOCH="$BLUE_RELEASE_EPOCH" ./gradlew finalQualityVerify rcVerify
 ```
 
 The first command writes clean-build evidence only after an exclusion-free

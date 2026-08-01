@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-contracts-core
-# entryCount: 1734
+# entryCount: 1753
 field blue.language.processor.ChannelLookupResult$Kind#ABSENT descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#NON_CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
@@ -579,6 +579,21 @@ field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_INITIALIZE
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_TERMINATED descriptor=Ljava/lang/String; access=public,static,final signature=- constant=-
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_TYPE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="/type"
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_VALUE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="/value"
+method blue.language.processor.BlueContracts#builder descriptor=(Lblue/language/runtime/LanguageProcessing;)Lblue/language/processor/BlueContracts$Builder; access=public,static signature=- throws=-
+method blue.language.processor.BlueContracts#close descriptor=()V access=public signature=- throws=-
+method blue.language.processor.BlueContracts#effectiveFragmentationCatalog descriptor=(Lblue/language/model/Node;)Lblue/language/processor/EffectiveFragmentationCatalog; access=public signature=- throws=-
+method blue.language.processor.BlueContracts#isClosed descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.BlueContracts#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Lblue/language/processor/DocumentProcessingResult; access=public signature=- throws=-
+method blue.language.processor.BlueContracts#processAttempt descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Lblue/language/processor/ProcessAttemptResult; access=public signature=- throws=-
+method blue.language.processor.BlueContracts#processForPlatformCommit descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/processor/VerifiedExecutionEvidence;)Lblue/language/processor/PlatformProcessingResult; access=public signature=- throws=-
+method blue.language.processor.BlueContracts$Builder#build descriptor=()Lblue/language/processor/BlueContracts; access=public signature=- throws=-
+method blue.language.processor.BlueContracts$Builder#deliveryPlanDeriver descriptor=(Lblue/language/processor/ExternalDeliveryPlanDeriver;)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
+method blue.language.processor.BlueContracts$Builder#evidenceVerifier descriptor=(Lblue/language/processor/ExternalDeliveryEvidenceVerifier;)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
+method blue.language.processor.BlueContracts$Builder#gasLimit descriptor=(J)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
+method blue.language.processor.BlueContracts$Builder#gasSchedule descriptor=(Lblue/language/processor/GasSchedule;)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
+method blue.language.processor.BlueContracts$Builder#observer descriptor=(Lblue/language/processor/ProcessingObserver;)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
+method blue.language.processor.BlueContracts$Builder#runtimeRegistry descriptor=(Lblue/language/processor/ContractProcessorRegistry;)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
+method blue.language.processor.BlueContracts$Builder#subscriptionSurfaceValidator descriptor=(Lblue/language/processor/SubscriptionSurfaceValidator;)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
 method blue.language.processor.ChannelCheckpointContext#channelKey descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.ChannelCheckpointContext#currentSubject descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.processor.ChannelCheckpointContext#event descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
@@ -687,6 +702,7 @@ method blue.language.processor.ContractMatchingService#matches descriptor=(Lblue
 method blue.language.processor.ContractMatchingService#matches descriptor=(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;)Z access=public signature=- throws=-
 method blue.language.processor.ContractProcessor#contractType descriptor=()Ljava/lang/Class; access=public,abstract signature=()Ljava/lang/Class<TT;>; throws=-
 method blue.language.processor.ContractProcessorRegistry#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.processor.ContractProcessorRegistry#exactTypeProvider descriptor=()Lblue/language/provider/NodeProvider; access=public signature=- throws=-
 method blue.language.processor.ContractProcessorRegistry#executableBodyFields descriptor=(Ljava/lang/String;)Ljava/util/List; access=public,synchronized signature=(Ljava/lang/String;)Ljava/util/List<Ljava/lang/String;>; throws=-
 method blue.language.processor.ContractProcessorRegistry#lookupChannel descriptor=(Lblue/language/processor/model/ChannelContract;)Ljava/util/Optional; access=public,synchronized signature=(Lblue/language/processor/model/ChannelContract;)Ljava/util/Optional<Lblue/language/processor/ChannelProcessor<+Lblue/language/processor/model/ChannelContract;>;>; throws=-
 method blue.language.processor.ContractProcessorRegistry#lookupChannel descriptor=(Ljava/lang/Class;)Ljava/util/Optional; access=public,synchronized signature=(Ljava/lang/Class<+Lblue/language/processor/model/ChannelContract;>;)Ljava/util/Optional<Lblue/language/processor/ChannelProcessor<+Lblue/language/processor/model/ChannelContract;>;>; throws=-
@@ -704,6 +720,7 @@ method blue.language.processor.ContractProcessorRegistry#register descriptor=(Lj
 method blue.language.processor.ContractProcessorRegistry#registerChannel descriptor=(Lblue/language/processor/ChannelProcessor;)V access=public signature=<T:Lblue/language/processor/model/ChannelContract;>(Lblue/language/processor/ChannelProcessor<TT;>;)V throws=-
 method blue.language.processor.ContractProcessorRegistry#registerHandler descriptor=(Lblue/language/processor/HandlerProcessor;)V access=public signature=<T:Lblue/language/processor/model/HandlerContract;>(Lblue/language/processor/HandlerProcessor<TT;>;)V throws=-
 method blue.language.processor.ContractProcessorRegistry#registerMarker descriptor=(Lblue/language/processor/ContractProcessor;)V access=public signature=<T:Lblue/language/processor/model/MarkerContract;>(Lblue/language/processor/ContractProcessor<TT;>;)V throws=-
+method blue.language.processor.ContractProcessorRegistry#snapshot descriptor=()Lblue/language/processor/ContractProcessorRegistry; access=public signature=- throws=-
 method blue.language.processor.ContractProcessorRegistryBuilder#build descriptor=()Lblue/language/processor/ContractProcessorRegistry; access=public signature=- throws=-
 method blue.language.processor.ContractProcessorRegistryBuilder#create descriptor=()Lblue/language/processor/ContractProcessorRegistryBuilder; access=public,static signature=- throws=-
 method blue.language.processor.ContractProcessorRegistryBuilder#register descriptor=(Lblue/language/processor/ContractProcessor;)Lblue/language/processor/ContractProcessorRegistryBuilder; access=public signature=(Lblue/language/processor/ContractProcessor<+Lblue/language/processor/model/Contract;>;)Lblue/language/processor/ContractProcessorRegistryBuilder; throws=-
@@ -992,11 +1009,11 @@ method blue.language.processor.FrozenJsonPatch#from descriptor=(Lblue/language/p
 method blue.language.processor.FrozenJsonPatch#getAuthoredCanonicalSizeBytes descriptor=()J access=public signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#getExactValue descriptor=()Lblue/language/processor/ExactBlueValue; access=public signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#getOp descriptor=()Lblue/language/processor/model/JsonPatch$Op; access=public signature=- throws=-
-method blue.language.processor.FrozenJsonPatch#getParsedPath descriptor=()Lblue/language/utils/ParsedJsonPointer; access=public signature=- throws=-
+method blue.language.processor.FrozenJsonPatch#getParsedPath descriptor=()Lblue/language/model/wire/ParsedJsonPointer; access=public signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#getPath descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#getValue descriptor=()Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#hashCode descriptor=()I access=public signature=- throws=-
-method blue.language.processor.FrozenJsonPatch#parsedPath descriptor=()Lblue/language/utils/ParsedJsonPointer; access=public signature=- throws=-
+method blue.language.processor.FrozenJsonPatch#parsedPath descriptor=()Lblue/language/model/wire/ParsedJsonPointer; access=public signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#remove descriptor=(Ljava/lang/String;)Lblue/language/processor/FrozenJsonPatch; access=public,static signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#replace descriptor=(Ljava/lang/String;Lblue/language/processor/ExactBlueValue;)Lblue/language/processor/FrozenJsonPatch; access=public,static signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#replace descriptor=(Ljava/lang/String;Lblue/language/snapshot/FrozenNode;)Lblue/language/processor/FrozenJsonPatch; access=public,static signature=- throws=-
@@ -1570,7 +1587,7 @@ method blue.language.processor.util.PointerUtils#abs descriptor=(Ljava/lang/Stri
 method blue.language.processor.util.PointerUtils#appendPointer descriptor=(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
 method blue.language.processor.util.PointerUtils#assertValidRuntimePointer descriptor=(Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
 method blue.language.processor.util.PointerUtils#canonicalizePointer descriptor=(Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
-method blue.language.processor.util.PointerUtils#descendantOrEqual descriptor=(Lblue/language/utils/ParsedJsonPointer;Lblue/language/utils/ParsedJsonPointer;)Z access=public,static signature=- throws=-
+method blue.language.processor.util.PointerUtils#descendantOrEqual descriptor=(Lblue/language/model/wire/ParsedJsonPointer;Lblue/language/model/wire/ParsedJsonPointer;)Z access=public,static signature=- throws=-
 method blue.language.processor.util.PointerUtils#descendantOrEqual descriptor=(Ljava/lang/String;Ljava/lang/String;)Z access=public,static signature=- throws=-
 method blue.language.processor.util.PointerUtils#escapeSegment descriptor=(Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
 method blue.language.processor.util.PointerUtils#joinRelativePointers descriptor=(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
@@ -1586,6 +1603,8 @@ method blue.language.processor.util.PointerUtils#toPointer descriptor=(Ljava/uti
 method blue.language.processor.util.ProcessorContractConstants#isReservedKey descriptor=(Ljava/lang/String;)Z access=public,static signature=- throws=-
 method blue.language.processor.util.ProcessorPointerConstants#relativeCheckpointEntry descriptor=(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
 method blue.language.processor.util.ProcessorPointerConstants#relativeContractsEntry descriptor=(Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
+type blue.language.processor.BlueContracts access=public,final super=java.lang.Object interfaces=java.lang.AutoCloseable signature=-
+type blue.language.processor.BlueContracts$Builder access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ChannelCheckpointContext access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ChannelEvaluation access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ChannelEvaluationContext access=public,final super=java.lang.Object interfaces=- signature=-

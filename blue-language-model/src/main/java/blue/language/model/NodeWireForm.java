@@ -16,18 +16,45 @@ import static blue.language.model.NodeWireForm.Strategy.SIMPLE;
 /** Model-owned conversion from mutable nodes to Blue wire values. */
 public final class NodeWireForm {
 
+    /** Selects the wire projection applied to node payloads. */
     public enum Strategy {
+        /**
+         * Emits the normative Blue object form, including inferred scalar
+         * type metadata where required.
+         */
         OFFICIAL,
+        /**
+         * Projects scalar and list payloads directly into compact wire values.
+         */
         SIMPLE
     }
 
     private NodeWireForm() {
     }
 
+    /**
+     * Projects a node using the normative Blue wire strategy.
+     *
+     * @param node node to project
+     * @return deterministic Blue wire scalar, list, or object map
+     * @throws NullPointerException if {@code node} is {@code null}
+     * @throws IllegalArgumentException if the node combines incompatible
+     *                                  payload kinds or has invalid list control
+     */
     public static Object get(Node node) {
         return get(node, OFFICIAL);
     }
 
+    /**
+     * Projects a node using the selected wire strategy.
+     *
+     * @param node node to project
+     * @param strategy wire projection strategy
+     * @return deterministic Blue wire scalar, list, or object map
+     * @throws NullPointerException if {@code node} is {@code null}
+     * @throws IllegalArgumentException if the node combines incompatible
+     *                                  payload kinds or has invalid list control
+     */
     public static Object get(Node node, Strategy strategy) {
         validatePayloadKind(node);
 

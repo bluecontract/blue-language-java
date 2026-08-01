@@ -46,6 +46,8 @@ depth, direct container width, participating scopes, event queue, patch count,
 or child-ledger shape. More gas cannot repair a portable-limit failure. The
 diagnostic identifies the bound name, observed value, and limit.
 
-Run `RuntimeChildGasLedgerExample` from `:examples`. The generated counter
-catalog is [gas-counters.md](../reference/gas-counters.md); operational metrics
-are listed in [host-metrics.md](../reference/host-metrics.md).
+Run
+[`RuntimeChildGasLedgerExample`](../../examples/src/main/java/blue/language/examples/RuntimeChildGasLedgerExample.java)
+from `:examples`. The generated counter catalog is
+[gas-counters.md](../reference/gas-counters.md); operational metrics are listed
+in [host-metrics.md](../reference/host-metrics.md).

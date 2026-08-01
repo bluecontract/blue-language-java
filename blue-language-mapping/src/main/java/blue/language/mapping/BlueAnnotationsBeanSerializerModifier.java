@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ser.std.BeanSerializerBase;
 public class BlueAnnotationsBeanSerializerModifier
         extends BeanSerializerModifier {
 
+    /** Creates a stateless serializer modifier for Blue annotations. */
     public BlueAnnotationsBeanSerializerModifier() {
     }
 

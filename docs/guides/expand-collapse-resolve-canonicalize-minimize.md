@@ -35,5 +35,9 @@ Strict methods require completion and throw deterministic failures for invalid
 or incomplete evidence. Limited methods return exhaustive outcomes such as
 established, absent, incomplete, and invalid. Incomplete never means absent.
 
-Run `ExpandCollapseProviderExample` and `SemanticFormsExample` from
-`:examples`. See [ADR 0003](../adr/0003-canonicalization-vs-minimization.md).
+Run
+[`ExpandCollapseProviderExample`](../../examples/src/main/java/blue/language/examples/ExpandCollapseProviderExample.java)
+and
+[`SemanticFormsExample`](../../examples/src/main/java/blue/language/examples/SemanticFormsExample.java)
+from `:examples`. See [ADR
+0003](../adr/0003-canonicalization-vs-minimization.md).

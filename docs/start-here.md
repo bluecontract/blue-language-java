@@ -181,13 +181,21 @@ overlay is Source and must be processed again before direct calculation.
 
 ## 9. List identity and incremental work
 
-List identity is one recursive prefix fold:
+List identity is one domain-separated recursive prefix fold. Here `H` is the
+normal direct BlueId hash over RFC 8785 canonical JSON, and `id(elementN)` is
+the exact BlueId of that element:
 
 ```text
-L0 = id([])
-Ln = FOLD_LIST_ID(Ln-1, id(elementN))
+L0 = H({"$list":"empty"})
+Ln = H({"$listCons":{
+       "elem":{"blueId":id(elementN)},
+       "prev":{"blueId":Ln-1}
+     }})
 id([a1, ..., an]) = Ln
 ```
+
+RFC 8785 serializes the fold map as `elem` before `prev`; neither Java map
+insertion order nor another host language's object order is semantic.
 
 If the BlueId for `[A, B]` is established, appending `C` performs one fold
 step with that prefix identity and `id(C)`. It does not need the bodies of A or

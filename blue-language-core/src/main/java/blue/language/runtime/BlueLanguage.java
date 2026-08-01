@@ -56,57 +56,101 @@ public final class BlueLanguage implements AutoCloseable {
         this.processing = runtime.processing();
     }
 
-    /** Returns a new independently configurable runtime builder. */
+    /**
+     * Returns a new independently configurable runtime builder.
+     *
+     * @return mutable builder for one independently owned runtime
+     */
     public static Builder builder() {
         return new Builder();
     }
 
-    /** Returns the stateless strict JSON/YAML codec. */
+    /**
+     * Returns the stateless strict JSON/YAML codec.
+     *
+     * @return runtime codec service
+     */
     public BlueCodec codec() {
         return codec;
     }
 
-    /** Returns the configured deterministic preprocessing service. */
+    /**
+     * Returns the configured deterministic preprocessing service.
+     *
+     * @return runtime preprocessing service
+     */
     public BluePreprocessing preprocessing() {
         return preprocessing;
     }
 
-    /** Returns exact expansion, collapse, and specialization operations. */
+    /**
+     * Returns exact expansion, collapse, and specialization operations.
+     *
+     * @return runtime graph service
+     */
     public BlueGraph graph() {
         return graph;
     }
 
-    /** Returns complete and demand-limited resolution operations. */
+    /**
+     * Returns complete and demand-limited resolution operations.
+     *
+     * @return runtime resolution service
+     */
     public BlueResolution resolution() {
         return resolution;
     }
 
-    /** Returns direct, Source Document, and cyclic-set identity operations. */
+    /**
+     * Returns direct, Source Document, and cyclic-set identity operations.
+     *
+     * @return runtime identity service
+     */
     public BlueIdentity identity() {
         return identity;
     }
 
-    /** Returns immutable snapshot and runtime-owned cache operations. */
+    /**
+     * Returns immutable snapshot and runtime-owned cache operations.
+     *
+     * @return runtime snapshot service
+     */
     public BlueSnapshots snapshots() {
         return snapshots;
     }
 
-    /** Returns mutable and immutable matching operations. */
+    /**
+     * Returns mutable and immutable matching operations.
+     *
+     * @return runtime matching service
+     */
     public BlueMatching matching() {
         return matching;
     }
 
-    /** Returns immutable canonical patching operations. */
+    /**
+     * Returns immutable canonical patching operations.
+     *
+     * @return runtime patching service
+     */
     public BluePatching patching() {
         return patching;
     }
 
-    /** Returns the Language-only bridge for deterministic processing scopes. */
+    /**
+     * Returns the Language-only bridge for deterministic processing scopes.
+     *
+     * @return runtime processing bridge
+     */
     public LanguageProcessing processing() {
         return processing;
     }
 
-    /** Returns whether terminal shutdown has released runtime-owned state. */
+    /**
+     * Returns whether terminal shutdown has released runtime-owned state.
+     *
+     * @return {@code true} after this runtime has closed
+     */
     public boolean isClosed() {
         return runtime.isClosed();
     }
@@ -130,21 +174,36 @@ public final class BlueLanguage implements AutoCloseable {
         private Builder() {
         }
 
-        /** Configures the borrowed provider used by graph operations. */
+        /**
+         * Configures the borrowed provider used by graph operations.
+         *
+         * @param nodeProvider borrowed exact-content provider
+         * @return this builder
+         */
         public Builder nodeProvider(NodeProvider nodeProvider) {
             this.nodeProvider = Objects.requireNonNull(
                     nodeProvider, "nodeProvider");
             return this;
         }
 
-        /** Configures immutable runtime-owned cache bounds. */
+        /**
+         * Configures immutable runtime-owned cache bounds.
+         *
+         * @param cachePolicy immutable cache bounds
+         * @return this builder
+         */
         public Builder cachePolicy(BlueCachePolicy cachePolicy) {
             this.cachePolicy = Objects.requireNonNull(
                     cachePolicy, "cachePolicy");
             return this;
         }
 
-        /** Freezes explicit aliases used only by root {@code blue} values. */
+        /**
+         * Freezes explicit aliases used only by root {@code blue} values.
+         *
+         * @param preprocessingAliases aliases mapped to exact BlueIds
+         * @return this builder
+         */
         public Builder preprocessingAliases(
                 Map<String, String> preprocessingAliases) {
             this.preprocessingAliases = Collections.unmodifiableMap(
@@ -157,6 +216,9 @@ public final class BlueLanguage implements AutoCloseable {
         /**
          * Freezes host type aliases imported into root {@code blue}
          * directives.
+         *
+         * @param environmentImports host aliases mapped to exact BlueIds
+         * @return this builder
          */
         public Builder environmentImports(
                 Map<String, String> environmentImports) {
@@ -167,7 +229,11 @@ public final class BlueLanguage implements AutoCloseable {
             return this;
         }
 
-        /** Builds an independent runtime with no process-global registration. */
+        /**
+         * Builds an independent runtime with no process-global registration.
+         *
+         * @return independently owned runtime
+         */
         public BlueLanguage build() {
             return new BlueLanguage(this);
         }

@@ -175,14 +175,24 @@ checked-in baseline mechanics.
 | Legacy checkpoint pointer aliases | Use `relativeCheckpointEntry(...)`. |
 | Legacy `ResolvedReferenceCache` alias/interner lane | Use verified canonical/resolved entries and structural interning. |
 | `DocumentProcessingResult.triggeredEvents()` | Use `events()`. |
+| Large mutable `Blue` service-locator surface | Use `BlueLanguage` for Language operations, `BlueContracts` for processing, or `BlueRuntime` when one owned composition root is useful. The retained `Blue` class is a thin 24-member convenience façade. |
+| `blue.language.utils.BlueIdReferenceValidator`, `BlueIds`, identity-input builders, and identity helpers | Import the supported equivalents from `blue.language.identity`. |
+| `blue.language.utils.MinimizedOverlayBuilder` and `MinimizedOverlayReconstructor` | Import the supported equivalents from `blue.language.resolve`; canonical identity construction remains in `blue.language.identity`. |
+| `blue.language.utils.NodePathEditor` and `Nodes` | Import the stable value helpers from `blue.language.model`. `NodePathSelector` is internal; call `NodePathEditor.select(...)`. |
+| `blue.language.utils.UncheckedObjectMapper` | Import `blue.language.codec.jackson.UncheckedObjectMapper` only when Jackson-specific integration is required; semantic code should normally use `BlueCodec`. |
+| Public `blue.language.utils.limits.*` implementation classes | Use `ResolutionLimits` and its named factories/builder. Concrete stateful limit implementations are intentionally not API. |
 
 Production source is guarded by build checks that reject new `@Deprecated`
 declarations and ambiguous bare `reverse` semantics.
 
-The checked-in `api/blue-language-java-1.0.json` file is the final
-public/protected JVM descriptor baseline after this preview cleanup.
-`verifyFinalApiBaseline` compares every candidate jar to that surface instead
-of treating a pre-1.0 branch or snapshot as authoritative.
+The checked-in `api/blue-language-java-1.0.json` file is the immutable
+pre-modernization distribution baseline. Each published module owns its final
+`api/public-api.txt` inventory, while
+`api/modernization-api-migration-ledger-1.0.json` classifies the exact
+baseline-to-final removals, relocations, and additions. `apiBaselineDiff`
+protects each settled module surface and `verifySemanticApiMigration` proves
+that the aggregate JVM delta is exactly the reviewed ledger—neither more nor
+less.
 
 ## Repository-independent provider boundary
 

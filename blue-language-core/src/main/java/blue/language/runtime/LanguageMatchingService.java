@@ -24,6 +24,14 @@ public final class LanguageMatchingService implements BlueMatching {
     private final BiFunction<Node, BlueOperationLimits,
             BlueOperationResult<Node>> limitedResolver;
 
+    /**
+     * Creates a matching service with explicit resolution dependencies.
+     *
+     * @param runtime runtime used for preprocessing, resolution, and type lookup
+     * @param defaultLimits limits applied by complete mutable matching
+     * @param limitedResolver exhaustive demand-limited resolver
+     * @throws NullPointerException if any argument is {@code null}
+     */
     public LanguageMatchingService(
             MatchingRuntime runtime,
             ResolutionLimits defaultLimits,
@@ -36,18 +44,41 @@ public final class LanguageMatchingService implements BlueMatching {
                 limitedResolver, "limitedResolver");
     }
 
+    /**
+     * Resolves and tests whether an authored candidate matches a type.
+     *
+     * @param candidate authored candidate value
+     * @param type authored type definition
+     * @return whether the resolved candidate matches the resolved type; runtime
+     *         matching failures return {@code false}
+     */
     @Override
     public boolean matches(Node candidate, Node type) {
         return new NodeTypeMatcher(runtime).matchesType(
                 candidate, type, defaultLimits);
     }
 
+    /**
+     * Tests two already-resolved immutable values.
+     *
+     * @param candidate resolved immutable candidate
+     * @param type resolved immutable type definition
+     * @return whether {@code candidate} matches {@code type}
+     */
     @Override
     public boolean matches(FrozenNode candidate, FrozenNode type) {
         return new NodeTypeMatcher(runtime).matchesResolvedType(
                 candidate, type);
     }
 
+    /**
+     * Tests one resolved snapshot path against an immutable type.
+     *
+     * @param snapshot resolved snapshot containing the candidate
+     * @param pointer RFC 6901 pointer selecting the candidate
+     * @param type resolved immutable type definition
+     * @return whether the selected candidate matches {@code type}
+     */
     @Override
     public boolean matches(
             ResolvedSnapshot snapshot,
@@ -57,6 +88,15 @@ public final class LanguageMatchingService implements BlueMatching {
                 snapshot, pointer, type);
     }
 
+    /**
+     * Performs a demand-limited match with an exhaustive outcome.
+     *
+     * @param candidate authored candidate value
+     * @param type authored type definition
+     * @param limits semantic-demand and reference-expansion limits
+     * @return established match result or the resolver's explicit absent,
+     *         incomplete, or invalid outcome
+     */
     @Override
     public BlueOperationResult<Boolean> matchesLimited(
             Node candidate,

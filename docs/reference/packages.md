@@ -8,40 +8,39 @@ Package ownership is derived from production Java source files. Only top-level p
 
 | Package | Public types | `package-info.java` |
 | --- | ---: | --- |
-| `blue.language` | 2 | **missing** |
-| `blue.language.api` | 9 | **missing** |
-| `blue.language.codec` | 3 | **missing** |
-| `blue.language.conformance` | 4 | **missing** |
-| `blue.language.conformance.api` | 9 | **missing** |
-| `blue.language.conformance.cli` | 1 | **missing** |
-| `blue.language.conformance.contracts` | 1 | **missing** |
-| `blue.language.conformance.runner` | 1 | **missing** |
-| `blue.language.dictionary` | 4 | **missing** |
-| `blue.language.graph` | 3 | **missing** |
-| `blue.language.identity` | 15 | **missing** |
-| `blue.language.mapping` | 16 | **missing** |
-| `blue.language.mapping.provider` | 1 | **missing** |
-| `blue.language.matching` | 4 | **missing** |
-| `blue.language.merge` | 13 | **missing** |
-| `blue.language.merge.processor` | 10 | **missing** |
-| `blue.language.model` | 13 | **missing** |
-| `blue.language.model.value` | 2 | **missing** |
-| `blue.language.model.wire` | 4 | **missing** |
-| `blue.language.patching` | 1 | **missing** |
-| `blue.language.preprocess` | 19 | **missing** |
-| `blue.language.preprocess.provider` | 2 | **missing** |
-| `blue.language.processor` | 89 | **missing** |
-| `blue.language.processor.model` | 18 | **missing** |
-| `blue.language.processor.registry` | 4 | **missing** |
-| `blue.language.processor.util` | 4 | **missing** |
-| `blue.language.provider` | 21 | **missing** |
-| `blue.language.provider.ipfs` | 3 | **missing** |
-| `blue.language.registry` | 4 | **missing** |
-| `blue.language.resolve` | 2 | **missing** |
-| `blue.language.runtime` | 7 | **missing** |
-| `blue.language.snapshot` | 13 | **missing** |
-| `blue.language.utils` | 11 | **missing** |
-| `blue.language.utils.limits` | 7 | **missing** |
+| `blue.language` | 2 | present |
+| `blue.language.api` | 9 | present |
+| `blue.language.codec` | 3 | present |
+| `blue.language.codec.jackson` | 1 | present |
+| `blue.language.conformance` | 4 | present |
+| `blue.language.conformance.api` | 9 | present |
+| `blue.language.conformance.cli` | 1 | present |
+| `blue.language.conformance.contracts` | 1 | present |
+| `blue.language.conformance.runner` | 1 | present |
+| `blue.language.dictionary` | 4 | present |
+| `blue.language.graph` | 3 | present |
+| `blue.language.identity` | 21 | present |
+| `blue.language.mapping` | 16 | present |
+| `blue.language.mapping.provider` | 1 | present |
+| `blue.language.matching` | 4 | present |
+| `blue.language.merge` | 13 | present |
+| `blue.language.merge.processor` | 10 | present |
+| `blue.language.model` | 15 | present |
+| `blue.language.model.value` | 2 | present |
+| `blue.language.model.wire` | 4 | present |
+| `blue.language.patching` | 1 | present |
+| `blue.language.preprocess` | 19 | present |
+| `blue.language.preprocess.provider` | 2 | present |
+| `blue.language.processor` | 89 | present |
+| `blue.language.processor.model` | 18 | present |
+| `blue.language.processor.registry` | 4 | present |
+| `blue.language.processor.util` | 4 | present |
+| `blue.language.provider` | 21 | present |
+| `blue.language.provider.ipfs` | 3 | present |
+| `blue.language.registry` | 4 | present |
+| `blue.language.resolve` | 4 | present |
+| `blue.language.runtime` | 7 | present |
+| `blue.language.snapshot` | 13 | present |
 
 ## `blue.language`
 
@@ -65,6 +64,10 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.codec.BlueCodec`
 - `blue.language.codec.BlueFormat`
 - `blue.language.codec.StandardBlueCodec`
+
+## `blue.language.codec.jackson`
+
+- `blue.language.codec.jackson.UncheckedObjectMapper`
 
 ## `blue.language.conformance`
 
@@ -115,15 +118,21 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.identity.Base58`
 - `blue.language.identity.Base58Sha256Provider`
 - `blue.language.identity.BlueIdInputNormalizer`
+- `blue.language.identity.BlueIdReferenceValidator`
 - `blue.language.identity.BlueIdentity`
+- `blue.language.identity.BlueIds`
 - `blue.language.identity.CanonicalIdentityConstants`
+- `blue.language.identity.CanonicalIdentityInputBuilder`
 - `blue.language.identity.CanonicalJsonHasher`
 - `blue.language.identity.CanonicalJsonValueWriter`
 - `blue.language.identity.CircularSetIdentityCalculator`
 - `blue.language.identity.DirectBlueIdCalculator`
 - `blue.language.identity.ListBlueIdFold`
+- `blue.language.identity.NodeToBlueIdInput`
 - `blue.language.identity.ObjectBlueIdHasher`
 - `blue.language.identity.ScalarIdentityEncoder`
+- `blue.language.identity.ScalarNodeIdentity`
+- `blue.language.identity.SchemaEnumCanonicalizer`
 - `blue.language.identity.SourceDocumentBlueIdCalculator`
 - `blue.language.identity.StandardBlueIdentity`
 - `blue.language.identity.StandardNodeIdentityProvider`
@@ -197,8 +206,10 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.model.NodeIdentities`
 - `blue.language.model.NodeIdentityProvider`
 - `blue.language.model.NodePath`
+- `blue.language.model.NodePathEditor`
 - `blue.language.model.NodeSerializer`
 - `blue.language.model.NodeWireForm`
+- `blue.language.model.Nodes`
 - `blue.language.model.Schema`
 - `blue.language.model.SchemaWireForm`
 - `blue.language.model.TypeBlueId`
@@ -413,7 +424,9 @@ Package ownership is derived from production Java source files. Only top-level p
 ## `blue.language.resolve`
 
 - `blue.language.resolve.BlueResolution`
+- `blue.language.resolve.MinimizedOverlayBuilder`
 - `blue.language.resolve.ReferenceCacheAdmissionPolicy`
+- `blue.language.resolve.ResolutionLimits`
 
 ## `blue.language.runtime`
 
@@ -440,28 +453,4 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.snapshot.FrozenNodeStructuralKey`
 - `blue.language.snapshot.FrozenNodeToBlueIdInput`
 - `blue.language.snapshot.ImmutableBluePatch`
-
-## `blue.language.utils`
-
-- `blue.language.utils.BlueIdReferenceValidator`
-- `blue.language.utils.BlueIds`
-- `blue.language.utils.CanonicalIdentityInputBuilder`
-- `blue.language.utils.MinimizedOverlayBuilder`
-- `blue.language.utils.NodePathEditor`
-- `blue.language.utils.NodePathSelector`
-- `blue.language.utils.NodeToBlueIdInput`
-- `blue.language.utils.Nodes`
-- `blue.language.utils.ScalarNodeIdentity`
-- `blue.language.utils.SchemaEnumCanonicalizer`
-- `blue.language.utils.UncheckedObjectMapper`
-
-## `blue.language.utils.limits`
-
-- `blue.language.utils.limits.CompositeLimits`
-- `blue.language.utils.limits.DeferredReferencePathLimits`
-- `blue.language.utils.limits.ExcludedPathLimits`
-- `blue.language.utils.limits.Limits`
-- `blue.language.utils.limits.NodeToPathLimitsConverter`
-- `blue.language.utils.limits.PathLimits`
-- `blue.language.utils.limits.TypeSpecificPropertyFilter`
 

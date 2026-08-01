@@ -17,15 +17,33 @@ import blue.language.provider.SourceContentVerificationRuntime;
 public interface LanguageRuntimeAccess extends MatchingRuntime,
         SourceContentVerificationRuntime {
 
-    /** Returns the runtime's verified provider graph. */
+    /**
+     * Returns the runtime's verified provider graph.
+     *
+     * @return verified provider selected for the runtime
+     */
     NodeProvider getNodeProvider();
 
-    /** Returns immutable bounds for runtime-owned derived caches. */
+    /**
+     * Returns immutable bounds for runtime-owned derived caches.
+     *
+     * @return runtime cache policy
+     */
     BlueCachePolicy cachePolicy();
 
-    /** Produces the canonical identity input for one authored Source value. */
+    /**
+     * Produces the canonical identity input for one authored Source value.
+     *
+     * @param source authored Source value
+     * @return canonical identity input under the runtime's frozen environment
+     */
     Node canonicalize(Node source);
 
-    /** Calculates the Content BlueId of one authored Source document. */
+    /**
+     * Calculates the Content BlueId of one authored Source document.
+     *
+     * @param source authored Source document
+     * @return Content BlueId under the runtime's frozen environment
+     */
     String calculateSourceDocumentBlueId(Node source);
 }

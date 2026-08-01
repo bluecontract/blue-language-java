@@ -14,16 +14,36 @@ import blue.language.resolve.ResolutionLimits;
  */
 public interface MatchingRuntime {
 
-    /** Returns the bounds used by matcher-owned derived caches. */
+    /**
+     * Returns the bounds used by matcher-owned derived caches.
+     *
+     * @return immutable cache policy for matching-derived state
+     */
     BlueCachePolicy matchingCachePolicy();
 
-    /** Applies the runtime's configured preprocessing rules to a source graph. */
+    /**
+     * Applies the runtime's configured preprocessing rules to a source graph.
+     *
+     * @param source authored source graph
+     * @return preprocessed graph used for matching
+     */
     Node preprocessForMatching(Node source);
 
-    /** Expands the demanded part of a mutable candidate in place. */
+    /**
+     * Expands the demanded part of a mutable candidate in place.
+     *
+     * @param source mutable candidate to expand
+     * @param limits target-driven expansion limits
+     */
     void expandForMatching(Node source, ResolutionLimits limits);
 
-    /** Resolves a candidate under the supplied target-driven limits. */
+    /**
+     * Resolves a candidate under the supplied target-driven limits.
+     *
+     * @param source candidate to resolve
+     * @param limits target-driven resolution limits
+     * @return resolved candidate
+     */
     Node resolveForMatching(Node source, ResolutionLimits limits);
 
     /**

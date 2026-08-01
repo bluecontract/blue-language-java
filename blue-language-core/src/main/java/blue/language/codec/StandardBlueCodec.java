@@ -13,6 +13,10 @@ import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 /** Default strict JSON/YAML implementation of {@link BlueCodec}. */
 public final class StandardBlueCodec implements BlueCodec {
 
+    /** Creates a stateless strict codec using the shared configured mappers. */
+    public StandardBlueCodec() {
+    }
+
     @Override
     public Node parseSource(String text, BlueFormat format) {
         return mapper(format).readValue(

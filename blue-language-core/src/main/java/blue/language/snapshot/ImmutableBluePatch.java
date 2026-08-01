@@ -26,32 +26,69 @@ public final class ImmutableBluePatch implements BluePatch {
         }
     }
 
-    /** Creates an add patch. */
+    /**
+     * Creates an immutable add patch with a defensive value copy.
+     *
+     * @param path authored target pointer
+     * @param value value to add
+     * @return a new immutable add patch
+     * @throws NullPointerException when {@code path} or {@code value} is
+     *         {@code null}
+     */
     public static ImmutableBluePatch add(String path, Node value) {
         return new ImmutableBluePatch(BluePatchOperation.ADD, path, value);
     }
 
-    /** Creates a replace patch. */
+    /**
+     * Creates an immutable replace patch with a defensive value copy.
+     *
+     * @param path authored target pointer
+     * @param value replacement value
+     * @return a new immutable replace patch
+     * @throws NullPointerException when {@code path} or {@code value} is
+     *         {@code null}
+     */
     public static ImmutableBluePatch replace(String path, Node value) {
         return new ImmutableBluePatch(
                 BluePatchOperation.REPLACE, path, value);
     }
 
-    /** Creates a remove patch. */
+    /**
+     * Creates an immutable remove patch.
+     *
+     * @param path authored target pointer
+     * @return a new immutable remove patch
+     * @throws NullPointerException when {@code path} is {@code null}
+     */
     public static ImmutableBluePatch remove(String path) {
         return new ImmutableBluePatch(BluePatchOperation.REMOVE, path, null);
     }
 
+    /**
+     * Returns this patch's operation kind.
+     *
+     * @return patch operation kind
+     */
     @Override
     public BluePatchOperation operation() {
         return operation;
     }
 
+    /**
+     * Returns the authored target pointer.
+     *
+     * @return target pointer
+     */
     @Override
     public String path() {
         return path;
     }
 
+    /**
+     * Returns a defensive copy of this patch's operation value.
+     *
+     * @return caller-owned value copy, or {@code null} for removal
+     */
     @Override
     public Node value() {
         return value == null ? null : value.clone();

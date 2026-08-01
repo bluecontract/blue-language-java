@@ -27,7 +27,14 @@ public final class CircularSetIdentityCalculator {
     private static final CircularSetIdentityCalculator SHARED =
             new CircularSetIdentityCalculator();
 
-    /** Calculates cyclic-set member BlueIds in source order. */
+    /**
+     * Calculates cyclic-set member BlueIds in source order.
+     *
+     * @param documents non-empty closed cyclic document set
+     * @return calculated member BlueIds in the supplied document order
+     * @throws IllegalArgumentException if the set or its internal references
+     *         are not valid cyclic identity input
+     */
     public static List<String> calculateCircularSetBlueIds(
             List<Node> documents) {
         return SHARED.circularBlueIds(documents);
@@ -52,6 +59,7 @@ public final class CircularSetIdentityCalculator {
      * Creates a calculator with an explicit direct identity implementation.
      *
      * @param directCalculator direct BlueId calculator
+     * @throws NullPointerException if {@code directCalculator} is {@code null}
      */
     public CircularSetIdentityCalculator(
             DirectBlueIdCalculator directCalculator) {
@@ -65,6 +73,9 @@ public final class CircularSetIdentityCalculator {
      *
      * @param documents non-empty cyclic document set
      * @return calculated member BlueIds
+     * @throws IllegalArgumentException if the set is empty, has no internal
+     *         references, contains invalid references, or has duplicate
+     *         preliminary identity inputs
      */
     public List<String> circularBlueIds(List<Node> documents) {
         if (documents == null || documents.isEmpty()) {

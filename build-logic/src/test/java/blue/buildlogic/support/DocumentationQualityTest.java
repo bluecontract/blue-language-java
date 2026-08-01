@@ -53,8 +53,10 @@ final class DocumentationQualityTest {
                 write("module/src/main/java/blue/RuntimeProvider.java",
                         "package blue; public interface RuntimeProvider {}\n"));
         Path api = write("module/build/reports/api/current-api.txt",
-                "# schema: blue-java-public-api/1.0\n# module: module\n# entryCount: 1\n"
-                        + "type blue.RuntimeProvider access=public,interface super=java.lang.Object interfaces=- signature=-\n");
+                "# schema: blue-java-public-api/1.0\n# module: module\n# entryCount: 3\n"
+                        + "type blue.RuntimeProvider access=public,interface super=java.lang.Object interfaces=- signature=-\n"
+                        + "type blue.BlueRuntime access=public,final super=java.lang.Object interfaces=java.lang.AutoCloseable signature=-\n"
+                        + "type blue.ProcessorRuntime access=public,abstract super=java.lang.Object interfaces=- signature=-\n");
         Path gas = write("gas.yaml", "schedule: contracts/1.0\nmaxProcessGas: 10\n"
                 + "namespaces:\n  processor:\n    counterCount: 1\n    counters:\n"
                 + "      call: 2\nportableLimits:\n  scopes: 3\n");
@@ -79,6 +81,10 @@ final class DocumentationQualityTest {
         assertTrue(statuses.contains("PORTABLE_LIMIT_EXCEEDED"));
         assertTrue(statuses.contains("SUBSCRIPTION_SURFACE_INVALID"));
         assertTrue(statuses.contains("retrying identical input cannot change"));
+        String runtimeSpi = first.get("reference/runtime-spi.md");
+        assertTrue(runtimeSpi.contains("`blue.RuntimeProvider`"));
+        assertTrue(runtimeSpi.contains("`blue.ProcessorRuntime`"));
+        assertTrue(!runtimeSpi.contains("`blue.BlueRuntime`"));
     }
 
     @Test

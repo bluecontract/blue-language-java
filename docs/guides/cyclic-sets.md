@@ -32,5 +32,7 @@ is available. Replacing the whole edge is allowed. Patching below it, opening
 an embedded processing scope through it, or using a bare member as the top-level
 Root/event is rejected when the required set transaction/proof is absent.
 
-Run `CyclicSetIdentityExample` from `:examples` for the released two-member
-vector. See [provider and fragment architecture](../architecture/provider-and-fragment-model.md).
+Run
+[`CyclicSetIdentityExample`](../../examples/src/main/java/blue/language/examples/CyclicSetIdentityExample.java)
+from `:examples` for the released two-member vector. See [provider and fragment
+architecture](../architecture/provider-and-fragment-model.md).

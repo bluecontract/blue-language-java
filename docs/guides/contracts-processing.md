@@ -64,6 +64,9 @@ invalid input, runtime failure, gas exhaustion, portable-limit failure, and
 subscription-surface failure publish no partial application state. Admitted
 gas remains visible because it records work already performed.
 
-Run `CustomRuntimeTypesExample`, `RootOnlyEventsExample`, and
-`FragmentedProcessingExample` from `:examples`. See the
-[Contracts pipeline](../architecture/contracts-pipeline.md).
+Run
+[`CustomExternalChannelExample`](../../examples/src/main/java/blue/language/examples/CustomExternalChannelExample.java),
+[`RootOnlyEventsExample`](../../examples/src/main/java/blue/language/examples/RootOnlyEventsExample.java),
+and
+[`PureReferenceFragmentsExample`](../../examples/src/main/java/blue/language/examples/PureReferenceFragmentsExample.java)
+from `:examples`. See the [Contracts pipeline](../architecture/contracts-pipeline.md).

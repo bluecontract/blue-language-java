@@ -54,7 +54,10 @@ participating closure is fixed before mutation. Replacing/removing an active
 embedded occurrence cuts off that occurrence and active descendants; adding a
 new value at the same path does not resurrect the previous occurrence.
 
-Run `RootOnlyEventsExample` from `:examples`. See
-[Transactional state](../architecture/transactional-state.md) and the focused
-concept guides for [events](../concepts/events-and-document-updates.md),
-[checkpoints](../concepts/checkpoints.md), and [lifecycle](../concepts/lifecycle.md).
+Run
+[`RootOnlyEventsExample`](../../examples/src/main/java/blue/language/examples/RootOnlyEventsExample.java)
+from `:examples`. See [Transactional
+state](../architecture/transactional-state.md) and the focused concept guides
+for [events](../concepts/events-and-document-updates.md),
+[checkpoints](../concepts/checkpoints.md), and
+[lifecycle](../concepts/lifecycle.md).

@@ -19,6 +19,7 @@ public final class ExpandCollapseProviderExample {
 
     /** Runs exact graph operations against a defensive in-memory provider. */
     public static Result run() {
+        // tag::verified-provider[]
         Node exactContent = new Node().value(CONTENT_VALUE);
         String exactBlueId =
                 DirectBlueIdCalculator.calculateBlueId(exactContent);
@@ -49,6 +50,7 @@ public final class ExpandCollapseProviderExample {
                     "Expansion must not mutate the caller's reference");
             return new Result(exactBlueId, expanded, collapsed);
         }
+        // end::verified-provider[]
     }
 
     /** Runs from a shell and prints the preserved identity. */

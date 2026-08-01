@@ -7,12 +7,24 @@ import blue.language.snapshot.FrozenNode;
  */
 public interface ResolutionSnapshot {
 
-    /** Returns the strict canonical identity root. */
+    /**
+     * Returns the strict canonical identity root.
+     *
+     * @return immutable strict canonical root
+     */
     FrozenNode canonicalRoot();
 
-    /** Returns the completed resolved runtime root. */
+    /**
+     * Returns the completed resolved runtime root.
+     *
+     * @return immutable completed resolved root
+     */
     FrozenNode resolvedRoot();
 
-    /** Returns immutable provenance from the same resolver invocation. */
+    /**
+     * Returns provenance from the same resolver invocation.
+     *
+     * @return immutable resolution provenance
+     */
     ResolutionProvenance provenance();
 }

@@ -10,6 +10,10 @@ import java.util.List;
 public final class StandardNodeIdentityProvider
         implements NodeIdentityProvider {
 
+    /** Creates the stateless normative model-identity provider. */
+    public StandardNodeIdentityProvider() {
+    }
+
     @Override
     public String calculate(Node node) {
         return DirectBlueIdCalculator.INSTANCE

@@ -6,8 +6,10 @@ import java.math.BigInteger;
 /** Numeric normalization and exact binary64 helpers owned by the model. */
 public class BlueNumbers {
 
+    /** Smallest integer represented exactly by every interoperable binary64 runtime. */
     public static final BigInteger MIN_INTEROPERABLE_INTEGER =
             BigInteger.valueOf(-9_007_199_254_740_991L);
+    /** Largest integer represented exactly by every interoperable binary64 runtime. */
     public static final BigInteger MAX_INTEROPERABLE_INTEGER =
             BigInteger.valueOf(9_007_199_254_740_991L);
 
@@ -15,6 +17,15 @@ public class BlueNumbers {
     protected BlueNumbers() {
     }
 
+    /**
+     * Converts a numeric value to the canonical decimal view of its binary64
+     * representation.
+     *
+     * @param value number or numeric string to normalize
+     * @return finite canonical decimal representation of the binary64 value
+     * @throws IllegalArgumentException when {@code value} is not numeric or
+     *         converts to a non-finite binary64 value
+     */
     public static BigDecimal toCanonicalDoubleValue(Object value) {
         double doubleValue;
         if (value instanceof BigDecimal) {
@@ -36,6 +47,17 @@ public class BlueNumbers {
         return BigDecimal.valueOf(doubleValue);
     }
 
+    /**
+     * Tests whether one binary64 value is an exact integer multiple of another.
+     * Both operands are compared as exact rationals after binary64 conversion.
+     *
+     * @param value numeric candidate value
+     * @param multipleOf numeric divisor, or {@code null} to disable the test
+     * @return {@code true} when the converted quotient is an exact integer or
+     *         when {@code multipleOf} is {@code null}
+     * @throws IllegalArgumentException when an operand is non-numeric or
+     *         non-finite, or when {@code multipleOf} converts to zero
+     */
     public static boolean isExactBinary64Multiple(
             Object value, BigDecimal multipleOf) {
         if (multipleOf == null) {

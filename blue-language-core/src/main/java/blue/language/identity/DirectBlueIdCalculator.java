@@ -39,6 +39,7 @@ public final class DirectBlueIdCalculator {
      * constructor.</p>
      *
      * @param hashProvider canonical-value hash function
+     * @throws NullPointerException if {@code hashProvider} is {@code null}
      */
     public DirectBlueIdCalculator(Function<Object, String> hashProvider) {
         Function<Object, String> checkedHashProvider = Objects.requireNonNull(
@@ -50,33 +51,75 @@ public final class DirectBlueIdCalculator {
         this.listFold = new ListBlueIdFold(checkedHashProvider);
     }
 
-    /** Calculates a strict direct BlueId with the shared calculator. */
+    /**
+     * Calculates a strict direct BlueId with the shared calculator.
+     *
+     * @param node strict direct identity input
+     * @return canonical BlueId
+     * @throws IllegalArgumentException if {@code node} is not valid direct
+     *         BlueId input
+     */
     public static String calculateBlueId(Node node) {
         return INSTANCE.directBlueId(node);
     }
 
-    /** Calculates a strict ordered-list BlueId with the shared calculator. */
+    /**
+     * Calculates a strict ordered-list BlueId with the shared calculator.
+     *
+     * @param nodes ordered strict identity elements
+     * @return canonical list BlueId
+     * @throws IllegalArgumentException if {@code nodes} is not valid direct
+     *         BlueId input
+     */
     public static String calculateBlueId(List<Node> nodes) {
         return INSTANCE.directBlueId(nodes);
     }
 
-    /** Calculates unchecked structural identity with the shared calculator. */
+    /**
+     * Calculates unchecked structural identity with the shared calculator.
+     *
+     * @param node source node
+     * @return unchecked structural BlueId
+     * @throws IllegalArgumentException if the projected wire value is not valid
+     *         canonical identity input
+     */
     public static String calculateUncheckedBlueId(Node node) {
         return INSTANCE.uncheckedBlueId(node);
     }
 
-    /** Calculates unchecked ordered-list identity with the shared calculator. */
+    /**
+     * Calculates unchecked ordered-list identity with the shared calculator.
+     *
+     * @param nodes ordered source elements
+     * @return unchecked structural list BlueId
+     * @throws IllegalArgumentException if the projected wire values are not
+     *         valid canonical identity input
+     */
     public static String calculateUncheckedBlueId(List<Node> nodes) {
         return INSTANCE.uncheckedBlueId(nodes);
     }
 
-    /** Calculates direct identity while accepting cyclic placeholders. */
+    /**
+     * Calculates direct identity while accepting cyclic placeholders.
+     *
+     * @param node cyclic calculation input
+     * @return preliminary or master BlueId
+     * @throws IllegalArgumentException if {@code node} is not valid cyclic
+     *         calculation input
+     */
     public static String calculateBlueIdAllowingCyclicPlaceholders(
             Node node) {
         return INSTANCE.directBlueIdAllowingCyclicPlaceholders(node);
     }
 
-    /** Calculates ordered identity while accepting cyclic placeholders. */
+    /**
+     * Calculates ordered identity while accepting cyclic placeholders.
+     *
+     * @param nodes cyclic calculation members
+     * @return cyclic-set master BlueId
+     * @throws IllegalArgumentException if {@code nodes} is not valid cyclic
+     *         calculation input
+     */
     public static String calculateBlueIdAllowingCyclicPlaceholders(
             List<Node> nodes) {
         return INSTANCE.directBlueIdAllowingCyclicPlaceholders(nodes);
@@ -87,6 +130,8 @@ public final class DirectBlueIdCalculator {
      *
      * @param node strict direct identity input
      * @return canonical BlueId
+     * @throws IllegalArgumentException if {@code node} is not valid direct
+     *         BlueId input
      */
     public String directBlueId(Node node) {
         return calculateNormalized(normalizer.normalize(node));
@@ -97,6 +142,8 @@ public final class DirectBlueIdCalculator {
      *
      * @param nodes ordered list elements
      * @return canonical list BlueId
+     * @throws IllegalArgumentException if {@code nodes} is not valid direct
+     *         BlueId input
      */
     public String directBlueId(List<Node> nodes) {
         return calculateNormalized(normalizer.normalizeElements(nodes));
@@ -107,6 +154,8 @@ public final class DirectBlueIdCalculator {
      *
      * @param canonicalInput projected identity input
      * @return canonical BlueId
+     * @throws IllegalArgumentException if {@code canonicalInput} is not a
+     *         supported map, list, or scalar identity value
      */
     public String directBlueIdFromCanonicalInput(Object canonicalInput) {
         return calculateNormalized(
@@ -118,6 +167,8 @@ public final class DirectBlueIdCalculator {
      *
      * @param node source node
      * @return unchecked structural BlueId
+     * @throws IllegalArgumentException if the projected wire value is not valid
+     *         canonical identity input
      */
     public String uncheckedBlueId(Node node) {
         return directBlueIdFromCanonicalInput(NodeWireForm.get(node));
@@ -128,6 +179,8 @@ public final class DirectBlueIdCalculator {
      *
      * @param nodes ordered source elements
      * @return unchecked structural list BlueId
+     * @throws IllegalArgumentException if the projected wire values are not
+     *         valid canonical identity input
      */
     public String uncheckedBlueId(List<Node> nodes) {
         java.util.ArrayList<Object> values = new java.util.ArrayList<>(
@@ -144,6 +197,8 @@ public final class DirectBlueIdCalculator {
      *
      * @param node cyclic calculation input
      * @return preliminary or master BlueId
+     * @throws IllegalArgumentException if {@code node} is not valid cyclic
+     *         calculation input
      */
     public String directBlueIdAllowingCyclicPlaceholders(Node node) {
         return calculateNormalized(
@@ -156,6 +211,8 @@ public final class DirectBlueIdCalculator {
      *
      * @param nodes cyclic calculation members
      * @return cyclic-set master BlueId
+     * @throws IllegalArgumentException if {@code nodes} is not valid cyclic
+     *         calculation input
      */
     public String directBlueIdAllowingCyclicPlaceholders(List<Node> nodes) {
         return calculateNormalized(

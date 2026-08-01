@@ -9,7 +9,13 @@ public final class TransformationExecutor {
 
     private final StandardPreprocessingPipeline standardPipeline;
 
-    /** Creates an executor with the mandatory Language baseline pipeline. */
+    /**
+     * Creates an executor with the mandatory Language baseline pipeline.
+     *
+     * @param standardPipeline mandatory pipeline applied after transformations
+     * @throws NullPointerException when {@code standardPipeline} is
+     *         {@code null}
+     */
     public TransformationExecutor(
             StandardPreprocessingPipeline standardPipeline) {
         this.standardPipeline = Objects.requireNonNull(

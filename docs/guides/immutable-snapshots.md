@@ -27,5 +27,7 @@ the owning runtime clears runtime caches and rejects new admitted operations;
 it does not mutate snapshot values already returned to a caller unless their
 documented handle is runtime-scoped.
 
-Run `ImmutableSnapshotExample` from `:examples`. See
+Run
+[`ImmutableSnapshotExample`](../../examples/src/main/java/blue/language/examples/ImmutableSnapshotExample.java)
+from `:examples`. See
 [immutability-and-runtime-state.md](../architecture/immutability-and-runtime-state.md).

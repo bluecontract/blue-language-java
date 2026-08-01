@@ -29,14 +29,33 @@ import static blue.language.model.wire.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
 /** Validates the reserved preprocessing directive independently of fetching. */
 public final class DirectiveValidator {
 
-    /** Validates graph bounds and proves that {@code blue} occurs only at root. */
+    /** Creates a stateless preprocessing-directive validator. */
+    public DirectiveValidator() {
+    }
+
+    /**
+     * Validates graph bounds and proves that {@code blue} occurs only at root.
+     *
+     * @param source source document to validate
+     * @throws NullPointerException if {@code source} is {@code null}
+     * @throws IllegalArgumentException if a portable graph bound is exceeded
+     *                                  or a nested {@code blue} directive exists
+     */
     public void validateSource(Node source) {
         PreprocessingLimits.requireGraphWithinBounds(
                 source, "Source Document");
         rejectNestedBlue(source);
     }
 
-    /** Validates the portable shape of the resolved root directive. */
+    /**
+     * Validates the portable shape of the resolved root directive.
+     *
+     * @param directive resolved root directive to validate
+     * @throws NullPointerException if {@code directive} is {@code null}
+     * @throws IllegalArgumentException if the directive contains nested
+     *                                  {@code blue}, unsupported fields, or
+     *                                  non-portable metadata
+     */
     public void validateDirective(Node directive) {
         rejectAnyBlue(directive, BlueLanguageConstants.OBJECT_BLUE);
         if (directive.getBlueId() != null
@@ -72,7 +91,14 @@ public final class DirectiveValidator {
         }
     }
 
-    /** Validates that imports are an object containing only alias entries. */
+    /**
+     * Validates that imports are an object containing only alias entries.
+     *
+     * @param imports resolved imports object to validate
+     * @throws NullPointerException if {@code imports} is {@code null}
+     * @throws IllegalArgumentException if non-object metadata occurs on the
+     *                                  imports container
+     */
     public void validateImportsObject(Node imports) {
         if (imports.getBlueId() != null
                 || imports.getValue() != null
@@ -94,7 +120,14 @@ public final class DirectiveValidator {
         }
     }
 
-    /** Validates the resolved transformations container before item preflight. */
+    /**
+     * Validates the resolved transformations container before item preflight.
+     *
+     * @param transformations resolved transformations list to validate
+     * @throws NullPointerException if {@code transformations} is {@code null}
+     * @throws IllegalArgumentException if object, scalar, or other unsupported
+     *                                  metadata occurs on the list container
+     */
     public void validateTransformationList(Node transformations) {
         if (transformations.getBlueId() != null
                 || transformations.getValue() != null
@@ -116,7 +149,17 @@ public final class DirectiveValidator {
         }
     }
 
-    /** Rejects a reserved directive anywhere inside a resolved resource. */
+    /**
+     * Rejects a reserved directive anywhere inside a resolved resource.
+     *
+     * <p>A {@code null} node represents an absent optional resource and is
+     * accepted.</p>
+     *
+     * @param node resolved resource to inspect, or {@code null}
+     * @param path diagnostic path identifying the resource
+     * @throws IllegalArgumentException if {@code blue} occurs anywhere in the
+     *                                  resolved resource
+     */
     public void rejectAnyBlue(Node node, String path) {
         if (node == null) {
             return;

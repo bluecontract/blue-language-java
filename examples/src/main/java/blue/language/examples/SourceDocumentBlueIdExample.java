@@ -22,6 +22,7 @@ public final class SourceDocumentBlueIdExample {
 
     /** Runs preprocess, resolve, canonicalize, and then the direct identity path. */
     public static Result run() {
+        // tag::source-document-blueid[]
         try (BlueLanguage language = BlueLanguage.builder().build()) {
             Node source = language.codec().parseSource(
                     SOURCE_YAML, BlueFormat.YAML);
@@ -41,6 +42,7 @@ public final class SourceDocumentBlueIdExample {
                     "Source identity must finish on the direct identity path");
             return new Result(canonical, sourceBlueId, directBlueId);
         }
+        // end::source-document-blueid[]
     }
 
     /** Runs from a shell and prints the Source Document BlueId. */

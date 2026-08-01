@@ -47,6 +47,10 @@ transport availability, authorization, or ownership. Those are host concerns.
 The same exact content has the same BlueId in YAML, JSON, memory, IPFS, or an
 application-specific provider.
 
-Run `ParseAndSerializeExample`, `DirectBlueIdExample`, and
-`SourceDocumentBlueIdExample` from `:examples` for executable Java versions.
+Run
+[`ParseAndSerializeExample`](../../examples/src/main/java/blue/language/examples/ParseAndSerializeExample.java),
+[`DirectBlueIdExample`](../../examples/src/main/java/blue/language/examples/DirectBlueIdExample.java),
+and
+[`SourceDocumentBlueIdExample`](../../examples/src/main/java/blue/language/examples/SourceDocumentBlueIdExample.java)
+from `:examples` for executable Java versions.
 See [ADR 0001](../adr/0001-one-blueid-two-calculation-paths.md).

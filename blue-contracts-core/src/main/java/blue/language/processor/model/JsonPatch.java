@@ -30,7 +30,11 @@ public class JsonPatch implements BluePatch {
         /** Remove the value at the addressed location. */
         REMOVE;
 
-        /** Returns the equivalent Language-owned patch operation. */
+        /**
+         * Returns the equivalent Language-owned patch operation.
+         *
+         * @return Language-owned operation corresponding to this Contracts operation
+         */
         public BluePatchOperation blueOperation() {
             switch (this) {
                 case ADD:
@@ -45,7 +49,13 @@ public class JsonPatch implements BluePatch {
             }
         }
 
-        /** Reconstructs the Contracts operation at the module boundary. */
+        /**
+         * Reconstructs the Contracts operation at the module boundary.
+         *
+         * @param operation Language-owned patch operation to translate
+         * @return Contracts operation corresponding to {@code operation}
+         * @throws NullPointerException if {@code operation} is {@code null}
+         */
         public static Op fromBlueOperation(
                 BluePatchOperation operation) {
             switch (Objects.requireNonNull(operation, "operation")) {

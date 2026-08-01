@@ -52,6 +52,8 @@ For every custom runtime type, cover:
 - exact child-gas trace and gas exhaustion;
 - concurrent calls through one immutable generation.
 
-Run `CustomRuntimeTypesExample` from `:examples`. The lower-level extension
-guide is [Adding a Contract runtime](adding-a-contract-runtime.md), and the SPI
-inventory is [runtime-spi.md](../reference/runtime-spi.md).
+Run
+[`CustomExternalChannelExample`](../../examples/src/main/java/blue/language/examples/CustomExternalChannelExample.java)
+from `:examples`. The lower-level extension guide is
+[Adding a Contract runtime](adding-a-contract-runtime.md), and the SPI inventory
+is [runtime-spi.md](../reference/runtime-spi.md).

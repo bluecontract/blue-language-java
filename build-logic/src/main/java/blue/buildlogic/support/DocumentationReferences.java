@@ -51,6 +51,10 @@ public final class DocumentationReferences {
                     + "ObservationKind\\.([A-Z_]+)(?:,\\s*(?:\\R\\s*)?"
                     + "ProcessingObservationDimension\\.([A-Z_]+))?\\)\\s*[,;]");
     private static final Pattern API_MODULE = Pattern.compile("(?m)^# module: (.+)$");
+    private static final String API_ACCESS_MARKER = " access=";
+    private static final String API_SUPER_MARKER = " super=";
+    private static final String API_INTERFACE_FLAG = "interface";
+    private static final String API_ABSTRACT_FLAG = "abstract";
 
     private DocumentationReferences() {}
 
@@ -150,7 +154,8 @@ public final class DocumentationReferences {
                     continue;
                 }
                 String type = token(entry, 1);
-                boolean extensionShape = entry.contains("interface") || entry.contains("abstract");
+                boolean extensionShape = hasApiAccessFlag(entry, API_INTERFACE_FLAG)
+                        || hasApiAccessFlag(entry, API_ABSTRACT_FLAG);
                 if (extensionShape && isRuntimeExtensionName(type)) {
                     extensionTypes.add(type);
                 }
@@ -169,6 +174,17 @@ public final class DocumentationReferences {
         markdown.append("\nTotal registered extension surfaces: **")
                 .append(extensionTypes.size()).append("**.\n");
         return markdown.toString();
+    }
+
+    private static boolean hasApiAccessFlag(String entry, String flag) {
+        int accessStart = entry.indexOf(API_ACCESS_MARKER);
+        int accessEnd = entry.indexOf(API_SUPER_MARKER, accessStart + 1);
+        if (accessStart < 0 || accessEnd < 0) {
+            return false;
+        }
+        String access = entry.substring(
+                accessStart + API_ACCESS_MARKER.length(), accessEnd);
+        return ("," + access + ",").contains("," + flag + ",");
     }
 
     private static String statuses(JavaSourceQuality.Analysis source) {

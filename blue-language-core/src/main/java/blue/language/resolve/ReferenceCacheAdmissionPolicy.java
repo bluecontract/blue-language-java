@@ -16,6 +16,11 @@ public interface ReferenceCacheAdmissionPolicy {
     /** Conservative policy for hosts whose provider content is contextual. */
     ReferenceCacheAdmissionPolicy DENY_ALL = blueId -> false;
 
-    /** Returns whether canonical content for {@code blueId} may be retained. */
+    /**
+     * Returns whether canonical content for {@code blueId} may be retained.
+     *
+     * @param blueId exact verified content identity
+     * @return {@code true} when the reusable cache may retain the content
+     */
     boolean mayCacheCanonical(String blueId);
 }

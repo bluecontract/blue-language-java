@@ -30,6 +30,15 @@ public final class LanguageRuntimeServices {
     private LanguageRuntimeServices() {
     }
 
+    /**
+     * Calculates the stable preprocessing-environment identity for directive
+     * aliases without host environment imports.
+     *
+     * @param aliases directive aliases, or {@code null} for the baseline
+     *        environment
+     * @return baseline environment identity, optionally extended by the
+     *         canonical alias-map hash
+     */
     public static String preprocessingEnvironmentIdentity(
             Map<String, String> aliases) {
         if (aliases == null || aliases.isEmpty()) {

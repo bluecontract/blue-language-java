@@ -14,10 +14,36 @@ public final class NodePath {
     private NodePath() {
     }
 
+    /**
+     * Reads a value or structural node at an absolute Blue path.
+     *
+     * <p>The root path returns the root scalar value when present and the root
+     * node otherwise. Reference nodes are not linked by this overload.</p>
+     *
+     * @param node root node to traverse
+     * @param path absolute Blue path using {@code "/"} as the root
+     * @return scalar value or node stored at {@code path}
+     * @throws NullPointerException if {@code node} is {@code null}
+     * @throws IllegalArgumentException if {@code path} is not absolute or a
+     *                                  path segment cannot be resolved
+     */
     public static Object get(Node node, String path) {
         return get(node, path, null);
     }
 
+    /**
+     * Reads a value or structural node and optionally links references while
+     * traversing.
+     *
+     * @param node root node to traverse
+     * @param path absolute Blue path using {@code "/"} as the root
+     * @param linkingProvider function that replaces encountered reference
+     *                        nodes, or {@code null} to leave references intact
+     * @return scalar value or node stored at {@code path}
+     * @throws NullPointerException if {@code node} is {@code null}
+     * @throws IllegalArgumentException if {@code path} is not absolute or a
+     *                                  path segment cannot be resolved
+     */
     public static Object get(
             Node node,
             String path,
@@ -25,6 +51,20 @@ public final class NodePath {
         return get(node, path, linkingProvider, true);
     }
 
+    /**
+     * Reads a value or structural node with explicit final-reference handling.
+     *
+     * @param node root node to traverse
+     * @param path absolute Blue path using {@code "/"} as the root
+     * @param linkingProvider function that replaces encountered reference
+     *                        nodes, or {@code null} to leave references intact
+     * @param resolveFinalLink whether to apply {@code linkingProvider} to the
+     *                         node at the final path segment
+     * @return scalar value or node stored at {@code path}
+     * @throws NullPointerException if {@code node} is {@code null}
+     * @throws IllegalArgumentException if {@code path} is not absolute or a
+     *                                  path segment cannot be resolved
+     */
     public static Object get(
             Node node,
             String path,
@@ -38,6 +78,19 @@ public final class NodePath {
                 linkingProvider, resolveFinalLink);
     }
 
+    /**
+     * Reads the structural node at an absolute Blue path without linking.
+     *
+     * <p>Unlike {@link #get(Node, String)}, this method retains a scalar
+     * payload inside its containing {@link Node}.</p>
+     *
+     * @param node root node to traverse
+     * @param path absolute Blue path using {@code "/"} as the root
+     * @return structural node stored at {@code path}
+     * @throws NullPointerException if {@code node} is {@code null}
+     * @throws IllegalArgumentException if {@code path} is not absolute or a
+     *                                  path segment cannot be resolved
+     */
     public static Node getNode(Node node, String path) {
         requireAbsolute(path);
         if (JsonPointer.ROOT.equals(path)) {

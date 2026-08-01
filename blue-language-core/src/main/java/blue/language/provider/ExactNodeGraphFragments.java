@@ -42,8 +42,11 @@ public final class ExactNodeGraphFragments {
      * Splits every semantic child boundary of supplied exact roots.
      *
      * @param exactRoots non-empty ordinary exact roots
-     * @throws IllegalArgumentException when a root is null, a pure reference,
-     *                                  cyclic, or otherwise not fragmentable
+     * @throws NullPointerException when the {@code exactRoots} array itself is
+     *                              {@code null}
+     * @throws IllegalArgumentException when no roots are supplied, or a root
+     *                                  is null, a pure reference, cyclic, or
+     *                                  otherwise not fragmentable
      */
     public ExactNodeGraphFragments(Node... exactRoots) {
         this(requireRootArray(exactRoots));
@@ -53,8 +56,10 @@ public final class ExactNodeGraphFragments {
      * Splits every semantic child boundary of supplied exact roots.
      *
      * @param exactRoots non-empty ordinary exact roots
-     * @throws IllegalArgumentException when a root is null, a pure reference,
-     *                                  cyclic, or otherwise not fragmentable
+     * @throws NullPointerException when {@code exactRoots} is {@code null}
+     * @throws IllegalArgumentException when no roots are supplied, or a root
+     *                                  is null, a pure reference, cyclic, or
+     *                                  otherwise not fragmentable
      */
     public ExactNodeGraphFragments(
             Collection<? extends Node> exactRoots) {
@@ -98,6 +103,11 @@ public final class ExactNodeGraphFragments {
      * @param cuts RFC 6901 pointers relative to {@code exactRoot}; the empty
      *             pointer selects the root
      * @return immutable exact-fragment graph
+     * @throws NullPointerException if {@code exactRoot} or {@code cuts} is
+     *                              {@code null}
+     * @throws IllegalArgumentException if the root is a pure reference,
+     *                                  cyclic, or otherwise not fragmentable,
+     *                                  or if a cut is invalid or absent
      */
     public static ExactNodeGraphFragments split(
             Node exactRoot,
@@ -240,22 +250,38 @@ public final class ExactNodeGraphFragments {
                     "directFragment").clone();
         }
 
-        /** @return exact root BlueId */
+        /**
+         * Returns the exact identity of the retained root.
+         *
+         * @return exact root BlueId
+         */
         public String blueId() {
             return blueId;
         }
 
-        /** @return defensive copy of the caller-supplied root */
+        /**
+         * Returns the caller-supplied root content.
+         *
+         * @return defensive copy of the caller-supplied root
+         */
         public Node original() {
             return original.clone();
         }
 
-        /** @return defensive shallow-fragment root copy */
+        /**
+         * Returns the root fragment whose semantic children are references.
+         *
+         * @return defensive shallow-fragment root copy
+         */
         public Node directFragment() {
             return directFragment.clone();
         }
 
-        /** @return fresh pure reference to the root identity */
+        /**
+         * Returns a pure reference to the retained root identity.
+         *
+         * @return fresh pure reference to the root identity
+         */
         public Node pureReference() {
             return new Node().blueId(blueId);
         }

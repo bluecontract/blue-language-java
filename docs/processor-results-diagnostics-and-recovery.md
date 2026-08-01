@@ -46,30 +46,12 @@ Root or event identity.
 column. Do not assume that every noncommitting result has a diagnostic:
 `no-match`, `stale`, and `terminated` are normal terminal outcomes.
 
-```java
-DocumentProcessingResult result =
-        processor.processDocument(document, event);
-
-if (result.commits()) {
-    Node committedDocument = result.document();
-    List<Node> rootEvents = result.events();
-    // Consume the semantic result. It does not itself contain a subscription delta.
-} else {
-    ProcessorDiagnostic diagnostic = result.diagnostic();
-    if (diagnostic == null) {
-        // Expected non-error outcome: NO_MATCH, STALE, or TERMINATED.
-        recordTerminalProgress(result.status());
-    } else {
-        handleDeterministicFailure(
-                result.status(),
-                diagnostic.category(),
-                diagnostic.details(),
-                diagnostic.message());
-    }
-}
-```
-
-The helper calls above represent host policy; they are not library methods.
+After `processDocument(document,event)`, adopt `document()` and `events()` only
+when `commits()` is true. When it is false and `diagnostic()` is absent, record
+ordinary terminal progress for `NO_MATCH`, `STALE`, or `TERMINATED`. When a
+diagnostic is present, route its stable status, category, details, and optional
+message to host policy. The host-policy actions are deliberately not library
+methods.
 `DocumentProcessingResult` intentionally contains only the five semantic result
 fields. A host that persists Root revisions, delivery progress, and an external
 subscription index must use `processDocumentForPlatformCommit(...)` and commit

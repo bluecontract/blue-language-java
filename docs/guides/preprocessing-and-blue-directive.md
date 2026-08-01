@@ -45,6 +45,7 @@ Source, and must not consult time, locale, random state, classpath scan order,
 or ambient I/O. If any entry is unavailable or invalid, no transformation
 runs.
 
-`PreprocessingDirectiveExample` in `:examples` proves import substitution,
-ordered execution, directive removal, and unchanged input. See the
-[Language pipeline](../architecture/language-pipeline.md).
+[`PreprocessingDirectiveExample`](../../examples/src/main/java/blue/language/examples/PreprocessingDirectiveExample.java)
+in `:examples` proves import substitution, ordered execution, directive
+removal, and unchanged input. See the [Language
+pipeline](../architecture/language-pipeline.md).

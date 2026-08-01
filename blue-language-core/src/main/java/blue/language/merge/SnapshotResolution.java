@@ -24,22 +24,42 @@ public final class SnapshotResolution implements ResolutionSnapshot {
                 provenance, "provenance");
     }
 
+    /**
+     * Returns the strict canonical root captured by this resolution.
+     *
+     * @return immutable strict canonical root
+     */
     @Override
     public FrozenNode canonicalRoot() {
         return canonicalRoot;
     }
 
+    /**
+     * Returns the completed root produced by this resolution.
+     *
+     * @return immutable completed resolved root
+     */
     @Override
     public FrozenNode resolvedRoot() {
         return resolvedRoot;
     }
 
+    /**
+     * Returns provenance captured by this resolver invocation.
+     *
+     * @return immutable resolution provenance
+     */
     @Override
     public ResolutionProvenance provenance() {
         return provenance;
     }
 
-    /** Returns verified reference evidence, or {@code null} when ineligible. */
+    /**
+     * Returns resolver-issued evidence for an eligible reference resolution.
+     *
+     * @return verified reference evidence, or {@code null} when the resolution
+     *         is not eligible for verified-reference caching
+     */
     public VerifiedReferenceResolution verifiedReferenceResolution() {
         return provenance.verifiedReferenceResolution();
     }

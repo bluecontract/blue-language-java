@@ -89,6 +89,11 @@ public final class BlueOperationLimits {
         return maxReferenceExpansions;
     }
 
+    /**
+     * Returns decoded pointer segments for every demanded path.
+     *
+     * @return immutable segment lists in demanded-path iteration order
+     */
     public List<List<String>> demandedSegments() {
         List<List<String>> result = new ArrayList<>(demandedPaths.size());
         for (String path : demandedPaths) {

@@ -83,20 +83,41 @@ public final class BlueContracts implements AutoCloseable {
         this.conformanceEngine = engine;
     }
 
-    /** Starts a builder borrowing one immutable Language processing bridge. */
+    /**
+     * Starts a builder borrowing one immutable Language processing bridge.
+     *
+     * @param languageProcessing bridge borrowed by the resulting service
+     * @return a new single-owner Contracts service builder
+     * @throws NullPointerException when {@code languageProcessing} is
+     *         {@code null}
+     */
     public static Builder builder(
             LanguageProcessing languageProcessing) {
         return new Builder(languageProcessing);
     }
 
-    /** Processes one Root and event using a derived exact delivery plan. */
+    /**
+     * Processes one Root and event using a derived exact delivery plan.
+     *
+     * @param root exact Root document supplied to the processor
+     * @param event exact event supplied to the processor
+     * @return the complete deterministic processing result
+     * @throws IllegalStateException when this service is closed
+     */
     public DocumentProcessingResult process(
             Node root,
             Node event) {
         return call(() -> processor.processDocument(root, event));
     }
 
-    /** Attempts processing and returns exact retry resources as data. */
+    /**
+     * Attempts processing and returns exact retry resources as data.
+     *
+     * @param root exact Root document supplied to the processor
+     * @param event exact event supplied to the processor
+     * @return the processing attempt and any exact retry requirements
+     * @throws IllegalStateException when this service is closed
+     */
     public ProcessAttemptResult processAttempt(
             Node root,
             Node event) {
@@ -106,6 +127,12 @@ public final class BlueContracts implements AutoCloseable {
     /**
      * Processes one Root for an atomic host commit using verified execution
      * evidence.
+     *
+     * @param root exact Root document supplied to the processor
+     * @param event exact event supplied to the processor
+     * @param evidence immutable host execution evidence bound to the inputs
+     * @return the prepared platform-commit result
+     * @throws IllegalStateException when this service is closed
      */
     public PlatformProcessingResult processForPlatformCommit(
             Node root,
@@ -115,13 +142,23 @@ public final class BlueContracts implements AutoCloseable {
                 root, event, evidence));
     }
 
-    /** Inspects effective fragmentation without semantic execution. */
+    /**
+     * Inspects effective fragmentation without semantic execution.
+     *
+     * @param root exact Root document to inspect
+     * @return the deterministic effective fragmentation catalog
+     * @throws IllegalStateException when this service is closed
+     */
     public EffectiveFragmentationCatalog effectiveFragmentationCatalog(
             Node root) {
         return call(() -> processor.effectiveFragmentationCatalog(root));
     }
 
-    /** Returns whether terminal shutdown has begun. */
+    /**
+     * Returns whether terminal shutdown has begun.
+     *
+     * @return {@code true} after terminal shutdown begins
+     */
     public boolean isClosed() {
         return closed;
     }
@@ -129,6 +166,9 @@ public final class BlueContracts implements AutoCloseable {
     /**
      * Waits for admitted processing calls and releases Contracts-owned state.
      * Closing from inside an admitted call is rejected.
+     *
+     * @throws IllegalStateException when invoked from an admitted processing
+     *         call or when a checked resource-close failure occurs
      */
     @Override
     public void close() {
@@ -263,7 +303,14 @@ public final class BlueContracts implements AutoCloseable {
                     languageProcessing, "languageProcessing");
         }
 
-        /** Selects the registry generation to freeze at build time. */
+        /**
+         * Selects the registry generation to freeze at build time.
+         *
+         * @param runtimeRegistry registry whose current generation is frozen
+         * @return this builder
+         * @throws NullPointerException when {@code runtimeRegistry} is
+         *         {@code null}
+         */
         public Builder runtimeRegistry(
                 ContractProcessorRegistry runtimeRegistry) {
             this.runtimeRegistry = Objects.requireNonNull(
@@ -271,20 +318,39 @@ public final class BlueContracts implements AutoCloseable {
             return this;
         }
 
-        /** Selects the immutable Contracts 1.0 gas schedule. */
+        /**
+         * Selects the immutable Contracts 1.0 gas schedule.
+         *
+         * @param gasSchedule schedule applied by the processor
+         * @return this builder
+         * @throws NullPointerException when {@code gasSchedule} is
+         *         {@code null}
+         */
         public Builder gasSchedule(GasSchedule gasSchedule) {
             this.gasSchedule = Objects.requireNonNull(
                     gasSchedule, "gasSchedule");
             return this;
         }
 
-        /** Selects a process budget within the configured schedule maximum. */
+        /**
+         * Selects a process budget within the configured schedule maximum.
+         *
+         * @param gasLimit maximum gas admitted for one process operation
+         * @return this builder
+         */
         public Builder gasLimit(long gasLimit) {
             this.gasLimit = gasLimit;
             return this;
         }
 
-        /** Selects the host's deterministic delivery-plan derivation. */
+        /**
+         * Selects the host's deterministic delivery-plan derivation.
+         *
+         * @param deliveryPlanDeriver host delivery-plan derivation boundary
+         * @return this builder
+         * @throws NullPointerException when {@code deliveryPlanDeriver} is
+         *         {@code null}
+         */
         public Builder deliveryPlanDeriver(
                 ExternalDeliveryPlanDeriver deliveryPlanDeriver) {
             this.deliveryPlanDeriver = Objects.requireNonNull(
@@ -292,7 +358,14 @@ public final class BlueContracts implements AutoCloseable {
             return this;
         }
 
-        /** Selects the host's exact execution-evidence verifier. */
+        /**
+         * Selects the host's exact execution-evidence verifier.
+         *
+         * @param evidenceVerifier verifier for host-supplied execution evidence
+         * @return this builder
+         * @throws NullPointerException when {@code evidenceVerifier} is
+         *         {@code null}
+         */
         public Builder evidenceVerifier(
                 ExternalDeliveryEvidenceVerifier evidenceVerifier) {
             this.evidenceVerifier = Objects.requireNonNull(
@@ -300,7 +373,13 @@ public final class BlueContracts implements AutoCloseable {
             return this;
         }
 
-        /** Selects the pre-commit subscription surface validator. */
+        /**
+         * Selects the pre-commit subscription surface validator.
+         *
+         * @param validator validator applied before subscription-state commit
+         * @return this builder
+         * @throws NullPointerException when {@code validator} is {@code null}
+         */
         public Builder subscriptionSurfaceValidator(
                 SubscriptionSurfaceValidator validator) {
             this.subscriptionSurfaceValidator = Objects.requireNonNull(
@@ -308,14 +387,26 @@ public final class BlueContracts implements AutoCloseable {
             return this;
         }
 
-        /** Selects an operational observer outside the semantic model. */
+        /**
+         * Selects an operational observer outside the semantic model.
+         *
+         * @param observer operational processing observer
+         * @return this builder
+         * @throws NullPointerException when {@code observer} is {@code null}
+         */
         public Builder observer(ProcessingObserver observer) {
             this.observer = Objects.requireNonNull(
                     observer, "observer");
             return this;
         }
 
-        /** Builds one independent Contracts service generation. */
+        /**
+         * Builds one independent Contracts service generation.
+         *
+         * @return a new independently owned Contracts service
+         * @throws IllegalStateException when the selected configuration cannot
+         *         construct a valid processor generation
+         */
         public BlueContracts build() {
             return new BlueContracts(this);
         }

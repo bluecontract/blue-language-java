@@ -265,42 +265,74 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 referenceCacheAdmission);
     }
 
-    /** Returns the stateless strict JSON/YAML codec. */
+    /**
+     * Returns the stateless strict JSON/YAML codec.
+     *
+     * @return runtime codec service
+     */
     public BlueCodec codec() {
         return codec;
     }
 
-    /** Returns the configured preprocessing service. */
+    /**
+     * Returns the configured preprocessing service.
+     *
+     * @return runtime preprocessing service
+     */
     public BluePreprocessing preprocessing() {
         return preprocessing;
     }
 
-    /** Returns exact expansion, collapse, and specialization operations. */
+    /**
+     * Returns exact expansion, collapse, and specialization operations.
+     *
+     * @return runtime graph service
+     */
     public BlueGraph graph() {
         return graph;
     }
 
-    /** Returns complete and demand-limited resolution operations. */
+    /**
+     * Returns complete and demand-limited resolution operations.
+     *
+     * @return runtime resolution service
+     */
     public BlueResolution resolution() {
         return resolution;
     }
 
-    /** Returns direct, Source Document, and cyclic-set identity operations. */
+    /**
+     * Returns direct, Source Document, and cyclic-set identity operations.
+     *
+     * @return runtime identity service
+     */
     public BlueIdentity identity() {
         return identity;
     }
 
-    /** Returns immutable snapshot and cache operations. */
+    /**
+     * Returns immutable snapshot and cache operations.
+     *
+     * @return runtime snapshot service
+     */
     public BlueSnapshots snapshots() {
         return snapshots;
     }
 
-    /** Returns mutable and immutable matching operations. */
+    /**
+     * Returns mutable and immutable matching operations.
+     *
+     * @return runtime matching service
+     */
     public BlueMatching matching() {
         return matching;
     }
 
-    /** Returns immutable canonical patching operations. */
+    /**
+     * Returns immutable canonical patching operations.
+     *
+     * @return runtime patching service
+     */
     public BluePatching patching() {
         return patching;
     }
@@ -325,7 +357,11 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 nodeProvider, mergingProcessor, cachePolicy));
     }
 
-    /** Returns the verified provider graph selected for this runtime. */
+    /**
+     * Returns the verified provider graph selected for this runtime.
+     *
+     * @return borrowed provider selected at construction
+     */
     public NodeProvider nodeProvider() {
         return nodeProvider;
     }
@@ -411,7 +447,11 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 Objects.requireNonNull(limits, "limits")));
     }
 
-    /** Returns whether close has released runtime-owned state. */
+    /**
+     * Returns whether close has released runtime-owned state.
+     *
+     * @return {@code true} after terminal shutdown
+     */
     public boolean isClosed() {
         return closed;
     }

@@ -5,18 +5,10 @@ Start with the closed result status. Only `success` commits. `no-match`,
 Failure statuses carry a stable `ProcessorErrorCategory` plus optional stable
 details.
 
-```java
-ProcessingDebugResult debug =
-        processor.processDocumentWithTrace(root, event);
-DocumentProcessingResult result = debug.processResult();
-
-System.out.println(result.status());
-System.out.println(result.totalGas());
-System.out.println(debug.trace().gas());
-System.out.println(result.diagnostic());
-```
-
-Use the method names above as the API boundary; format output in host code.
+Call `processDocumentWithTrace(root,event)`, then inspect
+`processResult().status()`, `processResult().totalGas()`, `trace().gas()`, and
+`processResult().diagnostic()` in that order. These are API names, not a host
+logging prescription; format output in host code.
 Never branch on exception class names, localized messages, timings, cache
 statistics, or stack traces.
 

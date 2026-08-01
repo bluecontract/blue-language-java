@@ -37,5 +37,7 @@ Schema validation happens against resolved meaning. Fixed values and enum
 members use canonical scalar/identity comparison, so representation or map key
 order cannot change validity.
 
-Run `UnconstrainedFieldExample` from `:examples` for accepted and rejected
-cases. See the generated package reference for the model schema API.
+Run
+[`UnconstrainedFieldExample`](../../examples/src/main/java/blue/language/examples/UnconstrainedFieldExample.java)
+from `:examples` for accepted and rejected cases. See the generated package
+reference for the model schema API.

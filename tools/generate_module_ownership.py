@@ -567,7 +567,7 @@ def module_definitions():
                 MODULE_IPFS,
             ],
         ),
-        module(MODULE_EXAMPLES, False, [MODULE_AGGREGATE, MODULE_CONFORMANCE]),
+        module(MODULE_EXAMPLES, False, [MODULE_AGGREGATE]),
         module(MODULE_BUILD_LOGIC, False, []),
     ]
 

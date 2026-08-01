@@ -16,7 +16,19 @@ public final class ImportMapBuilder {
     private final DirectiveValidator validator;
     private final Map<String, String> environmentImports;
 
-    /** Creates a builder for one immutable preprocessing environment. */
+    /**
+     * Creates a builder for one immutable preprocessing environment.
+     *
+     * <p>The environment import map is defensively copied and validated. A
+     * {@code null} map configures no environment aliases.</p>
+     *
+     * @param resolver resolver used for exact imported resources
+     * @param validator validator applied to resolved import containers
+     * @param environmentImports environment alias-to-BlueId mappings, or
+     *                           {@code null} for none
+     * @throws IllegalArgumentException if an environment alias is empty or
+     *                                  maps to a non-canonical BlueId
+     */
     public ImportMapBuilder(
             DirectiveResolver resolver,
             DirectiveValidator validator,

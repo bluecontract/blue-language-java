@@ -40,6 +40,8 @@ public final class CachingNodeProvider implements NodeProvider {
      *
      * @param delegate backing provider
      * @param maxSizeBytes non-negative approximate retained-size bound
+     * @throws NullPointerException if {@code delegate} is {@code null}
+     * @throws IllegalArgumentException if {@code maxSizeBytes} is negative
      */
     public CachingNodeProvider(NodeProvider delegate, long maxSizeBytes) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
@@ -50,6 +52,14 @@ public final class CachingNodeProvider implements NodeProvider {
         this.maxSizeBytes = maxSizeBytes;
     }
 
+    /**
+     * Fetches cached or delegated candidates for an exact BlueId.
+     *
+     * @param blueId exact content identity to look up
+     * @return defensive candidate copies for a found result, or {@code null}
+     *         for every non-found outcome
+     * @throws NullPointerException if {@code blueId} is {@code null}
+     */
     @Override
     public List<Node> fetchByBlueId(String blueId) {
         NodeProviderResult result = fetchResultByBlueId(blueId);
@@ -58,6 +68,18 @@ public final class CachingNodeProvider implements NodeProvider {
                 : null;
     }
 
+    /**
+     * Fetches a cached or delegated exhaustive provider conclusion.
+     *
+     * <p>Only found content and definitive misses are retained. Transient
+     * unavailability and invalid evidence always return directly from the
+     * delegate.</p>
+     *
+     * @param blueId exact content identity to look up
+     * @return transport-neutral lookup result
+     * @throws NullPointerException if {@code blueId} or the delegated result
+     *         is {@code null}
+     */
     @Override
     public NodeProviderResult fetchResultByBlueId(String blueId) {
         Objects.requireNonNull(blueId, OBJECT_BLUE_ID);
@@ -109,14 +131,22 @@ public final class CachingNodeProvider implements NodeProvider {
         return weight;
     }
 
-    /** Returns the current approximate retained size. */
+    /**
+     * Returns the current approximate retained size.
+     *
+     * @return current retained size in bytes
+     */
     public long getCurrentSize() {
         synchronized (cacheLock) {
             return currentSizeBytes;
         }
     }
 
-    /** Returns the current cache entry count. */
+    /**
+     * Returns the current cache entry count.
+     *
+     * @return current retained entry count
+     */
     public int getCacheSize() {
         synchronized (cacheLock) {
             return cache.size();

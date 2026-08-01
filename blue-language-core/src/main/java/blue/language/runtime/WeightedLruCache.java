@@ -9,10 +9,17 @@ import java.util.Map;
  * <p>Entries are bounded by count, aggregate weight, and individual weight.
  * Values rejected by a disabled or undersized policy remain usable by their
  * caller but are not retained.</p>
+ *
+ * @param <K> cache-key type
+ * @param <V> cached-value type
  */
 public final class WeightedLruCache<K, V> {
 
-    /** Calculates the approximate retained weight of a cache value. */
+    /**
+     * Calculates the approximate retained weight of a cache value.
+     *
+     * @param <V> weighed-value type
+     */
     public interface Weigher<V> {
 
         /**
@@ -158,37 +165,65 @@ public final class WeightedLruCache<K, V> {
         return released;
     }
 
-    /** @return current retained entry count */
+    /**
+     * Returns the current retained entry count.
+     *
+     * @return current retained entry count
+     */
     public synchronized int size() {
         return entries.size();
     }
 
-    /** @return current aggregate retained weight */
+    /**
+     * Returns the current aggregate retained weight.
+     *
+     * @return current aggregate retained weight
+     */
     public synchronized long currentWeight() {
         return currentWeight;
     }
 
-    /** @return highest aggregate retained weight observed */
+    /**
+     * Returns the highest aggregate retained weight observed.
+     *
+     * @return highest aggregate retained weight observed
+     */
     public synchronized long highWaterWeight() {
         return highWaterWeight;
     }
 
-    /** @return lifetime count of entries evicted to restore cache bounds */
+    /**
+     * Returns the lifetime count of entries evicted to restore cache bounds.
+     *
+     * @return lifetime eviction count
+     */
     public synchronized long evictions() {
         return evictions;
     }
 
-    /** @return lifetime count of candidates rejected by cache bounds */
+    /**
+     * Returns the lifetime count of candidates rejected by cache bounds.
+     *
+     * @return lifetime oversized-candidate rejection count
+     */
     public synchronized long oversizedRejections() {
         return oversizedRejections;
     }
 
-    /** @return lifetime count of successful {@link #get(Object)} lookups */
+    /**
+     * Returns the lifetime count of successful {@link #get(Object)} lookups.
+     *
+     * @return lifetime cache-hit count
+     */
     public synchronized long hits() {
         return hits;
     }
 
-    /** @return lifetime count of unsuccessful {@link #get(Object)} lookups */
+    /**
+     * Returns the lifetime count of unsuccessful {@link #get(Object)} lookups.
+     *
+     * @return lifetime cache-miss count
+     */
     public synchronized long misses() {
         return misses;
     }

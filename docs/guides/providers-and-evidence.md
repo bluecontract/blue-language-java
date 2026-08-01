@@ -33,6 +33,8 @@ proof.
 - Keep scanning, authorization, and application storage policy outside core
   semantics.
 
-Run `ExpandCollapseProviderExample` from `:examples`. The implementation guide
-is [Building a NodeProvider](building-a-node-provider.md); the physical model
-is [provider-and-fragment-model.md](../architecture/provider-and-fragment-model.md).
+Run
+[`ExpandCollapseProviderExample`](../../examples/src/main/java/blue/language/examples/ExpandCollapseProviderExample.java)
+from `:examples`. The implementation guide is [Building a
+NodeProvider](building-a-node-provider.md); the physical model is
+[provider-and-fragment-model.md](../architecture/provider-and-fragment-model.md).

@@ -72,8 +72,7 @@
       "directory": "examples",
       "published": false,
       "dependencies": [
-        ":blue-language-java",
-        ":blue-conformance"
+        ":blue-language-java"
       ]
     },
     {
@@ -84,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 556,
+    "productionSourceCount": 557,
     "productionResourceCount": 356,
-    "productionSourcePathIdentity": "sha256:aee52a3d9239d72bfa3f677c05db77abc1ea39f996530e864c00f68afead3c72",
+    "productionSourcePathIdentity": "sha256:0431c43f36bfeea108e3568ef5967a54516c725db07ca3d0c7fdb414e3b8931c",
     "productionResourcePathIdentity": "sha256:afe876a276348cfba121fc0cf6834384216b0e23acb4fb97e7dcbbd1e4eceb78"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -3603,6 +3602,13 @@
       "currentPackage": "blue.language",
       "targetModule": ":blue-language-java",
       "targetPath": "blue-language-java/src/main/java/blue/language/BlueRuntime.java",
+      "targetPackage": "blue.language"
+    },
+    {
+      "currentPath": "blue-language-java/src/main/java/blue/language/package-info.java",
+      "currentPackage": "blue.language",
+      "targetModule": ":blue-language-java",
+      "targetPath": "blue-language-java/src/main/java/blue/language/package-info.java",
       "targetPackage": "blue.language"
     },
     {

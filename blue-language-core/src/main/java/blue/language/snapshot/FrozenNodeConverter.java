@@ -24,29 +24,72 @@ public final class FrozenNodeConverter {
     private FrozenNodeConverter() {
     }
 
-    /** Strictly freezes canonical content. */
+    /**
+     * Strictly validates and defensively freezes canonical content.
+     *
+     * @param node mutable canonical content to freeze
+     * @return an immutable strict canonical representation
+     * @throws NullPointerException when {@code node} is {@code null}
+     * @throws IllegalArgumentException when the content is not valid strict
+     *         canonical Blue input
+     */
     public FrozenNode fromNode(Node node) {
         return freeze(node, true, null, true, false);
     }
 
-    /** Freezes a completed resolved view. */
+    /**
+     * Defensively freezes a completed resolved view.
+     *
+     * @param node mutable resolved content to freeze
+     * @return an immutable resolved representation
+     * @throws NullPointerException when {@code node} is {@code null}
+     * @throws IllegalArgumentException when the node contains an unsupported
+     *         value graph or incompatible payload shapes
+     */
     public FrozenNode fromResolvedNode(Node node) {
         return freeze(node, false, null, false, false);
     }
 
-    /** Freezes and structurally interns a completed resolved view. */
+    /**
+     * Freezes and structurally interns a completed resolved view.
+     *
+     * @param node mutable resolved content to freeze
+     * @param interner optional callback that may retain an equal representation
+     * @return an immutable, optionally interned resolved representation
+     * @throws NullPointerException when {@code node} is {@code null}
+     * @throws IllegalArgumentException when the node contains an unsupported
+     *         value graph or incompatible payload shapes
+     */
     public FrozenNode fromResolvedNode(
             Node node,
             FrozenNode.ResolvedStructuralInterner interner) {
         return freeze(node, false, interner, false, false);
     }
 
-    /** Freezes canonical-shaped content without strict BlueId validation. */
+    /**
+     * Freezes canonical-shaped content without strict BlueId validation.
+     *
+     * @param node mutable canonical-shaped content to freeze
+     * @return an immutable canonical-shaped representation
+     * @throws NullPointerException when {@code node} is {@code null}
+     * @throws IllegalArgumentException when the node has an invalid canonical
+     *         payload shape or unsupported value graph
+     */
     public FrozenNode fromUncheckedCanonicalNode(Node node) {
         return freeze(node, true, null, false, false);
     }
 
-    /** Strictly freezes an ordered canonical node list. */
+    /**
+     * Strictly freezes an ordered canonical node list.
+     *
+     * @param nodes canonical nodes to freeze, or {@code null}
+     * @return an immutable frozen list, or {@code null} when {@code nodes} is
+     *         {@code null}
+     * @throws NullPointerException when a supplied list element is
+     *         {@code null}
+     * @throws IllegalArgumentException when an element is not valid strict
+     *         canonical Blue input
+     */
     public List<FrozenNode> fromNodes(List<Node> nodes) {
         if (nodes == null) {
             return null;
@@ -58,7 +101,13 @@ public final class FrozenNodeConverter {
         return Collections.unmodifiableList(frozen);
     }
 
-    /** Returns a detached mutable materialization of an immutable graph. */
+    /**
+     * Returns a detached mutable materialization of an immutable graph.
+     *
+     * @param frozen immutable graph to materialize
+     * @return a caller-owned mutable node graph
+     * @throws NullPointerException when {@code frozen} is {@code null}
+     */
     public Node toNode(FrozenNode frozen) {
         Node node = new Node()
                 .name(frozen.name)

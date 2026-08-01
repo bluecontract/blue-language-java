@@ -4,20 +4,12 @@ A processor built through the modern builder is an immutable generation. The
 builder snapshots the runtime registry and configuration; later mutation of the
 builder or source registry cannot change an already built processor.
 
-```java
-DocumentProcessor processor = DocumentProcessor.builder()
-        .nodeProvider(provider)
-        .runtimeRegistry(registry)
-        .gasSchedule(schedule)
-        .gasLimit(limit)
-        .deliveryPlanDeriver(deriver)
-        .evidenceVerifier(verifier)
-        .subscriptionSurfaceValidator(surfaceValidator)
-        .snapshotStore(snapshotStore)
-        .observer(observer)
-        .cachePolicy(cachePolicy)
-        .build();
-```
+The builder freezes these collaborator groups: verified node provider; runtime
+registry generation; gas schedule and limit; delivery-plan derivation and
+evidence verification; subscription-surface validation; snapshot store;
+observer; and bounded cache policy. The runnable
+[`CustomExternalChannelExample`](../../examples/src/main/java/blue/language/examples/CustomExternalChannelExample.java)
+shows a complete immutable runtime generation.
 
 Create a new processor generation to change any semantic collaborator. Do not
 mutate a live generation or protect arbitrary reconfiguration with a global

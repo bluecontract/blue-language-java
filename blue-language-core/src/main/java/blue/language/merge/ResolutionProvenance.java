@@ -19,7 +19,11 @@ public final class ResolutionProvenance {
         this.verifiedReferenceResolution = verifiedReferenceResolution;
     }
 
-    /** Returns provenance with no cache-admissible reference evidence. */
+    /**
+     * Returns the shared provenance value with no cache-admissible evidence.
+     *
+     * @return immutable empty provenance
+     */
     public static ResolutionProvenance none() {
         return NONE;
     }
@@ -33,7 +37,12 @@ public final class ResolutionProvenance {
         return new ResolutionProvenance(verifiedReferenceResolution);
     }
 
-    /** Returns verified reference evidence, or {@code null} when ineligible. */
+    /**
+     * Returns resolver-issued evidence for an eligible reference resolution.
+     *
+     * @return verified reference evidence, or {@code null} when the resolution
+     *         is not eligible for verified-reference caching
+     */
     public VerifiedReferenceResolution verifiedReferenceResolution() {
         return verifiedReferenceResolution;
     }

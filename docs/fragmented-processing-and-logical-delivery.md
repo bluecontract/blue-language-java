@@ -196,12 +196,8 @@ occurrences, or demand executable bodies to decide routing.
 ## Effective fragmentation catalog
 
 Application-specific splitters can inspect the kernel's effective boundaries
-without executing contracts:
-
-```java
-EffectiveFragmentationCatalog catalog =
-    documentProcessor.effectiveFragmentationCatalog(root);
-```
+without executing contracts by calling
+`documentProcessor.effectiveFragmentationCatalog(root)`.
 
 The immutable result reports the exact Root BlueId, effective
 `Process Embedded` paths by scope, and ordered effective contract snapshots by

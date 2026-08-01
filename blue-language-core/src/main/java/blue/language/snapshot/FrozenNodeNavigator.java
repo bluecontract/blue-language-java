@@ -21,7 +21,14 @@ public final class FrozenNodeNavigator {
     private FrozenNodeNavigator() {
     }
 
-    /** Returns an object child, including the distinguished contracts child. */
+    /**
+     * Returns an object child, including the distinguished contracts child.
+     *
+     * @param node immutable object node to inspect
+     * @param key raw object-property key
+     * @return the selected child, or {@code null} when it is absent
+     * @throws NullPointerException when {@code node} is {@code null}
+     */
     public FrozenNode property(FrozenNode node, String key) {
         if (OBJECT_CONTRACTS.equals(key)) {
             return node.contracts;
@@ -29,7 +36,14 @@ public final class FrozenNodeNavigator {
         return node.properties != null ? node.properties.get(key) : null;
     }
 
-    /** Returns a list item, or {@code null} when the index is absent. */
+    /**
+     * Returns a list item by zero-based index.
+     *
+     * @param node immutable list node to inspect
+     * @param index zero-based list index
+     * @return the selected item, or {@code null} when it is absent
+     * @throws NullPointerException when {@code node} is {@code null}
+     */
     public FrozenNode item(FrozenNode node, int index) {
         if (node.items == null || index < 0 || index >= node.items.size()) {
             return null;
@@ -37,12 +51,25 @@ public final class FrozenNodeNavigator {
         return node.items.get(index);
     }
 
-    /** Resolves an RFC 6901 pointer. */
+    /**
+     * Resolves an encoded RFC 6901 pointer from an immutable node.
+     *
+     * @param node immutable root, or {@code null}
+     * @param pointer encoded pointer; {@code null} selects {@code node}
+     * @return the selected node, or {@code null} when the path is absent
+     */
     public FrozenNode at(FrozenNode node, String pointer) {
         return at(node, JsonPointer.split(pointer));
     }
 
-    /** Resolves decoded RFC 6901 pointer segments. */
+    /**
+     * Resolves decoded RFC 6901 pointer segments from an immutable node.
+     *
+     * @param node immutable root, or {@code null}
+     * @param pointerSegments decoded path segments; {@code null} selects
+     *        {@code node}
+     * @return the selected node, or {@code null} when the path is absent
+     */
     public FrozenNode at(FrozenNode node, List<String> pointerSegments) {
         List<String> segments = pointerSegments != null
                 ? pointerSegments
@@ -60,7 +87,13 @@ public final class FrozenNodeNavigator {
         return current;
     }
 
-    /** Builds an immutable RFC 6901 path index including the root. */
+    /**
+     * Builds an immutable RFC 6901 path index including the supplied root.
+     *
+     * @param node immutable root to index
+     * @return every reachable node keyed by its encoded RFC 6901 path
+     * @throws NullPointerException when {@code node} is {@code null}
+     */
     public Map<String, FrozenNode> pathIndex(FrozenNode node) {
         Map<String, FrozenNode> index = new LinkedHashMap<>();
         indexPaths(node, JsonPointer.ROOT, index);

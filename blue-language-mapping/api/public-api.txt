@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-language-mapping
-# entryCount: 128
+# entryCount: 121
 field blue.language.mapping.provider.ClasspathBasedNodeProvider#NO_PREPROCESSING descriptor=Ljava/util/function/Function; access=public,static,final signature=Ljava/util/function/Function<Lblue/language/model/Node;Lblue/language/model/Node;>; constant=-
 method blue.language.dictionary.DictionaryAwareExporter#<init> descriptor=(Lblue/language/dictionary/DictionaryRegistry;Lblue/language/dictionary/ExportContext;)V access=public signature=- throws=-
 method blue.language.dictionary.DictionaryAwareExporter#export descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public signature=- throws=-
@@ -33,7 +33,6 @@ method blue.language.mapping.BlueAnnotationsBeanSerializerModifier#<init> descri
 method blue.language.mapping.BlueAnnotationsBeanSerializerModifier#modifySerializer descriptor=(Lcom/fasterxml/jackson/databind/SerializationConfig;Lcom/fasterxml/jackson/databind/BeanDescription;Lcom/fasterxml/jackson/databind/JsonSerializer;)Lcom/fasterxml/jackson/databind/JsonSerializer; access=public signature=(Lcom/fasterxml/jackson/databind/SerializationConfig;Lcom/fasterxml/jackson/databind/BeanDescription;Lcom/fasterxml/jackson/databind/JsonSerializer<*>;)Lcom/fasterxml/jackson/databind/JsonSerializer<*>; throws=-
 method blue.language.mapping.BlueAnnotationsSerializer#<init> descriptor=(Lcom/fasterxml/jackson/databind/ser/std/BeanSerializerBase;)V access=public signature=- throws=-
 method blue.language.mapping.BlueAnnotationsSerializer#serialize descriptor=(Ljava/lang/Object;Lcom/fasterxml/jackson/core/JsonGenerator;Lcom/fasterxml/jackson/databind/SerializerProvider;)V access=public signature=- throws=java.io.IOException
-method blue.language.mapping.BlueIdResolver#<init> descriptor=()V access=protected signature=- throws=-
 method blue.language.mapping.BlueMapper#builder descriptor=()Lblue/language/mapping/BlueMapper$Builder; access=public,static signature=- throws=-
 method blue.language.mapping.BlueMapper#convert descriptor=(Ljava/lang/Object;Ljava/lang/Class;)Ljava/lang/Object; access=public signature=<T:Ljava/lang/Object;>(Ljava/lang/Object;Ljava/lang/Class<TT;>;)TT; throws=-
 method blue.language.mapping.BlueMapper#fromNode descriptor=(Lblue/language/model/Node;Ljava/lang/Class;)Ljava/lang/Object; access=public signature=<T:Ljava/lang/Object;>(Lblue/language/model/Node;Ljava/lang/Class<TT;>;)TT; throws=-
@@ -64,10 +63,6 @@ method blue.language.mapping.ConverterFactory#getConverter descriptor=(Lblue/lan
 method blue.language.mapping.ConverterFactory#getConverter descriptor=(Lblue/language/model/Node;Ljava/lang/reflect/Type;Z)Lblue/language/mapping/Converter; access=public signature=(Lblue/language/model/Node;Ljava/lang/reflect/Type;Z)Lblue/language/mapping/Converter<*>; throws=-
 method blue.language.mapping.EnumConverter#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.mapping.EnumConverter#convert descriptor=(Lblue/language/model/Node;Ljava/lang/reflect/Type;)Ljava/lang/Enum; access=public signature=(Lblue/language/model/Node;Ljava/lang/reflect/Type;)Ljava/lang/Enum<*>; throws=-
-method blue.language.mapping.JacksonPropertyNames#<init> descriptor=()V access=protected signature=- throws=-
-method blue.language.mapping.JacksonPropertyNames#findField descriptor=(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/reflect/Field; access=public,static signature=(Ljava/lang/Class<*>;Ljava/lang/String;)Ljava/lang/reflect/Field; throws=-
-method blue.language.mapping.JacksonPropertyNames#propertyName descriptor=(Ljava/lang/reflect/Field;)Ljava/lang/String; access=public,static signature=- throws=-
-method blue.language.mapping.JacksonPropertyNames#resolveTargetPropertyName descriptor=(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/String; access=public,static signature=(Ljava/lang/Class<*>;Ljava/lang/String;)Ljava/lang/String; throws=-
 method blue.language.mapping.MapConverter#<init> descriptor=(Lblue/language/mapping/ConverterFactory;Lblue/language/mapping/TypeClassResolver;)V access=public signature=- throws=-
 method blue.language.mapping.MapConverter#<init> descriptor=(Lblue/language/mapping/ConverterFactory;Lblue/language/mapping/TypeClassResolver;Lblue/language/mapping/ObjectFactoryRegistry;)V access=public signature=- throws=-
 method blue.language.mapping.MapConverter#convert descriptor=(Lblue/language/model/Node;Ljava/lang/reflect/Type;)Ljava/util/Map; access=public signature=(Lblue/language/model/Node;Ljava/lang/reflect/Type;)Ljava/util/Map<**>; throws=-
@@ -110,7 +105,6 @@ type blue.language.dictionary.ExportContext$Builder access=public,final super=ja
 type blue.language.dictionary.TypeDictionary access=public,abstract,interface super=java.lang.Object interfaces=- signature=-
 type blue.language.mapping.BlueAnnotationsBeanSerializerModifier access=public super=com.fasterxml.jackson.databind.ser.BeanSerializerModifier interfaces=- signature=-
 type blue.language.mapping.BlueAnnotationsSerializer access=public super=com.fasterxml.jackson.databind.ser.std.StdSerializer interfaces=- signature=Lcom/fasterxml/jackson/databind/ser/std/StdSerializer<Ljava/lang/Object;>;
-type blue.language.mapping.BlueIdResolver access=public super=blue.language.utils.BlueIdResolver interfaces=- signature=-
 type blue.language.mapping.BlueMapper access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.mapping.BlueMapper$Builder access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.mapping.CollectionConverter access=public super=java.lang.Object interfaces=blue.language.mapping.Converter signature=Ljava/lang/Object;Lblue/language/mapping/Converter<Ljava/lang/Object;>;
@@ -118,7 +112,6 @@ type blue.language.mapping.ComplexObjectConverter access=public super=java.lang.
 type blue.language.mapping.Converter access=public,abstract,interface super=java.lang.Object interfaces=- signature=<T:Ljava/lang/Object;>Ljava/lang/Object;
 type blue.language.mapping.ConverterFactory access=public super=java.lang.Object interfaces=- signature=-
 type blue.language.mapping.EnumConverter access=public super=java.lang.Object interfaces=blue.language.mapping.Converter signature=Ljava/lang/Object;Lblue/language/mapping/Converter<Ljava/lang/Enum<*>;>;
-type blue.language.mapping.JacksonPropertyNames access=public super=java.lang.Object interfaces=- signature=-
 type blue.language.mapping.MapConverter access=public super=java.lang.Object interfaces=blue.language.mapping.Converter signature=Ljava/lang/Object;Lblue/language/mapping/Converter<Ljava/util/Map<**>;>;
 type blue.language.mapping.NodeConverter access=public super=java.lang.Object interfaces=blue.language.mapping.Converter signature=Ljava/lang/Object;Lblue/language/mapping/Converter<Lblue/language/model/Node;>;
 type blue.language.mapping.NodeToObjectConverter access=public super=java.lang.Object interfaces=- signature=-

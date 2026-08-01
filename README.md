@@ -65,23 +65,27 @@ run on a newer JVM and provisions the Java 8 toolchain used by release gates.
 
 ### 1. Parse Source and calculate its BlueId
 
+<!-- blue-example: examples/src/main/java/blue/language/examples/SourceDocumentBlueIdExample.java#source-document-blueid -->
 ```java
-import blue.language.codec.BlueFormat;
-import blue.language.model.Node;
-import blue.language.runtime.BlueLanguage;
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            Node source = language.codec().parseSource(
+                    SOURCE_YAML, BlueFormat.YAML);
+            Node canonical = language.identity()
+                    .canonicalIdentityInput(source);
+            String sourceBlueId = language.identity()
+                    .sourceDocumentBlueId(source);
+            String directBlueId = language.identity()
+                    .directBlueId(canonical);
 
-import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
-
-try (BlueLanguage language = BlueLanguage.builder().build()) {
-    String yaml = "type:\n  blueId: " + TEXT_TYPE_BLUE_ID
-            + "\nvalue: hello\n";
-    Node source = language.codec().parseSource(yaml, BlueFormat.YAML);
-
-    String blueId = language.identity().sourceDocumentBlueId(source);
-    Node canonical = language.identity().canonicalIdentityInput(source);
-
-    assert blueId.equals(language.identity().directBlueId(canonical));
-}
+            ExampleSupport.require(canonical.getBlue() == null,
+                    "Canonical input must not retain the Source blue directive");
+            ExampleSupport.require(TEXT_TYPE_BLUE_ID.equals(
+                            canonical.getType().getBlueId()),
+                    "The imported alias must resolve to the exact Text type");
+            ExampleSupport.require(sourceBlueId.equals(directBlueId),
+                    "Source identity must finish on the direct identity path");
+            return new Result(canonical, sourceBlueId, directBlueId);
+        }
 ```
 
 The Source path is exact:
@@ -96,44 +100,38 @@ and [direct-input example](examples/src/main/java/blue/language/examples/DirectB
 
 ### 2. Use verified provider content
 
+<!-- blue-example: examples/src/main/java/blue/language/examples/ExpandCollapseProviderExample.java#verified-provider -->
 ```java
-import blue.language.model.Node;
-import blue.language.provider.NodeProvider;
-import blue.language.provider.NodeProviderResult;
-import blue.language.runtime.BlueLanguage;
+        Node exactContent = new Node().value(CONTENT_VALUE);
+        String exactBlueId =
+                DirectBlueIdCalculator.calculateBlueId(exactContent);
+        Map<String, Node> contentByBlueId = new LinkedHashMap<>();
+        contentByBlueId.put(exactBlueId, exactContent.clone());
+        Map<String, Node> providerState = Collections.unmodifiableMap(
+                contentByBlueId);
+        NodeProvider provider = requestedBlueId ->
+                ExampleSupport.lookup(providerState, requestedBlueId);
+        Node reference = ExampleSupport.reference(exactBlueId);
 
-import java.util.Collections;
-import java.util.Map;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build()) {
+            Node expanded = language.graph().expand(reference);
+            Node collapsed = language.graph().collapse(expanded);
+            String expandedBlueId = language.identity()
+                    .directBlueId(expanded);
 
-Node child = new Node().value("child");
-String childBlueId;
-try (BlueLanguage identityRuntime = BlueLanguage.builder().build()) {
-    childBlueId = identityRuntime.identity().directBlueId(child);
-}
-Map<String, Node> exactContent = Collections.singletonMap(childBlueId, child);
-NodeProvider provider = new NodeProvider() {
-    @Override
-    public java.util.List<Node> fetchByBlueId(String blueId) {
-        Node found = exactContent.get(blueId);
-        return found == null ? Collections.emptyList()
-                : Collections.singletonList(found.clone());
-    }
-
-    @Override
-    public NodeProviderResult fetchResultByBlueId(String blueId) {
-        Node found = exactContent.get(blueId);
-        return found == null ? NodeProviderResult.notFound()
-                : NodeProviderResult.found(
-                        Collections.singletonList(found.clone()));
-    }
-};
-
-try (BlueLanguage language = BlueLanguage.builder()
-        .nodeProvider(provider)
-        .build()) {
-    Node expanded = language.graph().expand(
-            new Node().blueId(childBlueId));
-}
+            ExampleSupport.require(exactBlueId.equals(expandedBlueId),
+                    "Expansion must preserve the referenced identity");
+            ExampleSupport.require(exactBlueId.equals(collapsed.getBlueId()),
+                    "Collapse must restore the same pure reference");
+            ExampleSupport.require(CONTENT_VALUE.equals(
+                            providerState.get(exactBlueId).getValue()),
+                    "Graph operations must not mutate provider-owned content");
+            ExampleSupport.require(reference.isReferenceOnly(),
+                    "Expansion must not mutate the caller's reference");
+            return new Result(exactBlueId, expanded, collapsed);
+        }
 ```
 
 The runtime calculates the returned candidate’s exact identity before admitting
@@ -143,26 +141,41 @@ a transport outage never proves semantic absence. Read
 
 ### 3. Process one Root and event
 
+<!-- blue-example: examples/src/main/java/blue/language/examples/CustomExternalChannelExample.java#custom-external-channel-handler -->
 ```java
-import blue.language.model.Node;
-import blue.language.processor.BlueContracts;
-import blue.language.processor.DocumentProcessingResult;
-import blue.language.runtime.BlueLanguage;
+        ContractsExampleSupport.RuntimeWorkProcessor unusedRuntimeWork =
+                new ContractsExampleSupport.RuntimeWorkProcessor();
+        Node root = ContractsExampleSupport.initializedCounterRoot();
+        Node event = ContractsExampleSupport.amountEvent(7L);
 
-try (BlueLanguage language = BlueLanguage.builder().build();
-     BlueContracts contracts = BlueContracts.builder(
-             language.processing()).build()) {
-    Node root = new Node().name("Root");
-    Node event = new Node().name("Event");
+        ExampleSupport.require(
+                !ContractsExampleSupport.SOURCE_CHANNEL_KEY.equals(
+                        ContractsExampleSupport.TARGET_CHANNEL_KEY),
+                "The accepting source and Handler target must be distinct");
 
-    DocumentProcessingResult result = contracts.process(root, event);
-    if (result.commits()) {
-        Node nextRoot = result.document();
-        java.util.List<Node> rootEvents = result.events();
-    } else if (result.diagnostic() != null) {
-        String stableCategory = result.diagnostic().category().name();
-    }
-}
+        try (BlueRuntime runtime = ContractsExampleSupport.runtime(
+                unusedRuntimeWork)) {
+            DocumentProcessingResult processed =
+                    runtime.contracts().process(root, event);
+
+            ExampleSupport.require(
+                    processed.status() == ProcessorStatus.SUCCESS,
+                    "The custom External Channel delivery must commit: "
+                            + ContractsExampleSupport.diagnostic(processed));
+            BigInteger counter = (BigInteger) processed.document()
+                    .getProperties()
+                    .get(ContractsExampleSupport.COUNTER_KEY)
+                    .getValue();
+            ExampleSupport.require(
+                    BigInteger.valueOf(7L).equals(counter),
+                    "The custom Handler must apply its buffered patch");
+            return new Result(
+                    counter,
+                    processed.status(),
+                    processed.totalGas(),
+                    ContractsExampleSupport.SOURCE_CHANNEL_KEY,
+                    ContractsExampleSupport.TARGET_CHANNEL_KEY);
+        }
 ```
 
 Only `success` commits. `no-match`, `stale`, and `terminated` are normal
@@ -173,21 +186,68 @@ stable status, category, details, and exact admitted-gas prefix. See
 
 ### 4. Observe fragmented processing demand exactly
 
-`processAttempt` makes resource suspension data, not an exception:
-
+<!-- blue-example: examples/src/main/java/blue/language/examples/PureReferenceFragmentsExample.java#pure-reference-fragments -->
 ```java
-ProcessAttemptResult attempt = contracts.processAttempt(root, event);
-if (attempt.isComplete()) {
-    DocumentProcessingResult completed = attempt.processResult();
-} else {
-    java.util.List<String> required = attempt.requiredExactBlueIds();
-}
+        Node fragmentedRoot = ContractsExampleSupport
+                .initializedCounterRoot();
+        Node handler = fragmentedRoot.getContracts()
+                .getProperties().get(
+                        ContractsExampleSupport.ADD_HANDLER_KEY);
+        String handlerBlueId = ContractsExampleSupport.blueId(handler);
+        fragmentedRoot.getContracts().getProperties().put(
+                ContractsExampleSupport.ADD_HANDLER_KEY,
+                ContractsExampleSupport.reference(handlerBlueId));
+
+        Node fragmentedEvent = ContractsExampleSupport.amountEvent(5L);
+        String rootBlueId = ContractsExampleSupport.blueId(fragmentedRoot);
+        String eventBlueId = ContractsExampleSupport.blueId(fragmentedEvent);
+        Map<String, Node> exactFragments = new LinkedHashMap<>();
+        exactFragments.put(rootBlueId, fragmentedRoot);
+        exactFragments.put(eventBlueId, fragmentedEvent);
+        exactFragments.put(handlerBlueId, handler);
+        List<String> requestedBlueIds = new ArrayList<>();
+        NodeProvider provider = blueId -> {
+            requestedBlueIds.add(blueId);
+            Node exact = exactFragments.get(blueId);
+            return exact != null
+                    ? Collections.singletonList(exact.clone())
+                    : null;
+        };
+
+        try (BlueRuntime runtime = ContractsExampleSupport.runtime(
+                provider,
+                new ContractsExampleSupport.RuntimeWorkProcessor())) {
+            DocumentProcessingResult processed =
+                    runtime.contracts().process(
+                            ContractsExampleSupport.reference(rootBlueId),
+                            ContractsExampleSupport.reference(eventBlueId));
+
+            ExampleSupport.require(
+                    processed.status() == ProcessorStatus.SUCCESS,
+                    "Pure-reference processing must commit: "
+                            + ContractsExampleSupport.diagnostic(processed));
+            BigInteger counter = (BigInteger) processed.document()
+                    .getProperties()
+                    .get(ContractsExampleSupport.COUNTER_KEY)
+                    .getValue();
+            ExampleSupport.require(
+                    BigInteger.valueOf(5L).equals(counter),
+                    "The selected Handler fragment must update Root");
+            ExampleSupport.require(
+                    requestedBlueIds.contains(handlerBlueId),
+                    "The selected Handler fragment must be fetched");
+            return new Result(
+                    rootBlueId,
+                    eventBlueId,
+                    counter,
+                    requestedBlueIds);
+        }
 ```
 
-Fulfil the reported exact BlueIds through the configured provider, then retry
-the exact same semantic inputs. The processor
-loads participating headers first, selected executable bodies later, and does
-not open unrelated branches. Read [Fragmented processing](docs/guides/fragmented-processing.md)
+The processor loads participating headers first, selected executable bodies
+later, and does not open unrelated branches. A temporarily missing demanded
+BlueId is surfaced by `processAttempt` as resumable data, never reclassified as
+semantic absence. Read [Fragmented processing](docs/guides/fragmented-processing.md)
 and run the tested exact-reference example in `:examples`.
 
 ## Determinism across languages

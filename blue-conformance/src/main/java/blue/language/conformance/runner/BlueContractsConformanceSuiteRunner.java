@@ -16,22 +16,38 @@ public final class BlueContractsConformanceSuiteRunner {
     private BlueContractsConformanceSuiteRunner() {
     }
 
-    /** Executes every bundled Contracts fixture. */
+    /**
+     * Executes every bundled Contracts fixture.
+     *
+     * @return immutable report containing every fixture outcome
+     */
     public static BlueContractsConformanceReport run() {
         return ContractsConformanceSuite.run();
     }
 
-    /** Describes the fixture inventory without executing it. */
+    /**
+     * Describes the fixture inventory without executing it.
+     *
+     * @return immutable report containing package and fixture metadata
+     */
     public static BlueContractsConformanceReport unexecutedReport() {
         return ContractsConformanceSuite.unexecutedReport();
     }
 
-    /** Validates one parsed fixture envelope for focused tests. */
+    /**
+     * Validates one parsed fixture envelope for focused tests.
+     *
+     * @param fixture parsed fixture envelope
+     */
     public static void validateFixtureMetadataForTest(JsonNode fixture) {
         ContractsConformanceSuite.validateFixture(fixture);
     }
 
-    /** Executes one parsed fixture envelope for focused tests. */
+    /**
+     * Executes one parsed fixture envelope for focused tests.
+     *
+     * @param fixture parsed fixture envelope
+     */
     public static void runFixtureSpecForTest(JsonNode fixture) {
         ContractsConformanceSuite.runFixture(fixture);
     }

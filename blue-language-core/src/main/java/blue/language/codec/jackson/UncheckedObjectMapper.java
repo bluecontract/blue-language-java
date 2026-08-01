@@ -60,6 +60,11 @@ public class UncheckedObjectMapper extends ObjectMapper {
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
                     .build());
 
+    /**
+     * Creates a strict mapper around the supplied JSON-family factory.
+     *
+     * @param jsonFactory configured JSON or YAML token factory
+     */
     protected UncheckedObjectMapper(JsonFactory jsonFactory) {
         super(jsonFactory);
 

@@ -44,14 +44,31 @@ public final class CanonicalJsonValueWriter {
     private CanonicalJsonValueWriter() {
     }
 
-    /** Returns exact canonical bytes for one supported identity value. */
+    /**
+     * Returns exact canonical bytes for one supported identity value.
+     *
+     * @param value normalized identity value, which may be {@code null}
+     * @return RFC 8785 canonical bytes
+     * @throws UnsupportedCanonicalValueException if the value has no supported
+     *         wire-equivalent representation
+     * @throws IllegalStateException if legacy-compatible serialization fails
+     */
     public static byte[] write(Object value) {
         ByteArraySink sink = new ByteArraySink();
         write(value, sink);
         return sink.toByteArray();
     }
 
-    /** Streams exact canonical bytes to a caller-owned sink. */
+    /**
+     * Streams exact canonical bytes to a caller-owned sink.
+     *
+     * @param value normalized identity value, which may be {@code null}
+     * @param sink caller-owned destination receiving bytes in encounter order
+     * @throws NullPointerException if {@code sink} is {@code null}
+     * @throws UnsupportedCanonicalValueException if the value has no supported
+     *         wire-equivalent representation
+     * @throws IllegalStateException if legacy-compatible serialization fails
+     */
     public static void write(Object value, ByteSink sink) {
         if (sink == null) {
             throw new NullPointerException("sink");
@@ -61,12 +78,30 @@ public final class CanonicalJsonValueWriter {
 
     /** Receives canonical bytes in encounter order. */
     public interface ByteSink {
+
+        /**
+         * Writes one canonical byte.
+         *
+         * @param value byte value; only the low eight bits are significant
+         */
         void writeByte(int value);
 
+        /**
+         * Writes a contiguous canonical byte range.
+         *
+         * @param bytes source byte array
+         * @param offset zero-based source offset
+         * @param length number of bytes to write
+         */
         void write(byte[] bytes, int offset, int length);
     }
 
-    /** Tests whether the allocation-light writer preserves Jackson semantics. */
+    /**
+     * Tests whether the allocation-light writer preserves Jackson semantics.
+     *
+     * @param value candidate normalized identity value
+     * @return {@code true} when the allocation-light path is wire-equivalent
+     */
     public static boolean supports(Object value) {
         return supports(value, 0);
     }
@@ -367,7 +402,11 @@ public final class CanonicalJsonValueWriter {
     public static final class UnsupportedCanonicalValueException
             extends RuntimeException {
 
-        /** Creates an exception for the unsupported runtime type. */
+        /**
+         * Creates an exception for the unsupported runtime type.
+         *
+         * @param type unsupported runtime type, or {@code null} for a null map key
+         */
         public UnsupportedCanonicalValueException(Class<?> type) {
             super(type == null
                     ? "Unsupported null map key"

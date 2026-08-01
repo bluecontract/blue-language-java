@@ -22,7 +22,21 @@ public final class PreprocessingDirectiveResolver {
     private final ImportMapBuilder importMapBuilder;
     private final TransformationPlanBuilder transformationPlanBuilder;
 
-    /** Creates a resolver for one declared preprocessing environment. */
+    /**
+     * Creates a resolver for one declared preprocessing environment.
+     * A {@code null} alias or import map configures an empty mapping.
+     *
+     * @param processorProvider registry used to resolve transformation types
+     * @param verifiedProvider identity-verifying provider for exact resources
+     * @param directiveAliases directive alias-to-BlueId mappings, or
+     *        {@code null} for none
+     * @param environmentImports environment alias-to-BlueId mappings, or
+     *        {@code null} for none
+     * @throws NullPointerException when {@code processorProvider} or
+     *         {@code verifiedProvider} is {@code null}
+     * @throws IllegalArgumentException when an alias is empty or maps to a
+     *         non-canonical BlueId
+     */
     public PreprocessingDirectiveResolver(
             TransformationProcessorProvider processorProvider,
             NodeProvider verifiedProvider,
@@ -42,7 +56,17 @@ public final class PreprocessingDirectiveResolver {
                 directiveValidator);
     }
 
-    /** Establishes the complete immutable plan without mutating Source. */
+    /**
+     * Establishes the complete immutable plan without mutating Source.
+     *
+     * @param source Source Document whose root directive is resolved
+     * @return the immutable preprocessing plan and exact dependencies
+     * @throws NullPointerException when {@code source} is {@code null}
+     * @throws IllegalArgumentException when the directive, imports, aliases,
+     *         transformations, or returned provider evidence is invalid
+     * @throws blue.language.provider.ProviderUnavailableException when an
+     *         exact preprocessing resource cannot currently be fetched
+     */
     public PreprocessingPlan resolve(Node source) {
         Objects.requireNonNull(source, "source");
         directiveValidator.validateSource(source);

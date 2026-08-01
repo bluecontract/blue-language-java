@@ -1,12 +1,19 @@
 # Lists and incremental identity
 
-There is one list identity algorithm: a recursive prefix fold.
+There is one list identity algorithm: a domain-separated recursive prefix
+fold. `H` is the normal direct BlueId hash over RFC 8785 canonical JSON:
 
 ```text
-L0 = id([])
-Ln = FOLD_LIST_ID(Ln-1, id(elementN))
+L0 = H({"$list":"empty"})
+Ln = H({"$listCons":{
+       "elem":{"blueId":id(elementN)},
+       "prev":{"blueId":Ln-1}
+     }})
 id([a1, ..., an]) = Ln
 ```
+
+The exact helper tokens are `$list`, `$listCons`, `elem`, and `prev`. RFC 8785
+serializes `elem` before `prev`; host map insertion order is irrelevant.
 
 ## Append
 
@@ -15,7 +22,10 @@ and `id(C)`. The bodies of A and B are not inputs to the append step.
 
 ```text
 prefix = id([A, B])
-result = FOLD_LIST_ID(prefix, id(C))
+result = H({"$listCons":{
+           "elem":{"blueId":id(C)},
+           "prev":{"blueId":prefix}
+         }})
 result = id([A, B, C])
 ```
 
@@ -35,5 +45,7 @@ co-located or available. Inline values and pure references both contribute the
 same exact element BlueId. `$previous` and `$empty` are exact list identity
 controls at their specified boundaries, not arbitrary authored shortcuts.
 
-Run `IncrementalListIdentityExample` from `:examples` and see
-[lists and incremental BlueId](../concepts/lists-and-incremental-blueid.md).
+Run
+[`IncrementalListIdentityExample`](../../examples/src/main/java/blue/language/examples/IncrementalListIdentityExample.java)
+from `:examples` and see [lists and incremental
+BlueId](../concepts/lists-and-incremental-blueid.md).

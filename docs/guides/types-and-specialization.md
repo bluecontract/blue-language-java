@@ -41,5 +41,7 @@ Type matching compares complete nominal and schema meaning. A warm matching
 plan or snapshot can reduce physical work but cannot change the result.
 Limited matching distinguishes established false from incomplete evidence.
 
-Run `SpecializationExample` from `:examples`. See
-[ADR 0002](../adr/0002-specialization-vs-expansion.md).
+Run
+[`SpecializationExample`](../../examples/src/main/java/blue/language/examples/SpecializationExample.java)
+from `:examples`. See [ADR
+0002](../adr/0002-specialization-vs-expansion.md).
