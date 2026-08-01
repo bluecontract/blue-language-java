@@ -26,6 +26,20 @@ public final class BuildLogicConstants {
             "generateSourceReleaseChecksum";
     public static final String TASK_GENERATE_SOURCE_RELEASE_METADATA =
             "generateSourceReleaseMetadata";
+    public static final String TASK_FRAGMENTED_PROCESSING_REPORT =
+            "fragmentedProcessingReport";
+    public static final String TASK_GENERATE_SEMANTIC_API_INVENTORY =
+            "generateSemanticApiInventory";
+    public static final String TASK_SEMANTIC_DISTRIBUTION_API_JAR =
+            "semanticDistributionApiJar";
+    public static final String TASK_PREPARE_SEMANTIC_VERIFICATION_WORKSPACE =
+            "prepareSemanticVerificationWorkspace";
+    public static final String TASK_SEMANTIC_BASELINE_CAPTURE = "semanticBaselineCapture";
+    public static final String TASK_SEMANTIC_BASELINE_VERIFY = "semanticBaselineVerify";
+    public static final String TASK_VERIFY_RELEASE_EVIDENCE_REPORT =
+            "verifyReleaseEvidenceReport";
+    public static final String TASK_VERIFY_SEMANTIC_API_MIGRATION =
+            "verifySemanticApiMigration";
     public static final String TASK_COMPARE_SOURCE_RELEASE_REPLICA =
             "compareSourceReleaseReplica";
     public static final String TASK_SOURCE_RELEASE_ARCHIVE = "sourceReleaseArchive";
@@ -75,6 +89,18 @@ public final class BuildLogicConstants {
             "reports/reproducibility/source-release-verification.json";
     public static final String REPORT_SOURCE_INPUT_EVIDENCE =
             "reports/release-evidence/source-input.json";
+    public static final String REPORT_FRAGMENTED_PROCESSING =
+            "reports/fragmented-processing/fragmented-processing.json";
+    public static final String REPORT_FRAGMENTED_PROCESSING_MARKDOWN =
+            "reports/fragmented-processing/final-generic-kernel.md";
+    public static final String REPORT_RELEASE_EVIDENCE_VERIFICATION =
+            "reports/fragmented-processing/verification.json";
+    public static final String REPORT_SEMANTIC_API_INVENTORY =
+            "reports/semantic-baseline/current-api.json";
+    public static final String REPORT_SEMANTIC_API_MIGRATION =
+            "reports/binary-api/final-1.0-baseline-to-candidate.txt";
+    public static final String REPORT_SEMANTIC_BASELINE_VERIFICATION =
+            "reports/semantic-baseline/verification.json";
     public static final String DIRECTORY_ARCHIVE_REPLICAS =
             "reproducibility/archive-replicas";
     public static final String DIRECTORY_SOURCE_RELEASE_METADATA =

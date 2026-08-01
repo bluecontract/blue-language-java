@@ -12,7 +12,6 @@ import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import blue.buildlogic.tasks.VerifyPublishedRepositoryTask;
 import blue.buildlogic.tasks.VerifySourceReleaseArchiveTask;
 import blue.buildlogic.support.RepositorySourceFiles;
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -68,6 +67,27 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             "blue-language-ipfs",
             "blue-contracts-core",
             "blue-language-java"));
+    private static final List<String> REQUIRED_LOCALITY_TESTS =
+            Collections.unmodifiableList(Arrays.asList(
+                    "blue.language.processor.FragmentedProcessingLocalityIntegrationTest#"
+                            + "shouldVerifyExactRootAndEventFragmentsHaveIdenticalSemanticsAcrossMatrix",
+                    "blue.language.processor.DeepGraphPhysicalLocalityIntegrationTest#"
+                            + "shouldVerifyDeepGraphHasSemanticParityAndPhysicalLocalityAcrossRepresentationsAndProviders",
+                    "blue.language.provider.ExactNodeGraphFragmentsTest#"
+                            + "shouldSplitOnlySelectedCutsAndTheirAncestorSpine",
+                    "blue.language.processor.FragmentedProcessingFailureMatrixTest#"
+                            + "shouldVerifySelectedBodyUnavailableSuspendsWithoutPortableGasAndRetryMatches"));
+    private static final List<String> REQUIRED_HOSTED_RUNTIME_SUITES =
+            Collections.unmodifiableList(Arrays.asList(
+                    "RuntimeWorkSessionTest",
+                    "RuntimeWorkSessionProcessorPhaseIntegrationTest",
+                    "SemanticOutputBoundaryTest",
+                    "DocumentProcessorHandlerFailureTest",
+                    "ExternalChannelDependencyContextTest",
+                    "SubtypeAssignablePredicateTest",
+                    "ContractContributionResolverTest",
+                    "SelectedExecutableBodyCapabilityTest",
+                    "ExternalChannelHostedOutputAdmissionTest"));
     private static final List<String> ALLOWED_MODULE_EDGES = Collections.unmodifiableList(Arrays.asList(
             "blue-language-core->blue-language-model",
             "blue-language-mapping->blue-language-model",
@@ -209,6 +229,16 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         registerEvidenceExecutions(project);
         registerCompatibilityAliases(
                 project, moduleApiVerify, moduleArchiveVerify, sourceRelease);
+        SemanticEvidenceOrchestration.Tasks semanticEvidence =
+                SemanticEvidenceOrchestration.register(
+                        project,
+                        PUBLISHED_MODULES,
+                        REQUIRED_LOCALITY_TESTS,
+                        REQUIRED_HOSTED_RUNTIME_SUITES,
+                        sourceRelease.primary,
+                        sourceRelease.comparison,
+                        sourceRelease.verification,
+                        benchmarkClasses);
 
         project.getGradle().projectsEvaluated(gradle -> configureModuleGraph(
                 project,
@@ -225,7 +255,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 scriptShape,
                 publishedRepository,
                 publishedSmoke,
-                sourceRelease));
+                sourceRelease,
+                semanticEvidence));
 
         TaskProvider<Task> releaseVerify = lifecycle(project, "releaseVerify",
                 "Runs all modular release-candidate gates and emits aggregate evidence.");
@@ -245,6 +276,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 sourceRelease.checksum,
                 sourceRelease.comparison,
                 sourceRelease.verification,
+                semanticEvidence.releaseEvidenceVerification,
+                semanticEvidence.semanticBaselineVerification,
                 verifyReceipt));
         lifecycle(project, "rcVerify", "Alias for releaseVerify.")
                 .configure(task -> task.dependsOn(releaseVerify));
@@ -450,7 +483,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             TaskProvider<VerifyBuildScriptShapeTask> scriptShape,
             TaskProvider<VerifyPublishedRepositoryTask> publishedRepository,
             TaskProvider<GradleBuild> publishedSmoke,
-            SourceReleaseTasks sourceRelease) {
+            SourceReleaseTasks sourceRelease,
+            SemanticEvidenceOrchestration.Tasks semanticEvidence) {
         for (String name : PUBLISHED_MODULES) {
             Project module = root.project(":" + name);
             moduleCheck.configure(task -> task.dependsOn(module.getTasks().named("check")));
@@ -511,7 +545,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 scriptShape,
                 publishedRepository,
                 publishedSmoke,
-                sourceRelease);
+                sourceRelease,
+                semanticEvidence);
     }
 
     private static void configureAggregateReceipt(
@@ -525,7 +560,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             TaskProvider<VerifyBuildScriptShapeTask> scriptShape,
             TaskProvider<VerifyPublishedRepositoryTask> publishedRepository,
             TaskProvider<GradleBuild> publishedSmoke,
-            SourceReleaseTasks sourceRelease) {
+            SourceReleaseTasks sourceRelease,
+            SemanticEvidenceOrchestration.Tasks semanticEvidence) {
         java.util.List<Object> api = new java.util.ArrayList<>();
         java.util.List<Object> verification = new java.util.ArrayList<>();
         for (String name : PUBLISHED_MODULES) {
@@ -567,6 +603,9 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 BuildLogicConstants.TASK_VERIFY_CLEAN_BUILD_EVIDENCE));
         verification.add(sourceRelease.comparison);
         verification.add(sourceRelease.verification);
+        verification.add(semanticEvidence.fragmentedReport);
+        verification.add(semanticEvidence.releaseEvidenceVerification);
+        verification.add(semanticEvidence.semanticBaselineVerification);
         root.getTasks().named("verifyReleaseEvidenceInputs").configure(task ->
                 task.dependsOn(root.getTasks().named("generateReleaseEvidence")));
 
@@ -591,6 +630,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                     sourceRelease.checksum,
                     sourceRelease.comparison,
                     sourceRelease.verification,
+                    semanticEvidence.releaseEvidenceVerification,
+                    semanticEvidence.semanticBaselineVerification,
                     root.getTasks().named("releaseConformanceTest"),
                     root.getTasks().named("runtimeTraceEvidence"),
                     root.getTasks().named("verifyReleaseEvidenceInputs"));
@@ -642,6 +683,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                         "blue.language.matching.FrozenTypeMatcherCachePolicyTest"));
         registerFocusedTest(project, "fragmentedProcessingTest",
                 "Runs provider-fragment admission and deterministic locality coverage.", task -> {
+                    task.getOutputs().dir(project.getLayout().getBuildDirectory().dir(
+                            "reports/semantic-baseline/locality"));
                     task.systemProperty("blue.semantic.locality.evidence.dir",
                             project.getLayout().getBuildDirectory().dir(
                                     "reports/semantic-baseline/locality").get().getAsFile()
@@ -652,6 +695,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                     task.getFilter().includeTestsMatching("blue.language.processor.*Routing*Test");
                     task.getFilter().includeTestsMatching("blue.language.processor.EffectiveFragmentationCatalogTest");
                     task.getFilter().includeTestsMatching("blue.language.processor.ProcessingInputAdmissionTest");
+                    task.getFilter().includeTestsMatching(
+                            "blue.language.processor.FragmentedProcessingFailureMatrixTest");
                 });
     }
 
@@ -715,24 +760,6 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                         moduleArchiveVerify,
                         sourceRelease.comparison,
                         sourceRelease.verification));
-        lifecycle(project, "fragmentedProcessingReport",
-                "Reserved for the typed semantic locality report assembler.")
-                .configure(task -> {
-                    task.dependsOn(project.getTasks().named("fragmentedProcessingTest"));
-                    task.doLast(ignored -> {
-                        throw new org.gradle.api.GradleException(
-                                "fragmentedProcessingReport has not yet been ported to typed build logic; "
-                                        + "the locality tests ran, but no semantic report was claimed");
-                    });
-                });
-        lifecycle(project, "semanticBaselineVerify",
-                "Reserved for typed semantic baseline verification.")
-                .configure(task -> task.dependsOn(project.getTasks().named(
-                        "fragmentedProcessingReport")));
-        lifecycle(project, "semanticBaselineCapture",
-                "Reserved for deliberate typed semantic baseline capture.")
-                .configure(task -> task.dependsOn(project.getTasks().named(
-                        "fragmentedProcessingReport")));
     }
 
     private static TaskProvider<Task> lifecycle(Project project, String name, String description) {

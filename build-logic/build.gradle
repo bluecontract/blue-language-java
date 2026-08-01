@@ -19,6 +19,7 @@ dependencies {
     implementation 'org.jreleaser:org.jreleaser.gradle.plugin:1.24.0'
     implementation 'me.champeau.jmh:me.champeau.jmh.gradle.plugin:0.7.3'
     implementation 'org.ow2.asm:asm:9.9'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
 
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -69,6 +70,10 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('compileTestJava') {
+    options.compilerArgs.add('-Xlint:deprecation')
+}
+
+tasks.named('compileJava') {
     options.compilerArgs.add('-Xlint:deprecation')
 }
 
