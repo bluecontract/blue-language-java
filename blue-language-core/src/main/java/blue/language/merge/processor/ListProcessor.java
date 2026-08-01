@@ -2,7 +2,6 @@ package blue.language.merge.processor;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
-import blue.language.*;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
