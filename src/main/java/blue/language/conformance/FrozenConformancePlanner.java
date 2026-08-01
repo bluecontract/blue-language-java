@@ -6,7 +6,6 @@ import blue.language.NodeProvider;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
-import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedReferenceCache;
 import blue.language.utils.CanonicalIdentityInputBuilder;
@@ -62,7 +61,7 @@ final class FrozenConformancePlanner {
 
     ConformancePlan plan(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {
         Objects.requireNonNull(resolvedRoot, "resolvedRoot");
-        String normalized = PointerUtils.normalizePointer(changedPath);
+        String normalized = JsonPointer.canonicalize(changedPath);
         List<String> existingSegments = existingPathSegments(resolvedRoot, normalized);
         FrozenNode nextResolvedRoot = resolvedRoot;
         FrozenNode nextCanonicalRoot = canonicalRoot;
