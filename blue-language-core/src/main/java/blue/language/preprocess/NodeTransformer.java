@@ -1,7 +1,8 @@
-package blue.language.utils;
+package blue.language.preprocess;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.utils.Nodes;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,12 +14,12 @@ import java.util.stream.Collectors;
  * Applies a transformation recursively to a defensive clone of every node in
  * a graph, including schema constraint nodes.
  */
-public class NodeTransformer {
+final class NodeTransformer {
 
     /**
      * Creates a recursive node transformation helper.
      */
-    public NodeTransformer() {
+    private NodeTransformer() {
     }
 
     /**
@@ -31,7 +32,7 @@ public class NodeTransformer {
      * @param nodeTransformer transformation applied to each cloned node
      * @return transformed deep graph, or {@code null} for a null root
      */
-    public static Node transform(Node node, Function<Node, Node> nodeTransformer) {
+    static Node transform(Node node, Function<Node, Node> nodeTransformer) {
         if (node == null) {
             return null;
         }

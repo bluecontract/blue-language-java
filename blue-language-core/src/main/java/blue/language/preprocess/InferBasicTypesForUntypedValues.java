@@ -3,7 +3,6 @@ package blue.language.preprocess;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
-import blue.language.utils.NodeTransformer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

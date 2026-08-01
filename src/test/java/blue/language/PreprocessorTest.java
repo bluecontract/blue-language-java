@@ -18,7 +18,6 @@ import blue.language.preprocess.TransformationProcessorProvider;
 import blue.language.processor.registry.RuntimeTypeAliases;
 import blue.language.registry.BootstrapProvider;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.utils.NodeTransformer;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +31,11 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class PreprocessorTest {
+
+    private static final String TRANSFORMED_PROPERTY = "y";
+    private static final String SOURCE_TRANSFORMATION_VALUE = "ABC";
+    private static final String TRANSFORMED_VALUE = "XYZ";
+    private static final String TRANSFORMED_VALUE_POINTER = "/y/value";
 
     @Test
     public void shouldPreprocessSupportedTypeForms() throws Exception {
@@ -86,20 +90,19 @@ public class PreprocessorTest {
                      "        blueId: " + TEXT_TYPE_BLUE_ID + "\n" +
                      "x:\n" +
                      "  type: Integer\n" +
-                     "y: ABC";
+                     "y: " + SOURCE_TRANSFORMATION_VALUE;
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
-        TransformationProcessor changeABCtoXYZ = document -> NodeTransformer.transform(document, docNode -> {
-            Node result = docNode.clone();
-            if (docNode.getValue() != null && "ABC".equals(docNode.getValue()))
-                result.value("XYZ");
-            return result;
-        });
+        TransformationProcessor replaceSourceValue =
+                replaceRootPropertyValue(
+                        TRANSFORMED_PROPERTY,
+                        SOURCE_TRANSFORMATION_VALUE,
+                        TRANSFORMED_VALUE);
         TransformationProcessorProvider provider = transformation -> {
             if (transformation.getType() != null
                     && TEXT_TYPE_BLUE_ID.equals(
                     transformation.getType().getBlueId())) {
-                return Optional.of(changeABCtoXYZ);
+                return Optional.of(replaceSourceValue);
             }
             return Optional.empty();
         };
@@ -109,7 +112,8 @@ public class PreprocessorTest {
 
         // then
         assertEquals(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID, result.getAsText("/x/type/blueId"));
-        assertEquals("XYZ", result.getAsText("/y/value"));
+        assertEquals(TRANSFORMED_VALUE,
+                result.getAsText(TRANSFORMED_VALUE_POINTER));
         assertEquals(BlueLanguageConstants.TEXT_TYPE_BLUE_ID,
                 result.getAsText("/y/type/blueId"));
     }
@@ -333,21 +337,19 @@ public class PreprocessorTest {
                      "        blueId: " + TEXT_TYPE_BLUE_ID + "\n" +
                      "x:\n" +
                      "  type: Person\n" +
-                     "y: ABC";
+                     "y: " + SOURCE_TRANSFORMATION_VALUE;
         Node node = YAML_MAPPER.readValue(doc, Node.class);
 
-        TransformationProcessor changeABCtoXYZ = document -> NodeTransformer.transform(document, docNode -> {
-            Node result = docNode.clone();
-            if ("ABC".equals(docNode.getValue())) {
-                result.value("XYZ");
-            }
-            return result;
-        });
+        TransformationProcessor replaceSourceValue =
+                replaceRootPropertyValue(
+                        TRANSFORMED_PROPERTY,
+                        SOURCE_TRANSFORMATION_VALUE,
+                        TRANSFORMED_VALUE);
         TransformationProcessorProvider provider = transformation -> {
             if (transformation.getType() != null
                     && TEXT_TYPE_BLUE_ID.equals(
                     transformation.getType().getBlueId())) {
-                return Optional.of(changeABCtoXYZ);
+                return Optional.of(replaceSourceValue);
             }
             return Optional.empty();
         };
@@ -357,8 +359,26 @@ public class PreprocessorTest {
 
         // then
         assertEquals(personBlueId, result.getAsText("/x/type/blueId"));
-        assertEquals("XYZ", result.getAsText("/y/value"));
+        assertEquals(TRANSFORMED_VALUE,
+                result.getAsText(TRANSFORMED_VALUE_POINTER));
         assertNull(result.getBlue());
+    }
+
+    private static TransformationProcessor replaceRootPropertyValue(
+            String propertyName,
+            String sourceValue,
+            String replacementValue) {
+        return document -> {
+            Node result = document.clone();
+            Node property = result.getProperties() == null
+                    ? null
+                    : result.getProperties().get(propertyName);
+            if (property != null
+                    && sourceValue.equals(property.getValue())) {
+                property.value(replacementValue);
+            }
+            return result;
+        };
     }
 
     private void assertNodesEqual(Node expected, Node actual) {
