@@ -7,7 +7,7 @@ import blue.language.provider.BasicNodeProvider;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

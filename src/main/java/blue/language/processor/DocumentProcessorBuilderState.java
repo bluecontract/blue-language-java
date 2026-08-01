@@ -6,7 +6,7 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 
 import java.util.Objects;
 

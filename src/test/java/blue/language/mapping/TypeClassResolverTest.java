@@ -1,4 +1,4 @@
-package blue.language.utils;
+package blue.language.mapping;
 
 import org.junit.jupiter.api.Test;
 

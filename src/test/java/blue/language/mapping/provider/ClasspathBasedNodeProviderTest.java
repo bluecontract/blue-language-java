@@ -1,4 +1,4 @@
-package blue.language.provider;
+package blue.language.mapping.provider;
 
 import blue.language.model.Node;
 import org.junit.jupiter.api.BeforeEach;

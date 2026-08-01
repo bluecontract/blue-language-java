@@ -1,17 +1,18 @@
 package blue.language.provider;
 
-import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.registry.BlueCoreTypeRegistry;
 
 import java.io.IOException;
 import java.util.List;
 
-import static blue.language.provider.ClasspathBasedNodeProvider.NO_PREPROCESSING;
-
 /**
  * Singleton provider for the canonical core registry and bundled preprocessing
  * transformation definitions.
+ *
+ * <p>The bundled transformations are loaded from an explicit, ordered
+ * resource manifest. Bootstrap assembly therefore never scans the ambient
+ * classpath and does not depend on optional mapping/discovery libraries.</p>
  */
 public class BootstrapProvider implements NodeProvider {
 
@@ -22,7 +23,8 @@ public class BootstrapProvider implements NodeProvider {
 
     private BootstrapProvider() {
         try {
-            ClasspathBasedNodeProvider transformation = new ClasspathBasedNodeProvider(NO_PREPROCESSING, "transformation");
+            NodeProvider transformation =
+                    new BundledTransformationProvider();
             NodeProvider core = BlueCoreTypeRegistry.INSTANCE.verifiedProvider();
             this.nodeProvider = new SequentialNodeProvider(core, transformation);
         } catch (IOException e) {

@@ -15,7 +15,9 @@ import blue.language.api.LanguageRuntimeServices;
 import blue.language.api.WeightedLruCache;
 import blue.language.utils.Properties;
 
+import blue.language.mapping.BlueMapper;
 import blue.language.mapping.NodeToObjectConverter;
+import blue.language.mapping.TypeClassResolver;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.dictionary.DictionaryAwareExporter;
 import blue.language.dictionary.DictionaryRegistry;
@@ -114,6 +116,8 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         SourceContentVerificationRuntime, MatchingRuntime, AutoCloseable {
 
     private static final int RECENT_PROCESSING_DOCUMENT_SNAPSHOT_LIMIT = 32;
+    private static final BlueMapper DEFAULT_OBJECT_MAPPER =
+            BlueMapper.builder().build();
     private static final String PINNED_SNAPSHOT_CACHE = "pinnedAuthoritativeSnapshots";
     private static final String DERIVED_SNAPSHOT_CACHE = "derivedResolvedSnapshots";
     private static final String CANONICAL_ALIAS_CACHE = "canonicalAliases";
@@ -1364,8 +1368,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     public Node objectToNode(Object object) {
         beginDirectCacheOperation();
         try {
-            String json = JSON_MAPPER.writeValueAsString(object);
-            return jsonToNode(json);
+            return preprocess(DEFAULT_OBJECT_MAPPER.toNode(object));
         } finally {
             endDirectCacheOperation();
         }
@@ -1796,8 +1799,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     public String calculateBlueId(Object object) {
         beginDirectCacheOperation();
         try {
-            String json = JSON_MAPPER.writeValueAsString(object);
-            return calculateBlueId(parseSourceJson(json));
+            return calculateBlueId(DEFAULT_OBJECT_MAPPER.toNode(object));
         } finally {
             endDirectCacheOperation();
         }

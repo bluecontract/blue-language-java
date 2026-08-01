@@ -1,6 +1,6 @@
 package blue.language.processor;
 
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

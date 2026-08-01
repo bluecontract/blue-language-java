@@ -7,7 +7,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
 import blue.language.snapshot.FrozenNode;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

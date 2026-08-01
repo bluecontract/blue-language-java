@@ -1,8 +1,6 @@
 package blue.language.mapping;
 
 import blue.language.model.Node;
-import blue.language.utils.TypeClassResolver;
-import blue.language.utils.UncheckedObjectMapper;
 
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
@@ -57,9 +55,9 @@ public final class BlueMapper {
         if (value instanceof Node) {
             return ((Node) value).clone();
         }
-        String json = UncheckedObjectMapper.JSON_MAPPER
+        String json = MappingObjectMapper.JSON_MAPPER
                 .writeValueAsString(value);
-        return UncheckedObjectMapper.JSON_MAPPER.readValue(
+        return MappingObjectMapper.JSON_MAPPER.readValue(
                 json,
                 Node.class);
     }

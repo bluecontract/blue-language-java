@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.api.BlueCachePolicy;
 import blue.language.provider.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 
 /**
  * Immutable construction snapshot consumed by one {@link DocumentProcessor}

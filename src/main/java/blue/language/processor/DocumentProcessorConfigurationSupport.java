@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.Contract;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 
 import java.util.Collections;
 import java.util.Map;

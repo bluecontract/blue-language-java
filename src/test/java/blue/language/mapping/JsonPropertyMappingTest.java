@@ -7,7 +7,6 @@ import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.TypeClassResolver;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.junit.jupiter.api.Test;
 

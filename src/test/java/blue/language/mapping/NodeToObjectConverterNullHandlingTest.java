@@ -3,7 +3,6 @@ package blue.language.mapping;
 import blue.language.Blue;
 import blue.language.mapping.model.Y;
 import blue.language.model.Node;
-import blue.language.utils.TypeClassResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

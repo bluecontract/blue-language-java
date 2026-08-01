@@ -1,7 +1,6 @@
 package blue.language.utils;
 
 import blue.language.model.*;
-import blue.language.mapping.BlueAnnotationsBeanSerializerModifier;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -59,7 +58,7 @@ public class UncheckedObjectMapper extends ObjectMapper {
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
                     .build());
 
-    private UncheckedObjectMapper(JsonFactory jsonFactory) {
+    protected UncheckedObjectMapper(JsonFactory jsonFactory) {
         super(jsonFactory);
 
         setVisibility(getSerializationConfig().getDefaultVisibilityChecker()
@@ -78,7 +77,6 @@ public class UncheckedObjectMapper extends ObjectMapper {
         setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
 
         SimpleModule module = new SimpleModule();
-        module.setSerializerModifier(new BlueAnnotationsBeanSerializerModifier());
         module.addSerializer(BigInteger.class, new JsonSerializer<BigInteger>() {
             @Override
             public void serialize(BigInteger value, JsonGenerator gen, SerializerProvider serializers) throws IOException {

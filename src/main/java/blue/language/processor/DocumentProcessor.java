@@ -9,7 +9,7 @@ import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 
 import java.util.Map;
 import java.util.Objects;

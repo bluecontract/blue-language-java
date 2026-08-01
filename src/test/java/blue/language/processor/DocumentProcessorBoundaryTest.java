@@ -8,7 +8,7 @@ import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.ContractBundle;
 import blue.language.processor.model.SetProperty;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;

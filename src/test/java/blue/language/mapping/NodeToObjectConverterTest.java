@@ -5,7 +5,6 @@ import blue.language.model.Node;
 import blue.language.mapping.model.*;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Properties;
-import blue.language.utils.TypeClassResolver;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

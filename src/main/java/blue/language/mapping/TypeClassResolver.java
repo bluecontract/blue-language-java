@@ -1,7 +1,8 @@
-package blue.language.utils;
+package blue.language.mapping;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.utils.BlueIdCalculator;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ClasspathHelper;
@@ -11,22 +12,25 @@ import org.reflections.util.FilterBuilder;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Thread-safe registry from released type BlueIds to Java classes.
  *
- * <p>Mappings may be registered explicitly or discovered from
- * {@link TypeBlueId}-annotated classes. Duplicate BlueIds may be re-registered
- * only for the same class. The exposed map is a live, unmodifiable,
- * synchronization-safe view.</p>
+ * <p>Explicit registration is the deterministic default. Optional package
+ * scanning is an integration convenience: discovered classes are sorted by
+ * binary name before registration, so a fixed classpath produces a fixed
+ * registry. Duplicate BlueIds may be re-registered only for the same class.
+ * The exposed map is a live, unmodifiable, synchronization-safe view.</p>
  */
 public class TypeClassResolver {
 
-    private final Map<String, Class<?>> blueIdMap = new HashMap<>();
+    private final Map<String, Class<?>> blueIdMap = new LinkedHashMap<>();
     private final Map<String, Class<?>> blueIdView = Collections.unmodifiableMap(
             new AbstractMap<String, Class<?>>() {
                 private final Set<Entry<String, Class<?>>> entries =
@@ -35,7 +39,7 @@ public class TypeClassResolver {
                             public Iterator<Entry<String, Class<?>>> iterator() {
                                 synchronized (TypeClassResolver.this) {
                                     return Collections.unmodifiableMap(
-                                            new HashMap<>(blueIdMap))
+                                            new LinkedHashMap<>(blueIdMap))
                                             .entrySet()
                                             .iterator();
                                 }
@@ -88,7 +92,7 @@ public class TypeClassResolver {
     }
 
     /**
-     * Creates a registry and scans the supplied packages in order.
+     * Creates a registry and optionally scans the supplied packages in order.
      *
      * @param packagesToScan package names to scan
      */
@@ -99,7 +103,9 @@ public class TypeClassResolver {
     }
 
     /**
-     * Discovers and registers every {@link TypeBlueId}-annotated class in a package.
+     * Discovers and registers every {@link TypeBlueId}-annotated class in a
+     * package. Explicit {@link #register(String, Class)} calls avoid scanning
+     * and are preferred by deterministic runtime assembly.
      *
      * @param packageName package to scan
      * @return this registry
@@ -110,7 +116,12 @@ public class TypeClassResolver {
                 .filterInputsBy(new FilterBuilder().includePackage(packageName))
                 .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes));
 
-        Set<Class<?>> annotatedClasses = reflections.getTypesAnnotatedWith(TypeBlueId.class);
+        List<Class<?>> annotatedClasses = reflections
+                .getTypesAnnotatedWith(TypeBlueId.class)
+                .stream()
+                .sorted((left, right) -> left.getName()
+                        .compareTo(right.getName()))
+                .collect(Collectors.toList());
 
         for (Class<?> clazz : annotatedClasses) {
             registerAnnotatedClass(clazz);

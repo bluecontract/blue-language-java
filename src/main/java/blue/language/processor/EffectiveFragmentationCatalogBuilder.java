@@ -13,7 +13,7 @@ import blue.language.utils.BlueIds;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.NodePathEditor;
 import blue.language.utils.Nodes;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;

@@ -8,7 +8,6 @@ import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.Nodes;
-import blue.language.utils.TypeClassResolver;
 
 import java.lang.reflect.*;
 import java.util.*;

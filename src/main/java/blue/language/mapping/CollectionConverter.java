@@ -2,7 +2,6 @@ package blue.language.mapping;
 
 import blue.language.model.Node;
 import blue.language.utils.Nodes;
-import blue.language.utils.TypeClassResolver;
 
 import java.lang.reflect.*;
 import java.util.*;

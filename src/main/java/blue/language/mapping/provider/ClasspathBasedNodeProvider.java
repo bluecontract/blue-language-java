@@ -1,7 +1,9 @@
-package blue.language.provider;
+package blue.language.mapping.provider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
+import blue.language.provider.NodeContentHandler;
+import blue.language.provider.PreloadedNodeProvider;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.BlueIds;
 import blue.language.utils.Properties;
@@ -19,11 +21,13 @@ import java.util.function.Function;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 /**
- * Eager provider built from files below one or more classpath directories.
+ * Optional eager provider built from files below one or more classpath
+ * directories.
  *
  * <p>{@code .blue} resources are parsed and preprocessed; other resources are
  * stored as addressable Text content. Both exploded directories and JAR
- * entries are supported.</p>
+ * entries are supported. The Language core does not use this scanner for its
+ * canonical bootstrap content; applications opt into discovery explicitly.</p>
  */
 public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
 
@@ -31,8 +35,10 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
     /** Identity transformation for already-preprocessed bootstrap resources. */
     public static final Function<Node, Node> NO_PREPROCESSING = e -> e;
 
-    private Map<String, Object> blueIdToContentMap = new HashMap<>();
-    private Map<String, Boolean> blueIdToMultipleDocumentsMap = new HashMap<>();
+    private final Map<String, Object> blueIdToContentMap =
+            new LinkedHashMap<>();
+    private final Map<String, Boolean> blueIdToMultipleDocumentsMap =
+            new LinkedHashMap<>();
     private Function<Node, Node> preprocessor;
 
     /**
@@ -88,7 +94,7 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
     }
 
     private Set<String> getResourcesFromDirectory(ClassLoader classLoader, String directory) throws IOException {
-        Set<String> resources = new HashSet<>();
+        Set<String> resources = new TreeSet<>();
         Enumeration<URL> urls = classLoader.getResources(directory);
         while (urls.hasMoreElements()) {
             URL url = urls.nextElement();

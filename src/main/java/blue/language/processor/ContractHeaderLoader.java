@@ -15,7 +15,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.utils.JsonPointer;
 import blue.language.utils.Nodes;
 import blue.language.utils.Properties;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;

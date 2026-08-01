@@ -6,7 +6,7 @@ import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;

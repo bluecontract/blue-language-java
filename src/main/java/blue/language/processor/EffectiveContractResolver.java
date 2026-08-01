@@ -7,7 +7,7 @@ import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.TypeClassResolver;
+import blue.language.mapping.TypeClassResolver;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
