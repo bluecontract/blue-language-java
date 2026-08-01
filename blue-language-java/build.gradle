@@ -1,0 +1,26 @@
+plugins {
+    id 'blue.java8-library-conventions'
+    id 'blue.reproducible-archives'
+    id 'blue.api-baseline'
+    id 'blue.jreleaser-publishing'
+}
+
+description = 'One-dependency aggregate and compatibility facade for Blue Language Java.'
+
+sourceSets {
+    main {
+        java {
+            srcDirs = [rootProject.file('src/main/java')]
+            include 'blue/language/Blue.java'
+        }
+        resources.srcDirs = []
+    }
+}
+
+dependencies {
+    api project(':blue-language-model')
+    api project(':blue-language-core')
+    api project(':blue-language-mapping')
+    api project(':blue-language-ipfs')
+    api project(':blue-contracts-core')
+}

@@ -1,0 +1,17 @@
+plugins {
+    id 'blue.java8-library-conventions'
+}
+
+description = 'Compiled runnable examples for Blue Language Java documentation.'
+
+sourceSets {
+    main {
+        java.srcDirs = []
+        resources.srcDirs = []
+    }
+}
+
+dependencies {
+    implementation project(':blue-language-java')
+    implementation project(':blue-conformance')
+}

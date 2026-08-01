@@ -15,6 +15,11 @@ plugins {
 group = "blue.language"
 version = project.findProperty('releaseVersion') ?: determineProjectVersion()
 
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
+}
+
 def releaseChannel = System.getenv('BLUE_RELEASE_CHANNEL')
 if (releaseChannel != null && !['rc', 'stable'].contains(releaseChannel)) {
     throw new GradleException("BLUE_RELEASE_CHANNEL must be either 'rc' or 'stable'")
@@ -344,9 +349,9 @@ tasks.register('identityDifferentialTest', Test) {
     configureFocusedTest(delegate)
     description = 'Runs Base58, canonical-byte, and frozen identity differential coverage.'
     filter {
-        includeTestsMatching 'blue.language.utils.Base58Test'
-        includeTestsMatching 'blue.language.utils.Base58Sha256ProviderTest'
-        includeTestsMatching 'blue.language.utils.BlueIdCalculatorTest'
+        includeTestsMatching 'blue.language.identity.Base58Test'
+        includeTestsMatching 'blue.language.identity.Base58Sha256ProviderTest'
+        includeTestsMatching 'blue.language.identity.DirectBlueIdCalculatorTest'
         includeTestsMatching 'blue.language.snapshot.FrozenNodeTest'
         includeTestsMatching 'blue.language.snapshot.FrozenNodeStructuralInternerTest'
         includeTestsMatching 'blue.language.snapshot.FrozenCanonicalDigesterTest'
@@ -380,11 +385,11 @@ tasks.register('cacheLifecycleTest', Test) {
     filter {
         includeTestsMatching 'blue.language.BlueCacheLifecycleTest'
         includeTestsMatching 'blue.language.BlueCachePolicyTest'
-        includeTestsMatching 'blue.language.WeightedLruCacheTest'
+        includeTestsMatching 'blue.language.runtime.WeightedLruCacheTest'
         includeTestsMatching 'blue.language.processor.ProcessorOwnedCacheLifecycleTest'
         includeTestsMatching 'blue.language.snapshot.FrozenNodeRetainedWeightTest'
         includeTestsMatching 'blue.language.snapshot.ResolvedReferenceCacheContractTest'
-        includeTestsMatching 'blue.language.utils.FrozenTypeMatcherCachePolicyTest'
+        includeTestsMatching 'blue.language.matching.FrozenTypeMatcherCachePolicyTest'
     }
 }
 
@@ -628,7 +633,7 @@ tasks.register('releaseConformanceTest', JavaExec) {
     dependsOn tasks.named('verifyNoAmbiguousReverseApi')
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'blue.language.conformance.ReleaseConformanceCli'
+    mainClass = 'blue.language.conformance.cli.ReleaseConformanceCli'
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(8)
     }
@@ -723,7 +728,7 @@ tasks.register('fragmentedProcessingTest', Test) {
     outputs.dir(semanticLocalityEvidenceDirectory)
     filter {
         includeTestsMatching 'blue.language.provider.ExactNodeGraphFragmentsTest'
-        includeTestsMatching 'blue.language.utils.NodeProviderWrapperCompatibilityTest'
+        includeTestsMatching 'blue.language.provider.NodeProviderWrapperTest'
         includeTestsMatching 'blue.language.processor.ProcessingInputAdmissionTest'
         includeTestsMatching 'blue.language.processor.DeepGraphPhysicalLocalityIntegrationTest'
         includeTestsMatching 'blue.language.processor.FragmentedProcessingLocalityIntegrationTest'

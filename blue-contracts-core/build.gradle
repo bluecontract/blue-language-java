@@ -1,0 +1,32 @@
+plugins {
+    id 'blue.java8-library-conventions'
+    id 'blue.reproducible-archives'
+    id 'blue.api-baseline'
+    id 'blue.jreleaser-publishing'
+    id 'blue.jmh-conventions'
+}
+
+description = 'Generic deterministic Blue Contracts 1.0 processing kernel.'
+
+sourceSets {
+    main {
+        java {
+            srcDirs = [rootProject.file('src/main/java')]
+            include 'blue/language/processor/**'
+        }
+        resources {
+            srcDirs = [rootProject.file('src/main/resources')]
+            include 'blue/language/processor/contracts-gas-1.0.yaml'
+            include 'registry/blue-contracts-1.0/**'
+            include 'specifications/blue-contracts-and-processor-specification-1.0.md'
+        }
+    }
+}
+
+dependencies {
+    api project(':blue-language-model')
+    api project(':blue-language-core')
+    api project(':blue-language-mapping')
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'io.github.erdtman:java-json-canonicalization:1.1'
+}
