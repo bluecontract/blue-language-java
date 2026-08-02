@@ -1,0 +1,92 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-15
+vectors:
+- C-EMB-15
+category: emb
+description: Inline and pure-reference forms of the same local Channel bind identically.
+operation: process
+input:
+  root:
+    lessons:
+      inline:
+        value: 0
+        contracts:
+          in: &id001
+            type:
+              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+            order: 0
+            subscriptionKey: lesson
+            eventKey: lesson
+            accept: true
+            checkpointDomain: shared-channel-v1
+          h:
+            type:
+              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+            channel: in
+            order: 0
+            result:
+              patches:
+              - op: replace
+                path: /value
+                val: 1
+      reference:
+        value: 0
+        contracts:
+          in:
+            blueId: 9VbqSkRYqcLnqhcgw6ELvq65dST7gKyXjsxxTS3HCfyp
+          h:
+            type:
+              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+            channel: in
+            order: 0
+            result:
+              patches:
+              - op: replace
+                path: /value
+                val: 1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        collectionPaths:
+        - /lessons
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: lesson
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - lesson
+    - 1
+    deliverySnapshot:
+    - scopePath: /lessons/inline
+      channelKey: in
+      order: 0
+    - scopePath: /lessons/reference
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    nodes:
+      9VbqSkRYqcLnqhcgw6ELvq65dST7gKyXjsxxTS3HCfyp: *id001
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.lessons.inline.value
+    op: equals
+    expected: 1
+  - actual: result.document.lessons.reference.value
+    op: equals
+    expected: 1
+  - actual: trace.handlerExecutionCount
+    op: equals
+    expected: 2

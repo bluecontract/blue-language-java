@@ -108,7 +108,9 @@ checkpointDomainBlueId
 
 It then verifies that the hints identify exactly the same ordered occurrences and that any supplied order/frontier agrees. A hint never supplies missing identity fields to `PROCESS`.
 
-Every non-root scope path must be reachable through direct effective `Process Embedded.paths` declarations at each ancestor. Every selected scope must contain the named effective External Channel. The validator performs this check for fixture content that is statically available.
+Every non-root scope path must be reachable at each ancestor through either an effective exact `Process Embedded.paths` declaration or one concrete direct object member generated from an effective `Process Embedded.collectionPaths` declaration. Every selected scope must contain the named effective External Channel. The validator performs this check for fixture content that is statically available.
+
+For collection declarations, the runner reads the complete direct ordinary member-key set, orders keys by Unicode code point, escapes each key as one Runtime Pointer segment, and derives concrete paths. A compact hint always names the resulting concrete path. The runner MUST reject list targets, non-object members, duplicate/overlapping declarations, wildcard syntax, reserved-field traversal, and cyclic-member boundaries.
 
 ### 6.2 Remaining feeder controls
 
@@ -162,3 +164,8 @@ Its Blue fields have these exact meanings:
 | `fallbackToSourceOnAbsentOrNonChannel` | If true and lookup yields `ABSENT` or `NON_CHANNEL`, the raw source key remains the Handler Channel. If false, the fixture source rejects the delivery. Incomplete or undeclared evidence never falls back. |
 
 The scripted implementation derives payload, checkpoint domain, checkpoint subject, target key, and logical-delivery key from immutable header fields and the exact event. It does not inspect mutable business fields. Several fresh sources in one `(scopePath, logicalDeliveryKey)` group execute Handlers once only when their exact payload and target identities agree. Each fresh source retains its own checkpoint authority.
+
+
+## 11. Exact participant bindings and parent lookup
+
+Fixtures may place the same exact Channel node inline or behind a pure BlueId reference. The runner MUST treat these forms identically after exact verification. It MUST NOT import a parent or ancestor Channel into an embedded scope merely because the raw key is equal. The fixture runtime has no implicit Parent Channel feature.

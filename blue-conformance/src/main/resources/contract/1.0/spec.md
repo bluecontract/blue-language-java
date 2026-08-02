@@ -31,7 +31,7 @@ Root
     └── External Review
 ```
 
-Declared embedded documents are owned parts of that rooted reality. They may contain their own contracts, channels, lifecycle state, and internal events, but they are not independently committed sessions. A successful transition creates one new Root. Changed embedded nodes and every changed ancestor on their paths receive new Node BlueIds. Unchanged branches retain their existing Node BlueIds.
+Declared embedded documents are owned parts of that rooted reality. They may contain their own contracts, channels, lifecycle state, and internal events, but they are not independently committed sessions. A successful transition creates one new Root. Changed embedded nodes and every changed ancestor on their paths receive new BlueIds. Unchanged branches retain their existing BlueIds.
 
 An independently evolving or shared business object is modeled as another autonomous root connected by references and events. It is not modeled as one mutable embedded occurrence owned simultaneously by several roots.
 
@@ -127,7 +127,7 @@ A conforming implementation MUST preserve all of these invariants:
 5. `PROCESS` never requires a recursive scan of the complete embedded surface.
 6. Inline, referenced, expanded, collapsed, warm, cold, batched, and segmented representations produce the same semantic result and portable gas.
 7. Every effective contract type in the initial participating closure is recognized before the first mutation; executable bodies remain lazy.
-8. Patches use persistent copy-on-write and preserve unchanged children by exact Node BlueId.
+8. Patches use persistent copy-on-write and preserve unchanged children by exact BlueId.
 9. Internal Document Updates and emitted events may reach ancestors without becoming public Root output.
 10. `ProcessResult.events` contains exactly Root emissions, in order and with multiplicity.
 11. Checkpoints bind to channel semantic identity and are written only after complete successful delivery.
@@ -135,6 +135,62 @@ A conforming implementation MUST preserve all of these invariants:
 13. Runtime semantics are selected by exact runtime-type BlueId; no document-level version field is required.
 14. Deterministic failure, gas exhaustion, or transient resource suspension before commit leaves the old Root authoritative and publishes no events.
 15. A successful new Root is committed only when its changed subscription surface is deterministically indexable.
+
+### 0.7 One external event at a glance (informative)
+
+The complete lifecycle of one event is:
+
+```text
+1. The feeder closes a safe external-order window.
+2. It derives the complete preselected delivery snapshot for one Root revision.
+3. The processor admits the exact Root and exact event.
+4. It checks direct terminated state and preflights the complete participating closure.
+5. Each raw External Channel occurrence is revalidated, accepted or rejected,
+   checkpoint-gated, and grouped into a logical delivery.
+6. Required scopes initialize from Root toward the selected descendant.
+7. Selected deliveries execute deeper scopes first; selected bodies remain lazy.
+8. Patches rebuild the changed identity spine, Document Updates cascade
+   synchronously, and emitted events drain through the internal FIFO.
+9. Successful source checkpoints are written after complete delivery.
+10. The final Root is validated, its subscription delta is derived, and the
+    platform atomically commits Root, Root events, index delta, and progress.
+```
+
+At no point does the processor need to materialize the complete Root graph. A host may physically prefetch more, but only demanded and causally reached content affects semantics or gas.
+
+### 0.8 Key terms (informative)
+
+| Term | Meaning |
+|---|---|
+| **Root** | The one authoritative Blue document state supplied to `PROCESS`. |
+| **Scope** | Root or one declared embedded object occurrence participating inside that Root. |
+| **Raw external occurrence** | One snapshotted External Channel at one scope path. It owns acceptance and checkpoint state. |
+| **Logical delivery** | One handler execution obtained after equivalent fresh raw sources are grouped. |
+| **Delivery snapshot** | Revision-bound derived evidence describing every preselected raw occurrence for the event. |
+| **EventOccurrence** | Internal FIFO run state for one emitted event, its source scope, and frozen ancestor chain. |
+| **Root event** | An event emitted by Root and therefore included in `ProcessResult.events`. |
+
+The exact external event and the derived delivery snapshot are different things. The event is immutable Blue content. The snapshot is verified execution evidence and is never inserted into the event.
+
+### 0.9 Reusable embedded process modules (informative)
+
+A reusable embedded process type defines local state, local contract roles, operations, and any nested owned processes. One occurrence becomes self-contained when it is created: every local role is bound to an exact Channel node, either materialized inline or supplied as an equivalent pure BlueId reference.
+
+```text
+Reusable Lesson type
+  declares teacherChannel and studentChannel roles
+
+Agreement occurrence
+  creates one Lesson
+  supplies exact teacher and student Channel nodes
+  declares the Lesson as embedded
+```
+
+The same Timeline, actor, or exact Channel definition may be reused in many embedded occurrences. Reuse does not duplicate the external history and does not merge the occurrences: each concrete scope path has its own lifecycle, checkpoint state, and document state.
+
+Contracts 1.0 does not define implicit parent-channel inheritance. An embedded scope does not search its parent or ancestors for a contract key, and changing a parent Channel does not silently change existing child occurrences. New occurrences may be assembled using the parent's current participant configuration; existing occurrences retain their exact bindings until an explicit workflow changes or replaces them.
+
+Dynamic collections of process occurrences are declared through `Process Embedded.collectionPaths` (§5.2). The collection uses stable object keys; every direct member becomes one concrete embedded scope. Raw wildcard syntax and implicit list-element embedding are not part of Contracts 1.0.
 
 ---
 
@@ -203,7 +259,7 @@ Registry source, calculated BlueIds, prose, fixtures, and gas manifest MUST agre
 The implementation-baseline runtime registry package identity is:
 
 ```text
-sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b
+sha256:34081fabc92444435a0aa41d272fb92a8245c00bb949aa22ac36be0bbf15d1f1
 ```
 
 The machine-readable `blue-contracts/gas/1.0` manifest is normative for counter names, weights, formulas, and portable limits. Its implementation-baseline package identity is:
@@ -228,13 +284,15 @@ A conforming implementation MUST:
 
 A component implementing only the processor library, feeder, node store, or a runtime may describe that component precisely, but MUST NOT claim complete Contracts 1.0 platform conformance unless the combined system satisfies all obligations.
 
+This specification intentionally defines a generic runtime boundary rather than one normative business channel or workflow language. The conformance harness uses identity-bound scripted runtime types to exercise that boundary. Real end-to-end applications require one or more separately published concrete External Channel and Handler/runtime specifications, each selected by exact runtime-type BlueId.
+
 ---
 
 ## 2. Processing Inputs, Environment, Result, and Atomicity
 
 ### 2.1 Processing Document
 
-`document` is an admitted exact Blue node. It MAY be inline, a pure reference, or partially materialized, but its exact Root Node BlueId MUST be established before semantic execution. The logical Root MUST be an object node.
+`document` is an admitted exact Blue node. It MAY be inline, a pure reference, or partially materialized, but its exact Root BlueId MUST be established before semantic execution. The logical Root MUST be an object node.
 
 The Processing Document need not be a complete Resolved Form or a closed graph. Contract fields, type contributions, schemas, values, and executable bodies are expanded and resolved on demand.
 
@@ -242,7 +300,7 @@ A higher-level API MAY accept Source syntax and preprocess it before `PROCESS`. 
 
 ### 2.2 Processing Event
 
-`event` is an admitted exact immutable Blue node. Its exact Node BlueId MUST be established before semantic execution. A higher-level API MAY preprocess Source-event syntax before `PROCESS`.
+`event` is an admitted exact immutable Blue node. Its exact BlueId MUST be established before semantic execution. A higher-level API MAY preprocess Source-event syntax before `PROCESS`.
 
 The event is never rewritten to contain a target path or delivery occurrence. Exact identity, signatures, source-chain links, and checkpoint subjects therefore remain stable.
 
@@ -291,7 +349,7 @@ ProcessResult {
 
 `document` is the exact resulting Root on success. Every noncommitting status returns the exact input Root.
 
-`events` is an out-of-band ordered sequence of exact Blue event nodes emitted by Root during the invocation. It preserves order and multiplicity. The sequence is not itself a Blue List node and has no independent Node BlueId inside `PROCESS`; a platform MAY wrap it in a Blue outbox envelope after processing. It is empty for every noncommitting status.
+`events` is an out-of-band ordered sequence of exact Blue event nodes emitted by Root during the invocation. It preserves order and multiplicity. The sequence is not itself a Blue List node and has no independent BlueId inside `PROCESS`; a platform MAY wrap it in a Blue outbox envelope after processing. It is empty for every noncommitting status.
 
 `totalGas` is the sum of admitted canonical counters. A conformance/debug API MUST be able to expose the exact named trace; an ordinary API MAY omit it.
 
@@ -318,7 +376,7 @@ Transient acquisition failure does not produce a completed `ProcessResult`; the 
 For graph-equivalent Root and event inputs under the same environment, a conforming implementation MUST return:
 
 - the same status and diagnostic category;
-- the same resulting Root Node BlueId;
+- the same resulting Root BlueId;
 - the same ordered Root event identities;
 - the same exact counter trace and total gas;
 - the same semantic provider demands.
@@ -463,6 +521,18 @@ The source Channel performed external acceptance and owns checkpoint domain, che
 
 The target Channel is not evaluated as another external occurrence and is not checkpointed merely because it is the handler target. Handlers are selected by the frozen `handlerChannelKey`.
 
+Informative example:
+
+```text
+sourceChannel accepts an externally attributed message
+message payload names operationsChannel as the effective target
+handlers bound to operationsChannel execute
+sourceChannel owns the checkpoint
+operationsChannel is not separately accepted or checkpointed
+```
+
+This supports delegated or routed operation protocols without rewriting the external event or adding a third `PROCESS` input.
+
 #### 3.3.3 Logical delivery grouping
 
 After rejection and stale filtering, accepted-new raw source occurrences are grouped by:
@@ -534,7 +604,36 @@ Removing and later re-adding a channel starts a new interval unless the exact ch
 
 The feeder MUST not process event `E` until the concrete external-source ecosystem has supplied completeness evidence that no active subscribed source can later produce an eligible event ordered before `E`.
 
-The concrete source specification MUST publish one exact strict total-order key and completeness rule. The order MUST preserve the order of each source, MUST be independent of arrival order, and MUST use a stable identity-bound tie-breaker when source-local positions alone do not determine a cross-source order. Contracts core treats that key as opaque ordered evidence. It does not define clocks, timelines, providers, or source-specific tie-breakers.
+Each concrete external-source specification MUST publish:
+
+```text
+source-local order key
+source-local completeness rule
+stable source identity used by the external-order policy
+```
+
+The managed execution environment binds one exact **external-order policy identity**. That policy MUST define a strict total order over eligible events from all active sources and satisfy all of these laws:
+
+1. **Per-source consistency.** If one source's final order places `A` before `B`, the cross-source policy MUST also place `A` before `B`.
+2. **Totality.** For any two distinct eligible event occurrences, exactly one orders before the other.
+3. **Determinism.** The result depends only on identity-bound source evidence and policy fields, never arrival order, query order, cache state, locale, or host scheduling.
+4. **Stable tie-breaking.** Equal source-neutral time values or other primary keys are resolved by exact identity-bound tie-break fields published by the policy.
+5. **Policy stability.** The policy identity is fixed for the managed-root session or changed only through an explicit migration that defines progress continuity.
+6. **Completeness compatibility.** Before selecting `E`, the feeder has evidence from every active source interval that no still-eligible event can later appear with a global order key less than `E`.
+
+Contracts core treats concrete order-key components as opaque evidence. It does not define clocks, timelines, providers, or one universal tie-break tuple.
+
+An informative feeder loop is:
+
+```text
+repeat:
+    assert subscription index matches authoritative Root revision
+    obtain each active source's next known event and completeness frontier
+    choose the least globally ordered candidate E
+    wait until every active source proves no eligible event precedes E
+    derive the complete preselected delivery snapshot for E
+    process and persist one revision-bound terminal result for E
+```
 
 No later external event may interleave with the retained deliveries of the current event. The complete canonical delivery set of `E` reaches one terminal progress record before the feeder begins `E2`.
 
@@ -712,6 +811,25 @@ For an accepted external delivery, its channel snapshot, payload, checkpoint dom
 
 A Handler binds to exactly one channel key in the same scope through its effective `channel` field. A missing same-scope channel makes the Handler inert unless its exact runtime type declares that shape invalid.
 
+The effective contracts of an embedded scope are resolved from that scope's own content, type chain, and overlays. Embedding does not import, inherit, or alias contracts from a parent or ancestor scope. A contract key in an ancestor has no same-scope effect in the child merely because the raw key is equal.
+
+An exact Channel node may be reused in several scopes. These are representation-equivalent bindings:
+
+```yaml
+teacherChannel:
+  blueId: <ExactChannelBlueId>
+```
+
+```yaml
+teacherChannel:
+  type: <ConcreteChannelType>
+  # exact materialized content whose BlueId is ExactChannelBlueId
+```
+
+The two forms identify the same Channel value. They do not create a live link to another contract-map key. If a parent later replaces its own Channel, an existing child reference still identifies the old exact Channel until the child occurrence is explicitly changed.
+
+Contracts 1.0 defines no informal `Parent Channel`, ancestor-key lookup, nearest-parent lookup, or context-dependent channel port. A future runtime may define an explicit cross-scope binding type only through a separately published exact runtime-type BlueId and complete dependency, subscription, checkpoint, invalidation, cycle, and gas semantics. Implementations MUST NOT infer such behavior from ordinary embedding or raw key equality.
+
 A child event reaches an ancestor only through an Embedded Node Channel. A descendant field change reaches an ancestor through a Document Update Channel.
 
 ### 4.10 Effective protected state
@@ -734,7 +852,7 @@ EFFECTIVE_PROTECTED_STATE(before)
 EFFECTIVE_PROTECTED_STATE(after)
 ```
 
-MUST hold, except that an explicitly permitted patch to `contracts/embedded/paths` may change only `paths` while preserving the exact Process Embedded type and every other effective field.
+MUST hold, except that an explicitly permitted patch to the declaration fields `contracts/embedded/paths` or `contracts/embedded/collectionPaths` may change only those declaration fields while preserving the exact Process Embedded type and every other effective field.
 
 This comparison catches indirect changes caused by replacing `/type`, `/contracts`, or an ancestor of a protected contribution.
 
@@ -778,7 +896,7 @@ An invalid result shape fails before any effect from that result is applied. Who
 
 ### 4.13 Runtime body demand and meter
 
-A candidate body is demanded only after its matcher succeeds. Passing an already admitted exact node into or out of a runtime preserves its Node BlueId and MUST NOT recursively clone, serialize, or size it.
+A candidate body is demanded only after its matcher succeeds. Passing an already admitted exact node into or out of a runtime preserves its BlueId and MUST NOT recursively clone, serialize, or size it.
 
 A runtime either debits the shared meter live or uses a child meter initialized with the exact remaining budget. It MUST NOT do both for the same work. A child ledger is validated and merged exactly once.
 
@@ -797,52 +915,88 @@ The root scope always exists. A declared embedded scope exists only while its pa
 
 ### 5.2 Process Embedded
 
-The reserved key `contracts/embedded` contains a Process Embedded marker:
+The reserved key `contracts/embedded` contains a Process Embedded marker. It has two explicit declaration forms:
 
 ```yaml
 contracts:
   embedded:
     type: Process Embedded
+
     paths:
       - /payment
       - /delivery
-      - /riskMonitor
+
+    collectionPaths:
+      - /lessons
+      - /refunds
 ```
 
-It defines:
+`paths` contains exact Runtime Pointers. Each path identifies one immediate owned embedded scope root.
+
+`collectionPaths` contains exact Runtime Pointers to object-compatible collection nodes. Every direct ordinary member present under such a collection becomes one immediate owned embedded scope root at the concrete path:
+
+```text
+collection path: /lessons
+member key:      lesson-17
+concrete scope:  /lessons/lesson-17
+```
+
+The collection container itself is not an embedded scope unless it is separately declared by a different valid ancestor marker. One Process Embedded marker MUST contain at least one non-empty `paths` or `collectionPaths` list after effective resolution.
+
+Process Embedded defines:
 
 1. owned child contract scopes;
 2. mutation boundaries;
 3. the recursive feeder subscription surface.
 
-It does not broadcast the current external event to every child.
+It does not broadcast the current external event to every child. It does not import parent contracts into a child. It never turns a contract entry under `/contracts` into a scope.
 
-### 5.3 Embedded path validity
+### 5.3 Embedded declaration validity
 
-Each immediate path MUST:
+Every entry in `paths` and `collectionPaths` MUST:
 
 - be a normalized Runtime Pointer beginning with `/`;
 - not equal `/`;
 - use object-member segments only;
 - not traverse list positions;
+- not contain wildcard, glob, selector, or query syntax;
 - not pass through `contracts`, `type`, `schema`, `items`, or another Language-reserved field;
-- be unique within the marker;
-- not overlap another immediate path by ancestor/descendant relation;
-- resolve to an object when present.
+- be unique within its declaration list;
+- not overlap another immediate declaration by ancestor/descendant relation.
 
-A missing declared child is permitted and contributes no active scope. A present non-object child is invalid. Traversal MUST reject an embedded ancestry cycle, including revisiting the same exact node on the current declared ancestor chain.
+A `paths` entry may be absent from the current document and then contributes no active scope. When present, it MUST resolve to an object node or a verified pure reference to an object node.
 
-### 5.4 Entry snapshot
+A `collectionPaths` entry may be absent and then contributes no active scopes. When present, it MUST resolve to an object-compatible node. Lists are not collection targets under Contracts 1.0. Every direct ordinary member under the collection MUST be an object node or a verified pure reference to an object node. A present scalar, list, cyclic-member boundary, or otherwise non-object member makes the subscription surface invalid.
+
+For one collection, direct member keys are ordered by Unicode code-point order. Each key is escaped as one Runtime Pointer segment to derive its concrete scope path. The processor and feeder MUST use the concrete paths, not a wildcard expression, in delivery snapshots, activation intervals, checkpoints, propagation chains, and diagnostics.
+
+The combined concrete child set from `paths` and `collectionPaths` MUST be duplicate-free. It is invalid when:
+
+- an explicit `paths` entry equals a collection-generated member path;
+- one declaration is a strict ancestor or descendant of another immediate declaration;
+- the same collection is declared twice through graph-equivalent pointers;
+- two declarations generate the same concrete path.
+
+Traversal MUST reject an embedded ancestry cycle, including revisiting the same exact node on the current declared ancestor chain.
+
+### 5.4 Entry snapshot and collection membership
 
 When a scope first participates, the processor freezes:
 
 ```text
-ENTRY_EMBEDDED_PATHS(scope)
+ENTRY_EXPLICIT_EMBEDDED_PATHS(scope)
+ENTRY_EMBEDDED_COLLECTION_PATHS(scope)
+ENTRY_COLLECTION_MEMBER_KEYS(scope, collectionPath)
+ENTRY_EMBEDDED_PATHS(scope)          # exact combined concrete child paths
 ENTRY_SCOPE_ROOT_IDENTITY(scope)
 ENTRY_ANCESTOR_CHAIN(scope)
 ```
 
-The embedded path snapshot is used for current-event path verification, boundaries, and propagation. Changes to `paths` affect later events only.
+For each collection path, `ENTRY_COLLECTION_MEMBER_KEYS` is the complete direct key set in Unicode code-point order. `ENTRY_EMBEDDED_PATHS` is produced by combining exact `paths` entries with every concrete collection-member path and then applying canonical Runtime Pointer ordering.
+
+The frozen concrete path set is used for current-event path verification, mutation boundaries, delivery ordering, cut-off, and propagation. Changes to `paths`, `collectionPaths`, collection membership, or direct collection keys affect later external events only.
+
+A member added while processing event `E` is ordinary tentative Root content during `E`; it is not a participating scope for `E`. After commit it begins a new subscription interval strictly after `E`'s external-order key. A removed member retires its occurrence at the committed revision. Removing and later re-adding the same key creates a fresh occurrence interval and does not reuse the prior occurrence's checkpoint state unless an exact runtime type defines an explicit deterministic migration.
 
 The entry root identity identifies the active occurrence for cut-off detection. Ordinary persistent writes strictly inside the occurrence create new node identities but preserve the occurrence. A whole-occurrence replacement by an ancestor with a different exact node ends it.
 
@@ -868,12 +1022,15 @@ An implementation MAY store tentative intermediate nodes by BlueId. Storage does
 
 ### 5.7 Mutation boundaries
 
-Let `S` be the executing scope and `E(S)` its immediate child roots from `ENTRY_EMBEDDED_PATHS(S)`.
+Let `S` be the executing scope and `E(S)` its immediate child roots from the exact combined `ENTRY_EMBEDDED_PATHS(S)`, including collection-generated concrete member paths.
 
 An application patch from `S` MAY:
 
 - change a strict descendant of `S` that is not strictly inside any child root in `E(S)`;
-- add, replace, or remove one immediate child root in `E(S)` as a whole.
+- add, replace, or remove one immediate child root in `E(S)` as a whole;
+- add a new direct member under an entry-snapshotted `collectionPaths` container, provided the final value is an object-compatible node and the resulting subscription surface is valid.
+
+A newly added collection member is not added to `E(S)` for the current event. It becomes an embedded occurrence only after the new Root commits and the next revision's subscription surface is derived.
 
 It MUST NOT:
 
@@ -881,6 +1038,7 @@ It MUST NOT:
 - replace or remove its own scope root;
 - patch strictly inside an immediate child root;
 - patch a strict ancestor of an immediate child root;
+- replace or remove a collection container as a whole while it contains entry-snapshotted active child roots;
 - cross into a cyclic-set member.
 
 The strict-ancestor rule is intentionally simple. Authors must use an exact child-root operation rather than an ambiguous ancestor replacement.
@@ -899,16 +1057,63 @@ When an ancestor removes an active embedded scope root or replaces it with a dif
 - the Document Update that caused cut-off continues along its frozen receiving chain;
 - re-adding the same path does not resurrect the old occurrence during this invocation.
 
-Replacing a child root with the exact same current Node BlueId is a semantic no-op and does not cut off the occurrence.
+Replacing a child root with the exact same current BlueId is a semantic no-op and does not cut off the occurrence.
 
 The processor MUST check cut-off after every nested cascade and before every marker or checkpoint write.
-
-Root is the authoritative invocation boundary and cannot be cut off. Root termination prevents new Root-local handlers, but it does not erase occurrences emitted earlier; those occurrences continue through any nonterminating descendant or intermediate recipients on their frozen chains.
 
 ### 5.9 Frozen propagation chains
 
 Every emitted event and every Document Update freezes its source scope and active ancestor chain when the occurrence is created. Later changes to Process Embedded declarations do not redirect an already-created occurrence. A removed or terminated receiving ancestor may stop its own local reaction, but an event that already happened is not silently rewritten to have a different source.
 
+### 5.10 Participant bindings in reusable process occurrences (normative boundary; informative pattern)
+
+A reusable process type may declare local Channel roles such as `teacherChannel`, `studentChannel`, `buyerChannel`, or `sellerChannel`. Each concrete occurrence supplies exact Channel values for those local keys. The values may be inline or equivalent pure BlueId references.
+
+The process occurrence is self-contained after creation. Its current subscription surface and authority are functions of its own exact content and registered runtime semantics, not of the unrelated current content of its parent.
+
+Recommended application behavior is:
+
+```text
+new process occurrence:
+  instantiate using the enclosing document's current participant configuration
+
+existing process occurrence:
+  retain its exact bindings
+
+participant change inside one occurrence:
+  perform an explicit authorized workflow that replaces local Channel values
+
+agreement-wide migration:
+  explicitly update or replace the selected existing occurrences
+```
+
+For a Channel-changing event, the pre-change frozen source snapshot authorizes and checkpoints the current delivery. The new Channel surface becomes active only after the Root transition commits. Thus an old participant set may validly govern the transition to a new participant set, while later events use the new set.
+
+Changing a parent Channel does not silently rewrite a child's exact binding. Contracts 1.0 intentionally chooses explicit participant snapshots over context-dependent live parent lookup.
+
+### 5.11 Addressing dynamic collection members (normative boundary; informative example)
+
+`collectionPaths` declares which object members are active embedded scopes. It does not define how an external protocol addresses one member. Addressing is part of the concrete External Channel runtime through `CHANNEL_KEYS`, `EVENT_KEYS`, `PRESELECTS`, and `ACCEPTS` (§3.3).
+
+A concrete channel may use a stable document-routing identity in the event and scope header. For example, a Timeline Entry protocol may derive keys from:
+
+```text
+documentId + timeline identity + actor identity
+```
+
+This allows many embedded process occurrences to reuse one physical Timeline while the feeder selects only the occurrence named by the event's `documentId`. Another channel type may use a different finite target projection.
+
+A stable logical document identifier and a BlueId serve different purposes:
+
+```text
+stable document-routing identity:
+  identifies the continuing process occurrence for the external protocol
+
+BlueId:
+  identifies one exact immutable state of that occurrence
+```
+
+Contracts core does not mandate a field named `documentId`; it requires each portable External Channel type to publish finite, deterministic subscription and event keys. If a channel's keys do not distinguish several occurrences sharing one source, all matching occurrences may be preselected and normal canonical delivery rules apply.
 
 ---
 
@@ -943,22 +1148,43 @@ External Channel acceptance is immutable for this event and cannot read mutable 
 
 ### 6.3 Document Update
 
-Every successful application patch or generated type-generalization write creates one immutable Document Update occurrence:
+Every successful application patch or generated type-generalization write creates one immutable **update occurrence** in run state. The occurrence freezes:
+
+```text
+absolute changed path from Root
+absolute patch-origin scope path
+before/after exact snapshots and presence
+frozen receiving ancestor chain
+semantic update operation
+```
+
+The underlying occurrence is created once. For each receiving scope, the processor deterministically renders one scope-relative Document Update payload:
 
 ```yaml
 type: Document Update
 op: add | replace | remove
-path: <path relative to receiving scope>
+path: <changed path relative to receiving scope>
 beforePresent: true | false
 before: <exact snapshot when present>
 afterPresent: true | false
 after: <exact snapshot when present>
-sourceScopePath: <path of patch origin relative to receiving scope>
+sourceScopePath: <patch-origin path relative to receiving scope>
 ```
 
-`before` and `after` are omitted when the corresponding presence Boolean is false. Null is not used as an absence sentinel. The semantic operation is derived from presence: absent-to-present is `add`, present-to-present is `replace`, and present-to-absent is `remove`. Consequently, an object-member patch authored with `op: replace` but applied as an upsert to an absent member produces a Document Update with `op: add`.
+The payload may therefore contain different relative `path` and `sourceScopePath` values at different receiving scopes while representing the same immutable underlying occurrence.
 
-There is one underlying Document Update occurrence for one committed mutation. It retains the absolute changed path, absolute source scope, presence flags, and exact before/after values. Each receiving scope gets a deterministic scope-relative rendering of that same occurrence; rendering does not create another mutation occurrence or change its identity.
+`before` and `after` are omitted when the corresponding presence Boolean is false. Null is not used as an absence sentinel.
+
+The semantic `op` is determined from presence, not merely copied from the authored Json Patch Entry:
+
+```text
+before absent, after present  -> add
+before present, after present -> replace
+before present, after absent  -> remove
+same exact before/after BlueId -> no Document Update
+```
+
+Therefore an authored object-member `replace` used as an upsert produces `op: add` when the member was absent.
 
 A Document Update Channel declares a scope-relative watched `path`. It matches when the changed path is equal to or below the watched path.
 
@@ -1206,8 +1432,9 @@ function DRAIN_INTERNAL_EVENTS():
         for receivingAncestor in occurrence.frozenAncestors nearest-first:
             if receivingAncestor is active and not terminating and not terminated:
                 DELIVER_EMBEDDED_EVENT(receivingAncestor, occurrence)
-
 ```
+
+Root has no ancestor and therefore cannot be cut off. Root termination does not erase occurrences that were already enqueued. The queue continues to quiescence under the ordinary active/nonterminating predicates and the shared gas limit. No new handler begins in Root after Root is marked terminating, and no later external delivery begins, but nonterminating descendant or intermediate scopes may finish reactions to occurrences already in the FIFO.
 
 Each delivery performs fresh channel and Handler discovery at that receiving scope, applies results synchronously, and may enqueue later occurrences.
 
@@ -1305,7 +1532,9 @@ val: <Blue node>      # required for add/replace; absent for remove
 
 Operations are applied in result order. A later patch observes all earlier tentative patches and cascades.
 
-`replace` on an object member is an upsert. `remove` of a missing member is invalid. The final parent container MUST already exist. Core patching never silently synthesizes a missing intermediate object or array; an earlier explicit operation must create that container before a later operation may address one of its children.
+`replace` on an object member is an upsert: the final member may be absent before the operation. `remove` of a missing member is invalid.
+
+The parent container of the final path segment MUST already exist and have the required object or list kind. Core patch semantics do not synthesize missing intermediate objects or lists. A runtime that wants to create a nested structure must add or replace an admitted complete subtree at an existing parent, or issue earlier patches that create each required parent explicitly. Arrays are never silently invented.
 
 ### 8.3 Insertion normalization
 
@@ -1422,13 +1651,13 @@ capability failure
 
 ### 9.2 Initialization identity
 
-The Document Processing Initiated event carries the exact scope document as it existed immediately before initialization effects. That node may be carried as a pure reference or verified materialization; both forms are the same document and do not change processing or gas. Content BlueId is not computed.
+The Document Processing Initiated event carries the exact scope document as it existed immediately before initialization effects. That node may be carried as a pure reference or verified materialization; both forms are the same document and do not change processing or gas. No Source Document BlueId calculation is performed.
 
 ### 9.3 Initialization algorithm
 
 For one uninitialized active scope:
 
-1. freeze its exact pre-initialization scope document and Node BlueId;
+1. freeze its exact pre-initialization scope document and BlueId;
 2. mark it `initializing` in run state;
 3. create Document Processing Initiated;
 4. deliver matching Lifecycle Channels and Handlers;
@@ -1476,7 +1705,7 @@ When Root begins termination:
 - no later external delivery begins;
 - the current result's already ordered patches and emissions complete according to §4.12;
 - the termination lifecycle completes once;
-- the Root termination marker is written if possible within the normal gas budget;
+- the Root termination marker write is attempted and metered under the normal rules; a committing termination requires it to complete;
 - the committing status remains `success` because a new Root was produced.
 
 A later invocation on that Root returns `terminated` immediately.
@@ -1526,7 +1755,7 @@ The default domain is the BlueId of a canonical domain node containing:
 ```text
 Contracts version tag
 External Channel effective type BlueId
-ordered source-contribution Node BlueIds
+ordered source-contribution BlueIds
 runtime-registered checkpoint-domain discriminator
 ```
 
@@ -1542,11 +1771,11 @@ The processor MUST NOT create an empty marker before establishing that a deliver
 
 ### 10.4 Default exact-node subject
 
-The default checkpoint subject is the exact input event Node BlueId retained as a pure reference.
+The default checkpoint subject is the exact input event BlueId retained as a pure reference.
 
 A channel is stale when the current active entry has the same domain and the registered newness policy says the subject is not new. A concrete channel may use timeline predecessor, sequence, or another deterministic subject, but its policy and work are part of that exact runtime type.
 
-Content BlueId is not the default subject.
+Checkpointing uses the exact input event BlueId by default; it does not run Source Document BlueId calculation.
 
 ### 10.5 Atomic checkpoint write
 
@@ -1664,8 +1893,9 @@ Executable bodies remain lazy; recognition does not execute them.
 
 Before a new Root can commit, the deterministic changed subscription delta MUST prove:
 
-- every changed Process Embedded path is valid;
-- every present declared child is an object;
+- every changed Process Embedded exact path and collection path is valid;
+- every present exact child, collection container, and direct collection member has the required object shape;
+- every generated concrete collection-member path is unique and canonical;
 - no declared embedded ancestry cycle exists;
 - embedded depth, scope, key, and header limits hold;
 - terminated-subtree pruning is deterministic;
@@ -1909,6 +2139,9 @@ Rules:
 - `deliverySnapshotEntry` is charged once per retained entry revalidated by the processor.
 - `scopeOpened` is charged once per distinct active scope occurrence in one invocation.
 - `contractHeaderRecognized` is charged once per `(scopePath, key, ordered contribution identities)`.
+- `embeddedPathEntryRead` is charged once for every effective entry read from `paths` or `collectionPaths` and once for every concrete direct member path generated from a collection declaration;
+- every segment of an explicit declaration path, collection path, or generated concrete member path pays `embeddedPathSegmentValidated` when validated;
+- opening a present collection target pays the ordinary semantic `nodeManifestOpened` charge, and enumerating its complete direct ordinary key set pays `objectMemberRead` once per direct member; collection enumeration is not free feeder folklore and is representation-invariant;
 - a Channel or Handler candidate pays its test charge even when it rejects;
 - a delivery counter (`documentUpdateDelivered`, `triggeredEventDelivered`, `embeddedEventDelivered`, `lifecycleDelivered`) is charged only for a matching Channel delivery, in addition to candidate tests;
 - `rootEventRecorded` is charged only for Root emissions, not child emissions.
@@ -1937,7 +2170,7 @@ Rules:
 
 ### 13.7 Manifest and immutable-read rules
 
-Opening the direct manifest of an exact node for the first semantic use in one invocation charges `nodeManifestOpened` once for that exact Node BlueId. A second semantic operation may reuse the retained immutable manifest without another manifest-open charge.
+Opening the direct manifest of an exact node for the first semantic use in one invocation charges `nodeManifestOpened` once for that exact BlueId. A second semantic operation may reuse the retained immutable manifest without another manifest-open charge.
 
 Known-key object access charges `objectMemberRead` each time the normative algorithm examines that member, unless the value was explicitly bound and reused within the same algorithmic step. Complete enumeration charges once per direct member in canonical key order.
 
@@ -1969,7 +2202,7 @@ textBlockExamined += ceil(k / 64) for the right operand
 
 Length-only comparison after a fully equal prefix does not reread content.
 
-Exact Blue node identity equality may compare known Node BlueIds without scanning transitive content. Runtime value equality that is not exact Blue identity follows the runtime specification.
+Exact Blue node identity equality may compare known BlueIds without scanning transitive content. Runtime value equality that is not exact Blue identity follows the runtime specification.
 
 ### 13.9 Integer work
 
@@ -2149,6 +2382,40 @@ both forms perform and charge the same semantic trace:
 
 The archive body is neither demanded nor charged. A one-million-field direct `x` remains expensive in both forms because its direct manifest is real identity work.
 
+### 13.19 Worked processor subtotal (informative)
+
+Assume one already admitted external event has:
+
+```text
+one retained raw delivery
+two participating scopes
+four effective contract headers
+one Channel candidate that accepts
+one Handler candidate that executes
+one two-segment patch path /x/a
+no initialization in this example
+```
+
+The processor-counter subtotal before semantic reads, runtime work, identity rebuilding, validation, updates, checkpoints, or sorting is:
+
+```text
+processInvocation             1 * 50 = 50
+deliverySnapshotEntry        1 *  5 =  5
+scopeOpened                  2 * 10 = 20
+contractHeaderRecognized     4 *  2 =  8
+channelCandidateTested       1 *  5 =  5
+channelAccepted              1 *  5 =  5
+handlerCandidateTested       1 *  5 =  5
+handlerCall                  1 * 50 = 50
+pointerSegmentTraversed      2 *  1 =  2
+patchBoundaryChecked         1 *  2 =  2
+patchAddOrReplace            1 * 20 = 20
+                                        ----
+processor subtotal                       172
+```
+
+`172` is deliberately only a subtotal. The complete gas also includes the exact semantic and runtime counters actually caused by the concrete nodes and handler. Conformance fixtures, not this illustrative example, define complete exact traces.
+
 ---
 
 ## 14. Determinism, Security, and Portable Limits
@@ -2180,7 +2447,19 @@ A host MUST NOT require recursive cloning to enforce read-only behavior. Immutab
 
 The processor trusts the managing feeder to supply a complete revision-bound snapshot and correct external-order evidence. It revalidates every selected branch and channel identity but does not independently rescan the complete subscription surface.
 
-Authorization and mandate eligibility belong to the feeder/provider layer unless an exact runtime type defines additional deterministic checks.
+The trust boundary is:
+
+| Input or claim | Core treatment |
+|---|---|
+| Root, event, type, body, and demanded node content | Must have verified exact BlueId evidence. |
+| Delivery path and channel contribution identity | Revalidated against the admitted Root and retained snapshot. |
+| Completeness of the preselected occurrence set | Feeder/platform obligation; an omission is nonconformance. |
+| Cross-source external order | Bound by the exact policy identity and completeness evidence under §3.6. |
+| Runtime semantics | Selected by exact runtime-type BlueId and registry binding. |
+| Authorization or mandate eligibility | Feeder/provider responsibility unless a runtime type adds deterministic checks. |
+| Cache, provider transport, database order, host scheduling | Never trusted as semantic input. |
+
+The processor fails closed on invalid or incomplete evidence. It does not reinterpret unavailable content as absence and does not silently broaden its trust in a warm cache or provider.
 
 ### 14.4 Portable limits
 
@@ -2193,7 +2472,8 @@ Authorization and mandate eligibility belong to the feeder/provider layer unless
 | Subscription keys from one Channel | 256 |
 | Preselected external occurrences for one event | 1,024 |
 | Participating scopes for one event | 4,096 |
-| Process Embedded paths in one scope | 4,096 |
+| Combined concrete Process Embedded child paths in one scope | 4,096 |
+| Process Embedded declaration entries (`paths` + `collectionPaths`) | 4,096 |
 | Embedded depth | 256 |
 | Runtime Pointer segments | 256 |
 | Normalized Runtime Pointer UTF-8 bytes | 4,096 |
@@ -2213,6 +2493,22 @@ Authorization and mandate eligibility belong to the feeder/provider layer unless
 | Direct inline identity Text code points | 262,144 |
 
 These are structural bounds, not promises that maximum-size valid structures fit under `MAX_PROCESS_GAS`. Gas is the operative work ceiling.
+
+Limits fall into two classes:
+
+```text
+preflight structural limits
+  may be established before semantic execution and fail with the named
+  portable-limit diagnostic, possibly with zero gas under §12.7;
+
+execution safety limits
+  stop pathological growth during processing but may be dominated by the
+  earlier gas ceiling under the bound manifest.
+```
+
+The release manifest and fixtures MUST define failure precedence for every limit. A listed safety limit is not a promise that its dedicated diagnostic is independently reachable under every gas schedule. If the calibrated gas ceiling necessarily triggers first, `gas-limit-exceeded` is the conforming result. A future manifest with different calibrated values may make the structural diagnostic reachable without changing the semantic rule.
+
+A host MAY impose lower operational quotas. It MUST NOT raise the portable gas or structural limits and still claim the same portable Contracts 1.0 execution environment unless the higher values are bound by a distinct environment identity and the resulting behavior is not presented as portable Contracts 1.0 conformance.
 
 The direct-container limit applies to every rebuilt ancestor. A larger exact node can be carried opaquely, but an operation requiring its direct manifest fails.
 
@@ -2241,7 +2537,23 @@ Authors SHOULD:
 - put mutable business conditions in Handlers, not External Channel acceptance;
 - avoid broad events matching thousands of scopes;
 - preserve event/gas headroom for ancestor reactions;
-- model independent shared objects as autonomous roots.
+- model independent shared objects as autonomous roots;
+- use stable object keys for dynamic embedded collections;
+- avoid list positions as process-occurrence identities;
+- instantiate reusable process modules with explicit local Channel bindings rather than implicit parent lookup.
+
+A useful lower-bound estimate before type, schema, text, sorting, runtime, mutation, and identity work is:
+
+```text
+base scan gas ~=
+    50                                      # processInvocation
+  + 5  * preselected raw occurrences
+  + 10 * distinct participating scopes
+  + 2  * recognized effective contract headers
+  + 5  * Channel and Handler candidates tested
+```
+
+The exact trace is defined by §13 and the bound manifest. This estimate is authoring guidance only, but it makes clear that the structural maxima are not practical per-event targets.
 
 ### 14.7 Locality conformance
 
@@ -2253,7 +2565,9 @@ An implementation may physically prefetch those bodies, but they must remain out
 
 ## 15. Conformance Vectors
 
-The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fixture package jointly define conformance. The fixture package includes a complete vector coverage map and exact gas microfixtures.
+The prose rules, runtime registry, gas manifest, and machine-readable fixture package form one conformance surface. A conforming implementation MUST pass every vector and every fixture bound by the release manifest.
+
+The 100 vectors are organized by the processor phase or invariant they exercise. One executable fixture may cover several vectors.
 
 ### 15.1 Representation and locality
 
@@ -2265,7 +2579,7 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-REP-06.** A wide direct ancestor is charged and limited in every representation.
 - **C-REP-07.** An early list edit pays the recomputed suffix; append pays only the delta when prior identity is available.
 
-### 15.2 Feeder and subscription
+### 15.2 Feeder, subscriptions, and external order
 
 - **C-FEED-01.** The subscription index is revision-complete before event selection.
 - **C-FEED-02.** `ACCEPTS => PRESELECTS` and `PRESELECTS => key intersection` hold for every portable External Channel.
@@ -2277,8 +2591,9 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-FEED-08.** All deliveries of one event complete before a later external event begins.
 - **C-FEED-09.** Nonmutating terminal progress is compare-and-swap bound to the exact Root revision.
 - **C-FEED-10.** Repeated deterministic poison events are quarantined rather than retried forever.
+- **C-FEED-11.** A concrete channel-specific target key may route one event to one collection member even when many members reuse the same external source; target derivation remains runtime-specific.
 
-### 15.3 Discovery, snapshots, and initialization
+### 15.3 Routing, discovery, snapshots, and initialization
 
 - **C-DISC-01.** Direct terminated state is checked before application contract recognition.
 - **C-DISC-02.** Every effective contract type in the initial participating closure is recognized before first mutation.
@@ -2291,6 +2606,12 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-INIT-03.** Accepted Channel/payload/checkpoint snapshot remains frozen across initialization.
 - **C-INIT-04.** Handler discovery after initialization sees post-initialization contracts.
 - **C-INIT-05.** Initialization marker writes do not create Document Updates.
+- **C-ROUTE-01.** The default handler Channel equals the accepted source Channel and preserves existing one-source behavior.
+- **C-ROUTE-02.** A declared peer same-scope Channel may be frozen as handler target without being externally evaluated or checkpointed.
+- **C-ROUTE-03.** Exact absent and present-non-Channel target lookups remain distinguishable; unavailable or undeclared evidence fails closed.
+- **C-ROUTE-04.** Several fresh sources with the same logical delivery key, target, and payload execute handlers once and checkpoint every source only after success.
+- **C-ROUTE-05.** A stale source does not piggyback on a fresh source in the same logical group.
+- **C-ROUTE-06.** Group target or payload disagreement fails atomically before mutation.
 - **C-INIT-06.** The initialization marker and initiated event carry the exact initial scope document; inline and pure-reference forms yield the same Root, lifecycle behavior, gas, and trace.
 
 ### 15.4 Embedded scopes, updates, and events
@@ -2302,6 +2623,15 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-EMB-05.** Strict-ancestor patches intersecting child roots are rejected.
 - **C-EMB-06.** Active-scope replacement cuts off remaining buffered effects and marker/checkpoint writes.
 - **C-EMB-07.** Re-adding a path does not resurrect the old occurrence in the current invocation.
+- **C-EMB-08.** `collectionPaths` expands direct object members into concrete embedded scopes in canonical key order; the collection container is not implicitly a scope.
+- **C-EMB-09.** A collection target must be object-compatible; lists, non-object members, wildcard syntax, reserved-field traversal, and cyclic-member boundaries fail closed.
+- **C-EMB-10.** A collection member added by event `E` does not participate in `E` and begins its subscription interval strictly after `E`.
+- **C-EMB-11.** Removing a collection member retires its occurrence; re-adding the same key creates a fresh interval and checkpoint lineage.
+- **C-EMB-12.** Exact paths, collection declarations, and generated concrete member paths must not overlap or duplicate one another.
+- **C-EMB-13.** The same exact child node at two collection keys creates two independent scope occurrences with independent checkpoints and state transitions.
+- **C-EMB-14.** Embedded scope contracts are same-scope and self-contained; parent and ancestor contract keys are not imported or searched.
+- **C-EMB-15.** A local Channel bound inline and the same exact Channel bound by pure BlueId reference produce identical processing, subscription, checkpoint, gas, and trace behavior.
+- **C-EMB-16.** Changing a parent Channel does not silently rebind an existing child; a newly created child may explicitly use the new binding.
 - **C-UPD-01.** Every successful application patch creates one origin-to-Root Document Update cascade.
 - **C-UPD-02.** Presence Booleans preserve add/remove identity without null sentinels.
 - **C-UPD-03.** Current update propagation continues on its frozen chain after source cut-off.
@@ -2310,12 +2640,6 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-EVT-03.** Child emissions are not returned unless Root explicitly emits.
 - **C-EVT-04.** Duplicate equal event nodes remain distinct occurrences and Root outputs.
 - **C-EVT-05.** The internal queue is drained exactly once by the normative owner.
-- **C-ROUTE-01.** The default handler Channel equals the accepted source Channel and preserves existing one-source behavior.
-- **C-ROUTE-02.** A declared peer same-scope Channel may be frozen as handler target without being externally evaluated or checkpointed.
-- **C-ROUTE-03.** Exact absent and present-non-Channel target lookups remain distinguishable; unavailable or undeclared evidence fails closed.
-- **C-ROUTE-04.** Several fresh sources with the same logical delivery key, target, and payload execute handlers once and checkpoint every source only after success.
-- **C-ROUTE-05.** A stale source does not piggyback on a fresh source in the same logical group.
-- **C-ROUTE-06.** Group target or payload disagreement fails atomically before mutation.
 
 ### 15.5 Checkpoints, lifecycle, and protected state
 
@@ -2331,9 +2655,9 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-LIFE-03.** Scope replacement during lifecycle prevents marker write into replacement.
 - **C-LIFE-04.** Gas failure during termination rolls back the entire invocation.
 - **C-PROT-01.** Application patches cannot directly or indirectly alter protected state.
-- **C-PROT-02.** Only `Process Embedded.paths` may change under its exact exception.
+- **C-PROT-02.** Only the Process Embedded declaration fields `paths` and `collectionPaths` may change under their exact protected-state exception.
 
-### 15.6 Soundness, failure, and indexability
+### 15.6 Soundness, failure, indexability, and bounded loops
 
 - **C-SND-01.** Every changed ancestor to Root is type- and schema-validated.
 - **C-SND-02.** Nearest-valid type generalization is deterministic and bounded by policy.
@@ -2352,13 +2676,7 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-FAIL-05.** `PROCESS_ATTEMPT` may return `NeedsResources`, but no completed `ProcessResult` uses `needs-resources` as a status.
 - **C-LOOP-01.** An internal event cycle is stopped by the shared gas limit and rolls back Root and Root events.
 
-### 15.7 End-to-end processing
-
-- **C-E2E-01.** A complete successful Root transition fixture asserts exact status, resulting document, Root event order, named trace, total gas, and semantic demands.
-- **C-E2E-02.** A deep embedded delivery fixture asserts the same complete result dimensions and returns an empty public event sequence when Root emits nothing.
-- **C-E2E-03.** An inline/reference representation matrix produces the exact same complete end-to-end result and trace.
-
-### 15.8 Gas and runtime
+### 15.7 Gas and executable-runtime integration
 
 - **C-GAS-01.** Every processor and semantic counter has an exact weight and microfixture.
 - **C-GAS-02.** Charges are admitted before work and the failing charge is absent on exhaustion.
@@ -2369,11 +2687,17 @@ The Contracts 1.0 prose, runtime registry, gas schedule, and machine-readable fi
 - **C-GAS-07.** Executable-runtime representation state is unobservable and recursive boundary-size charging is absent.
 - **C-GAS-08.** Provider verification and transport are outside portable gas.
 
+### 15.8 End-to-end results
+
+- **C-E2E-01.** A complete successful Root transition fixture asserts exact status, resulting document, Root event order, named trace, total gas, and semantic demands.
+- **C-E2E-02.** A deep embedded delivery fixture asserts the same complete result dimensions and returns an empty public event sequence when Root emits nothing.
+- **C-E2E-03.** An inline/reference representation matrix produces the exact same complete end-to-end result and trace.
+
 ### 15.9 Machine-readable fixture package
 
 The implementation-baseline fixture package is bound to the exact runtime registry manifest and the exact `blue-contracts/gas/1.0` manifest. It publishes:
 
-- 82 executable behavior fixtures covering all 90 vectors in §§15.1–15.8;
+- 96 executable behavior fixtures covering all 100 vectors in §§15.1–15.8;
 - feeder/platform and revision-bound commit fixtures;
 - locality semantic-demand assertions;
 - 58 exact gas microfixtures and composite gas fixtures;
@@ -2399,16 +2723,17 @@ expected:
   assertions: <ordered machine assertions>
 ```
 
-`input.feeder.deliverySnapshot` is derived environment evidence. It is not caller-authored Blue content and is not a third semantic input to `PROCESS`. The harness independently verifies that it equals the canonical snapshot for the supplied Root revision, event, activation intervals, and runtime registry.
+`input.feeder.deliverySnapshot` is derived environment evidence. It is not caller-authored Blue content and is not a third semantic input to `PROCESS`. The harness independently verifies that it equals the canonical snapshot for the supplied Root revision, event, activation intervals, external-order policy, and runtime registry.
+
+The scripted fixture runtime is a conformance instrument, not a portable application runtime. Its control vocabulary and trace projections MUST be closed, versioned, and defined by the fixture schema and harness. Unknown control fields or projections fail closed.
 
 The implementation-baseline fixture-package identity is:
 
 ```text
-sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18
+sha256:021bb98d58baf7708d66faec6bb64678e42b95a9f5ab4dd634b6ea310de9192f
 ```
 
-The package contains 90 normative vectors, 82 behavior fixtures, and 58 gas fixtures. The behavior-fixture count is not required to equal the vector count because one executable fixture may cover several inseparable normative assertions.
-
+The package contains 100 normative vectors, 96 behavior fixtures, and 58 gas fixtures. The behavior-fixture count is not required to equal the vector count because one executable fixture may cover several inseparable normative assertions.
 
 ---
 
@@ -2569,7 +2894,25 @@ Event `A@100` adds a new external-source Channel while that source already conta
 
 The new interval begins strictly after `A@100`. `B@50` is not delivered retroactively. An initial Root admission that intends historical replay must declare a historical frontier explicitly.
 
-### 16.9 Autonomous linked Root
+### 16.9 Deterministic order across independent sources
+
+Assume one Root subscribes to an identity-provider source and a bank source. Their concrete source-local keys are different, but the managed environment binds one global policy:
+
+```text
+primary: provider-assigned microsecond time
+secondary: stable source identity
+tertiary: source-local entry order
+```
+
+The identity provider reports event `I` at time `100`, and the bank reports event `B` at time `99`. Even if `I` arrives first, the feeder waits for both completeness frontiers and processes:
+
+```text
+B -> I
+```
+
+If both have primary time `100`, the policy's stable source-identity tie-breaker determines one order on every platform. Arrival order is irrelevant. The exact tuple above is illustrative; a concrete ecosystem publishes and identity-binds its own total-order policy under §3.6.
+
+### 16.10 Autonomous linked Root
 
 If two managed documents must observe one independently evolving object, that object is another managed Root:
 
@@ -2655,14 +2998,25 @@ Marker at `contracts/embedded`:
 
 ```yaml
 name: Process Embedded
+
 paths:
   type: List
   itemType: Text
+  description: Optional exact Runtime Pointers, one embedded scope per path.
+  schema:
+    uniqueItems: true
+
+collectionPaths:
+  type: List
+  itemType: Text
+  description: >
+    Optional exact Runtime Pointers to object-compatible collections whose
+    direct ordinary members are embedded scopes.
   schema:
     uniqueItems: true
 ```
 
-Only `paths` is application-changeable, under the protected-state exception.
+At least one of `paths` or `collectionPaths` must be non-empty after effective resolution. Only these two declaration fields are application-changeable under the protected-state exception. The exact canonical registry node remains the authority for identity-bearing descriptions and BlueId.
 
 ### A.8 Processing Initialized Marker
 
@@ -2860,6 +3214,11 @@ InvalidExternalChannelSnapshot
 ExternalSubscriptionLawViolation
 EmbeddedRouteNotFound
 EmbeddedScopeNotObject
+EmbeddedCollectionMustBeObject
+EmbeddedCollectionMemberMustBeObject
+InvalidEmbeddedCollectionPath
+EmbeddedPathSelectorUnsupported
+OverlappingEmbeddedDeclaration
 EmbeddedScopeCycle
 ActiveScopeCutOff
 CheckpointDomainError
@@ -2994,6 +3353,30 @@ Only the normative queue owner drains. Helpers enqueue and return.
 ### D.15 Do not confuse hosted work with portable gas
 
 Provider bytes, signatures, storage, index maintenance, and CAS retries are host resources, not portable Contracts counters.
+
+### D.16 Do not treat BlueId derivation paths as different identifier types
+
+Contracts uses exact BlueIds for Root, event, checkpoints, bodies, and snapshots. The Language may derive a BlueId directly from an exact node or through the Source Document pipeline. The resulting identifier is the same BlueId kind.
+
+### D.17 Do not copy an authored upsert operation into Document Update blindly
+
+An authored `replace` on an absent object member is an upsert, but the resulting Document Update has semantic `op: add` because the member was absent before and present afterward.
+
+### D.18 Do not merge independent external sources by arrival order
+
+Cross-source order must satisfy the totality, per-source consistency, stable tie-break, and completeness laws in §3.6. Network arrival order, query order, and database insertion order are not semantic evidence.
+
+### D.19 Do not embed contract entries
+
+`Process Embedded` declarations must not traverse `/contracts`. Contract entries are runtime declarations of their containing scope, not child scopes.
+
+### D.20 Do not interpret lists or wildcards as embedded collections
+
+`/lessons/*` has no wildcard meaning, and `collectionPaths: [/lessons]` requires an object-compatible collection with stable direct keys. Contracts 1.0 does not implicitly turn list positions into scope identities.
+
+### D.21 Do not invent live parent-channel inheritance
+
+An embedded scope does not search parent or ancestor contract maps. Reuse exact Channel nodes by inline content or BlueId reference, and change bindings explicitly. A context-dependent parent binding requires a separately specified runtime type.
 
 ---
 

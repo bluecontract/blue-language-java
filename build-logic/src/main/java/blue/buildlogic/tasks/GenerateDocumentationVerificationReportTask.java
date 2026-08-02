@@ -34,7 +34,7 @@ public abstract class GenerateDocumentationVerificationReportTask extends Defaul
 
     public GenerateDocumentationVerificationReportTask() {
         getExpectedLanguageFixtures().convention(153);
-        getExpectedContractsFixtures().convention(140);
+        getExpectedContractsFixtures().convention(154);
     }
 
     @Internal

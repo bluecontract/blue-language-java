@@ -90,7 +90,7 @@ checkpointDomainBlueId
 
 It MUST verify:
 
-1. every non-root path is transitively declared through `Process Embedded.paths`;
+1. every non-root path is transitively declared through either an exact `Process Embedded.paths` entry or a concrete direct member generated from `Process Embedded.collectionPaths`;
 2. the selected scope exists as an object and is not under a direct terminated scope;
 3. the effective contract at `channelKey` is an External Channel;
 4. any asserted `order` and activation frontier agree with the derived state;
@@ -171,3 +171,10 @@ The package validator MUST check:
 - fixture-package and release-manifest identities.
 
 A fixture, support file, gas schedule, registry dependency, or coverage-map change requires a new fixture-package identity. The registry manifest's reverse fixture binding is excluded from the registry package identity to avoid an identity cycle.
+
+
+### Collection-derived embedded scopes
+
+For `Process Embedded.collectionPaths`, the harness MUST enumerate the complete direct ordinary key set of each present object-compatible collection in Unicode code-point order. It MUST derive one concrete scope path per direct key using Runtime Pointer escaping. Lists are not collection targets, wildcard syntax is invalid, and no path may traverse `contracts` or another reserved Language field.
+
+The compact delivery hints always name concrete scope paths such as `/lessons/lesson-17`; they never name a wildcard or collection selector.

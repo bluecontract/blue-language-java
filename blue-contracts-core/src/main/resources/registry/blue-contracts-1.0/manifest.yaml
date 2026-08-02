@@ -2,7 +2,7 @@ registry: blue-contracts-runtime
 registryKind: runtime-type
 specificationVersion: '1.0'
 languageVersion: '1.0'
-fixturePackageIdentity: sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18
+fixturePackageIdentity: sha256:021bb98d58baf7708d66faec6bb64678e42b95a9f5ab4dd634b6ea310de9192f
 entries:
 - key: Channel
   path: Channel.blue
@@ -30,8 +30,8 @@ entries:
   fixtureOnly: false
 - key: ContractExecutionResult
   path: ContractExecutionResult.blue
-  blueId: 3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv
-  sha256: 6b3fd65507c9db589ee4e3b5c14f68f3ba64a0c9998a82b98605bed6fbf0e9c0
+  blueId: 6i9NrtN7uqtSYx136MwLyZSiLjJ98aCUCJNHuQvZah6n
+  sha256: eeb5a4727132af8801f453de5b6becdba595cfc30ac6076b0dd9377387350480
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: DocumentProcessingInitiated
@@ -48,7 +48,7 @@ entries:
   fixtureOnly: false
 - key: DocumentUpdate
   path: DocumentUpdate.blue
-  blueId: 7HZ6UDNxDdGdvhowi92mwB4EAqKfeynpJEFUFVvjmTJ2
+  blueId: 5qmRyRFrX38eVmgtRxUb79R27sG8VJRJcgsafyANxKgG
   sha256: 57c55965d04db66ee88bf03cdad411529654beb94c6bc8d3fb03b2e9bed8ddcd
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
@@ -90,7 +90,7 @@ entries:
   fixtureOnly: false
 - key: JsonPatchEntry
   path: JsonPatchEntry.blue
-  blueId: 5UihWoxkyiUbv9TZk7HcHsa82sz2R3ex1WifQQpKtHpP
+  blueId: 6ibiR9xVJNErraawKrsDzrGS3H5HyUUNwdZbDTDbU2U6
   sha256: 63f69547dab9adf1175aa9bdeeb24ceacd6734ddb1c584683c28464dacd7af6e
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
@@ -108,8 +108,8 @@ entries:
   fixtureOnly: false
 - key: ProcessEmbedded
   path: ProcessEmbedded.blue
-  blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
-  sha256: 4419c0b82d391459801941d61feb23d6378f18868c3ddcbc45913ae006d2bf5e
+  blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+  sha256: e8a70c30080f0afa187d12d29dccb08aa5eb4e19ae8938ea517b689df5b9fa1d
   semanticDescriptionIdentityBearing: true
   fixtureOnly: false
 - key: ProcessingInitializedMarker
@@ -138,14 +138,14 @@ entries:
   fixtureOnly: false
 - key: ScriptedExternalChannel
   path: ScriptedExternalChannel.blue
-  blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+  blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
   sha256: 8246d62d77bc88ba45e97e70c9211e6c6377892a5e4fd170b4ae02e89c2306fc
   semanticDescriptionIdentityBearing: true
   fixtureOnly: true
 - key: ScriptedHandler
   path: ScriptedHandler.blue
-  blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
-  sha256: 5f0bf56628d08f6fd3020edea085381a7363938fac2a67e432feb4f26ecd9bb2
+  blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+  sha256: 4dfa00390dbf89d1211e7d2a1c44eaa95d811af0f1a99bd6e51c6ac666f88a65
   semanticDescriptionIdentityBearing: true
   fixtureOnly: true
 - key: TriggeredEventChannel
@@ -170,4 +170,4 @@ packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity and fixturePackageIdentity are null before hashing
-packageIdentity: sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b
+packageIdentity: sha256:34081fabc92444435a0aa41d272fb92a8245c00bb949aa22ac36be0bbf15d1f1

@@ -16,7 +16,7 @@ result.diagnostic
 
 Everything under `trace`, `demands`, `feeder`, `commit`, `attempt`, `platform`, and `variants` is conformance evidence, not additional `PROCESS` output.
 
-The catalog may expose exact suffixes of `result.document` only when a fixture needs to assert a normative state invariant. The corrected package includes explicit suffixes for embedded replacement/cut-off, Process Embedded paths, and retained exact-node references; arbitrary uncatalogued document traversal remains forbidden.
+The catalog may expose exact suffixes of `result.document` only when a fixture needs to assert a normative state invariant. The package includes explicit suffixes for embedded replacement/cut-off, Process Embedded exact and collection declarations, collection-member occurrence independence, explicit participant bindings, and retained exact-node references; arbitrary uncatalogued document traversal remains forbidden.
 
 ## 2. Canonical named trace entry
 

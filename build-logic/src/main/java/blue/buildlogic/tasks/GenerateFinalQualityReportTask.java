@@ -37,7 +37,7 @@ public abstract class GenerateFinalQualityReportTask extends DefaultTask {
     public GenerateFinalQualityReportTask() {
         getExpectedModuleCount().convention(7);
         getExpectedLanguageFixtures().convention(153);
-        getExpectedContractsFixtures().convention(140);
+        getExpectedContractsFixtures().convention(154);
         getMaximumOrdinaryClassLines().convention(1200);
         getBlueFacadeLineLimit().convention(700);
         getBlueFacadeMemberLimit().convention(24);

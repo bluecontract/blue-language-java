@@ -1,0 +1,82 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-08
+vectors:
+- C-EMB-08
+category: emb
+description: collectionPaths expands direct object members into concrete embedded scopes in canonical key order.
+operation: process
+input:
+  root:
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        collectionPaths:
+        - /lessons
+    lessons:
+      lesson-b:
+        contracts:
+          in:
+            type:
+              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+            order: 0
+            subscriptionKey: lesson
+            eventKey: lesson
+            accept: true
+            checkpointDomain: lesson-v1
+          h:
+            type:
+              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+            channel: in
+            order: 0
+            result: {}
+      lesson-a:
+        contracts:
+          in:
+            type:
+              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+            order: 0
+            subscriptionKey: lesson
+            eventKey: lesson
+            accept: true
+            checkpointDomain: lesson-v1
+          h:
+            type:
+              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+            channel: in
+            order: 0
+            result: {}
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: lesson
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - lesson
+    - 1
+    deliverySnapshot:
+    - scopePath: /lessons/lesson-a
+      channelKey: in
+      order: 0
+    - scopePath: /lessons/lesson-b
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: trace.externalDeliveryOrder
+    op: sequenceEquals
+    expected:
+    - /lessons/lesson-a:in
+    - /lessons/lesson-b:in

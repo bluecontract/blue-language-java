@@ -112,7 +112,7 @@ final class ConformanceReportConstants {
 
     /** Normative fixture subtotals not exposed by the combined report API. */
     static final class FixtureCount {
-        static final int CONTRACTS_BEHAVIOR = 82;
+        static final int CONTRACTS_BEHAVIOR = 96;
         static final int CONTRACTS_GAS = 58;
 
         private FixtureCount() {

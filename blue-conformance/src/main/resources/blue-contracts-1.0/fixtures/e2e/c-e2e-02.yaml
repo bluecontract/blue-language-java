@@ -10,14 +10,14 @@ input:
     contracts:
       embedded:
         type:
-          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
         paths:
         - /child
     child:
       contracts:
         in:
           type:
-            blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+            blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
           order: 0
           subscriptionKey: timeline
           eventKey: timeline

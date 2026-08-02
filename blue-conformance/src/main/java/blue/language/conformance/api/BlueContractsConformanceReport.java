@@ -43,9 +43,10 @@ public final class BlueContractsConformanceReport {
     public static final String GAS_MANIFEST_RESOURCE = "blue/language/processor/contracts-gas-1.0.yaml";
     /** Contracts registry manifest resource. */
     public static final String REGISTRY_MANIFEST_RESOURCE = "registry/blue-contracts-1.0/manifest.yaml";
-    /** Combined release manifest resource. */
+    /** Authoritative final Language/Contracts package manifest resource. */
     public static final String RELEASE_MANIFEST_RESOURCE =
-            "release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml";
+            "release/blue-language-contracts-embedded-modules-collection-paths-1.0/"
+                    + "PACKAGE-MANIFEST.yaml";
     /** Normative Contracts specification resource. */
     public static final String CONTRACTS_SPECIFICATION_RESOURCE =
             "specifications/blue-contracts-and-processor-specification-1.0.md";
@@ -55,10 +56,10 @@ public final class BlueContractsConformanceReport {
 
     /** Exact release and constituent package identities. */
     public static final String RELEASE_NAME =
-            "blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline";
-    /** Exact combined release package identity. */
+            "blue-language-contracts-embedded-modules-collection-paths";
+    /** Canonical identity declared by the exact supplied package manifest. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa";
+            "sha256:b285e8fac0c9ae8bfb8d33925f7f7021ca6013c8ce7332e90cfa93af05dc6461";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
@@ -73,17 +74,17 @@ public final class BlueContractsConformanceReport {
             "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
     /** Exact Contracts fixture package identity. */
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18";
+            "sha256:021bb98d58baf7708d66faec6bb64678e42b95a9f5ab4dd634b6ea310de9192f";
 
     /** Expected digests for release-bound manifests and specifications. */
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
             "1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f";
     /** Published SHA-256 digest of the Contracts specification. */
     public static final String CONTRACTS_SPECIFICATION_SHA256 =
-            "d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1";
+            "c58ef4d4b60f9bac7cfce72768aef98bd3f71788efbb80de489e656de7390a5e";
     /** Published SHA-256 digest of the Language specification. */
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
-            "41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e";
+            "a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869";
 
     /**
      * Fixture envelopes may use YAML anchors for literal reuse. This parser is
@@ -683,13 +684,13 @@ public final class BlueContractsConformanceReport {
         }
         requireCount(manifest, "behaviorFixtureCount", behavior);
         requireCount(manifest, "gasFixtureCount", gas);
-        requireCount(manifest, "vectorCount", 90);
+        requireCount(manifest, "vectorCount", 100);
         if (behavior
                 != ConformanceReportConstants.FixtureCount.CONTRACTS_BEHAVIOR
                 || gas
                 != ConformanceReportConstants.FixtureCount.CONTRACTS_GAS) {
             throw new IllegalStateException(
-                    "Contracts fixture inventory must contain 82 behavior and 58 gas fixtures");
+                    "Contracts fixture inventory must contain 96 behavior and 58 gas fixtures");
         }
         if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
             throw new IllegalStateException("Contracts fixture package identity mismatch");
@@ -711,19 +712,22 @@ public final class BlueContractsConformanceReport {
      */
     public static void validateReleaseBindings() {
         JsonNode release = requireYamlResource(RELEASE_MANIFEST_RESOURCE);
-        requireText(release, "release", RELEASE_NAME);
+        requireText(release, "package", RELEASE_NAME);
         JsonNode components = release.get("components");
         if (components == null || !components.isObject()) {
             throw new IllegalStateException("Release components object is required");
         }
-        requireText(components, "languageRegistryPackage", LANGUAGE_REGISTRY_PACKAGE_IDENTITY);
-        requireText(components, "languageFixturePackage", LANGUAGE_FIXTURE_PACKAGE_IDENTITY);
-        requireText(components, "contractsRegistryPackage", CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
-        requireText(components, "contractsGasPackage", CONTRACTS_GAS_PACKAGE_IDENTITY);
-        requireText(components, "contractsFixturePackage", CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
-        requireText(
-                release,
-                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+        requireText(components, "languageRegistryPackageIdentity",
+                LANGUAGE_REGISTRY_PACKAGE_IDENTITY);
+        requireText(components, "languageFixturePackageIdentity",
+                LANGUAGE_FIXTURE_PACKAGE_IDENTITY);
+        requireText(components, "contractsRegistryPackageIdentity",
+                CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
+        requireText(components, "contractsGasPackageIdentity",
+                CONTRACTS_GAS_PACKAGE_IDENTITY);
+        requireText(components, "contractsFixturePackageIdentity",
+                CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
+        requireText(release, RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
                 RELEASE_PACKAGE_IDENTITY);
         if (!RELEASE_PACKAGE_IDENTITY.equals(computeReleasePackageIdentity())) {
             throw new IllegalStateException("Release package identity mismatch");
@@ -876,7 +880,7 @@ public final class BlueContractsConformanceReport {
                 != BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT) {
             throw new IllegalStateException(
                     "Contracts executable inventory must contain exactly "
-                            + "82 behavior and 58 gas fixtures; found "
+                            + "96 behavior and 58 gas fixtures; found "
                             + behavior + " behavior and " + gas + " gas");
         }
         return Collections.unmodifiableList(entries);

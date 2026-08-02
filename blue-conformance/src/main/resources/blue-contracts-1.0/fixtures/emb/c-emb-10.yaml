@@ -1,0 +1,92 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-10
+vectors:
+- C-EMB-10
+category: emb
+description: A collection member added by the current event becomes active only after commit.
+operation: process
+input:
+  root:
+    value: 0
+    lessons:
+      existing:
+        state: retained
+    contracts:
+      in:
+        type:
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+        order: 0
+        subscriptionKey: admin
+        eventKey: admin
+        accept: true
+        checkpointDomain: admin-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: add
+            path: /lessons/new
+            val:
+              value: 0
+              contracts:
+                in:
+                  type:
+                    blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+                  order: 0
+                  subscriptionKey: new-lesson
+                  eventKey: new-lesson
+                  accept: true
+                  checkpointDomain: new-lesson-v1
+                h:
+                  type:
+                    blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+                  channel: in
+                  order: 0
+                  result: {}
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        collectionPaths:
+        - /lessons
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: admin
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - admin
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: trace.externalDeliveryOrder
+    op: sequenceEquals
+    expected:
+    - /:in
+  - actual: commit.newIntervals.0.scopePath
+    op: equals
+    expected: /lessons/new
+  - actual: commit.newIntervals.0.startAfterExternalOrderKey
+    op: equals
+    expected:
+    - 1000
+    - admin
+    - 1

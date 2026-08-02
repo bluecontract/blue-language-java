@@ -1,0 +1,61 @@
+{
+  "schema": "blue-language-java-collection-paths-baseline/1.0",
+  "evidenceStatus": "executed",
+  "sourceCommit": "4b88f9148c3dfdeea31c715d1ef339b8d8d7c721",
+  "sourceDateEpoch": 1785624285,
+  "verification": {
+    "cleanBuild": "passed",
+    "finalQualityVerify": "passed",
+    "rcVerify": "passed",
+    "releaseEligible": true,
+    "releaseBlockers": 0
+  },
+  "specifications": {
+    "languageSha256": "41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e",
+    "contractsSha256": "d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1"
+  },
+  "packageIdentities": {
+    "languageRegistry": "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
+    "languageFixtures": "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55",
+    "contractsRegistry": "sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b",
+    "contractsFixtures": "sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18",
+    "contractsGas": "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5",
+    "processEmbeddedBlueId": "D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr"
+  },
+  "tests": {
+    "passed": 2622,
+    "failed": 0,
+    "skipped": 0,
+    "languageFixtures": 153,
+    "contractsFixtures": 140
+  },
+  "architecture": {
+    "moduleCount": 7,
+    "moduleCycles": 0,
+    "splitPackages": 0,
+    "undeclaredModuleEdges": 0,
+    "publicApiTypes": 384,
+    "processorDirectPackageSources": 232,
+    "processorPublicTopLevelTypes": 89,
+    "processorApiDescriptors": 1756,
+    "documentProcessorLines": 1043,
+    "contractsFixtureHarnessLines": 4378,
+    "blueConformanceSuiteRunnerLines": 3319
+  },
+  "benchmarks": {
+    "kind": "required-smoke",
+    "jdk": "26.0.1",
+    "processingSelectionCacheOpsPerSecond": 837.9775823592569,
+    "deepReferenceResolutionOpsPerSecond": 17.592547796753294
+  },
+  "artifacts": {
+    "blueConformance": "sha256:25ab51fb43d17bea50aa8b68618cadbae6183ab4c4c5e88a66663f6e573c506e",
+    "blueContractsCore": "sha256:1e931ddaa9954efa275d1957df523736ed9ab57fa8e3aa50678d2d8740835f54",
+    "blueLanguageCore": "sha256:ab7abd79bfe859c7d4bdbc3f728de14eee117f3d01f6670c8c03364ac0b335bd",
+    "blueLanguageIpfs": "sha256:bec7355f39a109c4fe6dfc5f9970232dc0a75cd8e5b4ab055abc311314d24c8e",
+    "blueLanguageJava": "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0",
+    "blueLanguageMapping": "sha256:d9141d5c611bde7eb6a21bce3dc4bc0df7d8167f013eeaef2a365dd0a6af329b",
+    "blueLanguageModel": "sha256:ae50f4f892f784ac01cd21014de25990b8c1b4bc9c58ca8f65365e437d9ded63"
+  },
+  "workspaceNote": "The unrelated uncommitted LICENSE edit was excluded from this baseline and remains user-owned."
+}

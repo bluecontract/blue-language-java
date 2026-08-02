@@ -15,6 +15,9 @@ entries:
 - path: commit.intermediateVisible
   type: boolean
   definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.newIntervals.0.scopePath
+  type: scalar-or-node
+  definition: Concrete scope path of the first newly activated subscription interval.
 - path: commit.newIntervals.0.startAfterExternalOrderKey
   type: value
   definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
@@ -30,6 +33,9 @@ entries:
 - path: commit.reason
   type: scalar-or-node
   definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.retiredIntervals.0.scopePath
+  type: scalar-or-node
+  definition: Concrete scope path of the first retired subscription interval.
 - path: commit.rootCasCount
   type: integer
   definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
@@ -96,8 +102,6 @@ entries:
 - path: result.document
   type: value
   definition: Exact resulting authoritative Root; input Root for every noncommitting status.
-- path: result.document.cyclic.blueId
-  definition: Opaque cyclic member identity preserved in the resulting Root.
 - path: result.document.child.b
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
@@ -107,6 +111,9 @@ entries:
 - path: result.document.child.generation
   type: scalar-or-node
   definition: Exact fixture child value after same-path replacement and re-add sequencing.
+- path: result.document.child.ran
+  type: value
+  definition: Whether the child Handler executed.
 - path: result.document.child.replacement
   type: scalar-or-node
   definition: Exact fixture child replacement marker in the resulting authoritative Root.
@@ -137,6 +144,9 @@ entries:
 - path: result.document.contracts.checkpoint.entries.target
   type: value
   definition: Checkpoint entry at the Handler target key; normally absent.
+- path: result.document.contracts.embedded.collectionPaths
+  type: sequence-or-value
+  definition: Exact resulting Process Embedded collectionPaths value.
 - path: result.document.contracts.embedded.paths
   type: sequence-or-value
   definition: Exact resulting Process Embedded paths value.
@@ -152,9 +162,14 @@ entries:
 - path: result.document.contracts.old
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.parentChannel.subscriptionKey
+  type: scalar-or-node
+  definition: Current explicit parent Channel subscription key.
 - path: result.document.contracts.terminated.reason
   type: scalar-or-node
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.cyclic.blueId
+  definition: Opaque cyclic member identity preserved in the resulting Root.
 - path: result.document.executions
   type: integer
   definition: Number of logical Handler executions recorded by the fixture.
@@ -164,6 +179,36 @@ entries:
 - path: result.document.large
   type: value
   definition: Exact large-node reference retained in the resulting Root without semantic materialization.
+- path: result.document.lessons.a.value
+  type: value
+  definition: Resulting value in collection occurrence /lessons/a.
+- path: result.document.lessons.b.blueId
+  type: scalar-or-node
+  definition: Retained exact BlueId at independent collection occurrence /lessons/b.
+- path: result.document.lessons.existing.contracts.teacherChannel.subscriptionKey
+  type: scalar-or-node
+  definition: Explicit retained teacher binding of the existing child.
+- path: result.document.lessons.inline.value
+  type: value
+  definition: Resulting value in the scope using an inline exact Channel binding.
+- path: result.document.lessons.lesson-a.contracts.checkpoint
+  type: value
+  definition: Checkpoint state of the concrete lesson-a occurrence.
+- path: result.document.lessons.lesson-a.generation
+  type: scalar-or-node
+  definition: Generation marker of the re-added lesson occurrence.
+- path: result.document.lessons.lesson-a.handled
+  type: value
+  definition: Whether lesson-a handled the targeted event.
+- path: result.document.lessons.lesson-b.handled
+  type: value
+  definition: Whether lesson-b handled the targeted event.
+- path: result.document.lessons.new.contracts.teacherChannel.subscriptionKey
+  type: scalar-or-node
+  definition: Explicit teacher binding supplied to the newly created child.
+- path: result.document.lessons.reference.value
+  type: value
+  definition: Resulting value in the scope using a pure-reference exact Channel binding.
 - path: result.document.postInitRan
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.

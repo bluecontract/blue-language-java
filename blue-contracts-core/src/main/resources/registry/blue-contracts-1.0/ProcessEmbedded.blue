@@ -1,12 +1,30 @@
 name: Process Embedded
 type:
   blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
-description: Declares immediate owned embedded scope roots within the one authoritative Root. The feeder derives subscriptions transitively; the processor uses an immutable entry snapshot and never recursively scans unrelated branches.
+description: >
+  Declares immediate owned embedded scope roots within one authoritative Root.
+  Exact paths identify one scope each. Collection paths identify object
+  collections whose direct ordinary members are scopes. The feeder derives
+  subscriptions transitively; the processor uses an immutable entry snapshot
+  and never recursively scans unrelated branches. Embedding does not import
+  parent contracts and never traverses the reserved contracts field.
 paths:
   type:
     blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
   itemType:
     blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  description: >
+    Optional exact Runtime Pointers, each identifying one immediate owned
+    embedded scope root.
   schema:
-    required: true
+    uniqueItems: true
+collectionPaths:
+  type:
+    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+  itemType:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  description: >
+    Optional exact Runtime Pointers to object-compatible collections whose
+    direct ordinary members are immediate owned embedded scope roots.
+  schema:
     uniqueItems: true

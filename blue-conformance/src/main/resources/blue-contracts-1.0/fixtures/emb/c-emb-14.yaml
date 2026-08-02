@@ -1,0 +1,64 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-14
+vectors:
+- C-EMB-14
+category: emb
+description: An embedded Handler cannot bind to a parent Channel with the same raw key.
+operation: process
+input:
+  root:
+    contracts:
+      teacherChannel:
+        type:
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+        order: 0
+        subscriptionKey: parent-only
+        eventKey: parent-only
+        accept: true
+        checkpointDomain: parent-domain
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /child
+    child:
+      ran: false
+      contracts:
+        h:
+          type:
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          channel: teacherChannel
+          order: 0
+          result:
+            patches:
+            - op: replace
+              path: /ran
+              val: true
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: child-target
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - child-target
+    - 1
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: no-match
+  - actual: result.document.child.ran
+    op: equals
+    expected: false
+  - actual: result.document.child.contracts.initialized
+    op: absent

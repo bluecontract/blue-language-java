@@ -1,0 +1,78 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-13
+vectors:
+- C-EMB-13
+category: emb
+description: The same exact child node at two keys creates two independent owned occurrences.
+operation: process
+input:
+  root:
+    lessons:
+      a:
+        blueId: 2mvUE8JiMWD8KVWCjoZEnBJ6XZF6MLkPn7VBzekSUwhb
+      b:
+        blueId: 2mvUE8JiMWD8KVWCjoZEnBJ6XZF6MLkPn7VBzekSUwhb
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        collectionPaths:
+        - /lessons
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: lesson
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - lesson
+    - 1
+    deliverySnapshot:
+    - scopePath: /lessons/a
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    nodes:
+      2mvUE8JiMWD8KVWCjoZEnBJ6XZF6MLkPn7VBzekSUwhb:
+        value: 0
+        contracts:
+          in:
+            type:
+              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+            order: 0
+            subscriptionKey: lesson
+            eventKey: lesson
+            accept: true
+            checkpointDomain: shared-channel-v1
+          h:
+            type:
+              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+            channel: in
+            order: 0
+            result:
+              patches:
+              - op: replace
+                path: /value
+                val: 1
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.lessons.a.value
+    op: equals
+    expected: 1
+  - actual: result.document.lessons.b.blueId
+    op: equals
+    expected: 2mvUE8JiMWD8KVWCjoZEnBJ6XZF6MLkPn7VBzekSUwhb
+  - actual: trace.externalDeliveryOrder
+    op: sequenceEquals
+    expected:
+    - /lessons/a:in

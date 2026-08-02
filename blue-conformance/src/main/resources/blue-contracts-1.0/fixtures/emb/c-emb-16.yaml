@@ -1,0 +1,94 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-16
+vectors:
+- C-EMB-16
+category: emb
+description: A parent Channel change does not silently rebind existing children; new children may use the new exact binding.
+operation: process
+input:
+  root:
+    lessons:
+      existing:
+        contracts:
+          teacherChannel: &id001
+            type:
+              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+            order: 0
+            subscriptionKey: teacher-old
+            eventKey: teacher-old
+            accept: true
+            checkpointDomain: teacher-old-v1
+        status: existing
+    contracts:
+      parentChannel: *id001
+      admin:
+        type:
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+        order: 0
+        subscriptionKey: admin
+        eventKey: admin
+        accept: true
+        checkpointDomain: admin-v1
+      h:
+        type:
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+        channel: admin
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /contracts/parentChannel
+            val: &id002
+              type:
+                blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+              order: 0
+              subscriptionKey: teacher-new
+              eventKey: teacher-new
+              accept: true
+              checkpointDomain: teacher-new-v1
+          - op: add
+            path: /lessons/new
+            val:
+              contracts:
+                teacherChannel: *id002
+              status: new
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        collectionPaths:
+        - /lessons
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: admin
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - admin
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: admin
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.contracts.parentChannel.subscriptionKey
+    op: equals
+    expected: teacher-new
+  - actual: result.document.lessons.existing.contracts.teacherChannel.subscriptionKey
+    op: equals
+    expected: teacher-old
+  - actual: result.document.lessons.new.contracts.teacherChannel.subscriptionKey
+    op: equals
+    expected: teacher-new

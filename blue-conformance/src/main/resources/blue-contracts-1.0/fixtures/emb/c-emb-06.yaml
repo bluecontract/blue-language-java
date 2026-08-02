@@ -11,14 +11,14 @@ input:
     contracts:
       embedded:
         type:
-          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
         paths:
         - /child
     child:
       contracts:
         in:
           type:
-            blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+            blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
           order: 0
           subscriptionKey: timeline
           eventKey: timeline
@@ -26,7 +26,7 @@ input:
           checkpointDomain: domain-v1
         h:
           type:
-            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
           channel: in
           order: 0
           result:

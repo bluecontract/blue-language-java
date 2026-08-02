@@ -75,7 +75,7 @@ class BlueContractsConformanceReportTest {
     @Test
     void shouldReportEveryContractsFixturePassingWithExactRoles() {
         // given
-        int expectedContractsFixtures = 140;
+        int expectedContractsFixtures = 154;
         long expectedBehaviorFixtures = 82L;
         long expectedGasFixtures = 58L;
 
@@ -118,7 +118,7 @@ class BlueContractsConformanceReportTest {
         String expectedContractsGas =
                 "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
         String expectedContractsFixtures =
-                "sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18";
+                "sha256:021bb98d58baf7708d66faec6bb64678e42b95a9f5ab4dd634b6ea310de9192f";
 
         // when
         BlueReleaseConformanceReport release = exactReleaseReport();
@@ -216,7 +216,7 @@ class BlueContractsConformanceReportTest {
     void shouldVerifyStaticReportExposesExactBindingsAndNeverClaimsUnrunPasses() {
         // given
         String expectedReleaseName =
-                "blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline";
+                "blue-language-contracts-embedded-modules-collection-paths";
 
         // when
         BlueContractsConformanceReport report =
@@ -229,10 +229,10 @@ class BlueContractsConformanceReportTest {
         // then
         assertEquals(expectedReleaseName, report.getReleaseName());
         assertEquals(
-                "sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa",
+                "sha256:b285e8fac0c9ae8bfb8d33925f7f7021ca6013c8ce7332e90cfa93af05dc6461",
                 report.getReleasePackageIdentity());
         assertEquals(
-                "sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18",
+                "sha256:021bb98d58baf7708d66faec6bb64678e42b95a9f5ab4dd634b6ea310de9192f",
                 report.getFixturePackageIdentity());
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -256,15 +256,15 @@ class BlueContractsConformanceReportTest {
         assertTrue(BlueContractsConformanceReport
                 .fixturePackageIdentityMatchesFixtureFiles());
         assertEquals(
-                "41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e",
+                "a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869",
                 nested(report.toMachineReadableMap(),
                         "language", "specificationSha256"));
         assertEquals(
-                "d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1",
+                "c58ef4d4b60f9bac7cfce72768aef98bd3f71788efbb80de489e656de7390a5e",
                 nested(report.toMachineReadableMap(),
                         "contracts", "specificationSha256"));
 
-        assertEquals(140, fixtures.size());
+        assertEquals(154, fixtures.size());
         assertTrue(fixtures.stream().allMatch(
                 result -> "FAIL".equals(result.get("status"))
                         && "HarnessDidNotRunFixture".equals(

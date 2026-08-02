@@ -37,7 +37,7 @@ public final class ConformancePackagePlugin implements Plugin<Project> {
             project.getTasks().register("releaseConformanceTest", JavaExec.class, task -> {
                 task.setGroup(BuildLogicConstants.VERIFICATION_GROUP);
                 task.setDescription(
-                        "Runs the exact 153 Language and 140 Contracts release fixtures.");
+                        "Runs the exact 153 Language and 154 Contracts release fixtures.");
                 task.dependsOn(project.getTasks().named(JavaPlugin.CLASSES_TASK_NAME));
                 task.setClasspath(sourceSets.getByName("main").getRuntimeClasspath());
                 task.getMainClass().set(

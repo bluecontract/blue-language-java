@@ -17,7 +17,7 @@ input:
           name: preinitialized
       in:
         type:
-          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
         order: 0
         subscriptionKey: timeline
         eventKey: timeline
@@ -25,7 +25,7 @@ input:
         checkpointDomain: domain-current
       old:
         type:
-          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
         order: 1
         subscriptionKey: old-timeline
         eventKey: old-timeline
@@ -33,7 +33,7 @@ input:
         checkpointDomain: domain-old
       h:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
         channel: in
         order: 0
         result:
@@ -46,7 +46,7 @@ input:
         entries:
           old:
             domain:
-              blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
             subject:
               blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
   event:

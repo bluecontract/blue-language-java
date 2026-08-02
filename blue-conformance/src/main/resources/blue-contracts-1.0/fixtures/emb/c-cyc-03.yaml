@@ -12,7 +12,7 @@ input:
     contracts:
       embedded:
         type:
-          blueId: D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
         paths:
         - /cyclic
   event:

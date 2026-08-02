@@ -11,7 +11,7 @@ input:
     contracts:
       sourceA:
         type:
-          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
         order: 0
         subscriptionKey: route
         eventKey: route
@@ -22,7 +22,7 @@ input:
         logicalDeliveryKey: shared-logical-delivery
       sourceB:
         type:
-          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
         order: 0
         subscriptionKey: route
         eventKey: route
@@ -37,7 +37,7 @@ input:
         order: 0
       h:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
         channel: target
         order: 0
         result:

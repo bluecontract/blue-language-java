@@ -54,6 +54,28 @@ vectors:
   - emb/c-emb-06.yaml
   C-EMB-07:
   - emb/c-emb-07.yaml
+  C-EMB-08:
+  - emb/c-emb-08.yaml
+  C-EMB-09:
+  - emb/c-emb-09-list-target.yaml
+  - emb/c-emb-09-nonobject-member.yaml
+  - emb/c-emb-09-reserved-field.yaml
+  - emb/c-emb-09-wildcard.yaml
+  - emb/c-emb-09-cyclic-member.yaml
+  C-EMB-10:
+  - emb/c-emb-10.yaml
+  C-EMB-11:
+  - emb/c-emb-11.yaml
+  C-EMB-12:
+  - emb/c-emb-12.yaml
+  C-EMB-13:
+  - emb/c-emb-13.yaml
+  C-EMB-14:
+  - emb/c-emb-14.yaml
+  C-EMB-15:
+  - emb/c-emb-15.yaml
+  C-EMB-16:
+  - emb/c-emb-16.yaml
   C-EVT-01:
   - evt/c-evt-01.yaml
   C-EVT-02:
@@ -94,6 +116,8 @@ vectors:
   - feed/c-feed-09.yaml
   C-FEED-10:
   - feed/c-feed-10.yaml
+  C-FEED-11:
+  - feed/c-feed-18.yaml
   C-GAS-01:
   - gas-micro/processor-channelAccepted.yaml
   - gas-micro/processor-channelCandidateTested.yaml

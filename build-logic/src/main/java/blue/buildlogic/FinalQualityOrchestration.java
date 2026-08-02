@@ -179,7 +179,7 @@ final class FinalQualityOrchestration {
         rationales.put(
                 "blue-conformance/src/main/java/blue/language/conformance/contracts/"
                         + "ContractsFixtureHarness.java",
-                "Closed 140-fixture Contracts oracle; one ordered harness keeps fixture semantics "
+                "Closed 154-fixture Contracts oracle; one ordered harness keeps fixture semantics "
                         + "and trace comparison auditable against the release package.");
         rationales.put(
                 "blue-conformance/src/main/java/blue/language/conformance/api/"
