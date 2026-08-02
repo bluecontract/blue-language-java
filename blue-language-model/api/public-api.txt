@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-language-model
-# entryCount: 311
+# entryCount: 313
 field blue.language.model.NodeWireForm$Strategy#OFFICIAL descriptor=Lblue/language/model/NodeWireForm$Strategy; access=public,static,final,enum signature=- constant=-
 field blue.language.model.NodeWireForm$Strategy#SIMPLE descriptor=Lblue/language/model/NodeWireForm$Strategy; access=public,static,final,enum signature=- constant=-
 field blue.language.model.Nodes$NodeField#BLUE descriptor=Lblue/language/model/Nodes$NodeField; access=public,static,final,enum signature=- constant=-
@@ -39,6 +39,7 @@ field blue.language.model.wire.BlueLanguageConstants#DOUBLE_TYPE descriptor=Ljav
 field blue.language.model.wire.BlueLanguageConstants#DOUBLE_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ"
 field blue.language.model.wire.BlueLanguageConstants#INTEGER_TYPE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="Integer"
 field blue.language.model.wire.BlueLanguageConstants#INTEGER_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq"
+field blue.language.model.wire.BlueLanguageConstants#LANGUAGE_RESERVED_FIELDS descriptor=Ljava/util/Set; access=public,static,final signature=Ljava/util/Set<Ljava/lang/String;>; constant=-
 field blue.language.model.wire.BlueLanguageConstants#LEGACY_OBJECT_CONSTRAINTS descriptor=Ljava/lang/String; access=public,static,final signature=- constant="constraints"
 field blue.language.model.wire.BlueLanguageConstants#LEGACY_OBJECT_PROPERTIES descriptor=Ljava/lang/String; access=public,static,final signature=- constant="properties"
 field blue.language.model.wire.BlueLanguageConstants#LIST_CONTROL_EMPTY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="$empty"
@@ -261,6 +262,7 @@ method blue.language.model.value.ScalarValues#getBigIntegerFromObject descriptor
 method blue.language.model.value.ScalarValues#getBooleanFromObject descriptor=(Ljava/lang/Object;)Ljava/lang/Boolean; access=public,static signature=- throws=-
 method blue.language.model.value.ScalarValues#getIntegerFromObject descriptor=(Ljava/lang/Object;)Ljava/lang/Integer; access=public,static signature=- throws=-
 method blue.language.model.wire.BlueLanguageConstants#<init> descriptor=()V access=protected signature=- throws=-
+method blue.language.model.wire.BlueLanguageConstants#isLanguageReservedField descriptor=(Ljava/lang/String;)Z access=public,static signature=- throws=-
 method blue.language.model.wire.JsonPointer#<init> descriptor=()V access=protected signature=- throws=-
 method blue.language.model.wire.JsonPointer#append descriptor=(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
 method blue.language.model.wire.JsonPointer#canonicalize descriptor=(Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-

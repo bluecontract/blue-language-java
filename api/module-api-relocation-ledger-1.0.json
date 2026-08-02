@@ -4,13 +4,13 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 377,
-    "publicTypeIdentity": "sha256:84d23ddb8e5526b25e1a4f198ab1140283538b5945714f83120279815be12085",
+    "publicProductionTypeCount": 380,
+    "publicTypeIdentity": "sha256:38ca6143f426bd8c157cf7ad615766be0ba78d9c555b18d7ba4fa57c4419bbfa",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
       "intentional-next-major-break": 17,
       "internal-type-removed-from-public-surface": 105,
-      "new-supported-api-spi": 55
+      "new-supported-api-spi": 58
     }
   },
   "allowedClassifications": [
@@ -2351,6 +2351,17 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.processor.DocumentProcessorAdministration",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessorAdministration.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.DocumentProcessorAdministration",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The focused administration service exposes stable cache, registry, marker, and fragmentation inspection without widening the processing facade."
+    },
+    {
       "type": "blue.language.processor.EffectiveContractSnapshot",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/EffectiveContractSnapshot.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -2415,6 +2426,28 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.processor.EmbeddedScopePlanView",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanView.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.EmbeddedScopePlanView",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The final collectionPaths amendment exposes one immutable structured embedded-scope plan for read-only fragmentation inspection."
+    },
+    {
+      "type": "blue.language.processor.EmbeddedScopePlanView$Origin",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanView.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.EmbeddedScopePlanView$Origin",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The plan view exposes exact-versus-collection provenance as a closed supported value."
     },
     {
       "type": "blue.language.processor.ExactBlueValue",

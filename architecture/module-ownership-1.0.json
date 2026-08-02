@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 557,
-    "productionResourceCount": 356,
-    "productionSourcePathIdentity": "sha256:0431c43f36bfeea108e3568ef5967a54516c725db07ca3d0c7fdb414e3b8931c",
-    "productionResourcePathIdentity": "sha256:afe876a276348cfba121fc0cf6834384216b0e23acb4fb97e7dcbbd1e4eceb78"
+    "productionSourceCount": 585,
+    "productionResourceCount": 370,
+    "productionSourcePathIdentity": "sha256:502bc262906950dc74c34a4064f4c360ae84d5917b9caf47b563920b5eea34cd",
+    "productionResourcePathIdentity": "sha256:a1ccc0c0105048804474a0ac9ac7a2b095e05d3b094a60a046295e78e5203797"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -98,10 +98,66 @@
       "targetPackage": "blue.language.conformance.api"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureExecution.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureExecution.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixturePackage.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixturePackage.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixturePrimitives.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixturePrimitives.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureSupport.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureSupport.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureTransformations.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureTransformations.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceGraphOperations.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceGraphOperations.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceProviderEnvironment.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceProviderEnvironment.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceReport.java",
       "currentPackage": "blue.language.conformance.api",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceReport.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceResolutionOperations.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceResolutionOperations.java",
       "targetPackage": "blue.language.conformance.api"
     },
     {
@@ -130,6 +186,13 @@
       "currentPackage": "blue.language.conformance.api",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueContractsFixtureCategory.java",
+      "targetPackage": "blue.language.conformance.api"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueContractsFixturePackage.java",
+      "currentPackage": "blue.language.conformance.api",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/api/BlueContractsFixturePackage.java",
       "targetPackage": "blue.language.conformance.api"
     },
     {
@@ -224,10 +287,59 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureExecutionEngine.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureExecutionEngine.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureFeederEnvironment.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureFeederEnvironment.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureHarness.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureHarness.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureHarnessDataSupport.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureHarnessDataSupport.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureInputPreparer.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureInputPreparer.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureProjectionExtractor.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureProjectionExtractor.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureProjectionSupport.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureProjectionSupport.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureScriptedEnvironment.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureScriptedEnvironment.java",
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
@@ -630,6 +742,20 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessorBuilderSupport.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessorBuilderSupport.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessorComponents.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessorComponents.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessorConfiguration.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -669,6 +795,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessorSnapshotOperations.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentUpdateData.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentUpdateData.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -732,6 +865,55 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EffectiveSubscriptionSurfaceProjector.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedConcretePath.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedConcretePath.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedPathOrigin.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedPathOrigin.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeDeclaration.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeDeclaration.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeEntryPlans.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeEntryPlans.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlan.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlan.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanView.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanView.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1519,6 +1701,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingRuntimeCounters.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingRuntimeCounters.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingScopeRegistry.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1922,6 +2111,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/TypeGeneralizationPolicyResolver.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/UpdateMaterializationMetrics.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/UpdateMaterializationMetrics.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -4132,6 +4328,71 @@
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-07.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-08.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-08.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-cyclic-member.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-cyclic-member.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-list-target.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-list-target.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-nonobject-member.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-nonobject-member.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-reserved-field.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-reserved-field.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-wildcard.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-09-wildcard.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-10.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-10.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-11.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-11.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-12.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-12.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-13.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-13.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-14.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-14.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-15.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-15.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-16.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-16.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-01.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-01.yaml"
@@ -4265,6 +4526,11 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/feed/c-feed-17.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/feed/c-feed-17.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/feed/c-feed-18.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/feed/c-feed-18.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/fixture-schema.yaml",
@@ -5557,9 +5823,9 @@
       "targetPath": "blue-conformance/src/main/resources/language/1.0/spec.md"
     },
     {
-      "currentPath": "blue-conformance/src/main/resources/release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml",
+      "currentPath": "blue-conformance/src/main/resources/release/blue-language-contracts-embedded-modules-collection-paths-1.0/PACKAGE-MANIFEST.yaml",
       "targetModule": ":blue-conformance",
-      "targetPath": "blue-conformance/src/main/resources/release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml"
+      "targetPath": "blue-conformance/src/main/resources/release/blue-language-contracts-embedded-modules-collection-paths-1.0/PACKAGE-MANIFEST.yaml"
     },
     {
       "currentPath": "blue-contracts-core/src/main/resources/blue/language/processor/contracts-gas-1.0.yaml",

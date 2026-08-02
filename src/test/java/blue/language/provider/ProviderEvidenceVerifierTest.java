@@ -19,6 +19,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProviderEvidenceVerifierTest {
 
+    private static final String CORRECTED_LANGUAGE_RELEASE_IDENTITY =
+            "blue-language-contracts-embedded-modules-collection-paths@"
+                    + "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6";
+
+    @Test
+    void shouldBindSourceEvidenceToCorrectedReleasePackage() {
+        // given
+        String expected = CORRECTED_LANGUAGE_RELEASE_IDENTITY;
+
+        // when
+        String actual =
+                SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY;
+
+        // then
+        assertEquals(expected, actual);
+    }
+
     @Test
     void shouldFailClosedWhenSourceRuntimeOmitsCanonicalRegistryBinding() {
         // given
