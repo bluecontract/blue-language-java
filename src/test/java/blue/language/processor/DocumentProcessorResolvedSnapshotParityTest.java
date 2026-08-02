@@ -6,6 +6,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -196,6 +197,60 @@ class DocumentProcessorResolvedSnapshotParityTest {
         assertTrue(result.processResult().events().isEmpty());
         assertTrue(result.trace().gas().isEmpty());
         assertTrue(result.trace().records().isEmpty());
+    }
+
+    @Test
+    void shouldMapInitializationSurfaceFailureEquallyForNodeAndSnapshot() {
+        // given
+        Node root = new Node()
+                .properties("child", new Node().value("not-an-object"))
+                .contracts(new Node().properties(
+                        ProcessorContractConstants.KEY_EMBEDDED,
+                        new Node()
+                                .type(new Node().blueId(
+                                        RuntimeBlueIds.PROCESS_EMBEDDED))
+                                .properties(
+                                        ProcessorContractConstants.KEY_PATHS,
+                                        new Node().items(
+                                                Collections.singletonList(
+                                                        new Node().value(
+                                                                "/child"))))));
+        ResolvedSnapshot snapshot = snapshot(root);
+        DocumentProcessor processor = DocumentProcessor.builder()
+                .snapshotStore(IdentitySnapshotManager.INSTANCE)
+                .build();
+
+        // when
+        DocumentProcessingResult nodeResult;
+        DocumentProcessingResult snapshotResult;
+        try {
+            nodeResult = processor.initializeDocument(root);
+            snapshotResult = processor.initializeDocument(snapshot);
+        } finally {
+            processor.close();
+        }
+
+        // then
+        assertEquals(ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                nodeResult.status());
+        assertEquals(ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                snapshotResult.status());
+        assertEquals(ProcessorErrorCategory.EmbeddedScopeNotObject,
+                diagnosticCategory(nodeResult));
+        assertEquals(ProcessorErrorCategory.EmbeddedScopeNotObject,
+                diagnosticCategory(snapshotResult));
+        assertEquals(nodeResult.totalGas(), snapshotResult.totalGas());
+        assertTrue(nodeResult.totalGas() > 0L,
+                "initialization must retain gas admitted before rejection");
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(root),
+                DirectBlueIdCalculator.calculateBlueId(nodeResult.document()));
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(root),
+                DirectBlueIdCalculator.calculateBlueId(
+                        snapshotResult.document()));
+        assertTrue(nodeResult.events().isEmpty());
+        assertTrue(snapshotResult.events().isEmpty());
     }
 
     private static void assertEquivalent(

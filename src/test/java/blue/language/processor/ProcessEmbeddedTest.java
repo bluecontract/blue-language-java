@@ -584,9 +584,9 @@ class ProcessEmbeddedTest {
         DocumentProcessingResult result = blue.initializeDocument(input);
 
         // then
-        assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
+        assertEquals(ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
                 result.status(), diagnosticMessage(result));
-        assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
+        assertEquals(ProcessorErrorCategory.InvalidRuntimePointer,
                 diagnosticCategory(result), diagnosticMessage(result));
         assertFalse(result.commits());
         assertTrue(result.events().isEmpty());
@@ -637,11 +637,17 @@ class ProcessEmbeddedTest {
         DocumentProcessingResult result = blue.initializeDocument(input);
 
         // then
-        assertRolledBack(input, result);
+        assertEquals(ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                result.status(), diagnosticMessage(result));
+        assertEquals(ProcessorErrorCategory.EmbeddedScopeNotObject,
+                diagnosticCategory(result), diagnosticMessage(result));
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(input.toString(), result.document().toString());
     }
 
     @Test
-    void shouldVerifyEmbeddedPathSelectingPureReferenceIsBoundaryViolationBeforeInitialization() {
+    void shouldInitializeEmbeddedPathSelectingVerifiedPureReference() {
         // given
         Node childType = new Node()
                 .name("Referenced Embedded Context Type")
@@ -676,34 +682,32 @@ class ProcessEmbeddedTest {
                 blue.initializeDocument(input);
 
         // then
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), diagnosticMessage(result));
-        assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
-                diagnosticCategory(result), diagnosticMessage(result));
-        assertTrue(result.document().getProperties().get("child").isReferenceOnly(),
-                "the referenced child must not be initialized or mutated as an active scope");
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
+        Node initializedChild = result.document().getProperties().get("child");
+        assertNotNull(initializedChild,
+                "the verified referenced child remains an active embedded occurrence");
+        assertFalse(initializedChild.isReferenceOnly(),
+                "initializing the verified occurrence materializes its exact content");
+        assertNotNull(initializedChild.getContracts());
+        assertNotNull(initializedChild.getContracts().getProperties()
+                .get(KEY_INITIALIZED),
+                "verified reference evidence must participate rather than fail open");
         assertTrue(result.events().isEmpty());
-        assertFalse(result.commits());
+        assertTrue(result.commits());
     }
 
     @Test
-    void shouldRejectMultipleProcessEmbeddedMarkersWithinScope() {
+    void shouldRejectProcessEmbeddedOutsideItsReservedContractKey() {
         // given
-        String yaml = "name: Multi Embedded Doc\n" +
+        String yaml = "name: Misplaced Embedded Marker\n" +
                 "x:\n" +
                 "  name: X Doc\n" +
-                "y:\n" +
-                "  name: Y Doc\n" +
                 "contracts:\n" +
-                "  embeddedPrimary:\n" +
+                "  embeddedModule:\n" +
                 "    type:\n" +
                 "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
-                "      - /x\n" +
-                "  embeddedSecondary:\n" +
-                "    type:\n" +
-                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
-                "    paths:\n" +
-                "      - /y\n";
+                "      - /x\n";
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
 
@@ -713,9 +717,35 @@ class ProcessEmbeddedTest {
         // then
         assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
                 result.status(), diagnosticMessage(result));
-        assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
+        assertEquals(ProcessorErrorCategory.InvalidContractKey,
                 diagnosticCategory(result), diagnosticMessage(result));
-        assertTrue(diagnosticMessage(result).contains("Process Embedded"));
+        assertTrue(diagnosticMessage(result).contains(KEY_EMBEDDED));
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(document.toString(), result.document().toString());
+    }
+
+    @Test
+    void shouldRejectNonEmbeddedContractAtReservedEmbeddedKey() {
+        // given
+        String yaml = "name: Reserved Embedded Key\n"
+                + "contracts:\n"
+                + "  " + KEY_EMBEDDED + ":\n"
+                + "    type:\n"
+                + "      blueId: "
+                + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n";
+        Blue blue = ProcessorTestSupport.blue();
+        Node document = blue.yamlToNode(yaml);
+
+        // when
+        DocumentProcessingResult result = blue.initializeDocument(document);
+
+        // then
+        assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
+                result.status(), diagnosticMessage(result));
+        assertEquals(ProcessorErrorCategory.InvalidContractKey,
+                diagnosticCategory(result), diagnosticMessage(result));
+        assertTrue(diagnosticMessage(result).contains(KEY_EMBEDDED));
         assertFalse(result.commits());
         assertTrue(result.events().isEmpty());
         assertEquals(document.toString(), result.document().toString());

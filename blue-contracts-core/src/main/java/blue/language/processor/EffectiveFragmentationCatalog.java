@@ -93,11 +93,12 @@ public final class EffectiveFragmentationCatalog {
     }
 
     /**
-     * Effective normalized Process Embedded paths by active scope.
+     * Effective concrete Process Embedded child paths by active scope.
      *
-     * <p>Scope keys are root-first and deterministic. Path list order remains
-     * the effective Process Embedded list order because list order is semantic
-     * Blue content.</p>
+     * <p>Scope keys are root-first and deterministic. Each value combines
+     * present exact children with generated stable-key collection members in
+     * canonical Runtime Pointer order. Declaration order remains separately
+     * available from {@link #scopePlansByScope()}.</p>
      *
      * @return deeply unmodifiable scope-to-path mapping
      */

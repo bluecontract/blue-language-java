@@ -191,9 +191,15 @@ public final class ContractBundle {
     }
 
     /**
-     * Returns normalized paths declared by the Process Embedded marker.
+     * Returns the effective embedded paths available in this bundle view.
      *
-     * @return an unmodifiable path list
+     * <p>An invocation-planned bundle returns the frozen combined concrete
+     * child paths. A structural cache-only bundle, which has no document from
+     * which to enumerate collection members, returns its normalized explicit
+     * declarations only. Runtime consumers must use planned bundles whenever
+     * concrete collection membership is semantic.</p>
+     *
+     * @return an unmodifiable effective path list
      */
     public List<String> embeddedPaths() {
         return embeddedPathsView;

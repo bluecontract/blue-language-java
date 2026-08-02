@@ -27,5 +27,15 @@
  * behind the published evidence, snapshot, validation, and observation SPIs.
  * Contract data models live in {@link blue.language.processor.model}; verified
  * built-in identities live in {@link blue.language.processor.registry}.</p>
+ *
+ * <p><strong>Embedded scopes.</strong> One invocation-local immutable plan
+ * freezes exact {@code Process Embedded.paths}, collection declarations,
+ * enumerated stable member keys, concrete child paths, and provenance before
+ * processing begins. Discovery, delivery, mutation boundaries, lifecycle,
+ * checkpoints, fragmentation inspection, and post-commit subscription deltas
+ * consume that same plan so an event cannot observe membership it created.
+ * Hosts may inspect the read-only public projection through
+ * {@link blue.language.processor.EmbeddedScopePlanView}; it contains no
+ * executable behavior and consumes no Contracts gas.</p>
  */
 package blue.language.processor;

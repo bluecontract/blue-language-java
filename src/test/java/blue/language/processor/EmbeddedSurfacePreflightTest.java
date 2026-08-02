@@ -158,6 +158,35 @@ final class EmbeddedSurfacePreflightTest {
                 ProcessorErrorCategory.OverlappingEmbeddedDeclaration);
     }
 
+    @Test
+    void shouldPreserveSubscriptionFailureDuringDerivedPreselection() {
+        // given
+        Node root = rootWithEmbedded(
+                new Node().properties(
+                        LESSONS_KEY,
+                        new Node().items(objectMember())),
+                Collections.<String>emptyList(),
+                Collections.singletonList(LESSONS_POINTER));
+        Node event = new Node().properties(
+                EVENT_KIND_KEY,
+                new Node().value(EVENT_KIND_UNMATCHED));
+        DocumentProcessor processor = DocumentProcessor.builder().build();
+
+        // when
+        DocumentProcessingResult result;
+        try {
+            result = processor.processDocument(root, event);
+        } finally {
+            processor.close();
+        }
+
+        // then
+        assertSurfaceFailure(
+                root,
+                result,
+                ProcessorErrorCategory.EmbeddedCollectionMustBeObject);
+    }
+
     private static DocumentProcessingResult processNoMatch(Node root) {
         Node event = new Node().properties(
                 EVENT_KIND_KEY,

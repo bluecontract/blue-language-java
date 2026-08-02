@@ -219,6 +219,37 @@ final class DocumentProcessorProcessingSupport {
                                 INVALID_EXTERNAL_DELIVERY_MESSAGE)));
     }
 
+    DocumentProcessingResult subscriptionSurfaceInvalidResult(
+            Node document,
+            SubscriptionSurfaceInvalidException exception) {
+        return DocumentProcessingResult.nonCommitting(
+                Objects.requireNonNull(document, "document"),
+                0L,
+                ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                exception.diagnostic());
+    }
+
+    DocumentProcessingResult portableLimitResult(
+            Node document,
+            PortableLimitExceededException exception) {
+        return DocumentProcessingResult.nonCommitting(
+                Objects.requireNonNull(document, "document"),
+                0L,
+                ProcessorStatus.PORTABLE_LIMIT_EXCEEDED,
+                exception.diagnostic());
+    }
+
+    PlatformProcessingResult platformFailure(
+            VerifiedExecutionEvidence evidence,
+            DocumentProcessingResult result) {
+        return new PlatformProcessingResult(
+                result,
+                PlatformCommitCompanion.of(
+                        Objects.requireNonNull(evidence, "evidence"),
+                        result,
+                        SubscriptionDelta.empty()));
+    }
+
     PlatformProcessingResult platformResult(ProcessingDebugResult debug) {
         PlatformCommitCompanion companion =
                 debug.platformCommitCompanion();

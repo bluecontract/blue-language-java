@@ -1,9 +1,5 @@
 package blue.language.processor;
 
-import blue.language.processor.util.ProcessorContractConstants;
-import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.model.wire.JsonPointer;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -107,49 +103,6 @@ final class ContractRecognitionMeter {
     void cancelCanonicalClassificationBatch() {
         pendingHeaders.clear();
         canonicalClassificationBatch = false;
-    }
-
-    void embeddedPathEntryRead(String scopePath,
-                               String contractKey,
-                               int index,
-                               String logicalPath) {
-        gas.chargeEmbeddedPathEntryRead(
-                scopePath,
-                logicalPath != null
-                        ? logicalPath
-                        : embeddedPath(
-                        scopePath, contractKey, index));
-    }
-
-    void embeddedPathSegmentsValidated(String scopePath,
-                                       String contractKey,
-                                       int index,
-                                       String logicalPath,
-                                       long quantity) {
-        gas.chargeEmbeddedPathSegmentsValidated(
-                scopePath,
-                logicalPath != null
-                        ? logicalPath
-                        : embeddedPath(
-                        scopePath, contractKey, index),
-                quantity);
-    }
-
-    private String embeddedPath(String scopePath,
-                                String contractKey,
-                                int index) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String prefix = "/".equals(normalizedScope)
-                ? ""
-                : normalizedScope;
-        String contractPath = ProcessorEngine.resolvePointer(
-                prefix,
-                ProcessorPointerConstants.relativeContractsEntry(
-                        contractKey));
-        String paths = JsonPointer.append(
-                contractPath,
-                ProcessorContractConstants.KEY_PATHS);
-        return JsonPointer.append(paths, String.valueOf(index));
     }
 
     private static final class HeaderIdentity {

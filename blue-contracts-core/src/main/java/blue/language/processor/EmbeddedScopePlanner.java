@@ -64,7 +64,8 @@ final class EmbeddedScopePlanner {
                 explicitPaths,
                 collectionPaths,
                 schedule,
-                null);
+                null,
+                true);
     }
 
     /** Builds an unmetered plan from one immutable effective scope. */
@@ -80,7 +81,8 @@ final class EmbeddedScopePlanner {
                 explicitPaths,
                 collectionPaths,
                 schedule,
-                null);
+                null,
+                true);
     }
 
     /**
@@ -100,7 +102,68 @@ final class EmbeddedScopePlanner {
                 explicitPaths,
                 collectionPaths,
                 meter.schedule(),
-                meter);
+                meter,
+                true);
+    }
+
+    /**
+     * Builds the current-event plan at the revision-bound feeder trust
+     * boundary. A direct explicit child that is already represented by one
+     * exact BlueId remains opaque until that branch participates; collection
+     * containers and members still use the strict projection rules because
+     * their direct key set must be known to construct the concrete paths.
+     */
+    EmbeddedScopePlan planForRevisionBoundEvent(
+            Node effectiveScope,
+            String scopePath,
+            List<String> explicitPaths,
+            List<String> collectionPaths,
+            GasSchedule schedule) {
+        Objects.requireNonNull(effectiveScope, "effectiveScope");
+        return planForRevisionBoundEvent(
+                FrozenNode.fromResolvedNode(effectiveScope),
+                scopePath,
+                explicitPaths,
+                collectionPaths,
+                schedule);
+    }
+
+    /** Builds a revision-bound plan from one immutable effective scope. */
+    EmbeddedScopePlan planForRevisionBoundEvent(
+            FrozenNode effectiveScope,
+            String scopePath,
+            List<String> explicitPaths,
+            List<String> collectionPaths,
+            GasSchedule schedule) {
+        return plan(
+                effectiveScope,
+                scopePath,
+                explicitPaths,
+                collectionPaths,
+                schedule,
+                null,
+                false);
+    }
+
+    /**
+     * Metered counterpart of {@link #planForRevisionBoundEvent(FrozenNode,
+     * String, List, List, GasSchedule)}.
+     */
+    EmbeddedScopePlan planForRevisionBoundEvent(
+            FrozenNode effectiveScope,
+            String scopePath,
+            List<String> explicitPaths,
+            List<String> collectionPaths,
+            GasMeter meter) {
+        Objects.requireNonNull(meter, "meter");
+        return plan(
+                effectiveScope,
+                scopePath,
+                explicitPaths,
+                collectionPaths,
+                meter.schedule(),
+                meter,
+                false);
     }
 
     private EmbeddedScopePlan plan(
@@ -109,7 +172,8 @@ final class EmbeddedScopePlanner {
             List<String> explicitPaths,
             List<String> collectionPaths,
             GasSchedule schedule,
-            GasMeter meter) {
+            GasMeter meter,
+            boolean verifyDirectExplicitReferences) {
         Objects.requireNonNull(effectiveScope, "effectiveScope");
         Objects.requireNonNull(schedule, "schedule");
         String normalizedScope = normalizedScope(scopePath);
@@ -154,8 +218,16 @@ final class EmbeddedScopePlanner {
             if (target == null) {
                 continue;
             }
-            target = materialize(target, normalizedScope, declaration);
-            if (!isScopeObjectCompatible(target)) {
+            if (target.isReferenceOnly()
+                    && !verifyDirectExplicitReferences) {
+                rejectCyclicMember(
+                        target, normalizedScope, declaration, null);
+            } else {
+                target = materialize(
+                        target, normalizedScope, declaration);
+            }
+            if (!target.isReferenceOnly()
+                    && !isScopeObjectCompatible(target)) {
                 throw invalid(
                         ProcessorErrorCategory.EmbeddedScopeNotObject,
                         "Process Embedded path must select an object: "
@@ -606,9 +678,18 @@ final class EmbeddedScopePlanner {
     private boolean isSelector(String segment) {
         return "*".equals(segment)
                 || "**".equals(segment)
-                || (segment.startsWith("[") && segment.endsWith("]"))
-                || (segment.startsWith("{") && segment.endsWith("}"))
-                || segment.startsWith("?");
+                || enclosedBy(segment, '[', ']')
+                || enclosedBy(segment, '{', '}')
+                || (!segment.isEmpty() && segment.charAt(0) == '?');
+    }
+
+    private boolean enclosedBy(
+            String value,
+            char opening,
+            char closing) {
+        return value.length() >= 2
+                && value.charAt(0) == opening
+                && value.charAt(value.length() - 1) == closing;
     }
 
     private String normalizedScope(String scopePath) {

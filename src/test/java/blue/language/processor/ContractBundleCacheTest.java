@@ -107,9 +107,10 @@ class ContractBundleCacheTest {
 
         // then
         assertEquals(new BigInteger("2"), second.document().get("/child/count"));
-        assertEquals(0L, metrics.bundleLoadCacheHits,
-                "root and child recognition both remain representation-independent");
-        assertEquals(0L, metrics.bundlesReused);
+        assertEquals(1L, metrics.bundleLoadCacheHits,
+                "feeder preselection may reuse one unmetered structural bundle");
+        assertEquals(1L, metrics.bundlesReused,
+                "physical reuse does not discount metered PROCESS recognition");
     }
 
     private Blue configuredBlue(RecordingMetrics metrics) {

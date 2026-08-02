@@ -42,7 +42,7 @@ final class EmbeddedScopeEntryPlans {
                     ? new EmbeddedScopePlanner(
                             manager::materializeVerifiedExactReference)
                     : new EmbeddedScopePlanner();
-            plan = planner.plan(
+            plan = planner.planForRevisionBoundEvent(
                     Objects.requireNonNull(
                             effectiveScope, "effectiveScope"),
                     normalizedScope,

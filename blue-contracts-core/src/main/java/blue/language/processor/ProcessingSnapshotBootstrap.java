@@ -2,7 +2,6 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
@@ -179,46 +178,144 @@ final class ProcessingSnapshotBootstrap {
             FrozenNode effectiveScope,
             Deque<String> pending,
             Set<String> visited) {
-        FrozenNode contracts = effectiveScope != null
-                ? effectiveScope.getContracts()
-                : null;
-        Map<String, FrozenNode> entries = contracts != null
-                ? contracts.getProperties()
-                : null;
-        if (entries == null) {
+        EmbeddedScopePlan plan = embeddedScopePlanIfAvailable(
+                effectiveScope, scopePath);
+        if (plan == null) {
             return;
         }
-        for (FrozenNode contract : entries.values()) {
-            if (!RuntimeBlueIds.PROCESS_EMBEDDED.equals(
-                    exactTypeBlueId(contract))) {
-                continue;
-            }
-            FrozenNode paths = contract != null
-                    ? contract.property(ProcessorContractConstants.KEY_PATHS)
-                    : null;
-            List<FrozenNode> items = paths != null ? paths.getItems() : null;
-            if (items == null) {
-                continue;
-            }
-            for (FrozenNode item : items) {
-                Object value = item != null ? item.getValue() : null;
-                if (!(value instanceof String)) {
-                    continue;
-                }
-                try {
-                    String child = PointerUtils.resolvePointer(
-                            scopePath,
-                            PointerUtils.assertValidRuntimePointer(
-                                    (String) value));
-                    if (!child.equals(scopePath)
-                            && !visited.contains(child)) {
-                        pending.addLast(child);
-                    }
-                } catch (IllegalArgumentException ignored) {
-                    // Runtime preflight owns malformed embedded-path diagnostics.
-                }
+        for (String childPath : plan.concreteChildPaths()) {
+            if (!childPath.equals(scopePath)
+                    && !visited.contains(childPath)) {
+                pending.addLast(childPath);
             }
         }
+    }
+
+    static EmbeddedScopePlan embeddedScopePlan(
+            FrozenNode effectiveScope,
+            String scopePath,
+            ProcessingSnapshotManager snapshotManager) {
+        FrozenNode embedded = processEmbeddedContract(effectiveScope);
+        if (embedded == null) {
+            return null;
+        }
+        List<String> explicit = embeddedDeclarations(
+                embedded,
+                ProcessorContractConstants.KEY_PATHS,
+                scopePath,
+                ProcessorErrorCategory.InvalidRuntimePointer);
+        List<String> collections = embeddedDeclarations(
+                embedded,
+                ProcessorContractConstants.KEY_COLLECTION_PATHS,
+                scopePath,
+                ProcessorErrorCategory.InvalidEmbeddedCollectionPath);
+        EmbeddedScopePlanner planner = snapshotManager != null
+                ? new EmbeddedScopePlanner(
+                        snapshotManager::materializeVerifiedExactReference)
+                : new EmbeddedScopePlanner();
+        return planner.plan(
+                effectiveScope,
+                scopePath,
+                explicit,
+                collections,
+                GasSchedule.contracts10());
+    }
+
+    static EmbeddedScopePlan embeddedScopePlanIfAvailable(
+            FrozenNode effectiveScope,
+            String scopePath) {
+        try {
+            return embeddedScopePlan(effectiveScope, scopePath, null);
+        } catch (SubscriptionSurfaceInvalidException
+                | PortableLimitExceededException
+                | ExecutionEvidenceUnavailableException
+                | InvalidExecutionEvidenceException unavailablePlan) {
+            /*
+             * Admission and boundary preflight own these diagnostics. Snapshot
+             * bootstrapping and protected-state comparison must not change the
+             * public failure selected for the same malformed input.
+             */
+            return null;
+        }
+    }
+
+    private static FrozenNode processEmbeddedContract(
+            FrozenNode scope) {
+        FrozenNode contracts = scope != null ? scope.getContracts() : null;
+        FrozenNode embedded = contracts != null
+                ? contracts.property(
+                        ProcessorContractConstants.KEY_EMBEDDED)
+                : null;
+        return isProcessEmbeddedContract(embedded) ? embedded : null;
+    }
+
+    static boolean isProcessEmbeddedContract(FrozenNode contract) {
+        return RuntimeBlueIds.PROCESS_EMBEDDED.equals(
+                exactTypeBlueId(contract));
+    }
+
+    private static List<String> embeddedDeclarations(
+            FrozenNode embedded,
+            String field,
+            String scopePath,
+            ProcessorErrorCategory category) {
+        FrozenNode declarations = embedded.property(field);
+        if (declarations == null || declarations.isEmptyNode()) {
+            return Collections.emptyList();
+        }
+        List<FrozenNode> items = declarations.getItems();
+        if (items == null) {
+            if (isUnpopulatedDeclarationDefinition(declarations)) {
+                return Collections.emptyList();
+            }
+            throw invalidEmbeddedDeclaration(
+                    field + " must be a List", scopePath, category);
+        }
+        List<String> result = new ArrayList<>(items.size());
+        for (FrozenNode item : items) {
+            Object value = item != null ? item.getValue() : null;
+            if (!(value instanceof String)) {
+                throw invalidEmbeddedDeclaration(
+                        field + " entries must be Text",
+                        scopePath,
+                        category);
+            }
+            result.add((String) value);
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    /**
+     * Distinguishes an optional field inherited from the Process Embedded
+     * type definition from an authored value. Resolution retains the field's
+     * List schema even when the instance omits that optional declaration.
+     */
+    private static boolean isUnpopulatedDeclarationDefinition(
+            FrozenNode declarations) {
+        /*
+         * Language 1.0 §4.1 and §9.2.3 define type/schema/name/
+         * description-only nodes as metadata-only, not semantically present.
+         * Those fields therefore do not distinguish an inherited optional
+         * declaration from an authored metadata refinement.
+         */
+        return declarations.getValue() == null
+                && declarations.getProperties() == null
+                && declarations.getContracts() == null
+                && declarations.getReferenceBlueId() == null
+                && declarations.getBlue() == null
+                && declarations.getPreviousBlueId() == null
+                && declarations.getPosition() == null;
+    }
+
+    private static SubscriptionSurfaceInvalidException invalidEmbeddedDeclaration(
+            String message,
+            String scopePath,
+            ProcessorErrorCategory category) {
+        return new SubscriptionSurfaceInvalidException(
+                "Process Embedded " + message,
+                scopePath,
+                ProcessorContractConstants.KEY_EMBEDDED,
+                category);
     }
 
     private static String contractPath(String scopePath, String contractKey) {

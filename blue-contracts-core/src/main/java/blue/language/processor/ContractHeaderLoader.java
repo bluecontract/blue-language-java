@@ -9,10 +9,8 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.TriggeredEventChannel;
-import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.model.wire.JsonPointer;
 import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.mapping.TypeClassResolver;
@@ -119,6 +117,7 @@ final class ContractHeaderLoader {
                     "Unsupported contract type: " + typeBlueId,
                     ProcessorErrorCategory.UnsupportedRuntimeType);
         }
+        validateReservedContractRole(key, contractClass);
     }
 
     ContractBundle load(
@@ -199,6 +198,7 @@ final class ContractHeaderLoader {
                     "Unsupported contract type: " + typeBlueId,
                     ProcessorErrorCategory.UnsupportedRuntimeType);
         }
+        validateReservedContractRole(key, contractClass);
         boolean handlerContract = HandlerContract.class.isAssignableFrom(contractClass);
         List<String> executableBodyFields = handlerContract
                 ? registry.executableBodyFields(typeBlueId)
@@ -223,13 +223,6 @@ final class ContractHeaderLoader {
                             ? recognitionReason
                             : "effective-contract-header");
         }
-        /*
-         * Embedded declaration and member work is metered exactly once by
-         * EmbeddedScopePlanner after structural-cache lookup. Header loading
-         * only preserves the immutable authored declaration.
-         */
-        List<String> meteredEmbeddedPaths = null;
-
         Node executableContract = executableBodies.exactExecutableContract(
                 effectiveContract,
                 deferredFields,
@@ -272,8 +265,7 @@ final class ContractHeaderLoader {
                 typeBlueId,
                 contractNodes,
                 typeBlueIds,
-                recognitionMeter,
-                meteredEmbeddedPaths);
+                recognitionMeter);
         bundle.addEffectiveContractSnapshot(snapshot.build());
     }
 
@@ -290,8 +282,7 @@ final class ContractHeaderLoader {
             String typeBlueId,
             Map<String, FrozenNode> contractNodes,
             Map<String, String> typeBlueIds,
-            ContractRecognitionMeter recognitionMeter,
-            List<String> meteredEmbeddedPaths) {
+            ContractRecognitionMeter recognitionMeter) {
         if (contract instanceof ChannelContract) {
             addChannel(bundle, snapshot, key, (ChannelContract) contract, effectiveContract, typeBlueId);
         } else if (contract instanceof HandlerContract) {
@@ -310,18 +301,16 @@ final class ContractHeaderLoader {
                     recognitionMeter);
         } else if (contract instanceof ProcessEmbedded) {
             ProcessEmbedded embedded = (ProcessEmbedded) contract;
-            if (meteredEmbeddedPaths != null) {
-                embedded.setPaths(meteredEmbeddedPaths);
-            } else {
-                validateEmbeddedPaths(embedded);
-            }
             bundle.setEmbedded(embedded, effectiveContract);
             snapshot.role(EffectiveContractSnapshotConstants.Role.PROCESS_EMBEDDED);
-            FrozenNode paths = effectiveContracts.property(
-                    effectiveContract, ProcessorContractConstants.KEY_PATHS);
-            if (paths != null) {
-                snapshot.deterministicDependency(paths.blueId());
-            }
+            addEmbeddedDeclarationDependency(
+                    snapshot,
+                    effectiveContract,
+                    ProcessorContractConstants.KEY_PATHS);
+            addEmbeddedDeclarationDependency(
+                    snapshot,
+                    effectiveContract,
+                    ProcessorContractConstants.KEY_COLLECTION_PATHS);
         } else if (contract instanceof MarkerContract) {
             bundle.addMarker(key, (MarkerContract) contract, effectiveContract);
             snapshot.role(EffectiveContractSnapshotConstants.Role.MARKER);
@@ -443,97 +432,36 @@ final class ContractHeaderLoader {
         }
     }
 
-    private void validateEmbeddedPaths(ProcessEmbedded embedded) {
-        Set<String> seen = new LinkedHashSet<>();
-        for (String path : embedded.getPaths()) {
-            if (!seen.add(path)) {
-                throw new MustUnderstandFailureException(
-                        "Unique items are required for Process Embedded paths",
-                        ProcessorErrorCategory.PatchBoundaryViolation);
-            }
+    /** Enforces the Contracts 1.0 reserved location for Process Embedded. */
+    private void validateReservedContractRole(
+            String key,
+            Class<?> contractClass) {
+        boolean embeddedKey = ProcessorContractConstants.KEY_EMBEDDED
+                .equals(key);
+        boolean processEmbedded = ProcessEmbedded.class
+                .isAssignableFrom(contractClass);
+        if (embeddedKey == processEmbedded) {
+            return;
         }
+        throw new MustUnderstandFailureException(
+                processEmbedded
+                        ? "Process Embedded must use reserved contract key '"
+                                + ProcessorContractConstants.KEY_EMBEDDED + "'"
+                        : "Reserved contract key '"
+                                + ProcessorContractConstants.KEY_EMBEDDED
+                                + "' must contain Process Embedded",
+                ProcessorErrorCategory.InvalidContractKey);
     }
 
-    private List<String> validateMeteredEmbeddedPaths(
-            String scopePath,
-            String contractKey,
-            FrozenNode contractNode,
-            ContractRecognitionMeter meter) {
-        FrozenNode pathsNode = effectiveContracts.property(
-                contractNode, ProcessorContractConstants.KEY_PATHS);
-        if (pathsNode == null || pathsNode.isEmptyNode()) {
-            return Collections.emptyList();
+    private void addEmbeddedDeclarationDependency(
+            EffectiveContractSnapshot.Builder snapshot,
+            FrozenNode effectiveContract,
+            String field) {
+        FrozenNode declaration = effectiveContracts.property(
+                effectiveContract, field);
+        if (declaration != null) {
+            snapshot.deterministicDependency(declaration.blueId());
         }
-        List<FrozenNode> items = pathsNode.getItems();
-        if (items == null) {
-            throw new MustUnderstandFailureException(
-                    "Process Embedded paths must be a List",
-                    ProcessorErrorCategory.PatchBoundaryViolation);
-        }
-        List<String> paths = new java.util.ArrayList<>(items.size());
-        Set<String> seen = new LinkedHashSet<>();
-        for (int index = 0; index < items.size(); index++) {
-            FrozenNode item = items.get(index);
-            Object value = item != null ? item.getValue() : null;
-            String logicalPath = value instanceof String
-                    ? logicalEmbeddedPath(scopePath, (String) value)
-                    : null;
-            meter.embeddedPathEntryRead(
-                    scopePath, contractKey, index, logicalPath);
-            if (!(value instanceof String)) {
-                throw new MustUnderstandFailureException(
-                        "Process Embedded path must be Text",
-                        ProcessorErrorCategory.PatchBoundaryViolation);
-            }
-            String path = (String) value;
-            meter.embeddedPathSegmentsValidated(
-                    scopePath,
-                    contractKey,
-                    index,
-                    logicalPath,
-                    uncheckedPointerSegmentCount(path));
-            final String normalized;
-            try {
-                normalized = PointerUtils.assertValidRuntimePointer(path);
-            } catch (IllegalArgumentException invalidPointer) {
-                throw new MustUnderstandFailureException(
-                        invalidPointer.getMessage(),
-                        ProcessorErrorCategory.PatchBoundaryViolation);
-            }
-            if (JsonPointer.ROOT.equals(normalized)) {
-                throw new MustUnderstandFailureException(
-                        "Process Embedded path '/' cannot embed its declaring scope",
-                        ProcessorErrorCategory.PatchBoundaryViolation);
-            }
-            if (!seen.add(normalized)) {
-                throw new MustUnderstandFailureException(
-                        "Unique items are required for Process Embedded paths",
-                        ProcessorErrorCategory.PatchBoundaryViolation);
-            }
-            paths.add(normalized);
-        }
-        return Collections.unmodifiableList(paths);
-    }
-
-    private String logicalEmbeddedPath(String scopePath, String rawPath) {
-        try {
-            return PointerUtils.resolvePointer(scopePath, rawPath);
-        } catch (IllegalArgumentException invalidPath) {
-            return rawPath;
-        }
-    }
-
-    private long uncheckedPointerSegmentCount(String pointer) {
-        if (pointer == null || pointer.isEmpty()) {
-            return 1L;
-        }
-        long count = 0L;
-        for (int index = 0; index < pointer.length(); index++) {
-            if (pointer.charAt(index) == '/') {
-                count++;
-            }
-        }
-        return Math.max(1L, count);
     }
 
     @SuppressWarnings("unchecked")

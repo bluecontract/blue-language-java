@@ -260,6 +260,7 @@ class PreparedPatchTransaction implements AutoCloseable {
                         sequenceManager,
                         runtime.scopes().keySet(),
                         runtime.executableBodyFieldsByType,
+                        runtime.entryEmbeddedScopePlans(),
                         roots.resolutionComplete);
         return new SequentialPatchPlanningSession(
                 originScope,

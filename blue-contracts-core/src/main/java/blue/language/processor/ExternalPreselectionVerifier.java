@@ -251,6 +251,10 @@ final class ExternalPreselectionVerifier {
             throw exception;
         } catch (InvalidExecutionEvidenceException exception) {
             throw exception;
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            throw exception;
+        } catch (PortableLimitExceededException exception) {
+            throw exception;
         } catch (RuntimeException exception) {
             if (BlueLanguageErrorClassifier.classify(exception)
                     == BlueLanguageErrorCategory.ProviderUnavailable) {

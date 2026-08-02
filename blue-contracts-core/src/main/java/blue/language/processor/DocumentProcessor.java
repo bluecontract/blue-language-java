@@ -509,24 +509,45 @@ public class DocumentProcessor implements AutoCloseable {
             return new Builder(Objects.requireNonNull(processor, "processor"));
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Replaces the runtime contract registry.
+         *
+         * @param registry registry to snapshot when building
+         * @return this builder
+         */
         public Builder runtimeRegistry(
                 ContractProcessorRegistry registry) {
             return support.runtimeRegistry(registry, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Replaces the contract type resolver.
+         *
+         * @param resolver resolver to snapshot when building
+         * @return this builder
+         */
         public Builder contractTypeResolver(
                 TypeClassResolver resolver) {
             return support.contractTypeResolver(resolver, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Adds annotated contract types discovered in one package.
+         *
+         * @param packageName package to scan
+         * @return this builder
+         */
         public Builder scanContractTypes(String packageName) {
             return support.scanContractTypes(packageName, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Registers one Java contract model under an exact runtime BlueId.
+         *
+         * @param blueId exact runtime type identity
+         * @param contractType Java contract model
+         * @return this builder
+         */
         public Builder registerContractType(
                 String blueId,
                 Class<? extends Contract> contractType) {
@@ -534,13 +555,24 @@ public class DocumentProcessor implements AutoCloseable {
                     blueId, contractType, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Registers a processor that declares its own runtime type.
+         *
+         * @param processor processor to register
+         * @return this builder
+         */
         public Builder registerContractProcessor(
                 ContractProcessor<? extends Contract> processor) {
             return support.registerContractProcessor(processor, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Registers a processor under an exact runtime BlueId.
+         *
+         * @param blueId exact runtime type identity
+         * @param processor processor to register
+         * @return this builder
+         */
         public Builder registerContractProcessor(
                 String blueId,
                 ContractProcessor<? extends Contract> processor) {
@@ -548,7 +580,14 @@ public class DocumentProcessor implements AutoCloseable {
                     blueId, processor, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Registers a processor with its canonical runtime type node.
+         *
+         * @param blueId exact runtime type identity
+         * @param canonicalTypeNode canonical direct-identity input
+         * @param processor processor to register
+         * @return this builder
+         */
         public Builder registerContractProcessor(
                 String blueId,
                 Node canonicalTypeNode,
@@ -557,74 +596,139 @@ public class DocumentProcessor implements AutoCloseable {
                     blueId, canonicalTypeNode, processor, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Replaces the optional conformance engine.
+         *
+         * @param engine conformance engine, or {@code null}
+         * @return this builder
+         */
         public Builder conformanceEngine(
                 ConformanceEngine engine) {
             return support.conformanceEngine(engine, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Replaces the optional conformance planner override.
+         *
+         * @param override planner override, or {@code null}
+         * @return this builder
+         */
         public Builder conformancePlannerOverride(
                 ConformancePlannerOverride override) {
             return support.conformancePlannerOverride(override, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Selects the verified snapshot store used for exact evidence.
+         *
+         * @param store snapshot manager, or {@code null}
+         * @return this builder
+         */
         public Builder snapshotStore(
                 ProcessingSnapshotManager store) {
             return support.snapshotStore(store, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Replaces contract matching behavior.
+         *
+         * @param service matching service
+         * @return this builder
+         */
         public Builder matchingService(
                 ContractMatchingService service) {
             return support.matchingService(service, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Selects the exact Contracts gas schedule.
+         *
+         * @param schedule gas schedule
+         * @return this builder
+         */
         public Builder gasSchedule(GasSchedule schedule) {
             return support.gasSchedule(schedule, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Sets the maximum admitted gas for one invocation.
+         *
+         * @param limit non-negative gas limit
+         * @return this builder
+         */
         public Builder gasLimit(long limit) {
             return support.gasLimit(limit, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Binds generated evidence to an exact runtime registry identity.
+         *
+         * @param identity nonblank registry identity
+         * @return this builder
+         */
         public Builder runtimeRegistryIdentity(String identity) {
             return support.runtimeRegistryIdentity(identity, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Selects the complete external-delivery plan deriver.
+         *
+         * @param deriver plan deriver
+         * @return this builder
+         */
         public Builder deliveryPlanDeriver(
                 ExternalDeliveryPlanDeriver deriver) {
             return support.deliveryPlanDeriver(deriver, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Selects the external-delivery evidence verifier.
+         *
+         * @param verifier evidence verifier
+         * @return this builder
+         */
         public Builder evidenceVerifier(
                 ExternalDeliveryEvidenceVerifier verifier) {
             return support.evidenceVerifier(verifier, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Selects final subscription-surface validation behavior.
+         *
+         * @param validator subscription validator
+         * @return this builder
+         */
         public Builder subscriptionSurfaceValidator(
                 SubscriptionSurfaceValidator validator) {
             return support.subscriptionSurfaceValidator(validator, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Wraps one exact node provider as the snapshot evidence source.
+         *
+         * @param provider exact node provider
+         * @return this builder
+         */
         public Builder nodeProvider(NodeProvider provider) {
             return support.nodeProvider(provider, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Selects the failure-isolated processing observer.
+         *
+         * @param observer processing observer
+         * @return this builder
+         */
         public Builder observer(ProcessingObserver observer) {
             return support.observer(observer, this);
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Selects bounded cache policy for processor-owned caches.
+         *
+         * @param policy cache policy
+         * @return this builder
+         */
         public Builder cachePolicy(BlueCachePolicy policy) {
             return support.cachePolicy(policy, this);
         }

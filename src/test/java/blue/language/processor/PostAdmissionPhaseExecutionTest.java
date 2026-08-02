@@ -125,8 +125,10 @@ final class PostAdmissionPhaseExecutionTest {
                 ProcessorContractConstants.KEY_EMBEDDED,
                 failure.diagnostic().detail(
                         ProcessorDiagnosticConstants.FIELD_CONTRACT_KEY));
-        assertTrue(failure.getMessage().contains(
-                "Process Embedded traversal into cyclic-set member"));
+        assertEquals(
+                "Process Embedded cannot cross cyclic-set member boundary: "
+                        + CYCLIC_MEMBER_POINTER,
+                failure.getMessage());
     }
 
     @Test

@@ -193,17 +193,32 @@ final class DocumentUpdateRouter {
         return matching;
     }
 
-    private boolean affectsEmbeddedSubscriptionSurface(
+    static boolean affectsEmbeddedSubscriptionSurface(
             String scopePath,
             String changedPath) {
-        String embeddedPaths = ProcessorEngine.resolvePointer(
-                scopePath,
-                ProcessorPointerConstants.RELATIVE_EMBEDDED_PATHS);
         String normalizedChange = PointerUtils.normalizePointer(changedPath);
+        return affectsEmbeddedDeclaration(
+                scopePath,
+                normalizedChange,
+                ProcessorPointerConstants.RELATIVE_EMBEDDED_PATHS)
+                || affectsEmbeddedDeclaration(
+                        scopePath,
+                        normalizedChange,
+                        ProcessorPointerConstants
+                                .RELATIVE_EMBEDDED_COLLECTION_PATHS);
+    }
+
+    private static boolean affectsEmbeddedDeclaration(
+            String scopePath,
+            String normalizedChange,
+            String relativeDeclarationPath) {
+        String declarationPath = ProcessorEngine.resolvePointer(
+                scopePath,
+                relativeDeclarationPath);
         return PointerUtils.descendantOrEqual(
-                normalizedChange, embeddedPaths)
+                normalizedChange, declarationPath)
                 || PointerUtils.descendantOrEqual(
-                embeddedPaths, normalizedChange);
+                declarationPath, normalizedChange);
     }
 
     /** One participating scope and its already-selected matching channels. */

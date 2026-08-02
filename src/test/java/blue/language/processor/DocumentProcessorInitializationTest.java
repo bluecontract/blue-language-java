@@ -370,7 +370,7 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
-    void shouldVerifyNonObjectEmbeddedChildTerminatesDuringPhase1WithoutInitialization() {
+    void shouldRejectNonObjectEmbeddedChildBeforeInitialization() {
         // given
         Blue blue = ProcessorTestSupport.blue();
         RecordingProcessingObserver metrics = new RecordingProcessingObserver();
@@ -394,9 +394,11 @@ class DocumentProcessorInitializationTest {
 
         // then
         assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertEquals(
+                ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                result.status());
         assertFalse(result.commits());
-        assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
+        assertEquals(ProcessorErrorCategory.EmbeddedScopeNotObject,
                 diagnosticCategory(result));
         assertEquals(exactInput,
                 result.document().toString());

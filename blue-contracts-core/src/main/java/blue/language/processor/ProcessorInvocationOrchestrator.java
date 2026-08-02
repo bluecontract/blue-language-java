@@ -47,6 +47,17 @@ final class ProcessorInvocationOrchestrator {
                     document.clone(),
                     exception.getMessage(),
                     exception.errorCategory());
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            if (execution == null) {
+                return DocumentProcessingResult.nonCommitting(
+                        document.clone(),
+                        0L,
+                        ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                        exception.diagnostic());
+            }
+            execution.fail(
+                    ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                    exception.diagnostic());
         } catch (IllegalArgumentException exception) {
             if (ScopeIdentityErrorMapper.isProviderIdentityFailure(exception)) {
                 throw exception;
@@ -90,6 +101,17 @@ final class ProcessorInvocationOrchestrator {
                     snapshot.resolvedRoot(),
                     exception.getMessage(),
                     exception.errorCategory());
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            if (execution == null) {
+                return DocumentProcessingResult.nonCommitting(
+                        snapshot.canonicalRoot(),
+                        0L,
+                        ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                        exception.diagnostic());
+            }
+            execution.fail(
+                    ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                    exception.diagnostic());
         } catch (IllegalArgumentException exception) {
             if (ScopeIdentityErrorMapper.isProviderIdentityFailure(exception)) {
                 throw exception;

@@ -58,6 +58,7 @@ public final class WorkingDocument implements AutoCloseable {
     private final Set<String> openedScopePaths;
     private final Map<String, List<String>>
             executableBodyFieldsByType;
+    private final Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans;
     private ProcessingSnapshotManager workingSequenceManager;
     private ResolvedSnapshot snapshot;
     private boolean resolutionComplete;
@@ -106,6 +107,40 @@ public final class WorkingDocument implements AutoCloseable {
                     Map<String, List<String>>
                             executableBodyFieldsByType,
                     boolean resolutionComplete) {
+        this(
+                originScope,
+                canonicalRoot,
+                resolvedRoot,
+                conformanceEngine,
+                conformancePlannerOverride,
+                snapshotManager,
+                snapshot,
+                materializedFallback,
+                exactReplacement,
+                mutablePatchSource,
+                metrics,
+                openedScopePaths,
+                executableBodyFieldsByType,
+                Collections.<String, EmbeddedScopePlan>emptyMap(),
+                resolutionComplete);
+    }
+
+    WorkingDocument(String originScope,
+                    FrozenNode canonicalRoot,
+                    FrozenNode resolvedRoot,
+                    ConformanceEngine conformanceEngine,
+                    ConformancePlannerOverride conformancePlannerOverride,
+                    ProcessingSnapshotManager snapshotManager,
+                    ResolvedSnapshot snapshot,
+                    boolean materializedFallback,
+                    boolean exactReplacement,
+                    PatchSource mutablePatchSource,
+                    ProcessingObserver metrics,
+                    Iterable<String> openedScopePaths,
+                    Map<String, List<String>>
+                            executableBodyFieldsByType,
+                    Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
+                    boolean resolutionComplete) {
         this.originScope = PointerUtils.normalizeScope(originScope);
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
@@ -124,6 +159,10 @@ public final class WorkingDocument implements AutoCloseable {
         this.executableBodyFieldsByType =
                 immutableExecutableBodyFields(
                         executableBodyFieldsByType);
+        this.entryEmbeddedScopePlans = Collections.unmodifiableMap(
+                new LinkedHashMap<>(Objects.requireNonNull(
+                        entryEmbeddedScopePlans,
+                        "entryEmbeddedScopePlans")));
         this.resolutionComplete = resolutionComplete;
         this.workingSequenceManager = snapshotManager != null
                 ? snapshotManager.transientSequence()
@@ -270,6 +309,7 @@ public final class WorkingDocument implements AutoCloseable {
                         sequenceManager,
                         openedScopePaths,
                         executableBodyFieldsByType,
+                        entryEmbeddedScopePlans,
                         resolutionComplete);
         SequentialPatchPlanningSession planningSession = new SequentialPatchPlanningSession(
                 this.originScope,

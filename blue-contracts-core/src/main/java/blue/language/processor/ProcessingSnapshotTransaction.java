@@ -67,8 +67,10 @@ final class ProcessingSnapshotTransaction {
                     planner,
                     false,
                     null,
+                    manager,
                     runtime.scopes().keySet(),
                     runtime.executableBodyFieldsByType,
+                    runtime.entryEmbeddedScopePlans(),
                     true);
         }
         ResolvedSnapshot base = runtime.snapshot != null
@@ -80,8 +82,10 @@ final class ProcessingSnapshotTransaction {
                 ImmutablePatchPlanner.forFrozen(base.frozenResolvedRoot()),
                 !runtime.selectedDocumentBacked,
                 !runtime.selectedDocumentBacked ? manager : null,
+                manager,
                 runtime.scopes().keySet(),
                 runtime.executableBodyFieldsByType,
+                runtime.entryEmbeddedScopePlans(),
                 base.isResolutionComplete());
     }
 

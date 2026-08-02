@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,27 +48,116 @@ final class ProtectedStateGuard {
                                 FrozenNode afterCanonical,
                                 FrozenNode afterResolved,
                                 Set<String> wholeEmbeddedChildPatches) {
-        Set<String> participatingScopes = participatingScopes(
-                beforeResolved);
-        participatingScopes.addAll(participatingScopes(afterResolved));
+        verifyUnchanged(
+                beforeCanonical,
+                beforeResolved,
+                afterCanonical,
+                afterResolved,
+                wholeEmbeddedChildPatches,
+                null,
+                false,
+                null);
+    }
+
+    static void verifyUnchanged(FrozenNode beforeCanonical,
+                                FrozenNode beforeResolved,
+                                FrozenNode afterCanonical,
+                                FrozenNode afterResolved,
+                                Set<String> wholeEmbeddedChildPatches,
+                                ProcessingSnapshotManager evidenceManager) {
+        verifyUnchanged(
+                beforeCanonical,
+                beforeResolved,
+                afterCanonical,
+                afterResolved,
+                wholeEmbeddedChildPatches,
+                evidenceManager,
+                true,
+                null);
+    }
+
+    /**
+     * Verifies the processor-owned state of the revision-bound participating
+     * closure. The caller supplies the scopes already opened by this
+     * invocation so an application patch cannot turn protected-state checking
+     * into a complete scan of unrelated embedded branches.
+     */
+    static void verifyUnchanged(FrozenNode beforeCanonical,
+                                FrozenNode beforeResolved,
+                                FrozenNode afterCanonical,
+                                FrozenNode afterResolved,
+                                Set<String> wholeEmbeddedChildPatches,
+                                ProcessingSnapshotManager evidenceManager,
+                                Set<String> participatingScopePaths) {
+        verifyUnchanged(
+                beforeCanonical,
+                beforeResolved,
+                afterCanonical,
+                afterResolved,
+                wholeEmbeddedChildPatches,
+                evidenceManager,
+                true,
+                participatingScopePaths);
+    }
+
+    private static void verifyUnchanged(FrozenNode beforeCanonical,
+                                        FrozenNode beforeResolved,
+                                        FrozenNode afterCanonical,
+                                        FrozenNode afterResolved,
+                                        Set<String> wholeEmbeddedChildPatches,
+                                        ProcessingSnapshotManager evidenceManager,
+                                        boolean requireExactEvidence,
+                                        Set<String> fixedParticipatingScopes) {
+        Set<String> participatingScopes = fixedParticipatingScopes != null
+                ? normalizedScopes(fixedParticipatingScopes)
+                : participatingScopes(
+                        beforeResolved,
+                        evidenceManager,
+                        requireExactEvidence);
+        if (fixedParticipatingScopes == null) {
+            participatingScopes.addAll(participatingScopes(
+                    afterResolved,
+                    evidenceManager,
+                    requireExactEvidence));
+        }
         Map<String, String> before = snapshot(
-                beforeCanonical, beforeResolved, participatingScopes);
+                beforeCanonical,
+                beforeResolved,
+                participatingScopes,
+                evidenceManager,
+                requireExactEvidence);
         Map<String, String> after = snapshot(
                 afterCanonical,
                 afterResolved,
-                participatingScopes);
+                participatingScopes,
+                evidenceManager,
+                requireExactEvidence);
         verifyEqual(before, after, wholeEmbeddedChildPatches);
+    }
+
+    private static Set<String> normalizedScopes(Set<String> scopePaths) {
+        Set<String> result = new LinkedHashSet<>();
+        result.add(JsonPointer.ROOT);
+        if (scopePaths != null) {
+            for (String scopePath : scopePaths) {
+                if (scopePath != null) {
+                    result.add(PointerUtils.normalizeScope(scopePath));
+                }
+            }
+        }
+        return result;
     }
 
     static void verifyEffectiveUnchanged(FrozenNode beforeResolved,
                                          FrozenNode afterResolved) {
         Set<String> participatingScopes = participatingScopes(
-                beforeResolved);
-        participatingScopes.addAll(participatingScopes(afterResolved));
+                beforeResolved, null, false);
+        participatingScopes.addAll(participatingScopes(
+                afterResolved, null, false));
         Map<String, String> before = effectiveSnapshot(
-                beforeResolved, participatingScopes);
+                beforeResolved, participatingScopes, null, false);
         Map<String, String> after = effectiveSnapshot(
-                afterResolved, participatingScopes);
+                afterResolved, participatingScopes, null, false);
         verifyEqual(before, after);
     }
 
@@ -145,11 +233,20 @@ final class ProtectedStateGuard {
 
     private static Map<String, String> effectiveSnapshot(
             FrozenNode resolved,
-            Set<String> scopes) {
+            Set<String> scopes,
+            ProcessingSnapshotManager evidenceManager,
+            boolean requireExactEvidence) {
         Map<String, String> result = new LinkedHashMap<>();
         for (String scope : scopes) {
+            FrozenNode resolvedScope = resolved != null
+                    ? resolved.at(scope)
+                    : null;
             collectEffective(
-                    resolved != null ? resolved.at(scope) : null,
+                    resolvedContent(
+                            resolvedScope,
+                            scope,
+                            evidenceManager,
+                            requireExactEvidence),
                     scope,
                     result);
         }
@@ -158,15 +255,29 @@ final class ProtectedStateGuard {
 
     private static Map<String, String> snapshot(FrozenNode canonical,
                                                 FrozenNode resolved,
-                                                Set<String> scopes) {
+                                                Set<String> scopes,
+                                                ProcessingSnapshotManager evidenceManager,
+                                                boolean requireExactEvidence) {
         Map<String, String> result = new LinkedHashMap<>();
         for (String scope : scopes) {
-            collectDirect(canonical != null
-                            ? canonical.at(scope)
-                            : null,
+            FrozenNode canonicalScope = canonical != null
+                    ? canonical.at(scope)
+                    : null;
+            FrozenNode resolvedScope = resolved != null
+                    ? resolved.at(scope)
+                    : null;
+            collectDirect(exactContent(
+                            canonicalScope,
+                            scope,
+                            evidenceManager,
+                            requireExactEvidence),
                     scope,
                     result);
-            collectEffective(resolved != null ? resolved.at(scope) : null,
+            collectEffective(resolvedContent(
+                            resolvedScope,
+                            scope,
+                            evidenceManager,
+                            requireExactEvidence),
                     scope,
                     result);
         }
@@ -179,7 +290,10 @@ final class ProtectedStateGuard {
      * entries are application data, even when they happen to contain a field
      * named {@code contracts}.
      */
-    private static Set<String> participatingScopes(FrozenNode resolvedRoot) {
+    private static Set<String> participatingScopes(
+            FrozenNode resolvedRoot,
+            ProcessingSnapshotManager evidenceManager,
+            boolean requireExactEvidence) {
         Set<String> result = new LinkedHashSet<>();
         result.add("/");
         if (resolvedRoot == null) {
@@ -189,47 +303,79 @@ final class ProtectedStateGuard {
         pending.add("/");
         while (!pending.isEmpty()) {
             String scope = pending.removeFirst();
-            FrozenNode scopeNode = resolvedRoot.at(scope);
-            FrozenNode embedded = contract(
-                    scopeNode,
-                    ProcessorContractConstants.KEY_EMBEDDED);
-            FrozenNode paths = embedded != null
-                    ? embedded.property(
-                    ProcessorContractConstants.KEY_PATHS)
-                    : null;
-            List<FrozenNode> items = paths != null
-                    ? paths.getItems()
-                    : null;
-            if (items == null) {
+            FrozenNode scopeNode = resolvedContent(
+                    resolvedRoot.at(scope),
+                    scope,
+                    evidenceManager,
+                    requireExactEvidence);
+            EmbeddedScopePlan plan = requireExactEvidence
+                    ? ProcessingSnapshotBootstrap.embeddedScopePlan(
+                            scopeNode, scope, evidenceManager)
+                    : ProcessingSnapshotBootstrap
+                            .embeddedScopePlanIfAvailable(
+                                    scopeNode, scope);
+            if (plan == null) {
                 continue;
             }
-            for (FrozenNode item : items) {
-                Object value = item != null ? item.getValue() : null;
-                if (!(value instanceof String)) {
-                    continue;
+            for (String child : plan.concreteChildPaths()) {
+                if (result.add(child)) {
+                    pending.addLast(child);
                 }
-                String child;
-                String relative;
-                try {
-                    relative = PointerUtils
-                            .assertValidRuntimePointer((String) value);
-                    child = PointerUtils.resolvePointer(scope, relative);
-                } catch (IllegalArgumentException invalidPath) {
-                    /*
-                     * Shape and boundary validation own malformed declarations.
-                     * Protected-state comparison must not reclassify them.
-                     */
-                    continue;
-                }
-                FrozenNode childNode = objectMemberAt(
-                        scopeNode, relative);
-                if (!isObjectScope(childNode) || !result.add(child)) {
-                    continue;
-                }
-                pending.addLast(child);
             }
         }
         return result;
+    }
+
+    private static FrozenNode exactContent(
+            FrozenNode node,
+            String scopePath,
+            ProcessingSnapshotManager evidenceManager,
+            boolean requireExactEvidence) {
+        if (node == null || !node.isReferenceOnly()) {
+            return node;
+        }
+        if (!requireExactEvidence) {
+            return node;
+        }
+        if (evidenceManager == null) {
+            throw missingEvidence(node, scopePath);
+        }
+        FrozenNode exact = evidenceManager
+                .materializeVerifiedExactReference(node);
+        if (exact == null || exact.isReferenceOnly()) {
+            throw new InvalidExecutionEvidenceException(
+                    "Verified exact content was not found for protected "
+                            + "scope " + scopePath,
+                    ProcessorErrorCategory.InvalidProcessingDocument);
+        }
+        return exact;
+    }
+
+    private static FrozenNode resolvedContent(
+            FrozenNode node,
+            String scopePath,
+            ProcessingSnapshotManager evidenceManager,
+            boolean requireExactEvidence) {
+        FrozenNode exact = exactContent(
+                node, scopePath, evidenceManager, requireExactEvidence);
+        if (exact == null
+                || !requireExactEvidence
+                || node == null
+                || !node.isReferenceOnly()) {
+            return exact;
+        }
+        return evidenceManager.fromDocumentTransient(exact.toNode())
+                .frozenResolvedRoot();
+    }
+
+    private static ExecutionEvidenceUnavailableException missingEvidence(
+            FrozenNode reference,
+            String scopePath) {
+        return new ExecutionEvidenceUnavailableException(
+                "Verified exact content is required for protected scope "
+                        + scopePath,
+                Collections.singletonList(
+                        reference.getReferenceBlueId()));
     }
 
     private static void collectDirect(FrozenNode node,
@@ -256,12 +402,17 @@ final class ProtectedStateGuard {
         }
         FrozenNode contracts = node.getContracts();
         if (contracts != null) {
-            putEffectiveIdentity(result,
-                    "effective:" + contractPath(
-                            path,
-                            ProcessorContractConstants.KEY_EMBEDDED),
-                    withoutEmbeddedPaths(contracts.property(
-                            ProcessorContractConstants.KEY_EMBEDDED)));
+            FrozenNode embedded = contracts.property(
+                    ProcessorContractConstants.KEY_EMBEDDED);
+            if (ProcessingSnapshotBootstrap
+                    .isProcessEmbeddedContract(embedded)) {
+                putEffectiveIdentity(
+                        result,
+                        "effective:" + contractPath(
+                                path,
+                                ProcessorContractConstants.KEY_EMBEDDED),
+                        withoutEmbeddedPaths(embedded));
+            }
             putEffectiveIdentity(result,
                     "effective:" + contractPath(
                             path,
@@ -269,30 +420,6 @@ final class ProtectedStateGuard {
                     contracts.property(
                             ProcessorContractConstants.KEY_GENERALIZATION));
         }
-    }
-
-    private static FrozenNode contract(FrozenNode scope, String key) {
-        FrozenNode contracts = scope != null ? scope.getContracts() : null;
-        return contracts != null ? contracts.property(key) : null;
-    }
-
-    private static FrozenNode objectMemberAt(FrozenNode scope,
-                                             String relativePath) {
-        FrozenNode current = scope;
-        for (String segment : JsonPointer.split(relativePath)) {
-            if (!isObjectScope(current)) {
-                return null;
-            }
-            current = current.property(segment);
-        }
-        return current;
-    }
-
-    private static boolean isObjectScope(FrozenNode node) {
-        return node != null
-                && node.getValue() == null
-                && !node.hasItems()
-                && !node.isReferenceOnly();
     }
 
     private static FrozenNode withoutEmbeddedPaths(FrozenNode embedded) {

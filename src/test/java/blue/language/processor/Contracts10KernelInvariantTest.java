@@ -269,7 +269,8 @@ final class Contracts10KernelInvariantTest {
                                         blue.language.processor.registry
                                                 .RuntimeBlueIds
                                                 .PROCESS_EMBEDDED))
-                                .properties("paths", new Node().items())));
+                                .properties("paths", new Node().items(
+                                        new Node().value("/reserved")))));
         Node after = before.clone();
         after.getContracts()
                 .getProperties().get("embedded")
@@ -302,7 +303,8 @@ final class Contracts10KernelInvariantTest {
         assertEquals(SubscriptionSurfaceInvalidException.class,
                 failure.getClass());
         assertTrue(failure.getMessage().contains(
-                "finite non-empty subscription key set"));
+                "finite non-empty subscription key set"),
+                failure.getMessage());
     }
 
     @Test

@@ -317,6 +317,7 @@ final class ProcessingDocumentView {
                     runtime.metrics,
                     runtime.scopes().keySet(),
                     runtime.executableBodyFieldsByType,
+                    runtime.entryEmbeddedScopePlans(),
                     current.isResolutionComplete());
         }
         Node root = runtime.materializedView.copyRoot();
@@ -337,6 +338,7 @@ final class ProcessingDocumentView {
                 runtime.metrics,
                 runtime.scopes().keySet(),
                 runtime.executableBodyFieldsByType,
+                runtime.entryEmbeddedScopePlans(),
                 true);
     }
 

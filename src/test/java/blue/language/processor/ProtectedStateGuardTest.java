@@ -1,6 +1,10 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
@@ -311,7 +315,7 @@ final class ProtectedStateGuardTest {
     }
 
     @Test
-    void shouldVerifyMalformedEmbeddedListRouteDoesNotTurnListItemIntoScope() {
+    void shouldRejectMalformedListRouteWithoutTreatingListItemAsScope() {
         // given
         Node beforeNode = rootWithEmbedded(
                 new Node().items(new Node().value("/rows/0")),
@@ -333,15 +337,21 @@ final class ProtectedStateGuardTest {
                         new Node().properties(
                                 "value",
                                 new Node().value("after")));
-        Throwable failure = FailureCapture.captureFailure(
+        SubscriptionSurfaceInvalidException failure =
+                FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         frozen(beforeNode),
                         frozen(beforeNode),
                         frozen(afterNode),
-                        frozen(afterNode)));
+                        frozen(afterNode),
+                        Collections.<String>emptySet(),
+                        null));
 
         // then
-        assertNull(failure);
+        assertNotNull(failure);
+        assertEquals(
+                ProcessorErrorCategory.InvalidRuntimePointer,
+                failure.diagnostic().category());
     }
 
     @Test
@@ -360,6 +370,30 @@ final class ProtectedStateGuardTest {
                         frozen(beforeNode),
                         frozen(afterNode),
                         frozen(afterNode)));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                ProcessorErrorCategory.ProtectedProcessorStateMutation,
+                failure.errorCategory());
+    }
+
+    @Test
+    void shouldVerifyDirectHistoryAtCollectionGeneratedScopeCannotChange() {
+        // given
+        Node beforeNode = rootWithEmbeddedCollectionChild(
+                childWithMarker("checkpoint", "before"));
+        Node afterNode = rootWithEmbeddedCollectionChild(
+                childWithMarker("checkpoint", "after"));
+
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
+                        () -> ProtectedStateGuard.verifyUnchanged(
+                                frozen(beforeNode),
+                                frozen(beforeNode),
+                                frozen(afterNode),
+                                frozen(afterNode)));
 
         // then
         assertNotNull(failure);
@@ -512,10 +546,97 @@ final class ProtectedStateGuardTest {
         assertNull(failure);
     }
 
+    @Test
+    void shouldRequireUnavailableEvidenceForProtectedCollectionScopes() {
+        // given
+        Node exactCollection = new Node().properties(
+                "lesson-a",
+                new Node().properties(
+                        "state", new Node().value("ready")));
+        String collectionBlueId = FrozenNode.fromNode(exactCollection)
+                .blueId();
+        Node root = rootWithCollection(
+                new Node().blueId(collectionBlueId));
+        FrozenNode frozenRoot = frozen(root);
+        ProcessingSnapshotManager manager = unavailableManager(
+                collectionBlueId);
+
+        // when
+        ExecutionEvidenceUnavailableException failure =
+                FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozenRoot,
+                        frozenRoot,
+                        frozenRoot,
+                        frozenRoot,
+                        Collections.<String>emptySet(),
+                        manager));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                Collections.singletonList(collectionBlueId),
+                failure.requiredExactBlueIds());
+    }
+
+    @Test
+    void shouldRejectProtectedStateInsideNewCollectionMember() {
+        // given
+        Node beforeNode = rootWithCollection(new Node());
+        Node afterNode = rootWithCollection(
+                new Node().properties(
+                        "lesson-a",
+                        childWithMarker("checkpoint", "forged")));
+
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(afterNode),
+                        frozen(afterNode),
+                        Collections.<String>emptySet(),
+                        null));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                ProcessorErrorCategory.ProtectedProcessorStateMutation,
+                failure.errorCategory());
+    }
+
+    @Test
+    void shouldNotHideInvalidTentativeCollectionSurface() {
+        // given
+        Node beforeNode = rootWithCollection(
+                new Node().properties(
+                        "lesson-a", new Node()));
+        Node afterNode = rootWithCollection(
+                new Node().items(new Node().value("not-an-object")));
+
+        // when
+        SubscriptionSurfaceInvalidException failure =
+                FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(afterNode),
+                        frozen(afterNode),
+                        Collections.<String>emptySet(),
+                        null));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                ProcessorErrorCategory.EmbeddedCollectionMustBeObject,
+                failure.diagnostic().category());
+    }
+
     private static Node rootWithEmbedded(Node paths, Node policy) {
         Node embedded = new Node()
                 .type(new Node().blueId(
-                        "11111111111111111111111111111111"))
+                        RuntimeBlueIds.PROCESS_EMBEDDED))
                 .properties(
                         "paths", paths,
                         "policy", policy);
@@ -528,6 +649,28 @@ final class ProtectedStateGuardTest {
                 new Node().items(new Node().value("/child")),
                 new Node().value(7))
                 .properties("child", child);
+    }
+
+    private static Node rootWithEmbeddedCollectionChild(Node child) {
+        return rootWithCollection(new Node().properties(
+                "lesson-a", child));
+    }
+
+    private static Node rootWithCollection(Node collection) {
+        Node embedded = new Node()
+                .type(new Node().blueId(
+                        RuntimeBlueIds.PROCESS_EMBEDDED))
+                .properties(
+                        ProcessorContractConstants.KEY_COLLECTION_PATHS,
+                        new Node().items(
+                                new Node().value("/lessons")),
+                        "policy",
+                        new Node().value(7));
+        return new Node()
+                .contracts(new Node().properties(
+                        ProcessorContractConstants.KEY_EMBEDDED,
+                        embedded))
+                .properties("lessons", collection);
     }
 
     private static Node childDeclaringGrandchild(Node grandchild) {
@@ -560,5 +703,32 @@ final class ProtectedStateGuardTest {
 
     private static FrozenNode frozen(Node node) {
         return FrozenNode.fromResolvedNode(node);
+    }
+
+    private static ProcessingSnapshotManager unavailableManager(
+            String requiredBlueId) {
+        return new ProcessingSnapshotManager() {
+            @Override
+            public ResolvedSnapshot fromDocument(Node document) {
+                throw new UnsupportedOperationException(
+                        "Resolution is not expected in this test");
+            }
+
+            @Override
+            public ResolvedSnapshot applyPatch(
+                    ResolvedSnapshot snapshot,
+                    JsonPatch patch) {
+                throw new UnsupportedOperationException(
+                        "Patching is not expected in this test");
+            }
+
+            @Override
+            public FrozenNode materializeVerifiedExactReference(
+                    FrozenNode reference) {
+                throw new ExecutionEvidenceUnavailableException(
+                        "Collection evidence is unavailable",
+                        Collections.singletonList(requiredBlueId));
+            }
+        };
     }
 }

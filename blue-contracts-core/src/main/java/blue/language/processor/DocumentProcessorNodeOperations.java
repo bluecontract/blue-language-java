@@ -64,6 +64,11 @@ final class DocumentProcessorNodeOperations {
                     admittedRoot,
                     admittedEvent,
                     evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return support.subscriptionSurfaceInvalidResult(
+                    document, exception);
+        } catch (PortableLimitExceededException exception) {
+            return support.portableLimitResult(document, exception);
         } catch (InvalidExecutionEvidenceException exception) {
             return support.invalidExternalDeliveryResult(
                     document, exception);
@@ -104,6 +109,11 @@ final class DocumentProcessorNodeOperations {
                     admittedRoot,
                     admittedEvent,
                     evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return support.subscriptionSurfaceInvalidResult(
+                    document, exception);
+        } catch (PortableLimitExceededException exception) {
+            return support.portableLimitResult(document, exception);
         } catch (InvalidExecutionEvidenceException exception) {
             return invalidExplicitEvidenceResult(document, exception);
         }
@@ -148,6 +158,15 @@ final class DocumentProcessorNodeOperations {
                             admittedRoot,
                             event,
                             evidence));
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return support.platformFailure(
+                    evidence,
+                    support.subscriptionSurfaceInvalidResult(
+                            document, exception));
+        } catch (PortableLimitExceededException exception) {
+            return support.platformFailure(
+                    evidence,
+                    support.portableLimitResult(document, exception));
         }
     }
 
@@ -182,6 +201,15 @@ final class DocumentProcessorNodeOperations {
                     admittedRoot,
                     admittedEvent,
                     evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return new ProcessingDebugResult(
+                    support.subscriptionSurfaceInvalidResult(
+                            document, exception),
+                    ProcessingConformanceTrace.empty());
+        } catch (PortableLimitExceededException exception) {
+            return new ProcessingDebugResult(
+                    support.portableLimitResult(document, exception),
+                    ProcessingConformanceTrace.empty());
         } catch (InvalidExecutionEvidenceException exception) {
             return new ProcessingDebugResult(
                     support.invalidExternalDeliveryResult(
@@ -224,6 +252,15 @@ final class DocumentProcessorNodeOperations {
                     admittedRoot,
                     admittedEvent,
                     evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return new ProcessingDebugResult(
+                    support.subscriptionSurfaceInvalidResult(
+                            document, exception),
+                    ProcessingConformanceTrace.empty());
+        } catch (PortableLimitExceededException exception) {
+            return new ProcessingDebugResult(
+                    support.portableLimitResult(document, exception),
+                    ProcessingConformanceTrace.empty());
         } catch (InvalidExecutionEvidenceException exception) {
             return new ProcessingDebugResult(
                     invalidExplicitEvidenceResult(document, exception),
@@ -267,6 +304,13 @@ final class DocumentProcessorNodeOperations {
                     plan);
         } catch (ExecutionEvidenceUnavailableException exception) {
             return support.needsResources(exception);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return ProcessAttemptResult.complete(
+                    support.subscriptionSurfaceInvalidResult(
+                            document, exception));
+        } catch (PortableLimitExceededException exception) {
+            return ProcessAttemptResult.complete(
+                    support.portableLimitResult(document, exception));
         } catch (InvalidExecutionEvidenceException exception) {
             return support.invalidAttempt(document, exception);
         }
@@ -305,6 +349,13 @@ final class DocumentProcessorNodeOperations {
                 return ProcessAttemptResult.needsResources(missing);
             }
             return completeExplicitAttempt(document, event, evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return ProcessAttemptResult.complete(
+                    support.subscriptionSurfaceInvalidResult(
+                            document, exception));
+        } catch (PortableLimitExceededException exception) {
+            return ProcessAttemptResult.complete(
+                    support.portableLimitResult(document, exception));
         } catch (InvalidExecutionEvidenceException exception) {
             return support.invalidAttempt(document, exception);
         }
@@ -356,6 +407,13 @@ final class DocumentProcessorNodeOperations {
                             evidence));
         } catch (ExecutionEvidenceUnavailableException exception) {
             return support.needsResources(exception);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return ProcessAttemptResult.complete(
+                    support.subscriptionSurfaceInvalidResult(
+                            document, exception));
+        } catch (PortableLimitExceededException exception) {
+            return ProcessAttemptResult.complete(
+                    support.portableLimitResult(document, exception));
         } catch (InvalidExecutionEvidenceException exception) {
             return support.invalidAttempt(document, exception);
         }

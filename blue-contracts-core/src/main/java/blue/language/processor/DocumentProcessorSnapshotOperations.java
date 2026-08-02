@@ -59,6 +59,12 @@ final class DocumentProcessorSnapshotOperations {
                             canonicalRoot, admittedEvent);
             return ProcessorEngine.processDocument(
                     processor, snapshot, admittedEvent, evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return support.subscriptionSurfaceInvalidResult(
+                    snapshot.canonicalRoot(), exception);
+        } catch (PortableLimitExceededException exception) {
+            return support.portableLimitResult(
+                    snapshot.canonicalRoot(), exception);
         } catch (InvalidExecutionEvidenceException exception) {
             return support.invalidExternalDeliveryResult(
                     snapshot.canonicalRoot(), exception);
@@ -94,6 +100,12 @@ final class DocumentProcessorSnapshotOperations {
                     processor.deliveryEvidenceVerifier());
             return ProcessorEngine.processDocument(
                     processor, snapshot, admittedEvent, evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return support.subscriptionSurfaceInvalidResult(
+                    snapshot.canonicalRoot(), exception);
+        } catch (PortableLimitExceededException exception) {
+            return support.portableLimitResult(
+                    snapshot.canonicalRoot(), exception);
         } catch (InvalidExecutionEvidenceException exception) {
             return support.invalidExternalDeliveryResult(
                     snapshot.canonicalRoot(), exception);
@@ -136,6 +148,16 @@ final class DocumentProcessorSnapshotOperations {
                             snapshot,
                             event,
                             evidence));
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return support.platformFailure(
+                    evidence,
+                    support.subscriptionSurfaceInvalidResult(
+                            snapshot.canonicalRoot(), exception));
+        } catch (PortableLimitExceededException exception) {
+            return support.platformFailure(
+                    evidence,
+                    support.portableLimitResult(
+                            snapshot.canonicalRoot(), exception));
         }
     }
 
@@ -164,6 +186,16 @@ final class DocumentProcessorSnapshotOperations {
                             canonicalRoot, admittedEvent);
             return ProcessorEngine.processDocumentWithTrace(
                     processor, snapshot, admittedEvent, evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return failureTrace(
+                    snapshot,
+                    support.subscriptionSurfaceInvalidResult(
+                            snapshot.canonicalRoot(), exception));
+        } catch (PortableLimitExceededException exception) {
+            return failureTrace(
+                    snapshot,
+                    support.portableLimitResult(
+                            snapshot.canonicalRoot(), exception));
         } catch (InvalidExecutionEvidenceException exception) {
             return invalidTrace(snapshot, exception);
         }
@@ -198,6 +230,16 @@ final class DocumentProcessorSnapshotOperations {
                     processor.deliveryEvidenceVerifier());
             return ProcessorEngine.processDocumentWithTrace(
                     processor, snapshot, admittedEvent, evidence);
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return failureTrace(
+                    snapshot,
+                    support.subscriptionSurfaceInvalidResult(
+                            snapshot.canonicalRoot(), exception));
+        } catch (PortableLimitExceededException exception) {
+            return failureTrace(
+                    snapshot,
+                    support.portableLimitResult(
+                            snapshot.canonicalRoot(), exception));
         } catch (InvalidExecutionEvidenceException exception) {
             return invalidTrace(snapshot, exception);
         }
@@ -215,9 +257,17 @@ final class DocumentProcessorSnapshotOperations {
     private ProcessingDebugResult invalidTrace(
             ResolvedSnapshot snapshot,
             InvalidExecutionEvidenceException exception) {
-        return new ProcessingDebugResult(
+        return failureTrace(
+                snapshot,
                 support.invalidExternalDeliveryResult(
-                        snapshot.canonicalRoot(), exception),
+                        snapshot.canonicalRoot(), exception));
+    }
+
+    private ProcessingDebugResult failureTrace(
+            ResolvedSnapshot snapshot,
+            DocumentProcessingResult result) {
+        return new ProcessingDebugResult(
+                result,
                 ProcessingConformanceTrace.empty(),
                 null,
                 snapshot);

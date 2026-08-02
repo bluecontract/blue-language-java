@@ -7,9 +7,7 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
-import java.util.ArrayDeque;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -50,51 +48,37 @@ final class EvidenceClassificationView {
     }
 
     /**
-     * Checks opaque Process Embedded boundaries before a no-match shortcut
-     * can avoid complete contract recognition.
+     * Checks the directly admitted Root marker before a no-match shortcut can
+     * avoid contract recognition. The revision-bound feeder is authoritative
+     * for the already indexed transitive surface, so this preflight must not
+     * recursively reopen every embedded branch on each event.
      */
     void preflightOpaqueProcessEmbeddedBoundaries() {
-        Deque<String> pending = new ArrayDeque<>();
-        Set<String> visited = new LinkedHashSet<>();
-        pending.add(JsonPointer.ROOT);
-        while (!pending.isEmpty()) {
-            String scopePath = ProcessorEngine.normalizeScope(
-                    pending.removeFirst());
-            if (!visited.add(scopePath)) {
-                continue;
-            }
-            FrozenNode selectedScope = runtime.selectedFrozenAt(scopePath);
-            if (!requiresEmbeddedPreflight(selectedScope)) {
-                continue;
-            }
-            FrozenNode effectiveScope = requiresEffectiveScopeResolution(
-                    selectedScope)
-                    ? runtime.resolvedFrozenAt(scopePath)
-                    : selectedScope;
-            if (effectiveScope == null) {
-                continue;
-            }
-            ContractBundle structural = owner.contractLoader()
-                    .loadExternalClassification(
-                            selectedScope,
-                            effectiveScope,
-                            scopePath,
-                            null,
-                            true,
-                            owner.observer());
-            ContractBundle planned = EmbeddedScopeEntryPlans.attach(
-                    runtime,
-                    scopePath,
-                    effectiveScope,
-                    structural);
-            EmbeddedScopePlan plan = planned.embeddedScopePlan();
-            if (plan == null) {
-                continue;
-            }
-            for (String childScope : plan.concreteChildPaths()) {
-                pending.addLast(childScope);
-            }
+        String scopePath = JsonPointer.ROOT;
+        FrozenNode selectedScope = runtime.selectedFrozenAt(scopePath);
+        if (!requiresEmbeddedPreflight(selectedScope)) {
+            return;
         }
+        FrozenNode effectiveScope = requiresEffectiveScopeResolution(
+                selectedScope)
+                ? runtime.resolvedFrozenAt(scopePath)
+                : selectedScope;
+        if (effectiveScope == null) {
+            return;
+        }
+        ContractBundle structural = owner.contractLoader()
+                .loadExternalClassification(
+                        selectedScope,
+                        effectiveScope,
+                        scopePath,
+                        null,
+                        true,
+                        owner.observer());
+        EmbeddedScopeEntryPlans.attach(
+                runtime,
+                scopePath,
+                effectiveScope,
+                structural);
     }
 
     /**

@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.processor.FailureCapture.captureFailure;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_EMBEDDED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -185,7 +185,7 @@ final class ContractRecognitionMeterTest {
     }
 
     @Test
-    void shouldVerifyMalformedProcessEmbeddedBodyChargesItsExactHeaderButNoPathEntry() {
+    void shouldDeferMalformedProcessEmbeddedDeclarationValidationToScopePlanner() {
         // given
         DocumentProcessor processor =
                 DocumentProcessor.builder().build();
@@ -203,20 +203,23 @@ final class ContractRecognitionMeterTest {
         GasMeter gas = new GasMeter();
 
         // when
-        Throwable failure = captureFailure(
-                () -> processor.contractLoader()
-                        .loadExternalClassification(
-                                scope,
-                                scope,
-                                "/",
-                                null,
-                                true,
-                                NoOpProcessingObserver.INSTANCE,
-                                new ContractRecognitionMeter(gas),
-                                "structural-route-header"));
+        ContractBundle bundle = processor.contractLoader()
+                .loadExternalClassification(
+                        scope,
+                        scope,
+                        "/",
+                        null,
+                        true,
+                        NoOpProcessingObserver.INSTANCE,
+                        new ContractRecognitionMeter(gas),
+                        "structural-route-header");
 
         // then
-        assertTrue(failure instanceof MustUnderstandFailureException);
+        assertTrue(bundle.hasProcessEmbedded());
+        assertTrue(bundle.embeddedScopeDeclaration()
+                .explicitPaths().isEmpty());
+        assertTrue(bundle.embeddedScopeDeclaration()
+                .collectionPaths().isEmpty());
         assertEquals(
                 1L,
                 quantity(
@@ -267,22 +270,26 @@ final class ContractRecognitionMeterTest {
     }
 
     @Test
-    void shouldRetainEffectiveProcessEmbeddedDeclarationAtArbitraryKey() {
+    void shouldRetainEffectiveProcessEmbeddedDeclarationAndDependenciesAtReservedKey() {
         // given
         DocumentProcessor processor =
                 DocumentProcessor.builder().build();
         FrozenNode selected =
                 processEmbeddedScope(
-                        "workflowSubscriptions",
+                        KEY_EMBEDDED,
                         false,
-                        "/child",
-                        "/child/grandchild");
+                        Arrays.asList(
+                                "/child",
+                                "/child/grandchild"),
+                        Arrays.asList("/lessons"));
         FrozenNode effective =
                 processEmbeddedScope(
-                        "workflowSubscriptions",
+                        KEY_EMBEDDED,
                         true,
-                        "/child",
-                        "/child/grandchild");
+                        Arrays.asList(
+                                "/child",
+                                "/child/grandchild"),
+                        Arrays.asList("/lessons"));
 
         // when
         ContractBundle bundle =
@@ -304,12 +311,26 @@ final class ContractRecognitionMeterTest {
         assertEquals(
                 RuntimeBlueIds.PROCESS_EMBEDDED,
                 bundle.effectiveContractSnapshot(
-                        "workflowSubscriptions")
+                        KEY_EMBEDDED)
                         .effectiveTypeBlueId());
+        assertEquals(
+                Arrays.asList("/lessons"),
+                bundle.embeddedScopeDeclaration()
+                        .collectionPaths());
+        FrozenNode effectiveEmbedded = effective.getContracts()
+                .property(KEY_EMBEDDED);
+        assertEquals(
+                Arrays.asList(
+                        effectiveEmbedded.property("paths").blueId(),
+                        effectiveEmbedded.property(
+                                "collectionPaths").blueId()),
+                bundle.effectiveContractSnapshot(
+                                KEY_EMBEDDED)
+                        .deterministicDependencyNodeBlueIds());
     }
 
     @Test
-    void shouldVerifyPathEntryExhaustionStopsBeforeTheSecondEntryAndHeader() {
+    void shouldLeaveEmbeddedDeclarationGasToTheEmbeddedScopePlanner() {
         // given
         DocumentProcessor processor =
                 DocumentProcessor.builder().build();
@@ -330,56 +351,20 @@ final class ContractRecognitionMeterTest {
                         new ContractRecognitionMeter(
                                 completeGas),
                         "structural-route-header");
-        List<String> logicalPaths = new ArrayList<>();
-        for (GasTraceEntry entry : completeGas.trace()) {
-            if ("embeddedPathEntryRead".equals(
-                    entry.counter())) {
-                logicalPaths.add(entry.logicalPath());
-            }
-        }
-        long prefix = prefixBeforeSecondPathEntry(
-                completeGas);
-        GasMeter limited =
-                new GasMeter(
-                        GasSchedule.contracts10(),
-                        prefix);
-        Throwable failure =
-                captureFailure(
-                        () -> processor.contractLoader()
-                                .loadExternalClassification(
-                                        scope,
-                                        scope,
-                                        "/",
-                                        null,
-                                        true,
-                                        NoOpProcessingObserver.INSTANCE,
-                                        new ContractRecognitionMeter(
-                                                limited),
-                                        "structural-route-header"));
 
         // then
         assertEquals(
-                Arrays.asList("/first", "/second/leaf"),
-                logicalPaths,
-                "route gas names the authored logical paths, not manifest pointers");
-        assertTrue(failure instanceof GasLimitExceededException);
-        assertEquals(
-                prefix,
-                ((GasLimitExceededException) failure)
-                        .admittedGas());
-        assertEquals(
-                1L,
+                0L,
                 quantity(
-                        limited,
+                        completeGas,
                         "processor",
                         "embeddedPathEntryRead"));
         assertEquals(
                 1L,
                 quantity(
-                        limited,
+                        completeGas,
                         "processor",
                         "contractHeaderRecognized"));
-        assertEquals(prefix, limited.totalGas());
     }
 
     private static FrozenNode processEmbeddedScope(
@@ -394,6 +379,18 @@ final class ContractRecognitionMeterTest {
             String key,
             boolean includeType,
             String... paths) {
+        return processEmbeddedScope(
+                key,
+                includeType,
+                Arrays.asList(paths),
+                java.util.Collections.<String>emptyList());
+    }
+
+    private static FrozenNode processEmbeddedScope(
+            String key,
+            boolean includeType,
+            List<String> paths,
+            List<String> collectionPaths) {
         Node pathList = new Node();
         List<Node> items = new ArrayList<>();
         for (String path : paths) {
@@ -404,6 +401,16 @@ final class ContractRecognitionMeterTest {
                 new Node().properties(
                         "paths",
                         pathList);
+        if (!collectionPaths.isEmpty()) {
+            Node collectionPathList = new Node();
+            List<Node> collectionItems = new ArrayList<>();
+            for (String path : collectionPaths) {
+                collectionItems.add(new Node().value(path));
+            }
+            embedded.properties(
+                    "collectionPaths",
+                    collectionPathList.items(collectionItems));
+        }
         if (includeType) {
             embedded.type(reference(
                     RuntimeBlueIds.PROCESS_EMBEDDED));
@@ -430,25 +437,6 @@ final class ContractRecognitionMeterTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
-    }
-
-    private static long prefixBeforeSecondPathEntry(
-            GasMeter gas) {
-        int entries = 0;
-        long prefix = 0L;
-        for (GasTraceEntry entry : gas.trace()) {
-            if ("processor".equals(entry.namespace())
-                    && "embeddedPathEntryRead".equals(
-                    entry.counter())
-                    && ++entries == 2) {
-                return prefix;
-            }
-            prefix += entry.subtotal();
-        }
-        throw new AssertionError(
-                "Complete trace did not contain two path entries: "
-                        + Arrays.toString(
-                        gas.trace().toArray()));
     }
 
     private static long quantity(GasMeter gas,

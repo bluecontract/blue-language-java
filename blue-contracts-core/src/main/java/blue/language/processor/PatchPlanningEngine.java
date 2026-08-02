@@ -37,6 +37,7 @@ final class PatchPlanningEngine {
     private final FrozenNode initialResolvedRoot;
     private final boolean exactReplacement;
     private final ProcessingSnapshotManager authoritativeSnapshotManager;
+    private final ProcessingSnapshotManager invocationEvidenceSnapshotManager;
     private final ConformanceEngine conformanceEngine;
     private final ConformancePlannerOverride conformancePlannerOverride;
     private final UpdateMaterializationMetrics materializationMetrics;
@@ -46,6 +47,7 @@ final class PatchPlanningEngine {
     private final Set<String> openedScopePaths;
     private final Map<String, List<String>> executableBodyFieldsByType;
     private final boolean initialResolutionComplete;
+    private final EmbeddedScopePlan originEmbeddedScopePlan;
 
     PatchPlanningEngine(String originScopePath,
                         PatchPlanningContext planning,
@@ -83,7 +85,8 @@ final class PatchPlanningEngine {
                         UpdateMaterializationMetrics materializationMetrics,
                         ProcessingObserver metrics,
                         boolean retainInitialRoots) {
-        this.originScopePath = originScopePath;
+        this.originScopePath = PointerUtils.normalizeScope(
+                originScopePath);
         Objects.requireNonNull(planning, "planning");
         FrozenNode canonicalRoot = planning.baseSnapshot() != null
                 ? planning.baseSnapshot().frozenCanonicalRoot()
@@ -95,6 +98,8 @@ final class PatchPlanningEngine {
         this.initialResolvedRoot = retainInitialRoots ? resolvedRoot : null;
         this.exactReplacement = planning.exactReplacement();
         this.authoritativeSnapshotManager = planning.authoritativeSnapshotManager();
+        this.invocationEvidenceSnapshotManager =
+                planning.invocationEvidenceSnapshotManager();
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.materializationMetrics = materializationMetrics;
@@ -112,6 +117,8 @@ final class PatchPlanningEngine {
                 planning.executableBodyFieldsByType();
         this.initialResolutionComplete =
                 planning.isResolutionComplete();
+        this.originEmbeddedScopePlan = planning.entryEmbeddedScopePlan(
+                this.originScopePath);
     }
 
     BatchPatchResult planAtomic(List<JsonPatch> patches, boolean buildUpdates) {
@@ -335,8 +342,9 @@ final class PatchPlanningEngine {
                     finalCanonical,
                     finalResolved,
                     wholeEmbeddedChildApplicationPatches(
-                            records,
-                            initialResolved));
+                            records),
+                    invocationEvidenceSnapshotManager,
+                    openedScopePaths);
         }
         boolean includeGeneratedUpdates = conformancePlannerOverride != null && conformancePlannerOverride.applies();
 
@@ -397,57 +405,29 @@ final class PatchPlanningEngine {
     }
 
     private Set<String> wholeEmbeddedChildApplicationPatches(
-            List<BatchPatchRecord> records,
-            FrozenNode entryResolvedRoot) {
+            List<BatchPatchRecord> records) {
         /*
          * Boundary validation already limits an ancestor to an exact
-         * immediate-child-root operation. Re-derive that narrow set from the
-         * entry Process Embedded snapshot for protected-state comparison.
+         * immediate-child-root operation. Use the immutable concrete plan
+         * frozen when this invocation entered the scope; later patches must
+         * not reopen changed collection membership.
          */
         Set<String> result = new LinkedHashSet<>();
         for (BatchPatchRecord record : records) {
             if (record.processorManagedConformanceBypass()) {
                 continue;
             }
-            FrozenNode scope = entryResolvedRoot != null
-                    ? entryResolvedRoot.at(record.originScope())
-                    : null;
-            FrozenNode contracts =
-                    scope != null ? scope.getContracts() : null;
-            FrozenNode embedded = contracts != null
-                    ? contracts.property(
-                    ProcessorContractConstants.KEY_EMBEDDED)
-                    : null;
-            FrozenNode paths = embedded != null
-                    ? embedded.property(
-                    ProcessorContractConstants.KEY_PATHS)
-                    : null;
-            List<FrozenNode> items =
-                    paths != null ? paths.getItems() : null;
-            if (items == null) {
+            if (originEmbeddedScopePlan == null
+                    || !originEmbeddedScopePlan.scopePath().equals(
+                            PointerUtils.normalizeScope(
+                                    record.originScope()))) {
                 continue;
             }
             String target =
                     PointerUtils.normalizePointer(record.path());
-            for (FrozenNode item : items) {
-                Object value =
-                        item != null ? item.getValue() : null;
-                if (!(value instanceof String)) {
-                    continue;
-                }
-                String child;
-                try {
-                    child = PointerUtils.resolvePointer(
-                            record.originScope(),
-                            PointerUtils.assertValidRuntimePointer(
-                                    (String) value));
-                } catch (IllegalArgumentException malformedPath) {
-                    continue;
-                }
-                if (target.equals(child)) {
-                    result.add(child);
-                    break;
-                }
+            if (originEmbeddedScopePlan.concreteChildPaths()
+                    .contains(target)) {
+                result.add(target);
             }
         }
         return result;

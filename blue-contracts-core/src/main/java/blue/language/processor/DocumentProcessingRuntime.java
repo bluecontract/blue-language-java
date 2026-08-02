@@ -584,6 +584,17 @@ final class DocumentProcessingRuntime {
             FrozenNode resolvedRoot,
             boolean exactReplacement,
             ProcessingSnapshotManager snapshotManager,
+            Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans) {
+        return workingPlanningContext(canonicalRoot, resolvedRoot,
+                exactReplacement, snapshotManager, Collections.emptySet(),
+                Collections.emptyMap(), entryEmbeddedScopePlans, true);
+    }
+
+    static PatchPlanningContext workingPlanningContext(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            boolean exactReplacement,
+            ProcessingSnapshotManager snapshotManager,
             Iterable<String> openedScopePaths) {
         return workingPlanningContext(canonicalRoot, resolvedRoot,
                 exactReplacement, snapshotManager, openedScopePaths,
@@ -610,13 +621,35 @@ final class DocumentProcessingRuntime {
             Iterable<String> openedScopePaths,
             Map<String, List<String>> executableBodyFieldsByType,
             boolean resolutionComplete) {
+        return workingPlanningContext(
+                canonicalRoot,
+                resolvedRoot,
+                exactReplacement,
+                snapshotManager,
+                openedScopePaths,
+                executableBodyFieldsByType,
+                Collections.<String, EmbeddedScopePlan>emptyMap(),
+                resolutionComplete);
+    }
+
+    static PatchPlanningContext workingPlanningContext(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            boolean exactReplacement,
+            ProcessingSnapshotManager snapshotManager,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
+            boolean resolutionComplete) {
         return new PatchPlanningContext(null,
                 ImmutablePatchPlanner.forFrozen(canonicalRoot),
                 ImmutablePatchPlanner.forFrozen(resolvedRoot),
                 exactReplacement,
                 exactReplacement ? snapshotManager : null,
+                snapshotManager,
                 openedScopePaths,
                 executableBodyFieldsByType,
+                entryEmbeddedScopePlans,
                 resolutionComplete);
     }
 

@@ -91,33 +91,57 @@ public final class EmbeddedScopePlanView {
                 Collections.<String, Origin>emptyMap());
     }
 
-    /** Returns the absolute path of the declaring scope. */
+    /**
+     * Returns the absolute path of the declaring scope.
+     *
+     * @return normalized absolute scope path
+     */
     public String scopePath() {
         return scopePath;
     }
 
-    /** Returns exact child declarations in effective list order. */
+    /**
+     * Returns exact child declarations in effective list order.
+     *
+     * @return immutable explicit declaration list
+     */
     public List<String> explicitDeclarationPaths() {
         return explicitDeclarationPaths;
     }
 
-    /** Returns collection declarations in effective list order. */
+    /**
+     * Returns collection declarations in effective list order.
+     *
+     * @return immutable collection declaration list
+     */
     public List<String> collectionDeclarationPaths() {
         return collectionDeclarationPaths;
     }
 
-    /** Returns canonical direct member keys for every collection declaration. */
+    /**
+     * Returns canonical direct member keys for every collection declaration.
+     *
+     * @return immutable declaration-to-member-key map
+     */
     public Map<String, List<String>>
     collectionMemberKeysByDeclaration() {
         return collectionMemberKeysByDeclaration;
     }
 
-    /** Returns combined absolute concrete child paths in canonical order. */
+    /**
+     * Returns combined absolute concrete child paths in canonical order.
+     *
+     * @return immutable concrete child path list
+     */
     public List<String> concreteChildPaths() {
         return concreteChildPaths;
     }
 
-    /** Returns declaration origin for every concrete child path. */
+    /**
+     * Returns declaration origin for every concrete child path.
+     *
+     * @return immutable concrete-path origin map
+     */
     public Map<String, Origin> originsByConcretePath() {
         return originsByConcretePath;
     }

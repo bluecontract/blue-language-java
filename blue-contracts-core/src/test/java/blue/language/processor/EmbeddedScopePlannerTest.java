@@ -1,8 +1,14 @@
 package blue.language.processor;
 
+import blue.language.api.NodeProviderOutcome;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.provider.NodeProvider;
+import blue.language.provider.NodeProviderResult;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -23,6 +29,8 @@ final class EmbeddedScopePlannerTest {
 
     private static final String CYCLIC_MEMBER_BLUE_ID =
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
+    private static final String ROOT_SCOPE_PATH = "/root";
+    private static final String LESSONS_DECLARATION = "/lessons";
 
     @Test
     void shouldProjectCollectionMembersInCodePointOrderAndEscapeKeys() {
@@ -499,6 +507,34 @@ final class EmbeddedScopePlannerTest {
     }
 
     @Test
+    void shouldKeepUnselectedExplicitReferenceOpaqueForRevisionBoundEvent() {
+        // given
+        AtomicInteger materializations = new AtomicInteger();
+        String childBlueId = DirectBlueIdCalculator.calculateBlueId(
+                new Node().properties("value", new Node().value(1)));
+        Node scope = new Node().properties(
+                "child", new Node().blueId(childBlueId));
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(reference -> {
+            materializations.incrementAndGet();
+            return FrozenNode.fromNode(object());
+        });
+
+        // when
+        EmbeddedScopePlan plan = planner.planForRevisionBoundEvent(
+                scope,
+                "/",
+                Collections.singletonList("/child"),
+                Collections.emptyList(),
+                GasSchedule.contracts10());
+
+        // then
+        assertEquals(
+                Collections.singletonList("/child"),
+                plan.concreteChildPaths());
+        assertEquals(0, materializations.get());
+    }
+
+    @Test
     void shouldAcceptVerifiedPureReferenceToObjectMember() {
         // given
         Node exactChild = new Node().properties(
@@ -551,6 +587,348 @@ final class EmbeddedScopePlannerTest {
                 failure.limitName());
         assertEquals(4097L, failure.observed());
         assertEquals(4096L, failure.limit());
+    }
+
+    @Test
+    void shouldRejectCombinedConcretePathSetAbovePortableLimit() {
+        // given
+        Map<String, Node> lessons = new LinkedHashMap<>();
+        for (int index = 0; index < 4096; index++) {
+            lessons.put("lesson-" + index, object());
+        }
+        Node scope = new Node().properties(
+                "payment", object(),
+                "lessons", new Node().properties(lessons));
+
+        // when
+        PortableLimitExceededException failure = assertThrows(
+                PortableLimitExceededException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        scope,
+                        ROOT_SCOPE_PATH,
+                        Collections.singletonList("/payment"),
+                        Collections.singletonList(LESSONS_DECLARATION),
+                        GasSchedule.contracts10()));
+
+        // then
+        assertEquals(
+                GasScheduleConstants.PortableLimit
+                        .PROCESS_EMBEDDED_PATHS_PER_SCOPE,
+                failure.limitName());
+        assertEquals(4097L, failure.observed());
+        assertEquals(4096L, failure.limit());
+    }
+
+    @Test
+    void shouldPlanPureReferenceCollectionFromVerifiedProviderContent() {
+        // given
+        Node exactCollection = twoMemberCollection();
+        String collectionBlueId = DirectBlueIdCalculator.calculateBlueId(
+                exactCollection);
+        Node scope = collectionReferenceScope(collectionBlueId);
+        List<String> providerDemands = new ArrayList<>();
+        NodeProvider provider = providerWithResult(
+                collectionBlueId,
+                NodeProviderResult.found(
+                        Collections.singletonList(exactCollection)),
+                providerDemands);
+
+        // when
+        EmbeddedScopePlan plan;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope processingScope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(processingScope);
+            plan = new EmbeddedScopePlanner(
+                    manager::materializeVerifiedExactReference).plan(
+                            scope,
+                            ROOT_SCOPE_PATH,
+                            Collections.emptyList(),
+                            Collections.singletonList(LESSONS_DECLARATION),
+                            GasSchedule.contracts10());
+        }
+
+        // then
+        assertEquals(
+                Arrays.asList(
+                        "/root/lessons/lesson-a",
+                        "/root/lessons/lesson-b"),
+                plan.concreteChildPaths());
+        assertEquals(
+                Collections.singletonList(collectionBlueId),
+                providerDemands);
+    }
+
+    @Test
+    void shouldMapProviderNotFoundDuringCollectionPlanningToInvalidEvidence() {
+        // given
+        String collectionBlueId = DirectBlueIdCalculator.calculateBlueId(
+                twoMemberCollection());
+        Node scope = collectionReferenceScope(collectionBlueId);
+        NodeProvider provider = providerWithResult(
+                collectionBlueId,
+                NodeProviderResult.notFound(),
+                new ArrayList<>());
+
+        // when
+        InvalidExecutionEvidenceException failure;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope processingScope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(processingScope);
+            failure = assertThrows(
+                    InvalidExecutionEvidenceException.class,
+                    () -> new EmbeddedScopePlanner(
+                            manager::materializeVerifiedExactReference).plan(
+                                    scope,
+                                    ROOT_SCOPE_PATH,
+                                    Collections.emptyList(),
+                                    Collections.singletonList(
+                                            LESSONS_DECLARATION),
+                                    GasSchedule.contracts10()));
+        }
+
+        // then
+        assertEquals(
+                ProcessorErrorCategory.InvalidProcessingDocument,
+                failure.errorCategory());
+    }
+
+    @Test
+    void shouldPreserveProviderUnavailabilityDuringCollectionPlanning() {
+        // given
+        String collectionBlueId = DirectBlueIdCalculator.calculateBlueId(
+                twoMemberCollection());
+        Node scope = collectionReferenceScope(collectionBlueId);
+        NodeProvider provider = providerWithResult(
+                collectionBlueId,
+                NodeProviderResult.unavailable("collection provider offline"),
+                new ArrayList<>());
+
+        // when
+        ExecutionEvidenceUnavailableException failure;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope processingScope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(processingScope);
+            failure = assertThrows(
+                    ExecutionEvidenceUnavailableException.class,
+                    () -> new EmbeddedScopePlanner(
+                            manager::materializeVerifiedExactReference).plan(
+                                    scope,
+                                    ROOT_SCOPE_PATH,
+                                    Collections.emptyList(),
+                                    Collections.singletonList(
+                                            LESSONS_DECLARATION),
+                                    GasSchedule.contracts10()));
+        }
+
+        // then
+        assertEquals("collection provider offline", failure.getMessage());
+        assertEquals(
+                Collections.singletonList(collectionBlueId),
+                failure.requiredExactBlueIds());
+    }
+
+    @Test
+    void shouldPreserveInvalidProviderEvidenceDuringCollectionPlanning() {
+        // given
+        String collectionBlueId = DirectBlueIdCalculator.calculateBlueId(
+                twoMemberCollection());
+        Node scope = collectionReferenceScope(collectionBlueId);
+        NodeProvider provider = providerWithResult(
+                collectionBlueId,
+                NodeProviderResult.invalidEvidence(
+                        "collection evidence is forged"),
+                new ArrayList<>());
+
+        // when
+        InvalidExecutionEvidenceException failure;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope processingScope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(processingScope);
+            failure = assertThrows(
+                    InvalidExecutionEvidenceException.class,
+                    () -> new EmbeddedScopePlanner(
+                            manager::materializeVerifiedExactReference).plan(
+                                    scope,
+                                    ROOT_SCOPE_PATH,
+                                    Collections.emptyList(),
+                                    Collections.singletonList(
+                                            LESSONS_DECLARATION),
+                                    GasSchedule.contracts10()));
+        }
+
+        // then
+        assertEquals("collection evidence is forged", failure.getMessage());
+        assertEquals(
+                ProcessorErrorCategory.InvalidExternalChannelSnapshot,
+                failure.errorCategory());
+    }
+
+    @Test
+    void shouldNotDemandTransitiveDescendantsOrExecutableBodiesForEnumeration() {
+        // given
+        Node exactDescendant = new Node().properties(
+                "state", new Node().value("descendant"));
+        Node exactBody = new Node().properties(
+                "patch", new Node().value("body"));
+        String descendantBlueId = DirectBlueIdCalculator.calculateBlueId(
+                exactDescendant);
+        String bodyBlueId = DirectBlueIdCalculator.calculateBlueId(exactBody);
+        Node lesson = new Node()
+                .properties(
+                        "descendant",
+                        new Node().blueId(descendantBlueId))
+                .contracts(new Node().properties(
+                        "handler",
+                        new Node().properties(
+                                "result",
+                                new Node().blueId(bodyBlueId))));
+        Node scope = new Node().properties(
+                "lessons",
+                new Node().properties("lesson-a", lesson));
+        AtomicInteger materializations = new AtomicInteger();
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(reference -> {
+            materializations.incrementAndGet();
+            throw new AssertionError(
+                    "Enumeration must not materialize descendant content");
+        });
+
+        // when
+        EmbeddedScopePlan plan = planner.plan(
+                scope,
+                ROOT_SCOPE_PATH,
+                Collections.emptyList(),
+                Collections.singletonList(LESSONS_DECLARATION),
+                GasSchedule.contracts10());
+
+        // then
+        assertEquals(
+                Collections.singletonList("/root/lessons/lesson-a"),
+                plan.concreteChildPaths());
+        assertEquals(0, materializations.get());
+    }
+
+    @Test
+    void shouldProduceExactGasTraceForTwoMemberInlineCollection() {
+        // given
+        Node scope = new Node().properties(
+                "lessons", twoMemberCollection());
+        GasMeter meter = new GasMeter(GasSchedule.contracts10());
+
+        // when
+        new EmbeddedScopePlanner().plan(
+                FrozenNode.fromResolvedNode(scope),
+                ROOT_SCOPE_PATH,
+                Collections.emptyList(),
+                Collections.singletonList(LESSONS_DECLARATION),
+                meter);
+
+        // then
+        assertEquals(twoMemberCollectionTrace(), traceSignatures(meter));
+        assertEquals(19L, meter.totalGas());
+    }
+
+    @Test
+    void shouldProduceExactGasTraceForTwoMemberReferencedCollection() {
+        // given
+        Node exactCollection = twoMemberCollection();
+        String collectionBlueId = DirectBlueIdCalculator.calculateBlueId(
+                exactCollection);
+        Node scope = collectionReferenceScope(collectionBlueId);
+        List<String> providerDemands = new ArrayList<>();
+        NodeProvider provider = providerWithResult(
+                collectionBlueId,
+                NodeProviderResult.found(
+                        Collections.singletonList(exactCollection)),
+                providerDemands);
+        GasMeter meter = new GasMeter(GasSchedule.contracts10());
+
+        // when
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope processingScope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(processingScope);
+            new EmbeddedScopePlanner(
+                    manager::materializeVerifiedExactReference).plan(
+                            FrozenNode.fromResolvedNode(scope),
+                            ROOT_SCOPE_PATH,
+                            Collections.emptyList(),
+                            Collections.singletonList(LESSONS_DECLARATION),
+                            meter);
+        }
+
+        // then
+        assertEquals(twoMemberCollectionTrace(), traceSignatures(meter));
+        assertEquals(19L, meter.totalGas());
+        assertEquals(
+                Collections.singletonList(collectionBlueId),
+                providerDemands);
+    }
+
+    @Test
+    void shouldKeepInlineAndProviderBackedCollectionGasIdentical() {
+        // given
+        Node exactCollection = twoMemberCollection();
+        String collectionBlueId = DirectBlueIdCalculator.calculateBlueId(
+                exactCollection);
+        GasMeter inlineMeter = new GasMeter(GasSchedule.contracts10());
+        GasMeter providerMeter = new GasMeter(GasSchedule.contracts10());
+        NodeProvider provider = providerWithResult(
+                collectionBlueId,
+                NodeProviderResult.found(
+                        Collections.singletonList(exactCollection)),
+                new ArrayList<>());
+
+        // when
+        new EmbeddedScopePlanner().plan(
+                FrozenNode.fromResolvedNode(new Node().properties(
+                        "lessons", exactCollection)),
+                ROOT_SCOPE_PATH,
+                Collections.emptyList(),
+                Collections.singletonList(LESSONS_DECLARATION),
+                inlineMeter);
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope processingScope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(processingScope);
+            new EmbeddedScopePlanner(
+                    manager::materializeVerifiedExactReference).plan(
+                            FrozenNode.fromResolvedNode(
+                                    collectionReferenceScope(
+                                            collectionBlueId)),
+                            ROOT_SCOPE_PATH,
+                            Collections.emptyList(),
+                            Collections.singletonList(
+                                    LESSONS_DECLARATION),
+                            providerMeter);
+        }
+
+        // then
+        assertEquals(inlineMeter.totalGas(), providerMeter.totalGas());
+        assertEquals(
+                traceSignatures(inlineMeter),
+                traceSignatures(providerMeter));
     }
 
     @Test
@@ -609,6 +987,193 @@ final class EmbeddedScopePlannerTest {
                 "member",
                 new Node().properties(
                         "state", new Node().value(1)));
+    }
+
+    private static Node twoMemberCollection() {
+        return new Node().properties(
+                "lesson-b", new Node().properties(
+                        "state", new Node().value("b")),
+                "lesson-a", new Node().properties(
+                        "state", new Node().value("a")));
+    }
+
+    private static Node collectionReferenceScope(String collectionBlueId) {
+        return new Node().properties(
+                "lessons", new Node().blueId(collectionBlueId));
+    }
+
+    private static NodeProvider providerWithResult(
+            String requestedBlueId,
+            NodeProviderResult requestedResult,
+            List<String> providerDemands) {
+        return new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                NodeProviderResult result = fetchResultByBlueId(blueId);
+                return result.outcome() == NodeProviderOutcome.FOUND
+                        ? result.nodes()
+                        : null;
+            }
+
+            @Override
+            public NodeProviderResult fetchResultByBlueId(String blueId) {
+                providerDemands.add(blueId);
+                return requestedBlueId.equals(blueId)
+                        ? requestedResult
+                        : NodeProviderResult.notFound();
+            }
+        };
+    }
+
+    private static List<String> traceSignatures(GasMeter meter) {
+        List<String> signatures = new ArrayList<>();
+        for (GasTraceEntry entry : meter.trace()) {
+            signatures.add(traceSignature(
+                    entry.sequence(),
+                    entry.namespace(),
+                    entry.counter(),
+                    entry.quantity(),
+                    entry.weight(),
+                    entry.subtotal(),
+                    entry.scopePath(),
+                    entry.contractKey(),
+                    entry.logicalPath(),
+                    entry.reason()));
+        }
+        return signatures;
+    }
+
+    private static List<String> twoMemberCollectionTrace() {
+        String processor = GasScheduleConstants.Namespace.PROCESSOR;
+        String semantic = GasScheduleConstants.Namespace.SEMANTIC;
+        String embedded = ProcessorContractConstants.KEY_EMBEDDED;
+        String route = GasScheduleConstants.ChargeReason.ROUTE;
+        return Arrays.asList(
+                unitTrace(0L, processor,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_PATH_ENTRY_READ,
+                        1L, ROOT_SCOPE_PATH, null,
+                        "/root/lessons", route),
+                unitTrace(1L, processor,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_PATH_SEGMENT_VALIDATED,
+                        1L, ROOT_SCOPE_PATH, null,
+                        "/root/lessons", route),
+                unitTrace(2L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .NODE_MANIFEST_OPENED,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        "/root/lessons", route),
+                unitTrace(3L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .OBJECT_MEMBER_READ,
+                        2L, ROOT_SCOPE_PATH, embedded,
+                        "/root/lessons", route),
+                unitTrace(4L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .SORT_COMPARISON,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        LESSONS_DECLARATION, route),
+                unitTrace(5L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .SCALAR_COMPARISON,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        LESSONS_DECLARATION, route),
+                unitTrace(6L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .TEXT_BLOCK_EXAMINED,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        LESSONS_DECLARATION, route),
+                unitTrace(7L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .TEXT_BLOCK_EXAMINED,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        LESSONS_DECLARATION, route),
+                unitTrace(8L, processor,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_PATH_ENTRY_READ,
+                        1L, ROOT_SCOPE_PATH, null,
+                        "/root/lessons/lesson-a", route),
+                unitTrace(9L, processor,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_PATH_SEGMENT_VALIDATED,
+                        2L, ROOT_SCOPE_PATH, null,
+                        "/root/lessons/lesson-a", route),
+                unitTrace(10L, processor,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_PATH_ENTRY_READ,
+                        1L, ROOT_SCOPE_PATH, null,
+                        "/root/lessons/lesson-b", route),
+                unitTrace(11L, processor,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_PATH_SEGMENT_VALIDATED,
+                        2L, ROOT_SCOPE_PATH, null,
+                        "/root/lessons/lesson-b", route),
+                unitTrace(12L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .SORT_COMPARISON,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        ROOT_SCOPE_PATH, route),
+                unitTrace(13L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .SCALAR_COMPARISON,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        ROOT_SCOPE_PATH, route),
+                unitTrace(14L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .TEXT_BLOCK_EXAMINED,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        ROOT_SCOPE_PATH, route),
+                unitTrace(15L, semantic,
+                        GasScheduleConstants.SemanticCounter
+                                .TEXT_BLOCK_EXAMINED,
+                        1L, ROOT_SCOPE_PATH, embedded,
+                        ROOT_SCOPE_PATH, route));
+    }
+
+    private static String unitTrace(
+            long sequence,
+            String namespace,
+            String counter,
+            long quantity,
+            String scopePath,
+            String contractKey,
+            String logicalPath,
+            String reason) {
+        return traceSignature(
+                sequence,
+                namespace,
+                counter,
+                quantity,
+                1L,
+                quantity,
+                scopePath,
+                contractKey,
+                logicalPath,
+                reason);
+    }
+
+    private static String traceSignature(
+            long sequence,
+            String namespace,
+            String counter,
+            long quantity,
+            long weight,
+            long subtotal,
+            String scopePath,
+            String contractKey,
+            String logicalPath,
+            String reason) {
+        return sequence
+                + "|" + namespace
+                + "|" + counter
+                + "|" + quantity
+                + "|" + weight
+                + "|" + subtotal
+                + "|" + scopePath
+                + "|" + contractKey
+                + "|" + logicalPath
+                + "|" + reason;
     }
 
     private static EmbeddedConcretePath explicitConcrete(String path) {
