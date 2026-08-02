@@ -7,9 +7,7 @@ import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 import me.champeau.jmh.JMHTask;
 import org.gradle.api.Project;
@@ -27,7 +25,6 @@ final class FinalQualityOrchestration {
             Collections.unmodifiableList(Arrays.asList(
                     "blue.language.ReferenceBlueIdValidationBenchmark.resolveDeepValidReferenceDocument",
                     "blue.language.ProcessingSelectionCacheBenchmark.processWarmSameNode"));
-    private static final Map<String, String> CLASS_SIZE_RATIONALES = classSizeRationales();
 
     private FinalQualityOrchestration() {}
 
@@ -118,7 +115,6 @@ final class FinalQualityOrchestration {
                             .file("reports/published-smoke/verification.json"));
                     task.getSourceCommit().set(sourceCommit);
                     task.getExcludedTasks().set(excludedTasks);
-                    task.getClassSizeRationales().set(CLASS_SIZE_RATIONALES);
                     task.getRequiredSmokeBenchmarks().set(REQUIRED_SMOKE_BENCHMARKS);
                     task.getExpectedModuleCount().set(publishedModules.size());
                     task.getJavadocsSuccessful().set(true);
@@ -172,21 +168,6 @@ final class FinalQualityOrchestration {
         }
         return JmhConventionsPlugin.combineIncludePatterns(
                 exactPatterns);
-    }
-
-    private static Map<String, String> classSizeRationales() {
-        Map<String, String> rationales = new LinkedHashMap<>();
-        rationales.put(
-                "blue-conformance/src/main/java/blue/language/conformance/contracts/"
-                        + "ContractsFixtureHarness.java",
-                "Closed 154-fixture Contracts oracle; one ordered harness keeps fixture semantics "
-                        + "and trace comparison auditable against the release package.");
-        rationales.put(
-                "blue-conformance/src/main/java/blue/language/conformance/api/"
-                        + "BlueConformanceSuiteRunner.java",
-                "Closed 153-fixture Language runner; one ordered dispatcher keeps operation and "
-                        + "vector accounting auditable against the release package.");
-        return Collections.unmodifiableMap(rationales);
     }
 
     /** Providers exposed for receipt or future release aliases. */
