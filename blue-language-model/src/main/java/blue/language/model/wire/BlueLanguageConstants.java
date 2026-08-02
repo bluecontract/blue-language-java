@@ -1,8 +1,11 @@
 package blue.language.model.wire;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -51,6 +54,32 @@ public class BlueLanguageConstants {
     public static final String LEGACY_OBJECT_PROPERTIES = "properties";
     /** Legacy wire key formerly used for schema constraints. */
     public static final String LEGACY_OBJECT_CONSTRAINTS = "constraints";
+
+    /**
+     * Language-owned keys that cannot denote ordinary object members.
+     *
+     * <p>The two legacy keys are reserved-invalid in Language 1.0. List
+     * controls are deliberately absent: outside a list-control position,
+     * {@code $previous}, {@code $pos}, {@code $replace}, and {@code $empty}
+     * are ordinary field names.</p>
+     */
+    public static final Set<String> LANGUAGE_RESERVED_FIELDS =
+            Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(
+                    OBJECT_NAME,
+                    OBJECT_DESCRIPTION,
+                    OBJECT_TYPE,
+                    OBJECT_ITEM_TYPE,
+                    OBJECT_KEY_TYPE,
+                    OBJECT_VALUE_TYPE,
+                    OBJECT_VALUE,
+                    OBJECT_ITEMS,
+                    OBJECT_BLUE_ID,
+                    OBJECT_BLUE,
+                    OBJECT_SCHEMA,
+                    OBJECT_MERGE_POLICY,
+                    OBJECT_CONTRACTS,
+                    LEGACY_OBJECT_PROPERTIES,
+                    LEGACY_OBJECT_CONSTRAINTS)));
     /** Canonical textual spelling of the Boolean true value. */
     public static final String BOOLEAN_TEXT_TRUE = "true";
     /** Canonical textual spelling of the Boolean false value. */
@@ -68,6 +97,16 @@ public class BlueLanguageConstants {
     public static final String LIST_CONTROL_REPLACE = "$replace";
     /** List-control key representing an explicit empty placeholder. */
     public static final String LIST_CONTROL_EMPTY = "$empty";
+
+    /**
+     * Reports whether a key is reserved by the Language object model.
+     *
+     * @param key candidate ordinary object-member key, or {@code null}
+     * @return {@code true} when the key is Language-owned or reserved-invalid
+     */
+    public static boolean isLanguageReservedField(String key) {
+        return key != null && LANGUAGE_RESERVED_FIELDS.contains(key);
+    }
 
     /** Released source-level name of the Text core type. */
     public static final String TEXT_TYPE = "Text";

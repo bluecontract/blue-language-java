@@ -37,6 +37,16 @@ public enum ProcessorErrorCategory {
     EmbeddedRouteNotFound,
     /** An embedded route selects a non-object scope. */
     EmbeddedScopeNotObject,
+    /** A declared embedded collection is present but is not an object. */
+    EmbeddedCollectionMustBeObject,
+    /** A direct embedded-collection member is not an object. */
+    EmbeddedCollectionMemberMustBeObject,
+    /** An embedded collection path traverses a forbidden field or value kind. */
+    InvalidEmbeddedCollectionPath,
+    /** An embedded declaration uses unsupported selector syntax. */
+    EmbeddedPathSelectorUnsupported,
+    /** Immediate embedded declarations overlap or produce the same path. */
+    OverlappingEmbeddedDeclaration,
     /** Embedded-scope traversal encounters a cycle. */
     EmbeddedScopeCycle,
     /** An otherwise active scope has been terminated or cut off. */
