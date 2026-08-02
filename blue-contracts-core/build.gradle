@@ -15,3 +15,21 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
 }
+
+def collectionJmhSizes = ['10', '100', '1000', '4096']
+def requestedCollectionJmhSize = providers.gradleProperty(
+        'blueCollectionJmhSize')
+
+// The GC profiler publishes allocation rate and bytes per operation alongside
+// the benchmark's deterministic provider, manifest, and logical-gas counters.
+jmh {
+    profilers = ['gc']
+    if (requestedCollectionJmhSize.isPresent()) {
+        def size = requestedCollectionJmhSize.get()
+        if (!collectionJmhSizes.contains(size)) {
+            throw new GradleException(
+                    "blueCollectionJmhSize must be one of ${collectionJmhSizes}; got '${size}'")
+        }
+        benchmarkParameters = [size: [size]]
+    }
+}
