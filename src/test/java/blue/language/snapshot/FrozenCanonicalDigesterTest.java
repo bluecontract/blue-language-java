@@ -162,7 +162,7 @@ class FrozenCanonicalDigesterTest {
     }
 
     @Test
-    void shouldPreserveDirectSchemaEnumOrderWithoutLeavingFrozenFastPath() throws Exception {
+    void shouldCanonicalizeSchemaEnumsWithoutLeavingFrozenFastPath() throws Exception {
         // given
         Node mutable = new Node()
                 .schema(new Schema().enumValues(Arrays.asList(
