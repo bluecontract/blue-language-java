@@ -1,27 +1,27 @@
 # Blue Language 1.0 and Contracts Kernel 1.0 migration
 
-This release aligns `blue-language-java` with the Final Implementation
-Baseline identified by:
+This release aligns `blue-language-java` with the corrected enum-normalized
+Language and Contracts package identified by:
 
 ```text
 release:
-  blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline
+  blue-language-contracts-embedded-modules-collection-paths
 releasePackage:
-  sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa
+  sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6
 languageSpecification:
-  sha256:41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e
+  sha256:a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869
 contractsSpecification:
-  sha256:d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1
+  sha256:6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81
 languageRegistryPackage:
   sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e
 languageFixturePackage:
   sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55
 contractsRegistryPackage:
-  sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b
+  sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
 contractsGasPackage:
   sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
 contractsFixturePackage:
-  sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18
+  sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc
 ```
 
 The Contracts gas weights and portable limits are loaded from the bound
@@ -69,12 +69,15 @@ pure member is rejected as a `PROCESS` Root/Event, mutation and
 demand, and whole-edge replacement remains supported.
 
 Downstream splitters should use
-`DocumentProcessor.effectiveFragmentationCatalog(Node)`. The immutable catalog
-reports effective/inherited `Process Embedded` paths and, for each scope,
-ordered `EffectiveContractSnapshot` entries with exact source contributions,
-sanitized header fields, registered executable-body field names, and present
-body BlueIds by field. Inspection is provider-verified, body-cold, read-only,
-and outside Contracts gas.
+`BlueContracts.effectiveFragmentationCatalog(Node)` or the lower-level
+`DocumentProcessor.administration().effectiveFragmentationCatalog(Node)`.
+The immutable catalog reports each structured embedded-scope plan—including
+exact declarations, collection declarations, frozen member keys, concrete
+paths, and provenance—and, for each scope, ordered
+`EffectiveContractSnapshot` entries with exact source contributions, sanitized
+header fields, registered executable-body field names, and present body BlueIds
+by field. Inspection is provider-verified, body-cold, read-only, and outside
+Contracts gas.
 
 ## Contracts result and failure model
 
@@ -429,9 +432,9 @@ normative:
   pre-initialization Root. This lets the published limit exercise the intended
   internal-event cycle; ordinary PROCESS inputs still pay initialization gas.
 
-The final identity-bound packages produce 153/153 Language passes and 140/140
-Contracts passes (82 behavior and 58 gas fixtures). The combined release report
-contains exactly 293 unique results: 293 `PASS`, zero `FAIL`, and zero skipped.
+The final identity-bound packages produce 153/153 Language passes and 154/154
+Contracts passes (96 behavior and 58 gas fixtures). The combined release report
+contains exactly 307 unique results: 307 `PASS`, zero `FAIL`, and zero skipped.
 
 Thirteen prior Contracts failures were corrected in the fixture package because
 their old inputs or assertions did not describe executable normative scenarios:

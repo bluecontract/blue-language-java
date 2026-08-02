@@ -9,13 +9,13 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
 | `blue-conformance` | 19 | 164 | 57 | 240 |
-| `blue-contracts-core` | 151 | 1024 | 578 | 1753 |
+| `blue-contracts-core` | 154 | 1032 | 587 | 1773 |
 | `blue-language-core` | 160 | 812 | 96 | 1068 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 95 | 1 | 121 |
-| `blue-language-model` | 23 | 209 | 79 | 311 |
-| **Distribution** | **384** | **2352** | **811** | **3547** |
+| `blue-language-model` | 23 | 210 | 80 | 313 |
+| **Distribution** | **387** | **2361** | **821** | **3569** |
 
 ## blue-conformance
 
@@ -23,23 +23,23 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 field blue.language.conformance.api.BlueConformanceReport#BLUE_SPEC_SOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0-final-implementation-baseline"
 field blue.language.conformance.api.BlueConformanceReport#FIXTURE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0/fixtures/manifest.yaml"
 field blue.language.conformance.api.BlueConformanceReport#FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55"
-field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18"
+field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_GAS_MANIFEST_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_GAS_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5"
-field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_REGISTRY_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b"
+field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_REGISTRY_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="specifications/blue-contracts-and-processor-specification-1.0.md"
-field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1"
+field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81"
 field blue.language.conformance.api.BlueContractsConformanceReport#FIXTURE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts-1.0/fixtures/manifest.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#FIXTURE_ROOT_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts-1.0/fixtures/"
 field blue.language.conformance.api.BlueContractsConformanceReport#GAS_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue/language/processor/contracts-gas-1.0.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55"
 field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_REGISTRY_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e"
 field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_SPECIFICATION_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="specifications/blue-language-specification-1.0.md"
-field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e"
+field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869"
 field blue.language.conformance.api.BlueContractsConformanceReport#REGISTRY_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="registry/blue-contracts-1.0/manifest.yaml"
-field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml"
-field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_NAME descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline"
-field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa"
+field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="release/blue-language-contracts-embedded-modules-collection-paths-1.0/PACKAGE-MANIFEST.yaml"
+field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_NAME descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-contracts-embedded-modules-collection-paths"
+field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6"
 field blue.language.conformance.api.BlueContractsFixtureCategory#CHK descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueContractsFixtureCategory#DISC descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueContractsFixtureCategory#E2E descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
@@ -73,10 +73,10 @@ field blue.language.conformance.api.BlueFixtureCategory#RESOLUTION descriptor=Lb
 field blue.language.conformance.api.BlueFixtureCategory#SCHEMA descriptor=Lblue/language/conformance/api/BlueFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueFixtureCategory#SERIALIZATION descriptor=Lblue/language/conformance/api/BlueFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueFixtureCategory#SPECIALIZATION descriptor=Lblue/language/conformance/api/BlueFixtureCategory; access=public,static,final,enum signature=- constant=-
-field blue.language.conformance.api.BlueReleaseConformanceReport#CONTRACTS_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=140
+field blue.language.conformance.api.BlueReleaseConformanceReport#CONTRACTS_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=154
 field blue.language.conformance.api.BlueReleaseConformanceReport#LANGUAGE_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=153
 field blue.language.conformance.api.BlueReleaseConformanceReport#SCHEMA descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-java-release-conformance-report/1.0"
-field blue.language.conformance.api.BlueReleaseConformanceReport#TOTAL_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=293
+field blue.language.conformance.api.BlueReleaseConformanceReport#TOTAL_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=307
 method blue.language.conformance.api.BlueConformanceFailure#<init> descriptor=(Ljava/lang/String;Lblue/language/conformance/api/BlueFixtureCategory;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V access=public signature=- throws=-
 method blue.language.conformance.api.BlueConformanceFailure#<init> descriptor=(Ljava/lang/String;Lblue/language/conformance/api/BlueFixtureCategory;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lblue/language/api/BlueLanguageErrorCategory;)V access=public signature=- throws=-
 method blue.language.conformance.api.BlueConformanceFailure#getCategory descriptor=()Lblue/language/conformance/api/BlueFixtureCategory; access=public signature=- throws=-
@@ -279,6 +279,8 @@ field blue.language.processor.EffectiveContractSnapshotConstants$Role#HANDLER de
 field blue.language.processor.EffectiveContractSnapshotConstants$Role#MARKER descriptor=Ljava/lang/String; access=public,static,final signature=- constant="marker"
 field blue.language.processor.EffectiveContractSnapshotConstants$Role#PROCESSOR_CHANNEL descriptor=Ljava/lang/String; access=public,static,final signature=- constant="processor-channel"
 field blue.language.processor.EffectiveContractSnapshotConstants$Role#PROCESS_EMBEDDED descriptor=Ljava/lang/String; access=public,static,final signature=- constant="process-embedded"
+field blue.language.processor.EmbeddedScopePlanView$Origin#COLLECTION_MEMBER descriptor=Lblue/language/processor/EmbeddedScopePlanView$Origin; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.EmbeddedScopePlanView$Origin#EXPLICIT descriptor=Lblue/language/processor/EmbeddedScopePlanView$Origin; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ExternalChannelDependencySnapshot$TypeMatchMode#ASSIGNABLE descriptor=Lblue/language/processor/ExternalChannelDependencySnapshot$TypeMatchMode; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ExternalChannelDependencySnapshot$TypeMatchMode#EXACT descriptor=Lblue/language/processor/ExternalChannelDependencySnapshot$TypeMatchMode; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ExternalDeliveryPlanDeriver#UNAVAILABLE descriptor=Lblue/language/processor/ExternalDeliveryPlanDeriver; access=public,static,final signature=- constant=-
@@ -684,6 +686,9 @@ field blue.language.processor.ProcessorErrorCategory#CyclicMemberProcessingRootU
 field blue.language.processor.ProcessorErrorCategory#CyclicSetEmbeddedBoundaryUnsupported descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#CyclicSetMutationUnsupported descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#DirectNodeLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#EmbeddedCollectionMemberMustBeObject descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#EmbeddedCollectionMustBeObject descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#EmbeddedPathSelectorUnsupported descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#EmbeddedRouteNotFound descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#EmbeddedScopeCycle descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#EmbeddedScopeNotObject descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
@@ -694,6 +699,7 @@ field blue.language.processor.ProcessorErrorCategory#InconsistentLogicalDelivery
 field blue.language.processor.ProcessorErrorCategory#InternalEventLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#InvalidContractBinding descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#InvalidContractKey descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#InvalidEmbeddedCollectionPath descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#InvalidExternalChannelSnapshot descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#InvalidPatch descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#InvalidProcessingDocument descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
@@ -701,6 +707,7 @@ field blue.language.processor.ProcessorErrorCategory#InvalidProcessingEvent desc
 field blue.language.processor.ProcessorErrorCategory#InvalidReservedRuntimeState descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#InvalidRuntimePointer descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#MatchingDeliveryLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#OverlappingEmbeddedDeclaration descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#ParticipatingScopeLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#PatchBoundaryViolation descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#PatchLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
@@ -760,8 +767,8 @@ field blue.language.processor.registry.RuntimeBlueIds#LIFECYCLE_EVENT_CHANNEL de
 field blue.language.processor.registry.RuntimeBlueIds#MARKER descriptor=Ljava/lang/String; access=public,static,final signature=- constant="8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD"
 field blue.language.processor.registry.RuntimeBlueIds#PROCESSING_INITIALIZED_MARKER descriptor=Ljava/lang/String; access=public,static,final signature=- constant="Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
 field blue.language.processor.registry.RuntimeBlueIds#PROCESSING_TERMINATED_MARKER descriptor=Ljava/lang/String; access=public,static,final signature=- constant="4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v"
-field blue.language.processor.registry.RuntimeBlueIds#PROCESS_EMBEDDED descriptor=Ljava/lang/String; access=public,static,final signature=- constant="D5s6GcGwW2hwqy4SrzUuxzdPPRNZ3jNuDkFHbUDmnHZr"
-field blue.language.processor.registry.RuntimeBlueIds#REGISTRY_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b"
+field blue.language.processor.registry.RuntimeBlueIds#PROCESS_EMBEDDED descriptor=Ljava/lang/String; access=public,static,final signature=- constant="EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"
+field blue.language.processor.registry.RuntimeBlueIds#REGISTRY_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1"
 field blue.language.processor.registry.RuntimeBlueIds#RUNTIME_COUNTER_ENTRY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="2fQHvWpJRfkPW9rqcqZKdcEKx4586LDkYR2bWTPRDZEo"
 field blue.language.processor.registry.RuntimeBlueIds#RUNTIME_LEDGER descriptor=Ljava/lang/String; access=public,static,final signature=- constant="EEcehN6F5zKoZbLFvoAqa8hiWKzPY2VFbd3j5qGDELS2"
 field blue.language.processor.registry.RuntimeBlueIds#SCRIPTED_EXTERNAL_CHANNEL descriptor=Ljava/lang/String; access=public,static,final signature=- constant="2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt"
@@ -808,6 +815,7 @@ field blue.language.processor.util.ProcessorContractConstants#KEY_BEFORE descrip
 field blue.language.processor.util.ProcessorContractConstants#KEY_BEFORE_PRESENT descriptor=Ljava/lang/String; access=public,static,final signature=- constant="beforePresent"
 field blue.language.processor.util.ProcessorContractConstants#KEY_CAUSE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="cause"
 field blue.language.processor.util.ProcessorContractConstants#KEY_CHECKPOINT descriptor=Ljava/lang/String; access=public,static,final signature=- constant="checkpoint"
+field blue.language.processor.util.ProcessorContractConstants#KEY_COLLECTION_PATHS descriptor=Ljava/lang/String; access=public,static,final signature=- constant="collectionPaths"
 field blue.language.processor.util.ProcessorContractConstants#KEY_CONTRACTS descriptor=Ljava/lang/String; access=public,static,final signature=- constant="contracts"
 field blue.language.processor.util.ProcessorContractConstants#KEY_DEFAULT_MODE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="defaultMode"
 field blue.language.processor.util.ProcessorContractConstants#KEY_DOCUMENT descriptor=Ljava/lang/String; access=public,static,final signature=- constant="document"
@@ -837,6 +845,7 @@ field blue.language.processor.util.ProcessorPointerConstants#PROCESS_EVENT_SUBSC
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_CHECKPOINT descriptor=Ljava/lang/String; access=public,static,final signature=- constant=-
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_CONTRACTS descriptor=Ljava/lang/String; access=public,static,final signature=- constant="/contracts"
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_EMBEDDED descriptor=Ljava/lang/String; access=public,static,final signature=- constant=-
+field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_EMBEDDED_COLLECTION_PATHS descriptor=Ljava/lang/String; access=public,static,final signature=- constant=-
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_EMBEDDED_PATHS descriptor=Ljava/lang/String; access=public,static,final signature=- constant=-
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_GENERALIZATION descriptor=Ljava/lang/String; access=public,static,final signature=- constant=-
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_INITIALIZED descriptor=Ljava/lang/String; access=public,static,final signature=- constant=-
@@ -1006,20 +1015,15 @@ method blue.language.processor.DocumentProcessingResult#runtimeFatal descriptor=
 method blue.language.processor.DocumentProcessingResult#status descriptor=()Lblue/language/processor/ProcessorStatus; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessingResult#totalGas descriptor=()J access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.processor.DocumentProcessor#administration descriptor=()Lblue/language/processor/DocumentProcessorAdministration; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#builder descriptor=()Lblue/language/processor/DocumentProcessor$Builder; access=public,static signature=- throws=-
-method blue.language.processor.DocumentProcessor#cacheEntryCount descriptor=()I access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor#cacheWeightBytes descriptor=()J access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#clearCaches descriptor=()V access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#close descriptor=()V access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor#effectiveFragmentationCatalog descriptor=(Lblue/language/model/Node;)Lblue/language/processor/EffectiveFragmentationCatalog; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor#getContractRegistry descriptor=()Lblue/language/processor/ContractProcessorRegistry; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor#getContractTypeResolver descriptor=()Lblue/language/mapping/TypeClassResolver; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#initializeDocument descriptor=(Lblue/language/merge/ResolvedSnapshot;)Lblue/language/processor/DocumentProcessingResult; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#initializeDocument descriptor=(Lblue/language/model/Node;)Lblue/language/processor/DocumentProcessingResult; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#isClosed descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#isInitialized descriptor=(Lblue/language/merge/ResolvedSnapshot;)Z access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#isInitialized descriptor=(Lblue/language/model/Node;)Z access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor#markersFor descriptor=(Lblue/language/model/Node;Ljava/lang/String;)Ljava/util/Map; access=public signature=(Lblue/language/model/Node;Ljava/lang/String;)Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/model/MarkerContract;>; throws=-
 method blue.language.processor.DocumentProcessor#processAttempt descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Lblue/language/processor/ProcessAttemptResult; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#processAttempt descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/processor/VerifiedExecutionEvidence;)Lblue/language/processor/ProcessAttemptResult; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor#processDocument descriptor=(Lblue/language/merge/ResolvedSnapshot;Lblue/language/model/Node;)Lblue/language/processor/DocumentProcessingResult; access=public signature=- throws=-
@@ -1037,11 +1041,15 @@ method blue.language.processor.DocumentProcessor#supportsSnapshotProcessing desc
 method blue.language.processor.DocumentProcessor$Builder#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#build descriptor=()Lblue/language/processor/DocumentProcessor; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#cachePolicy descriptor=(Lblue/language/api/BlueCachePolicy;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessor$Builder#conformanceEngine descriptor=(Lblue/language/conformance/ConformanceEngine;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessor$Builder#conformancePlannerOverride descriptor=(Lblue/language/processor/ConformancePlannerOverride;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessor$Builder#contractTypeResolver descriptor=(Lblue/language/mapping/TypeClassResolver;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#deliveryPlanDeriver descriptor=(Lblue/language/processor/ExternalDeliveryPlanDeriver;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#evidenceVerifier descriptor=(Lblue/language/processor/ExternalDeliveryEvidenceVerifier;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#from descriptor=(Lblue/language/processor/DocumentProcessor;)Lblue/language/processor/DocumentProcessor$Builder; access=public,static signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#gasLimit descriptor=(J)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#gasSchedule descriptor=(Lblue/language/processor/GasSchedule;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessor$Builder#matchingService descriptor=(Lblue/language/processor/ContractMatchingService;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#nodeProvider descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#observer descriptor=(Lblue/language/processor/ProcessingObserver;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#registerContractProcessor descriptor=(Lblue/language/processor/ContractProcessor;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=(Lblue/language/processor/ContractProcessor<+Lblue/language/processor/model/Contract;>;)Lblue/language/processor/DocumentProcessor$Builder; throws=-
@@ -1049,21 +1057,18 @@ method blue.language.processor.DocumentProcessor$Builder#registerContractProcess
 method blue.language.processor.DocumentProcessor$Builder#registerContractProcessor descriptor=(Ljava/lang/String;Lblue/language/processor/ContractProcessor;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=(Ljava/lang/String;Lblue/language/processor/ContractProcessor<+Lblue/language/processor/model/Contract;>;)Lblue/language/processor/DocumentProcessor$Builder; throws=-
 method blue.language.processor.DocumentProcessor$Builder#registerContractType descriptor=(Ljava/lang/String;Ljava/lang/Class;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=(Ljava/lang/String;Ljava/lang/Class<+Lblue/language/processor/model/Contract;>;)Lblue/language/processor/DocumentProcessor$Builder; throws=-
 method blue.language.processor.DocumentProcessor$Builder#runtimeRegistry descriptor=(Lblue/language/processor/ContractProcessorRegistry;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessor$Builder#runtimeRegistryIdentity descriptor=(Ljava/lang/String;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#scanContractTypes descriptor=(Ljava/lang/String;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#snapshotStore descriptor=(Lblue/language/processor/ProcessingSnapshotManager;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#subscriptionSurfaceValidator descriptor=(Lblue/language/processor/SubscriptionSurfaceValidator;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withConformanceEngine descriptor=(Lblue/language/conformance/ConformanceEngine;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withConformancePlannerOverride descriptor=(Lblue/language/processor/ConformancePlannerOverride;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withContractTypeResolver descriptor=(Lblue/language/mapping/TypeClassResolver;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withExternalDeliveryEvidenceVerifier descriptor=(Lblue/language/processor/ExternalDeliveryEvidenceVerifier;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withExternalDeliveryPlanDeriver descriptor=(Lblue/language/processor/ExternalDeliveryPlanDeriver;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withGasLimit descriptor=(J)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withGasSchedule descriptor=(Lblue/language/processor/GasSchedule;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withMatchingService descriptor=(Lblue/language/processor/ContractMatchingService;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withRegistry descriptor=(Lblue/language/processor/ContractProcessorRegistry;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withRuntimeRegistryIdentity descriptor=(Ljava/lang/String;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withSnapshotManager descriptor=(Lblue/language/processor/ProcessingSnapshotManager;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
-method blue.language.processor.DocumentProcessor$Builder#withSubscriptionSurfaceValidator descriptor=(Lblue/language/processor/SubscriptionSurfaceValidator;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#cacheEntryCount descriptor=()I access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#cacheWeightBytes descriptor=()J access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#clearCaches descriptor=()V access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#contractRegistry descriptor=()Lblue/language/processor/ContractProcessorRegistry; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#contractTypeResolver descriptor=()Lblue/language/mapping/TypeClassResolver; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#effectiveFragmentationCatalog descriptor=(Lblue/language/model/Node;)Lblue/language/processor/EffectiveFragmentationCatalog; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#isClosed descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#markersFor descriptor=(Lblue/language/model/Node;Ljava/lang/String;)Ljava/util/Map; access=public signature=(Lblue/language/model/Node;Ljava/lang/String;)Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/model/MarkerContract;>; throws=-
 method blue.language.processor.EffectiveContractSnapshot#builder descriptor=(Ljava/lang/String;Ljava/lang/String;)Lblue/language/processor/EffectiveContractSnapshot$Builder; access=public,static signature=- throws=-
 method blue.language.processor.EffectiveContractSnapshot#deterministicDependencyNodeBlueIds descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
 method blue.language.processor.EffectiveContractSnapshot#dispatchFields descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>; throws=-
@@ -1089,6 +1094,15 @@ method blue.language.processor.EffectiveContractSnapshot$Builder#sourceContribut
 method blue.language.processor.EffectiveFragmentationCatalog#effectiveContractsByScope descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/util/List<Lblue/language/processor/EffectiveContractSnapshot;>;>; throws=-
 method blue.language.processor.EffectiveFragmentationCatalog#effectiveProcessEmbeddedPathsByScope descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/util/List<Ljava/lang/String;>;>; throws=-
 method blue.language.processor.EffectiveFragmentationCatalog#rootBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.EffectiveFragmentationCatalog#scopePlansByScope descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/EmbeddedScopePlanView;>; throws=-
+method blue.language.processor.EmbeddedScopePlanView#collectionDeclarationPaths descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
+method blue.language.processor.EmbeddedScopePlanView#collectionMemberKeysByDeclaration descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/util/List<Ljava/lang/String;>;>; throws=-
+method blue.language.processor.EmbeddedScopePlanView#concreteChildPaths descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
+method blue.language.processor.EmbeddedScopePlanView#explicitDeclarationPaths descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
+method blue.language.processor.EmbeddedScopePlanView#originsByConcretePath descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/EmbeddedScopePlanView$Origin;>; throws=-
+method blue.language.processor.EmbeddedScopePlanView#scopePath descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.EmbeddedScopePlanView$Origin#valueOf descriptor=(Ljava/lang/String;)Lblue/language/processor/EmbeddedScopePlanView$Origin; access=public,static signature=- throws=-
+method blue.language.processor.EmbeddedScopePlanView$Origin#values descriptor=()[Lblue/language/processor/EmbeddedScopePlanView$Origin; access=public,static signature=- throws=-
 method blue.language.processor.ExactBlueValue#blueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.ExactBlueValue#frozenValue descriptor=()Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.processor.ExactBlueValue#isCyclicMember descriptor=()Z access=public signature=- throws=-
@@ -1804,8 +1818,11 @@ method blue.language.processor.model.JsonPatch$Op#values descriptor=()[Lblue/lan
 method blue.language.processor.model.LifecycleChannel#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.processor.model.MarkerContract#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.processor.model.ProcessEmbedded#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.processor.model.ProcessEmbedded#addCollectionPath descriptor=(Ljava/lang/String;)Lblue/language/processor/model/ProcessEmbedded; access=public signature=- throws=-
 method blue.language.processor.model.ProcessEmbedded#addPath descriptor=(Ljava/lang/String;)Lblue/language/processor/model/ProcessEmbedded; access=public signature=- throws=-
+method blue.language.processor.model.ProcessEmbedded#getCollectionPaths descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
 method blue.language.processor.model.ProcessEmbedded#getPaths descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
+method blue.language.processor.model.ProcessEmbedded#setCollectionPaths descriptor=(Ljava/util/List;)V access=public signature=(Ljava/util/List<Ljava/lang/String;>;)V throws=-
 method blue.language.processor.model.ProcessEmbedded#setPaths descriptor=(Ljava/util/List;)V access=public signature=(Ljava/util/List<Ljava/lang/String;>;)V throws=-
 method blue.language.processor.model.ProcessingTerminatedMarker#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.processor.model.ProcessingTerminatedMarker#cause descriptor=(Ljava/lang/String;)Lblue/language/processor/model/ProcessingTerminatedMarker; access=public signature=- throws=-
@@ -1892,12 +1909,15 @@ type blue.language.processor.DirectSubscriptionSurfaceValidator access=public,fi
 type blue.language.processor.DocumentProcessingResult access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.DocumentProcessor access=public super=java.lang.Object interfaces=java.lang.AutoCloseable signature=-
 type blue.language.processor.DocumentProcessor$Builder access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.DocumentProcessorAdministration access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.EffectiveContractSnapshot access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.EffectiveContractSnapshot$Builder access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.EffectiveContractSnapshotConstants access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.EffectiveContractSnapshotConstants$DispatchField access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.EffectiveContractSnapshotConstants$Role access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.EffectiveFragmentationCatalog access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.EmbeddedScopePlanView access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.EmbeddedScopePlanView$Origin access=public,final,enum super=java.lang.Enum interfaces=- signature=Ljava/lang/Enum<Lblue/language/processor/EmbeddedScopePlanView$Origin;>;
 type blue.language.processor.ExactBlueValue access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ExecutableBodySourceDescriptor access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ExecutionEvidenceUnavailableException access=public,final super=java.lang.RuntimeException interfaces=- signature=-
@@ -2086,7 +2106,7 @@ field blue.language.provider.ProviderMode#BOUND_SOURCE_CONTENT descriptor=Lblue/
 field blue.language.provider.ProviderMode#DIRECT_NODE descriptor=Lblue/language/provider/ProviderMode; access=public,static,final signature=- constant=-
 field blue.language.provider.ProviderMode#SOURCE_DOCUMENT descriptor=Lblue/language/provider/ProviderMode; access=public,static,final,enum signature=- constant=-
 field blue.language.provider.SourceProviderEnvironment#EXPLICIT_VERIFIER_DOMAIN_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0:explicit-provider-evidence-verifier"
-field blue.language.provider.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0-contracts-1.0-final-implementation-baseline@sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa"
+field blue.language.provider.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-contracts-embedded-modules-collection-paths@sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6"
 field blue.language.provider.SourceProviderEnvironment#LANGUAGE_CONTENT_STRATEGY_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0:source-content-canonicalization"
 field blue.language.registry.BlueCoreTypeRegistry#INSTANCE descriptor=Lblue/language/registry/BlueCoreTypeRegistry; access=public,static,final signature=- constant=-
 field blue.language.registry.BlueCoreTypeRegistry#RESOURCE_ROOT descriptor=Ljava/lang/String; access=public,static,final signature=- constant="registry/blue-language-1.0"
@@ -3324,6 +3344,7 @@ field blue.language.model.wire.BlueLanguageConstants#DOUBLE_TYPE descriptor=Ljav
 field blue.language.model.wire.BlueLanguageConstants#DOUBLE_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ"
 field blue.language.model.wire.BlueLanguageConstants#INTEGER_TYPE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="Integer"
 field blue.language.model.wire.BlueLanguageConstants#INTEGER_TYPE_BLUE_ID descriptor=Ljava/lang/String; access=public,static,final signature=- constant="E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq"
+field blue.language.model.wire.BlueLanguageConstants#LANGUAGE_RESERVED_FIELDS descriptor=Ljava/util/Set; access=public,static,final signature=Ljava/util/Set<Ljava/lang/String;>; constant=-
 field blue.language.model.wire.BlueLanguageConstants#LEGACY_OBJECT_CONSTRAINTS descriptor=Ljava/lang/String; access=public,static,final signature=- constant="constraints"
 field blue.language.model.wire.BlueLanguageConstants#LEGACY_OBJECT_PROPERTIES descriptor=Ljava/lang/String; access=public,static,final signature=- constant="properties"
 field blue.language.model.wire.BlueLanguageConstants#LIST_CONTROL_EMPTY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="$empty"
@@ -3546,6 +3567,7 @@ method blue.language.model.value.ScalarValues#getBigIntegerFromObject descriptor
 method blue.language.model.value.ScalarValues#getBooleanFromObject descriptor=(Ljava/lang/Object;)Ljava/lang/Boolean; access=public,static signature=- throws=-
 method blue.language.model.value.ScalarValues#getIntegerFromObject descriptor=(Ljava/lang/Object;)Ljava/lang/Integer; access=public,static signature=- throws=-
 method blue.language.model.wire.BlueLanguageConstants#<init> descriptor=()V access=protected signature=- throws=-
+method blue.language.model.wire.BlueLanguageConstants#isLanguageReservedField descriptor=(Ljava/lang/String;)Z access=public,static signature=- throws=-
 method blue.language.model.wire.JsonPointer#<init> descriptor=()V access=protected signature=- throws=-
 method blue.language.model.wire.JsonPointer#append descriptor=(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
 method blue.language.model.wire.JsonPointer#canonicalize descriptor=(Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-

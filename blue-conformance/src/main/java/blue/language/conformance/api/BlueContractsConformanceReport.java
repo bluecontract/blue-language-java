@@ -460,28 +460,19 @@ public final class BlueContractsConformanceReport {
     }
 
     /**
-
      * Serializes the release-tool report.
-
      *
-
      * @return JSON report
-
      */
     public String toMachineReadableJson() {
         return UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(toMachineReadableMap());
     }
 
     /**
-
-     * Returns normative Contracts 1.0 fixture identities.
-
+     * Returns the exact ordered Contracts 1.0 fixture identities.
      *
-
      * @return immutable identity list
-
      */
-    /** Returns the exact ordered Contracts 1.0 fixture identities. */
     public static List<String> requiredFixtureIdsForContracts10() {
         return BlueContractsFixturePackage.requiredFixtureIdsForContracts10();
     }
@@ -496,37 +487,65 @@ public final class BlueContractsConformanceReport {
         return BlueContractsFixturePackage.loadFixturePackageIdentity(fallback);
     }
 
-    /** Returns the exact ordered fixture identity inventory. */
+    /**
+     * Returns the exact ordered fixture identity inventory.
+     *
+     * @return immutable fixture identity list
+     */
     public static List<String> loadFixtureIds() {
         return BlueContractsFixturePackage.loadFixtureIds();
     }
 
-    /** Returns fixture categories keyed by exact fixture identity. */
+    /**
+     * Returns fixture categories keyed by exact fixture identity.
+     *
+     * @return immutable category map
+     */
     public static Map<String, BlueContractsFixtureCategory> loadFixtureCategories() {
         return BlueContractsFixturePackage.loadFixtureCategories();
     }
 
-    /** Computes the canonical Contracts fixture package identity. */
+    /**
+     * Computes the canonical Contracts fixture package identity.
+     *
+     * @return calculated package identity
+     */
     public static String computeFixturePackageIdentity() {
         return BlueContractsFixturePackage.computeFixturePackageIdentity();
     }
 
-    /** Computes the canonical Contracts gas package identity. */
+    /**
+     * Computes the canonical Contracts gas package identity.
+     *
+     * @return calculated gas package identity
+     */
     public static String computeGasPackageIdentity() {
         return BlueContractsFixturePackage.computeGasPackageIdentity();
     }
 
-    /** Computes the canonical Contracts registry package identity. */
+    /**
+     * Computes the canonical Contracts registry package identity.
+     *
+     * @return calculated registry package identity
+     */
     public static String computeRegistryPackageIdentity() {
         return BlueContractsFixturePackage.computeRegistryPackageIdentity();
     }
 
-    /** Computes the canonical final release package identity. */
+    /**
+     * Computes the canonical final release package identity.
+     *
+     * @return calculated release package identity
+     */
     public static String computeReleasePackageIdentity() {
         return BlueContractsFixturePackage.computeReleasePackageIdentity();
     }
 
-    /** Reports whether the fixture manifest identity matches its exact files. */
+    /**
+     * Reports whether the fixture manifest identity matches its exact files.
+     *
+     * @return {@code true} when every fixture binding is exact
+     */
     public static boolean fixturePackageIdentityMatchesFixtureFiles() {
         return BlueContractsFixturePackage.fixturePackageIdentityMatchesFixtureFiles();
     }
@@ -564,7 +583,11 @@ public final class BlueContractsConformanceReport {
         return BlueContractsFixturePackage.readFixture(path);
     }
 
-    /** Loads the ordered executable fixture inventory. */
+    /**
+     * Loads the ordered executable fixture inventory.
+     *
+     * @return immutable executable fixture inventory
+     */
     public static List<FixtureInventoryEntry> loadFixtureInventory() {
         return BlueContractsFixturePackage.loadFixtureInventory();
     }

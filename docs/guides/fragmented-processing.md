@@ -30,6 +30,14 @@ for the initial participating closure. It does not fetch unselected executable
 bodies or unrelated document branches merely because their references are
 visible.
 
+An effective `collectionPaths` declaration adds each present direct object
+member's concrete path to that closure in Unicode code-point key order. A
+pure-reference member is demanded only as exact evidence for that member; the
+collection declaration does not authorize wildcard traversal, List expansion,
+or eager loading outside the participating closure. Two keys may refer to the
+same exact child BlueId and still remain two independently addressed owned
+occurrences.
+
 Mutation uses persistent changed-spine rebuilding: changed nodes and ancestors
 to Root receive new exact identities; untouched siblings retain theirs.
 Patching below an opaque cyclic-member edge is rejected before provider demand,
@@ -39,3 +47,5 @@ Run
 [`PureReferenceFragmentsExample`](../../examples/src/main/java/blue/language/examples/PureReferenceFragmentsExample.java)
 from `:examples`. For the complete evidence and logical-delivery model, see
 [Fragmented processing and logical delivery](../fragmented-processing-and-logical-delivery.md).
+For collection activation and Channel binding rules, see
+[Embedded collection paths](embedded-collection-paths.md).

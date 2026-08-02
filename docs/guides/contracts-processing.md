@@ -56,6 +56,28 @@ The target is read-only for this classification unless it independently
 participates as an external source. Dependency declarations freeze the exact
 target header or bounded catalog used by event-time routing.
 
+## Exact paths and stable-key collections
+
+`Process Embedded` declares owned child scopes in two ways:
+
+```text
+paths:           one exact child scope per pointer
+collectionPaths: every direct object member under the pointer
+```
+
+A `collectionPaths` entry is not a glob. It cannot contain `*`, select List
+items, or enter `/contracts`. The direct member key becomes part of the
+concrete scope path and remains the occurrence address. The processor freezes
+those concrete paths before classification, so adding a member cannot make it
+receive the event that created it. The successful post-commit subscription
+delta makes it eligible for the next event.
+
+Local Channels are exact child data. They can be inline or pure references to
+the same exact value. No Channel is imported from a parent merely because its
+raw key is the same, and replacing a parent Channel does not rebind an existing
+child. A Channel runtime's finite keys continue to select a concrete member;
+`collectionPaths` only establishes which members are active scopes.
+
 ## Result atomicity
 
 Success commits patches, lifecycle markers, checkpoints, snapshot publication,
@@ -70,3 +92,6 @@ Run
 and
 [`PureReferenceFragmentsExample`](../../examples/src/main/java/blue/language/examples/PureReferenceFragmentsExample.java)
 from `:examples`. See the [Contracts pipeline](../architecture/contracts-pipeline.md).
+The complete tested Agreement/Lessons workflow is in
+[`EmbeddedCollectionAgreementExample`](../../examples/src/main/java/blue/language/examples/EmbeddedCollectionAgreementExample.java)
+and is explained in [Embedded collection paths](embedded-collection-paths.md).

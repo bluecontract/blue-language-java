@@ -29,6 +29,11 @@ invalid evidence completes with a deterministic noncommitting failure.
 
 The participating closure is frozen, all effective contract types in it are
 recognized, and dispatch headers are snapshotted before the first mutation.
+One immutable embedded-scope plan expands exact `paths` and every direct
+stable-key member selected by `collectionPaths`. The same frozen concrete
+paths drive classification, mutation boundaries, cut-off, fragmentation, and
+the entry side of subscription validation; no later mutation can join the
+current event.
 Executable bodies remain cold. External classification evaluates source
 acceptance, checkpoint freshness, same-scope target selection, payload identity,
 and logical-delivery grouping.
@@ -44,9 +49,14 @@ nested cascades and before writes.
 
 Final soundness rechecks the specification-defined evidence and protected state
 against the tentative Root. Subscription delta validation proves that affected
-before/after branches remain finitely indexable. Result assembly publishes one
+before/after branches remain finitely indexable. New collection members are
+published as concrete subscription additions starting strictly after the
+committing event. Result assembly publishes one
 Root and Root-only events on success, or rolls all tentative effects back on a
 closed non-success status. The admitted gas prefix is retained in either case.
+
+See [Embedded collection paths](../guides/embedded-collection-paths.md) for the
+selection laws, exact local Channel bindings, and activation timeline.
 
 Component tests exercise every phase without constructing the whole engine;
 end-to-end fixtures pin ordering, identities, diagnostics, and exact gas traces.

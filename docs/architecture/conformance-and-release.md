@@ -8,7 +8,7 @@ compilation into one reproducible receipt.
 flowchart TD
     Clean["clean build with SOURCE_DATE_EPOCH"] --> Marker["clean-build evidence"]
     Marker --> Verify["releaseVerify / finalQualityVerify"]
-    Fixtures["153 Language + 140 Contracts fixtures"] --> Verify
+    Fixtures["153 Language + 154 Contracts fixtures"] --> Verify
     Tests["unit, integration, locality, gas traces"] --> Verify
     API["module API baselines + migration ledger"] --> Verify
     Archives["JAR/source replicas + source ZIP"] --> Verify

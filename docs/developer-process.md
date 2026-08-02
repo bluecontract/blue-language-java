@@ -92,7 +92,12 @@ Useful commands:
 4. Keep feeder/platform state outside the two semantic inputs.
 5. Test success, rollback, suspension/unavailability, exact diagnostic, gas
    prefix, Root-only events, and representation parity.
-6. Run Contracts package cycles, focused tests, runtime trace, and exact
+6. For embedded-scope work, change the immutable `EmbeddedScopePlan` producer
+   or a named consumer; do not introduce a second ad-hoc traversal of `paths`
+   or `collectionPaths`. Audit admission, evidence, entry snapshots, protected
+   state, mutation/cut-off, checkpoints, fragmentation, and subscription
+   validation together.
+7. Run Contracts package cycles, focused tests, runtime trace, and exact
    Contracts fixtures.
 
 ```bash
@@ -150,7 +155,7 @@ tracked inputs:
   and
   `blue-contracts-core/src/main/java/blue/language/processor/registry/RuntimeBlueIds.java`;
 - release binding:
-  `blue-conformance/src/main/resources/release/blue-language-1.0-contracts-1.0-bex-2.0/RELEASE-MANIFEST.yaml`.
+  `blue-conformance/src/main/resources/release/blue-language-contracts-embedded-modules-collection-paths-1.0/PACKAGE-MANIFEST.yaml`.
 
 Use this manual, reviewable workflow:
 
@@ -257,6 +262,14 @@ modules. Run one root-owned benchmark with the repository-owned regex filter:
   -PblueJmhIncludes='.*DeepGraphPhysicalLocalityBenchmark.*'
 ```
 
+The collection-path campaign can be run independently at one smoke size with:
+
+```bash
+./gradlew :blue-contracts-core:jmh \
+  -PblueJmhIncludes='.*EmbeddedCollection.*' \
+  -PblueCollectionJmhSize=10
+```
+
 Multiple comma-separated regular expressions are accepted. An empty or invalid
 expression fails during configuration instead of silently running a different
 set. JMH forks fresh benchmark JVMs, performs warmup iterations, then records
@@ -313,7 +326,7 @@ commit the exact result. Do not edit a generated reference by hand.
 ```
 
 The Language fixture package contains 153 exact fixtures and the Contracts
-package contains 140. Generated fixture coverage is the source for category
+package contains 154. Generated fixture coverage is the source for category
 subtotals; avoid copying subtotals into authored docs.
 
 `semanticBaselineCapture` is manual and exceptional. Verification never

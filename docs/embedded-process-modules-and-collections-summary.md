@@ -211,3 +211,6 @@ The canonical `Process Embedded` node changed, so its BlueId and the Contracts r
 ## 13. Final architecture in one sentence
 
 > Reusable embedded processes are self-contained owned scopes instantiated with exact local participant bindings; dynamic stable-key collections are declared explicitly through `collectionPaths`; external targeting remains the responsibility of each concrete Channel type; Contracts 1.0 does not introduce live parent-channel inheritance.
+
+The developer-facing walkthrough and runnable Agreement/Lessons program are in
+[Embedded collection paths](guides/embedded-collection-paths.md).

@@ -18,10 +18,25 @@ pure `blueId` references connect exact content into the logical graph.
 - The `blue` directive supplies imports and ordered transformations.
 - `PROCESS(document,event)` transforms one Root and returns Root emissions
   only.
+- `Process Embedded.paths` selects one exact child per pointer;
+  `collectionPaths` selects every direct stable-key object member.
 - Provider evidence, gas, diagnostics, and output are deterministic across
   equivalent inline/reference, warm/cold, and whole/fragmented forms.
 
 The complete 20–30 minute introduction is [Start here](docs/start-here.md).
+
+`collectionPaths` is an explicit collection declaration, not wildcard syntax:
+it never expands `*`, list positions, `/contracts/...`, or inherited parent
+Channels. Membership is frozen for the current invocation, so a member added
+by a successful event becomes active only after that event commits. Read the
+[embedded collection guide](docs/guides/embedded-collection-paths.md) for the
+exact rules and a tested Agreement/Lessons example.
+
+Each child owns exact local Channel values, reusable inline or by BlueId;
+changing a parent Channel never silently rewrites an existing child. The same
+child BlueId at two stable keys still creates two independent owned
+occurrences, and the concrete Channel runtime—not `collectionPaths`—decides
+which one an external event targets.
 
 ## What is included
 
@@ -276,6 +291,10 @@ and gas traces across equivalent representations.
 - [Runtime SPI](docs/reference/runtime-spi.md): generated extension registry.
 - [Custom runtime types](docs/guides/custom-runtime-types.md): add a runtime-
   neutral Channel or Handler.
+- [Embedded collection paths](docs/guides/embedded-collection-paths.md): select
+  stable-key child scopes, bind local Channels, and handle activation deltas.
+- [Collection-paths migration report](docs/collection-paths-and-cohesion-migration-report.md):
+  review conformance, locality, gas, API, benchmark, and cohesion evidence.
 - [Developer process](docs/developer-process.md): fixtures, identity-bearing
   registries, API baselines, benchmarks, and RC workflow.
 - [Contributing](CONTRIBUTING.md): review contract and checklist.
@@ -292,7 +311,7 @@ Every program under [`examples/src/main/java`](examples/src/main/java) has a
 ./gradlew finalQualityVerify
 ```
 
-The release package binds **153 Language fixtures** and **140 Contracts
+The release package binds **153 Language fixtures** and **154 Contracts
 fixtures**, exact specification/package identities, Java 8 bytecode, API
 baselines, Javadocs, runnable examples, benchmark smoke runs, package/module
 cycles, fragmented/locality assertions, and reproducible binary/source

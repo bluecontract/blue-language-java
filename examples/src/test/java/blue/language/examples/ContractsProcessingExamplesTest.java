@@ -4,6 +4,7 @@ import blue.language.processor.ProcessorStatus;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -67,5 +68,59 @@ final class ContractsProcessingExamplesTest {
         assertFalse(result.getRootBlueId().isEmpty());
         assertFalse(result.getEventBlueId().isEmpty());
         assertTrue(result.getRequestedBlueIds().size() >= 3);
+    }
+
+    @Test
+    void shouldTargetOnlyOneStableKeyLessonOccurrence() {
+        // given
+        long expectedTargetProgress = 1L;
+        long expectedUntargetedProgress = 0L;
+
+        // when
+        EmbeddedCollectionAgreementResult result =
+                EmbeddedCollectionAgreementExample.run();
+
+        // then
+        assertFalse(result.getInitialLessonBlueId().isEmpty());
+        assertFalse(result.getReusedParticipantBlueId().isEmpty());
+        assertEquals(expectedTargetProgress,
+                result.getLessonAProgressAfterTarget());
+        assertEquals(expectedUntargetedProgress,
+                result.getLessonBProgressAfterTarget());
+    }
+
+    @Test
+    void shouldActivateCreatedLessonOnlyAfterTheCreatingEventCommits() {
+        // given
+        String expectedActivatedScope = "/lessons/lesson-c";
+
+        // when
+        EmbeddedCollectionAgreementResult result =
+                EmbeddedCollectionAgreementExample.run();
+
+        // then
+        assertEquals(0L, result.getLessonCProgressDuringCreation());
+        assertEquals(1L, result.getLessonCProgressAfterNextEvent());
+        assertEquals(expectedActivatedScope, result.getActivatedScopePath());
+        assertTrue(result.getActivationStart() != null);
+    }
+
+    @Test
+    void shouldKeepExistingBindingsWhenParentParticipantChanges() {
+        // given
+        Supplier<EmbeddedCollectionAgreementResult> example =
+                EmbeddedCollectionAgreementExample::run;
+
+        // when
+        EmbeddedCollectionAgreementResult result =
+                example.get();
+
+        // then
+        assertEquals(result.getLessonAParticipantBlueId(),
+                result.getLessonBParticipantBlueId());
+        assertNotEquals(result.getLessonAParticipantBlueId(),
+                result.getLessonCParticipantBlueId());
+        assertEquals(result.getLessonCParticipantBlueId(),
+                result.getParentParticipantBlueId());
     }
 }

@@ -197,11 +197,14 @@ occurrences, or demand executable bodies to decide routing.
 
 Application-specific splitters can inspect the kernel's effective boundaries
 without executing contracts by calling
-`documentProcessor.effectiveFragmentationCatalog(root)`.
+`documentProcessor.administration().effectiveFragmentationCatalog(root)` or
+the high-level `blueContracts.effectiveFragmentationCatalog(root)`.
 
 The immutable result reports the exact Root BlueId, effective
-`Process Embedded` paths by scope, and ordered effective contract snapshots by
-scope. Each snapshot exposes its raw key, effective runtime type, runtime role,
+`Process Embedded` concrete paths by scope, the structured immutable plan that
+produced each path from an exact declaration or stable collection member, and
+ordered effective contract snapshots by scope. Each snapshot exposes its raw
+key, effective runtime type, runtime role,
 ordered exact source-contribution identities, sanitized immutable header
 fields, registered executable-body field names, and exact present body BlueIds
 by field. It never assigns an identity to a synthetic merged contract and
@@ -212,10 +215,11 @@ partially materialized, pure contracts-map reference, and pure Root reference
 forms produce the same catalog. Inherited contracts and inherited
 `Process Embedded` declarations are included. Unsupported effective types fail
 closed. Discovery follows only declared participating scopes: a referenced
-embedded child is opened when its effective `Process Embedded.paths` entry is
-known, while unrelated data references remain cold. Registered body fields and
-the Handler event edge are preserved before Language resolution. The operation
-is read-only and outside Contracts gas.
+exact child is opened when its effective `paths` entry is known; a collection
+target or direct member is opened only as needed to freeze `collectionPaths`
+membership; unrelated data and unselected executable bodies remain cold.
+Registered body fields and the Handler event edge are preserved before Language
+resolution. The operation is read-only and outside Contracts gas.
 
 ## Deliberate limits
 

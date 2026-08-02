@@ -297,10 +297,32 @@ contracts:
     paths: [/child]
 ```
 
+The two declaration forms have deliberately different meanings:
+
+```text
+paths:           one exact child scope per normalized pointer
+collectionPaths: every present direct stable-key object member is a child scope
+```
+
+For example, `collectionPaths: [/lessons]` selects
+`/lessons/lesson-a` and `/lessons/lesson-b`; it does not select the
+`/lessons` container. There are no wildcards, implicit List items,
+`/contracts/...` scopes, or inherited parent Channels. Each selected child
+must carry its own exact local bindings. The same exact child or Channel
+BlueId can be reused at two keys, but the keys name independent owned
+occurrences.
+
 The participating closure is frozen before mutation. Child work may run in a
 deterministic order, but all patches apply to one tentative Root. If an active
 scope occurrence is replaced or removed, that occurrence and its descendants
 are cut off.
+
+A member created during an event is therefore not processed by that event. A
+successful commit publishes a subscription delta whose lower boundary is the
+creating event; the new member can receive the next eligible event. Replacing
+a parent Channel does not rewrite existing children, while a later-created
+child may explicitly reuse the new exact Channel value. Concrete targeting is
+still defined by the selected Channel runtime, not by `collectionPaths`.
 
 Internal child events are drained inside the invocation. Only events emitted
 by Root are returned to the caller.
@@ -349,6 +371,8 @@ More gas cannot repair a portable-limit failure.
 - [Resolve, canonicalize, and minimize](guides/expand-collapse-resolve-canonicalize-minimize.md)
 - [Providers and evidence](guides/providers-and-evidence.md)
 - [Contracts processing](guides/contracts-processing.md)
+- [Embedded collection paths](guides/embedded-collection-paths.md)
+- [Collection-paths migration report](collection-paths-and-cohesion-migration-report.md)
 - [Statuses and diagnostics](reference/statuses-and-diagnostics.md)
 - [Architecture overview](architecture/overview.md)
 - [Developer process](developer-process.md)

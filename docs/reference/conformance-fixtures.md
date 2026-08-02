@@ -4,13 +4,13 @@
 
 Schema: `blue-language-java-generated-documentation/1.0`.
 
-Release package: `blue-language-1.0-contracts-1.0-bex-2.0-coordination-1.0-final-implementation-baseline`
+Release package: `blue-language-contracts-embedded-modules-collection-paths`
 
-Package identity: `sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e300279f09b2cfa`
+Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6`
 
 | Suite | Fixture count |
 | --- | ---: |
-| `contracts` | 140 |
+| `contracts` | 154 |
 | `language` | 153 |
 
 ## Package identities
@@ -19,16 +19,16 @@ Package identity: `sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e3002
 | --- | --- |
 | `languageRegistry` | `sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e` |
 | `languageFixtures` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` |
-| `contractsRegistry` | `sha256:67ce3101449c5bca9e6093b081da239d5d699fdc02182a058d3ad795c6c6120b` |
+| `contractsRegistry` | `sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1` |
 | `contractsGas` | `sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5` |
-| `contractsFixtures` | `sha256:d8231b77e196af8ff268432cf5867466151e16f2d1aec5e493c8a16c3f2e8b18` |
+| `contractsFixtures` | `sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc` |
 
 ## Specification hashes
 
 | Specification | SHA-256 |
 | --- | --- |
-| `languageSha256` | `41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e` |
-| `contractsSha256` | `d2efc2a5df8cd7e81b17b8c0d5f7ad73c5dbcb91344a7e5714c60605732676c1` |
+| `languageSha256` | `a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869` |
+| `contractsSha256` | `6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81` |
 
 ## Category coverage
 
@@ -37,10 +37,10 @@ Package identity: `sha256:f6165c10ab07ddd15fb99392753de43fa3afbd79d303a3cd6e3002
 | `contracts:chk` | 7 |
 | `contracts:disc` | 6 |
 | `contracts:e2e` | 3 |
-| `contracts:emb` | 8 |
+| `contracts:emb` | 21 |
 | `contracts:evt` | 5 |
 | `contracts:fail` | 5 |
-| `contracts:feed` | 17 |
+| `contracts:feed` | 18 |
 | `contracts:gas` | 58 |
 | `contracts:idx` | 2 |
 | `contracts:init` | 6 |

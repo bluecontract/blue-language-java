@@ -175,7 +175,7 @@ Language core registry package:
 sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e
 
 Language specification SHA-256:
-41291e52f520870bd3cc0665cdb085df8f10238853531a9e99d4409b6b63c92e
+a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869
 ```
 
 The fixture-only transformation types under

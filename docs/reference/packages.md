@@ -31,7 +31,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.patching` | 1 | present |
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
-| `blue.language.processor` | 89 | present |
+| `blue.language.processor` | 91 | present |
 | `blue.language.processor.model` | 18 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -278,9 +278,11 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.DirectSubscriptionSurfaceValidator`
 - `blue.language.processor.DocumentProcessingResult`
 - `blue.language.processor.DocumentProcessor`
+- `blue.language.processor.DocumentProcessorAdministration`
 - `blue.language.processor.EffectiveContractSnapshot`
 - `blue.language.processor.EffectiveContractSnapshotConstants`
 - `blue.language.processor.EffectiveFragmentationCatalog`
+- `blue.language.processor.EmbeddedScopePlanView`
 - `blue.language.processor.ExactBlueValue`
 - `blue.language.processor.ExecutableBodySourceDescriptor`
 - `blue.language.processor.ExecutionEvidenceUnavailableException`

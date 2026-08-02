@@ -52,6 +52,11 @@ This rejects the tentative commit when the effective external Channel subscripti
 - `ExternalSubscriptionLawViolation`
 - `EmbeddedRouteNotFound`
 - `EmbeddedScopeNotObject`
+- `EmbeddedCollectionMustBeObject`
+- `EmbeddedCollectionMemberMustBeObject`
+- `InvalidEmbeddedCollectionPath`
+- `EmbeddedPathSelectorUnsupported`
+- `OverlappingEmbeddedDeclaration`
 - `EmbeddedScopeCycle`
 - `ActiveScopeCutOff`
 - `CheckpointDomainError`
