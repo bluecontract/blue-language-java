@@ -925,7 +925,7 @@ public class DirectBlueIdCalculatorTest {
         }
 
         @Test
-        public void shouldCanonicalizeSchemaEnumOrderAndDuplicates() {
+        public void shouldPreserveSchemaEnumOrderAndDuplicatesForDirectBlueId() {
                 // given
                 Node first = new Node()
                                 .schema(new Schema().enumValues(Arrays.asList(
@@ -944,10 +944,13 @@ public class DirectBlueIdCalculatorTest {
                 String secondBlueId = DirectBlueIdCalculator.calculateBlueId(second);
 
                 // then
-                assertEquals(secondBlueId, firstBlueId);
+                assertNotEquals(secondBlueId, firstBlueId);
+                assertEquals(
+                                "8SjfBawfgR5nmYD2rNLErCRW3NRGNVvUYaLpEzpCcEXs",
+                                firstBlueId);
                 assertEquals(
                                 "4Q8KMTFv6BboSsKpd6WK6GDonEPhXY9LSHu7cmV1ZtFr",
-                                firstBlueId);
+                                secondBlueId);
                 assertEquals("B", first.getSchema().getEnum().get(0).getValue());
                 assertEquals(3, first.getSchema().getEnum().size());
         }
