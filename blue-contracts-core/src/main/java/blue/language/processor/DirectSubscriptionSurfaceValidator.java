@@ -67,18 +67,19 @@ public final class DirectSubscriptionSurfaceValidator
                     context.hasActiveSubscriptionIntervals()
                             ? intervals.affectedRetainedSurface(
                                     context, normalized)
-                            : projector.project(
+                            : projector.projectEntry(
                                     context.inputRoot(),
                                     context.inputSnapshot(),
                                     context.gasSchedule(),
                                     normalized,
                                     context);
-            Map<String, SubscriptionDelta.Entry> after = projector.project(
-                    context.tentativeRoot(),
-                    context.tentativeSnapshot(),
-                    context.gasSchedule(),
-                    normalized,
-                    context);
+            Map<String, SubscriptionDelta.Entry> after =
+                    projector.projectTentative(
+                            context.tentativeRoot(),
+                            context.tentativeSnapshot(),
+                            context.gasSchedule(),
+                            normalized,
+                            context);
             return deltas.build(before, after, context);
         } catch (SubscriptionSurfaceInvalidException exception) {
             throw exception;

@@ -29,35 +29,41 @@ final class ExternalDeliveryResolution implements AutoCloseable {
     }
 
     Node selectedNodeAt(String scopePath) {
+        Node selected;
         if (snapshot != null) {
             if (JsonPointer.ROOT.equals(
                     PointerUtils.normalizeScope(scopePath))) {
-                return snapshot.canonicalRoot();
+                selected = snapshot.canonicalRoot();
+            } else {
+                selected = snapshot.canonicalNodeAt(scopePath);
             }
-            Node selected = snapshot.canonicalNodeAt(scopePath);
-            return selected != null ? selected : null;
+        } else {
+            selected = ExternalEvidenceVerificationSupport.nodeAt(
+                    root, scopePath);
         }
-        return ExternalEvidenceVerificationSupport.nodeAt(
-                root, scopePath);
+        return projectionBuilder.materializeSelectedScope(selected);
     }
 
     Node effectiveNodeAt(String scopePath) {
+        Node effective;
         if (snapshot != null) {
             if (JsonPointer.ROOT.equals(
                     PointerUtils.normalizeScope(scopePath))) {
-                return snapshot.resolvedRoot();
+                effective = snapshot.resolvedRoot();
+            } else {
+                effective = snapshot.resolvedNodeAt(scopePath);
             }
-            return snapshot.resolvedNodeAt(scopePath);
+        } else {
+            effective = ExternalEvidenceVerificationSupport.nodeAt(
+                    root, scopePath);
+            if (effective != null && effective.getType() != null) {
+                throw ExternalEvidenceVerificationSupport.invalid(
+                        "Inherited effective scope resolution requires a "
+                                + "configured ProcessingSnapshotManager at "
+                                + scopePath);
+            }
         }
-        Node selected = ExternalEvidenceVerificationSupport.nodeAt(
-                root, scopePath);
-        if (selected != null && selected.getType() != null) {
-            throw ExternalEvidenceVerificationSupport.invalid(
-                    "Inherited effective scope resolution requires a "
-                            + "configured ProcessingSnapshotManager at "
-                            + scopePath);
-        }
-        return selected;
+        return projectionBuilder.materializeEffectiveScope(effective);
     }
 
     ContractBundle bundleAt(String scopePath) {
@@ -72,6 +78,28 @@ final class ExternalDeliveryResolution implements AutoCloseable {
         return contractLoader.load(
                 FrozenNode.fromResolvedNode(selected),
                 scopePath);
+    }
+
+    /** Plans concrete embedded children against this resolution's full scope. */
+    EmbeddedScopePlan embeddedScopePlanAt(
+            String scopePath,
+            ContractBundle bundle) {
+        if (bundle == null || !bundle.hasProcessEmbedded()) {
+            return null;
+        }
+        Node effective = effectiveNodeAt(scopePath);
+        if (effective == null) {
+            throw ExternalEvidenceVerificationSupport.invalid(
+                    "Scope is absent: " + scopePath);
+        }
+        EmbeddedScopeDeclaration declaration =
+                bundle.embeddedScopeDeclaration();
+        return projectionBuilder.embeddedScopePlanner().plan(
+                FrozenNode.fromResolvedNode(effective),
+                scopePath,
+                declaration.explicitPaths(),
+                declaration.collectionPaths(),
+                GasSchedule.contracts10());
     }
 
     ContractBundle subscriptionBundleAt(String scopePath) {

@@ -2,11 +2,14 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -27,6 +30,8 @@ public final class SubscriptionSurfaceValidationContext {
     private final ResolvedSnapshot inputSnapshot;
     private final ResolvedSnapshot tentativeSnapshot;
     private final Set<String> changedPaths;
+    private final Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans;
+    private final Set<String> replacedScopePaths;
     private final List<SubscriptionDelta.Entry> activeSubscriptionIntervals;
     private final boolean activeSubscriptionIntervalsSupplied;
     private final GasSchedule gasSchedule;
@@ -45,6 +50,10 @@ public final class SubscriptionSurfaceValidationContext {
         this.changedPaths = Collections.unmodifiableSet(
                 new LinkedHashSet<>(Objects.requireNonNull(
                         builder.changedPaths, "changedPaths")));
+        this.entryEmbeddedScopePlans = immutableEntryEmbeddedScopePlans(
+                builder.entryEmbeddedScopePlans);
+        this.replacedScopePaths = immutableScopePaths(
+                builder.replacedScopePaths);
         this.activeSubscriptionIntervals =
                 immutableActiveIntervals(
                         builder.activeSubscriptionIntervals);
@@ -123,6 +132,35 @@ public final class SubscriptionSurfaceValidationContext {
      */
     public Set<String> changedPaths() {
         return changedPaths;
+    }
+
+    /** Reports whether current-event membership was frozen for one scope. */
+    boolean hasEntryEmbeddedScopePlan(String scopePath) {
+        return entryEmbeddedScopePlans.containsKey(
+                ProcessorEngine.normalizeScope(scopePath));
+    }
+
+    /** Returns the immutable current-event membership frozen for one scope. */
+    EmbeddedScopePlan entryEmbeddedScopePlan(String scopePath) {
+        return entryEmbeddedScopePlans.get(
+                ProcessorEngine.normalizeScope(scopePath));
+    }
+
+    /**
+     * Reports whether an occurrence was replaced during this invocation.
+     *
+     * <p>A whole-scope replacement also replaces every descendant channel
+     * occurrence, even when its final immutable subscription snapshot happens
+     * to equal the snapshot that was active at entry.</p>
+     */
+    boolean replacesOccurrence(String scopePath) {
+        String normalized = ProcessorEngine.normalizeScope(scopePath);
+        for (String replaced : replacedScopePaths) {
+            if (PointerUtils.descendantOrEqual(normalized, replaced)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -204,6 +242,9 @@ public final class SubscriptionSurfaceValidationContext {
         private final Node tentativeRoot;
         private final Set<String> changedPaths;
         private final GasSchedule gasSchedule;
+        private final Map<String, EmbeddedScopePlan>
+                entryEmbeddedScopePlans = new LinkedHashMap<>();
+        private final Set<String> replacedScopePaths = new LinkedHashSet<>();
         private final List<SubscriptionDelta.Entry>
                 activeSubscriptionIntervals = new ArrayList<>();
         private boolean activeSubscriptionIntervalsSupplied;
@@ -256,6 +297,26 @@ public final class SubscriptionSurfaceValidationContext {
                 this.activeSubscriptionIntervals.add(
                         Objects.requireNonNull(
                                 interval, "active subscription interval"));
+            }
+            return this;
+        }
+
+        /** Attaches invocation-frozen embedded plans for entry projection. */
+        Builder entryEmbeddedScopePlans(
+                Map<String, EmbeddedScopePlan> plans) {
+            Objects.requireNonNull(plans, "plans");
+            this.entryEmbeddedScopePlans.clear();
+            this.entryEmbeddedScopePlans.putAll(plans);
+            return this;
+        }
+
+        /** Attaches whole-scope replacements observed during the invocation. */
+        Builder replacedScopePaths(Iterable<String> scopePaths) {
+            Objects.requireNonNull(scopePaths, "scopePaths");
+            this.replacedScopePaths.clear();
+            for (String scopePath : scopePaths) {
+                this.replacedScopePaths.add(
+                        Objects.requireNonNull(scopePath, "scopePath"));
             }
             return this;
         }
@@ -325,5 +386,39 @@ public final class SubscriptionSurfaceValidationContext {
             }
         }
         return Collections.unmodifiableList(copy);
+    }
+
+    private static Map<String, EmbeddedScopePlan>
+    immutableEntryEmbeddedScopePlans(
+            Map<String, EmbeddedScopePlan> source) {
+        Map<String, EmbeddedScopePlan> copy = new LinkedHashMap<>();
+        for (Map.Entry<String, EmbeddedScopePlan> entry
+                : Objects.requireNonNull(
+                        source, "entryEmbeddedScopePlans").entrySet()) {
+            String scopePath = ProcessorEngine.normalizeScope(
+                    Objects.requireNonNull(entry.getKey(), "scopePath"));
+            EmbeddedScopePlan plan = Objects.requireNonNull(
+                    entry.getValue(), "entryEmbeddedScopePlan");
+            if (!scopePath.equals(plan.scopePath())) {
+                throw new IllegalArgumentException(
+                        "Entry embedded plan scope mismatch: "
+                                + scopePath + " != " + plan.scopePath());
+            }
+            if (copy.put(scopePath, plan) != null) {
+                throw new IllegalArgumentException(
+                        "Duplicate entry embedded plan: " + scopePath);
+            }
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private static Set<String> immutableScopePaths(Iterable<String> source) {
+        Set<String> copy = new LinkedHashSet<>();
+        for (String scopePath : Objects.requireNonNull(
+                source, "scopePaths")) {
+            copy.add(ProcessorEngine.normalizeScope(
+                    Objects.requireNonNull(scopePath, "scopePath")));
+        }
+        return Collections.unmodifiableSet(copy);
     }
 }

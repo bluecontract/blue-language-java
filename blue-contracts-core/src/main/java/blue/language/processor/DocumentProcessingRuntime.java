@@ -10,6 +10,7 @@ import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,8 @@ final class DocumentProcessingRuntime {
     long sequenceStalePreviewFallbacks;
     long sequenceFallbackPatches;
     final Set<String> changedPaths = new LinkedHashSet<>();
+    private final Set<String> replacedEmbeddedScopePaths =
+            new LinkedHashSet<>();
 
     /** Creates a node-backed invocation with default services. */
     public DocumentProcessingRuntime(Node document) {
@@ -310,6 +313,32 @@ final class DocumentProcessingRuntime {
     /** Returns committed changed paths in first-change order. */
     public Set<String> changedPaths() {
         return Collections.unmodifiableSet(new LinkedHashSet<>(changedPaths));
+    }
+
+    /** Captures one whole embedded occurrence replacement for commit delta. */
+    void recordReplacedEmbeddedScope(String scopePath) {
+        replacedEmbeddedScopePaths.add(
+                PointerUtils.normalizeScope(scopePath));
+    }
+
+    /** Returns whole occurrence replacements in first-observed order. */
+    Set<String> replacedEmbeddedScopePaths() {
+        return Collections.unmodifiableSet(
+                new LinkedHashSet<>(replacedEmbeddedScopePaths));
+    }
+
+    /** Returns all successfully frozen current-event embedded plans. */
+    Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans() {
+        Map<String, EmbeddedScopePlan> plans = new LinkedHashMap<>();
+        for (Map.Entry<String, ScopeRuntimeContext> entry
+                : scopeRegistry.scopes().entrySet()) {
+            ScopeRuntimeContext context = entry.getValue();
+            if (context.hasEntryEmbeddedScopePlan()
+                    && context.entryEmbeddedScopePlan() != null) {
+                plans.put(entry.getKey(), context.entryEmbeddedScopePlan());
+            }
+        }
+        return Collections.unmodifiableMap(plans);
     }
 
     /** Returns an immutable conformance-trace snapshot. */

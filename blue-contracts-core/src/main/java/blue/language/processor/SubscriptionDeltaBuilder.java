@@ -28,14 +28,20 @@ final class SubscriptionDeltaBuilder {
         for (Map.Entry<String, SubscriptionDelta.Entry> entry
                 : before.entrySet()) {
             SubscriptionDelta.Entry replacement = after.get(entry.getKey());
-            if (!entry.getValue().sameSubscriptionSnapshot(replacement)) {
+            if (context.replacesOccurrence(
+                    entry.getValue().scopePath())
+                    || !entry.getValue()
+                            .sameSubscriptionSnapshot(replacement)) {
                 removed.add(intervals.retire(entry.getValue(), context));
             }
         }
         for (Map.Entry<String, SubscriptionDelta.Entry> entry
                 : after.entrySet()) {
             SubscriptionDelta.Entry previous = before.get(entry.getKey());
-            if (!entry.getValue().sameSubscriptionSnapshot(previous)) {
+            if (context.replacesOccurrence(
+                    entry.getValue().scopePath())
+                    || !entry.getValue()
+                            .sameSubscriptionSnapshot(previous)) {
                 added.add(intervals.activate(entry.getValue(), context));
             }
         }

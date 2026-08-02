@@ -65,8 +65,15 @@ final class DirectProtectedStateMutationGuard {
                 String embeddedPathsPointer = ProcessorEngine.resolvePointer(
                         normalizedScope,
                         ProcessorPointerConstants.RELATIVE_EMBEDDED_PATHS);
+                String embeddedCollectionPathsPointer =
+                        ProcessorEngine.resolvePointer(
+                                normalizedScope,
+                                ProcessorPointerConstants
+                                        .RELATIVE_EMBEDDED_COLLECTION_PATHS);
                 if (PointerUtils.descendantOrEqual(
-                        targetPath, embeddedPathsPointer)) {
+                        targetPath, embeddedPathsPointer)
+                        || PointerUtils.descendantOrEqual(
+                        targetPath, embeddedCollectionPathsPointer)) {
                     return;
                 }
             }

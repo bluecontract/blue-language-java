@@ -5,6 +5,7 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.ChannelEventCheckpoint;
+import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 
@@ -33,6 +34,8 @@ public final class ContractBundle {
     private final Map<String, MarkerContract> markers;
     private final Map<String, FrozenNode> contractNodes;
     private final List<EffectiveContractSnapshot> effectiveContractSnapshots;
+    private final EmbeddedScopeDeclaration embeddedScopeDeclaration;
+    private final EmbeddedScopePlan embeddedScopePlan;
     private final List<String> embeddedPaths;
     private boolean checkpointDeclared;
 
@@ -47,7 +50,8 @@ public final class ContractBundle {
                            Map<String, MarkerContract> markers,
                            Map<String, FrozenNode> contractNodes,
                            List<EffectiveContractSnapshot> effectiveContractSnapshots,
-                           List<String> embeddedPaths,
+                           EmbeddedScopeDeclaration embeddedScopeDeclaration,
+                           EmbeddedScopePlan embeddedScopePlan,
                            boolean checkpointDeclared) {
         this.channels = channels;
         this.channelNodes = channelNodes;
@@ -55,7 +59,10 @@ public final class ContractBundle {
         this.markers = markers;
         this.contractNodes = contractNodes;
         this.effectiveContractSnapshots = effectiveContractSnapshots;
-        this.embeddedPaths = embeddedPaths;
+        this.embeddedScopeDeclaration = embeddedScopeDeclaration;
+        this.embeddedScopePlan = embeddedScopePlan;
+        this.embeddedPaths = effectiveEmbeddedPaths(
+                embeddedScopeDeclaration, embeddedScopePlan);
         this.checkpointDeclared = checkpointDeclared;
 
         this.channelsView = Collections.unmodifiableMap(this.channels);
@@ -192,6 +199,31 @@ public final class ContractBundle {
         return embeddedPathsView;
     }
 
+    /** Returns the immutable structural Process Embedded declaration. */
+    EmbeddedScopeDeclaration embeddedScopeDeclaration() {
+        return embeddedScopeDeclaration;
+    }
+
+    /**
+     * Returns the invocation-local concrete embedded-scope plan.
+     *
+     * @return immutable plan, or {@code null} on a cache-only structural view
+     */
+    EmbeddedScopePlan embeddedScopePlan() {
+        return embeddedScopePlan;
+    }
+
+    /** Reports whether this bundle contains an effective Process Embedded marker. */
+    boolean hasProcessEmbedded() {
+        for (EffectiveContractSnapshot snapshot : effectiveContractSnapshots) {
+            if (EffectiveContractSnapshotConstants.Role.PROCESS_EMBEDDED
+                    .equals(snapshot.role())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Reports whether a checkpoint marker has been declared.
      *
@@ -255,7 +287,8 @@ public final class ContractBundle {
 
     ContractBundle copyWithRuntimeMarkers(Map<String, MarkerContract> runtimeMarkers,
                                           Map<String, FrozenNode> runtimeMarkerNodes,
-                                          boolean runtimeCheckpointDeclared) {
+                                          boolean runtimeCheckpointDeclared,
+                                          EmbeddedScopePlan runtimeEmbeddedScopePlan) {
         Map<String, List<HandlerBinding>> handlersCopy = new LinkedHashMap<>();
         for (Map.Entry<String, List<HandlerBinding>> entry : handlersByChannel.entrySet()) {
             handlersCopy.put(entry.getKey(), new ArrayList<>(entry.getValue()));
@@ -273,8 +306,47 @@ public final class ContractBundle {
                 runtimeMarkers != null ? new LinkedHashMap<>(runtimeMarkers) : new LinkedHashMap<>(),
                 nodesCopy,
                 new ArrayList<>(effectiveContractSnapshots),
-                new ArrayList<>(embeddedPaths),
+                embeddedScopeDeclaration,
+                runtimeEmbeddedScopePlan,
                 runtimeCheckpointDeclared);
+    }
+
+    /** Returns an invocation-local copy carrying the frozen entry plan. */
+    ContractBundle withEmbeddedScopePlan(EmbeddedScopePlan plan) {
+        Map<String, List<HandlerBinding>> handlersCopy =
+                new LinkedHashMap<>();
+        for (Map.Entry<String, List<HandlerBinding>> entry
+                : handlersByChannel.entrySet()) {
+            handlersCopy.put(
+                    entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        return new ContractBundle(
+                new LinkedHashMap<>(channels),
+                new LinkedHashMap<>(channelNodes),
+                handlersCopy,
+                new LinkedHashMap<>(markers),
+                new LinkedHashMap<>(contractNodes),
+                new ArrayList<>(effectiveContractSnapshots),
+                embeddedScopeDeclaration,
+                plan,
+                checkpointDeclared);
+    }
+
+    private static List<String> effectiveEmbeddedPaths(
+            EmbeddedScopeDeclaration declaration,
+            EmbeddedScopePlan plan) {
+        if (plan == null) {
+            return new ArrayList<>(declaration.explicitPaths());
+        }
+        List<String> concrete = new ArrayList<>(
+                plan.concretePaths().size());
+        for (EmbeddedConcretePath path : plan.concretePaths()) {
+            concrete.add(path.origin() == EmbeddedPathOrigin.EXPLICIT
+                    ? path.declarationPath()
+                    : PointerUtils.appendPointer(
+                            path.declarationPath(), path.memberKey()));
+        }
+        return concrete;
     }
 
     boolean hasStaticCheckpointDeclaration() {
@@ -422,7 +494,8 @@ public final class ContractBundle {
         private final Map<String, FrozenNode> contractNodes = new LinkedHashMap<>();
         private final List<EffectiveContractSnapshot> effectiveContractSnapshots =
                 new ArrayList<>();
-        private final List<String> embeddedPaths = new ArrayList<>();
+        private EmbeddedScopeDeclaration embeddedScopeDeclaration =
+                EmbeddedScopeDeclaration.empty();
         private boolean embeddedDeclared;
         private boolean checkpointDeclared;
 
@@ -544,10 +617,8 @@ public final class ContractBundle {
             if (node != null && embedded.getKey() != null) {
                 contractNodes.put(embedded.getKey(), node);
             }
-            if (embedded.getPaths() != null) {
-                embeddedPaths.clear();
-                embeddedPaths.addAll(embedded.getPaths());
-            }
+            embeddedScopeDeclaration = EmbeddedScopeDeclaration.of(
+                    embedded.getPaths(), embedded.getCollectionPaths());
             return this;
         }
 
@@ -608,7 +679,8 @@ public final class ContractBundle {
                     markers,
                     contractNodes,
                     effectiveContractSnapshots,
-                    embeddedPaths,
+                    embeddedScopeDeclaration,
+                    null,
                     checkpointDeclared);
         }
     }

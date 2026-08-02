@@ -81,8 +81,9 @@ final class ExternalEvidenceVerificationSupport {
                 scopePath))) {
             return true;
         }
-        return node.getValue() == null
-                && node.getItems() == null;
+        return node.getItems() == null
+                && (node.getValue() == null
+                        || node.getContracts() != null);
     }
 
     static int depth(String scopePath) {

@@ -142,8 +142,10 @@ final class ActivationIntervalValidator {
                 PointerUtils.relativizePointer(
                         contractsPath, changedPath));
         return relative.size() >= 2
-                && ProcessorContractConstants.KEY_PATHS.equals(
-                        relative.get(1));
+                && (ProcessorContractConstants.KEY_PATHS.equals(
+                        relative.get(1))
+                        || ProcessorContractConstants.KEY_COLLECTION_PATHS
+                                .equals(relative.get(1)));
     }
 
     private boolean processEmbeddedContractChanged(

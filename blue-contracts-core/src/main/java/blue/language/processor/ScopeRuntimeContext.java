@@ -24,6 +24,8 @@ public final class ScopeRuntimeContext {
     private final Deque<Node> triggeredQueue = new ArrayDeque<>();
     private final List<Node> bridgeableEvents = new ArrayList<>();
     private final List<String> processedEmbeddedPaths = new ArrayList<>();
+    private boolean entryEmbeddedScopePlanFrozen;
+    private EmbeddedScopePlan entryEmbeddedScopePlan;
     private ScopeRuntimeContext parentOccurrence;
     private TerminationState terminationState = TerminationState.ACTIVE;
     private String terminationReason;
@@ -123,6 +125,34 @@ public final class ScopeRuntimeContext {
      */
     public List<String> processedEmbeddedPaths() {
         return new ArrayList<>(processedEmbeddedPaths);
+    }
+
+    /** Reports whether embedded membership has been frozen for this event. */
+    boolean hasEntryEmbeddedScopePlan() {
+        return entryEmbeddedScopePlanFrozen;
+    }
+
+    /** Returns the frozen entry plan, or {@code null} when no marker exists. */
+    EmbeddedScopePlan entryEmbeddedScopePlan() {
+        if (!entryEmbeddedScopePlanFrozen) {
+            throw new IllegalStateException(
+                    "Embedded scope entry plan has not been frozen at "
+                            + scopePath);
+        }
+        return entryEmbeddedScopePlan;
+    }
+
+    /** Publishes embedded membership exactly once after successful planning. */
+    void freezeEntryEmbeddedScopePlan(EmbeddedScopePlan plan) {
+        if (entryEmbeddedScopePlanFrozen) {
+            if (!Objects.equals(entryEmbeddedScopePlan, plan)) {
+                throw new IllegalStateException(
+                        "Embedded scope entry plan changed at " + scopePath);
+            }
+            return;
+        }
+        entryEmbeddedScopePlan = plan;
+        entryEmbeddedScopePlanFrozen = true;
     }
 
     void attachToParentOccurrence(ScopeRuntimeContext parent) {

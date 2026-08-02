@@ -91,6 +91,10 @@ final class ProcessingResultCoordinator {
                         runtime.changedPaths(),
                         owner.gasSchedule())
                         .snapshots(inputSnapshot, runtime.snapshot())
+                        .entryEmbeddedScopePlans(
+                                runtime.entryEmbeddedScopePlans())
+                        .replacedScopePaths(
+                                runtime.replacedEmbeddedScopePaths())
                         .runtimeWorkSessions(() -> runtime
                                 .newRuntimeWorkSession(
                                         owner.matchingService().blue()));

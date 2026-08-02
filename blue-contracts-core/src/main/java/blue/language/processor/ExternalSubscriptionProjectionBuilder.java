@@ -133,6 +133,34 @@ final class ExternalSubscriptionProjectionBuilder {
                 contractLoader, this, projection.root, snapshot);
     }
 
+    /** Opens selected pure-reference scope content through verified evidence. */
+    Node materializeSelectedScope(Node selected) {
+        if (selected == null || !selected.isReferenceOnly()
+                || snapshotManager == null) {
+            return selected;
+        }
+        return snapshotManager.materializeVerifiedExactReference(
+                FrozenNode.fromResolvedNode(selected)).toNode();
+    }
+
+    /** Opens effective pure-reference scope content through verified evidence. */
+    Node materializeEffectiveScope(Node effective) {
+        if (effective == null || !effective.isReferenceOnly()
+                || snapshotManager == null) {
+            return effective;
+        }
+        return snapshotManager.materializeVerifiedReference(
+                FrozenNode.fromResolvedNode(effective)).toNode();
+    }
+
+    /** Creates a planner bound to this projection's verified provider view. */
+    EmbeddedScopePlanner embeddedScopePlanner() {
+        return snapshotManager != null
+                ? new EmbeddedScopePlanner(
+                        snapshotManager::materializeVerifiedExactReference)
+                : new EmbeddedScopePlanner();
+    }
+
     Map<String, String> selectorEffectiveContractTypes(
             ExternalDeliveryResolution resolution,
             String scopePath) {
@@ -196,8 +224,11 @@ final class ExternalSubscriptionProjectionBuilder {
             Node source,
             String path,
             Set<String> selectorScopes) {
-        if (source == null || source.isReferenceOnly()) {
-            return source != null ? source.clone() : null;
+        if (source == null) {
+            return null;
+        }
+        if (source.isReferenceOnly()) {
+            source = exactHeaderNode(source);
         }
         String normalized = PointerUtils.normalizeScope(path);
         boolean selected = selectorScopes.contains(normalized);
@@ -466,8 +497,11 @@ final class ExternalSubscriptionProjectionBuilder {
             Node source,
             String path,
             Map<String, Set<String>> subscriptionKeys) {
-        if (source == null || source.isReferenceOnly()) {
-            return source != null ? source.clone() : null;
+        if (source == null) {
+            return null;
+        }
+        if (source.isReferenceOnly()) {
+            source = exactHeaderNode(source);
         }
         Set<String> requestedKeys = subscriptionKeys.getOrDefault(
                 PointerUtils.normalizeScope(path),

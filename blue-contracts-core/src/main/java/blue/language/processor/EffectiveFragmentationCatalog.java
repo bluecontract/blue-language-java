@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.processor.util.PointerUtils;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -17,6 +19,7 @@ import java.util.Objects;
 public final class EffectiveFragmentationCatalog {
 
     private final String rootBlueId;
+    private final Map<String, EmbeddedScopePlanView> scopePlansByScope;
     private final Map<String, List<String>>
             effectiveProcessEmbeddedPathsByScope;
     private final Map<String, List<EffectiveContractSnapshot>>
@@ -28,8 +31,25 @@ public final class EffectiveFragmentationCatalog {
                     effectiveProcessEmbeddedPathsByScope,
             Map<String, List<EffectiveContractSnapshot>>
                     effectiveContractsByScope) {
+        this(
+                rootBlueId,
+                legacyPlans(effectiveProcessEmbeddedPathsByScope),
+                effectiveProcessEmbeddedPathsByScope,
+                effectiveContractsByScope);
+    }
+
+    EffectiveFragmentationCatalog(
+            String rootBlueId,
+            Map<String, EmbeddedScopePlanView> scopePlansByScope,
+            Map<String, List<String>>
+                    effectiveProcessEmbeddedPathsByScope,
+            Map<String, List<EffectiveContractSnapshot>>
+                    effectiveContractsByScope) {
         this.rootBlueId =
                 Objects.requireNonNull(rootBlueId, "rootBlueId");
+        this.scopePlansByScope = Collections.unmodifiableMap(
+                new LinkedHashMap<>(Objects.requireNonNull(
+                        scopePlansByScope, "scopePlansByScope")));
         this.effectiveProcessEmbeddedPathsByScope =
                 immutableLists(
                         effectiveProcessEmbeddedPathsByScope,
@@ -43,6 +63,11 @@ public final class EffectiveFragmentationCatalog {
             throw new IllegalArgumentException(
                     "Catalog scope surfaces must have identical keys");
         }
+        if (!this.scopePlansByScope.keySet().equals(
+                this.effectiveContractsByScope.keySet())) {
+            throw new IllegalArgumentException(
+                    "Catalog scope plans and contracts must have identical keys");
+        }
     }
 
     /**
@@ -52,6 +77,19 @@ public final class EffectiveFragmentationCatalog {
      */
     public String rootBlueId() {
         return rootBlueId;
+    }
+
+    /**
+     * Structured effective Process Embedded plans by active scope.
+     *
+     * <p>Every active scope has one view. A scope without an effective Process
+     * Embedded contract has an empty view, preserving root-first catalog key
+     * order without conflating absence with another scope's declaration.</p>
+     *
+     * @return immutable scope-to-plan mapping
+     */
+    public Map<String, EmbeddedScopePlanView> scopePlansByScope() {
+        return scopePlansByScope;
     }
 
     /**
@@ -98,5 +136,36 @@ public final class EffectiveFragmentationCatalog {
                                             label + " value"))));
         }
         return Collections.unmodifiableMap(copy);
+    }
+
+    private static Map<String, EmbeddedScopePlanView> legacyPlans(
+            Map<String, List<String>> pathsByScope) {
+        Objects.requireNonNull(pathsByScope,
+                "effectiveProcessEmbeddedPathsByScope");
+        Map<String, EmbeddedScopePlanView> result = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry
+                : pathsByScope.entrySet()) {
+            List<String> concrete = new ArrayList<>();
+            Map<String, EmbeddedScopePlanView.Origin> origins =
+                    new LinkedHashMap<>();
+            for (String path : entry.getValue()) {
+                String absolute = PointerUtils.resolvePointer(
+                        entry.getKey(), path);
+                concrete.add(absolute);
+                origins.put(
+                        absolute,
+                        EmbeddedScopePlanView.Origin.EXPLICIT);
+            }
+            result.put(
+                    entry.getKey(),
+                    new EmbeddedScopePlanView(
+                            entry.getKey(),
+                            entry.getValue(),
+                            Collections.<String>emptyList(),
+                            Collections.<String, List<String>>emptyMap(),
+                            concrete,
+                            origins));
+        }
+        return result;
     }
 }

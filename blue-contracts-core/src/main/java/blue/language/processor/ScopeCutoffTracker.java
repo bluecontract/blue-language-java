@@ -9,10 +9,13 @@ import java.util.Objects;
 final class ScopeCutoffTracker {
 
     private final ProcessingCutoffTracker cutoff;
+    private final DocumentProcessingRuntime runtime;
 
     ScopeCutoffTracker(ProcessorInvocationState execution) {
-        this.cutoff = new ProcessingCutoffTracker(
-                Objects.requireNonNull(execution, "execution"));
+        ProcessorInvocationState checked = Objects.requireNonNull(
+                execution, "execution");
+        this.cutoff = new ProcessingCutoffTracker(checked);
+        this.runtime = checked.runtime();
     }
 
     void recordEmbeddedReplacement(
@@ -31,15 +34,19 @@ final class ScopeCutoffTracker {
                 continue;
             }
             JsonPatch.Op operation = update.op();
-            if (operation == JsonPatch.Op.REMOVE
-                    || operation == JsonPatch.Op.REPLACE) {
-                if (operation == JsonPatch.Op.REPLACE
-                        && update.beforePresent()
+            boolean replacesExistingOccurrence =
+                    operation == JsonPatch.Op.REMOVE
+                    || operation == JsonPatch.Op.REPLACE
+                    || (operation == JsonPatch.Op.ADD
+                            && update.beforePresent());
+            if (replacesExistingOccurrence) {
+                if (update.beforePresent()
                         && update.afterPresent()
                         && semanticallyEqual(
                         update.before(), update.after())) {
                     continue;
                 }
+                runtime.recordReplacedEmbeddedScope(childScope);
                 cutoff.markCutOff(childScope);
             }
         }

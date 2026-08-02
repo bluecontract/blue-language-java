@@ -51,15 +51,81 @@ final class SubscriptionSurfaceProjector {
             GasSchedule schedule,
             Set<String> changedPaths,
             SubscriptionSurfaceValidationContext context) {
+        return project(
+                root,
+                snapshot,
+                schedule,
+                changedPaths,
+                context,
+                EmbeddedMembership.TENTATIVE);
+    }
+
+    /** Projects the current-event surface from frozen entry membership. */
+    Map<String, SubscriptionDelta.Entry> projectEntry(
+            Node root,
+            ResolvedSnapshot snapshot,
+            GasSchedule schedule,
+            Set<String> changedPaths,
+            SubscriptionSurfaceValidationContext context) {
+        return project(
+                root,
+                snapshot,
+                schedule,
+                changedPaths,
+                context,
+                EmbeddedMembership.ENTRY);
+    }
+
+    /** Projects the post-commit candidate from tentative final membership. */
+    Map<String, SubscriptionDelta.Entry> projectTentative(
+            Node root,
+            ResolvedSnapshot snapshot,
+            GasSchedule schedule,
+            Set<String> changedPaths,
+            SubscriptionSurfaceValidationContext context) {
+        return project(
+                root,
+                snapshot,
+                schedule,
+                changedPaths,
+                context,
+                EmbeddedMembership.TENTATIVE);
+    }
+
+    private Map<String, SubscriptionDelta.Entry> project(
+            Node root,
+            ResolvedSnapshot snapshot,
+            GasSchedule schedule,
+            Set<String> changedPaths,
+            SubscriptionSurfaceValidationContext context,
+            EmbeddedMembership membership) {
         if (effective != null) {
             return effective.project(
-                    root, snapshot, schedule, changedPaths, context);
+                    root,
+                    snapshot,
+                    schedule,
+                    changedPaths,
+                    context,
+                    membership);
         }
-        return direct.project(root, schedule, changedPaths);
+        return direct.project(
+                root,
+                schedule,
+                changedPaths,
+                context,
+                membership);
     }
 
     /** Shares the stateless rules with interval validation. */
     SubscriptionSurfaceRules rules() {
         return rules;
+    }
+
+    /** Selects the immutable membership snapshot used for route projection. */
+    enum EmbeddedMembership {
+        /** Current event's write-once entry membership. */
+        ENTRY,
+        /** Tentative final membership that becomes active after commit. */
+        TENTATIVE
     }
 }

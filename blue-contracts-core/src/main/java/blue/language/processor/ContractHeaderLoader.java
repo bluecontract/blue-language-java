@@ -223,15 +223,12 @@ final class ContractHeaderLoader {
                             ? recognitionReason
                             : "effective-contract-header");
         }
-        List<String> meteredEmbeddedPaths =
-                recognitionMeter != null
-                        && ProcessEmbedded.class.isAssignableFrom(contractClass)
-                        ? validateMeteredEmbeddedPaths(
-                                scopePath,
-                                key,
-                                effectiveContract,
-                                recognitionMeter)
-                        : null;
+        /*
+         * Embedded declaration and member work is metered exactly once by
+         * EmbeddedScopePlanner after structural-cache lookup. Header loading
+         * only preserves the immutable authored declaration.
+         */
+        List<String> meteredEmbeddedPaths = null;
 
         Node executableContract = executableBodies.exactExecutableContract(
                 effectiveContract,
@@ -464,7 +461,7 @@ final class ContractHeaderLoader {
             ContractRecognitionMeter meter) {
         FrozenNode pathsNode = effectiveContracts.property(
                 contractNode, ProcessorContractConstants.KEY_PATHS);
-        if (pathsNode == null) {
+        if (pathsNode == null || pathsNode.isEmptyNode()) {
             return Collections.emptyList();
         }
         List<FrozenNode> items = pathsNode.getItems();

@@ -39,7 +39,9 @@ final class DirectSubscriptionSurfaceProjector {
     Map<String, SubscriptionDelta.Entry> project(
             Node root,
             GasSchedule schedule,
-            Set<String> changedPaths) {
+            Set<String> changedPaths,
+            SubscriptionSurfaceValidationContext validationContext,
+            SubscriptionSurfaceProjector.EmbeddedMembership membership) {
         if (!rules.isConcrete(root)) {
             throw rules.invalid(
                     "Root subscription scope must be concrete",
@@ -56,7 +58,9 @@ final class DirectSubscriptionSurfaceProjector {
                 new LinkedHashMap<String, String>(),
                 schedule,
                 changedPaths,
-                0);
+                0,
+                validationContext,
+                membership);
         return result;
     }
 
@@ -68,7 +72,11 @@ final class DirectSubscriptionSurfaceProjector {
                          Map<String, String> activeExactScopes,
                          GasSchedule schedule,
                          Set<String> changedPaths,
-                         int depth) {
+                         int depth,
+                         SubscriptionSurfaceValidationContext
+                                 validationContext,
+                         SubscriptionSurfaceProjector.EmbeddedMembership
+                                 membership) {
         rules.requireLimit(
                 GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH,
                 depth,
@@ -183,11 +191,26 @@ final class DirectSubscriptionSurfaceProjector {
                                 contract.getKey());
                     }
                     embeddedKey = contract.getKey();
-                    embeddedRoutes = routes.project(
-                            contract.getValue(),
+                    EmbeddedScopePlan entryPlan =
+                            membership
+                                    == SubscriptionSurfaceProjector
+                                            .EmbeddedMembership.ENTRY
+                                    && validationContext
+                                            .hasEntryEmbeddedScopePlan(
+                                                    scopePath)
+                            ? validationContext.entryEmbeddedScopePlan(
+                                    scopePath)
+                            : null;
+                    embeddedRoutes = routes.projectScope(
+                            scope,
+                            routes.declaration(
+                                    contract.getValue(),
+                                    scopePath,
+                                    contract.getKey()),
+                            entryPlan,
                             scopePath,
-                            contract.getKey(),
-                            schedule);
+                            schedule,
+                            new EmbeddedScopePlanner());
                 }
             }
 
@@ -234,7 +257,9 @@ final class DirectSubscriptionSurfaceProjector {
                         routeDependencyChanged
                                 ? Collections.singleton(targetScope)
                                 : changedPaths,
-                        depth + 1);
+                        depth + 1,
+                        validationContext,
+                        membership);
             }
         } finally {
             activeScopes.remove(scope);

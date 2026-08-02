@@ -96,6 +96,7 @@ final class EffectiveFragmentationCatalogBuilder {
                                         discovery
                                                 .executableBodyPaths());
                 CatalogPass pass = catalog(
+                        sequence,
                         snapshot,
                         admitted.node(),
                         rootBlueId);
@@ -122,9 +123,12 @@ final class EffectiveFragmentationCatalogBuilder {
     }
 
     private CatalogPass catalog(
+            ProcessingSnapshotManager sequence,
             ResolvedSnapshot snapshot,
             Node exactSelectedRoot,
             String rootBlueId) {
+        Map<String, EmbeddedScopePlanView> plansByScope =
+                new LinkedHashMap<>();
         Map<String, List<String>> pathsByScope =
                 new LinkedHashMap<>();
         Map<String, List<EffectiveContractSnapshot>>
@@ -214,10 +218,29 @@ final class EffectiveFragmentationCatalogBuilder {
                 }
             }
 
-            List<String> embeddedPaths =
-                    Collections.unmodifiableList(
-                            new ArrayList<>(
-                                    bundle.embeddedPaths()));
+            EmbeddedScopePlan embeddedPlan = null;
+            if (bundle.hasProcessEmbedded()) {
+                EmbeddedScopeDeclaration declaration =
+                        bundle.embeddedScopeDeclaration();
+                embeddedPlan = new EmbeddedScopePlanner(
+                        sequence::materializeVerifiedExactReference)
+                        .plan(
+                                effective,
+                                frame.scopePath,
+                                declaration.explicitPaths(),
+                                declaration.collectionPaths(),
+                                limits);
+            }
+            EmbeddedScopePlanView planView = embeddedPlan != null
+                    ? EmbeddedScopePlanView.from(embeddedPlan)
+                    : EmbeddedScopePlanView.empty(frame.scopePath);
+            plansByScope.put(frame.scopePath, planView);
+            List<String> embeddedPaths = new ArrayList<>();
+            for (String childPath : planView.concreteChildPaths()) {
+                embeddedPaths.add(PointerUtils.relativizePointer(
+                        frame.scopePath, childPath));
+            }
+            embeddedPaths = Collections.unmodifiableList(embeddedPaths);
             requireLimit(
                     GasScheduleConstants.PortableLimit.PROCESS_EMBEDDED_PATHS_PER_SCOPE,
                     embeddedPaths.size());
@@ -231,30 +254,13 @@ final class EffectiveFragmentationCatalogBuilder {
 
             Set<String> localChildren =
                     new LinkedHashSet<>();
-            for (String declaredPath : embeddedPaths) {
-                final String normalized;
-                final String childScope;
-                try {
-                    normalized =
-                            PointerUtils
-                                    .assertValidRuntimePointer(
-                                            declaredPath);
-                    childScope =
-                            PointerUtils.resolvePointer(
-                                    frame.scopePath,
-                                    normalized);
-                } catch (IllegalArgumentException invalidPath) {
-                    throw new MustUnderstandFailureException(
-                            invalidPath.getMessage(),
-                            ProcessorErrorCategory
-                                    .PatchBoundaryViolation);
-                }
+            for (String childScope : planView.concreteChildPaths()) {
                 if (childScope.equals(frame.scopePath)
                         || !localChildren.add(childScope)
                         || scheduled.contains(childScope)) {
                     throw new MustUnderstandFailureException(
                             "Duplicate or cyclic Process Embedded path: "
-                                    + declaredPath,
+                                    + childScope,
                             ProcessorErrorCategory
                                     .PatchBoundaryViolation);
                 }
@@ -286,6 +292,7 @@ final class EffectiveFragmentationCatalogBuilder {
         return new CatalogPass(
                 new EffectiveFragmentationCatalog(
                         rootBlueId,
+                        plansByScope,
                         pathsByScope,
                         contractsByScope),
                 unmaterializedScopePaths);
@@ -331,8 +338,9 @@ final class EffectiveFragmentationCatalogBuilder {
             String scopePath,
             FrozenNode node) {
         if (node.isReferenceOnly()
-                || node.getValue() != null
-                || node.hasItems()) {
+                || node.hasItems()
+                || (node.getValue() != null
+                && node.getContracts() == null)) {
             throw new MustUnderstandFailureException(
                     "Process Embedded scope is not an object: "
                             + scopePath,

@@ -80,6 +80,11 @@ final class ScopeFrameFactory {
                     metrics,
                     execution.contractRecognitionMeter(),
                     "participating-contract-header");
+            loaded = EmbeddedScopeEntryPlans.attach(
+                    runtime,
+                    normalizedScope,
+                    resolvedScope,
+                    loaded);
             for (EffectiveContractSnapshot snapshot
                     : loaded.effectiveContractSnapshots()) {
                 runtime.recordContractSnapshot(snapshot);
@@ -131,9 +136,10 @@ final class ScopeFrameFactory {
 
     boolean isObjectScope(FrozenNode node) {
         return node != null
-                && node.getValue() == null
                 && !node.hasItems()
-                && !node.isReferenceOnly();
+                && !node.isReferenceOnly()
+                && (node.getValue() == null
+                || node.getContracts() != null);
     }
 
     boolean isParticipatingScope(String scopePath, FrozenNode node) {

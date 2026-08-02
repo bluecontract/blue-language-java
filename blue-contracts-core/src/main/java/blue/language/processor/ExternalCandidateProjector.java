@@ -89,6 +89,8 @@ final class ExternalCandidateProjector {
             return false;
         }
         return blue.language.model.wire.JsonPointer.ROOT.equals(scopePath)
-                || (node.getValue() == null && !node.hasItems());
+                || (!node.hasItems()
+                && (node.getValue() == null
+                || node.getContracts() != null));
     }
 }

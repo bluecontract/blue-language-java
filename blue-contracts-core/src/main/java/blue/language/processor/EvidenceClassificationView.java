@@ -1,7 +1,6 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
@@ -64,73 +63,90 @@ final class EvidenceClassificationView {
             if (!visited.add(scopePath)) {
                 continue;
             }
-            Node scope = ProcessorEngine.nodeAt(inputDocument, scopePath);
-            if (scope == null || scope.isReferenceOnly()) {
+            FrozenNode selectedScope = runtime.selectedFrozenAt(scopePath);
+            if (!requiresEmbeddedPreflight(selectedScope)) {
                 continue;
             }
-            Node contracts = scope.getContracts();
-            Map<String, Node> entries = contracts != null
-                    ? contracts.getProperties()
-                    : null;
-            if (entries == null) {
+            FrozenNode effectiveScope = requiresEffectiveScopeResolution(
+                    selectedScope)
+                    ? runtime.resolvedFrozenAt(scopePath)
+                    : selectedScope;
+            if (effectiveScope == null) {
                 continue;
             }
-            for (Map.Entry<String, Node> entry : entries.entrySet()) {
-                Node contract = entry.getValue();
-                Node type = contract != null ? contract.getType() : null;
-                if (type == null
-                        || !type.isReferenceOnly()
-                        || !RuntimeBlueIds.PROCESS_EMBEDDED.equals(
-                        type.getBlueId())) {
-                    continue;
-                }
-                Node paths = directProperty(
-                        contract,
-                        ProcessorContractConstants.KEY_PATHS);
-                if (paths == null || paths.getItems() == null) {
-                    continue;
-                }
-                for (Node declared : paths.getItems()) {
-                    Object raw = declared != null
-                            ? declared.getValue()
-                            : null;
-                    if (!(raw instanceof String)) {
-                        continue;
-                    }
-                    String target;
-                    try {
-                        target = ProcessorEngine.resolvePointer(
-                                scopePath,
-                                PointerUtils.assertValidRuntimePointer(
-                                        (String) raw));
-                        runtime
-                                .validateProcessEmbeddedTraversalWithoutResolution(
-                                        target);
-                    } catch (ProcessorFailureException exception) {
-                        if (exception.errorCategory()
-                                != ProcessorErrorCategory
-                                .CyclicSetEmbeddedBoundaryUnsupported) {
-                            throw exception;
-                        }
-                        throw new SubscriptionSurfaceInvalidException(
-                                exception.getMessage(),
-                                scopePath,
-                                entry.getKey(),
-                                exception.errorCategory());
-                    } catch (IllegalArgumentException ignored) {
-                        // Contract recognition owns malformed-path precedence.
-                        continue;
-                    }
-                    Node targetNode = ProcessorEngine.nodeAt(
-                            inputDocument,
-                            target);
-                    if (targetNode != null
-                            && !targetNode.isReferenceOnly()) {
-                        pending.addLast(target);
-                    }
-                }
+            ContractBundle structural = owner.contractLoader()
+                    .loadExternalClassification(
+                            selectedScope,
+                            effectiveScope,
+                            scopePath,
+                            null,
+                            true,
+                            owner.observer());
+            ContractBundle planned = EmbeddedScopeEntryPlans.attach(
+                    runtime,
+                    scopePath,
+                    effectiveScope,
+                    structural);
+            EmbeddedScopePlan plan = planned.embeddedScopePlan();
+            if (plan == null) {
+                continue;
+            }
+            for (String childScope : plan.concreteChildPaths()) {
+                pending.addLast(childScope);
             }
         }
+    }
+
+    /**
+     * Avoids resolving an ordinary child merely because its parent embeds it.
+     * A direct marker, an inherited type, or an opaque selected node is the
+     * only reason this pre-no-match pass may demand the child's effective
+     * scope. Unrelated contracts remain owned by participating-closure
+     * recognition and keep their established failure precedence.
+     */
+    private boolean requiresEmbeddedPreflight(FrozenNode selectedScope) {
+        if (selectedScope == null) {
+            return false;
+        }
+        if (selectedScope.isReferenceOnly()
+                || selectedScope.getType() != null) {
+            return true;
+        }
+        FrozenNode contracts = selectedScope.getContracts();
+        if (contracts == null) {
+            return false;
+        }
+        if (contracts.isReferenceOnly()) {
+            return true;
+        }
+        Map<String, FrozenNode> entries = contracts.getProperties();
+        if (entries == null) {
+            return false;
+        }
+        for (FrozenNode contract : entries.values()) {
+            if (contract != null
+                    && owner.contractLoader().isProcessEmbeddedContract(
+                    contract.toNode())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Resolves only selected scopes whose effective Process Embedded marker or
+     * target content can differ from the selected node. Untyped direct scopes
+     * remain self-effective, so scanning their embedded children does not
+     * demand unrelated descendant contract types ahead of closure discovery.
+     */
+    private boolean requiresEffectiveScopeResolution(
+            FrozenNode selectedScope) {
+        if (selectedScope.isReferenceOnly()
+                || selectedScope.getType() != null) {
+            return true;
+        }
+        FrozenNode contracts = selectedScope.getContracts();
+        return contracts != null && contracts.isReferenceOnly();
     }
 
     FrozenNode selectedAt(String scopePath) {
@@ -153,11 +169,11 @@ final class EvidenceClassificationView {
     FrozenNode resolvedAt(String scopePath) {
         String normalized = ProcessorEngine.normalizeScope(scopePath);
         if (inputSnapshot != null) {
-            return inputSnapshot.resolvedAt(normalized);
+            return resolvedAt(inputSnapshot, normalized);
         }
         ensureProjected();
         if (classificationSnapshot != null) {
-            return classificationSnapshot.resolvedAt(normalized);
+            return resolvedAt(classificationSnapshot, normalized);
         }
         Node selected = ProcessorEngine.nodeAt(
                 classificationDocument,
@@ -165,6 +181,31 @@ final class EvidenceClassificationView {
         return selected != null
                 ? FrozenNode.fromResolvedNode(selected)
                 : null;
+    }
+
+    /**
+     * Builds the effective form of an opaque selected occurrence without
+     * inheriting an eagerly resolved executable body from the containing
+     * document snapshot.
+     */
+    private FrozenNode resolvedAt(
+            ResolvedSnapshot snapshot,
+            String normalizedScope) {
+        FrozenNode canonical = snapshot.canonicalAt(normalizedScope);
+        if (canonical == null || !canonical.isReferenceOnly()) {
+            return snapshot.resolvedAt(normalizedScope);
+        }
+        ProcessingSnapshotManager manager = owner.snapshotManager();
+        if (manager == null) {
+            return snapshot.resolvedAt(normalizedScope);
+        }
+        FrozenNode exact = selectedAt(snapshot, normalizedScope);
+        return DocumentProcessingRuntime.resolveCanonicalTransient(
+                manager,
+                exact,
+                Collections.singleton(JsonPointer.ROOT),
+                runtime.executableBodyFieldsByType)
+                .frozenResolvedRoot();
     }
 
     SubscriptionDelta.Entry activeSubscriptionInterval(
@@ -420,9 +461,4 @@ final class EvidenceClassificationView {
                 || ProcessorContractConstants.KEY_CHECKPOINT.equals(key);
     }
 
-    private Node directProperty(Node node, String key) {
-        return node != null && node.getProperties() != null
-                ? node.getProperties().get(key)
-                : null;
-    }
 }

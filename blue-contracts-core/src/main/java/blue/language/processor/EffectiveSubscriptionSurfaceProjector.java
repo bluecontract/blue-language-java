@@ -32,6 +32,7 @@ final class EffectiveSubscriptionSurfaceProjector {
     private final NodeToObjectConverter converter;
     private final SubscriptionSurfaceRules rules;
     private final EmbeddedSubscriptionRouteProjector routes;
+    private final EmbeddedScopePlanner embeddedPlanner;
 
     EffectiveSubscriptionSurfaceProjector(
             ContractLoader contractLoader,
@@ -46,6 +47,10 @@ final class EffectiveSubscriptionSurfaceProjector {
         this.converter = converter;
         this.rules = Objects.requireNonNull(rules, "rules");
         this.routes = new EmbeddedSubscriptionRouteProjector(rules);
+        this.embeddedPlanner = snapshotManager != null
+                ? new EmbeddedScopePlanner(
+                        snapshotManager::materializeVerifiedExactReference)
+                : new EmbeddedScopePlanner();
     }
 
     /** Projects only occurrences whose effective dependencies changed. */
@@ -54,7 +59,8 @@ final class EffectiveSubscriptionSurfaceProjector {
             ResolvedSnapshot suppliedSnapshot,
             GasSchedule schedule,
             Set<String> changedPaths,
-            SubscriptionSurfaceValidationContext validationContext) {
+            SubscriptionSurfaceValidationContext validationContext,
+            SubscriptionSurfaceProjector.EmbeddedMembership membership) {
         EffectiveResolution resolution =
                 new EffectiveResolution(root, suppliedSnapshot);
         ScopeView rootScope = resolution.scopeAt(JsonPointer.ROOT);
@@ -76,7 +82,8 @@ final class EffectiveSubscriptionSurfaceProjector {
                 schedule,
                 changedPaths,
                 0,
-                validationContext);
+                validationContext,
+                membership);
         return result;
     }
 
@@ -91,7 +98,8 @@ final class EffectiveSubscriptionSurfaceProjector {
             GasSchedule schedule,
             Set<String> changedPaths,
             int depth,
-            SubscriptionSurfaceValidationContext validationContext) {
+            SubscriptionSurfaceValidationContext validationContext,
+            SubscriptionSurfaceProjector.EmbeddedMembership membership) {
         rules.requireLimit(
                 GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH,
                 depth,
@@ -199,11 +207,23 @@ final class EffectiveSubscriptionSurfaceProjector {
                                 contract.key());
                     }
                     embeddedKey = contract.key();
-                    embeddedRoutes = routes.project(
-                            bundle.embeddedPaths(),
+                    EmbeddedScopePlan entryPlan =
+                            membership
+                                    == SubscriptionSurfaceProjector
+                                            .EmbeddedMembership.ENTRY
+                                    && validationContext
+                                            .hasEntryEmbeddedScopePlan(
+                                                    scopePath)
+                            ? validationContext.entryEmbeddedScopePlan(
+                                    scopePath)
+                            : null;
+                    embeddedRoutes = routes.projectScope(
+                            scope.effective,
+                            bundle.embeddedScopeDeclaration(),
+                            entryPlan,
                             scopePath,
-                            contract.key(),
-                            schedule);
+                            schedule,
+                            embeddedPlanner);
                 }
             }
 
@@ -250,7 +270,8 @@ final class EffectiveSubscriptionSurfaceProjector {
                                 ? Collections.singleton(targetScope)
                                 : changedPaths,
                         depth + 1,
-                        validationContext);
+                        validationContext,
+                        membership);
             }
         } finally {
             activeScopes.remove(identityNode);

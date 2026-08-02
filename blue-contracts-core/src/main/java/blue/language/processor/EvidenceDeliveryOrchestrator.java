@@ -532,6 +532,11 @@ final class EvidenceDeliveryOrchestrator {
                             currentScope,
                             null,
                             true);
+            bundle = EmbeddedScopeEntryPlans.attach(
+                    runtime,
+                    currentScope,
+                    execution.classificationResolvedAt(currentScope),
+                    bundle);
             EffectiveContractSnapshot embeddedSnapshot = null;
             for (EffectiveContractSnapshot snapshot
                     : bundle.effectiveContractSnapshots()) {

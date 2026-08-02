@@ -9,6 +9,8 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -22,6 +24,9 @@ import java.util.Objects;
 final class ProcessingDocumentView {
 
     private final DocumentProcessingRuntime runtime;
+    private final Map<String, FrozenNode> exactReferencedScopes =
+            new LinkedHashMap<>();
+    private long exactReferencedScopesVersion = Long.MIN_VALUE;
 
     ProcessingDocumentView(DocumentProcessingRuntime runtime) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
@@ -66,6 +71,22 @@ final class ProcessingDocumentView {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
         if (current != null) {
+            FrozenNode selected = selectedCanonicalFrozenAt(normalized);
+            if (selected != null && selected.isReferenceOnly()) {
+                ProcessingSnapshotManager manager =
+                        runtime.currentSnapshotManager();
+                if (manager != null) {
+                    FrozenNode exact = exactReferencedScope(
+                            normalized, selected, manager);
+                    return DocumentProcessingRuntime
+                            .resolveCanonicalTransient(
+                                    manager,
+                                    exact,
+                                    Collections.singleton(JsonPointer.ROOT),
+                                    runtime.executableBodyFieldsByType)
+                            .frozenResolvedRoot();
+                }
+            }
             return current.resolvedAt(normalized);
         }
         Node node = runtime.materializedView.nodeAt(normalized);
@@ -92,14 +113,53 @@ final class ProcessingDocumentView {
 
     FrozenNode selectedFrozenAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
+        FrozenNode selected = selectedCanonicalFrozenAt(normalized);
+        if (selected == null || !selected.isReferenceOnly()) {
+            return selected;
+        }
+        ProcessingSnapshotManager manager = runtime.currentSnapshotManager();
+        return manager != null
+                ? exactReferencedScope(normalized, selected, manager)
+                : selected;
+    }
+
+    /**
+     * Returns the authored contribution without opening a pure reference.
+     * Reference materialization is deliberately layered above this lookup so
+     * selected and resolved reads can share one verified exact provider value.
+     */
+    private FrozenNode selectedCanonicalFrozenAt(String normalizedPath) {
         if (!runtime.selectedDocumentBacked) {
             ResolvedSnapshot current = snapshot();
             if (current != null) {
-                return current.canonicalAt(normalized);
+                return current.canonicalAt(normalizedPath);
             }
         }
-        Node node = runtime.materializedView.nodeAt(normalized);
+        Node node = runtime.materializedView.nodeAt(normalizedPath);
         return node != null ? FrozenNode.fromResolvedNode(node) : null;
+    }
+
+    /**
+     * Materializes a selected pure-reference scope once per processing state.
+     * The exact provider value remains canonical; its executable bodies are
+     * preserved separately when the corresponding effective scope is built.
+     */
+    private FrozenNode exactReferencedScope(
+            String normalizedPath,
+            FrozenNode reference,
+            ProcessingSnapshotManager manager) {
+        if (exactReferencedScopesVersion != runtime.stateVersion) {
+            exactReferencedScopes.clear();
+            exactReferencedScopesVersion = runtime.stateVersion;
+        }
+        FrozenNode cached = exactReferencedScopes.get(normalizedPath);
+        if (cached != null) {
+            return cached;
+        }
+        FrozenNode exact = ExecutableBodyPathCatalog.materializeVerifiedExact(
+                manager, reference, "Selected processing scope");
+        exactReferencedScopes.put(normalizedPath, exact);
+        return exact;
     }
 
     Node nodeAt(String path) {

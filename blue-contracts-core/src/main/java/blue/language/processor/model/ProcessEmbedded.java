@@ -18,8 +18,8 @@ import java.util.List;
 @TypeBlueId(RuntimeBlueIds.PROCESS_EMBEDDED)
 public class ProcessEmbedded extends MarkerContract {
 
-    private final List<String> paths = new ArrayList<>();
-    private final List<String> collectionPaths = new ArrayList<>();
+    private List<String> paths = new ArrayList<>();
+    private List<String> collectionPaths = new ArrayList<>();
 
     /** Creates a marker with no selected embedded paths. */
     public ProcessEmbedded() {
@@ -31,7 +31,7 @@ public class ProcessEmbedded extends MarkerContract {
      * @return unmodifiable live view in insertion order
      */
     public List<String> getPaths() {
-        return Collections.unmodifiableList(paths);
+        return Collections.unmodifiableList(mutablePaths());
     }
 
     /**
@@ -41,9 +41,10 @@ public class ProcessEmbedded extends MarkerContract {
      *        selection
      */
     public void setPaths(List<String> newPaths) {
-        paths.clear();
+        List<String> target = mutablePaths();
+        target.clear();
         if (newPaths != null) {
-            paths.addAll(newPaths);
+            target.addAll(newPaths);
         }
     }
 
@@ -55,7 +56,7 @@ public class ProcessEmbedded extends MarkerContract {
      */
     public ProcessEmbedded addPath(String path) {
         if (path != null) {
-            paths.add(path);
+            mutablePaths().add(path);
         }
         return this;
     }
@@ -67,7 +68,7 @@ public class ProcessEmbedded extends MarkerContract {
      * @return unmodifiable live view in insertion order
      */
     public List<String> getCollectionPaths() {
-        return Collections.unmodifiableList(collectionPaths);
+        return Collections.unmodifiableList(mutableCollectionPaths());
     }
 
     /**
@@ -77,9 +78,10 @@ public class ProcessEmbedded extends MarkerContract {
      *        the selection
      */
     public void setCollectionPaths(List<String> newCollectionPaths) {
-        collectionPaths.clear();
+        List<String> target = mutableCollectionPaths();
+        target.clear();
         if (newCollectionPaths != null) {
-            collectionPaths.addAll(newCollectionPaths);
+            target.addAll(newCollectionPaths);
         }
     }
 
@@ -91,8 +93,22 @@ public class ProcessEmbedded extends MarkerContract {
      */
     public ProcessEmbedded addCollectionPath(String collectionPath) {
         if (collectionPath != null) {
-            collectionPaths.add(collectionPath);
+            mutableCollectionPaths().add(collectionPath);
         }
         return this;
+    }
+
+    private List<String> mutablePaths() {
+        if (paths == null) {
+            paths = new ArrayList<>();
+        }
+        return paths;
+    }
+
+    private List<String> mutableCollectionPaths() {
+        if (collectionPaths == null) {
+            collectionPaths = new ArrayList<>();
+        }
+        return collectionPaths;
     }
 }

@@ -303,6 +303,8 @@ final class ProtectedStateGuard {
         if (stripped.getProperties() != null) {
             stripped.getProperties().remove(
                     ProcessorContractConstants.KEY_PATHS);
+            stripped.getProperties().remove(
+                    ProcessorContractConstants.KEY_COLLECTION_PATHS);
         }
         NodeToBlueIdInput.stripResolvedBlueIdMetadata(stripped);
         return Nodes.isEmptyNode(stripped)

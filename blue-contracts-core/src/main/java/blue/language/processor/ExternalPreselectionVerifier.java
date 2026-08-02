@@ -79,15 +79,17 @@ final class ExternalPreselectionVerifier {
                                         .referencedBlueIds(root));
                     }
                 }
-                for (String embedded : bundle.embeddedPaths()) {
-                    String child = PointerUtils.resolvePointer(
-                            scopePath, embedded);
+                EmbeddedScopePlan embeddedPlan =
+                        resolution.embeddedScopePlanAt(scopePath, bundle);
+                for (String child : embeddedPlan != null
+                        ? embeddedPlan.concreteChildPaths()
+                        : Collections.<String>emptyList()) {
                     if (child.equals(scopePath)
                             || !PointerUtils.descendantOrEqual(
                             child, scopePath)) {
                         throw ExternalEvidenceVerificationSupport.invalid(
                                 "Process Embedded path escapes its scope at "
-                                        + scopePath + ": " + embedded);
+                                + scopePath + ": " + child);
                     }
                     if (visited.contains(child) || pending.contains(child)) {
                         throw ExternalEvidenceVerificationSupport.invalid(
@@ -438,11 +440,13 @@ final class ExternalPreselectionVerifier {
             }
             ContractBundle bundle = resolution.subscriptionBundleAt(
                     current, (String) null, true);
+            EmbeddedScopePlan embeddedPlan =
+                    resolution.embeddedScopePlanAt(current, bundle);
             String selectedChild = null;
             int selectedDepth = -1;
-            for (String embedded : bundle.embeddedPaths()) {
-                String candidate = PointerUtils.resolvePointer(
-                        current, embedded);
+            for (String candidate : embeddedPlan != null
+                    ? embeddedPlan.concreteChildPaths()
+                    : Collections.<String>emptyList()) {
                 if (candidate.equals(current)
                         || !PointerUtils.descendantOrEqual(
                         target, candidate)) {

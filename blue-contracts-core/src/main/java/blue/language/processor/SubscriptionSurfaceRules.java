@@ -337,9 +337,10 @@ final class SubscriptionSurfaceRules {
     /** Reports whether a node is a materialized direct object. */
     boolean isObject(Node node) {
         return node != null
-                && node.getValue() == null
                 && node.getItems() == null
-                && !node.isReferenceOnly();
+                && !node.isReferenceOnly()
+                && (node.getValue() == null
+                        || node.getContracts() != null);
     }
 
     /** Reports whether a node is materialized rather than reference-only. */

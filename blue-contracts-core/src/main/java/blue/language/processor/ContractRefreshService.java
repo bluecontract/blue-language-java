@@ -60,7 +60,8 @@ final class ContractRefreshService {
                     structuralLoader);
             ProcessingObservations.record(
                     metrics, ProcessingMetricId.BUNDLES_BUILT, 1L);
-            return withCurrentMarkers(built, selectedScopeNode, effectiveScopeNode);
+            return withCurrentMarkers(
+                    built, selectedScopeNode, effectiveScopeNode);
         }
 
         long keyStart = System.nanoTime();
@@ -108,7 +109,8 @@ final class ContractRefreshService {
         cache.putIfAbsent(key, built);
         ProcessingObservations.record(
                 metrics, ProcessingMetricId.BUNDLES_BUILT, 1L);
-        return withCurrentMarkers(built, selectedScopeNode, effectiveScopeNode);
+        return withCurrentMarkers(
+                built, selectedScopeNode, effectiveScopeNode);
     }
 
     void clear() {
@@ -155,7 +157,8 @@ final class ContractRefreshService {
         return structural.copyWithRuntimeMarkers(
                 markers.markers,
                 markers.nodes,
-                markers.checkpointDeclared);
+                markers.checkpointDeclared,
+                null);
     }
 
     private RuntimeMarkers runtimeMarkers(
