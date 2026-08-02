@@ -2,21 +2,25 @@
   "schema": "blue-language-java-collection-paths-final/1.0",
   "generatedAt": "2026-08-02",
   "phase": "collection-paths-and-cohesion",
-  "status": "implementation-complete-final-clean-sequence-pending",
+  "status": "final-evidence-complete-for-verified-implementation",
   "evidencePolicy": {
     "executed": "Produced by a command or test run against the current implementation work.",
     "staticValidation": "Derived by inspecting source-controlled inputs or generated inventories without claiming a runtime gate passed.",
     "retainedPreviousEvidence": "A prior or externally supplied result retained for context; it is not current Java release-gate evidence.",
-    "notExecuted": "Required final evidence that has not yet been produced for the final report-bearing commit."
+    "notExecuted": "A requested evidence item was not run or cannot be produced from the available baseline; no passing claim is made."
   },
   "source": {
     "repository": "blue-language-java",
     "branch": "codex/language-final-rc",
-    "verifiedImplementationCommit": "f7d03ac3db4a0400db240a35da06813a9c148bae",
-    "verifiedImplementationCommitSubject": "fix(contracts): complete collection scope lifecycle",
+    "verifiedImplementationCommit": "63a9ed6a1a66d47119a80d16ed2ab0beda0d2453",
+    "verifiedImplementationCommitSubject": "chore(quality): remove stale class size exceptions",
+    "verifiedImplementationSourceDateEpoch": 1785685523,
+    "verifiedSourceFileCount": 1557,
+    "verifiedSourceInputIdentity": "sha256:0ae0cef00f7de69733b179fe75226249b84c67c4d3af398ebdaec8631c2f2a20",
     "baselineCommit": "4b88f9148c3dfdeea31c715d1ef339b8d8d7c721",
     "reportCommit": null,
-    "reportCommitStatus": "notExecuted",
+    "reportCommitStatus": "evidence-only-successor-not-clean-built",
+    "reportCommitScope": "The successor records results produced from the verified implementation commit. It is not itself described as clean-built or release-verified.",
     "boundary": {
       "repositoriesModified": [
         "blue-language-java"
@@ -30,7 +34,7 @@
     }
   },
   "normativeInputs": {
-    "evidenceStatus": "staticValidation",
+    "evidenceStatus": "executed",
     "correctedArchive": {
       "path": "/Users/piotr/Downloads/blue-language-contracts-embedded-modules-collection-paths-1.0-enum-normalized-corrected.zip",
       "sha256": "ba7859cad8eb499fd394d236705d17c48eadb5304526e2ca27a563ee400c5251"
@@ -61,6 +65,12 @@
       "warnings": 0,
       "errors": 0,
       "note": "Supplied package validation; the Java release-conformance execution is recorded separately."
+    },
+    "finalBindingVerification": {
+      "report": "build/reports/final-quality/final-quality.json",
+      "specificationsBound": true,
+      "packageIdentitiesValid": true,
+      "exactlyBound": true
     }
   },
   "implementation": {
@@ -159,8 +169,23 @@
       "blue.language.processor.DocumentProcessorResolvedSnapshotParityTest",
       "blue.language.processor.DeepGraphPhysicalLocalityIntegrationTest"
     ],
-    "finalCleanBuildAggregateCount": null,
-    "finalCleanBuildAggregateCountStatus": "notExecuted"
+    "mainTestInventory": {
+      "task": ":test",
+      "tests": 2279,
+      "passed": 2279,
+      "failed": 0,
+      "skipped": 0
+    },
+    "finalQualityAggregate": {
+      "evidenceStatus": "executed",
+      "sourceTask": ":allUnitAndIntegrationTests",
+      "suiteCount": 246,
+      "tests": 2729,
+      "passed": 2729,
+      "failed": 0,
+      "skipped": 0,
+      "note": "Aggregates the main, focused, specialized, module, and example suites; it is not presented as the :test-only count."
+    }
   },
   "providerDemandAndLocality": {
     "evidenceStatus": "executed",
@@ -237,34 +262,40 @@
       "profiler": "gc"
     },
     "rawResult": {
-      "path": "/tmp/blue-collection-paths-all-sizes.json",
-      "sha256": "sha256:aa314a49138d897722160500535e0683af44345a50b4cf6dd59d247f1b236f75",
+      "path": "/tmp/blue-collection-paths-all-sizes-final.json",
+      "sha256": "sha256:74903aa443f33ca7e316f1cf806d580eb539c4c9a0c362656afbf8fbb4c11958",
       "resultCount": 40
+    },
+    "statisticalAudit": {
+      "finiteScores": 40,
+      "scoreErrorNaN": 40,
+      "statisticallyBounded": false,
+      "reason": "One fork and one measurement iteration produce finite characterization scores but no finite scoreError bounds."
     },
     "selectedLatencyUsPerOp": {
       "initialCollectionProjection": {
-        "10": 12.7240772799414,
-        "100": 116.31240818584071,
-        "1000": 1175.7781046511627,
-        "4096": 5230.0
+        "10": 14.154961686808948,
+        "100": 116.4256955602537,
+        "1000": 1215.054032967033,
+        "4096": 5352.041666666667
       },
       "pureReferenceCollectionTarget": {
-        "10": 13.573648837209303,
-        "100": 115.10642606790799,
-        "1000": 1167.3717666666666,
-        "4096": 5298.24585
+        "10": 13.750591714434602,
+        "100": 116.79824282560706,
+        "1000": 1207.2427608695652,
+        "4096": 5521.6479
       },
       "pureReferenceMemberHeaders": {
-        "10": 13.23092696133988,
-        "100": 120.31672421784472,
-        "1000": 1175.6147078651686,
-        "4096": 4899.566272727273
+        "10": 13.342405140016972,
+        "100": 130.54820979899498,
+        "1000": 1216.270578313253,
+        "4096": 5328.69585
       },
       "selectedMemberProcessing": {
-        "10": 54345.0835,
-        "100": 184845.584,
-        "1000": 2330691.333,
-        "4096": 520840.5
+        "10": 61531.9375,
+        "100": 178910.5,
+        "1000": 1878786.583,
+        "4096": 510560.416
       }
     },
     "comparison": {
@@ -272,7 +303,27 @@
       "maximumRegressionPercent": null,
       "reason": "The retained pre-amendment benchmark corpus has no equivalent collectionPaths measures; a direct before/after percentage would be fabricated. Existing unrelated baseline measures are not used as substitutes."
     },
-    "interpretation": "The 4096-member rows that report gas-limit or portable-limit rejection exercise normative rejection boundaries; their latency is not comparable to smaller successful rows. The quick campaign is characterization, not a statistically powered release regression gate."
+    "finalRequiredSmoke": {
+      "evidenceStatus": "executed",
+      "report": "build/reports/benchmarks/required-smoke.json",
+      "passed": true,
+      "jdk": "26.0.1",
+      "results": {
+        "blue.language.ProcessingSelectionCacheBenchmark.processWarmSameNode": {
+          "score": 627.9289886187871,
+          "unit": "ops/s"
+        },
+        "blue.language.ReferenceBlueIdValidationBenchmark.resolveDeepValidReferenceDocument": {
+          "score": 18.36994309910125,
+          "unit": "ops/s"
+        }
+      }
+    },
+    "finalJmhClassesGate": {
+      "evidenceStatus": "executed",
+      "passed": true
+    },
+    "interpretation": "The 4096-member rows that report gas-limit or portable-limit rejection exercise normative rejection boundaries; their latency is not comparable to smaller successful rows. The quick collection campaign is characterization, not a statistically powered release regression gate. The separately required final smoke benchmark gate passed."
   },
   "architecture": {
     "moduleGraph": {
@@ -294,7 +345,8 @@
     "packageCycles": {
       "value": 0,
       "evidenceStatus": "executed",
-      "source": "PhaseFourModuleOwnershipArchitectureTest in :test"
+      "reportCount": 7,
+      "source": "build/reports/final-quality/final-quality.json"
     }
   },
   "api": {
@@ -309,6 +361,7 @@
     "unapprovedChanges": 0,
     "missingApprovedChanges": 0,
     "currentClassMajorVersion": 52,
+    "finalQualityPublicTypeCount": 387,
     "publicTypeInventory": {
       "types": 380,
       "identity": "sha256:38ca6143f426bd8c157cf7ad615766be0ba78d9c555b18d7ba4fa57c4419bbfa",
@@ -373,54 +426,204 @@
     }
   },
   "artifacts": {
-    "intermediateExecuted": {
-      "jmhJar": {
-        "path": "blue-contracts-core/build/libs/blue-contracts-core-3.1.0-rc.18-SNAPSHOT-jmh.jar",
-        "sha256": "sha256:206d1bf224fa511086db707527b9ae61167476a7e5b09113a93f541c0ebce7e8"
-      },
-      "sourceReleaseReplica": {
-        "path": "build/reports/reproducibility/source-release-replica.json",
-        "sha256": "sha256:1d54cabedfbad2a0d84a8fa9284e5fee395ace4a54c3bbdc71d80aabdc1123d1",
-        "identical": true,
-        "note": "Intermediate archive evidence; adding this report changes the source archive."
-      }
-    },
     "finalCandidate": {
-      "evidenceStatus": "notExecuted",
-      "jars": {},
-      "sourceArchive": null,
-      "reason": "Final hashes must be captured only after the report-bearing commit is built from a clean worktree with SOURCE_DATE_EPOCH bound to that commit."
+      "evidenceStatus": "executed",
+      "verifiedSourceCommit": "63a9ed6a1a66d47119a80d16ed2ab0beda0d2453",
+      "version": "3.1.0-rc.18",
+      "moduleJars": [
+        {
+          "module": "blue-conformance",
+          "sha256": "sha256:7c45ff6bcd31266bd54b73dbf3d1f4ead81d603249ee8c1afd9d817504704fcf"
+        },
+        {
+          "module": "blue-contracts-core",
+          "sha256": "sha256:ec45224ffee3e0c47246869d89c002657c9d1f348af8c553be3b6c0874bf7bae"
+        },
+        {
+          "module": "blue-language-core",
+          "sha256": "sha256:a7d3c72640ab8ac5832feaad576cd1a56457cb87eaf07323fe04a88ae5730740"
+        },
+        {
+          "module": "blue-language-ipfs",
+          "sha256": "sha256:bec7355f39a109c4fe6dfc5f9970232dc0a75cd8e5b4ab055abc311314d24c8e"
+        },
+        {
+          "module": "blue-language-java",
+          "sha256": "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0"
+        },
+        {
+          "module": "blue-language-mapping",
+          "sha256": "sha256:d9141d5c611bde7eb6a21bce3dc4bc0df7d8167f013eeaef2a365dd0a6af329b"
+        },
+        {
+          "module": "blue-language-model",
+          "sha256": "sha256:ef55be8331147442b858474add4782489d993568effe30202a9c4a8b014d5bd8"
+        }
+      ],
+      "moduleSourcesJars": [
+        {
+          "module": "blue-conformance",
+          "sha256": "sha256:995b9f65a186e2622233e9c3aee96a24a740bc03e75e227b3d393aff685b5f29"
+        },
+        {
+          "module": "blue-contracts-core",
+          "sha256": "sha256:4c070daac13f7b4af49ebdfd6f5bc65419fad3f06f7ccc9ba313debfbd8a399e"
+        },
+        {
+          "module": "blue-language-core",
+          "sha256": "sha256:d9ac76d5684b271030b8e25e6791158dff234c3ba8cf312a2af9413cc6c9d8ce"
+        },
+        {
+          "module": "blue-language-ipfs",
+          "sha256": "sha256:a7fd62c141303410d1dba27904e6114afd3a9b997b44493be951b8d1c1a3eab9"
+        },
+        {
+          "module": "blue-language-java",
+          "sha256": "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518"
+        },
+        {
+          "module": "blue-language-mapping",
+          "sha256": "sha256:05ddbc700dd0635927ac6e8b2edb93e778d92c1312c3504539d6799c9e2079db"
+        },
+        {
+          "module": "blue-language-model",
+          "sha256": "sha256:84b48c13cff2594230a23cc248a7c00e7b2d0cb3b352cc90347039035ab472e6"
+        }
+      ],
+      "aggregateJavadocJar": "sha256:f6c714c5d06d4b718ab909b36eb541927a182e96d203c6961ea5bdfe512e6597",
+      "sourceArchive": {
+        "path": "build/release/blue-language-java-3.1.0-rc.18-source-release.zip",
+        "sha256": "sha256:e79bb7a12b4de7c2e0d1e68daf5f426ea1fefab3609d97e0a786508ec2b059fa",
+        "bytes": 3309181,
+        "replicaIdentical": true,
+        "verifiedEntryCount": 1557,
+        "normalizedTimestampMillis": 318211200000
+      },
+      "aggregateReceipt": {
+        "receiptIdentity": "sha256:747df2d486c07259dbc04ed05b00106a48593e787f25f52a44fd51dd108bee1e",
+        "verified": true,
+        "artifactsIdentity": "sha256:c65e5bf2581a2362ecc110d3ddd5485f30688c48055162131fb374ddcedc628f",
+        "artifactFileCount": 37,
+        "testsIdentity": "sha256:6a80579bf38e6369e172b4e0ee59fed9cc6699dab84919bf45c88ecb480f48d9",
+        "testFileCount": 272,
+        "fixturesIdentity": "sha256:e3860c6f1155bab7454d7782200ca0cd7dbf272547e97dd4b3384b4b22a71f7d",
+        "apiIdentity": "sha256:71b63fa4a87aca83af70656e18c95ba5cc91dac63c072e5946f2726c73dd86fb",
+        "verificationIdentity": "sha256:b548aeaf9921176a940541af4a5b8aa1a6fe9346e8d6b71a7f9be0bfd0e5991a"
+      },
+      "publicationSmoke": {
+        "repositoryValid": true,
+        "coordinatesResolved": 7,
+        "smokeValid": true
+      }
     }
   },
   "finalVerification": {
-    "evidenceStatus": "notExecuted",
-    "requiredOrder": [
-      "CI=true SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD) ./gradlew --no-daemon clean build",
-      "./gradlew --no-daemon releaseConformanceTest",
-      "./gradlew --no-daemon semanticBaselineVerify",
-      "./gradlew --no-daemon finalQualityVerify",
-      "./gradlew --no-daemon rcVerify",
-      "./gradlew --no-daemon jmhClasses"
+    "evidenceStatus": "executed",
+    "verifiedSourceCommit": "63a9ed6a1a66d47119a80d16ed2ab0beda0d2453",
+    "sourceDateEpoch": 1785685523,
+    "worktree": "/tmp/blue-language-final-parent.jw5uk2/worktree",
+    "cleanDetachedWorktree": true,
+    "environment": {
+      "CI": true,
+      "pythonPathWorkaround": {
+        "applied": true,
+        "python": "/usr/bin/python3",
+        "reason": "PATH was adjusted to prefer the system Python because the discovered Anaconda python3 executable was broken. This changed only tool discovery, not source or generated semantics."
+      }
+    },
+    "gates": [
+      {
+        "order": 1,
+        "task": "clean build",
+        "passed": true,
+        "durationSeconds": 229,
+        "reportedTaskCount": 134,
+        "cleanMarkerVerified": true,
+        "sourceInputIdentity": "sha256:0ae0cef00f7de69733b179fe75226249b84c67c4d3af398ebdaec8631c2f2a20"
+      },
+      {
+        "order": 2,
+        "task": "releaseConformanceTest",
+        "passed": true,
+        "fixturesPassed": 307,
+        "fixturesFailed": 0,
+        "fixturesSkipped": 0
+      },
+      {
+        "order": 3,
+        "task": "semanticBaselineVerify",
+        "passed": true,
+        "verificationReport": "build/reports/semantic-baseline/verification.json",
+        "approvedIncompatibleChanges": 337,
+        "approvedAdditiveChanges": 300,
+        "unapprovedChanges": 0
+      },
+      {
+        "order": 4,
+        "task": "finalQualityVerify",
+        "passed": true,
+        "reportedTaskCount": 197,
+        "testsPassed": 2729,
+        "testsFailed": 0,
+        "testsSkipped": 0,
+        "releaseEligible": true,
+        "blockers": 0
+      },
+      {
+        "order": 5,
+        "task": "rcVerify",
+        "passed": true,
+        "reportedTaskCount": 188,
+        "aggregateReceiptVerified": true,
+        "publicationRepositorySmokePassed": true
+      },
+      {
+        "order": 6,
+        "task": "jmhClasses",
+        "passed": true
+      }
     ],
-    "lastSemanticBaselineAttempt": {
-      "evidenceStatus": "executed",
-      "semanticTestsPassedBeforeReportStep": true,
-      "stoppedAt": "fragmentedProcessingReport",
-      "reason": "build/reports/release-evidence/clean-build.json was absent because semanticBaselineVerify was invoked without the required preceding clean build."
-    }
+    "receipts": {
+      "cleanBuild": "build/reports/release-evidence/clean-build-verification.json",
+      "semanticBaseline": "build/reports/semantic-baseline/verification.json",
+      "finalQuality": "build/reports/final-quality/verification.json",
+      "fragmentedProcessing": "build/reports/fragmented-processing/verification.json",
+      "documentation": "build/reports/documentation/verification.json",
+      "sourceReproducibility": "build/reports/reproducibility/source-release-replica.json",
+      "publishedRepository": "build/reports/published-repository/verification.json",
+      "publishedSmoke": "build/reports/published-smoke/verification.json",
+      "aggregateRelease": "build/reports/release-evidence/aggregate-release-verification.json"
+    },
+    "qualitySummary": {
+      "java8Bytecode": true,
+      "moduleCycles": 0,
+      "packageCycles": 0,
+      "splitPackages": 0,
+      "undeclaredModuleEdges": 0,
+      "documentationValid": true,
+      "examplesCompiledAndTested": true,
+      "javadocsValid": true,
+      "sourceArchiveReplicaIdentical": true,
+      "publishedCoordinateCount": 7,
+      "requiredBenchmarkSmokePassed": true,
+      "releaseBlockers": 0
+    },
+    "reportCommitCaveat": "The commit that adds this final report is an evidence-only successor. The clean build, gates, receipts, and artifacts bind exactly to verifiedSourceCommit and are not claimed for the successor commit."
   },
   "knownLimitations": [
-    "The final ordered clean release-gate sequence and final artifact hashes remain to be executed for the report-bearing commit.",
+    "The evidence-only successor commit containing this report was not clean-built; all release evidence and artifact hashes intentionally bind to 63a9ed6a1a66d47119a80d16ed2ab0beda0d2453.",
     "No equivalent pre-amendment collectionPaths benchmark exists, so a direct <=10% before/after regression claim is not available.",
     "The processor direct-package numeric aims were not reached; the evidence-backed exception preserves public compatibility, package-private visibility, and zero cycles.",
     "DocumentProcessor is 745 lines after final semantic integration, above its 650-line target; processing mechanics remain delegated, but the numerical facade target is not claimed.",
     "The 4096-member JMH campaign reaches normative gas or portable-limit rejection in some lanes; rejected rows are not successful-throughput measurements.",
-    "The quick JMH campaign uses one warmup and one measurement iteration and is characterization evidence, not a statistically powered regression decision.",
+    "All 40 quick-campaign scoreError values are NaN under the one-fork, one-measurement setup, so the finite scores are characterization evidence rather than statistically bounded regression evidence.",
     "Contracts 1.0 numerical gas weights and portable limits remain provisional in the supplied final implementation baseline specification."
   ],
   "releaseDecision": {
-    "readyForFinalCleanVerification": true,
-    "releaseReady": false,
-    "reason": "Implementation, conformance, focused behavior, API, and locality evidence are green, but the mandated final clean sequence and final artifact hashes are intentionally not claimed before execution."
+    "verifiedImplementationReleaseReady": true,
+    "verifiedSourceCommit": "63a9ed6a1a66d47119a80d16ed2ab0beda0d2453",
+    "reportCommitCleanBuilt": false,
+    "releaseBlockers": 0,
+    "reason": "The verified implementation commit passed the complete ordered clean release sequence with exact conformance, reproducibility, API, documentation, publication-smoke, and artifact evidence. The evidence-only report successor is outside that build claim."
   }
 }

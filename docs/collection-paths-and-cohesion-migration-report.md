@@ -2,12 +2,16 @@
 
 ## Decision
 
-The final Contracts amendment is implemented at commit
-`f7d03ac3db4a0400db240a35da06813a9c148bae`. The Java conformance runner passes
-all 153 Language fixtures and all 154 Contracts fixtures without failures or
-skips. The implementation is ready for the mandated final clean verification
-sequence; this report does not call it release-ready until that sequence and
-the final artifact hashes exist for the report-bearing commit.
+The final Contracts amendment is release-verified at commit
+`63a9ed6a1a66d47119a80d16ed2ab0beda0d2453`. From a clean detached worktree,
+that exact commit passed the ordered clean build, release conformance, semantic
+baseline, final quality, RC, and JMH-compilation gates. The Java conformance
+runner passes all 153 Language fixtures and all 154 Contracts fixtures without
+failures or skips, and final quality reports zero release blockers.
+
+The commit that adds this report is an evidence-only successor. The build,
+receipts, and artifact hashes below bind to `63a9ed6`; this report does not
+claim that its own successor commit was clean-built.
 
 The machine-readable companion is
 [`reports/modernization/phase-collection-paths-final.json`](../reports/modernization/phase-collection-paths-final.json).
@@ -21,8 +25,8 @@ This report uses four labels deliberately:
   generated inventory without implying that a runtime gate passed.
 - **Retained previous evidence** is a prior or externally supplied result kept
   for context, not current Java release-gate evidence.
-- **Not executed** means the final evidence has not yet been produced. It is
-  never described as passing.
+- **Not executed** means a requested evidence item was not run or cannot be
+  produced from the available baseline. It is never described as passing.
 
 ## Normative package
 
@@ -101,11 +105,13 @@ The release-conformance report records:
 | Contracts gas | 58 / 58 | 0 | 0 |
 | Combined | 307 / 307 | 0 | 0 |
 
-The latest root `:test` result contains 2,279 passing tests with no failures or
-skips. The focused `EmbeddedScopePlannerTest` result contains 31 passing tests.
-The fragmented-processing lane contains 85 passing tests and the examples
-module contains 19; those counts are reported separately because the
-fragmented lane overlaps root test classes.
+The main `:test` inventory contains 2,279 passing tests with no failures or
+skips. Final quality aggregates the main, focused, specialized, module, and
+example suites as 2,729 / 2,729 tests across 246 suites, with zero failures and
+zero skips. The focused `EmbeddedScopePlannerTest` result contains 31 passing
+tests. The fragmented-processing lane contains 85 passing tests and the
+examples module contains 19; those counts are not added to the 2,279 main count
+because the specialized inventories overlap it.
 
 Focused coverage includes model immutability, declaration validation, Unicode
 and pointer behavior, provider outcomes, gas equality, preflight, subscription
@@ -143,20 +149,29 @@ Selected average times in microseconds per operation were:
 
 | Lane | 10 | 100 | 1,000 | 4,096 |
 |---|---:|---:|---:|---:|
-| Initial projection | 12.724 | 116.312 | 1,175.778 | 5,230.000 |
-| Pure-reference target | 13.574 | 115.106 | 1,167.372 | 5,298.246 |
-| Pure-reference member headers | 13.231 | 120.317 | 1,175.615 | 4,899.566 |
-| Selected member processing | 54,345.084 | 184,845.584 | 2,330,691.333 | 520,840.500 |
+| Initial projection | 14.155 | 116.426 | 1,215.054 | 5,352.042 |
+| Pure-reference target | 13.751 | 116.798 | 1,207.243 | 5,521.648 |
+| Pure-reference member headers | 13.342 | 130.548 | 1,216.271 | 5,328.696 |
+| Selected member processing | 61,531.938 | 178,910.500 | 1,878,786.583 | 510,560.416 |
 
-The raw file is `/tmp/blue-collection-paths-all-sizes.json`, identity
-`sha256:aa314a49138d897722160500535e0683af44345a50b4cf6dd59d247f1b236f75`.
+The raw file is `/tmp/blue-collection-paths-all-sizes-final.json`, identity
+`sha256:74903aa443f33ca7e316f1cf806d580eb539c4c9a0c362656afbf8fbb4c11958`.
 
 This is characterization, not a statistically powered release regression
-decision. There is no equivalent pre-amendment `collectionPaths` benchmark, so
-no honest before/after percentage can be calculated. Existing baseline
-benchmarks measure different operations and are not substitutes. At 4,096
-members, some lanes exercise normative gas-limit or portable-limit rejection;
-their latency must not be compared with successful smaller rows.
+decision. All 40 `scoreError` values are `NaN` because the quick campaign used
+one fork and one measurement iteration; the finite scores are point
+characterizations, not statistically bounded estimates. There is no equivalent
+pre-amendment `collectionPaths` benchmark, so no honest before/after percentage
+can be calculated. Existing baseline benchmarks measure different operations
+and are not substitutes. At 4,096 members, some lanes exercise normative
+gas-limit or portable-limit rejection; their latency must not be compared with
+successful smaller rows.
+
+The separate final required-smoke gate passed at the verified commit:
+`ProcessingSelectionCacheBenchmark.processWarmSameNode` measured 627.929 ops/s
+and `ReferenceBlueIdValidationBenchmark.resolveDeepValidReferenceDocument`
+measured 18.370 ops/s. `jmhClasses` also passed after the full RC gate. These
+required-smoke results do not manufacture a pre-amendment collection benchmark.
 
 ## Architecture, API, and cohesion
 
@@ -169,7 +184,9 @@ The JVM API gate reports 327 baseline and 380 current API classes, Java 8 class
 major version 52, 337 approved incompatible changes, 300 approved additive
 changes, zero unapproved changes, and zero missing approvals. The collection
 phase adds the immutable plan view and processor-administration surfaces and
-records the collection diagnostics and model accessors.
+records the collection diagnostics and model accessors. Final quality's broader
+published-API union contains 387 public types; this is a different inventory
+from the binary baseline comparison, not a conflicting test count.
 
 One compatibility caveat is worth making explicit: the descriptor of
 `SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY` did not change, but
@@ -203,44 +220,68 @@ the requested 650-line facade target. Processing mechanics remain delegated to
 focused collaborators; this report records the numerical miss instead of
 compressing comments or creating forwarding types merely to satisfy a count.
 
-## Artifact evidence and remaining gate
+## Final verification and artifact evidence
 
-The intermediate JMH JAR is
-`sha256:206d1bf224fa511086db707527b9ae61167476a7e5b09113a93f541c0ebce7e8`.
-An intermediate source archive and its independently built replica were
-byte-identical at
-`sha256:1d54cabedfbad2a0d84a8fa9284e5fee395ace4a54c3bbdc71d80aabdc1123d1`.
-That source-archive hash is not final: adding this report changes the archive.
+The ordered gate ran from clean detached worktree
+`/tmp/blue-language-final-parent.jw5uk2/worktree` with `CI=true` and
+`SOURCE_DATE_EPOCH=1785685523`, the timestamp of verified commit `63a9ed6`.
+The environment put `/usr/bin/python3` first on `PATH` because the discovered
+Anaconda `python3` executable was broken. That workaround changed only tool
+discovery; it did not change source or generated semantics.
 
-The last `semanticBaselineVerify` attempt completed its semantic, conformance,
-locality, runtime-trace, ordinary-test, source-replica, reproducibility, and API
-work before reaching `fragmentedProcessingReport`. It stopped there because
-`build/reports/release-evidence/clean-build.json` was absent: the task was run
-without the required preceding clean build. This is an invocation-order gap,
-not a claimed pass for the final gate.
+| Order | Gate | Result | Recorded work |
+|---:|---|---|---:|
+| 1 | `clean build` | Passed in 3m49s | 134 tasks |
+| 2 | `releaseConformanceTest` | Passed, 307 / 307 fixtures | — |
+| 3 | `semanticBaselineVerify` | Passed, 337 approved incompatible, 300 additive, 0 unapproved | — |
+| 4 | `finalQualityVerify` | Passed, 0 blockers | 197 tasks |
+| 5 | `rcVerify` | Passed | 188 tasks |
+| 6 | `jmhClasses` | Passed | — |
 
-The final report-bearing commit must therefore be verified, in order, from a
-clean worktree:
+The clean marker binds 1,557 source files to source-input identity
+`sha256:0ae0cef00f7de69733b179fe75226249b84c67c4d3af398ebdaec8631c2f2a20`.
+Final quality reports Java 8 bytecode, zero module/package cycles, zero split
+packages, zero undeclared module edges, valid documentation and Javadocs,
+compiled and tested examples, a green required benchmark smoke, and zero
+release blockers.
 
-```bash
-export CI=true
-export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+The seven release JARs are:
 
-./gradlew --no-daemon clean build
-./gradlew --no-daemon releaseConformanceTest
-./gradlew --no-daemon semanticBaselineVerify
-./gradlew --no-daemon finalQualityVerify
-./gradlew --no-daemon rcVerify
-./gradlew --no-daemon jmhClasses
-```
+| Module | JAR SHA-256 |
+|---|---|
+| `blue-conformance` | `7c45ff6bcd31266bd54b73dbf3d1f4ead81d603249ee8c1afd9d817504704fcf` |
+| `blue-contracts-core` | `ec45224ffee3e0c47246869d89c002657c9d1f348af8c553be3b6c0874bf7bae` |
+| `blue-language-core` | `a7d3c72640ab8ac5832feaad576cd1a56457cb87eaf07323fe04a88ae5730740` |
+| `blue-language-ipfs` | `bec7355f39a109c4fe6dfc5f9970232dc0a75cd8e5b4ab055abc311314d24c8e` |
+| `blue-language-java` | `0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0` |
+| `blue-language-mapping` | `d9141d5c611bde7eb6a21bce3dc4bc0df7d8167f013eeaef2a365dd0a6af329b` |
+| `blue-language-model` | `ef55be8331147442b858474add4782489d993568effe30202a9c4a8b014d5bd8` |
 
-Only after that run should final candidate JAR and source-archive hashes be
-written into the machine report and the release decision change to green.
+For the aggregate artifact, the sources JAR is
+`sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518`
+and the Javadoc JAR is
+`sha256:f6c714c5d06d4b718ab909b36eb541927a182e96d203c6961ea5bdfe512e6597`.
+The 3,309,181-byte source release is
+`sha256:e79bb7a12b4de7c2e0d1e68daf5f426ea1fefab3609d97e0a786508ec2b059fa`;
+its independently generated replica is byte-identical and its 1,557 entries
+have normalized timestamps.
+
+The aggregate receipt identity is
+`sha256:747df2d486c07259dbc04ed05b00106a48593e787f25f52a44fd51dd108bee1e`.
+It verifies 37 staged artifact files, 272 test-result files, all fixture
+reports, all seven API inventories, and the release receipts. The staged Maven
+repository validates all seven `blue.language:*:3.1.0-rc.18` coordinates, and
+the independent published-artifact smoke resolves all seven successfully.
+
+These hashes and receipts are final for verified source commit `63a9ed6`.
+Because this report is committed afterward, its evidence-only successor has a
+different source tree and is deliberately not described as clean-built.
 
 ## Remaining limitations
 
-- The final ordered clean gate and final report-bearing artifact hashes are not
-  yet executed and are not presented as passing.
+- The evidence-only successor containing this report was not clean-built; all
+  release claims and artifact hashes intentionally bind to verified commit
+  `63a9ed6a1a66d47119a80d16ed2ab0beda0d2453`.
 - A direct collection benchmark regression percentage is unavailable because
   the old implementation had no equivalent benchmark.
 - The direct processor-package numeric goals have an evidence-backed exception;
@@ -248,6 +289,8 @@ written into the machine report and the release decision change to green.
 - `DocumentProcessor` is 745 lines after final semantic integration, so the
   650-line facade target is not claimed even though its mechanics are delegated.
 - Some 4,096-member benchmark lanes hit the normative gas or portable limit.
+- Every quick-campaign `scoreError` is `NaN` under the one-fork,
+  one-measurement setup, so its finite scores are not statistically bounded.
 - The supplied implementation-baseline specification still calls numerical gas
   weights and portable limits provisional pending calibration.
 
