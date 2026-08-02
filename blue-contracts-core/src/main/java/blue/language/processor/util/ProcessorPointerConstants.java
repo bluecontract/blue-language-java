@@ -38,6 +38,11 @@ public final class ProcessorPointerConstants {
             JsonPointer.append(
                     RELATIVE_EMBEDDED,
                     ProcessorContractConstants.KEY_PATHS);
+    /** Relative pointer to the embedded collection-path list. */
+    public static final String RELATIVE_EMBEDDED_COLLECTION_PATHS =
+            JsonPointer.append(
+                    RELATIVE_EMBEDDED,
+                    ProcessorContractConstants.KEY_COLLECTION_PATHS);
     /** Relative pointer to checkpoint state. */
     public static final String RELATIVE_CHECKPOINT =
             relativeContractsEntry(

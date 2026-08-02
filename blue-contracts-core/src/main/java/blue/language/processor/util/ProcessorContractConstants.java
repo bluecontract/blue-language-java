@@ -32,6 +32,8 @@ public final class ProcessorContractConstants {
     public static final String KEY_ENTRIES = "entries";
     /** Property containing selected embedded child paths. */
     public static final String KEY_PATHS = "paths";
+    /** Property containing collections whose direct members are embedded. */
+    public static final String KEY_COLLECTION_PATHS = "collectionPaths";
     /** Contract key containing type-generalization policy. */
     public static final String KEY_GENERALIZATION = "generalization";
     /** Property containing the exact initialized document. */
