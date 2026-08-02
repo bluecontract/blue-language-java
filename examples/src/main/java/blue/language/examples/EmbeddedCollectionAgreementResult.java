@@ -44,62 +44,110 @@ public final class EmbeddedCollectionAgreementResult {
         this.parentParticipantBlueId = parentParticipantBlueId;
     }
 
-    /** Returns the exact initial BlueId shared by lesson-a and lesson-b. */
+    /**
+     * Returns the exact initial BlueId shared by lesson-a and lesson-b.
+     *
+     * @return shared initial Lesson BlueId
+     */
     public String getInitialLessonBlueId() {
         return initialLessonBlueId;
     }
 
-    /** Returns the exact participant Channel BlueId reused by both Lessons. */
+    /**
+     * Returns the exact participant Channel BlueId reused by both Lessons.
+     *
+     * @return reused participant Channel BlueId
+     */
     public String getReusedParticipantBlueId() {
         return reusedParticipantBlueId;
     }
 
-    /** Returns lesson-a progress after its concretely targeted event. */
+    /**
+     * Returns lesson-a progress after its concretely targeted event.
+     *
+     * @return lesson-a progress after targeting
+     */
     public long getLessonAProgressAfterTarget() {
         return lessonAProgressAfterTarget;
     }
 
-    /** Returns lesson-b progress after lesson-a was targeted. */
+    /**
+     * Returns lesson-b progress after lesson-a was targeted.
+     *
+     * @return unchanged lesson-b progress
+     */
     public long getLessonBProgressAfterTarget() {
         return lessonBProgressAfterTarget;
     }
 
-    /** Returns lesson-c progress in the event that created it. */
+    /**
+     * Returns lesson-c progress in the event that created it.
+     *
+     * @return lesson-c progress during creation
+     */
     public long getLessonCProgressDuringCreation() {
         return lessonCProgressDuringCreation;
     }
 
-    /** Returns lesson-c progress after the next eligible event. */
+    /**
+     * Returns lesson-c progress after the next eligible event.
+     *
+     * @return lesson-c progress after activation
+     */
     public long getLessonCProgressAfterNextEvent() {
         return lessonCProgressAfterNextEvent;
     }
 
-    /** Returns the concrete scope activated by the post-commit delta. */
+    /**
+     * Returns the concrete scope activated by the post-commit delta.
+     *
+     * @return activated concrete scope path
+     */
     public String getActivatedScopePath() {
         return activatedScopePath;
     }
 
-    /** Returns the exclusive event-order boundary for lesson-c activation. */
+    /**
+     * Returns the exclusive event-order boundary for lesson-c activation.
+     *
+     * @return exclusive activation boundary
+     */
     public ExternalOrderKey getActivationStart() {
         return activationStart;
     }
 
-    /** Returns lesson-a's retained participant Channel BlueId. */
+    /**
+     * Returns lesson-a's retained participant Channel BlueId.
+     *
+     * @return lesson-a participant Channel BlueId
+     */
     public String getLessonAParticipantBlueId() {
         return lessonAParticipantBlueId;
     }
 
-    /** Returns lesson-b's retained participant Channel BlueId. */
+    /**
+     * Returns lesson-b's retained participant Channel BlueId.
+     *
+     * @return lesson-b participant Channel BlueId
+     */
     public String getLessonBParticipantBlueId() {
         return lessonBParticipantBlueId;
     }
 
-    /** Returns lesson-c's participant Channel BlueId. */
+    /**
+     * Returns lesson-c's participant Channel BlueId.
+     *
+     * @return lesson-c participant Channel BlueId
+     */
     public String getLessonCParticipantBlueId() {
         return lessonCParticipantBlueId;
     }
 
-    /** Returns the replacement parent participant Channel BlueId. */
+    /**
+     * Returns the replacement parent participant Channel BlueId.
+     *
+     * @return replacement parent participant Channel BlueId
+     */
     public String getParentParticipantBlueId() {
         return parentParticipantBlueId;
     }
