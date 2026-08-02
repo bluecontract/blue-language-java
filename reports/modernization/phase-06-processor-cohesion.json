@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "phase": "06-processor-cohesion",
+  "status": "static-classification-with-evidence-backed-target-exceptions",
+  "evidence": {
+    "kind": "static-validation",
+    "sourceCommit": "fa6654902c0f01e58c877fadb321dd37d01ccdd4",
+    "processorImplementationCommit": "f7d03ac3db4a0400db240a35da06813a9c148bae",
+    "cohesionRefactorCommit": "a7adcb3580568d339222b93790c9bcc83e01590c",
+    "baselineCommit": "4b88f9148c3dfdeea31c715d1ef339b8d8d7c721",
+    "method": "Static source inventory, API-baseline comparison, read-only sibling import scan, lexical dependency analysis, and physical Java source line counts.",
+    "executedRuntimeEvidence": false
+  },
+  "scope": {
+    "module": ":blue-contracts-core",
+    "package": "blue.language.processor",
+    "semanticChangesPermitted": false
+  },
+  "classification": {
+    "inventory": "api/processor-type-classification-1.0.json",
+    "inventorySha256": "sha256:dce3d9a290d945e37ee43afe08e9ff36a7f07f96754256354804553be95da468",
+    "productionSourceFiles": 273,
+    "topLevelProcessorTreeTypes": 270,
+    "publicApi": 89,
+    "publicSpi": 10,
+    "publicModel": 18,
+    "internalEngine": 81,
+    "internalSupport": 72
+  },
+  "directPackage": {
+    "sourceFilesIncludingPackageInfo": 244,
+    "topLevelTypes": 244,
+    "publicTopLevelTypes": 91,
+    "packagePrivateTopLevelTypes": 153,
+    "sourceFileAim": 110,
+    "publicTypeAim": 70,
+    "sourceFileAimReached": false,
+    "publicTypeAimReached": false,
+    "exceptions": [
+      {
+        "aim": "source files <= 110",
+        "actual": 244,
+        "minimumFilesThatWouldNeedRelocation": 134,
+        "rationale": "The 148-type package-private main component has dependencies in both directions across stable root public API types; reaching the aim without a versioned API boundary would require public technical bridges, a package cycle, or incompatible API moves."
+      },
+      {
+        "aim": "public top-level types <= 70",
+        "actual": 91,
+        "survivingBaselineTypes": 76,
+        "rationale": "The surviving binary-baseline types alone exceed the aim, and the remaining current types are approved modernization or protocol surfaces. The static audit supports no safe visibility reduction."
+      }
+    ]
+  },
+  "compatibilityEvidence": {
+    "survivingBaselineDirectPublicTypes": 76,
+    "currentTypesReferencedOutsideDirectProductionPackage": 88,
+    "readOnlySiblingImportedCurrentTypes": 56,
+    "visibilityReductions": 0,
+    "publicTechnicalGatewaysAdded": 0,
+    "migrationLedger": "api/processor-package-relocation-ledger-1.0.json"
+  },
+  "dependencyEvidence": {
+    "packagePrivateConnectedComponents": 6,
+    "largestComponentTypes": 148,
+    "rootPublicReferrersOfLargestComponent": 19,
+    "largestComponentRootPublicDependencies": 78,
+    "packageCyclesAdded": 0
+  },
+  "lineBudget": {
+    "ordinaryProductionClassLimit": 800,
+    "ordinaryProductionClassViolations": 0,
+    "tiedMaximumClasses": [
+      {
+        "class": "ExternalChannelDependencySnapshot",
+        "lines": 800,
+        "changeState": "unchanged-from-baseline"
+      },
+      {
+        "class": "EmbeddedScopePlanner",
+        "lines": 800,
+        "changeState": "new"
+      }
+    ],
+    "documentProcessorTarget": {
+      "targetLines": 650,
+      "baselineLines": 1043,
+      "cohesionRefactorLines": 641,
+      "cohesionRefactorCommit": "a7adcb3580568d339222b93790c9bcc83e01590c",
+      "currentLines": 745,
+      "result": "not-reached-in-final-integrated-source",
+      "rationale": "The focused cohesion commit reached the target. Final collection-scope semantic integration subsequently added orchestration and compatibility surface, bringing the facade back above the target. This is a documented remaining cohesion limitation, not a completed target."
+    },
+    "documentProcessingRuntime": {
+      "practicalInternalAimLines": 600,
+      "baselineLines": 797,
+      "cohesionRefactorLines": 713,
+      "currentLines": 746,
+      "result": "practical-aim-exception",
+      "rationale": "The runtime remains the package-local owner of invocation state and atomic processing coordination. A further split requires green state-ownership characterization and a non-public boundary that does not duplicate collection-scope semantics."
+    },
+    "phaseTouchedInternalClassesAbovePracticalAim": [
+      {
+        "class": "DocumentProcessingRuntime",
+        "lines": 746,
+        "baselineLines": 797,
+        "changeState": "materially-modified",
+        "rationale": "Retained package-local invocation-state and atomic-processing ownership; a further split requires additional state-ownership characterization."
+      },
+      {
+        "class": "EffectiveFragmentationCatalogBuilder",
+        "lines": 711,
+        "baselineLines": 703,
+        "changeState": "modified",
+        "rationale": "Integrated the immutable embedded-scope plan into the existing deterministic fragmentation builder without introducing a second catalog interpretation."
+      },
+      {
+        "class": "EmbeddedScopePlanner",
+        "lines": 800,
+        "baselineLines": null,
+        "changeState": "new",
+        "rationale": "Keeps declaration validation, deterministic collection enumeration, overlap/cycle checks, and concrete-path provenance in the one authoritative planner required by the amendment. Further extraction must not create divergent path semantics."
+      },
+      {
+        "class": "EvidenceDeliveryOrchestrator",
+        "lines": 711,
+        "baselineLines": 706,
+        "changeState": "modified",
+        "rationale": "Retained existing evidence phase ordering while consuming the shared embedded-scope plan; the phase did not introduce a parallel evidence pipeline solely to reduce line count."
+      },
+      {
+        "class": "ExternalSubscriptionProjectionBuilder",
+        "lines": 706,
+        "baselineLines": 672,
+        "changeState": "materially-modified",
+        "rationale": "Preserves one deterministic projection and feeder-index construction path for exact and collection-generated scopes."
+      },
+      {
+        "class": "PatchPlanningEngine",
+        "lines": 644,
+        "baselineLines": 664,
+        "changeState": "materially-modified-and-reduced",
+        "rationale": "Keeps protected-state validation and patch admission in one atomic planning path; the class was reduced but remains above the practical aim."
+      }
+    ]
+  },
+  "decision": "Preserve the stable API and package-private visibility. Do not manufacture public bridges or a package cycle to satisfy an aspirational file-count target."
+}
