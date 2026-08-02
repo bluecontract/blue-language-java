@@ -30,6 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueContractsConformanceReportTest {
 
+    private static final int CONTRACTS_BEHAVIOR_FIXTURE_COUNT = 96;
+    private static final int CONTRACTS_GAS_FIXTURE_COUNT = 58;
+
     private static final Pattern SPECIFICATION_REGISTRY_IDENTITY = Pattern.compile(
             "(?s)The canonical core-registry package identity bound by this "
                     + "fixture package is:\\s*```text\\s*"
@@ -75,9 +78,12 @@ class BlueContractsConformanceReportTest {
     @Test
     void shouldReportEveryContractsFixturePassingWithExactRoles() {
         // given
-        int expectedContractsFixtures = 154;
-        long expectedBehaviorFixtures = 82L;
-        long expectedGasFixtures = 58L;
+        int expectedContractsFixtures =
+                BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT;
+        long expectedBehaviorFixtures =
+                CONTRACTS_BEHAVIOR_FIXTURE_COUNT;
+        long expectedGasFixtures =
+                CONTRACTS_GAS_FIXTURE_COUNT;
 
         // when
         BlueContractsConformanceReport contracts =
@@ -118,7 +124,7 @@ class BlueContractsConformanceReportTest {
         String expectedContractsGas =
                 "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
         String expectedContractsFixtures =
-                "sha256:021bb98d58baf7708d66faec6bb64678e42b95a9f5ab4dd634b6ea310de9192f";
+                "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc";
 
         // when
         BlueReleaseConformanceReport release = exactReleaseReport();
@@ -161,7 +167,8 @@ class BlueContractsConformanceReportTest {
     @Test
     void shouldExposeCompletePassingRowsInMachineReadableReleaseReport() {
         // given
-        int expectedReleaseFixtures = 293;
+        int expectedReleaseFixtures =
+                BlueReleaseConformanceReport.TOTAL_FIXTURE_COUNT;
 
         // when
         Map<String, Object> encoded =
@@ -197,7 +204,8 @@ class BlueContractsConformanceReportTest {
     void shouldSerializeCompleteReleaseSummaryToJson()
             throws Exception {
         // given
-        int expectedReleaseFixtures = 293;
+        int expectedReleaseFixtures =
+                BlueReleaseConformanceReport.TOTAL_FIXTURE_COUNT;
 
         // when
         JsonNode json = JSON_MAPPER.readTree(
@@ -229,10 +237,10 @@ class BlueContractsConformanceReportTest {
         // then
         assertEquals(expectedReleaseName, report.getReleaseName());
         assertEquals(
-                "sha256:b285e8fac0c9ae8bfb8d33925f7f7021ca6013c8ce7332e90cfa93af05dc6461",
+                "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
                 report.getReleasePackageIdentity());
         assertEquals(
-                "sha256:021bb98d58baf7708d66faec6bb64678e42b95a9f5ab4dd634b6ea310de9192f",
+                "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc",
                 report.getFixturePackageIdentity());
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -260,7 +268,7 @@ class BlueContractsConformanceReportTest {
                 nested(report.toMachineReadableMap(),
                         "language", "specificationSha256"));
         assertEquals(
-                "c58ef4d4b60f9bac7cfce72768aef98bd3f71788efbb80de489e656de7390a5e",
+                "6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81",
                 nested(report.toMachineReadableMap(),
                         "contracts", "specificationSha256"));
 
@@ -309,12 +317,12 @@ class BlueContractsConformanceReportTest {
                         .LANGUAGE_FIXTURE_PACKAGE_IDENTITY,
                 requiredYamlIdentity("packageIdentity", fixtureManifest));
         assertEquals(manifestIdentity, requiredYamlIdentity(
-                "languageRegistryPackage", releaseManifest));
+                "languageRegistryPackageIdentity", releaseManifest));
         assertEquals(
                 BlueContractsConformanceReport
                         .LANGUAGE_FIXTURE_PACKAGE_IDENTITY,
                 requiredYamlIdentity(
-                        "languageFixturePackage", releaseManifest));
+                        "languageFixturePackageIdentity", releaseManifest));
         assertEquals(
                 BlueContractsConformanceReport.RELEASE_PACKAGE_IDENTITY,
                 requiredYamlIdentity("packageIdentity", releaseManifest));

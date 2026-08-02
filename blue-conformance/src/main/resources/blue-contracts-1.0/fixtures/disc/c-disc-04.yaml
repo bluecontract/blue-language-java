@@ -11,7 +11,7 @@ input:
     contracts:
       in:
         type:
-          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
         order: 0
         subscriptionKey: timeline
         eventKey: timeline
@@ -19,7 +19,7 @@ input:
         checkpointDomain: domain-v1
       h:
         type:
-          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
         channel: in
         order: 0
         result:
@@ -28,7 +28,7 @@ input:
             path: /value
             val: 1
     type:
-      blueId: 3gwbrYjenX1ji8fHvwnrBv6fijVbau47NchRQtNQxei3
+      blueId: 9iJE1p1FBrrunVBKUhxFh7cmvv2B6FWiNFR8HPtnDoBL
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -53,11 +53,11 @@ input:
     mode: exact-node
     semanticDemandsOnly: true
     nodes:
-      3gwbrYjenX1ji8fHvwnrBv6fijVbau47NchRQtNQxei3:
+      9iJE1p1FBrrunVBKUhxFh7cmvv2B6FWiNFR8HPtnDoBL:
         contracts:
           h:
             type:
-              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
             channel: in
             order: 0
   runtime:

@@ -4,6 +4,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.Schema;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -20,6 +21,41 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class SchemaEnumCanonicalizerTest {
+
+    @Test
+    void shouldIgnoreEnumAuthoringOrderAndDuplicatesForDirectBlueIds() {
+        // given
+        Node authoredSchema = schemaNode("add", "replace", "remove");
+        Node duplicateSchema = schemaNode(
+                "remove", "add", "replace", "add");
+        Node canonicalSchema = schemaNode("add", "remove", "replace");
+        Node authoredContainer = enclosingNode(
+                "add", "replace", "remove");
+        Node duplicateContainer = enclosingNode(
+                "remove", "add", "replace", "add");
+        Node canonicalContainer = enclosingNode(
+                "add", "remove", "replace");
+
+        // when
+        String authoredSchemaBlueId =
+                DirectBlueIdCalculator.calculateBlueId(authoredSchema);
+        String duplicateSchemaBlueId =
+                DirectBlueIdCalculator.calculateBlueId(duplicateSchema);
+        String canonicalSchemaBlueId =
+                DirectBlueIdCalculator.calculateBlueId(canonicalSchema);
+        String authoredContainerBlueId =
+                DirectBlueIdCalculator.calculateBlueId(authoredContainer);
+        String duplicateContainerBlueId =
+                DirectBlueIdCalculator.calculateBlueId(duplicateContainer);
+        String canonicalContainerBlueId =
+                DirectBlueIdCalculator.calculateBlueId(canonicalContainer);
+
+        // then
+        assertEquals(canonicalSchemaBlueId, authoredSchemaBlueId);
+        assertEquals(canonicalSchemaBlueId, duplicateSchemaBlueId);
+        assertEquals(canonicalContainerBlueId, authoredContainerBlueId);
+        assertEquals(canonicalContainerBlueId, duplicateContainerBlueId);
+    }
 
     @Test
     void shouldSortPunctuationNumbersAndUnicodeByCanonicalUtf8Bytes() {
@@ -164,6 +200,24 @@ class SchemaEnumCanonicalizerTest {
 
     private static Node scalar(Object value) {
         return new Node().value(value);
+    }
+
+    private static Node schemaNode(String... values) {
+        return new Node().schema(enumSchema(values));
+    }
+
+    private static Node enclosingNode(String... values) {
+        return new Node()
+                .name("Operation")
+                .schema(enumSchema(values))
+                .value("add");
+    }
+
+    private static Schema enumSchema(String... values) {
+        return new Schema().enumValues(
+                Arrays.stream(values)
+                        .map(SchemaEnumCanonicalizerTest::scalar)
+                        .collect(Collectors.toList()));
     }
 
     private static List<String> stringValues(List<Node> nodes) {

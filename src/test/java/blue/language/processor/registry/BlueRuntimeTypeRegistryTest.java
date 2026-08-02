@@ -20,6 +20,7 @@ import blue.language.identity.BlueIds;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +33,57 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueRuntimeTypeRegistryTest {
+
+    @Test
+    void shouldCalculateCorrectedEnumBearingRuntimeBlueIds() {
+        // given
+        BlueRuntimeTypeRegistry registry =
+                BlueRuntimeTypeRegistry.getDefault();
+        List<RuntimeTypeKey> enumBearingTypes = Arrays.asList(
+                RuntimeTypeKey.DOCUMENT_UPDATE,
+                RuntimeTypeKey.JSON_PATCH_ENTRY,
+                RuntimeTypeKey.SCRIPTED_EXTERNAL_CHANNEL);
+
+        // when
+        Map<RuntimeTypeKey, String> calculated =
+                new EnumMap<>(RuntimeTypeKey.class);
+        for (RuntimeTypeKey key : enumBearingTypes) {
+            calculated.put(
+                    key,
+                    DirectBlueIdCalculator.calculateBlueId(
+                            registry.node(key)));
+        }
+
+        // then
+        assertEquals(RuntimeBlueIds.DOCUMENT_UPDATE,
+                calculated.get(RuntimeTypeKey.DOCUMENT_UPDATE));
+        assertEquals(RuntimeBlueIds.JSON_PATCH_ENTRY,
+                calculated.get(RuntimeTypeKey.JSON_PATCH_ENTRY));
+        assertEquals(RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL,
+                calculated.get(RuntimeTypeKey.SCRIPTED_EXTERNAL_CHANNEL));
+    }
+
+    @Test
+    void shouldCalculateCorrectedTransitiveRuntimeBlueIds() {
+        // given
+        BlueRuntimeTypeRegistry registry =
+                BlueRuntimeTypeRegistry.getDefault();
+
+        // when
+        String contractExecutionResult =
+                DirectBlueIdCalculator.calculateBlueId(
+                        registry.node(
+                                RuntimeTypeKey.CONTRACT_EXECUTION_RESULT));
+        String scriptedHandler =
+                DirectBlueIdCalculator.calculateBlueId(
+                        registry.node(RuntimeTypeKey.SCRIPTED_HANDLER));
+
+        // then
+        assertEquals(RuntimeBlueIds.CONTRACT_EXECUTION_RESULT,
+                contractExecutionResult);
+        assertEquals(RuntimeBlueIds.SCRIPTED_HANDLER,
+                scriptedHandler);
+    }
 
     @Test
     void shouldMatchEveryNamedRuntimeBlueIdToTheClosedRegistry() {

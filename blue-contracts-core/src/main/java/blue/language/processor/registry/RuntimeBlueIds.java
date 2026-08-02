@@ -11,7 +11,7 @@ public final class RuntimeBlueIds {
 
     /** SHA-256 identity of the complete runtime-registry package. */
     public static final String REGISTRY_PACKAGE_IDENTITY =
-            "sha256:34081fabc92444435a0aa41d272fb92a8245c00bb949aa22ac36be0bbf15d1f1";
+            "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1";
 
     /**
      * Legacy BlueId meta-type identity retained for binary/source
@@ -39,7 +39,7 @@ public final class RuntimeBlueIds {
             "4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4";
     /** Published BlueId of the Contract Execution Result runtime type. */
     public static final String CONTRACT_EXECUTION_RESULT =
-            "6i9NrtN7uqtSYx136MwLyZSiLjJ98aCUCJNHuQvZah6n";
+            "3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv";
     /** Published BlueId of the processing-initiated lifecycle event. */
     public static final String DOCUMENT_PROCESSING_INITIATED =
             "Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C";
@@ -48,7 +48,7 @@ public final class RuntimeBlueIds {
             "xaVhnN73YeTiJ1vaLGwndpYQE2RsbckfvzihLQsp2Yi";
     /** Published BlueId of the Document Update runtime type. */
     public static final String DOCUMENT_UPDATE =
-            "5qmRyRFrX38eVmgtRxUb79R27sG8VJRJcgsafyANxKgG";
+            "7HZ6UDNxDdGdvhowi92mwB4EAqKfeynpJEFUFVvjmTJ2";
     /** Published BlueId of the Document Update Channel runtime type. */
     public static final String DOCUMENT_UPDATE_CHANNEL =
             "4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An";
@@ -69,7 +69,7 @@ public final class RuntimeBlueIds {
             "2Ag2NfcWpCfPqBAR7bFAEL9L3roX3UWGUkDq7nN3D4gV";
     /** Published BlueId of the JSON Patch Entry runtime type. */
     public static final String JSON_PATCH_ENTRY =
-            "6ibiR9xVJNErraawKrsDzrGS3H5HyUUNwdZbDTDbU2U6";
+            "5UihWoxkyiUbv9TZk7HcHsa82sz2R3ex1WifQQpKtHpP";
     /** Published BlueId of the Lifecycle Event Channel runtime type. */
     public static final String LIFECYCLE_EVENT_CHANNEL =
             "2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo";
@@ -93,10 +93,10 @@ public final class RuntimeBlueIds {
             "EEcehN6F5zKoZbLFvoAqa8hiWKzPY2VFbd3j5qGDELS2";
     /** Published BlueId of the conformance Scripted External Channel. */
     public static final String SCRIPTED_EXTERNAL_CHANNEL =
-            "LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp";
+            "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt";
     /** Published BlueId of the conformance Scripted Handler. */
     public static final String SCRIPTED_HANDLER =
-            "DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ";
+            "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw";
     /** Published BlueId of the Triggered Event Channel runtime type. */
     public static final String TRIGGERED_EVENT_CHANNEL =
             "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf";

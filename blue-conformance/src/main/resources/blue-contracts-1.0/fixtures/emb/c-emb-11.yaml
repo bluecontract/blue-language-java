@@ -13,7 +13,7 @@ input:
         contracts:
           in:
             type:
-              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+              blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
             order: 0
             subscriptionKey: lesson-a
             eventKey: lesson-a
@@ -31,7 +31,7 @@ input:
     contracts:
       admin:
         type:
-          blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
         order: 0
         subscriptionKey: admin
         eventKey: admin
@@ -39,7 +39,7 @@ input:
         checkpointDomain: admin-v1
       h:
         type:
-          blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
         channel: admin
         order: 0
         result:
@@ -53,7 +53,7 @@ input:
               contracts:
                 in:
                   type:
-                    blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+                    blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
                   order: 0
                   subscriptionKey: lesson-a
                   eventKey: lesson-a
@@ -61,7 +61,7 @@ input:
                   checkpointDomain: new-domain
                 h:
                   type:
-                    blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+                    blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
                   channel: in
                   order: 0
                   result: {}

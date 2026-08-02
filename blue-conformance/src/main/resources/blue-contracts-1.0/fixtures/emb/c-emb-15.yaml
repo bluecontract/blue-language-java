@@ -13,7 +13,7 @@ input:
         contracts:
           in: &id001
             type:
-              blueId: LYwiqvSHTUSVN15kKLxFhVLF2qLrzVu1grmYUjbqqgp
+              blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
             order: 0
             subscriptionKey: lesson
             eventKey: lesson
@@ -21,7 +21,7 @@ input:
             checkpointDomain: shared-channel-v1
           h:
             type:
-              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
             channel: in
             order: 0
             result:
@@ -33,10 +33,10 @@ input:
         value: 0
         contracts:
           in:
-            blueId: 9VbqSkRYqcLnqhcgw6ELvq65dST7gKyXjsxxTS3HCfyp
+            blueId: 4WBFdeusYgwnJWs2X1zJra5vK7JJDa9HMiy4rR3Gthzx
           h:
             type:
-              blueId: DT9DtvU5MQbR1NWN46h6JzJFBwyhEWa4iQQHEw6S5QVZ
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
             channel: in
             order: 0
             result:
@@ -73,7 +73,7 @@ input:
     mode: exact-node
     semanticDemandsOnly: true
     nodes:
-      9VbqSkRYqcLnqhcgw6ELvq65dST7gKyXjsxxTS3HCfyp: *id001
+      4WBFdeusYgwnJWs2X1zJra5vK7JJDa9HMiy4rR3Gthzx: *id001
   runtime:
     typeRegistryManifest: ../../registry/manifest.yaml
 expected:
