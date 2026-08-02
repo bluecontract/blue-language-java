@@ -37,7 +37,7 @@ final class ProcessingMutationSession {
         return runtime.workingDocument(originScopePath);
     }
 
-    List<DocumentProcessingRuntime.DocumentUpdateData> apply(
+    List<DocumentUpdateData> apply(
             String originScopePath,
             List<JsonPatch> patches) {
         return applyPatches(
@@ -68,14 +68,14 @@ final class ProcessingMutationSession {
                 .publishFallbackDirectWrite(path, value);
     }
 
-    DocumentProcessingRuntime.DocumentUpdateData applyPatch(
+    DocumentUpdateData applyPatch(
             String originScopePath,
             JsonPatch patch,
             PatchSource source) {
         if (patch == null) {
             return null;
         }
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+        List<DocumentUpdateData> updates =
                 applyPatches(
                         originScopePath,
                         Collections.singletonList(patch),
@@ -83,7 +83,7 @@ final class ProcessingMutationSession {
         return updates.isEmpty() ? null : updates.get(0);
     }
 
-    List<DocumentProcessingRuntime.DocumentUpdateData> applyPatches(
+    List<DocumentUpdateData> applyPatches(
             String originScopePath,
             List<JsonPatch> patches,
             PatchSource source) {
@@ -95,20 +95,20 @@ final class ProcessingMutationSession {
                 PatchInput.mutableList(patches, source));
     }
 
-    DocumentProcessingRuntime.DocumentUpdateData applyFrozenPatch(
+    DocumentUpdateData applyFrozenPatch(
             String originScopePath,
             FrozenJsonPatch patch) {
         if (patch == null) {
             return null;
         }
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+        List<DocumentUpdateData> updates =
                 applyFrozenPatches(
                         originScopePath,
                         Collections.singletonList(patch));
         return updates.isEmpty() ? null : updates.get(0);
     }
 
-    List<DocumentProcessingRuntime.DocumentUpdateData> applyFrozenPatches(
+    List<DocumentUpdateData> applyFrozenPatches(
             String originScopePath,
             List<FrozenJsonPatch> patches) {
         if (patches == null || patches.isEmpty()) {
@@ -119,7 +119,7 @@ final class ProcessingMutationSession {
                 PatchInput.frozenList(patches));
     }
 
-    List<DocumentProcessingRuntime.DocumentUpdateData> applyPrecomputedPatch(
+    List<DocumentUpdateData> applyPrecomputedPatch(
             String originScopePath,
             JsonPatch patch,
             WorkingDocument.PatchPreview preview) {
@@ -136,8 +136,7 @@ final class ProcessingMutationSession {
                 ? runtime.materializedView.copyRoot()
                 : null;
         ResolvedSnapshot snapshotRollback = runtime.snapshot;
-        runtime.batchPatchCalls++;
-        runtime.batchPatchEntries++;
+        runtime.counters().recordBatchPatch(1);
         try {
             chargeSemanticIdentityWork(Collections.singletonList(
                     PatchInput.mutable(patch)));
@@ -152,7 +151,7 @@ final class ProcessingMutationSession {
                 recordBuildUpdatesNanos(
                         System.nanoTime() - buildUpdatesStart);
             }
-            List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+            List<DocumentUpdateData> updates =
                     commitMeasured(result);
             recordChangedPaths(updates);
             return updates;
@@ -185,12 +184,12 @@ final class ProcessingMutationSession {
         gasCharger.enforcePortableLimit(category, limitName, observed);
     }
 
-    DocumentProcessingRuntime.UpdateMaterializationMetrics
+    UpdateMaterializationMetrics
     updateMaterializationMetrics() {
-        return new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+        return new UpdateMaterializationMetrics() {
             @Override
             public void recordBeforeNodeMaterialization() {
-                runtime.documentUpdateBeforeNodeMaterializations++;
+                runtime.counters().recordBeforeNodeMaterialization();
                 runtime.observe(
                         ProcessingMetricId
                                 .DOCUMENT_UPDATE_BEFORE_MATERIALIZATIONS,
@@ -199,7 +198,7 @@ final class ProcessingMutationSession {
 
             @Override
             public void recordAfterNodeMaterialization() {
-                runtime.documentUpdateAfterNodeMaterializations++;
+                runtime.counters().recordAfterNodeMaterialization();
                 runtime.observe(
                         ProcessingMetricId
                                 .DOCUMENT_UPDATE_AFTER_MATERIALIZATIONS,
@@ -208,23 +207,22 @@ final class ProcessingMutationSession {
         };
     }
 
-    private List<DocumentProcessingRuntime.DocumentUpdateData>
+    private List<DocumentUpdateData>
     applyPatchInputs(String originScopePath, List<PatchInput> patches) {
         Node selectedRollback = runtime.selectedDocumentBacked
                 ? runtime.materializedView.copyRoot()
                 : null;
         ResolvedSnapshot snapshotRollback = runtime.snapshot;
-        runtime.batchPatchCalls++;
-        runtime.batchPatchEntries += patches.size();
+        runtime.counters().recordBatchPatch(patches.size());
         if (patches.size() == 1) {
-            runtime.singletonPatchTransactions++;
+            runtime.counters().recordSingletonPatchTransaction();
             runtime.observe(
                     ProcessingMetricId.SINGLETON_PATCH_TRANSACTIONS,
                     1L);
         }
         try {
             preflightPatchInputsWithoutResolution(patches);
-            DocumentProcessingRuntime.PlanningContext planning =
+            PatchPlanningContext planning =
                     runtime.planningContext(runtime.materializedView.root());
             chargeSemanticIdentityWork(patches);
             BatchPatchTransaction transaction =
@@ -239,7 +237,7 @@ final class ProcessingMutationSession {
                             runtime.metrics);
             BatchPatchResult result = transaction.apply();
             recordPlanningMetrics(result);
-            List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+            List<DocumentUpdateData> updates =
                     commitMeasured(result);
             recordChangedPaths(updates);
             return updates;
@@ -330,7 +328,7 @@ final class ProcessingMutationSession {
                         current.isResolutionComplete());
     }
 
-    private List<DocumentProcessingRuntime.DocumentUpdateData> commitMeasured(
+    private List<DocumentUpdateData> commitMeasured(
             BatchPatchResult result) {
         long commitStart = System.nanoTime();
         try {
@@ -340,7 +338,7 @@ final class ProcessingMutationSession {
                     runtime.currentSnapshotManager());
         } finally {
             long commitNanos = System.nanoTime() - commitStart;
-            runtime.batchPatchCommitNanos += commitNanos;
+            runtime.counters().recordCommitNanos(commitNanos);
             runtime.observe(
                     ProcessingMetricId.BATCH_PATCH_COMMIT_NANOS,
                     commitNanos);
@@ -351,9 +349,12 @@ final class ProcessingMutationSession {
     }
 
     private void recordPlanningMetrics(BatchPatchResult result) {
-        runtime.batchPatchPlanningNanos += result.patchPlanningNanos();
-        runtime.batchPatchConformanceNanos += result.conformanceNanos();
-        runtime.batchPatchBuildUpdatesNanos += result.buildUpdatesNanos();
+        runtime.counters().recordPatchPlanningNanos(
+                result.patchPlanningNanos());
+        runtime.counters().recordConformanceNanos(
+                result.conformanceNanos());
+        runtime.counters().recordBuildUpdatesNanos(
+                result.buildUpdatesNanos());
         runtime.observe(
                 ProcessingMetricId.BATCH_PATCH_PLANNING_NANOS,
                 result.patchPlanningNanos());
@@ -366,15 +367,15 @@ final class ProcessingMutationSession {
     }
 
     private void recordBuildUpdatesNanos(long nanos) {
-        runtime.batchPatchBuildUpdatesNanos += nanos;
+        runtime.counters().recordBuildUpdatesNanos(nanos);
         runtime.observe(
                 ProcessingMetricId.BATCH_PATCH_BUILD_UPDATES_NANOS,
                 nanos);
     }
 
     private void recordChangedPaths(
-            List<DocumentProcessingRuntime.DocumentUpdateData> updates) {
-        for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
+            List<DocumentUpdateData> updates) {
+        for (DocumentUpdateData update : updates) {
             runtime.changedPaths.add(
                     PointerUtils.normalizePointer(update.path()));
         }

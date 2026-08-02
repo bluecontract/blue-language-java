@@ -747,13 +747,13 @@ final class ExternalChannelCatalogContextTest {
                                          NON_CHANNEL_TYPE_BLUE_ID,
                                          NON_CHANNEL_TYPE,
                                          new NonChannelProcessor())
-                                 .withMatchingService(
+                                 .matchingService(
                                          new ContractMatchingService(
                                                  blue))
-                                 .withSnapshotManager(
+                                 .snapshotStore(
                                          languageProcessor
                                                  .snapshotManager())
-                                 .withExternalDeliveryPlanDeriver(
+                                 .deliveryPlanDeriver(
                                          (root, event) ->
                                                  exactPlan)
                                  .build()) {

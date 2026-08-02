@@ -53,8 +53,8 @@ public final class BlueContracts implements AutoCloseable {
                             .observer(builder.observer)
                             .cachePolicy(processing.runtimeAccess()
                                     .cachePolicy())
-                            .withConformanceEngine(engine)
-                            .withMatchingService(
+                            .conformanceEngine(engine)
+                            .matchingService(
                                     new ContractMatchingService(
                                             processing.runtimeAccess()));
             if (builder.gasLimit != null) {
@@ -151,7 +151,7 @@ public final class BlueContracts implements AutoCloseable {
      */
     public EffectiveFragmentationCatalog effectiveFragmentationCatalog(
             Node root) {
-        return call(() -> processor.effectiveFragmentationCatalog(root));
+        return call(() -> processor.administration().effectiveFragmentationCatalog(root));
     }
 
     /**

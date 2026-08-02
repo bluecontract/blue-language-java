@@ -18,7 +18,7 @@ import java.util.Objects;
 class DocumentUpdateDataAdapter {
 
     private final DocumentUpdateOccurrence occurrence;
-    private final DocumentProcessingRuntime.UpdateMaterializationMetrics
+    private final UpdateMaterializationMetrics
             materializationMetrics;
 
     DocumentUpdateDataAdapter(
@@ -45,7 +45,7 @@ class DocumentUpdateDataAdapter {
             JsonPatch.Op operation,
             String originScope,
             List<String> recipientChain,
-            DocumentProcessingRuntime.UpdateMaterializationMetrics metrics) {
+            UpdateMaterializationMetrics metrics) {
         this(new DocumentUpdateOccurrence(
                         path,
                         before,
@@ -58,7 +58,7 @@ class DocumentUpdateDataAdapter {
 
     DocumentUpdateDataAdapter(
             DocumentUpdateOccurrence occurrence,
-            DocumentProcessingRuntime.UpdateMaterializationMetrics metrics) {
+            UpdateMaterializationMetrics metrics) {
         this.occurrence = Objects.requireNonNull(occurrence, "occurrence");
         this.materializationMetrics = metrics;
     }

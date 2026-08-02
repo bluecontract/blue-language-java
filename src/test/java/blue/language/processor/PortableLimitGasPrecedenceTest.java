@@ -82,7 +82,7 @@ final class PortableLimitGasPrecedenceTest {
 
     private static ContextFixture contextWithGasLimit(long gasLimit) {
         DocumentProcessor owner = DocumentProcessor.builder()
-                .withGasLimit(gasLimit)
+                .gasLimit(gasLimit)
                 .build();
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(

@@ -42,7 +42,7 @@ final class RevisionBoundNoMatchProgressTest {
                 event,
                 RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY);
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         (ignoredRoot, ignoredEvent) -> plan)
                 .build();
 

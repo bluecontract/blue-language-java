@@ -32,8 +32,8 @@ import java.util.Set;
  */
 public final class WorkingDocument implements AutoCloseable {
 
-    private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_MATERIALIZATION_METRICS =
-            new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+    private static final UpdateMaterializationMetrics NOOP_MATERIALIZATION_METRICS =
+            new UpdateMaterializationMetrics() {
                 @Override
                 public void recordBeforeNodeMaterialization() {
                     // Working previews keep update metadata frozen and do not expose document-update materialization.
@@ -262,7 +262,7 @@ public final class WorkingDocument implements AutoCloseable {
         ConformanceEngine sequenceConformanceEngine = sequenceManager != null
                 ? sequenceManager.transientConformanceEngine(conformanceEngine)
                 : conformanceEngine != null ? conformanceEngine.transientView() : null;
-        DocumentProcessingRuntime.PlanningContext planning =
+        PatchPlanningContext planning =
                 DocumentProcessingRuntime.workingPlanningContext(
                         canonicalRoot,
                         resolvedRoot,

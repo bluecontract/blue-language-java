@@ -100,8 +100,8 @@ class ProcessorPreviewOwnershipTest {
                 .register(handler)
                 .build();
         DocumentProcessor owner = DocumentProcessor.builder()
-                .withRegistry(registry)
-                .withSnapshotManager(manager)
+                .runtimeRegistry(registry)
+                .snapshotStore(manager)
                 .build();
         ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
         SetProperty contract = new SetProperty();
@@ -166,7 +166,7 @@ class ProcessorPreviewOwnershipTest {
         List<JsonPatch> patches = java.util.Arrays.asList(
                 JsonPatch.add("/prefix", new Node().value("committed")),
                 JsonPatch.add("/suffix", new Node().value("not-consumed")));
-        DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        PreparedPatchTransaction sequence =
                 runtime.preparePatchSequence("/", patches, null);
 
         // when
@@ -185,7 +185,7 @@ class ProcessorPreviewOwnershipTest {
         int finalOpenCalls = manager.openCalls;
         int finalReleaseCalls = manager.releaseCalls;
         long finalSnapshotCacheInserts =
-                runtime.sequenceFinalSnapshotCacheInsertsForTest();
+                runtime.countersForTest().sequenceFinalSnapshotCacheInserts();
 
         // then
         assertInstanceOf(IllegalStateException.class,
@@ -234,7 +234,7 @@ class ProcessorPreviewOwnershipTest {
 
     private Fixture fixture(TrackingSnapshotManager manager) {
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withSnapshotManager(manager)
+                .snapshotStore(manager)
                 .build();
         ProcessorInvocationState execution = new ProcessorInvocationState(
                 processor, new Node());

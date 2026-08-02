@@ -108,8 +108,12 @@ class ProcessorOwnedCacheLifecycleTest {
                 ContractProcessorRegistryBuilder.create().registerDefaults().build();
         TypeClassResolver resolver = new TypeClassResolver("blue.language.processor.model");
         ContractMatchingService matchingService = new ContractMatchingService();
-        DocumentProcessor processor = new DocumentProcessor(
-                registry, resolver, null, null, matchingService, NoOpProcessingObserver.INSTANCE);
+        DocumentProcessor processor = DocumentProcessor.builder()
+                .runtimeRegistry(registry)
+                .contractTypeResolver(resolver)
+                .matchingService(matchingService)
+                .observer(NoOpProcessingObserver.INSTANCE)
+                .build();
 
         loadEmpty(processor.contractLoader(), "/cached", NoOpProcessingObserver.INSTANCE);
 
@@ -121,7 +125,7 @@ class ProcessorOwnedCacheLifecycleTest {
                 processor.contractLoader().cacheSize();
         int matcherSizeBeforeClear =
                 matchingService.matcherCacheSize();
-        processor.clearCaches();
+        processor.administration().clearCaches();
         int loaderSizeAfterClear =
                 processor.contractLoader().cacheSize();
         int matcherSizeAfterClear =
@@ -170,8 +174,8 @@ class ProcessorOwnedCacheLifecycleTest {
         assertTrue(result != null);
         assertTrue(processor.isClosed());
         assertFalse(processor.supportsSnapshotProcessing());
-        assertEquals(0, processor.cacheEntryCount());
-        assertEquals(0L, processor.cacheWeightBytes());
+        assertEquals(0, processor.administration().cacheEntryCount());
+        assertEquals(0L, processor.administration().cacheWeightBytes());
     }
 
     private ContractLoader loader(BlueCachePolicy policy) {

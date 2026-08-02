@@ -439,7 +439,7 @@ final class PostAdmissionPhaseExecutionTest {
         DocumentProcessor current = blue.getDocumentProcessor();
         DocumentProcessor owner = validator != null
                 ? DocumentProcessor.Builder.from(current)
-                .withSubscriptionSurfaceValidator(validator)
+                .subscriptionSurfaceValidator(validator)
                 .build()
                 : current;
         Node document = acceptedDocument();

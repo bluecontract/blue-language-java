@@ -24,7 +24,7 @@ final class BatchPatchResult {
 
     private final FrozenNode canonicalRoot;
     private final FrozenNode resolvedRoot;
-    private final List<DocumentProcessingRuntime.DocumentUpdateData> updates;
+    private final List<DocumentUpdateData> updates;
     private final UpdatePlan updatePlan;
     private final List<ImmutableJsonPatch> requestedPatches;
     private final List<GeneralizationMetadataWrite> generalizationMetadataWrites;
@@ -35,13 +35,13 @@ final class BatchPatchResult {
 
     BatchPatchResult(FrozenNode canonicalRoot,
                      FrozenNode resolvedRoot,
-                     List<DocumentProcessingRuntime.DocumentUpdateData> updates) {
+                     List<DocumentUpdateData> updates) {
         this(canonicalRoot, resolvedRoot, updates, 0L, 0L, 0L);
     }
 
     BatchPatchResult(FrozenNode canonicalRoot,
                      FrozenNode resolvedRoot,
-                     List<DocumentProcessingRuntime.DocumentUpdateData> updates,
+                     List<DocumentUpdateData> updates,
                      long patchPlanningNanos,
                      long conformanceNanos,
                      long buildUpdatesNanos) {
@@ -59,7 +59,7 @@ final class BatchPatchResult {
 
     BatchPatchResult(FrozenNode canonicalRoot,
                      FrozenNode resolvedRoot,
-                     List<DocumentProcessingRuntime.DocumentUpdateData> updates,
+                     List<DocumentUpdateData> updates,
                      UpdatePlan updatePlan,
                      List<ImmutableJsonPatch> requestedPatches,
                      List<GeneralizationMetadataWrite> generalizationMetadataWrites,
@@ -80,7 +80,7 @@ final class BatchPatchResult {
 
     BatchPatchResult(FrozenNode canonicalRoot,
                      FrozenNode resolvedRoot,
-                     List<DocumentProcessingRuntime.DocumentUpdateData> updates,
+                     List<DocumentUpdateData> updates,
                      UpdatePlan updatePlan,
                      List<ImmutableJsonPatch> requestedPatches,
                      List<GeneralizationMetadataWrite> generalizationMetadataWrites,
@@ -130,19 +130,19 @@ final class BatchPatchResult {
         return resolvedRoot;
     }
 
-    List<DocumentProcessingRuntime.DocumentUpdateData> updates() {
+    List<DocumentUpdateData> updates() {
         return updates != null ? updates : updatePlan.build(null);
     }
 
-    List<DocumentProcessingRuntime.DocumentUpdateData> updatesAgainst(
+    List<DocumentUpdateData> updatesAgainst(
             FrozenNode authoritativeResolvedRoot,
-            DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
+            UpdateMaterializationMetrics materializationMetrics) {
         if (updatePlan != null) {
             return updatePlan.build(materializationMetrics,
                     Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
         }
-        List<DocumentProcessingRuntime.DocumentUpdateData> rebound = new ArrayList<>(updates.size());
-        for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
+        List<DocumentUpdateData> rebound = new ArrayList<>(updates.size());
+        for (DocumentUpdateData update : updates) {
             rebound.add(update.withMaterializationMetrics(materializationMetrics));
         }
         return Collections.unmodifiableList(rebound);
@@ -172,7 +172,8 @@ final class BatchPatchResult {
         return buildUpdatesNanos;
     }
 
-    BatchPatchResult withMaterializationMetrics(DocumentProcessingRuntime.UpdateMaterializationMetrics metrics) {
+    BatchPatchResult withMaterializationMetrics(
+            UpdateMaterializationMetrics metrics) {
         if (updatePlan != null) {
             return new BatchPatchResult(canonicalRoot,
                     resolvedRoot,
@@ -185,8 +186,8 @@ final class BatchPatchResult {
                     conformanceNanos,
                     buildUpdatesNanos);
         }
-        List<DocumentProcessingRuntime.DocumentUpdateData> rebound = new ArrayList<>(updates.size());
-        for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
+        List<DocumentUpdateData> rebound = new ArrayList<>(updates.size());
+        for (DocumentUpdateData update : updates) {
             rebound.add(update.withMaterializationMetrics(metrics));
         }
         return new BatchPatchResult(canonicalRoot,
@@ -244,15 +245,15 @@ final class BatchPatchResult {
             this.laterOverlaps = computeLaterOverlaps(this.records);
         }
 
-        List<DocumentProcessingRuntime.DocumentUpdateData> build(
-                DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
+        List<DocumentUpdateData> build(
+                UpdateMaterializationMetrics materializationMetrics) {
             return build(materializationMetrics, finalResolvedRoot);
         }
 
-        List<DocumentProcessingRuntime.DocumentUpdateData> build(
-                DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+        List<DocumentUpdateData> build(
+                UpdateMaterializationMetrics materializationMetrics,
                 FrozenNode authoritativeResolvedRoot) {
-            List<DocumentProcessingRuntime.DocumentUpdateData> built = new ArrayList<>();
+            List<DocumentUpdateData> built = new ArrayList<>();
             ImmutablePatchPlanner finalResolvedPlanner = ImmutablePatchPlanner.forFrozen(
                     Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
             for (int recordIndex = 0; recordIndex < records.size(); recordIndex++) {
@@ -264,7 +265,7 @@ final class BatchPatchResult {
                             ? record.afterAtPatchTime()
                             : finalResolvedPlanner.read(record.path());
                 }
-                built.add(new DocumentProcessingRuntime.DocumentUpdateData(record.path(),
+                built.add(new DocumentUpdateData(record.path(),
                         before,
                         after,
                         semanticOperation(record, before),
@@ -278,7 +279,7 @@ final class BatchPatchResult {
                 for (String path : generatedPaths) {
                     FrozenNode before = preConformancePlanner.read(path);
                     FrozenNode after = finalResolvedPlanner.read(path);
-                    built.add(new DocumentProcessingRuntime.DocumentUpdateData(path,
+                    built.add(new DocumentUpdateData(path,
                             before,
                             after,
                             before == null ? JsonPatch.Op.ADD : JsonPatch.Op.REPLACE,

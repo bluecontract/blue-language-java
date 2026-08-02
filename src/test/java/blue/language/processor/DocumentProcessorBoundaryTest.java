@@ -26,6 +26,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
 import static blue.language.processor.FailureCapture.captureFailure;
+import static blue.language.processor.DocumentProcessorTestFactory.mutableProcessor;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessorBoundaryTest {
@@ -59,8 +60,10 @@ class DocumentProcessorBoundaryTest {
                 "shared-composite-registration");
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         BlockingTypeClassResolver resolver = new BlockingTypeClassResolver(blueId);
-        DocumentProcessor registeringProcessor = new DocumentProcessor(registry, resolver, null, null);
-        DocumentProcessor readingProcessor = new DocumentProcessor(registry, resolver, null, null);
+        DocumentProcessor registeringProcessor =
+                mutableProcessor(registry, resolver);
+        DocumentProcessor readingProcessor =
+                mutableProcessor(registry, resolver);
         SetPropertyContractProcessor contractProcessor = new SetPropertyContractProcessor();
         ExecutorService executor = daemonExecutor(2);
 
@@ -119,8 +122,10 @@ class DocumentProcessorBoundaryTest {
                 "shared-read-callback-reentrant");
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         CallbackTypeClassResolver resolver = new CallbackTypeClassResolver(existingBlueId);
-        DocumentProcessor readingProcessor = new DocumentProcessor(registry, resolver, null, null);
-        DocumentProcessor registeringProcessor = new DocumentProcessor(registry, resolver, null, null);
+        DocumentProcessor readingProcessor =
+                mutableProcessor(registry, resolver);
+        DocumentProcessor registeringProcessor =
+                mutableProcessor(registry, resolver);
         SetPropertyContractProcessor contractProcessor = new SetPropertyContractProcessor();
         readingProcessor.registerContractProcessor(
                 existingBlueId, existingType, contractProcessor);
@@ -137,7 +142,7 @@ class DocumentProcessorBoundaryTest {
         try {
             Future<IllegalStateException> result =
                     executor.submit(() -> captureFailure(
-                            () -> readingProcessor.markersFor(
+                            () -> readingProcessor.administration().markersFor(
                                     scope, "/")));
             failure = getWithoutDeadlock(result);
             reentrantRegistrationVisible =
@@ -162,8 +167,10 @@ class DocumentProcessorBoundaryTest {
         String existingBlueId = DirectBlueIdCalculator.calculateBlueId(existingType);
         SignallingRegistry registry = new SignallingRegistry();
         CallbackTypeClassResolver resolver = new CallbackTypeClassResolver(existingBlueId);
-        DocumentProcessor readingProcessor = new DocumentProcessor(registry, resolver, null, null);
-        DocumentProcessor closingProcessor = new DocumentProcessor(registry, resolver, null, null);
+        DocumentProcessor readingProcessor =
+                mutableProcessor(registry, resolver);
+        DocumentProcessor closingProcessor =
+                mutableProcessor(registry, resolver);
         readingProcessor.registerContractProcessor(
                 existingBlueId,
                 existingType,
@@ -191,7 +198,7 @@ class DocumentProcessorBoundaryTest {
         boolean closed;
         try {
             Future<Map<String, blue.language.processor.model.MarkerContract>> read =
-                    executor.submit(() -> readingProcessor.markersFor(scope, "/"));
+                    executor.submit(() -> readingProcessor.administration().markersFor(scope, "/"));
             callbackObserved =
                     callbackEntered.await(5, TimeUnit.SECONDS);
             Future<?> registration = executor.submit(() -> closingProcessor

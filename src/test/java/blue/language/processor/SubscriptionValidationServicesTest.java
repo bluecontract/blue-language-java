@@ -278,8 +278,8 @@ final class SubscriptionValidationServicesTest {
                 .build()
                 .withEmbeddedScopePlan(
                         collectionPlan("/lessons", "lesson-a"));
-        DocumentProcessingRuntime.DocumentUpdateData removal =
-                new DocumentProcessingRuntime.DocumentUpdateData(
+        DocumentUpdateData removal =
+                new DocumentUpdateData(
                         "/lessons/lesson-a",
                         member,
                         null,

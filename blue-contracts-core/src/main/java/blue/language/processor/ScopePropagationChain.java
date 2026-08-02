@@ -49,7 +49,7 @@ final class ScopePropagationChain {
     }
 
     List<String> freezeReceivingChain(
-            DocumentProcessingRuntime.DocumentUpdateData update) {
+            DocumentUpdateData update) {
         List<String> result = new ArrayList<>();
         String origin = ProcessorEngine.normalizeScope(update.originScope());
         for (String candidate : update.recipientChain()) {

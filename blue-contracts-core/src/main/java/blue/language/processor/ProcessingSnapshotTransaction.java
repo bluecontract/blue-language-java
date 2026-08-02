@@ -32,7 +32,7 @@ final class ProcessingSnapshotTransaction {
         Node rollback = runtime.materializedView.copyRoot();
         ResolvedSnapshot snapshotRollback = runtime.snapshot;
         try {
-            DocumentProcessingRuntime.PlanningContext planning =
+            PatchPlanningContext planning =
                     planningContext(rollback);
             FrozenNode before = planning.canonicalPlanner().read(path);
             Node beforeNode = before != null ? before.toNode() : null;
@@ -56,12 +56,12 @@ final class ProcessingSnapshotTransaction {
         }
     }
 
-    DocumentProcessingRuntime.PlanningContext planningContext(Node rollback) {
+    PatchPlanningContext planningContext(Node rollback) {
         ProcessingSnapshotManager manager = currentManager();
         if (manager == null || canPlanFromSelectedWithoutSnapshot()) {
             ImmutablePatchPlanner planner =
                     ImmutablePatchPlanner.forMaterialized(rollback);
-            return new DocumentProcessingRuntime.PlanningContext(
+            return new PatchPlanningContext(
                     null,
                     planner,
                     planner,
@@ -74,7 +74,7 @@ final class ProcessingSnapshotTransaction {
         ResolvedSnapshot base = runtime.snapshot != null
                 ? runtime.snapshot
                 : snapshotFromDocument(rollback);
-        return new DocumentProcessingRuntime.PlanningContext(
+        return new PatchPlanningContext(
                 base,
                 ImmutablePatchPlanner.forSnapshot(base),
                 ImmutablePatchPlanner.forFrozen(base.frozenResolvedRoot()),
@@ -85,7 +85,7 @@ final class ProcessingSnapshotTransaction {
                 base.isResolutionComplete());
     }
 
-    List<DocumentProcessingRuntime.DocumentUpdateData> commitBatchPatchResult(
+    List<DocumentUpdateData> commitBatchPatchResult(
             BatchPatchResult result,
             boolean insertSharedSnapshot,
             ProcessingSnapshotManager commitManager) {
@@ -102,14 +102,14 @@ final class ProcessingSnapshotTransaction {
             ResolvedSnapshot authoritative = snapshotFromDocument(
                     tentativeSelected, true, commitManager);
             long buildUpdatesStart = System.nanoTime();
-            List<DocumentProcessingRuntime.DocumentUpdateData> updates;
+            List<DocumentUpdateData> updates;
             try {
                 updates = result.updatesAgainst(
                         authoritative.frozenResolvedRoot(),
                         runtime.updateMaterializationMetrics());
             } finally {
                 long nanos = System.nanoTime() - buildUpdatesStart;
-                runtime.batchPatchBuildUpdatesNanos += nanos;
+                runtime.counters().recordBuildUpdatesNanos(nanos);
                 runtime.observe(
                         ProcessingMetricId.BATCH_PATCH_BUILD_UPDATES_NANOS,
                         nanos);
@@ -288,8 +288,7 @@ final class ProcessingSnapshotTransaction {
         if (!runtime.selectedDocumentBacked) {
             commitMaterializedSnapshot(cached);
         }
-        runtime.sequenceSharedSnapshotCacheInserts++;
-        runtime.sequenceFinalSnapshotCacheInserts++;
+        runtime.counters().recordFinalSharedSnapshotCacheInsert();
         runtime.observe(
                 ProcessingMetricId.SEQUENCE_SHARED_SNAPSHOT_CACHE_INSERTS,
                 1L);

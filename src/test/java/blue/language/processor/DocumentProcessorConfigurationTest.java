@@ -88,7 +88,7 @@ class DocumentProcessorConfigurationTest {
                         MarkerContract.class)
                 .build();
         TypeClassResolver resolverView =
-                processor.getContractTypeResolver();
+                processor.administration().contractTypeResolver();
         resolverView.register(
                 DETACHED_RESOLVER_TEST_BLUE_ID,
                 String.class);
@@ -96,7 +96,7 @@ class DocumentProcessorConfigurationTest {
         // then
         assertTrue(processor.hasImmutableConfiguration());
         assertSame(provider, processor.configuredNodeProvider());
-        assertNotSame(registry, processor.getContractRegistry());
+        assertNotSame(registry, processor.administration().contractRegistry());
         assertSame(schedule, processor.gasSchedule());
         assertSame(snapshotStore, processor.snapshotManager());
         assertSame(observer, processor.processingObserver());
@@ -105,18 +105,18 @@ class DocumentProcessorConfigurationTest {
         assertSame(surfaceValidator, successor.subscriptionSurfaceValidator());
         assertSame(
                 MarkerContract.class,
-                successor.getContractTypeResolver()
+                successor.administration().contractTypeResolver()
                         .resolveClass(SUCCESSOR_RESOLVER_TEST_BLUE_ID));
         assertSame(cachePolicy, processor.cachePolicy());
-        assertFalse(processor.getContractTypeResolver()
+        assertFalse(processor.administration().contractTypeResolver()
                 .getBlueIdMap()
                 .containsKey(DETACHED_RESOLVER_TEST_BLUE_ID));
-        assertFalse(processor.getContractTypeResolver()
+        assertFalse(processor.administration().contractTypeResolver()
                 .getBlueIdMap()
                 .containsKey(SUCCESSOR_RESOLVER_TEST_BLUE_ID));
         assertThrows(
                 UnsupportedOperationException.class,
-                () -> processor.getContractRegistry().register(
+                () -> processor.administration().contractRegistry().register(
                         (ContractProcessor<?>) null));
     }
 
@@ -150,20 +150,20 @@ class DocumentProcessorConfigurationTest {
 
         // when
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withRegistry(registry)
-                .withContractTypeResolver(resolver)
-                .withMatchingService(matchingService)
+                .runtimeRegistry(registry)
+                .contractTypeResolver(resolver)
+                .matchingService(matchingService)
                 .observer(initialObserver)
                 .build();
         resolver.register(DETACHED_RESOLVER_TEST_BLUE_ID, String.class);
 
         // then
         assertTrue(processor.hasImmutableConfiguration());
-        assertNotSame(registry, processor.getContractRegistry());
-        assertNotSame(resolver, processor.getContractTypeResolver());
+        assertNotSame(registry, processor.administration().contractRegistry());
+        assertNotSame(resolver, processor.administration().contractTypeResolver());
         assertSame(matchingService, processor.matchingService());
         assertSame(initialObserver, processor.processingObserver());
-        assertFalse(processor.getContractTypeResolver()
+        assertFalse(processor.administration().contractTypeResolver()
                 .getBlueIdMap()
                 .containsKey(DETACHED_RESOLVER_TEST_BLUE_ID));
     }

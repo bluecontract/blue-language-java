@@ -120,7 +120,7 @@ class ResolvedSnapshotPatchTransactionTest {
                 manager);
 
         // when
-        DocumentProcessingRuntime.DocumentUpdateData update = runtime.applyPatch(
+        DocumentUpdateData update = runtime.applyPatch(
                 "/", JsonPatch.add("/status", reference(fixture.activeId)));
 
         // then
@@ -256,7 +256,7 @@ class ResolvedSnapshotPatchTransactionTest {
         // when
         DocumentProcessingRuntime optimized = new DocumentProcessingRuntime(
                 initial, null, new RecordingSnapshotManager(blue));
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      optimized.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             sequence.applyNext(1);

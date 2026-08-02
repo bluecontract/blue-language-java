@@ -22,8 +22,8 @@ final class DocumentUpdateOccurrenceTest {
         // given
         Node suppliedBefore = value("before");
         Node suppliedAfter = value("after");
-        DocumentProcessingRuntime.DocumentUpdateData occurrence =
-                new DocumentProcessingRuntime.DocumentUpdateData(
+        DocumentUpdateData occurrence =
+                new DocumentUpdateData(
                         "/scope/value",
                         suppliedBefore,
                         suppliedAfter,
@@ -61,8 +61,8 @@ final class DocumentUpdateOccurrenceTest {
         // given
         List<String> suppliedChain = new ArrayList<>(
                 Arrays.asList("/scope/child", "/scope", "/"));
-        DocumentProcessingRuntime.DocumentUpdateData occurrence =
-                new DocumentProcessingRuntime.DocumentUpdateData(
+        DocumentUpdateData occurrence =
+                new DocumentUpdateData(
                         "/scope/child/value",
                         null,
                         new Node().value("after"),

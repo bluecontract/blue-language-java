@@ -54,7 +54,7 @@ final class DocumentUpdateRouter {
 
     void route(String scopePath,
                ContractBundle bundle,
-               DocumentProcessingRuntime.DocumentUpdateData update) {
+               DocumentUpdateData update) {
         if (update == null) {
             return;
         }
@@ -100,7 +100,7 @@ final class DocumentUpdateRouter {
 
     private void recordUpdateTrace(
             List<String> receivingChain,
-            DocumentProcessingRuntime.DocumentUpdateData update) {
+            DocumentUpdateData update) {
         for (String cascadeScope : receivingChain) {
             Map<String, Object> details = new LinkedHashMap<>();
             details.put(
@@ -127,7 +127,7 @@ final class DocumentUpdateRouter {
 
     private List<DocumentUpdateParticipant> participants(
             List<String> receivingChain,
-            DocumentProcessingRuntime.DocumentUpdateData update) {
+            DocumentUpdateData update) {
         List<DocumentUpdateParticipant> participants = new ArrayList<>();
         for (String cascadeScope : receivingChain) {
             if (execution.shouldStopScopeWork(cascadeScope)) {

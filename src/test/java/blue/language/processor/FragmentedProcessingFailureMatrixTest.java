@@ -706,17 +706,17 @@ final class FragmentedProcessingFailureMatrixTest {
                             .build();
             DocumentProcessor processor =
                     DocumentProcessor.builder()
-                            .withMatchingService(
+                            .matchingService(
                                     new ContractMatchingService(
                                             blue))
-                            .withConformanceEngine(
+                            .conformanceEngine(
                                     blue.conformanceEngine())
-                            .withSnapshotManager(
+                            .snapshotStore(
                                     blue.getDocumentProcessor()
                                             .snapshotManager())
-                            .withGasSchedule(
+                            .gasSchedule(
                                     GasSchedule.contracts10())
-                            .withRuntimeRegistryIdentity(
+                            .runtimeRegistryIdentity(
                                     RuntimeBlueIds
                                             .REGISTRY_PACKAGE_IDENTITY)
                             .registerContractProcessor(
@@ -732,7 +732,7 @@ final class FragmentedProcessingFailureMatrixTest {
                                             RuntimeTypeKey
                                                     .SCRIPTED_HANDLER),
                                     new MockHandlerProcessor())
-                            .withExternalDeliveryPlanDeriver(
+                            .deliveryPlanDeriver(
                                     (ignoredRoot,
                                      ignoredEvent) -> plan)
                             .build();

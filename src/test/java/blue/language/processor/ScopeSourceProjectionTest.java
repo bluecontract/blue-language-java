@@ -525,9 +525,9 @@ class ScopeSourceProjectionTest {
         ProcessingSnapshotManager mismatchManager = new ProofMismatchSnapshotManager(
                 configuredProcessor.snapshotManager(), proofChildBlueId);
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withSnapshotManager(mismatchManager)
-                .withConformanceEngine(configuredProcessor.conformanceEngine())
-                .withMatchingService(configuredProcessor.matchingService())
+                .snapshotStore(mismatchManager)
+                .conformanceEngine(configuredProcessor.conformanceEngine())
+                .matchingService(configuredProcessor.matchingService())
                 .build();
         Node source = configured.yamlToNode(
                 "name: Structural Proof Mismatch\ncontracts: {}\n");

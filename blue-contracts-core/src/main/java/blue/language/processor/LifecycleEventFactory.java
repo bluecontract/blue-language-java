@@ -38,7 +38,7 @@ final class LifecycleEventFactory {
     }
 
     static Node documentUpdate(
-            DocumentProcessingRuntime.DocumentUpdateData data,
+            DocumentUpdateData data,
             String scopePath) {
         String relativePath = PointerUtils.relativizePointer(
                 scopePath, data.path());

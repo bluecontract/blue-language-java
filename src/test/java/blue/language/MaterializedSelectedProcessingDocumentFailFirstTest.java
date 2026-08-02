@@ -220,18 +220,18 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
                         }
                     };
             DocumentProcessor exact = DocumentProcessor.builder()
-                    .withRegistry(current.getContractRegistry())
-                    .withContractTypeResolver(
-                            current.getContractTypeResolver())
-                    .withConformanceEngine(new ConformanceEngine(
+                    .runtimeRegistry(current.administration().contractRegistry())
+                    .contractTypeResolver(
+                            current.administration().contractTypeResolver())
+                    .conformanceEngine(new ConformanceEngine(
                             blue.getNodeProvider(),
                             blue.getMergingProcessor()))
-                    .withSnapshotManager(snapshotManager)
-                    .withMatchingService(
+                    .snapshotStore(snapshotManager)
+                    .matchingService(
                             new ContractMatchingService(blue))
                     .observer(
                             current.processingObserver())
-                    .withExternalDeliveryPlanDeriver(
+                    .deliveryPlanDeriver(
                             this::deriveExactAuditPlan)
                     .build();
             blue.documentProcessor(exact);

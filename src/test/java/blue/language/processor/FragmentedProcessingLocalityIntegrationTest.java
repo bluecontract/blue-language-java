@@ -232,15 +232,15 @@ final class FragmentedProcessingLocalityIntegrationTest {
         ReadingMockHandlerProcessor handlers =
                 new ReadingMockHandlerProcessor();
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withMatchingService(
+                .matchingService(
                         new ContractMatchingService(blue))
-                .withConformanceEngine(
+                .conformanceEngine(
                         blue.conformanceEngine())
-                .withSnapshotManager(
+                .snapshotStore(
                         blue.getDocumentProcessor()
                                 .snapshotManager())
-                .withGasSchedule(GasSchedule.contracts10())
-                .withRuntimeRegistryIdentity(
+                .gasSchedule(GasSchedule.contracts10())
+                .runtimeRegistryIdentity(
                         RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY)
                 .registerContractProcessor(
                         MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL,
@@ -253,7 +253,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                         runtimeTypes.node(
                                 RuntimeTypeKey.SCRIPTED_HANDLER),
                         handlers)
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         (root, event) -> scenario.plan)
                 .build();
         try {

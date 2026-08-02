@@ -1123,9 +1123,9 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                     reference.structuralOversizedRejections(),
                     false));
             int processorEntries = documentProcessorOwned && documentProcessor != null
-                    ? documentProcessor.cacheEntryCount() : 0;
+                    ? documentProcessor.administration().cacheEntryCount() : 0;
             long processorWeight = documentProcessorOwned && documentProcessor != null
-                    ? documentProcessor.cacheWeightBytes() : 0L;
+                    ? documentProcessor.administration().cacheWeightBytes() : 0L;
             processorPlanCacheHighWaterBytes = Math.max(
                     processorPlanCacheHighWaterBytes, processorWeight);
             regions.put(PROCESSOR_PLAN_CACHE, new BlueCacheStats.Region(
@@ -2310,7 +2310,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                     DocumentProcessor.Builder.from(previous);
             configurationMutation.accept(builder);
             DocumentProcessor replacement = builder
-                    .withMatchingService(new ContractMatchingService(this))
+                    .matchingService(new ContractMatchingService(this))
                     .build();
             synchronized (lifecycleLock) {
                 runtimeMutation.run();
@@ -2476,9 +2476,9 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                 new HashMap<>(preprocessingAliases));
         ResolutionLimits capturedLimits = globalLimits;
         return DocumentProcessor.builder()
-                .withConformanceEngine(processorConformanceEngine(
+                .conformanceEngine(processorConformanceEngine(
                         capturedSnapshotProvider, capturedMergingProcessor))
-                .withSnapshotManager(new BlueProcessingSnapshotManager(
+                .snapshotStore(new BlueProcessingSnapshotManager(
                         ownerToken,
                         capturedPreprocessingProvider,
                         capturedSnapshotProvider,
@@ -2487,7 +2487,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                         capturedLimits,
                         null,
                         null))
-                .withMatchingService(new ContractMatchingService(this))
+                .matchingService(new ContractMatchingService(this))
                 .build();
     }
 
@@ -2642,9 +2642,9 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                     new HashMap<>(preprocessingAliases));
             ResolutionLimits capturedLimits = globalLimits;
             documentProcessor = DocumentProcessor.Builder.from(previous)
-                    .withConformanceEngine(processorConformanceEngine(
+                    .conformanceEngine(processorConformanceEngine(
                             capturedSnapshotProvider, capturedMergingProcessor))
-                    .withSnapshotManager(new BlueProcessingSnapshotManager(
+                    .snapshotStore(new BlueProcessingSnapshotManager(
                             ownerToken,
                             capturedPreprocessingProvider,
                             capturedSnapshotProvider,
@@ -2653,7 +2653,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                             capturedLimits,
                             null,
                             null))
-                    .withMatchingService(new ContractMatchingService(this))
+                    .matchingService(new ContractMatchingService(this))
                     .build();
             documentProcessorOwned = true;
             return previousOwned ? previous : null;
@@ -4124,7 +4124,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                 processorOwnerToken = new Object();
                 processorToClose = documentProcessorOwned ? documentProcessor : null;
                 long processorWeight = processorToClose != null
-                        ? processorToClose.cacheWeightBytes() : 0L;
+                        ? processorToClose.administration().cacheWeightBytes() : 0L;
                 processorPlanCacheHighWaterBytes = Math.max(
                         processorPlanCacheHighWaterBytes, processorWeight);
                 documentProcessor = null;

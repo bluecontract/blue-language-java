@@ -37,6 +37,7 @@ final class DocumentProcessingRuntime {
     private final ProcessingGasContext gasContext;
     private final ProcessingSnapshotTransaction snapshotTransaction;
     private final ProcessingConformanceRecorder conformanceRecorder;
+    private final ProcessingRuntimeCounters counters;
 
     final Map<String, List<String>> executableBodyFieldsByType;
     final ConformanceEngine conformanceEngine;
@@ -49,25 +50,8 @@ final class DocumentProcessingRuntime {
     ResolvedSnapshot snapshot;
     ProcessingSnapshotManager activeSequenceSnapshotManager;
     boolean materializedViewStale;
-    long batchPatchCalls;
-    long batchPatchEntries;
-    long batchPatchPlanningNanos;
-    long batchPatchConformanceNanos;
-    long batchPatchBuildUpdatesNanos;
-    long batchPatchCommitNanos;
-    long batchPatchRollbackCopies;
-    long documentUpdateBeforeNodeMaterializations;
-    long documentUpdateAfterNodeMaterializations;
     long stateVersion;
     long sharedSnapshotVersion;
-    long patchSequencesPrepared;
-    long singletonPatchTransactions;
-    long sequenceIntermediateSnapshotAdvances;
-    long sequenceSharedSnapshotCacheInserts;
-    long sequenceFinalSnapshotCacheInserts;
-    long sequenceSuffixRebases;
-    long sequenceStalePreviewFallbacks;
-    long sequenceFallbackPatches;
     final Set<String> changedPaths = new LinkedHashSet<>();
     private final Set<String> replacedEmbeddedScopePaths =
             new LinkedHashSet<>();
@@ -153,6 +137,7 @@ final class DocumentProcessingRuntime {
         this.snapshotTransaction = new ProcessingSnapshotTransaction(this);
         this.documentView = new ProcessingDocumentView(this);
         this.mutationSession = new ProcessingMutationSession(this);
+        this.counters = new ProcessingRuntimeCounters();
         this.conformanceRecorder =
                 new ProcessingConformanceRecorder(this.gasContext.meter());
     }
@@ -231,6 +216,7 @@ final class DocumentProcessingRuntime {
         this.snapshotTransaction = new ProcessingSnapshotTransaction(this);
         this.documentView = new ProcessingDocumentView(this);
         this.mutationSession = new ProcessingMutationSession(this);
+        this.counters = new ProcessingRuntimeCounters();
         this.conformanceRecorder =
                 new ProcessingConformanceRecorder(this.gasContext.meter());
     }
@@ -310,6 +296,7 @@ final class DocumentProcessingRuntime {
     ProcessingLifecycleState lifecycleStateComponent() { return lifecycleState; }
     ProcessingSnapshotTransaction snapshotTransactionComponent() {
         return snapshotTransaction; }
+    ProcessingRuntimeCounters counters() { return counters; }
     /** Returns committed changed paths in first-change order. */
     public Set<String> changedPaths() {
         return Collections.unmodifiableSet(new LinkedHashSet<>(changedPaths));
@@ -552,23 +539,24 @@ final class DocumentProcessingRuntime {
             WorkingDocument.PatchPreview preview) {
         return mutationSession.applyPrecomputedPatch(
                 originScopePath, patch, preview); }
-    PreparedPatchSequence preparePatchSequence(
+    PreparedPatchTransaction preparePatchSequence(
             String originScopePath,
             List<JsonPatch> patches,
             WorkingDocument.Preview preview) {
-        return new PreparedPatchSequence(originScopePath,
+        return new PreparedPatchTransaction(this, originScopePath,
                 PatchInput.mutableList(patches), preview); }
-    PreparedPatchSequence prepareFrozenPatchSequence(
+    PreparedPatchTransaction prepareFrozenPatchSequence(
             String originScopePath,
             List<FrozenJsonPatch> patches,
             WorkingDocument.Preview preview) {
-        return new PreparedPatchSequence(originScopePath,
+        return new PreparedPatchTransaction(this, originScopePath,
                 PatchInput.frozenList(patches), preview); }
-    PreparedPatchSequence preparePatchInputSequence(
+    PreparedPatchTransaction preparePatchInputSequence(
             String originScopePath,
             List<PatchInput> patches,
             WorkingDocument.Preview preview) {
-        return new PreparedPatchSequence(originScopePath, patches, preview); }
+        return new PreparedPatchTransaction(
+                this, originScopePath, patches, preview); }
     UpdateMaterializationMetrics updateMaterializationMetrics() {
         return mutationSession.updateMaterializationMetrics(); }
     FrozenNode canonicalRootWithoutResolution() {
@@ -577,11 +565,11 @@ final class DocumentProcessingRuntime {
         return documentView.identityChargeCanonicalRoot(); }
     FrozenNode resolvedRootWithoutResolution() {
         return documentView.resolvedRootWithoutResolution(); }
-    PlanningContext planningContext(Node rollback) {
+    PatchPlanningContext planningContext(Node rollback) {
         return snapshotTransaction.planningContext(rollback); }
     boolean usesAuthoritativeSelectedSnapshot() {
         return selectedDocumentBacked && snapshotManager != null; }
-    static PlanningContext workingPlanningContext(
+    static PatchPlanningContext workingPlanningContext(
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
             boolean exactReplacement,
@@ -591,7 +579,7 @@ final class DocumentProcessingRuntime {
                 Collections.emptyMap(), true);
     }
 
-    static PlanningContext workingPlanningContext(
+    static PatchPlanningContext workingPlanningContext(
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
             boolean exactReplacement,
@@ -602,7 +590,7 @@ final class DocumentProcessingRuntime {
                 Collections.emptyMap(), true);
     }
 
-    static PlanningContext workingPlanningContext(
+    static PatchPlanningContext workingPlanningContext(
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
             boolean exactReplacement,
@@ -614,7 +602,7 @@ final class DocumentProcessingRuntime {
                 executableBodyFieldsByType, true);
     }
 
-    static PlanningContext workingPlanningContext(
+    static PatchPlanningContext workingPlanningContext(
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
             boolean exactReplacement,
@@ -622,7 +610,7 @@ final class DocumentProcessingRuntime {
             Iterable<String> openedScopePaths,
             Map<String, List<String>> executableBodyFieldsByType,
             boolean resolutionComplete) {
-        return new PlanningContext(null,
+        return new PatchPlanningContext(null,
                 ImmutablePatchPlanner.forFrozen(canonicalRoot),
                 ImmutablePatchPlanner.forFrozen(resolvedRoot),
                 exactReplacement,
@@ -721,106 +709,5 @@ final class DocumentProcessingRuntime {
         return deferred;
     }
 
-    long batchPatchCallsForTest() { return batchPatchCalls; }
-    long batchPatchEntriesForTest() { return batchPatchEntries; }
-    long batchPatchPlanningNanosForTest() { return batchPatchPlanningNanos; }
-    long batchPatchConformanceNanosForTest() { return batchPatchConformanceNanos; }
-    long batchPatchBuildUpdatesNanosForTest() { return batchPatchBuildUpdatesNanos; }
-    long batchPatchCommitNanosForTest() { return batchPatchCommitNanos; }
-    long batchPatchRollbackCopiesForTest() { return batchPatchRollbackCopies; }
-    long documentUpdateBeforeNodeMaterializationsForTest() {
-        return documentUpdateBeforeNodeMaterializations;
-    }
-    long documentUpdateAfterNodeMaterializationsForTest() {
-        return documentUpdateAfterNodeMaterializations;
-    }
-    long patchSequencesPreparedForTest() { return patchSequencesPrepared; }
-    long singletonPatchTransactionsForTest() { return singletonPatchTransactions; }
-    long sequenceIntermediateSnapshotAdvancesForTest() {
-        return sequenceIntermediateSnapshotAdvances;
-    }
-    long sequenceSharedSnapshotCacheInsertsForTest() {
-        return sequenceSharedSnapshotCacheInserts;
-    }
-    long sequenceFinalSnapshotCacheInsertsForTest() {
-        return sequenceFinalSnapshotCacheInserts;
-    }
-    long sequenceSuffixRebasesForTest() { return sequenceSuffixRebases; }
-    long sequenceStalePreviewFallbacksForTest() {
-        return sequenceStalePreviewFallbacks;
-    }
-    long sequenceFallbackPatchesForTest() { return sequenceFallbackPatches; }
-
-    /** Invocation-bound cursor for an ordered prepared patch transaction. */
-    final class PreparedPatchSequence extends PreparedPatchTransaction {
-        PreparedPatchSequence(
-                String originScope,
-                List<PatchInput> requestedPatches,
-                WorkingDocument.Preview preview) {
-            super(DocumentProcessingRuntime.this, originScope,
-                    requestedPatches, preview);
-        }
-    }
-
-    /** Receives detached before/after update-view materialization events. */
-    interface UpdateMaterializationMetrics {
-        void recordBeforeNodeMaterialization();
-        void recordAfterNodeMaterialization();
-    }
-
-    /** Compatibility name for the immutable document-update adapter. */
-    static final class DocumentUpdateData extends DocumentUpdateDataAdapter {
-        DocumentUpdateData(
-                String path,
-                Node before,
-                Node after,
-                JsonPatch.Op op,
-                String originScope,
-                List<String> cascadeScopes) {
-            super(path, before, after, op, originScope, cascadeScopes);
-        }
-
-        DocumentUpdateData(
-                String path,
-                FrozenNode beforeFrozen,
-                FrozenNode afterFrozen,
-                JsonPatch.Op op,
-                String originScope,
-                List<String> cascadeScopes,
-                UpdateMaterializationMetrics materializationMetrics) {
-            super(path, beforeFrozen, afterFrozen, op, originScope,
-                    cascadeScopes, materializationMetrics);
-        }
-
-        private DocumentUpdateData(
-                DocumentUpdateOccurrence occurrence,
-                UpdateMaterializationMetrics materializationMetrics) {
-            super(occurrence, materializationMetrics);
-        }
-
-        DocumentUpdateData withMaterializationMetrics(
-                UpdateMaterializationMetrics materializationMetrics) {
-            return new DocumentUpdateData(
-                    occurrence(),
-                    materializationMetrics);
-        }
-    }
-
-    /** Compatibility subtype for immutable patch-planning inputs. */
-    static final class PlanningContext extends PatchPlanningContext {
-        PlanningContext(
-                ResolvedSnapshot baseSnapshot,
-                ImmutablePatchPlanner canonicalPlanner,
-                ImmutablePatchPlanner resolvedPlanner,
-                boolean exactReplacement,
-                ProcessingSnapshotManager authoritativeSnapshotManager,
-                Iterable<String> openedScopePaths,
-                Map<String, List<String>> executableBodyFieldsByType,
-                boolean resolutionComplete) {
-            super(baseSnapshot, canonicalPlanner, resolvedPlanner,
-                    exactReplacement, authoritativeSnapshotManager,
-                    openedScopePaths, executableBodyFieldsByType,
-                    resolutionComplete);
-        }
-    }
+    ProcessingRuntimeCounters countersForTest() { return counters; }
 }

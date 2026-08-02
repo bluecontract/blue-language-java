@@ -39,7 +39,7 @@ final class PatchPlanningEngine {
     private final ProcessingSnapshotManager authoritativeSnapshotManager;
     private final ConformanceEngine conformanceEngine;
     private final ConformancePlannerOverride conformancePlannerOverride;
-    private final DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics;
+    private final UpdateMaterializationMetrics materializationMetrics;
     private final ImmutableJsonPatch.PreparationContext patchPreparation;
     private final ProcessingObserver metrics;
     private final PatchImpactAnalyzer impactAnalyzer;
@@ -48,10 +48,10 @@ final class PatchPlanningEngine {
     private final boolean initialResolutionComplete;
 
     PatchPlanningEngine(String originScopePath,
-                        DocumentProcessingRuntime.PlanningContext planning,
+                        PatchPlanningContext planning,
                         ConformanceEngine conformanceEngine,
                         ConformancePlannerOverride conformancePlannerOverride,
-                        DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
+                        UpdateMaterializationMetrics materializationMetrics) {
         this(originScopePath,
                 planning,
                 conformanceEngine,
@@ -62,10 +62,10 @@ final class PatchPlanningEngine {
     }
 
     PatchPlanningEngine(String originScopePath,
-                        DocumentProcessingRuntime.PlanningContext planning,
+                        PatchPlanningContext planning,
                         ConformanceEngine conformanceEngine,
                         ConformancePlannerOverride conformancePlannerOverride,
-                        DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                        UpdateMaterializationMetrics materializationMetrics,
                         ProcessingObserver metrics) {
         this(originScopePath,
                 planning,
@@ -77,10 +77,10 @@ final class PatchPlanningEngine {
     }
 
     PatchPlanningEngine(String originScopePath,
-                        DocumentProcessingRuntime.PlanningContext planning,
+                        PatchPlanningContext planning,
                         ConformanceEngine conformanceEngine,
                         ConformancePlannerOverride conformancePlannerOverride,
-                        DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                        UpdateMaterializationMetrics materializationMetrics,
                         ProcessingObserver metrics,
                         boolean retainInitialRoots) {
         this.originScopePath = originScopePath;
@@ -348,7 +348,7 @@ final class PatchPlanningEngine {
         List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
                 generalizationMetadataWrites(finalCanonical, finalResolved, conformancePlan.changedPaths());
         long buildUpdatesNanos = 0L;
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = null;
+        List<DocumentUpdateData> updates = null;
         if (buildUpdates) {
             long buildUpdatesStart = System.nanoTime();
             updates = updatePlan.build(materializationMetrics);

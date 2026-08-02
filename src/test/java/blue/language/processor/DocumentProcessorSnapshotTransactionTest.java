@@ -113,7 +113,7 @@ class DocumentProcessorSnapshotTransactionTest {
         // when
         WorkingDocument.Preview preview = runtime.workingDocument("/")
                 .previewAndApplyPatches(Collections.singletonList(patch));
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+        List<DocumentUpdateData> updates =
                 runtime.applyPrecomputedPatch("/", patch, preview.patch(0));
 
         // then
@@ -123,12 +123,12 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals(2, manager.fromDocumentCalls);
         assertEquals(0, manager.applyPatchCalls);
         assertEquals(1, manager.cacheSnapshotCalls);
-        assertEquals(1, runtime.batchPatchCallsForTest());
-        assertEquals(1, runtime.batchPatchEntriesForTest());
-        assertEquals(0, runtime.batchPatchPlanningNanosForTest());
-        assertEquals(0, runtime.batchPatchConformanceNanosForTest());
-        assertTrue(runtime.batchPatchBuildUpdatesNanosForTest() > 0);
-        assertTrue(runtime.batchPatchCommitNanosForTest() > 0);
+        assertEquals(1, runtime.countersForTest().batchPatchCalls());
+        assertEquals(1, runtime.countersForTest().batchPatchEntries());
+        assertEquals(0, runtime.countersForTest().batchPatchPlanningNanos());
+        assertEquals(0, runtime.countersForTest().batchPatchConformanceNanos());
+        assertTrue(runtime.countersForTest().batchPatchBuildUpdatesNanos() > 0);
+        assertTrue(runtime.countersForTest().batchPatchCommitNanos() > 0);
         assertSnapshotConsistent(runtime.snapshot());
     }
 
@@ -431,7 +431,7 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine(), manager);
 
         // when
-        DocumentProcessingRuntime.DocumentUpdateData data =
+        DocumentUpdateData data =
                 runtime.applyPatch("/", JsonPatch.replace("/x", new Node().value(1)));
 
         // then
@@ -771,7 +771,9 @@ class DocumentProcessorSnapshotTransactionTest {
         Node canonical = YAML_MAPPER.readValue("local: yes", Node.class);
         Node resolved = YAML_MAPPER.readValue("local: yes\ninherited: from-type", Node.class);
         CountingSnapshotManager manager = new CountingSnapshotManager(canonical, resolved);
-        DocumentProcessor processor = new DocumentProcessor(null, manager);
+        DocumentProcessor processor = DocumentProcessor.builder()
+                .snapshotStore(manager)
+                .build();
         ProcessorInvocationState execution = new ProcessorInvocationState(processor, canonical.clone());
         execution.preflightScope("/");
         execution.runtime().snapshot();

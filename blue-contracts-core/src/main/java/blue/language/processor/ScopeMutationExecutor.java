@@ -45,7 +45,7 @@ final class ScopeMutationExecutor {
                 || patches.isEmpty()) {
             return;
         }
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchInputSequence(
                              scopePath, patches, preview)) {
             for (int index = 0; index < sequence.size(); index++) {
@@ -121,7 +121,7 @@ final class ScopeMutationExecutor {
     private void apply(
             String scopePath,
             ContractBundle bundle,
-            DocumentProcessingRuntime.PreparedPatchSequence sequence,
+            PreparedPatchTransaction sequence,
             int index,
             PatchInput patch) {
         try {
@@ -133,10 +133,10 @@ final class ScopeMutationExecutor {
                     ProcessingMetricId.PATCH_GAS_NANOS,
                     System.nanoTime() - gasStarted);
 
-            List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+            List<DocumentUpdateData> updates =
                     sequence.applyNext(index);
             long routingStarted = System.nanoTime();
-            for (DocumentProcessingRuntime.DocumentUpdateData update
+            for (DocumentUpdateData update
                     : updates) {
                 updateRouter.route(scopePath, bundle, update);
                 if (execution.shouldStopScopeWork(scopePath)) {

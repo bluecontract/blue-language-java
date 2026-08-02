@@ -266,8 +266,8 @@ class DocumentProcessorBatchPatchTest {
         ), false);
 
         // then
-        assertEquals(0, execution.runtime().documentUpdateBeforeNodeMaterializationsForTest());
-        assertEquals(0, execution.runtime().documentUpdateAfterNodeMaterializationsForTest());
+        assertEquals(0, execution.runtime().countersForTest().documentUpdateBeforeNodeMaterializations());
+        assertEquals(0, execution.runtime().countersForTest().documentUpdateAfterNodeMaterializations());
     }
 
     @Test
@@ -291,8 +291,8 @@ class DocumentProcessorBatchPatchTest {
         ), false);
 
         // then
-        assertEquals(1, execution.runtime().documentUpdateBeforeNodeMaterializationsForTest());
-        assertEquals(1, execution.runtime().documentUpdateAfterNodeMaterializationsForTest());
+        assertEquals(1, execution.runtime().countersForTest().documentUpdateBeforeNodeMaterializations());
+        assertEquals(1, execution.runtime().countersForTest().documentUpdateAfterNodeMaterializations());
     }
 
     private boolean hasProperty(Node node, String key) {

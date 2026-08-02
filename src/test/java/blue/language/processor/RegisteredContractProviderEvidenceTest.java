@@ -92,13 +92,15 @@ class RegisteredContractProviderEvidenceTest {
                 .build();
 
         // when
-        DocumentProcessor standalone = new DocumentProcessor(registry);
+        DocumentProcessor standalone = DocumentProcessor.builder()
+                .runtimeRegistry(registry)
+                .build();
         DocumentProcessingResult result = standalone.initializeDocument(
                 fixture.document());
 
         // then
         assertEquals(EvidenceChannel.class,
-                standalone.getContractTypeResolver().resolveClass(fixture.blueId));
+                standalone.administration().contractTypeResolver().resolveClass(fixture.blueId));
         assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
         assertSame(registered, registry.processors().get(fixture.blueId));
     }
@@ -187,7 +189,7 @@ class RegisteredContractProviderEvidenceTest {
                 .registerContractProcessor(
                         fixture.blueId, fixture.canonicalType, original)
                 .build();
-        ContractProcessorRegistry registry = standalone.getContractRegistry();
+        ContractProcessorRegistry registry = standalone.administration().contractRegistry();
         long versionBefore = registry.version();
         String evidenceBefore = DirectBlueIdCalculator.calculateBlueId(
                 registry.canonicalTypeNode(fixture.blueId));
@@ -202,12 +204,12 @@ class RegisteredContractProviderEvidenceTest {
                         new ConflictingEvidenceChannelProcessor()));
         DocumentProcessor afterConflict = successor.build();
         ContractProcessorRegistry registryAfter =
-                afterConflict.getContractRegistry();
+                afterConflict.administration().contractRegistry();
         long versionAfter = registryAfter.version();
         ContractProcessor<?> processorAfter =
                 registryAfter.processors().get(fixture.blueId);
         Class<?> resolvedClassAfter =
-                afterConflict.getContractTypeResolver()
+                afterConflict.administration().contractTypeResolver()
                         .resolveClass(fixture.blueId);
         String evidenceAfter = DirectBlueIdCalculator.calculateBlueId(
                 registryAfter.canonicalTypeNode(fixture.blueId));
@@ -237,11 +239,11 @@ class RegisteredContractProviderEvidenceTest {
                         new ConflictingEvidenceChannelProcessor()));
         DocumentProcessor standalone = builder.build();
         ContractProcessor<?> processor =
-                standalone.getContractRegistry()
+                standalone.administration().contractRegistry()
                         .processors()
                         .get(fixture.blueId);
         Class<?> resolvedClass =
-                standalone.getContractTypeResolver()
+                standalone.administration().contractTypeResolver()
                         .resolveClass(fixture.blueId);
 
         // then

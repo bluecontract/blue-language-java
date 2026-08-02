@@ -451,7 +451,7 @@ class ExternalContractIntegrationTest {
             String channelKey,
             String channelTypeBlueId) {
         return DocumentProcessor.builder()
-                .withExternalDeliveryPlanDeriver((root, event) ->
+                .deliveryPlanDeriver((root, event) ->
                         exactDeliveryPlan(
                                 root,
                                 event,

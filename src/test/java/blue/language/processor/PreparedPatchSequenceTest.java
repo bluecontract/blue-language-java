@@ -50,7 +50,7 @@ class PreparedPatchSequenceTest {
         int cacheSnapshotBeforeApplication;
         long preparedSequencesBeforeApplication;
         long preparedPatchesBeforeApplication;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", Arrays.asList(patch), null)) {
             validationPatch = sequence.patchForValidation(0);
             fromDocumentBeforeApplication =
@@ -93,7 +93,7 @@ class PreparedPatchSequenceTest {
 
         // when
         ProcessorFailureException failure;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence(
                              "/",
                              Arrays.asList(JsonPatch.add(
@@ -130,7 +130,7 @@ class PreparedPatchSequenceTest {
                 JsonPatch.add("/cyclic/next", new Node().value("allowed")));
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             sequence.applyNext(1);
@@ -152,7 +152,7 @@ class PreparedPatchSequenceTest {
 
         // when
         int preparedSize;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", callerPatches, null)) {
             callerPatches.clear();
             preparedSize = sequence.size();
@@ -177,7 +177,7 @@ class PreparedPatchSequenceTest {
                 JsonPatch.add("/second", new Node().value(2)));
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             sequence.applyNext(1);
@@ -208,12 +208,12 @@ class PreparedPatchSequenceTest {
         for (int index = 0; index < 9; index++) {
             assertEquals(index, runtime.document().getAsInteger("/k" + index));
         }
-        assertEquals(1, runtime.patchSequencesPreparedForTest());
-        assertEquals(1, runtime.batchPatchCallsForTest());
-        assertEquals(9, runtime.batchPatchEntriesForTest());
-        assertEquals(8, runtime.sequenceIntermediateSnapshotAdvancesForTest());
-        assertEquals(1, runtime.sequenceSharedSnapshotCacheInsertsForTest());
-        assertEquals(1, runtime.sequenceFinalSnapshotCacheInsertsForTest());
+        assertEquals(1, runtime.countersForTest().patchSequencesPrepared());
+        assertEquals(1, runtime.countersForTest().batchPatchCalls());
+        assertEquals(9, runtime.countersForTest().batchPatchEntries());
+        assertEquals(8, runtime.countersForTest().sequenceIntermediateSnapshotAdvances());
+        assertEquals(1, runtime.countersForTest().sequenceSharedSnapshotCacheInserts());
+        assertEquals(1, runtime.countersForTest().sequenceFinalSnapshotCacheInserts());
         assertEquals(1, manager.cacheSnapshotCalls());
         assertEquals(1, metrics.patchSequencesPrepared);
         assertEquals(9, metrics.patchesPrepared);
@@ -235,13 +235,13 @@ class PreparedPatchSequenceTest {
         execution.handlePatches("/", ContractBundle.builder().build(), patches, false, preview);
 
         // then
-        assertEquals(0, runtime.batchPatchPlanningNanosForTest());
-        assertEquals(0, runtime.batchPatchConformanceNanosForTest());
-        assertEquals(0, runtime.sequenceSuffixRebasesForTest());
-        assertEquals(0, runtime.sequenceStalePreviewFallbacksForTest());
-        assertEquals(4, runtime.sequenceIntermediateSnapshotAdvancesForTest());
-        assertEquals(1, runtime.sequenceSharedSnapshotCacheInsertsForTest());
-        assertEquals(1, runtime.sequenceFinalSnapshotCacheInsertsForTest());
+        assertEquals(0, runtime.countersForTest().batchPatchPlanningNanos());
+        assertEquals(0, runtime.countersForTest().batchPatchConformanceNanos());
+        assertEquals(0, runtime.countersForTest().sequenceSuffixRebases());
+        assertEquals(0, runtime.countersForTest().sequenceStalePreviewFallbacks());
+        assertEquals(4, runtime.countersForTest().sequenceIntermediateSnapshotAdvances());
+        assertEquals(1, runtime.countersForTest().sequenceSharedSnapshotCacheInserts());
+        assertEquals(1, runtime.countersForTest().sequenceFinalSnapshotCacheInserts());
         assertEquals(1, manager.cacheSnapshotCalls);
         assertEquals(0, metrics.singletonPatchTransactions);
         for (int index = 0; index < preview.size(); index++) {
@@ -265,7 +265,7 @@ class PreparedPatchSequenceTest {
                 FrozenJsonPatch.add("/slot", referenceValue));
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.prepareFrozenPatchSequence("/", requested, preview)) {
             sequence.applyNext(0);
         }
@@ -274,7 +274,7 @@ class PreparedPatchSequenceTest {
         // then
         assertTrue(committed.isReferenceOnly());
         assertEquals(referenceValue.blueId(), committed.getBlueId());
-        assertEquals(1, runtime.sequenceStalePreviewFallbacksForTest());
+        assertEquals(1, runtime.countersForTest().sequenceStalePreviewFallbacks());
     }
 
     @Test
@@ -291,7 +291,7 @@ class PreparedPatchSequenceTest {
                 JsonPatch.add("/slot", new Node().blueId(blueId)));
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", requested, preview)) {
             sequence.applyNext(0);
         }
@@ -300,7 +300,7 @@ class PreparedPatchSequenceTest {
         // then
         assertTrue(committed.isReferenceOnly());
         assertEquals(blueId, committed.getBlueId());
-        assertEquals(1, runtime.sequenceStalePreviewFallbacksForTest());
+        assertEquals(1, runtime.countersForTest().sequenceStalePreviewFallbacks());
     }
 
     @Test
@@ -317,8 +317,8 @@ class PreparedPatchSequenceTest {
                 .previewAndApplyPatches(patches);
 
         // when
-        List<DocumentProcessingRuntime.DocumentUpdateData> secondUpdates;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        List<DocumentUpdateData> secondUpdates;
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
             runtime.applyPatch("/", JsonPatch.replace("/counter", new Node().value(41)));
@@ -330,9 +330,9 @@ class PreparedPatchSequenceTest {
         assertEquals(41, integerValue(secondUpdates.get(0).before()));
         assertEquals(2, integerValue(secondUpdates.get(0).after()));
         assertEquals(2, document.getAsInteger("/counter"));
-        assertEquals(1, runtime.sequenceSuffixRebasesForTest());
-        assertEquals(1, runtime.sequenceStalePreviewFallbacksForTest());
-        assertEquals(0, runtime.sequenceFallbackPatchesForTest());
+        assertEquals(1, runtime.countersForTest().sequenceSuffixRebases());
+        assertEquals(1, runtime.countersForTest().sequenceStalePreviewFallbacks());
+        assertEquals(0, runtime.countersForTest().sequenceFallbackPatches());
         assertEquals(2, manager.cacheSnapshotCalls,
                 "the simulated handler write and final outer step each promote their own result");
         assertEquals(1, metrics.singletonPatchTransactions,
@@ -359,15 +359,15 @@ class PreparedPatchSequenceTest {
         // when
         int secondBefore;
         int thirdBefore;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
             runtime.applyPatch("/", JsonPatch.replace("/counter", new Node().value(10)));
-            List<DocumentProcessingRuntime.DocumentUpdateData> second = sequence.applyNext(1);
+            List<DocumentUpdateData> second = sequence.applyNext(1);
             secondBefore = integerValue(second.get(0).before());
 
             runtime.applyPatch("/", JsonPatch.replace("/counter", new Node().value(20)));
-            List<DocumentProcessingRuntime.DocumentUpdateData> third = sequence.applyNext(2);
+            List<DocumentUpdateData> third = sequence.applyNext(2);
             thirdBefore = integerValue(third.get(0).before());
             sequence.applyNext(3);
         }
@@ -376,9 +376,9 @@ class PreparedPatchSequenceTest {
         assertEquals(10, secondBefore);
         assertEquals(20, thirdBefore);
         assertEquals(4, document.getAsInteger("/counter"));
-        assertEquals(2, runtime.sequenceSuffixRebasesForTest(),
+        assertEquals(2, runtime.countersForTest().sequenceSuffixRebases(),
                 "each actual intervening mutation rebases the same reusable suffix session once");
-        assertEquals(0, runtime.sequenceFallbackPatchesForTest());
+        assertEquals(0, runtime.countersForTest().sequenceFallbackPatches());
         assertEquals(2, metrics.singletonPatchTransactions,
                 "only the two simulated reentrant handler patches are standalone singletons");
     }
@@ -398,7 +398,7 @@ class PreparedPatchSequenceTest {
         // when
         IllegalStateException sequenceFailure =
                 FailureCapture.captureFailure(() -> {
-            try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+            try (PreparedPatchTransaction sequence =
                          runtime.preparePatchSequence("/", patches, null)) {
                 sequence.applyNext(0);
                 sequence.applyNext(1);
@@ -412,9 +412,9 @@ class PreparedPatchSequenceTest {
         assertNotNull(sequenceFailure);
         assertEquals("committed", document.getAsText("/prefix"));
         assertNotNull(tailFailure);
-        assertEquals(1, runtime.sequenceIntermediateSnapshotAdvancesForTest());
-        assertEquals(1, runtime.sequenceSharedSnapshotCacheInsertsForTest());
-        assertEquals(1, runtime.sequenceFinalSnapshotCacheInsertsForTest());
+        assertEquals(1, runtime.countersForTest().sequenceIntermediateSnapshotAdvances());
+        assertEquals(1, runtime.countersForTest().sequenceSharedSnapshotCacheInserts());
+        assertEquals(1, runtime.countersForTest().sequenceFinalSnapshotCacheInserts());
         assertEquals(1, manager.cacheSnapshotCalls);
         assertNotNull(runtime.snapshot());
         assertEquals("committed", runtime.snapshot().resolvedRoot().getAsText("/prefix"));
@@ -444,9 +444,9 @@ class PreparedPatchSequenceTest {
         assertNotNull(failure);
         assertEquals("idle", document.getAsText("/status"));
         assertEquals(0, manager.cacheSnapshotCalls);
-        assertEquals(0, runtime.patchSequencesPreparedForTest());
-        assertEquals(1, runtime.batchPatchCallsForTest());
-        assertEquals(2, runtime.batchPatchEntriesForTest());
+        assertEquals(0, runtime.countersForTest().patchSequencesPrepared());
+        assertEquals(1, runtime.countersForTest().batchPatchCalls());
+        assertEquals(2, runtime.countersForTest().batchPatchEntries());
     }
 
     @Test
@@ -462,7 +462,7 @@ class PreparedPatchSequenceTest {
         WorkingDocument.PatchPreview consumedBeforeClose;
         WorkingDocument.PatchPreview secondBeforeClose;
         WorkingDocument.PatchPreview thirdBeforeClose;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
             consumedBeforeClose = preview.patch(0);
@@ -519,7 +519,7 @@ class PreparedPatchSequenceTest {
 
         // when
         int releasesWhileTransferred;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, transferred)) {
             sequence.applyNext(0);
             transferred.close();
@@ -554,7 +554,7 @@ class PreparedPatchSequenceTest {
         // when
         String firstPreparedValue;
         String secondPreparedValue;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             firstValue.getProperties().get("payload").value("first-after");
             secondValue.getProperties().get("payload").value("second-after");
@@ -589,7 +589,7 @@ class PreparedPatchSequenceTest {
 
         // when
         IllegalArgumentException invalidPatchFailure;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             invalidPatchFailure =
@@ -680,7 +680,7 @@ class PreparedPatchSequenceTest {
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/prefix", new Node().value("committed")),
                 JsonPatch.add("/suffix", new Node().value("not-consumed")));
-        DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        PreparedPatchTransaction sequence =
                 runtime.preparePatchSequence("/", patches, null);
 
         // when
@@ -693,14 +693,14 @@ class PreparedPatchSequenceTest {
         assertNotNull(firstCloseFailure);
         assertEquals("committed", document.getAsText("/prefix"));
         assertEquals(1, manager.cacheSnapshotCalls());
-        assertEquals(1, runtime.sequenceFinalSnapshotCacheInsertsForTest());
+        assertEquals(1, runtime.countersForTest().sequenceFinalSnapshotCacheInserts());
     }
 
     private ProcessorInvocationState execution(Node document,
                                                 CountingSnapshotManager manager,
                                                 RecordingMetrics metrics) {
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withSnapshotManager(manager)
+                .snapshotStore(manager)
                 .observer(metrics)
                 .build();
         return new ProcessorInvocationState(processor, document);

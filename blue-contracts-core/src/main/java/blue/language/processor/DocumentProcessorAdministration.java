@@ -13,7 +13,7 @@ import java.util.Objects;
  * Implements internal configuration support, cache lifecycle, and read-only
  * processor inspection behind the public facade.
  */
-final class DocumentProcessorAdministration {
+public final class DocumentProcessorAdministration {
 
     private static final String FRAGMENTATION_MANAGER_REQUIRED =
             "Effective fragmentation catalog requires a verified ProcessingSnapshotManager";
@@ -99,12 +99,16 @@ final class DocumentProcessorAdministration {
     }
 
     /** Clears all reloadable processor-owned acceleration caches. */
-    void clearCaches() {
+    public void clearCaches() {
         lifecycle.clearCaches();
     }
 
-    /** Returns a saturated count of reloadable cache entries. */
-    int cacheEntryCount() {
+    /**
+     * Returns a saturated count of reloadable cache entries.
+     *
+     * @return current cache-entry count, saturated at {@link Integer#MAX_VALUE}
+     */
+    public int cacheEntryCount() {
         int loaderEntries = processor.contractLoader().cacheSize();
         ContractMatchingService matchingService =
                 processor.matchingService();
@@ -116,8 +120,12 @@ final class DocumentProcessorAdministration {
                 : loaderEntries + matchingEntries;
     }
 
-    /** Returns a saturated approximation of reloadable cache weight. */
-    long cacheWeightBytes() {
+    /**
+     * Returns a saturated approximation of reloadable cache weight.
+     *
+     * @return approximate byte weight, saturated at {@link Long#MAX_VALUE}
+     */
+    public long cacheWeightBytes() {
         long loaderWeight =
                 processor.contractLoader().cacheWeightBytes();
         ContractMatchingService matchingService =
@@ -150,8 +158,34 @@ final class DocumentProcessorAdministration {
                 processor.registry(), languageRuntime);
     }
 
-    /** Loads an immutable marker view for one exact resolved scope. */
-    Map<String, MarkerContract> markersFor(
+    /**
+     * Returns the frozen runtime contract registry.
+     *
+     * @return registry used by subsequent processor invocations
+     */
+    public ContractProcessorRegistry contractRegistry() {
+        return processor.registry();
+    }
+
+    /**
+     * Returns a detached contract-type resolver view.
+     *
+     * @return resolver copy that cannot mutate the running processor
+     */
+    public blue.language.mapping.TypeClassResolver contractTypeResolver() {
+        return DocumentProcessorConfigurationSupport
+                .copyContractTypeResolver(
+                        processor.contractTypeResolverInternal());
+    }
+
+    /**
+     * Loads an immutable marker view for one exact resolved scope.
+     *
+     * @param scopeNode exact resolved scope node
+     * @param scopePath canonical path identifying that scope
+     * @return immutable marker-key view
+     */
+    public Map<String, MarkerContract> markersFor(
             Node scopeNode,
             String scopePath) {
         try (DocumentProcessorLifecycle.ReadScope ignored =
@@ -162,8 +196,13 @@ final class DocumentProcessorAdministration {
         }
     }
 
-    /** Builds the effective fragmentation catalog without semantic execution. */
-    EffectiveFragmentationCatalog effectiveFragmentationCatalog(
+    /**
+     * Builds the effective fragmentation catalog without semantic execution.
+     *
+     * @param document document whose effective fragmentation is inspected
+     * @return deterministic read-only fragmentation catalog
+     */
+    public EffectiveFragmentationCatalog effectiveFragmentationCatalog(
             Node document) {
         Objects.requireNonNull(document, "document");
         try (DocumentProcessorLifecycle.ReadScope ignored =
@@ -184,7 +223,12 @@ final class DocumentProcessorAdministration {
         }
     }
 
-    boolean isClosed() {
+    /**
+     * Reports whether terminal processor shutdown has begun.
+     *
+     * @return {@code true} after shutdown begins
+     */
+    public boolean isClosed() {
         return lifecycle.isClosed();
     }
 

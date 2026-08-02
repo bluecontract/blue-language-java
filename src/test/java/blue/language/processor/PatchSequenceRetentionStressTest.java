@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PatchSequenceRetentionStressTest {
 
-    private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_METRICS =
-            new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+    private static final UpdateMaterializationMetrics NOOP_METRICS =
+            new UpdateMaterializationMetrics() {
                 @Override
                 public void recordBeforeNodeMaterialization() {
                 }

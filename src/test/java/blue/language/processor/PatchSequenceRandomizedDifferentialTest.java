@@ -16,8 +16,8 @@ import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 class PatchSequenceRandomizedDifferentialTest {
 
-    private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_METRICS =
-            new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+    private static final UpdateMaterializationMetrics NOOP_METRICS =
+            new UpdateMaterializationMetrics() {
                 @Override
                 public void recordBeforeNodeMaterialization() {
                 }
@@ -59,9 +59,9 @@ class PatchSequenceRandomizedDifferentialTest {
                     + ", op=" + patch.getOp() + ", path=" + patch.getPath();
 
             SequentialPatchPlanningSession.PlannedStep planned = session.planNext(patch);
-            List<DocumentProcessingRuntime.DocumentUpdateData> plannedUpdates =
+            List<DocumentUpdateData> plannedUpdates =
                     planned.result().updates();
-            DocumentProcessingRuntime.DocumentUpdateData referenceUpdate =
+            DocumentUpdateData referenceUpdate =
                     reference.applyPatch("/", patch);
 
             assertEquals(1, plannedUpdates.size(), context + " update count");
@@ -80,8 +80,8 @@ class PatchSequenceRandomizedDifferentialTest {
                 "final resolved BlueId for seed " + seed + " and count " + count);
     }
 
-    private void assertUpdateEquals(DocumentProcessingRuntime.DocumentUpdateData expected,
-                                    DocumentProcessingRuntime.DocumentUpdateData actual,
+    private void assertUpdateEquals(DocumentUpdateData expected,
+                                    DocumentUpdateData actual,
                                     String context) {
         assertEquals(expected.path(), actual.path(), context + " update path");
         assertEquals(expected.op(), actual.op(), context + " update op");

@@ -703,21 +703,21 @@ class ProcessingInputAdmissionTest {
                         .exactRuntimeState()
                         .build();
         return DocumentProcessor.builder()
-                .withSnapshotManager(fragments)
-                .withExternalDeliveryPlanDeriver(
+                .snapshotStore(fragments)
+                .deliveryPlanDeriver(
                         (root, event) -> {
                             assertFalse(root.isReferenceOnly());
                             assertFalse(event.isReferenceOnly());
                             derivations.incrementAndGet();
                             return plan;
                         })
-                .withExternalDeliveryEvidenceVerifier(
+                .evidenceVerifier(
                         (root, event, evidence) -> {
                             assertFalse(root.isReferenceOnly());
                             assertFalse(event.isReferenceOnly());
                             verifications.incrementAndGet();
                         })
-                .withRuntimeRegistryIdentity(
+                .runtimeRegistryIdentity(
                         RuntimeBlueIds
                                 .REGISTRY_PACKAGE_IDENTITY)
                 .build();

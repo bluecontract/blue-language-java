@@ -64,7 +64,7 @@ class PreparedPatchTransaction implements AutoCloseable {
         return patchAt(patchIndex);
     }
 
-    List<DocumentProcessingRuntime.DocumentUpdateData> applyNext(
+    List<DocumentUpdateData> applyNext(
             int patchIndex) {
         if (closed) {
             throw new IllegalStateException(
@@ -75,8 +75,7 @@ class PreparedPatchTransaction implements AutoCloseable {
         runtime.chargeSemanticIdentityWork(
                 Collections.singletonList(authoredPatch));
         if (!counted) {
-            runtime.patchSequencesPrepared++;
-            runtime.batchPatchCalls++;
+            runtime.counters().recordPreparedPatchSequence();
             counted = true;
         }
         SequenceRoots actual = currentRoots();
@@ -103,7 +102,7 @@ class PreparedPatchTransaction implements AutoCloseable {
         } else {
             if (preview != null) {
                 preview.discardFrom(patchIndex);
-                runtime.sequenceStalePreviewFallbacks++;
+                runtime.counters().recordStalePreviewFallback();
                 runtime.observe(
                         ProcessingMetricId.SEQUENCE_STALE_PREVIEW_FALLBACKS,
                         1L);
@@ -116,7 +115,7 @@ class PreparedPatchTransaction implements AutoCloseable {
                         actual.canonical,
                         actual.resolved,
                         actual.resolutionComplete);
-                runtime.sequenceSuffixRebases++;
+                runtime.counters().recordSuffixRebase();
                 runtime.observe(
                         ProcessingMetricId.SEQUENCE_SUFFIX_REBASES,
                         1L);
@@ -129,10 +128,12 @@ class PreparedPatchTransaction implements AutoCloseable {
         }
 
         if (plannedNow) {
-            runtime.batchPatchPlanningNanos += result.patchPlanningNanos();
-            runtime.batchPatchConformanceNanos += result.conformanceNanos();
+            runtime.counters().recordPatchPlanningNanos(
+                    result.patchPlanningNanos());
+            runtime.counters().recordConformanceNanos(
+                    result.conformanceNanos());
         }
-        runtime.batchPatchEntries++;
+        runtime.counters().recordPatchEntry();
 
         long buildUpdatesStart = System.nanoTime();
         BatchPatchResult commitResult;
@@ -144,7 +145,7 @@ class PreparedPatchTransaction implements AutoCloseable {
         } finally {
             long buildUpdatesNanos =
                     System.nanoTime() - buildUpdatesStart;
-            runtime.batchPatchBuildUpdatesNanos += buildUpdatesNanos;
+            runtime.counters().recordBuildUpdatesNanos(buildUpdatesNanos);
             runtime.observe(
                     ProcessingMetricId.BATCH_PATCH_BUILD_UPDATES_NANOS,
                     buildUpdatesNanos);
@@ -162,7 +163,7 @@ class PreparedPatchTransaction implements AutoCloseable {
                 runtime.snapshotManager != null && finalRequestedPatch;
         long commitStart = System.nanoTime();
         try {
-            List<DocumentProcessingRuntime.DocumentUpdateData> updates =
+            List<DocumentUpdateData> updates =
                     runtime.commitBatchPatchResult(
                             commitResult,
                             insertSharedSnapshot,
@@ -173,8 +174,7 @@ class PreparedPatchTransaction implements AutoCloseable {
                             && runtime.sharedSnapshotVersion
                             == runtime.stateVersion;
             if (sharedSnapshotInserted) {
-                runtime.sequenceSharedSnapshotCacheInserts++;
-                runtime.sequenceFinalSnapshotCacheInserts++;
+                runtime.counters().recordFinalSharedSnapshotCacheInsert();
                 runtime.observe(
                         ProcessingMetricId
                                 .SEQUENCE_SHARED_SNAPSHOT_CACHE_INSERTS,
@@ -184,13 +184,13 @@ class PreparedPatchTransaction implements AutoCloseable {
                                 .SEQUENCE_FINAL_SNAPSHOT_CACHE_INSERTS,
                         1L);
             } else {
-                runtime.sequenceIntermediateSnapshotAdvances++;
+                runtime.counters().recordIntermediateSnapshotAdvance();
                 runtime.observe(
                         ProcessingMetricId
                                 .SEQUENCE_INTERMEDIATE_SNAPSHOT_ADVANCES,
                         1L);
             }
-            for (DocumentProcessingRuntime.DocumentUpdateData update
+            for (DocumentUpdateData update
                     : updates) {
                 runtime.changedPaths.add(
                         PointerUtils.normalizePointer(update.path()));
@@ -210,7 +210,7 @@ class PreparedPatchTransaction implements AutoCloseable {
             throw failure;
         } finally {
             long commitNanos = System.nanoTime() - commitStart;
-            runtime.batchPatchCommitNanos += commitNanos;
+            runtime.counters().recordCommitNanos(commitNanos);
             runtime.observe(
                     ProcessingMetricId.BATCH_PATCH_COMMIT_NANOS,
                     commitNanos);
@@ -252,7 +252,7 @@ class PreparedPatchTransaction implements AutoCloseable {
                 : runtime.conformanceEngine != null
                         ? runtime.conformanceEngine.transientView()
                         : null;
-        DocumentProcessingRuntime.PlanningContext planning =
+        PatchPlanningContext planning =
                 DocumentProcessingRuntime.workingPlanningContext(
                         roots.canonical,
                         roots.resolved,
@@ -364,7 +364,7 @@ class PreparedPatchTransaction implements AutoCloseable {
             observedResolved = current.frozenResolvedRoot();
             observedResolutionComplete = current.isResolutionComplete();
         } else {
-            DocumentProcessingRuntime.PlanningContext planning =
+            PatchPlanningContext planning =
                     runtime.planningContext(runtime.materializedView.root());
             observedCanonical = planning.canonicalPlanner().root();
             observedResolved = planning.resolvedPlanner().root();

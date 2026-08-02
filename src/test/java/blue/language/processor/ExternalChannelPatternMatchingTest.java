@@ -820,11 +820,11 @@ final class ExternalChannelPatternMatchingTest {
                                     LEAF_TYPE_BLUE_ID,
                                     LEAF_TYPE,
                                     functions)
-                            .withMatchingService(
+                            .matchingService(
                                     new ContractMatchingService(
                                             language))
-                            .withSnapshotManager(manager)
-                            .withExternalDeliveryPlanDeriver(
+                            .snapshotStore(manager)
+                            .deliveryPlanDeriver(
                                     (root, event) ->
                                             plan.get())
                             .build();

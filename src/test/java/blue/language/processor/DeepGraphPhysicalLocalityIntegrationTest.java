@@ -354,15 +354,15 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                         .build();
         DocumentProcessor processor =
                 DocumentProcessor.builder()
-                        .withMatchingService(
+                        .matchingService(
                                 new ContractMatchingService(
                                         blue))
-                        .withConformanceEngine(
+                        .conformanceEngine(
                                 blue.conformanceEngine())
-                        .withSnapshotManager(snapshots)
-                        .withGasSchedule(
+                        .snapshotStore(snapshots)
+                        .gasSchedule(
                                 GasSchedule.contracts10())
-                        .withRuntimeRegistryIdentity(
+                        .runtimeRegistryIdentity(
                                 RuntimeBlueIds
                                         .REGISTRY_PACKAGE_IDENTITY)
                         .registerContractProcessor(
@@ -382,10 +382,10 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                 RELAY_HANDLER_TYPE_BLUE_ID,
                                 RELAY_HANDLER_TYPE,
                                 new RelayHandlerProcessor())
-                        .withExternalDeliveryPlanDeriver(
+                        .deliveryPlanDeriver(
                                 (ignoredRoot, ignoredEvent) ->
                                         rootDelivery)
-                        .withExternalDeliveryEvidenceVerifier(
+                        .evidenceVerifier(
                                 (ignoredRoot, ignoredEvent, evidence) -> {
                                     // Exact delivery/bundle checks still run
                                     // inside the generic processor.
@@ -551,12 +551,12 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                                 .snapshotManager(),
                         scenario.physicallyDeferredPaths);
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withMatchingService(
+                .matchingService(
                         new ContractMatchingService(blue))
-                .withConformanceEngine(blue.conformanceEngine())
-                .withSnapshotManager(snapshots)
-                .withGasSchedule(GasSchedule.contracts10())
-                .withRuntimeRegistryIdentity(
+                .conformanceEngine(blue.conformanceEngine())
+                .snapshotStore(snapshots)
+                .gasSchedule(GasSchedule.contracts10())
+                .runtimeRegistryIdentity(
                         RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY)
                 .registerContractProcessor(
                         MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL,
@@ -573,7 +573,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                         RELAY_HANDLER_TYPE_BLUE_ID,
                         RELAY_HANDLER_TYPE,
                         new RelayHandlerProcessor())
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         (root, event) -> scenario.plan)
                 .build();
 

@@ -57,9 +57,9 @@ class PatchImpactIncrementalResolutionTest {
         // when
         List<PatchObservation> observations = new ArrayList<>();
         for (JsonPatch patch : patches) {
-            DocumentProcessingRuntime.DocumentUpdateData incrementalUpdate =
+            DocumentUpdateData incrementalUpdate =
                     incremental.applyPatch("/", patch);
-            DocumentProcessingRuntime.DocumentUpdateData oracleUpdate =
+            DocumentUpdateData oracleUpdate =
                     oracle.applyPatch("/", patch);
             observations.add(new PatchObservation(
                     oracle.snapshot(),
@@ -131,9 +131,9 @@ class PatchImpactIncrementalResolutionTest {
         // when
         List<PatchObservation> observations = new ArrayList<>();
         for (JsonPatch patch : patches) {
-            DocumentProcessingRuntime.DocumentUpdateData incrementalUpdate =
+            DocumentUpdateData incrementalUpdate =
                     incremental.applyPatch("/", patch);
-            DocumentProcessingRuntime.DocumentUpdateData oracleUpdate =
+            DocumentUpdateData oracleUpdate =
                     oracle.applyPatch("/", patch);
             FrozenNode resolvedStatus = incremental.snapshot().resolvedAt("/status");
             observations.add(new PatchObservation(
@@ -202,9 +202,9 @@ class PatchImpactIncrementalResolutionTest {
         // when
         List<PatchObservation> observations = new ArrayList<>();
         for (JsonPatch patch : patches) {
-            DocumentProcessingRuntime.DocumentUpdateData incrementalUpdate =
+            DocumentUpdateData incrementalUpdate =
                     incremental.applyPatch("/", patch);
-            DocumentProcessingRuntime.DocumentUpdateData oracleUpdate =
+            DocumentUpdateData oracleUpdate =
                     oracle.applyPatch("/", patch);
             observations.add(new PatchObservation(
                     oracle.snapshot(),
@@ -651,16 +651,16 @@ class PatchImpactIncrementalResolutionTest {
     private static final class PatchObservation {
         private final ResolvedSnapshot expectedSnapshot;
         private final ResolvedSnapshot actualSnapshot;
-        private final DocumentProcessingRuntime.DocumentUpdateData expectedUpdate;
-        private final DocumentProcessingRuntime.DocumentUpdateData actualUpdate;
+        private final DocumentUpdateData expectedUpdate;
+        private final DocumentUpdateData actualUpdate;
         private final FrozenNode resolvedChangedNode;
         private final FrozenNode unaffectedNode;
 
         private PatchObservation(
                 ResolvedSnapshot expectedSnapshot,
                 ResolvedSnapshot actualSnapshot,
-                DocumentProcessingRuntime.DocumentUpdateData expectedUpdate,
-                DocumentProcessingRuntime.DocumentUpdateData actualUpdate,
+                DocumentUpdateData expectedUpdate,
+                DocumentUpdateData actualUpdate,
                 FrozenNode resolvedChangedNode,
                 FrozenNode unaffectedNode) {
             this.expectedSnapshot = expectedSnapshot;

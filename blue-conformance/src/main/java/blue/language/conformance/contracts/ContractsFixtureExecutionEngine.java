@@ -453,12 +453,12 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
         };
 
         DocumentProcessor.Builder builder = DocumentProcessor.builder()
-                .withMatchingService(new ContractMatchingService(
+                .matchingService(new ContractMatchingService(
                         fixtureLanguage))
-                .withConformanceEngine(conformanceEngine)
-                .withSnapshotManager(snapshots)
-                .withGasSchedule(GasSchedule.contracts10())
-                .withRuntimeRegistryIdentity(
+                .conformanceEngine(conformanceEngine)
+                .snapshotStore(snapshots)
+                .gasSchedule(GasSchedule.contracts10())
+                .runtimeRegistryIdentity(
                         BlueContractsConformanceReport
                                 .CONTRACTS_REGISTRY_PACKAGE_IDENTITY)
                 .registerContractType(
@@ -477,10 +477,10 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
                         ? input.generalization.newPlanner()
                         : null;
         if (generalization != null) {
-            builder.withConformancePlannerOverride(generalization);
+            builder.conformancePlannerOverride(generalization);
         }
         if (input.deliveryPlan != null) {
-            builder.withExternalDeliveryPlanDeriver((root, event) -> {
+            builder.deliveryPlanDeriver((root, event) -> {
                 String rootBlueId = DirectBlueIdCalculator.calculateBlueId(root);
                 String eventBlueId = DirectBlueIdCalculator.calculateBlueId(event);
                 if (!input.evidence.rootBlueId().equals(rootBlueId)
@@ -493,13 +493,13 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
         }
         if (input.runtimeControls != null
                 && input.runtimeControls.has("gasLimit")) {
-            builder.withGasLimit(
+            builder.gasLimit(
                     requiredLong(input.runtimeControls, "gasLimit"));
         }
         if (input.runtimeControls != null
                 && input.runtimeControls.path(
                 "gasLimitDuringTermination").asBoolean(false)) {
-            builder.withGasLimit(170L);
+            builder.gasLimit(170L);
         }
         return new ProcessorBundle(
                 builder.build(),

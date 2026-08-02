@@ -52,9 +52,9 @@ class SelectedExecutableBodyProviderProvenanceTest {
                         .register(handlerProcessor)
                         .build();
         DocumentProcessor owner = DocumentProcessor.builder()
-                .withRegistry(registry)
-                .withSnapshotManager(activeManager)
-                .withMatchingService(
+                .runtimeRegistry(registry)
+                .snapshotStore(activeManager)
+                .matchingService(
                         new ContractMatchingService(matchingBlue))
                 .build();
 
@@ -306,9 +306,9 @@ class SelectedExecutableBodyProviderProvenanceTest {
                                 handlerProcessor)
                         .build();
         return DocumentProcessor.builder()
-                .withRegistry(
+                .runtimeRegistry(
                         registry)
-                .withSnapshotManager(
+                .snapshotStore(
                         manager)
                 .build();
     }

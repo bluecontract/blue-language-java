@@ -28,10 +28,10 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
     private boolean metricsStarted;
 
     SequentialPatchPlanningSession(String originScope,
-                                   DocumentProcessingRuntime.PlanningContext planning,
+                                   PatchPlanningContext planning,
                                    ConformanceEngine conformanceEngine,
                                    ConformancePlannerOverride conformancePlannerOverride,
-                                   DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
+                                   UpdateMaterializationMetrics materializationMetrics) {
         this(originScope,
                 planning,
                 conformanceEngine,
@@ -41,10 +41,10 @@ final class SequentialPatchPlanningSession implements AutoCloseable {
     }
 
     SequentialPatchPlanningSession(String originScope,
-                                   DocumentProcessingRuntime.PlanningContext planning,
+                                   PatchPlanningContext planning,
                                    ConformanceEngine conformanceEngine,
                                    ConformancePlannerOverride conformancePlannerOverride,
-                                   DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                                   UpdateMaterializationMetrics materializationMetrics,
                                    ProcessingObserver metrics) {
         this.originScope = PointerUtils.normalizeScope(Objects.requireNonNull(originScope, "originScope"));
         Objects.requireNonNull(planning, "planning");

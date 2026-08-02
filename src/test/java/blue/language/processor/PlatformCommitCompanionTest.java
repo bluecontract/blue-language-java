@@ -81,7 +81,7 @@ final class PlatformCommitCompanionTest {
                 root, event, order, 7L);
         DocumentProcessor processor =
                 DocumentProcessor.builder()
-                        .withExternalDeliveryEvidenceVerifier(
+                        .evidenceVerifier(
                                 (document, processingEvent, ignored) -> {
                                     throw new AssertionError(
                                             "direct termination must not "

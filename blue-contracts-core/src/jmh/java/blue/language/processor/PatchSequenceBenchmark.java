@@ -25,8 +25,8 @@ import java.util.List;
  */
 public class PatchSequenceBenchmark {
 
-    private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_METRICS =
-            new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+    private static final UpdateMaterializationMetrics NOOP_METRICS =
+            new UpdateMaterializationMetrics() {
                 @Override
                 public void recordBeforeNodeMaterialization() {
                 }
@@ -41,7 +41,7 @@ public class PatchSequenceBenchmark {
         FrozenNode canonical = state.initialFrozen;
         FrozenNode resolved = state.initialFrozen;
         for (JsonPatch patch : state.patches) {
-            DocumentProcessingRuntime.PlanningContext planning =
+            PatchPlanningContext planning =
                     DocumentProcessingRuntime.workingPlanningContext(
                             canonical, resolved, false, null);
             BatchPatchResult result = new BatchPatchTransaction("/",

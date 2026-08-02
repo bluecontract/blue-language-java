@@ -319,18 +319,18 @@ class DocumentProcessorResolvedSnapshotParityTest {
                                 CHANNEL_TYPE_BLUE_ID,
                                 CHANNEL_TYPE,
                                 new ParityChannelProcessor())
-                        .withSnapshotManager(
+                        .snapshotStore(
                                 IdentitySnapshotManager.INSTANCE)
-                        .withExternalDeliveryPlanDeriver(
+                        .deliveryPlanDeriver(
                                 (root, event) -> plan)
-                        .withExternalDeliveryEvidenceVerifier(
+                        .evidenceVerifier(
                                 (root, event, evidence) -> {
                                     // Binding is verified independently by the facade.
                                 })
-                        .withSubscriptionSurfaceValidator(
+                        .subscriptionSurfaceValidator(
                                 failureMode.validator());
         if (gasLimit != null) {
-            builder.withGasLimit(gasLimit);
+            builder.gasLimit(gasLimit);
         }
         return builder.build();
     }

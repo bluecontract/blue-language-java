@@ -68,7 +68,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         // when
         DocumentProcessor configured = DocumentProcessor.Builder
                 .from(processor)
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         (suppliedRoot, suppliedEvent) -> {
                             derivations.incrementAndGet();
                             return exactPlan;
@@ -429,7 +429,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         String missing = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Feeder snapshot evidence"));
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         ExternalDeliveryPlanDeriver.needsResources(
                                 Collections.singletonList(missing)))
                 .build();
@@ -899,7 +899,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                 TRACE_HANDLER_TYPE_BLUE_ID,
                                 TRACE_HANDLER_TYPE,
                                 new TraceHandlerProcessor())
-                        .withExternalDeliveryEvidenceVerifier(
+                        .evidenceVerifier(
                                 (ignoredRoot,
                                  ignoredEvent,
                                  ignoredEvidence) -> {
@@ -1011,14 +1011,14 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                                 CHANNEL_TYPE,
                                 new PlanChannelProcessor());
         if (language != null) {
-            builder.withMatchingService(
+            builder.matchingService(
                     new ContractMatchingService(language));
         }
         if (snapshotManager != null) {
-            builder.withSnapshotManager(snapshotManager);
+            builder.snapshotStore(snapshotManager);
         }
         if (plan != null) {
-            builder.withExternalDeliveryPlanDeriver(
+            builder.deliveryPlanDeriver(
                     (root, event) -> plan);
         }
         return builder.build();
@@ -1035,7 +1035,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         TRACE_HANDLER_TYPE_BLUE_ID,
                         TRACE_HANDLER_TYPE,
                         new TraceHandlerProcessor())
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         (root, event) -> plan)
                 .build();
     }

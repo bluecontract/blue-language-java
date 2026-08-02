@@ -155,7 +155,7 @@ class EffectiveFragmentationCatalogTest {
             EffectiveContractSnapshot handler =
                     contract(
                             blue.getDocumentProcessor()
-                                    .effectiveFragmentationCatalog(
+                                    .administration().effectiveFragmentationCatalog(
                                             document),
                             "/",
                             "run");
@@ -226,7 +226,7 @@ class EffectiveFragmentationCatalogTest {
             handler =
                     contract(
                             blue.getDocumentProcessor()
-                                    .effectiveFragmentationCatalog(
+                                    .administration().effectiveFragmentationCatalog(
                                             document),
                             "/",
                             "run");
@@ -279,7 +279,7 @@ class EffectiveFragmentationCatalogTest {
             ExecutableBodySourceDescriptor source =
                     contract(
                             blue.getDocumentProcessor()
-                                    .effectiveFragmentationCatalog(
+                                    .administration().effectiveFragmentationCatalog(
                                             document),
                             "/",
                             "run")
@@ -338,11 +338,11 @@ class EffectiveFragmentationCatalogTest {
         try (Blue blue = fixture.blue()) {
             EffectiveFragmentationCatalog first =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     firstDocument);
             EffectiveFragmentationCatalog second =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     secondDocument);
             ExecutableBodySourceDescriptor firstSource =
                     contract(first, "/", "run")
@@ -388,7 +388,7 @@ class EffectiveFragmentationCatalogTest {
             ExecutableBodySourceDescriptor source =
                     contract(
                             blue.getDocumentProcessor()
-                                    .effectiveFragmentationCatalog(
+                                    .administration().effectiveFragmentationCatalog(
                                             document),
                             "/",
                             "run")
@@ -442,15 +442,15 @@ class EffectiveFragmentationCatalogTest {
         try (Blue blue = fixture.blue()) {
             EffectiveFragmentationCatalog inlineCatalog =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     inline);
             EffectiveFragmentationCatalog fragmentedCatalog =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     fragmented);
             EffectiveFragmentationCatalog referenceCatalog =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     new Node().blueId(
                                             rootBlueId));
             inlineSignature = signature(inlineCatalog);
@@ -472,12 +472,12 @@ class EffectiveFragmentationCatalogTest {
         try (Blue cold = fixture.blue()) {
             EffectiveFragmentationCatalog coldReference =
                     cold.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     new Node().blueId(
                                             rootBlueId));
             EffectiveFragmentationCatalog warmInline =
                     cold.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     inline);
             coldReferenceSignature = signature(coldReference);
             warmInlineSignature = signature(warmInline);
@@ -526,7 +526,7 @@ class EffectiveFragmentationCatalogTest {
                 new ArrayList<String>())) {
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     document);
 
             // then
@@ -589,7 +589,7 @@ class EffectiveFragmentationCatalogTest {
                 new LinkedHashMap<String, Node>(),
                 new ArrayList<String>())) {
             catalog = blue.getDocumentProcessor()
-                    .effectiveFragmentationCatalog(document);
+                    .administration().effectiveFragmentationCatalog(document);
         }
         EmbeddedScopePlanView rootPlan =
                 catalog.scopePlansByScope().get("/");
@@ -604,8 +604,8 @@ class EffectiveFragmentationCatalogTest {
                         .get("/lessons"));
         assertEquals(
                 Arrays.asList(
-                        "/lessons/a~1b",
                         "/lessons/a~0c",
+                        "/lessons/a~1b",
                         "/lessons/b"),
                 rootPlan.concreteChildPaths());
         assertEquals(
@@ -662,7 +662,7 @@ class EffectiveFragmentationCatalogTest {
         try (Blue blue = blue(content, new ArrayList<String>())) {
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     document);
 
             // then
@@ -730,7 +730,7 @@ class EffectiveFragmentationCatalogTest {
         try (Blue blue = blue(content, requests)) {
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     document);
 
             // then
@@ -772,7 +772,7 @@ class EffectiveFragmentationCatalogTest {
             EffectiveContractSnapshot handler =
                     contract(
                             blue.getDocumentProcessor()
-                                    .effectiveFragmentationCatalog(
+                                    .administration().effectiveFragmentationCatalog(
                                             document),
                             "/",
                             "run");
@@ -811,7 +811,7 @@ class EffectiveFragmentationCatalogTest {
                 requests)) {
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     new Node().properties(
                                             "unrelated",
                                             new Node().blueId(
@@ -863,7 +863,7 @@ class EffectiveFragmentationCatalogTest {
                     captureFailure(
                             () -> blue
                                     .getDocumentProcessor()
-                                    .effectiveFragmentationCatalog(
+                                    .administration().effectiveFragmentationCatalog(
                                             document));
 
             // then
@@ -1037,7 +1037,7 @@ class EffectiveFragmentationCatalogTest {
         try (Blue blue = fixture.blue()) {
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
-                            .effectiveFragmentationCatalog(
+                            .administration().effectiveFragmentationCatalog(
                                     fixture.document());
             EffectiveContractSnapshot handler =
                     contract(catalog, "/", "run");

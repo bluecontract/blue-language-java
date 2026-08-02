@@ -1023,31 +1023,31 @@ final class DocumentProcessorExactFeederSupport {
             Long gasLimit) {
         DocumentProcessor current = blue.getDocumentProcessor();
         DocumentProcessor.Builder builder = DocumentProcessor.builder()
-                .withRegistry(current.getContractRegistry())
-                .withContractTypeResolver(
-                        current.getContractTypeResolver())
-                .withMatchingService(
+                .runtimeRegistry(current.administration().contractRegistry())
+                .contractTypeResolver(
+                        current.administration().contractTypeResolver())
+                .matchingService(
                         new ContractMatchingService(blue))
                 .observer(
                         current.processingObserver())
-                .withGasSchedule(current.gasSchedule())
-                .withRuntimeRegistryIdentity(
+                .gasSchedule(current.gasSchedule())
+                .runtimeRegistryIdentity(
                         current.runtimeRegistryIdentity())
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         deriver);
         if (gasLimit != null) {
-            builder.withGasLimit(gasLimit);
+            builder.gasLimit(gasLimit);
         }
         if (current.conformanceEngine() != null) {
-            builder.withConformanceEngine(
+            builder.conformanceEngine(
                     current.conformanceEngine());
         }
         if (current.conformancePlannerOverride() != null) {
-            builder.withConformancePlannerOverride(
+            builder.conformancePlannerOverride(
                     current.conformancePlannerOverride());
         }
         if (current.snapshotManager() != null) {
-            builder.withSnapshotManager(
+            builder.snapshotStore(
                     current.snapshotManager());
         }
         DocumentProcessor exact = builder.build();
@@ -1062,10 +1062,10 @@ final class DocumentProcessorExactFeederSupport {
         final DocumentProcessor[] owner = new DocumentProcessor[1];
         DocumentProcessor.Builder builder =
                 DocumentProcessor.builder()
-                        .withSnapshotManager(snapshotManager)
+                        .snapshotStore(snapshotManager)
                         .registerContractProcessor(
                                 testEventChannelProcessor())
-                        .withExternalDeliveryPlanDeriver(
+                        .deliveryPlanDeriver(
                                 (root, event) -> derive(
                                         owner[0], root, event));
         if (processors != null) {

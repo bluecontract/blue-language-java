@@ -32,22 +32,26 @@ class DocumentProcessorDefaultTypeResolverTest {
 
         // when
         try (DocumentProcessor first =
-                     new DocumentProcessor(emptyRegistry);
+                     DocumentProcessor.builder()
+                             .runtimeRegistry(emptyRegistry)
+                             .build();
              DocumentProcessor second =
-                     new DocumentProcessor(
-                             ContractProcessorRegistryBuilder
-                                     .create()
-                                     .build())) {
+                     DocumentProcessor.builder()
+                             .runtimeRegistry(
+                                     ContractProcessorRegistryBuilder
+                                             .create()
+                                             .build())
+                             .build()) {
             Map<String, Class<?>> firstMappings =
                     new TreeMap<>(
-                            first.getContractTypeResolver()
+                            first.administration().contractTypeResolver()
                                     .getBlueIdMap());
             Map<String, Class<?>> secondMappings =
                     new TreeMap<>(
-                            second.getContractTypeResolver()
+                            second.administration().contractTypeResolver()
                                     .getBlueIdMap());
             TypeClassResolver detachedFirstResolver =
-                    first.getContractTypeResolver();
+                    first.administration().contractTypeResolver();
             detachedFirstResolver.register(
                     ISOLATED_TEST_BLUE_ID,
                     String.class);
@@ -62,11 +66,11 @@ class DocumentProcessorDefaultTypeResolverTest {
                             .resolveClass(
                                     ISOLATED_TEST_BLUE_ID));
             assertNull(
-                    first.getContractTypeResolver()
+                    first.administration().contractTypeResolver()
                             .resolveClass(
                                     ISOLATED_TEST_BLUE_ID));
             assertFalse(
-                    second.getContractTypeResolver()
+                    second.administration().contractTypeResolver()
                             .getBlueIdMap()
                             .containsKey(
                                     ISOLATED_TEST_BLUE_ID));

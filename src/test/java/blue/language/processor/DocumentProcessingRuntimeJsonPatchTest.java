@@ -45,8 +45,8 @@ class DocumentProcessingRuntimeJsonPatchTest {
         JsonPatch replaceAgain = JsonPatch.replace("/alpha/beta", new Node().value("v2"));
 
         // when
-        DocumentProcessingRuntime.DocumentUpdateData upsert = runtime.applyPatch("/", replace);
-        DocumentProcessingRuntime.DocumentUpdateData update = runtime.applyPatch("/", replaceAgain);
+        DocumentUpdateData upsert = runtime.applyPatch("/", replace);
+        DocumentUpdateData update = runtime.applyPatch("/", replaceAgain);
         Node beta = property(property(document, "alpha"), "beta");
 
         // then
@@ -71,7 +71,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
                 new DocumentProcessingRuntime(document);
 
         // when
-        DocumentProcessingRuntime.DocumentUpdateData update =
+        DocumentUpdateData update =
                 runtime.applyPatch(
                         "/",
                         JsonPatch.add(
@@ -96,7 +96,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.remove("/key"));
+        DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.remove("/key"));
 
         // then
         assertEquals("value", data.before().getValue());
@@ -128,7 +128,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         // when
         JsonPatch patch = JsonPatch.add("/items/1", new Node().value(99));
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
+        DocumentUpdateData data = runtime.applyPatch("/", patch);
         List<Node> items = array(document, "items");
 
         // then
@@ -150,7 +150,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         // when
         JsonPatch patch = JsonPatch.add("/values/-", new Node().value(6));
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
+        DocumentUpdateData data = runtime.applyPatch("/", patch);
         List<Node> items = array(document, "values");
 
         // then
@@ -168,7 +168,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.replace("/nums/1", new Node().value(80)));
+        DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.replace("/nums/1", new Node().value(80)));
 
         // then
         assertEquals(8, intValue(data.before()));
@@ -204,7 +204,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.remove("/letters/1"));
+        DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.remove("/letters/1"));
         List<Node> items = array(document, "letters");
 
         // then
@@ -353,7 +353,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node document = arrayDocument("numbers", 1);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.replace("/numbers/0", new Node().value(2)));
+        DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.replace("/numbers/0", new Node().value(2)));
 
         // when
         // mutate returned nodes to ensure the document is unaffected

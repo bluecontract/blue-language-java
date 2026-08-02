@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 class SequentialPatchPlanningSessionTest {
 
-    private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_METRICS =
-            new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+    private static final UpdateMaterializationMetrics NOOP_METRICS =
+            new UpdateMaterializationMetrics() {
                 @Override
                 public void recordBeforeNodeMaterialization() {
                 }
@@ -50,7 +50,7 @@ class SequentialPatchPlanningSessionTest {
         // given
         Node initial = typedRoot();
         RecordingConformanceOverride atomicOverride = new RecordingConformanceOverride();
-        DocumentProcessingRuntime.PlanningContext atomicPlanning = planning(initial);
+        PatchPlanningContext atomicPlanning = planning(initial);
 
         // when
         new BatchPatchTransaction("/",
@@ -165,7 +165,7 @@ class SequentialPatchPlanningSessionTest {
                 NOOP_METRICS);
     }
 
-    private DocumentProcessingRuntime.PlanningContext planning(Node root) {
+    private PatchPlanningContext planning(Node root) {
         FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(root.clone());
         FrozenNode resolved = FrozenNode.fromResolvedNode(root.clone());
         return DocumentProcessingRuntime.workingPlanningContext(canonical,

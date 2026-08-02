@@ -68,7 +68,7 @@ final class MutationCommit {
     void publishSnapshot(String path, Node value) {
         ResolvedSnapshot snapshotRollback = runtime.snapshot;
         try {
-            DocumentProcessingRuntime.PlanningContext planning =
+            PatchPlanningContext planning =
                     runtime.planningContext(runtime.materializedView.root());
             FrozenNode before = planning.canonicalPlanner().read(path);
             Node beforeNode = before != null ? before.toNode() : null;

@@ -172,7 +172,7 @@ final class EmbeddedSurfacePreflightTest {
                 .exactRuntimeState()
                 .build();
         DocumentProcessor processor = DocumentProcessor.builder()
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         (ignoredRoot, ignoredEvent) -> plan)
                 .build();
         VerifiedExecutionEvidence evidence = plan.bind(

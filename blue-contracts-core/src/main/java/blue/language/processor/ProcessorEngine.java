@@ -97,7 +97,9 @@ final class ProcessorEngine {
         return CheckpointIdentityCalculator.canonicalSignature(node);
     }
 
-    static Node createDocumentUpdateEvent(DocumentProcessingRuntime.DocumentUpdateData data, String scopePath) {
+    static Node createDocumentUpdateEvent(
+            DocumentUpdateData data,
+            String scopePath) {
         return LifecycleEventFactory.documentUpdate(data, scopePath);
     }
 

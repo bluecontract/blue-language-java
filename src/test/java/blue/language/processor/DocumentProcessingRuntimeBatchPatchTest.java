@@ -43,7 +43,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         );
 
         // when
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", patches);
+        List<DocumentUpdateData> updates = runtime.applyPatches("/", patches);
 
         // then
         assertEquals(3, updates.size());
@@ -55,9 +55,9 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertEquals(1, manager.fromDocumentCalls);
         assertEquals(0, manager.applyPatchCalls);
         assertEquals(1, manager.cacheSnapshotCalls);
-        assertEquals(1, runtime.batchPatchCallsForTest());
-        assertEquals(3, runtime.batchPatchEntriesForTest());
-        assertEquals(0, runtime.batchPatchRollbackCopiesForTest());
+        assertEquals(1, runtime.countersForTest().batchPatchCalls());
+        assertEquals(3, runtime.countersForTest().batchPatchEntries());
+        assertEquals(0, runtime.countersForTest().batchPatchRollbackCopies());
     }
 
     @Test
@@ -67,7 +67,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
+        List<DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/status", new Node().value("first")),
                 JsonPatch.replace("/status", new Node().value("second"))
         ));
@@ -97,7 +97,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertTrue(failure instanceof IllegalStateException);
         assertEquals("idle", document.getAsText("/status"));
         assertNull(document.getProperties().get("missing"));
-        assertEquals(0, runtime.batchPatchRollbackCopiesForTest());
+        assertEquals(0, runtime.countersForTest().batchPatchRollbackCopies());
     }
 
     @Test
@@ -371,7 +371,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertEquals("idle", document.getAsText("/status"));
         assertEquals(1, manager.fromDocumentCalls);
         assertEquals(1, manager.cacheSnapshotCalls);
-        assertEquals(0, runtime.batchPatchRollbackCopiesForTest());
+        assertEquals(0, runtime.countersForTest().batchPatchRollbackCopies());
     }
 
     @Test
@@ -427,7 +427,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
+        List<DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.remove("/temp"),
                 JsonPatch.add("/temp", new Node().value("new")),
                 JsonPatch.add("/scratch", new Node().value("value")),
@@ -456,21 +456,21 @@ class DocumentProcessingRuntimeBatchPatchTest {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Collections.singletonList(
+        List<DocumentUpdateData> updates = runtime.applyPatches("/", Collections.singletonList(
                 JsonPatch.replace("/status", new Node().value("active"))
         ));
         long beforeMaterializationsBeforeRead =
-                runtime.documentUpdateBeforeNodeMaterializationsForTest();
+                runtime.countersForTest().documentUpdateBeforeNodeMaterializations();
         long afterMaterializationsBeforeRead =
-                runtime.documentUpdateAfterNodeMaterializationsForTest();
+                runtime.countersForTest().documentUpdateAfterNodeMaterializations();
         Object firstBefore = updates.get(0).before().getValue();
         Object firstAfter = updates.get(0).after().getValue();
         Object repeatedBefore = updates.get(0).before().getValue();
         Object repeatedAfter = updates.get(0).after().getValue();
         long beforeMaterializationsAfterRead =
-                runtime.documentUpdateBeforeNodeMaterializationsForTest();
+                runtime.countersForTest().documentUpdateBeforeNodeMaterializations();
         long afterMaterializationsAfterRead =
-                runtime.documentUpdateAfterNodeMaterializationsForTest();
+                runtime.countersForTest().documentUpdateAfterNodeMaterializations();
 
         // then
         assertEquals(0, beforeMaterializationsBeforeRead);
@@ -575,12 +575,12 @@ class DocumentProcessingRuntimeBatchPatchTest {
         // then
         assertEquals(100, document.getAsNode("/values").getProperties().size());
         assertTrue(elapsedMs < 1000, "Batch patching should not be catastrophically slow; elapsedMs=" + elapsedMs);
-        assertEquals(1, runtime.batchPatchCallsForTest());
-        assertEquals(100, runtime.batchPatchEntriesForTest());
-        assertEquals(0, runtime.batchPatchRollbackCopiesForTest());
-        assertTrue(runtime.batchPatchPlanningNanosForTest() > 0);
-        assertTrue(runtime.batchPatchBuildUpdatesNanosForTest() > 0);
-        assertTrue(runtime.batchPatchCommitNanosForTest() > 0);
+        assertEquals(1, runtime.countersForTest().batchPatchCalls());
+        assertEquals(100, runtime.countersForTest().batchPatchEntries());
+        assertEquals(0, runtime.countersForTest().batchPatchRollbackCopies());
+        assertTrue(runtime.countersForTest().batchPatchPlanningNanos() > 0);
+        assertTrue(runtime.countersForTest().batchPatchBuildUpdatesNanos() > 0);
+        assertTrue(runtime.countersForTest().batchPatchCommitNanos() > 0);
     }
 
     private List<Integer> integerValues(Node document, String path) {

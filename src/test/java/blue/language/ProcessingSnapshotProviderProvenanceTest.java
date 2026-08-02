@@ -130,9 +130,9 @@ class ProcessingSnapshotProviderProvenanceTest {
         Node document = new Node().contracts(new Node().properties(
                 "derived", new Node().type(reference(requestedBlueId))));
         DocumentProcessingResult result = blue.initializeDocument(document);
-        boolean baseProcessorRegistered = blue.getDocumentProcessor().getContractRegistry()
+        boolean baseProcessorRegistered = blue.getDocumentProcessor().administration().contractRegistry()
                 .processors().containsKey(baseBlueId);
-        boolean derivedProcessorRegistered = blue.getDocumentProcessor().getContractRegistry()
+        boolean derivedProcessorRegistered = blue.getDocumentProcessor().administration().contractRegistry()
                 .processors().containsKey(requestedBlueId);
         ResolvedSnapshot resultSnapshot = snapshot(blue, result);
 

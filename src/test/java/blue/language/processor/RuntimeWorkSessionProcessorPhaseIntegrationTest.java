@@ -202,13 +202,13 @@ final class RuntimeWorkSessionProcessorPhaseIntegrationTest {
                                      HANDLER_TYPE_BLUE_ID,
                                      HANDLER_TYPE,
                                      handlerProcessor)
-                             .withExternalDeliveryEvidenceVerifier(
+                             .evidenceVerifier(
                                      (document, event, evidence) -> {
                                          // The scenario isolates
                                          // processor-owned runtime phases
                                          // from an environmental feeder.
                                      })
-                             .withExternalDeliveryPlanDeriver(
+                             .deliveryPlanDeriver(
                                      RuntimeWorkSessionProcessorPhaseIntegrationTest
                                              ::deliveryPlan)
                              .build()) {

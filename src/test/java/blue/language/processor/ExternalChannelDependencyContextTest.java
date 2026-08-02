@@ -911,10 +911,10 @@ final class ExternalChannelDependencyContextTest {
                                     RECORDING_HANDLER_TYPE_BLUE_ID,
                                     RECORDING_HANDLER_TYPE,
                                     handlerProcessor)
-                            .withMatchingService(
+                            .matchingService(
                                     new ContractMatchingService(
                                             language))
-                            .withSnapshotManager(
+                            .snapshotStore(
                                     language.getDocumentProcessor()
                                             .snapshotManager())
                             .build();
@@ -1148,13 +1148,13 @@ final class ExternalChannelDependencyContextTest {
                                 OTHER_TYPE_BLUE_ID,
                                 OTHER_TYPE,
                                 new OtherProcessor())
-                        .withMatchingService(
+                        .matchingService(
                                 new ContractMatchingService(
                                         language))
-                        .withSnapshotManager(
+                        .snapshotStore(
                                 language.getDocumentProcessor()
                                         .snapshotManager())
-                        .withExternalDeliveryPlanDeriver(
+                        .deliveryPlanDeriver(
                                 (root, event) -> plan);
         if (registerHandler) {
             builder.registerContractProcessor(

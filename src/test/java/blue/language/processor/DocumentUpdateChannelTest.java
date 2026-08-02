@@ -24,8 +24,8 @@ class DocumentUpdateChannelTest {
     @Test
     void shouldRenderOneUnderlyingDocumentUpdateRelativeToEveryReceivingScope() {
         // given
-        DocumentProcessingRuntime.DocumentUpdateData update =
-                new DocumentProcessingRuntime.DocumentUpdateData(
+        DocumentUpdateData update =
+                new DocumentUpdateData(
                         "/a/b/x",
                         null,
                         new Node().value(BigInteger.ONE),

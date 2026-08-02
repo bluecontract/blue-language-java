@@ -6,12 +6,9 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
-import blue.language.processor.model.MarkerContract;
-import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.mapping.TypeClassResolver;
 
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -51,201 +48,33 @@ public class DocumentProcessor implements AutoCloseable {
 
     /** Creates a processor with the default immutable Contracts configuration. */
     public DocumentProcessor() {
-        this(new Builder());
+        this(new DocumentProcessorBuilderState().snapshot());
     }
 
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(ContractProcessorRegistry registry) {
-        this(registry,
-                DocumentProcessorConfigurationSupport
-                        .defaultContractTypeResolver(),
-                null,
-                null);
-    }
-
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(ConformanceEngine conformanceEngine) {
-        this(ContractProcessorRegistryBuilder.create()
-                        .registerDefaults()
-                        .build(),
-                conformanceEngine,
-                null);
-    }
-
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(
-            ConformanceEngine conformanceEngine,
-            ProcessingSnapshotManager snapshotManager) {
-        this(ContractProcessorRegistryBuilder.create()
-                        .registerDefaults()
-                        .build(),
-                conformanceEngine,
-                snapshotManager);
-    }
-
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(
-            ContractProcessorRegistry registry,
-            ConformanceEngine conformanceEngine) {
-        this(registry, conformanceEngine, null);
-    }
-
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(
-            ContractProcessorRegistry registry,
-            ConformanceEngine conformanceEngine,
-            ProcessingSnapshotManager snapshotManager) {
-        this(registry,
-                DocumentProcessorConfigurationSupport
-                        .defaultContractTypeResolver(),
-                conformanceEngine,
-                snapshotManager);
-    }
-
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(
-            ContractProcessorRegistry registry,
-            TypeClassResolver contractTypeResolver,
-            ConformanceEngine conformanceEngine,
-            ProcessingSnapshotManager snapshotManager) {
-        this(registry,
-                contractTypeResolver,
-                conformanceEngine,
-                snapshotManager,
-                new ContractMatchingService());
-    }
-
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(
-            ContractProcessorRegistry registry,
-            TypeClassResolver contractTypeResolver,
-            ConformanceEngine conformanceEngine,
-            ProcessingSnapshotManager snapshotManager,
-            ContractMatchingService matchingService) {
-        this(registry,
-                contractTypeResolver,
-                conformanceEngine,
-                snapshotManager,
-                matchingService,
-                null);
-    }
-
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(
-            ContractProcessorRegistry registry,
-            TypeClassResolver contractTypeResolver,
-            ConformanceEngine conformanceEngine,
-            ProcessingSnapshotManager snapshotManager,
-            ContractMatchingService matchingService,
-            ProcessingObserver observer) {
-        this(registry,
-                contractTypeResolver,
-                conformanceEngine,
-                null,
-                snapshotManager,
-                matchingService,
-                observer);
-    }
-
-    /** Package-private compatibility constructor for kernel tests. */
-    DocumentProcessor(
-            ContractProcessorRegistry registry,
-            TypeClassResolver contractTypeResolver,
-            ConformanceEngine conformanceEngine,
-            ConformancePlannerOverride conformancePlannerOverride,
-            ProcessingSnapshotManager snapshotManager,
-            ContractMatchingService matchingService,
-            ProcessingObserver observer) {
-        this(registry,
-                contractTypeResolver,
-                conformanceEngine,
-                conformancePlannerOverride,
-                snapshotManager,
-                matchingService,
-                observer,
-                null,
-                null,
-                GasSchedule.contracts10(),
-                null,
-                RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY,
-                ExternalDeliveryPlanDeriver.unavailable(),
-                null,
-                null,
-                false);
-    }
-
-    private DocumentProcessor(
-            ContractProcessorRegistry registry,
-            TypeClassResolver contractTypeResolver,
-            ConformanceEngine conformanceEngine,
-            ConformancePlannerOverride conformancePlannerOverride,
-            ProcessingSnapshotManager snapshotManager,
-            ContractMatchingService matchingService,
-            ProcessingObserver observer,
-            NodeProvider nodeProvider,
-            BlueCachePolicy cachePolicy,
-            GasSchedule gasSchedule,
-            Long gasLimit,
-            String runtimeRegistryIdentity,
-            ExternalDeliveryPlanDeriver externalDeliveryPlanDeriver,
-            ExternalDeliveryEvidenceVerifier deliveryEvidenceVerifier,
-            SubscriptionSurfaceValidator subscriptionSurfaceValidator,
-            boolean immutableConfiguration) {
-        this.contractRegistry = Objects.requireNonNull(registry, "registry");
-        this.contractTypeResolver = Objects.requireNonNull(contractTypeResolver, "contractTypeResolver");
-        DocumentProcessorConfigurationSupport.registerRegistryContractTypes(
-                this.contractRegistry, this.contractTypeResolver);
-        this.contractConverter = new NodeToObjectConverter(this.contractTypeResolver);
-        this.matchingService = Objects.requireNonNull(matchingService, "matchingService");
-        this.cachePolicy = cachePolicy != null
-                ? cachePolicy
-                : this.matchingService.cachePolicy();
-        this.configuredNodeProvider = nodeProvider != null
-                ? nodeProvider
-                : this.matchingService.blue() != null
-                        ? this.matchingService.blue().getNodeProvider()
-                        : null;
-        this.contractLoader = new ContractLoader(
-                contractRegistry,
-                contractConverter,
-                this.contractTypeResolver,
-                this.cachePolicy,
-                this.configuredNodeProvider);
-        this.conformanceEngine = conformanceEngine;
-        this.conformancePlannerOverride = conformancePlannerOverride;
-        this.snapshotManager = snapshotManager;
-        this.observer = observer != null
-                ? observer
-                : NoOpProcessingObserver.INSTANCE;
-        this.gasSchedule = Objects.requireNonNull(gasSchedule, "gasSchedule");
-        this.contractLoader.gasSchedule(this.gasSchedule);
-        this.gasLimit = gasLimit != null
-                ? gasLimit
-                : this.gasSchedule.maxProcessGas();
-        this.runtimeRegistryIdentity = Objects.requireNonNull(
-                runtimeRegistryIdentity, "runtimeRegistryIdentity");
-        this.externalDeliveryPlanDeriver = Objects.requireNonNull(
-                externalDeliveryPlanDeriver, "externalDeliveryPlanDeriver");
+    private DocumentProcessor(DocumentProcessorComponents components) {
+        this.contractRegistry = components.registry;
+        this.contractTypeResolver = components.typeResolver;
+        this.contractConverter = components.converter;
+        this.contractLoader = components.loader;
+        this.configuredNodeProvider = components.nodeProvider;
+        this.cachePolicy = components.cachePolicy;
+        this.immutableConfiguration = components.immutableConfiguration;
+        this.conformanceEngine = components.conformanceEngine;
+        this.conformancePlannerOverride =
+                components.conformancePlannerOverride;
+        this.snapshotManager = components.snapshotManager;
+        this.matchingService = components.matchingService;
+        this.observer = components.observer;
+        this.gasSchedule = components.gasSchedule;
+        this.gasLimit = components.gasLimit;
+        this.runtimeRegistryIdentity = components.runtimeRegistryIdentity;
+        this.externalDeliveryPlanDeriver = components.deliveryPlanDeriver;
         this.configuredDeliveryEvidenceVerifier =
-                deliveryEvidenceVerifier;
-        this.deliveryEvidenceVerifier = deliveryEvidenceVerifier != null
-                ? deliveryEvidenceVerifier
-                : RootExternalDeliveryEvidenceVerifier.configured(
-                        contractLoader,
-                        snapshotManager,
-                        contractRegistry,
-                        contractConverter,
-                        this.externalDeliveryPlanDeriver);
+                components.configuredEvidenceVerifier;
+        this.deliveryEvidenceVerifier = components.evidenceVerifier;
         this.configuredSubscriptionSurfaceValidator =
-                subscriptionSurfaceValidator;
-        this.subscriptionSurfaceValidator = subscriptionSurfaceValidator != null
-                ? subscriptionSurfaceValidator
-                : DirectSubscriptionSurfaceValidator.configured(
-                        contractLoader,
-                        snapshotManager,
-                        contractRegistry,
-                        contractConverter);
-        this.immutableConfiguration = immutableConfiguration;
+                components.configuredSurfaceValidator;
+        this.subscriptionSurfaceValidator = components.surfaceValidator;
         this.lifecycle = new DocumentProcessorLifecycle(
                 new DocumentProcessorLifecycle.Resources() {
                     @Override
@@ -270,27 +99,8 @@ public class DocumentProcessor implements AutoCloseable {
                 this, lifecycle);
     }
 
-    private DocumentProcessor(Builder builder) {
-        this(builder.configuration.snapshot());
-    }
-
-    private DocumentProcessor(DocumentProcessorConfiguration configuration) {
-        this(configuration.contractRegistry,
-                configuration.contractTypeResolver,
-                configuration.conformanceEngine,
-                configuration.conformancePlannerOverride,
-                configuration.snapshotManager,
-                configuration.matchingService,
-                configuration.observer,
-                configuration.nodeProvider,
-                configuration.cachePolicy,
-                configuration.gasSchedule,
-                configuration.gasLimit,
-                configuration.runtimeRegistryIdentity,
-                configuration.externalDeliveryPlanDeriver,
-                configuration.deliveryEvidenceVerifier,
-                configuration.subscriptionSurfaceValidator,
-                configuration.immutableConfiguration);
+    DocumentProcessor(DocumentProcessorConfiguration configuration) {
+        this(DocumentProcessorComponents.from(configuration));
     }
 
     /**
@@ -536,26 +346,6 @@ public class DocumentProcessor implements AutoCloseable {
                 blueId, canonicalTypeNode, processor);
     }
 
-    /**
-     * Returns the frozen contract registry used by subsequent invocations.
-     *
-     * @return runtime contract registry
-     */
-    public ContractProcessorRegistry getContractRegistry() {
-        return contractRegistry;
-    }
-
-    /**
-     * Returns a detached view of the contract type resolver so caller
-     * registration cannot mutate the running processor.
-     *
-     * @return contract type resolver view
-     */
-    public TypeClassResolver getContractTypeResolver() {
-        return DocumentProcessorConfigurationSupport
-                .copyContractTypeResolver(contractTypeResolver);
-    }
-
     ContractProcessorRegistry registry() { return contractRegistry; }
 
     NodeToObjectConverter contractConverter() { return contractConverter; }
@@ -608,51 +398,24 @@ public class DocumentProcessor implements AutoCloseable {
      */
     public boolean supportsSnapshotProcessing() { return snapshotManager != null; }
 
+    /**
+     * Returns the focused cache, registry, and fragmentation inspection view.
+     *
+     * @return processor administration and inspection service
+     */
+    public DocumentProcessorAdministration administration() {
+        return administration;
+    }
+
+    /** Clears reloadable caches while preserving lifecycle override hooks. */
+    public void clearCaches() {
+        administration.clearCaches();
+    }
+
     /** Replaces the delivery-plan deriver in internal mutable test generations. */
     DocumentProcessor externalDeliveryPlanDeriver(
             ExternalDeliveryPlanDeriver deriver) {
         return administration.externalDeliveryPlanDeriver(deriver);
-    }
-
-    /** Releases every reloadable processor-owned cache. */
-    public void clearCaches() { administration.clearCaches(); }
-
-    /**
-     * Returns a saturated count of reloadable cache entries.
-     *
-     * @return current cache-entry count, saturated at {@link Integer#MAX_VALUE}
-     */
-    public int cacheEntryCount() { return administration.cacheEntryCount(); }
-
-    /**
-     * Returns a saturated approximation of reloadable cache weight.
-     *
-     * @return approximate cache weight in bytes, saturated at {@link Long#MAX_VALUE}
-     */
-    public long cacheWeightBytes() { return administration.cacheWeightBytes(); }
-
-    /**
-     * Returns the immutable marker view for one exact scope.
-     *
-     * @param scopeNode node containing the marker scope
-     * @param scopePath canonical path identifying the exact scope
-     * @return immutable map of marker key to marker contract
-     */
-    public Map<String, MarkerContract> markersFor(
-            Node scopeNode,
-            String scopePath) {
-        return administration.markersFor(scopeNode, scopePath);
-    }
-
-    /**
-     * Inspects effective fragmentation without semantic execution.
-     *
-     * @param document document whose effective fragmentation is inspected
-     * @return deterministic effective fragmentation catalog
-     */
-    public EffectiveFragmentationCatalog effectiveFragmentationCatalog(
-            Node document) {
-        return administration.effectiveFragmentationCatalog(document);
     }
 
     /**
@@ -720,19 +483,20 @@ public class DocumentProcessor implements AutoCloseable {
     /**
      * Mutable, single-owner configuration builder.
      *
-     * <p>Every build snapshots its registry and type resolver. Builder aliases
-     * retained for source migration have the same immutable ownership policy.</p>
+     * <p>Every build snapshots its registry and type resolver. The builder has
+     * one canonical vocabulary; configuration mechanics are package-owned.</p>
      */
     public static final class Builder {
-        private final DocumentProcessorBuilderState configuration;
+
+        private final DocumentProcessorBuilderSupport support;
 
         /** Creates a builder with the default Contracts configuration. */
         public Builder() {
-            this.configuration = new DocumentProcessorBuilderState();
+            support = new DocumentProcessorBuilderSupport();
         }
 
         private Builder(DocumentProcessor processor) {
-            this.configuration = new DocumentProcessorBuilderState(processor);
+            support = new DocumentProcessorBuilderSupport(processor);
         }
 
         /**
@@ -745,290 +509,124 @@ public class DocumentProcessor implements AutoCloseable {
             return new Builder(Objects.requireNonNull(processor, "processor"));
         }
 
-        /**
-         * Selects the registry to snapshot at build time.
-         *
-         * @param registry mutable registry to snapshot
-         * @return this builder
-         */
-        public Builder withRegistry(ContractProcessorRegistry registry) {
-            configuration.registry(registry, false); return this;
+        /** {@inheritDoc} */
+        public Builder runtimeRegistry(
+                ContractProcessorRegistry registry) {
+            return support.runtimeRegistry(registry, this);
         }
 
-        /**
-         * Selects the type resolver to snapshot at build time.
-         *
-         * @param resolver type resolver to snapshot
-         * @return this builder
-         */
-        public Builder withContractTypeResolver(TypeClassResolver resolver) {
-            configuration.contractTypeResolver(resolver); return this;
+        /** {@inheritDoc} */
+        public Builder contractTypeResolver(
+                TypeClassResolver resolver) {
+            return support.contractTypeResolver(resolver, this);
         }
 
-        /**
-         * Scans one package into the builder resolver.
-         *
-         * @param packageName Java package containing contract types
-         * @return this builder
-         */
+        /** {@inheritDoc} */
         public Builder scanContractTypes(String packageName) {
-            configuration.scanContractTypes(packageName); return this;
+            return support.scanContractTypes(packageName, this);
         }
 
-        /**
-         * Registers one explicit contract type.
-         *
-         * @param blueId exact BlueId identifying the contract type
-         * @param contractType Java class representing the contract type
-         * @return this builder
-         */
+        /** {@inheritDoc} */
         public Builder registerContractType(
-                String blueId, Class<? extends Contract> contractType) {
-            configuration.registerContractType(blueId, contractType); return this;
+                String blueId,
+                Class<? extends Contract> contractType) {
+            return support.registerContractType(
+                    blueId, contractType, this);
         }
 
-        /**
-         * Registers one annotated contract processor.
-         *
-         * @param processor processor whose annotated contract type is registered
-         * @return this builder
-         */
+        /** {@inheritDoc} */
         public Builder registerContractProcessor(
                 ContractProcessor<? extends Contract> processor) {
-            configuration.registerContractProcessor(processor); return this;
+            return support.registerContractProcessor(processor, this);
         }
 
-        /**
-         * Registers a processor for an explicit BlueId.
-         *
-         * @param blueId exact BlueId identifying the contract type
-         * @param processor processor registered for that identity
-         * @return this builder
-         */
+        /** {@inheritDoc} */
         public Builder registerContractProcessor(
-                String blueId, ContractProcessor<? extends Contract> processor) {
-            configuration.registerContractProcessor(blueId, processor); return this;
-        }
-
-        /**
-         * Registers a processor with exact canonical type content.
-         *
-         * @param blueId exact BlueId identifying the contract type
-         * @param canonicalTypeNode canonical content whose identity must match {@code blueId}
-         * @param processor processor registered for that exact type
-         * @return this builder
-         */
-        public Builder registerContractProcessor(
-                String blueId, Node canonicalTypeNode,
+                String blueId,
                 ContractProcessor<? extends Contract> processor) {
-            configuration.registerContractProcessor(
-                    blueId, canonicalTypeNode, processor);
-            return this;
+            return support.registerContractProcessor(
+                    blueId, processor, this);
         }
 
-        /**
-         * Selects optional conformance.
-         *
-         * @param engine conformance engine, or {@code null} to disable conformance
-         * @return this builder
-         */
-        public Builder withConformanceEngine(ConformanceEngine engine) {
-            configuration.conformanceEngine(engine); return this;
+        /** {@inheritDoc} */
+        public Builder registerContractProcessor(
+                String blueId,
+                Node canonicalTypeNode,
+                ContractProcessor<? extends Contract> processor) {
+            return support.registerContractProcessor(
+                    blueId, canonicalTypeNode, processor, this);
         }
 
-        /**
-         * Selects an optional planner override.
-         *
-         * @param override planner override, or {@code null} to use the configured engine
-         * @return this builder
-         */
-        public Builder withConformancePlannerOverride(
+        /** {@inheritDoc} */
+        public Builder conformanceEngine(
+                ConformanceEngine engine) {
+            return support.conformanceEngine(engine, this);
+        }
+
+        /** {@inheritDoc} */
+        public Builder conformancePlannerOverride(
                 ConformancePlannerOverride override) {
-            configuration.conformancePlannerOverride(override); return this;
+            return support.conformancePlannerOverride(override, this);
         }
 
-        /**
-         * Selects the snapshot manager.
-         *
-         * @param manager processing snapshot manager
-         * @return this builder
-         */
-        public Builder withSnapshotManager(ProcessingSnapshotManager manager) {
-            configuration.snapshotManager(manager, false); return this;
+        /** {@inheritDoc} */
+        public Builder snapshotStore(
+                ProcessingSnapshotManager store) {
+            return support.snapshotStore(store, this);
         }
 
-        /**
-         * Selects the matching service.
-         *
-         * @param service contract matching service
-         * @return this builder
-         */
-        public Builder withMatchingService(ContractMatchingService service) {
-            configuration.matchingService(service); return this;
+        /** {@inheritDoc} */
+        public Builder matchingService(
+                ContractMatchingService service) {
+            return support.matchingService(service, this);
         }
 
-        /**
-         * Selects the gas schedule.
-         *
-         * @param schedule deterministic gas schedule
-         * @return this builder
-         */
-        public Builder withGasSchedule(GasSchedule schedule) {
-            configuration.gasSchedule(schedule, false); return this;
-        }
-
-        /**
-         * Selects the gas limit.
-         *
-         * @param limit maximum gas available to one processing invocation
-         * @return this builder
-         */
-        public Builder withGasLimit(long limit) {
-            configuration.gasLimit(limit, false); return this;
-        }
-
-        /**
-         * Selects the registry identity bound into evidence.
-         *
-         * @param identity canonical runtime-registry identity
-         * @return this builder
-         */
-        public Builder withRuntimeRegistryIdentity(String identity) {
-            configuration.runtimeRegistryIdentity(identity); return this;
-        }
-
-        /**
-         * Selects the evidence verifier.
-         *
-         * @param verifier external-delivery evidence verifier
-         * @return this builder
-         */
-        public Builder withExternalDeliveryEvidenceVerifier(
-                ExternalDeliveryEvidenceVerifier verifier) {
-            configuration.deliveryEvidenceVerifier(verifier, false); return this;
-        }
-
-        /**
-         * Selects the delivery-plan deriver.
-         *
-         * @param deriver external-delivery plan deriver
-         * @return this builder
-         */
-        public Builder withExternalDeliveryPlanDeriver(
-                ExternalDeliveryPlanDeriver deriver) {
-            configuration.deliveryPlanDeriver(deriver, false); return this;
-        }
-
-        /**
-         * Selects the subscription validator.
-         *
-         * @param validator subscription-surface validator
-         * @return this builder
-         */
-        public Builder withSubscriptionSurfaceValidator(
-                SubscriptionSurfaceValidator validator) {
-            configuration.subscriptionSurfaceValidator(validator, false); return this;
-        }
-
-        /**
-         * Selects the verified provider for an immutable generation.
-         *
-         * @param provider provider of verified canonical nodes
-         * @return this builder
-         */
-        public Builder nodeProvider(NodeProvider provider) {
-            configuration.nodeProvider(provider); return this;
-        }
-
-        /**
-         * Selects the registry for an immutable generation.
-         *
-         * @param registry contract registry to snapshot
-         * @return this builder
-         */
-        public Builder runtimeRegistry(ContractProcessorRegistry registry) {
-            configuration.registry(registry, true); return this;
-        }
-
-        /**
-         * Selects the gas schedule for an immutable generation.
-         *
-         * @param schedule deterministic gas schedule
-         * @return this builder
-         */
+        /** {@inheritDoc} */
         public Builder gasSchedule(GasSchedule schedule) {
-            configuration.gasSchedule(schedule, true); return this;
+            return support.gasSchedule(schedule, this);
         }
 
-        /**
-         * Selects the gas budget for an immutable generation.
-         *
-         * @param limit maximum gas available to one processing invocation
-         * @return this builder
-         */
+        /** {@inheritDoc} */
         public Builder gasLimit(long limit) {
-            configuration.gasLimit(limit, true); return this;
+            return support.gasLimit(limit, this);
         }
 
-        /**
-         * Selects the delivery-plan deriver for an immutable generation.
-         *
-         * @param deriver external-delivery plan deriver
-         * @return this builder
-         */
-        public Builder deliveryPlanDeriver(ExternalDeliveryPlanDeriver deriver) {
-            configuration.deliveryPlanDeriver(deriver, true); return this;
+        /** {@inheritDoc} */
+        public Builder runtimeRegistryIdentity(String identity) {
+            return support.runtimeRegistryIdentity(identity, this);
         }
 
-        /**
-         * Selects the evidence verifier for an immutable generation.
-         *
-         * @param verifier external-delivery evidence verifier
-         * @return this builder
-         */
-        public Builder evidenceVerifier(ExternalDeliveryEvidenceVerifier verifier) {
-            configuration.deliveryEvidenceVerifier(verifier, true); return this;
+        /** {@inheritDoc} */
+        public Builder deliveryPlanDeriver(
+                ExternalDeliveryPlanDeriver deriver) {
+            return support.deliveryPlanDeriver(deriver, this);
         }
 
-        /**
-         * Selects the subscription validator for an immutable generation.
-         *
-         * @param validator subscription-surface validator
-         * @return this builder
-         */
+        /** {@inheritDoc} */
+        public Builder evidenceVerifier(
+                ExternalDeliveryEvidenceVerifier verifier) {
+            return support.evidenceVerifier(verifier, this);
+        }
+
+        /** {@inheritDoc} */
         public Builder subscriptionSurfaceValidator(
                 SubscriptionSurfaceValidator validator) {
-            configuration.subscriptionSurfaceValidator(validator, true); return this;
+            return support.subscriptionSurfaceValidator(validator, this);
         }
 
-        /**
-         * Selects the snapshot store for an immutable generation.
-         *
-         * @param snapshotStore processing snapshot store
-         * @return this builder
-         */
-        public Builder snapshotStore(ProcessingSnapshotManager snapshotStore) {
-            configuration.snapshotManager(snapshotStore, true); return this;
+        /** {@inheritDoc} */
+        public Builder nodeProvider(NodeProvider provider) {
+            return support.nodeProvider(provider, this);
         }
 
-        /**
-         * Selects the observer for an immutable generation.
-         *
-         * @param processingObserver observer receiving operational notifications
-         * @return this builder
-         */
-        public Builder observer(ProcessingObserver processingObserver) {
-            configuration.observer(processingObserver, true); return this;
+        /** {@inheritDoc} */
+        public Builder observer(ProcessingObserver observer) {
+            return support.observer(observer, this);
         }
 
-        /**
-         * Selects cache bounds for an immutable generation.
-         *
-         * @param policy cache bounds and weighting policy
-         * @return this builder
-         */
+        /** {@inheritDoc} */
         public Builder cachePolicy(BlueCachePolicy policy) {
-            configuration.cachePolicy(policy); return this;
+            return support.cachePolicy(policy, this);
         }
 
         /**
@@ -1037,7 +635,7 @@ public class DocumentProcessor implements AutoCloseable {
          * @return independent processor generation
          */
         public DocumentProcessor build() {
-            return new DocumentProcessor(this);
+            return new DocumentProcessor(support.configurationSnapshot());
         }
     }
 }

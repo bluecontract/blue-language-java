@@ -21,7 +21,7 @@ final class ScopeCutoffTracker {
     void recordEmbeddedReplacement(
             String scopePath,
             ContractBundle bundle,
-            DocumentProcessingRuntime.DocumentUpdateData update) {
+            DocumentUpdateData update) {
         if (bundle == null || bundle.embeddedPaths().isEmpty()) {
             return;
         }

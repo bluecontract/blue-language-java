@@ -1887,14 +1887,14 @@ final class LogicalDeliveryRoutingTest {
                                     HEADER_PROBE_TYPE_BLUE_ID,
                                     HEADER_PROBE_TYPE,
                                     headerProbe)
-                            .withMatchingService(
+                            .matchingService(
                                     new ContractMatchingService(
                                             language))
-                            .withSnapshotManager(
+                            .snapshotStore(
                                     language
                                             .getDocumentProcessor()
                                             .snapshotManager())
-                            .withExternalDeliveryEvidenceVerifier(
+                            .evidenceVerifier(
                                     (root, event, evidence) -> {
                                         // Exact binding is still revalidated
                                         // by VerifiedExecutionEvidence.

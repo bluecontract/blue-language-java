@@ -238,9 +238,9 @@ final class ChannelCheckpointSubjectTest {
                     new InlineSequenceChannelProcessor();
             DocumentProcessor owner = DocumentProcessor.builder()
                     .registerContractProcessor(channelProcessor)
-                    .withMatchingService(
+                    .matchingService(
                             new ContractMatchingService(language))
-                    .withSnapshotManager(snapshots)
+                    .snapshotStore(snapshots)
                     .build();
             Node document = new Node().contracts(
                     new Node().properties(

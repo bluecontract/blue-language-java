@@ -178,10 +178,10 @@ class BlueCacheLifecycleTest {
         DocumentProcessor refreshed = first.getDocumentProcessor();
 
         // then
-        assertNotSame(shared.getContractRegistry(), refreshed.getContractRegistry());
-        assertNotSame(shared.getContractTypeResolver(), refreshed.getContractTypeResolver());
-        assertEquals(shared.getContractRegistry().processors(),
-                refreshed.getContractRegistry().processors());
+        assertNotSame(shared.administration().contractRegistry(), refreshed.administration().contractRegistry());
+        assertNotSame(shared.administration().contractTypeResolver(), refreshed.administration().contractTypeResolver());
+        assertEquals(shared.administration().contractRegistry().processors(),
+                refreshed.administration().contractRegistry().processors());
     }
 
     @Test
@@ -197,13 +197,13 @@ class BlueCacheLifecycleTest {
         DocumentProcessor refreshed = first.getDocumentProcessor();
         second.registerContractProcessor("shared-registration", processor);
         ContractProcessor<?> registeredInFirst =
-                refreshed.getContractRegistry().processors().get("shared-registration");
+                refreshed.administration().contractRegistry().processors().get("shared-registration");
         DocumentProcessor secondGeneration = second.getDocumentProcessor();
         ContractProcessor<?> registeredInSecond =
-                secondGeneration.getContractRegistry()
+                secondGeneration.administration().contractRegistry()
                         .processors().get("shared-registration");
         Class<?> registeredType = secondGeneration
-                .getContractTypeResolver().resolveClass("shared-registration");
+                .administration().contractTypeResolver().resolveClass("shared-registration");
 
         // then
         assertNull(registeredInFirst);
@@ -254,13 +254,13 @@ class BlueCacheLifecycleTest {
         // given
         Blue blue = new Blue();
         DocumentProcessor owned = blue.getDocumentProcessor();
-        owned.markersFor(new Node(), "/");
+        owned.administration().markersFor(new Node(), "/");
         DocumentProcessor borrowed = new DocumentProcessor();
 
         // when
         blue.documentProcessor(borrowed);
         boolean ownedClosed = owned.isClosed();
-        int ownedEntries = owned.cacheEntryCount();
+        int ownedEntries = owned.administration().cacheEntryCount();
         boolean borrowedClosedAfterInjection = borrowed.isClosed();
         blue.close();
         boolean borrowedClosedAfterRuntimeClose = borrowed.isClosed();
@@ -283,7 +283,7 @@ class BlueCacheLifecycleTest {
         blue.close();
         boolean ownedClosed = owned.isClosed();
         Throwable useAfterCloseFailure =
-                captureFailure(() -> owned.markersFor(new Node(), "/"));
+                captureFailure(() -> owned.administration().markersFor(new Node(), "/"));
 
         // then
         assertTrue(ownedClosed);
@@ -611,10 +611,11 @@ class BlueCacheLifecycleTest {
         Throwable initializationFailure = captureFailure(
                 () -> leakedProcessor.initializeDocument(document(4)));
         Throwable markerFailure = captureFailure(
-                () -> leakedProcessor.markersFor(new Node(), "/"));
+                () -> leakedProcessor.administration().markersFor(new Node(), "/"));
         boolean closed = leakedProcessor.isClosed();
         boolean supportsSnapshots = leakedProcessor.supportsSnapshotProcessing();
-        int retainedEntries = leakedProcessor.cacheEntryCount();
+        int retainedEntries = leakedProcessor.administration()
+                .cacheEntryCount();
 
         // then
         assertTrue(initializationFailure instanceof IllegalStateException,
@@ -1317,7 +1318,7 @@ class BlueCacheLifecycleTest {
         boolean replacementAlive = replacement.isAlive();
         boolean registrationAlive = registration.isAlive();
         Throwable concurrentFailure = failure.get();
-        ContractProcessor<?> registered = blue.getDocumentProcessor().getContractRegistry()
+        ContractProcessor<?> registered = blue.getDocumentProcessor().administration().contractRegistry()
                 .processors().get("registration-race");
 
         // then

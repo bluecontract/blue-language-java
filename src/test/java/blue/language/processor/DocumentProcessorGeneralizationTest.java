@@ -46,7 +46,7 @@ class DocumentProcessorGeneralizationTest {
         DocumentProcessingRuntime runtime = runtime(blue, document);
 
         // when
-        DocumentProcessingRuntime.DocumentUpdateData update =
+        DocumentUpdateData update =
                 runtime.applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
 
         // then
@@ -117,7 +117,7 @@ class DocumentProcessorGeneralizationTest {
         DocumentProcessingRuntime runtime = runtime(blue, document);
 
         // when
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
+        List<DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/price/currency", new Node().value("USD")),
                 JsonPatch.replace("/stock", new Node().value(6))
         ));
@@ -476,7 +476,7 @@ class DocumentProcessorGeneralizationTest {
         DocumentProcessingRuntime runtime = runtime(blue, document);
 
         // when
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
+        List<DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/price", YAML_MAPPER.readValue(
                         "amount: 150\n" +
                         "currency: USD", Node.class))
@@ -1056,12 +1056,12 @@ class DocumentProcessorGeneralizationTest {
                 comparisonCase.initial.clone();
         Node sequentialDocument =
                 comparisonCase.initial.clone();
-        List<DocumentProcessingRuntime.DocumentUpdateData> batchUpdates =
+        List<DocumentUpdateData> batchUpdates =
                 runtime(comparisonCase.blue, batchDocument)
                         .applyPatches(
                                 "/",
                                 comparisonCase.patches);
-        List<DocumentProcessingRuntime.DocumentUpdateData> sequentialUpdates =
+        List<DocumentUpdateData> sequentialUpdates =
                 applySequential(
                         sequentialDocument,
                         comparisonCase.blue,
@@ -1086,11 +1086,11 @@ class DocumentProcessorGeneralizationTest {
                 comparison.label + " update paths");
     }
 
-    private List<DocumentProcessingRuntime.DocumentUpdateData> applySequential(Node document,
+    private List<DocumentUpdateData> applySequential(Node document,
                                                                                Blue blue,
                                                                                List<JsonPatch> patches) {
         DocumentProcessingRuntime sequential = runtime(blue, document);
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = new ArrayList<>();
+        List<DocumentUpdateData> updates = new ArrayList<>();
         for (JsonPatch patch : patches) {
             updates.add(sequential.applyPatch("/", patch));
         }
@@ -1107,9 +1107,9 @@ class DocumentProcessorGeneralizationTest {
         return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
     }
 
-    private List<String> updatePaths(List<DocumentProcessingRuntime.DocumentUpdateData> updates) {
+    private List<String> updatePaths(List<DocumentUpdateData> updates) {
         List<String> paths = new ArrayList<>();
-        for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
+        for (DocumentUpdateData update : updates) {
             assertNotNull(update);
             paths.add(update.path());
         }
@@ -1138,18 +1138,18 @@ class DocumentProcessorGeneralizationTest {
         private final String label;
         private final Node batchDocument;
         private final Node sequentialDocument;
-        private final List<DocumentProcessingRuntime.DocumentUpdateData>
+        private final List<DocumentUpdateData>
                 batchUpdates;
-        private final List<DocumentProcessingRuntime.DocumentUpdateData>
+        private final List<DocumentUpdateData>
                 sequentialUpdates;
 
         private BatchComparison(
                 String label,
                 Node batchDocument,
                 Node sequentialDocument,
-                List<DocumentProcessingRuntime.DocumentUpdateData>
+                List<DocumentUpdateData>
                         batchUpdates,
-                List<DocumentProcessingRuntime.DocumentUpdateData>
+                List<DocumentUpdateData>
                         sequentialUpdates) {
             this.label = label;
             this.batchDocument = batchDocument;

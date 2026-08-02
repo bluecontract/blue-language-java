@@ -22,20 +22,20 @@ final class BatchPatchTransaction {
 
     BatchPatchTransaction(String originScopePath,
                           List<JsonPatch> patches,
-                          DocumentProcessingRuntime.PlanningContext planning,
+                          PatchPlanningContext planning,
                           ConformanceEngine conformanceEngine,
                           ConformancePlannerOverride conformancePlannerOverride,
-                          DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics) {
+                          UpdateMaterializationMetrics materializationMetrics) {
         this(originScopePath, patches, planning, conformanceEngine, conformancePlannerOverride,
                 materializationMetrics, true);
     }
 
     BatchPatchTransaction(String originScopePath,
                           List<JsonPatch> patches,
-                          DocumentProcessingRuntime.PlanningContext planning,
+                          PatchPlanningContext planning,
                           ConformanceEngine conformanceEngine,
                           ConformancePlannerOverride conformancePlannerOverride,
-                          DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                          UpdateMaterializationMetrics materializationMetrics,
                           boolean buildUpdates) {
         this(originScopePath,
                 patches,
@@ -49,10 +49,10 @@ final class BatchPatchTransaction {
 
     BatchPatchTransaction(String originScopePath,
                           List<JsonPatch> patches,
-                          DocumentProcessingRuntime.PlanningContext planning,
+                          PatchPlanningContext planning,
                           ConformanceEngine conformanceEngine,
                           ConformancePlannerOverride conformancePlannerOverride,
-                          DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                          UpdateMaterializationMetrics materializationMetrics,
                           boolean buildUpdates,
                           ProcessingObserver metrics) {
         this.patches = PatchInput.mutableList(patches);
@@ -67,10 +67,10 @@ final class BatchPatchTransaction {
 
     private BatchPatchTransaction(List<PatchInput> patches,
                                   String originScopePath,
-                                  DocumentProcessingRuntime.PlanningContext planning,
+                                  PatchPlanningContext planning,
                                   ConformanceEngine conformanceEngine,
                                   ConformancePlannerOverride conformancePlannerOverride,
-                                  DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                                  UpdateMaterializationMetrics materializationMetrics,
                                   boolean buildUpdates,
                                   ProcessingObserver metrics) {
         this.patches = Collections.unmodifiableList(new ArrayList<>(patches));
@@ -85,10 +85,10 @@ final class BatchPatchTransaction {
 
     static BatchPatchTransaction fromInputs(String originScopePath,
                                             List<PatchInput> patches,
-                                            DocumentProcessingRuntime.PlanningContext planning,
+                                            PatchPlanningContext planning,
                                             ConformanceEngine conformanceEngine,
                                             ConformancePlannerOverride conformancePlannerOverride,
-                                            DocumentProcessingRuntime.UpdateMaterializationMetrics materializationMetrics,
+                                            UpdateMaterializationMetrics materializationMetrics,
                                             boolean buildUpdates,
                                             ProcessingObserver metrics) {
         return new BatchPatchTransaction(patches,

@@ -376,10 +376,10 @@ final class ProcessorPhasePrecedenceTest {
                 language.resolveToSnapshot(root.clone());
         DocumentProcessor processor =
                 DocumentProcessor.builder()
-                        .withSnapshotManager(
+                        .snapshotStore(
                                 language.getDocumentProcessor()
                                         .snapshotManager())
-                        .withExternalDeliveryPlanDeriver(
+                        .deliveryPlanDeriver(
                                 (document, processingEvent) -> {
                                     feederCalls.incrementAndGet();
                                     return unavailable.derive(
@@ -418,12 +418,12 @@ final class ProcessorPhasePrecedenceTest {
                         CHANNEL_TYPE_BLUE_ID,
                         CHANNEL_TYPE,
                         new PhaseChannelProcessor())
-                .withExternalDeliveryEvidenceVerifier(
+                .evidenceVerifier(
                         (document, processingEvent, evidence) -> {
                             // Isolate semantic phase ordering from
                             // environmental feeder storage.
                         })
-                .withExternalDeliveryPlanDeriver(
+                .deliveryPlanDeriver(
                         (document, processingEvent) -> plan)
                 .build();
     }

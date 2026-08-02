@@ -467,9 +467,9 @@ class SelectedScopeContentBlueIdFailFirstTest {
             IdentityFailingSnapshotManager manager = new IdentityFailingSnapshotManager(
                     configuredProcessor.snapshotManager(), failure);
             DocumentProcessor processor = DocumentProcessor.builder()
-                    .withSnapshotManager(manager)
-                    .withConformanceEngine(configuredProcessor.conformanceEngine())
-                    .withMatchingService(configuredProcessor.matchingService())
+                    .snapshotStore(manager)
+                    .conformanceEngine(configuredProcessor.conformanceEngine())
+                    .matchingService(configuredProcessor.matchingService())
                     .registerContractProcessor(
                             lifecycleHandlerBlueId,
                             new CaptureAndMutateLifecycleProcessor(recorder))

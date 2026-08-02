@@ -42,7 +42,7 @@ class ProcessingSnapshotProviderPatchTest {
 
         // when
         String intermediateInherited;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             intermediateInherited = runtime.snapshot()
@@ -96,7 +96,7 @@ class ProcessingSnapshotProviderPatchTest {
         // when
         int firstStepFetches;
         int fetchesAfterSequence;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             firstStepFetches = provider.fetchesFor(typeBlueId);
@@ -255,7 +255,7 @@ class ProcessingSnapshotProviderPatchTest {
                 .previewAndApplyPatches(patches);
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
         }
@@ -289,7 +289,7 @@ class ProcessingSnapshotProviderPatchTest {
         int previewFetches = provider.fetchesFor(typeBlueId);
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
         }
@@ -323,7 +323,7 @@ class ProcessingSnapshotProviderPatchTest {
 
         // when
         String intermediateInherited;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
             intermediateInherited = runtime.snapshot()
@@ -363,7 +363,7 @@ class ProcessingSnapshotProviderPatchTest {
                 .previewAndApplyPatches(patches);
         int previewFetches = provider.fetchesFor(typeBlueId);
         blue.clearResolvedSnapshotCache();
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
         }
@@ -399,7 +399,7 @@ class ProcessingSnapshotProviderPatchTest {
                 .previewAndApplyPatches(patches);
         int previewFetches = provider.fetchesFor(typeBlueId);
         int firstStepFetches;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
             firstStepFetches = provider.fetchesFor(typeBlueId);
@@ -452,7 +452,7 @@ class ProcessingSnapshotProviderPatchTest {
             newFetches.incrementAndGet();
             return Collections.singletonList(requestedType.clone());
         });
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", Collections.singletonList(
                              JsonPatch.add("/typed",
                                      new Node().type(new Node().blueId(requestedBlueId)))), null)) {
@@ -493,7 +493,7 @@ class ProcessingSnapshotProviderPatchTest {
                 new Node(), customEngine, processor.snapshotManager());
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", Collections.singletonList(
                              JsonPatch.add("/typed",
                                      new Node().type(new Node().blueId(typeBlueId)))), null)) {
@@ -527,7 +527,7 @@ class ProcessingSnapshotProviderPatchTest {
 
         // when
         String intermediateInherited;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             intermediateInherited = runtime.snapshot()
@@ -582,7 +582,7 @@ class ProcessingSnapshotProviderPatchTest {
                 new Node(), processor.conformanceEngine(), processor.snapshotManager());
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", Collections.singletonList(
                              JsonPatch.add("/retained",
                                      new Node().type(new Node().blueId(outerBlueId)))), null)) {
@@ -621,7 +621,7 @@ class ProcessingSnapshotProviderPatchTest {
                 new Node(), processor.conformanceEngine(), processor.snapshotManager());
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", Arrays.asList(JsonPatch.add("/retained",
                              new Node().type(new Node().blueId(compositeBlueId)))), null)) {
             sequence.applyNext(0);
@@ -662,7 +662,7 @@ class ProcessingSnapshotProviderPatchTest {
                 .previewAndApplyPatches(patches);
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, preview)) {
             sequence.applyNext(0);
         }
@@ -698,11 +698,11 @@ class ProcessingSnapshotProviderPatchTest {
         int afterFirstStep;
         int afterNestedStep;
         int afterFinalStep;
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             afterFirstStep = provider.fetchesFor(typeBlueId);
-            try (DocumentProcessingRuntime.PreparedPatchSequence nested =
+            try (PreparedPatchTransaction nested =
                          runtime.preparePatchSequence("/", Collections.singletonList(
                                  JsonPatch.add("/nested", new Node().value("reentrant"))), null)) {
                 nested.applyNext(0);
@@ -735,7 +735,7 @@ class ProcessingSnapshotProviderPatchTest {
                 JsonPatch.add("/third", new Node().value(3)));
 
         // when
-        try (DocumentProcessingRuntime.PreparedPatchSequence sequence =
+        try (PreparedPatchTransaction sequence =
                      runtime.preparePatchSequence("/", patches, null)) {
             sequence.applyNext(0);
             sequence.applyNext(1);
