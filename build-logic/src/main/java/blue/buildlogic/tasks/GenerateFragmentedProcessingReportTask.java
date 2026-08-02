@@ -444,8 +444,8 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
             throw new GradleException(
                     "Release fixture records do not match their summary counts");
         }
-        boolean conformant = tests == 293
-                && passed == 293
+        boolean conformant = tests == BuildLogicConstants.EXPECTED_RELEASE_FIXTURE_COUNT
+                && passed == BuildLogicConstants.EXPECTED_RELEASE_FIXTURE_COUNT
                 && failed == 0
                 && skipped == 0
                 && summary.path("conformant").asBoolean();

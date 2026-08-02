@@ -7,6 +7,16 @@ public final class BuildLogicConstants {
     public static final String ROOT_BUILD_TASK_PATH = ":build";
     public static final String ROOT_CLEAN_TASK_PATH = ":clean";
 
+    /** Exact fixture inventory bound by the final Language 1.0 package. */
+    public static final int EXPECTED_LANGUAGE_FIXTURE_COUNT = 153;
+
+    /** Exact fixture inventory bound by the final Contracts 1.0 package. */
+    public static final int EXPECTED_CONTRACTS_FIXTURE_COUNT = 154;
+
+    /** Combined release-conformance fixture inventory. */
+    public static final int EXPECTED_RELEASE_FIXTURE_COUNT =
+            EXPECTED_LANGUAGE_FIXTURE_COUNT + EXPECTED_CONTRACTS_FIXTURE_COUNT;
+
     public static final String TASK_API_BASELINE_DIFF = "apiBaselineDiff";
     public static final String TASK_COMPARE_ARCHIVE_REPLICAS = "compareArchiveReplicas";
     public static final String TASK_JAR_REPLICA = "jarReplica";

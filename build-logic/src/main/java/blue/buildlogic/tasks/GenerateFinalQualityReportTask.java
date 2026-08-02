@@ -1,5 +1,6 @@
 package blue.buildlogic.tasks;
 
+import blue.buildlogic.BuildLogicConstants;
 import blue.buildlogic.support.DeterministicJson;
 import blue.buildlogic.support.FinalQualityEvidence;
 import java.io.File;
@@ -36,8 +37,10 @@ public abstract class GenerateFinalQualityReportTask extends DefaultTask {
 
     public GenerateFinalQualityReportTask() {
         getExpectedModuleCount().convention(7);
-        getExpectedLanguageFixtures().convention(153);
-        getExpectedContractsFixtures().convention(154);
+        getExpectedLanguageFixtures()
+                .convention(BuildLogicConstants.EXPECTED_LANGUAGE_FIXTURE_COUNT);
+        getExpectedContractsFixtures()
+                .convention(BuildLogicConstants.EXPECTED_CONTRACTS_FIXTURE_COUNT);
         getMaximumOrdinaryClassLines().convention(1200);
         getBlueFacadeLineLimit().convention(700);
         getBlueFacadeMemberLimit().convention(24);

@@ -165,11 +165,15 @@ public abstract class VerifyReleaseEvidenceReportTask extends DefaultTask {
         JsonNode contracts = suites.get("contracts");
         check(violations,
                 language != null
-                        && language.path("tests").asInt() == 153
-                        && language.path("passed").asInt() == 153
+                        && language.path("tests").asInt()
+                        == BuildLogicConstants.EXPECTED_LANGUAGE_FIXTURE_COUNT
+                        && language.path("passed").asInt()
+                        == BuildLogicConstants.EXPECTED_LANGUAGE_FIXTURE_COUNT
                         && contracts != null
-                        && contracts.path("tests").asInt() == 154
-                        && contracts.path("passed").asInt() == 154
+                        && contracts.path("tests").asInt()
+                        == BuildLogicConstants.EXPECTED_CONTRACTS_FIXTURE_COUNT
+                        && contracts.path("passed").asInt()
+                        == BuildLogicConstants.EXPECTED_CONTRACTS_FIXTURE_COUNT
                         && report.path("releaseConformance").path("failed").asInt(-1) == 0
                         && report.path("releaseConformance").path("skipped").asInt(-1) == 0,
                 "release-fixture-counts-not-exact");

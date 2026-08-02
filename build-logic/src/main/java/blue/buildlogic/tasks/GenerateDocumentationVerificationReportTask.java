@@ -1,5 +1,6 @@
 package blue.buildlogic.tasks;
 
+import blue.buildlogic.BuildLogicConstants;
 import blue.buildlogic.support.DeterministicJson;
 import blue.buildlogic.support.DocumentationVerification;
 import java.io.File;
@@ -33,8 +34,10 @@ import org.gradle.api.tasks.TaskAction;
 public abstract class GenerateDocumentationVerificationReportTask extends DefaultTask {
 
     public GenerateDocumentationVerificationReportTask() {
-        getExpectedLanguageFixtures().convention(153);
-        getExpectedContractsFixtures().convention(154);
+        getExpectedLanguageFixtures()
+                .convention(BuildLogicConstants.EXPECTED_LANGUAGE_FIXTURE_COUNT);
+        getExpectedContractsFixtures()
+                .convention(BuildLogicConstants.EXPECTED_CONTRACTS_FIXTURE_COUNT);
     }
 
     @Internal
