@@ -160,6 +160,32 @@ final class ProtectedStateGuardTest {
     }
 
     @Test
+    void shouldVerifyExactProcessEmbeddedCollectionPathsExceptionPreservesOtherFields() {
+        // given
+        Node beforeNode = rootWithEmbedded(
+                new Node().items(new Node().value("/one")),
+                new Node().value(7));
+        beforeNode.getContracts().getProperties().get("embedded").properties(
+                "collectionPaths",
+                new Node().items(new Node().value("/collections-one")));
+        Node afterNode = beforeNode.clone();
+        afterNode.getContracts().getProperties().get("embedded").properties(
+                "collectionPaths",
+                new Node().items(new Node().value("/collections-two")));
+
+        // when
+        Throwable failure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(afterNode),
+                        frozen(afterNode)));
+
+        // then
+        assertNull(failure);
+    }
+
+    @Test
     void shouldVerifyProcessEmbeddedNonPathFieldCannotChange() {
         // given
         FrozenNode before = frozen(rootWithEmbedded(

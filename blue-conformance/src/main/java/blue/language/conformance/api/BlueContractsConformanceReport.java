@@ -86,15 +86,6 @@ public final class BlueContractsConformanceReport {
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
             "a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869";
 
-    /**
-     * Fixture envelopes may use YAML anchors for literal reuse. This parser is
-     * separate from Blue's YAML parser because anchors are envelope syntax, not
-     * part of the Blue value model.
-     */
-    private static final ObjectMapper FIXTURE_YAML = new ObjectMapper(
-            YAMLFactory.builder()
-                    .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
-                    .build());
 
     private final String specVersion;
     private final String releaseName;
@@ -490,263 +481,77 @@ public final class BlueContractsConformanceReport {
      * @return immutable identity list
 
      */
+    /** Returns the exact ordered Contracts 1.0 fixture identities. */
     public static List<String> requiredFixtureIdsForContracts10() {
-        return Collections.unmodifiableList(loadFixtureIds());
+        return BlueContractsFixturePackage.requiredFixtureIdsForContracts10();
     }
 
     /**
-     * Loads the declared fixture package identity.
+     * Loads the bound fixture package identity.
      *
-     * @param fallback value used when no identity is declared
-     * @return declared identity or {@code fallback}
+     * @param fallback value used when the package manifest is unavailable
+     * @return bound package identity, or the supplied fallback
      */
     public static String loadFixturePackageIdentity(String fallback) {
-        validateFixturePackageIntegrity();
-        validateReleaseBindings();
-        JsonNode manifest = requireYamlResource(FIXTURE_MANIFEST_RESOURCE);
-        JsonNode identity = manifest.get(
-                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
-        if (identity == null || !identity.isTextual() || identity.asText().trim().isEmpty()) {
-            throw new IllegalStateException(
-                    "Contracts fixture manifest is missing packageIdentity");
-        }
-        return identity.asText();
+        return BlueContractsFixturePackage.loadFixturePackageIdentity(fallback);
     }
 
-    /**
-
-     * Loads fixture identities in manifest order.
-
-     *
-
-     * @return fixture identity list
-
-     */
+    /** Returns the exact ordered fixture identity inventory. */
     public static List<String> loadFixtureIds() {
-        List<String> ids = new ArrayList<>();
-        for (FixtureInventoryEntry entry : loadFixtureInventory()) {
-            ids.add(entry.id);
-        }
-        return ids;
+        return BlueContractsFixturePackage.loadFixtureIds();
     }
 
-    /**
-
-     * Loads fixture categories.
-
-     *
-
-     * @return categories keyed by fixture identity
-
-     */
+    /** Returns fixture categories keyed by exact fixture identity. */
     public static Map<String, BlueContractsFixtureCategory> loadFixtureCategories() {
-        Map<String, BlueContractsFixtureCategory> categories = new LinkedHashMap<>();
-        for (FixtureInventoryEntry entry : loadFixtureInventory()) {
-            categories.put(entry.id, entry.category);
-        }
-        return categories;
+        return BlueContractsFixturePackage.loadFixtureCategories();
     }
 
-    /**
-
-     * Recomputes the fixture package identity.
-
-     *
-
-     * @return fixture package identity
-
-     */
+    /** Computes the canonical Contracts fixture package identity. */
     public static String computeFixturePackageIdentity() {
-        return computeYamlPackageIdentity(
-                FIXTURE_MANIFEST_RESOURCE,
-                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
+        return BlueContractsFixturePackage.computeFixturePackageIdentity();
     }
 
-    /**
-
-     * Recomputes the gas package identity.
-
-     *
-
-     * @return gas package identity
-
-     */
+    /** Computes the canonical Contracts gas package identity. */
     public static String computeGasPackageIdentity() {
-        return computeYamlPackageIdentity(
-                GAS_MANIFEST_RESOURCE,
-                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
+        return BlueContractsFixturePackage.computeGasPackageIdentity();
     }
 
-    /**
-
-     * Recomputes the registry package identity.
-
-     *
-
-     * @return registry package identity
-
-     */
+    /** Computes the canonical Contracts registry package identity. */
     public static String computeRegistryPackageIdentity() {
-        return computeYamlPackageIdentity(
-                REGISTRY_MANIFEST_RESOURCE,
-                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
-                RegistryManifestConstants.FIELD_FIXTURE_PACKAGE_IDENTITY);
+        return BlueContractsFixturePackage.computeRegistryPackageIdentity();
     }
 
-    /**
-
-     * Recomputes the release package identity.
-
-     *
-
-     * @return release package identity
-
-     */
+    /** Computes the canonical final release package identity. */
     public static String computeReleasePackageIdentity() {
-        return computeYamlPackageIdentity(
-                RELEASE_MANIFEST_RESOURCE,
-                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
+        return BlueContractsFixturePackage.computeReleasePackageIdentity();
     }
 
-    /**
-
-     * Verifies fixture identity and file digests.
-
-     *
-
-     * @return whether all evidence matches
-
-     */
+    /** Reports whether the fixture manifest identity matches its exact files. */
     public static boolean fixturePackageIdentityMatchesFixtureFiles() {
-        try {
-            validateFixturePackageIntegrity();
-            return CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity());
-        } catch (RuntimeException ex) {
-            return false;
-        }
+        return BlueContractsFixturePackage.fixturePackageIdentityMatchesFixtureFiles();
     }
 
     /**
-     * Requires internally consistent fixture package evidence.
+     * Verifies fixture paths, bytes, digests, counts, and package identity.
      *
-     * @throws IllegalStateException when package evidence is inconsistent
+     * @throws IllegalStateException when any package binding is inconsistent
      */
     public static void validateFixturePackageIntegrity() {
-        JsonNode manifest = requireYamlResource(FIXTURE_MANIFEST_RESOURCE);
-        requireText(manifest, "fixturePackage", "blue-contracts-conformance");
-        requireText(
-                manifest,
-                RegistryManifestConstants.FIELD_SPECIFICATION_VERSION,
-                ConformanceReportConstants.SPECIFICATION_VERSION_1_0);
-        requireText(manifest, "schemaVersion", "blue-contracts-fixture/1.0");
-        requireText(manifest, "registryPackageIdentity", CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
-        requireText(manifest, "gasSchedule", "blue-contracts/gas/1.0");
-        requireText(manifest, "gasManifestPackageIdentity", CONTRACTS_GAS_PACKAGE_IDENTITY);
-        requireText(manifest, "gasManifestSha256", CONTRACTS_GAS_MANIFEST_SHA256);
-        requireText(
-                manifest,
-                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
-                CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
-
-        JsonNode files = manifest.get("files");
-        if (files == null || !files.isArray()) {
-            throw new IllegalStateException("Contracts fixture manifest files must be a list");
-        }
-        Set<String> paths = new LinkedHashSet<>();
-        int behavior = 0;
-        int gas = 0;
-        for (JsonNode file : files) {
-            String path = requiredText(
-                    file, RegistryManifestConstants.FIELD_PATH);
-            validateRelativeResourcePath(path);
-            if (!paths.add(path)) {
-                throw new IllegalStateException("Duplicate Contracts fixture file path: " + path);
-            }
-            String role = requiredText(file, "role");
-            if ("behavior-fixture".equals(role)) {
-                behavior++;
-            } else if ("gas-fixture".equals(role)) {
-                gas++;
-            } else if (!"support".equals(role)) {
-                throw new IllegalStateException("Unknown Contracts fixture file role: " + role);
-            }
-            byte[] normalized = normalizeLineEndings(
-                    readRequiredResource(FIXTURE_ROOT_RESOURCE + path));
-            if (file.path("bytes").asLong(-1L) != normalized.length) {
-                throw new IllegalStateException("Contracts fixture byte length mismatch: " + path);
-            }
-            String expectedDigest = requiredText(
-                    file, RegistryManifestConstants.FIELD_SHA256);
-            String actualDigest = sha256Hex(normalized);
-            if (!expectedDigest.equals(actualDigest)) {
-                throw new IllegalStateException("Contracts fixture digest mismatch: " + path);
-            }
-        }
-        requireCount(manifest, "behaviorFixtureCount", behavior);
-        requireCount(manifest, "gasFixtureCount", gas);
-        requireCount(manifest, "vectorCount", 100);
-        if (behavior
-                != ConformanceReportConstants.FixtureCount.CONTRACTS_BEHAVIOR
-                || gas
-                != ConformanceReportConstants.FixtureCount.CONTRACTS_GAS) {
-            throw new IllegalStateException(
-                    "Contracts fixture inventory must contain 96 behavior and 58 gas fixtures");
-        }
-        if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
-            throw new IllegalStateException("Contracts fixture package identity mismatch");
-        }
-        loadFixtureInventory(
-                manifest,
-                new Function<String, JsonNode>() {
-                    @Override
-                    public JsonNode apply(String path) {
-                        return readFixture(path);
-                    }
-                });
+        BlueContractsFixturePackage.validateFixturePackageIntegrity();
     }
 
     /**
-     * Requires the published release bindings to match bundled resources.
+     * Verifies final release, registry, gas, and specification bindings.
      *
-     * @throws IllegalStateException when a release binding is inconsistent
+     * @throws IllegalStateException when any release binding is inconsistent
      */
     public static void validateReleaseBindings() {
-        JsonNode release = requireYamlResource(RELEASE_MANIFEST_RESOURCE);
-        requireText(release, "package", RELEASE_NAME);
-        JsonNode components = release.get("components");
-        if (components == null || !components.isObject()) {
-            throw new IllegalStateException("Release components object is required");
-        }
-        requireText(components, "languageRegistryPackageIdentity",
-                LANGUAGE_REGISTRY_PACKAGE_IDENTITY);
-        requireText(components, "languageFixturePackageIdentity",
-                LANGUAGE_FIXTURE_PACKAGE_IDENTITY);
-        requireText(components, "contractsRegistryPackageIdentity",
-                CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
-        requireText(components, "contractsGasPackageIdentity",
-                CONTRACTS_GAS_PACKAGE_IDENTITY);
-        requireText(components, "contractsFixturePackageIdentity",
-                CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
-        requireText(release, RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
-                RELEASE_PACKAGE_IDENTITY);
-        if (!RELEASE_PACKAGE_IDENTITY.equals(computeReleasePackageIdentity())) {
-            throw new IllegalStateException("Release package identity mismatch");
-        }
-        if (!CONTRACTS_GAS_PACKAGE_IDENTITY.equals(computeGasPackageIdentity())) {
-            throw new IllegalStateException("Contracts gas package identity mismatch");
-        }
-        if (!CONTRACTS_REGISTRY_PACKAGE_IDENTITY.equals(computeRegistryPackageIdentity())) {
-            throw new IllegalStateException("Contracts registry package identity mismatch");
-        }
-        assertRawResourceDigest(GAS_MANIFEST_RESOURCE, CONTRACTS_GAS_MANIFEST_SHA256);
-        assertRawResourceDigest(
-                LANGUAGE_SPECIFICATION_RESOURCE,
-                LANGUAGE_SPECIFICATION_SHA256);
-        assertRawResourceDigest(CONTRACTS_SPECIFICATION_RESOURCE, CONTRACTS_SPECIFICATION_SHA256);
+        BlueContractsFixturePackage.validateReleaseBindings();
     }
 
+    /** Returns the strict fixture-envelope YAML mapper. */
     static ObjectMapper fixtureYamlMapper() {
-        return FIXTURE_YAML;
+        return BlueContractsFixturePackage.fixtureYamlMapper();
     }
 
     /**
@@ -756,134 +561,19 @@ public final class BlueContractsConformanceReport {
      * @return parsed fixture envelope
      */
     public static JsonNode readFixture(String path) {
-        validateRelativeResourcePath(path);
-        String resource = FIXTURE_ROOT_RESOURCE + path;
-        try (InputStream input = BlueContractsConformanceReport.class
-                .getClassLoader().getResourceAsStream(resource)) {
-            if (input == null) {
-                throw new IllegalStateException(
-                        "Missing required Contracts resource: " + resource);
-            }
-            LoaderOptions options = new LoaderOptions();
-            options.setAllowDuplicateKeys(false);
-            Object envelope =
-                    new Yaml(new SafeConstructor(options)).load(input);
-            if (envelope == null) {
-                throw new IllegalStateException(
-                        "Empty Contracts fixture resource: " + resource);
-            }
-            return UncheckedObjectMapper.JSON_MAPPER.valueToTree(envelope);
-        } catch (IOException ex) {
-            throw new IllegalStateException(
-                    "Unable to read Contracts fixture: " + resource, ex);
-        }
+        return BlueContractsFixturePackage.readFixture(path);
     }
 
-    /**
-     * Loads the ordered executable inventory from the verified manifest.
-     *
-     * @return immutable executable inventory
-     */
+    /** Loads the ordered executable fixture inventory. */
     public static List<FixtureInventoryEntry> loadFixtureInventory() {
-        JsonNode manifest = requireYamlResource(FIXTURE_MANIFEST_RESOURCE);
-        return loadFixtureInventory(
-                manifest,
-                new Function<String, JsonNode>() {
-                    @Override
-                    public JsonNode apply(String path) {
-                        return readFixture(path);
-                    }
-                });
+        return BlueContractsFixturePackage.loadFixtureInventory();
     }
 
     static List<FixtureInventoryEntry> loadFixtureInventory(
             JsonNode manifest,
             Function<String, JsonNode> fixtureReader) {
-        if (manifest == null || !manifest.isObject()) {
-            throw new IllegalStateException(
-                    "Contracts fixture manifest must be an object");
-        }
-        if (fixtureReader == null) {
-            throw new IllegalArgumentException("fixtureReader is required");
-        }
-        JsonNode files = manifest.get("files");
-        if (files == null || !files.isArray() || files.size() == 0) {
-            throw new IllegalStateException(
-                    "Contracts fixture manifest files must be a non-empty list");
-        }
-        List<FixtureInventoryEntry> entries = new ArrayList<>();
-        Set<String> ids = new LinkedHashSet<>();
-        Set<String> paths = new LinkedHashSet<>();
-        int behavior = 0;
-        int gas = 0;
-        for (JsonNode file : files) {
-            String role = file.path("role").asText();
-            if (!"behavior-fixture".equals(role) && !"gas-fixture".equals(role)) {
-                continue;
-            }
-            String path = requiredText(
-                    file, RegistryManifestConstants.FIELD_PATH);
-            validateRelativeResourcePath(path);
-            if (!paths.add(path)) {
-                throw new IllegalStateException(
-                        "Duplicate executable Contracts fixture path: " + path);
-            }
-            JsonNode fixture = fixtureReader.apply(path);
-            if (fixture == null || !fixture.isObject()) {
-                throw new IllegalStateException(
-                        "Contracts fixture must be an object: " + path);
-            }
-            String id = requiredText(
-                    fixture, ConformanceReportConstants.Field.ID);
-            if (!ids.add(id)) {
-                throw new IllegalStateException(
-                        "Duplicate executable Contracts fixture id: " + id);
-            }
-            List<String> vectors = new ArrayList<>();
-            JsonNode declaredVectors = fixture.get(
-                    ConformanceReportConstants.Field.VECTORS);
-            if (declaredVectors == null
-                    || !declaredVectors.isArray()
-                    || declaredVectors.size() == 0) {
-                throw new IllegalStateException(
-                        "Contracts fixture has no vector coverage: " + path);
-            }
-            for (JsonNode vector : declaredVectors) {
-                if (!vector.isTextual() || vector.asText().isEmpty()) {
-                    throw new IllegalStateException(
-                            "Contracts fixture has malformed vector coverage: " + path);
-                }
-                vectors.add(vector.asText());
-            }
-            entries.add(new FixtureInventoryEntry(
-                    id,
-                    path,
-                    role,
-                    BlueContractsFixtureCategory.fromLabel(requiredText(
-                            fixture,
-                            ConformanceReportConstants.Field.CATEGORY)),
-                    requiredText(
-                            fixture,
-                            ConformanceReportConstants.Field.OPERATION),
-                    vectors));
-            if ("behavior-fixture".equals(role)) {
-                behavior++;
-            } else {
-                gas++;
-            }
-        }
-        if (behavior
-                != ConformanceReportConstants.FixtureCount.CONTRACTS_BEHAVIOR
-                || gas
-                != ConformanceReportConstants.FixtureCount.CONTRACTS_GAS
-                || entries.size()
-                != BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT) {
-            throw new IllegalStateException(
-                    "Contracts executable inventory must contain exactly "
-                            + "96 behavior and 58 gas fixtures; found "
-                            + behavior + " behavior and " + gas + " gas");
-        }
-        return Collections.unmodifiableList(entries);
+        return BlueContractsFixturePackage.loadFixtureInventory(
+                manifest, fixtureReader);
     }
 
     private void validateResultPartition() {
@@ -954,129 +644,6 @@ public final class BlueContractsConformanceReport {
         }
     }
 
-    private static String computeYamlPackageIdentity(String resource, String... nulledFields) {
-        JsonNode parsed = requireYamlResource(resource);
-        if (!parsed.isObject()) {
-            throw new IllegalStateException("Package manifest must be an object: " + resource);
-        }
-        ObjectNode normalized = ((ObjectNode) parsed).deepCopy();
-        for (String field : nulledFields) {
-            normalized.putNull(field);
-        }
-        try {
-            // Package identities require explicit null fields. The public
-            // mapper intentionally omits null bean properties, so use a fresh
-            // compact mapper for this canonical payload.
-            String json = new ObjectMapper().writeValueAsString(normalized);
-            byte[] canonical = new JsonCanonicalizer(json).getEncodedUTF8();
-            return "sha256:" + sha256Hex(canonical);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Unable to canonicalize package manifest: " + resource, ex);
-        }
-    }
-
-    private static JsonNode loadYamlResource(String resource) {
-        try (InputStream input = BlueContractsConformanceReport.class.getClassLoader()
-                .getResourceAsStream(resource)) {
-            return input == null ? null : FIXTURE_YAML.readTree(input);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Unable to read YAML resource: " + resource, ex);
-        }
-    }
-
-    private static JsonNode requireYamlResource(String resource) {
-        JsonNode node = loadYamlResource(resource);
-        if (node == null) {
-            throw new IllegalStateException("Missing required Contracts resource: " + resource);
-        }
-        return node;
-    }
-
-    private static byte[] readRequiredResource(String resource) {
-        try (InputStream input = BlueContractsConformanceReport.class.getClassLoader()
-                .getResourceAsStream(resource)) {
-            if (input == null) {
-                throw new IllegalStateException("Missing required Contracts resource: " + resource);
-            }
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            byte[] buffer = new byte[8192];
-            int read;
-            while ((read = input.read(buffer)) != -1) {
-                output.write(buffer, 0, read);
-            }
-            return output.toByteArray();
-        } catch (IOException ex) {
-            throw new IllegalStateException("Unable to read Contracts resource: " + resource, ex);
-        }
-    }
-
-    private static void assertRawResourceDigest(String resource, String expected) {
-        String actual = sha256Hex(readRequiredResource(resource));
-        if (!expected.equals(actual)) {
-            throw new IllegalStateException(
-                    "Contracts resource digest mismatch for " + resource
-                            + ": expected=" + expected + ", actual=" + actual);
-        }
-    }
-
-    private static byte[] normalizeLineEndings(byte[] bytes) {
-        return new String(bytes, StandardCharsets.UTF_8)
-                .replace("\r\n", "\n")
-                .replace("\r", "\n")
-                .getBytes(StandardCharsets.UTF_8);
-    }
-
-    private static String sha256Hex(byte[] bytes) {
-        MessageDigest digest;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException ex) {
-            throw new AssertionError("SHA-256 is unavailable", ex);
-        }
-        byte[] value = digest.digest(bytes);
-        StringBuilder builder = new StringBuilder(value.length * 2);
-        for (byte b : value) {
-            builder.append(String.format("%02x", b & 0xff));
-        }
-        return builder.toString();
-    }
-
-    private static void validateRelativeResourcePath(String path) {
-        if (path == null
-                || path.isEmpty()
-                || path.startsWith("/")
-                || path.startsWith("\\")
-                || path.contains("\\")
-                || path.equals("..")
-                || path.startsWith("../")
-                || path.contains("/../")
-                || path.endsWith("/..")) {
-            throw new IllegalArgumentException("Unsafe Contracts fixture resource path: " + path);
-        }
-    }
-
-    private static void requireText(JsonNode object, String field, String expected) {
-        String actual = requiredText(object, field);
-        if (!expected.equals(actual)) {
-            throw new IllegalStateException(
-                    "Contracts package field " + field + " expected " + expected + " but was " + actual);
-        }
-    }
-
-    private static String requiredText(JsonNode object, String field) {
-        JsonNode value = object != null ? object.get(field) : null;
-        if (value == null || !value.isTextual() || value.asText().isEmpty()) {
-            throw new IllegalStateException("Required non-empty text field is missing: " + field);
-        }
-        return value.asText();
-    }
-
-    private static void requireCount(JsonNode manifest, String field, int expected) {
-        if (!manifest.has(field) || manifest.get(field).asInt(-1) != expected) {
-            throw new IllegalStateException(
-                    "Contracts fixture manifest " + field + " mismatch: expected " + expected);
-        }
-    }
 
     private static List<String> immutableCopy(List<String> values) {
         return Collections.unmodifiableList(new ArrayList<>(

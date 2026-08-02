@@ -1,5 +1,10 @@
 package blue.language.processor.model;
 
+import blue.language.mapping.NodeToObjectConverter;
+import blue.language.mapping.TypeClassResolver;
+import blue.language.model.Node;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -156,5 +161,54 @@ final class ProcessEmbeddedTest {
         assertEquals(
                 Arrays.asList("/lessons"),
                 embedded.getCollectionPaths());
+    }
+
+    @Test
+    void shouldDeserializeOnlyExactPathsWithEmptyCollectionPaths() {
+        // given
+        Node contract = processEmbeddedNode().properties(
+                ProcessorContractConstants.KEY_PATHS,
+                new Node().items(new Node().value("/payment")));
+
+        // when
+        ProcessEmbedded embedded = deserialize(contract);
+
+        // then
+        assertEquals(
+                Arrays.asList("/payment"),
+                embedded.getPaths());
+        assertEquals(0, embedded.getCollectionPaths().size());
+    }
+
+    @Test
+    void shouldDeserializeOnlyCollectionPathsWithEmptyExactPaths() {
+        // given
+        Node contract = processEmbeddedNode().properties(
+                ProcessorContractConstants.KEY_COLLECTION_PATHS,
+                new Node().items(new Node().value("/lessons")));
+
+        // when
+        ProcessEmbedded embedded = deserialize(contract);
+
+        // then
+        assertEquals(0, embedded.getPaths().size());
+        assertEquals(
+                Arrays.asList("/lessons"),
+                embedded.getCollectionPaths());
+    }
+
+    private static ProcessEmbedded deserialize(Node contract) {
+        NodeToObjectConverter converter = new NodeToObjectConverter(
+                new TypeClassResolver(
+                        "blue.language.processor.model"));
+        return (ProcessEmbedded) converter.convertWithType(
+                contract,
+                Contract.class,
+                false);
+    }
+
+    private static Node processEmbeddedNode() {
+        return new Node().type(new Node().blueId(
+                RuntimeBlueIds.PROCESS_EMBEDDED));
     }
 }

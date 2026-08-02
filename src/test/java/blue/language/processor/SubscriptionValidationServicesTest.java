@@ -1,7 +1,10 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
@@ -157,6 +160,143 @@ final class SubscriptionValidationServicesTest {
         assertFalse(retained.containsKey(unaffected.occurrenceKey()));
     }
 
+    @Test
+    void shouldActivateTentativeCollectionMemberAfterFrozenEntryMembership() {
+        // given
+        Node newChannel = scriptedChannel("new-topic");
+        Node newMember = new Node().contracts(
+                new Node().properties(CHANNEL_KEY, newChannel));
+        Node root = rootWithCollection(
+                new Node()
+                        .properties("existing", new Node())
+                        .properties("new", newMember));
+        EmbeddedScopePlan entryPlan = collectionPlan(
+                "/lessons", "existing");
+        ExternalOrderKey currentOrder = ExternalOrderKey.of(
+                Arrays.asList(5, "source", 1));
+        SubscriptionSurfaceValidationContext context =
+                SubscriptionSurfaceValidationContext.builder(
+                                root,
+                                root.clone(),
+                                Collections.singleton("/lessons/new"),
+                                GasSchedule.contracts10())
+                        .entryEmbeddedScopePlans(
+                                Collections.singletonMap(
+                                        ROOT_SCOPE, entryPlan))
+                        .committingInterval(currentOrder, 6L)
+                        .build();
+
+        // when
+        SubscriptionDelta delta =
+                DirectSubscriptionSurfaceValidator.INSTANCE.validate(
+                        context);
+
+        // then
+        assertTrue(delta.removed().isEmpty());
+        assertEquals(1, delta.added().size());
+        SubscriptionDelta.Entry added = delta.added().get(0);
+        assertEquals("/lessons/new", added.scopePath());
+        assertEquals(Long.valueOf(6L), added.activationRootRevision());
+        assertEquals(currentOrder, added.startAfterExternalOrderKey());
+    }
+
+    @Test
+    void shouldStartFreshIntervalForReaddedCollectionOccurrence() {
+        // given
+        Node channel = scriptedChannel("topic");
+        Node member = new Node().contracts(
+                new Node().properties(CHANNEL_KEY, channel));
+        Node root = rootWithCollection(
+                new Node().properties("lesson-a", member));
+        ExternalOrderKey originalOrder = ExternalOrderKey.of(
+                Arrays.asList(1, "source", 0));
+        ExternalOrderKey currentOrder = ExternalOrderKey.of(
+                Arrays.asList(8, "source", 2));
+        String contribution = channel.getBlueId();
+        SubscriptionDelta.Entry retained = new SubscriptionDelta.Entry(
+                "/lessons/lesson-a",
+                CHANNEL_KEY,
+                RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL,
+                Collections.singletonList(contribution),
+                0,
+                Collections.singletonList("topic"),
+                CheckpointDomain.derive(
+                        RuntimeBlueIds.SCRIPTED_EXTERNAL_CHANNEL,
+                        Collections.singletonList(contribution),
+                        CHECKPOINT_DOMAIN),
+                2L,
+                originalOrder,
+                null);
+        SubscriptionSurfaceValidationContext context =
+                SubscriptionSurfaceValidationContext.builder(
+                                root,
+                                root.clone(),
+                                Collections.singleton(
+                                        "/lessons/lesson-a"),
+                                GasSchedule.contracts10())
+                        .activeSubscriptionIntervals(
+                                Collections.singleton(retained))
+                        .replacedScopePaths(
+                                Collections.singleton(
+                                        "/lessons/lesson-a"))
+                        .committingInterval(currentOrder, 9L)
+                        .build();
+
+        // when
+        SubscriptionDelta delta =
+                DirectSubscriptionSurfaceValidator.INSTANCE.validate(
+                        context);
+
+        // then
+        assertEquals(1, delta.removed().size());
+        assertEquals(1, delta.added().size());
+        assertEquals(Long.valueOf(2L),
+                delta.removed().get(0).activationRootRevision());
+        assertEquals(originalOrder,
+                delta.removed().get(0).startAfterExternalOrderKey());
+        assertEquals(Long.valueOf(9L),
+                delta.removed().get(0).endAtRootRevision());
+        assertEquals(Long.valueOf(9L),
+                delta.added().get(0).activationRootRevision());
+        assertEquals(currentOrder,
+                delta.added().get(0).startAfterExternalOrderKey());
+    }
+
+    @Test
+    void shouldRecordRemovedFrozenCollectionMemberAsReplacedOccurrence() {
+        // given
+        Node member = new Node().properties(
+                "generation", new Node().value("old"));
+        Node root = rootWithCollection(
+                new Node().properties("lesson-a", member));
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                new DocumentProcessor(), root);
+        ContractBundle bundle = ContractBundle.builder()
+                .setEmbedded(
+                        new ProcessEmbedded()
+                                .addCollectionPath("/lessons"))
+                .build()
+                .withEmbeddedScopePlan(
+                        collectionPlan("/lessons", "lesson-a"));
+        DocumentProcessingRuntime.DocumentUpdateData removal =
+                new DocumentProcessingRuntime.DocumentUpdateData(
+                        "/lessons/lesson-a",
+                        member,
+                        null,
+                        JsonPatch.Op.REMOVE,
+                        ROOT_SCOPE,
+                        Collections.singletonList(ROOT_SCOPE));
+
+        // when
+        new ScopeCutoffTracker(execution).recordEmbeddedReplacement(
+                ROOT_SCOPE, bundle, removal);
+
+        // then
+        assertEquals(
+                Collections.singleton("/lessons/lesson-a"),
+                execution.runtime().replacedEmbeddedScopePaths());
+    }
+
     private static Map<String, SubscriptionDelta.Entry> singletonSurface(
             SubscriptionDelta.Entry entry) {
         Map<String, SubscriptionDelta.Entry> result = new LinkedHashMap<>();
@@ -209,5 +349,35 @@ final class SubscriptionValidationServicesTest {
                         new Node().value(CHECKPOINT_DOMAIN));
         channel.blueId(DirectBlueIdCalculator.calculateBlueId(channel));
         return channel;
+    }
+
+    private static Node rootWithCollection(Node collection) {
+        Node embedded = new Node()
+                .type(new Node().blueId(RuntimeBlueIds.PROCESS_EMBEDDED))
+                .properties(
+                        ProcessorContractConstants.KEY_COLLECTION_PATHS,
+                        new Node().items(new Node().value("/lessons")));
+        return new Node()
+                .properties("lessons", collection)
+                .contracts(new Node().properties("embedded", embedded));
+    }
+
+    private static EmbeddedScopePlan collectionPlan(
+            String declaration,
+            String memberKey) {
+        String memberPath = declaration + "/" + memberKey;
+        return new EmbeddedScopePlan(
+                ROOT_SCOPE,
+                Collections.<String>emptyList(),
+                Collections.singletonList(declaration),
+                Collections.singletonMap(
+                        declaration,
+                        Collections.singletonList(memberKey)),
+                Collections.singletonList(
+                        new EmbeddedConcretePath(
+                                memberPath,
+                                EmbeddedPathOrigin.COLLECTION_MEMBER,
+                                declaration,
+                                memberKey)));
     }
 }

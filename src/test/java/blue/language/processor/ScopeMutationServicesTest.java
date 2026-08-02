@@ -125,6 +125,24 @@ final class ScopeMutationServicesTest {
     }
 
     @Test
+    void shouldAllowApplicationToChangeEmbeddedCollectionPathList() {
+        // given
+        ProcessorInvocationState execution = execution(new Node());
+        DirectProtectedStateMutationGuard guard =
+                new DirectProtectedStateMutationGuard(execution.runtime());
+        PatchInput patch = PatchInput.mutable(JsonPatch.add(
+                "/contracts/embedded/collectionPaths/-",
+                new Node().value("/children")));
+
+        // when
+        Throwable failure = FailureCapture.captureFailure(
+                () -> guard.validate("/", patch, false));
+
+        // then
+        assertNull(failure);
+    }
+
+    @Test
     void shouldRejectInlineTypeThatContributesProtectedState() {
         // given
         ProcessorInvocationState execution = execution(new Node());

@@ -3,6 +3,7 @@ package blue.language.conformance.contracts;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.wire.JsonPointer;
 import blue.language.processor.GasMeter;
 import blue.language.processor.GasSchedule;
 import blue.language.processor.GasScheduleConstants;
@@ -177,7 +178,7 @@ final class ScriptedContractsRuntime {
                         controls.get("initializationPatches"));
                 if (patches != null) {
                     for (JsonNode patch : patches) {
-                        context.applyPatch(toPatch(patch));
+                        context.applyPatch(toPatch(patch, context));
                     }
                 }
             }
@@ -329,7 +330,7 @@ final class ScriptedContractsRuntime {
                 JsonNode patches = listItems(result.get(ContractsFixtureConstants.Field.PATCHES));
                 if (patches != null) {
                     for (JsonNode patch : patches) {
-                        context.applyPatch(toPatch(patch));
+                        context.applyPatch(toPatch(patch, context));
                     }
                 }
                 JsonNode events = listItems(result.get(ContractsFixtureConstants.Field.EVENTS));
@@ -375,7 +376,9 @@ final class ScriptedContractsRuntime {
         context.terminate("completed", termination.asText(null));
     }
 
-    private static JsonPatch toPatch(JsonNode patch) {
+    private static JsonPatch toPatch(
+            JsonNode patch,
+            ProcessorExecutionContext context) {
         if (patch == null || !patch.isObject()) {
             throw new IllegalArgumentException("Scripted patch must be an object");
         }
@@ -389,8 +392,16 @@ final class ScriptedContractsRuntime {
             throw new IllegalArgumentException(
                     "Scripted patch requires op and path");
         }
+        String normalizedPath = PointerUtils.normalizePointer(path);
+        String normalizedScope = PointerUtils.normalizePointer(
+                context.scopePath());
+        String absolutePath = !JsonPointer.ROOT.equals(normalizedScope)
+                && PointerUtils.descendantOrEqual(
+                        normalizedPath, normalizedScope)
+                ? normalizedPath
+                : context.resolvePointer(normalizedPath);
         if (ContractsFixtureConstants.PatchOperation.REMOVE.equals(op)) {
-            return JsonPatch.remove(path);
+            return JsonPatch.remove(absolutePath);
         }
         JsonNode rawValue = patch.get(
                 ContractsFixtureConstants.PatchField.VALUE);
@@ -400,10 +411,10 @@ final class ScriptedContractsRuntime {
         }
         Node value = readNode(rawValue);
         if (ContractsFixtureConstants.PatchOperation.ADD.equals(op)) {
-            return JsonPatch.add(path, value);
+            return JsonPatch.add(absolutePath, value);
         }
         if (ContractsFixtureConstants.PatchOperation.REPLACE.equals(op)) {
-            return JsonPatch.replace(path, value);
+            return JsonPatch.replace(absolutePath, value);
         }
         throw new IllegalArgumentException("Unsupported scripted patch op: " + op);
     }

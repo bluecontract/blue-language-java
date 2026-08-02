@@ -548,6 +548,80 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
+    void shouldExposeStructuredCollectionPlanWithExactMemberProvenance() {
+        // given
+        Node document =
+                new Node()
+                        .properties(
+                                "lessons",
+                                new Node()
+                                        .properties(
+                                                "b",
+                                                new Node().properties(
+                                                        "value",
+                                                        new Node().value("b")))
+                                        .properties(
+                                                "a/b",
+                                                new Node().properties(
+                                                        "value",
+                                                        new Node().value("slash")))
+                                        .properties(
+                                                "a~c",
+                                                new Node().properties(
+                                                        "value",
+                                                        new Node().value("tilde"))))
+                        .contracts(
+                                new Node().properties(
+                                        "embedded",
+                                        new Node()
+                                                .type(new Node().blueId(
+                                                        RuntimeBlueIds
+                                                                .PROCESS_EMBEDDED))
+                                                .properties(
+                                                        "collectionPaths",
+                                                        new Node().items(
+                                                                new Node().value(
+                                                                        "/lessons")))));
+
+        // when
+        EffectiveFragmentationCatalog catalog;
+        try (Blue blue = blue(
+                new LinkedHashMap<String, Node>(),
+                new ArrayList<String>())) {
+            catalog = blue.getDocumentProcessor()
+                    .effectiveFragmentationCatalog(document);
+        }
+        EmbeddedScopePlanView rootPlan =
+                catalog.scopePlansByScope().get("/");
+
+        // then
+        assertEquals(
+                Collections.singletonList("/lessons"),
+                rootPlan.collectionDeclarationPaths());
+        assertEquals(
+                Arrays.asList("a/b", "a~c", "b"),
+                rootPlan.collectionMemberKeysByDeclaration()
+                        .get("/lessons"));
+        assertEquals(
+                Arrays.asList(
+                        "/lessons/a~1b",
+                        "/lessons/a~0c",
+                        "/lessons/b"),
+                rootPlan.concreteChildPaths());
+        assertEquals(
+                EmbeddedScopePlanView.Origin.COLLECTION_MEMBER,
+                rootPlan.originsByConcretePath()
+                        .get("/lessons/a~1b"));
+        assertEquals(
+                rootPlan.concreteChildPaths(),
+                catalog.effectiveProcessEmbeddedPathsByScope().get("/"));
+        assertTrue(catalog.scopePlansByScope()
+                .get("/lessons/a~1b")
+                .concreteChildPaths()
+                .isEmpty());
+    }
+
+    @Test
     void shouldDefineChildCatalogScopeFromInheritedProcessEmbeddedPath() {
         // given
         Node inheritedEmbedded =
@@ -825,12 +899,26 @@ class EffectiveFragmentationCatalogTest {
                                 .effectiveContractsByScope()
                                 .get("/")
                                 .clear());
+        UnsupportedOperationException planMapFailure =
+                captureFailure(
+                        () -> catalog.scopePlansByScope()
+                                .clear());
+        UnsupportedOperationException planListFailure =
+                captureFailure(
+                        () -> catalog.scopePlansByScope()
+                                .get("/")
+                                .concreteChildPaths()
+                                .clear());
 
         // then
         assertEquals(UnsupportedOperationException.class,
                 scopeMapFailure.getClass());
         assertEquals(UnsupportedOperationException.class,
                 scopeListFailure.getClass());
+        assertEquals(UnsupportedOperationException.class,
+                planMapFailure.getClass());
+        assertEquals(UnsupportedOperationException.class,
+                planListFailure.getClass());
     }
 
     @Test

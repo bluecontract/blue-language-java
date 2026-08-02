@@ -81,6 +81,132 @@ class ContractsFixtureHarnessControlTest {
     }
 
     @Test
+    void shouldDeriveCanonicalDeliverySnapshotFromCollectionMembers()
+            throws IOException {
+        // given
+        ObjectNode fixture = copy("emb/c-emb-08.yaml");
+        fixture.put("operation", "platform");
+        ArrayNode assertions = (ArrayNode) fixture.path("expected")
+                .path("assertions");
+        assertions.removeAll();
+        ObjectNode assertion = assertions.addObject();
+        assertion.put("actual", "feeder.canonicalSnapshot");
+        assertion.put("op", "equals");
+        ArrayNode expected = assertion.putArray("expected");
+        expected.addObject()
+                .put("scopePath", "/lessons/lesson-a")
+                .put("channelKey", "in");
+        expected.addObject()
+                .put("scopePath", "/lessons/lesson-b")
+                .put("channelKey", "in");
+
+        // when
+        ContractsConformanceProjection projection = execute(fixture);
+
+        // then
+        assertTrue(
+                projection.project("feeder.canonicalSnapshot").isPresent());
+    }
+
+    @Test
+    void shouldProcessCollectionMembersInCanonicalDeliveryOrder()
+            throws IOException {
+        // given
+        ObjectNode fixture = copy("emb/c-emb-08.yaml");
+
+        // when
+        ContractsConformanceProjection projection = execute(fixture);
+
+        // then
+        assertEquals(
+                "success",
+                projection.project("result.status").getValue(),
+                projection.values()::toString);
+        assertEquals(
+                Arrays.asList(
+                        "/lessons/lesson-a:in",
+                        "/lessons/lesson-b:in"),
+                projection.project("trace.externalDeliveryOrder")
+                        .getValue(),
+                projection.values()::toString);
+    }
+
+    @Test
+    void shouldProcessReferencedCollectionMembersAndChannels()
+            throws IOException {
+        // given
+        List<String> fixtures = Arrays.asList(
+                "emb/c-emb-13.yaml",
+                "emb/c-emb-15.yaml");
+
+        // when
+        for (String fixture : fixtures) {
+            ContractsConformanceProjection projection =
+                    execute(resource(fixture));
+
+            // then
+            assertEquals(
+                    "success",
+                    projection.project("result.status").getValue(),
+                    projection.values()::toString);
+        }
+    }
+
+    @Test
+    void shouldTargetOnlyTheSelectedCollectionMember()
+            throws IOException {
+        // given
+        ObjectNode fixture = copy("feed/c-feed-18.yaml");
+
+        // when
+        ContractsConformanceProjection projection = execute(fixture);
+
+        // then
+        assertEquals(
+                "success",
+                projection.project("result.status").getValue(),
+                projection.values()::toString);
+        assertEquals(
+                Arrays.asList("/lessons/lesson-a:in"),
+                projection.project("trace.externalDeliveryOrder")
+                        .getValue(),
+                projection.values()::toString);
+    }
+
+    @Test
+    void shouldRetireAndReactivateReplacedCollectionMember()
+            throws IOException {
+        // given
+        ObjectNode fixture = copy("emb/c-emb-11.yaml");
+        ArrayNode assertions = (ArrayNode) fixture.path("expected")
+                .path("assertions");
+        assertions.removeAll();
+        assertions.addObject()
+                .put("actual", "result.status")
+                .put("op", "equals")
+                .put("expected", "success");
+
+        // when
+        ContractsConformanceProjection projection = execute(fixture);
+
+        // then
+        assertTrue(
+                projection.project(
+                        "commit.retiredIntervals.0.scopePath").isPresent(),
+                projection.values()::toString);
+        assertEquals(
+                "/lessons/lesson-a",
+                projection.project("commit.retiredIntervals.0.scopePath")
+                        .getValue(),
+                projection.values()::toString);
+        assertEquals(
+                "/lessons/lesson-a",
+                projection.project("commit.newIntervals.0.scopePath")
+                        .getValue(),
+                projection.values()::toString);
+    }
+
+    @Test
     void shouldAllowInstallingRootForwardAllWithoutReceivingDescendant()
             throws IOException {
         // given
