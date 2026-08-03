@@ -9,13 +9,13 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
 | `blue-conformance` | 19 | 164 | 57 | 240 |
-| `blue-contracts-core` | 154 | 1032 | 587 | 1773 |
+| `blue-contracts-core` | 160 | 1070 | 587 | 1817 |
 | `blue-language-core` | 160 | 812 | 96 | 1068 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 95 | 1 | 121 |
 | `blue-language-model` | 23 | 210 | 80 | 313 |
-| **Distribution** | **387** | **2361** | **821** | **3569** |
+| **Distribution** | **393** | **2399** | **821** | **3613** |
 
 ## blue-conformance
 
@@ -854,11 +854,15 @@ field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_TYPE descr
 field blue.language.processor.util.ProcessorPointerConstants#RELATIVE_VALUE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="/value"
 method blue.language.processor.BlueContracts#builder descriptor=(Lblue/language/runtime/LanguageProcessing;)Lblue/language/processor/BlueContracts$Builder; access=public,static signature=- throws=-
 method blue.language.processor.BlueContracts#close descriptor=()V access=public signature=- throws=-
+method blue.language.processor.BlueContracts#currentRootDeliveryPlanDeriver descriptor=(JLblue/language/processor/ExternalOrderKey;Ljava/util/List;)Lblue/language/processor/ExternalDeliveryPlanDeriver; access=public signature=(JLblue/language/processor/ExternalOrderKey;Ljava/util/List<Lblue/language/processor/SubscriptionDelta$Entry;>;)Lblue/language/processor/ExternalDeliveryPlanDeriver; throws=-
 method blue.language.processor.BlueContracts#effectiveFragmentationCatalog descriptor=(Lblue/language/model/Node;)Lblue/language/processor/EffectiveFragmentationCatalog; access=public signature=- throws=-
+method blue.language.processor.BlueContracts#indexedDeliveryEvaluator descriptor=()Lblue/language/processor/IndexedDeliveryEvaluator; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#isClosed descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.BlueContracts#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Lblue/language/processor/DocumentProcessingResult; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#processAttempt descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Lblue/language/processor/ProcessAttemptResult; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#processForPlatformCommit descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/processor/VerifiedExecutionEvidence;)Lblue/language/processor/PlatformProcessingResult; access=public signature=- throws=-
+method blue.language.processor.BlueContracts#runtimeAccess descriptor=()Lblue/language/processor/ProcessorRuntimeAccess; access=public signature=- throws=-
+method blue.language.processor.BlueContracts#subscriptionSurfaceProjection descriptor=()Lblue/language/processor/SubscriptionSurfaceProjection; access=public signature=- throws=-
 method blue.language.processor.BlueContracts$Builder#build descriptor=()Lblue/language/processor/BlueContracts; access=public signature=- throws=-
 method blue.language.processor.BlueContracts$Builder#deliveryPlanDeriver descriptor=(Lblue/language/processor/ExternalDeliveryPlanDeriver;)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
 method blue.language.processor.BlueContracts$Builder#evidenceVerifier descriptor=(Lblue/language/processor/ExternalDeliveryEvidenceVerifier;)Lblue/language/processor/BlueContracts$Builder; access=public signature=- throws=-
@@ -1056,6 +1060,7 @@ method blue.language.processor.DocumentProcessor$Builder#registerContractProcess
 method blue.language.processor.DocumentProcessor$Builder#registerContractProcessor descriptor=(Ljava/lang/String;Lblue/language/model/Node;Lblue/language/processor/ContractProcessor;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=(Ljava/lang/String;Lblue/language/model/Node;Lblue/language/processor/ContractProcessor<+Lblue/language/processor/model/Contract;>;)Lblue/language/processor/DocumentProcessor$Builder; throws=-
 method blue.language.processor.DocumentProcessor$Builder#registerContractProcessor descriptor=(Ljava/lang/String;Lblue/language/processor/ContractProcessor;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=(Ljava/lang/String;Lblue/language/processor/ContractProcessor<+Lblue/language/processor/model/Contract;>;)Lblue/language/processor/DocumentProcessor$Builder; throws=-
 method blue.language.processor.DocumentProcessor$Builder#registerContractType descriptor=(Ljava/lang/String;Ljava/lang/Class;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=(Ljava/lang/String;Ljava/lang/Class<+Lblue/language/processor/model/Contract;>;)Lblue/language/processor/DocumentProcessor$Builder; throws=-
+method blue.language.processor.DocumentProcessor$Builder#runtimeAccess descriptor=(Lblue/language/processor/ProcessorRuntimeAccess;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#runtimeRegistry descriptor=(Lblue/language/processor/ContractProcessorRegistry;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#runtimeRegistryIdentity descriptor=(Ljava/lang/String;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessor$Builder#scanContractTypes descriptor=(Ljava/lang/String;)Lblue/language/processor/DocumentProcessor$Builder; access=public signature=- throws=-
@@ -1067,8 +1072,11 @@ method blue.language.processor.DocumentProcessorAdministration#clearCaches descr
 method blue.language.processor.DocumentProcessorAdministration#contractRegistry descriptor=()Lblue/language/processor/ContractProcessorRegistry; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#contractTypeResolver descriptor=()Lblue/language/mapping/TypeClassResolver; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#effectiveFragmentationCatalog descriptor=(Lblue/language/model/Node;)Lblue/language/processor/EffectiveFragmentationCatalog; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#indexedDeliveryEvaluator descriptor=()Lblue/language/processor/IndexedDeliveryEvaluator; access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#isClosed descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.DocumentProcessorAdministration#markersFor descriptor=(Lblue/language/model/Node;Ljava/lang/String;)Ljava/util/Map; access=public signature=(Lblue/language/model/Node;Ljava/lang/String;)Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/model/MarkerContract;>; throws=-
+method blue.language.processor.DocumentProcessorAdministration#runtimeAccess descriptor=()Lblue/language/processor/ProcessorRuntimeAccess; access=public signature=- throws=-
+method blue.language.processor.DocumentProcessorAdministration#subscriptionSurfaceProjection descriptor=()Lblue/language/processor/SubscriptionSurfaceProjection; access=public signature=- throws=-
 method blue.language.processor.EffectiveContractSnapshot#builder descriptor=(Ljava/lang/String;Ljava/lang/String;)Lblue/language/processor/EffectiveContractSnapshot$Builder; access=public,static signature=- throws=-
 method blue.language.processor.EffectiveContractSnapshot#deterministicDependencyNodeBlueIds descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
 method blue.language.processor.EffectiveContractSnapshot#dispatchFields descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>; throws=-
@@ -1280,6 +1288,12 @@ method blue.language.processor.ExternalOrderKey#equals descriptor=(Ljava/lang/Ob
 method blue.language.processor.ExternalOrderKey#hashCode descriptor=()I access=public signature=- throws=-
 method blue.language.processor.ExternalOrderKey#of descriptor=(Ljava/util/List;)Lblue/language/processor/ExternalOrderKey; access=public,static signature=(Ljava/util/List<*>;)Lblue/language/processor/ExternalOrderKey; throws=-
 method blue.language.processor.ExternalOrderKey#toString descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.ExternalSubscriptionOccurrenceKey#channelKey descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.ExternalSubscriptionOccurrenceKey#equals descriptor=(Ljava/lang/Object;)Z access=public signature=- throws=-
+method blue.language.processor.ExternalSubscriptionOccurrenceKey#hashCode descriptor=()I access=public signature=- throws=-
+method blue.language.processor.ExternalSubscriptionOccurrenceKey#of descriptor=(Ljava/lang/String;Ljava/lang/String;)Lblue/language/processor/ExternalSubscriptionOccurrenceKey; access=public,static signature=- throws=-
+method blue.language.processor.ExternalSubscriptionOccurrenceKey#scopePath descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.ExternalSubscriptionOccurrenceKey#toString descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#add descriptor=(Ljava/lang/String;Lblue/language/processor/ExactBlueValue;)Lblue/language/processor/FrozenJsonPatch; access=public,static signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#add descriptor=(Ljava/lang/String;Lblue/language/snapshot/FrozenNode;)Lblue/language/processor/FrozenJsonPatch; access=public,static signature=- throws=-
 method blue.language.processor.FrozenJsonPatch#equals descriptor=(Ljava/lang/Object;)Z access=public signature=- throws=-
@@ -1378,6 +1392,22 @@ method blue.language.processor.HandlerRegistrationContext#handlerKey descriptor=
 method blue.language.processor.HandlerRegistrationContext#hasContract descriptor=(Ljava/lang/String;)Z access=public signature=- throws=-
 method blue.language.processor.HandlerRegistrationContext#runtimeWorkSession descriptor=()Lblue/language/processor/RuntimeWorkSession; access=public signature=- throws=-
 method blue.language.processor.HandlerRegistrationContext#scopePath descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#accepts descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#channelKeys descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#checkpointDomainBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#checkpointSubjectBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#dependencies descriptor=()Lblue/language/processor/ExternalChannelDependencySnapshot; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#eligibleAtEvent descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#eventKeys descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#handlerChannelKey descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#logicalDeliveryKey descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#occurrenceKey descriptor=()Lblue/language/processor/ExternalSubscriptionOccurrenceKey; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#payloadBlueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#physicalCandidate descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryDiagnostic#preselects descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryEvaluator#prepare descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;JLblue/language/processor/ExternalOrderKey;Ljava/util/List;Ljava/util/List;)Lblue/language/processor/IndexedDeliveryPreparation; access=public signature=(Lblue/language/model/Node;Lblue/language/model/Node;JLblue/language/processor/ExternalOrderKey;Ljava/util/List<Lblue/language/processor/SubscriptionDelta$Entry;>;Ljava/util/List<Lblue/language/processor/ExternalSubscriptionOccurrenceKey;>;)Lblue/language/processor/IndexedDeliveryPreparation; throws=-
+method blue.language.processor.IndexedDeliveryPreparation#deliveryPlan descriptor=()Lblue/language/processor/ExternalDeliveryPlan; access=public signature=- throws=-
+method blue.language.processor.IndexedDeliveryPreparation#diagnostics descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Lblue/language/processor/IndexedDeliveryDiagnostic;>; throws=-
 method blue.language.processor.InvalidExecutionEvidenceException#<init> descriptor=(Ljava/lang/String;)V access=public signature=- throws=-
 method blue.language.processor.InvalidExecutionEvidenceException#<init> descriptor=(Ljava/lang/String;Lblue/language/processor/ProcessorErrorCategory;)V access=public signature=- throws=-
 method blue.language.processor.InvalidExecutionEvidenceException#errorCategory descriptor=()Lblue/language/processor/ProcessorErrorCategory; access=public signature=- throws=-
@@ -1547,6 +1577,11 @@ method blue.language.processor.ProcessorFatalException#<init> descriptor=(Ljava/
 method blue.language.processor.ProcessorFatalException#errorCategory descriptor=()Lblue/language/processor/ProcessorErrorCategory; access=public signature=- throws=-
 method blue.language.processor.ProcessorFatalException#partialResult descriptor=()Lblue/language/processor/DocumentProcessingResult; access=public signature=- throws=-
 method blue.language.processor.ProcessorFatalException#totalGas descriptor=()J access=public signature=- throws=-
+method blue.language.processor.ProcessorRuntimeAccess#isCurrent descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.ProcessorRuntimeAccess#languageRuntime descriptor=()Lblue/language/runtime/LanguageRuntimeAccess; access=public signature=- throws=-
+method blue.language.processor.ProcessorRuntimeAccess#materializeVerifiedExactReference descriptor=(Lblue/language/snapshot/FrozenNode;)Lblue/language/api/BlueOperationResult; access=public signature=(Lblue/language/snapshot/FrozenNode;)Lblue/language/api/BlueOperationResult<Lblue/language/snapshot/FrozenNode;>; throws=-
+method blue.language.processor.ProcessorRuntimeAccess#resolveTransient descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
+method blue.language.processor.ProcessorRuntimeAccess#resolveTransientPreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.processor.ProcessorStatus#commits descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.ProcessorStatus#fromWireValue descriptor=(Ljava/lang/String;)Lblue/language/processor/ProcessorStatus; access=public,static signature=- throws=-
 method blue.language.processor.ProcessorStatus#valueOf descriptor=(Ljava/lang/String;)Lblue/language/processor/ProcessorStatus; access=public,static signature=- throws=-
@@ -1674,6 +1709,8 @@ method blue.language.processor.SubscriptionSurfaceInvalidException#<init> descri
 method blue.language.processor.SubscriptionSurfaceInvalidException#<init> descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V access=public signature=- throws=-
 method blue.language.processor.SubscriptionSurfaceInvalidException#<init> descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lblue/language/processor/ProcessorErrorCategory;)V access=public signature=- throws=-
 method blue.language.processor.SubscriptionSurfaceInvalidException#diagnostic descriptor=()Lblue/language/processor/ProcessorDiagnostic; access=public signature=- throws=-
+method blue.language.processor.SubscriptionSurfaceProjection#projectInitial descriptor=(Lblue/language/model/Node;JLblue/language/processor/ExternalOrderKey;)Lblue/language/processor/SubscriptionDelta; access=public signature=- throws=-
+method blue.language.processor.SubscriptionSurfaceProjection#projectUpdate descriptor=(Lblue/language/model/Node;Ljava/util/List;Ljava/util/Set;JLblue/language/processor/ExternalOrderKey;)Lblue/language/processor/SubscriptionDelta; access=public signature=(Lblue/language/model/Node;Ljava/util/List<Lblue/language/processor/SubscriptionDelta$Entry;>;Ljava/util/Set<Ljava/lang/String;>;JLblue/language/processor/ExternalOrderKey;)Lblue/language/processor/SubscriptionDelta; throws=-
 method blue.language.processor.SubscriptionSurfaceValidationContext#activeSubscriptionIntervals descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Lblue/language/processor/SubscriptionDelta$Entry;>; throws=-
 method blue.language.processor.SubscriptionSurfaceValidationContext#builder descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Ljava/util/Set;Lblue/language/processor/GasSchedule;)Lblue/language/processor/SubscriptionSurfaceValidationContext$Builder; access=public,static signature=(Lblue/language/model/Node;Lblue/language/model/Node;Ljava/util/Set<Ljava/lang/String;>;Lblue/language/processor/GasSchedule;)Lblue/language/processor/SubscriptionSurfaceValidationContext$Builder; throws=-
 method blue.language.processor.SubscriptionSurfaceValidationContext#changedPaths descriptor=()Ljava/util/Set; access=public signature=()Ljava/util/Set<Ljava/lang/String;>; throws=-
@@ -1685,6 +1722,7 @@ method blue.language.processor.SubscriptionSurfaceValidationContext#inputRoot de
 method blue.language.processor.SubscriptionSurfaceValidationContext#inputSnapshot descriptor=()Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
 method blue.language.processor.SubscriptionSurfaceValidationContext#tentativeRoot descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.processor.SubscriptionSurfaceValidationContext#tentativeSnapshot descriptor=()Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
+method blue.language.processor.SubscriptionSurfaceValidationContext#usesRetainedIntervalInputSurface descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.SubscriptionSurfaceValidationContext$Builder#activeSubscriptionIntervals descriptor=(Ljava/lang/Iterable;)Lblue/language/processor/SubscriptionSurfaceValidationContext$Builder; access=public signature=(Ljava/lang/Iterable<Lblue/language/processor/SubscriptionDelta$Entry;>;)Lblue/language/processor/SubscriptionSurfaceValidationContext$Builder; throws=-
 method blue.language.processor.SubscriptionSurfaceValidationContext$Builder#build descriptor=()Lblue/language/processor/SubscriptionSurfaceValidationContext; access=public signature=- throws=-
 method blue.language.processor.SubscriptionSurfaceValidationContext$Builder#committingInterval descriptor=(Lblue/language/processor/ExternalOrderKey;J)Lblue/language/processor/SubscriptionSurfaceValidationContext$Builder; access=public signature=- throws=-
@@ -1938,6 +1976,7 @@ type blue.language.processor.ExternalDeliveryPlanDeriver access=public,abstract,
 type blue.language.processor.ExternalDeliverySnapshot access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ExternalDeliverySnapshot$Builder access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ExternalOrderKey access=public,final super=java.lang.Object interfaces=java.lang.Comparable signature=Ljava/lang/Object;Ljava/lang/Comparable<Lblue/language/processor/ExternalOrderKey;>;
+type blue.language.processor.ExternalSubscriptionOccurrenceKey access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.FrozenJsonPatch access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.GasChargeContext access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.GasLimitExceededException access=public,final super=java.lang.RuntimeException interfaces=- signature=-
@@ -1956,6 +1995,9 @@ type blue.language.processor.GasTraceEntry access=public,final super=java.lang.O
 type blue.language.processor.HandlerMatchContext access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.HandlerProcessor access=public,abstract,interface super=java.lang.Object interfaces=blue.language.processor.ContractProcessor signature=<T:Lblue/language/processor/model/HandlerContract;>Ljava/lang/Object;Lblue/language/processor/ContractProcessor<TT;>;
 type blue.language.processor.HandlerRegistrationContext access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.IndexedDeliveryDiagnostic access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.IndexedDeliveryEvaluator access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.IndexedDeliveryPreparation access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.InvalidExecutionEvidenceException access=public,final super=java.lang.RuntimeException interfaces=- signature=-
 type blue.language.processor.JfrProcessingObserver access=public,final super=java.lang.Object interfaces=blue.language.processor.ProcessingObserver,java.lang.AutoCloseable signature=-
 type blue.language.processor.NoOpProcessingObserver access=public,final super=java.lang.Object interfaces=blue.language.processor.ProcessingObserver signature=-
@@ -1988,6 +2030,7 @@ type blue.language.processor.ProcessorErrorCategory access=public,final,enum sup
 type blue.language.processor.ProcessorExecutionContext access=public,final super=java.lang.Object interfaces=java.lang.AutoCloseable signature=-
 type blue.language.processor.ProcessorFailureException access=public super=java.lang.IllegalArgumentException interfaces=- signature=-
 type blue.language.processor.ProcessorFatalException access=public super=java.lang.RuntimeException interfaces=- signature=-
+type blue.language.processor.ProcessorRuntimeAccess access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ProcessorStatus access=public,final,enum super=java.lang.Enum interfaces=- signature=Ljava/lang/Enum<Lblue/language/processor/ProcessorStatus;>;
 type blue.language.processor.RecordingProcessingObserver access=public,final super=java.lang.Object interfaces=blue.language.processor.ProcessingObserver signature=-
 type blue.language.processor.RootExternalDeliveryEvidenceVerifier access=public,final super=java.lang.Object interfaces=blue.language.processor.ExternalDeliveryEvidenceVerifier signature=-
@@ -2004,6 +2047,7 @@ type blue.language.processor.SemanticOutputBoundary access=public,final super=ja
 type blue.language.processor.SubscriptionDelta access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.SubscriptionDelta$Entry access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.SubscriptionSurfaceInvalidException access=public,final super=java.lang.RuntimeException interfaces=- signature=-
+type blue.language.processor.SubscriptionSurfaceProjection access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.SubscriptionSurfaceValidationContext access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.SubscriptionSurfaceValidationContext$Builder access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.SubscriptionSurfaceValidator access=public,abstract,interface super=java.lang.Object interfaces=- signature=-

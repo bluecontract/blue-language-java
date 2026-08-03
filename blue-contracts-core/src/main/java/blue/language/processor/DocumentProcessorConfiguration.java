@@ -4,6 +4,7 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.provider.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.mapping.TypeClassResolver;
+import blue.language.runtime.LanguageRuntimeAccess;
 
 /**
  * Immutable construction snapshot consumed by one {@link DocumentProcessor}
@@ -20,6 +21,8 @@ final class DocumentProcessorConfiguration {
     final ConformanceEngine conformanceEngine;
     final ConformancePlannerOverride conformancePlannerOverride;
     final ProcessingSnapshotManager snapshotManager;
+    final LanguageRuntimeAccess languageRuntimeAccess;
+    final ProcessorRuntimeAccess.GenerationGuard runtimeGenerationGuard;
     final ContractMatchingService matchingService;
     final ProcessingObserver observer;
     final NodeProvider nodeProvider;
@@ -38,6 +41,8 @@ final class DocumentProcessorConfiguration {
             ConformanceEngine conformanceEngine,
             ConformancePlannerOverride conformancePlannerOverride,
             ProcessingSnapshotManager snapshotManager,
+            LanguageRuntimeAccess languageRuntimeAccess,
+            ProcessorRuntimeAccess.GenerationGuard runtimeGenerationGuard,
             ContractMatchingService matchingService,
             ProcessingObserver observer,
             NodeProvider nodeProvider,
@@ -54,6 +59,8 @@ final class DocumentProcessorConfiguration {
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
         this.snapshotManager = snapshotManager;
+        this.languageRuntimeAccess = languageRuntimeAccess;
+        this.runtimeGenerationGuard = runtimeGenerationGuard;
         this.matchingService = matchingService;
         this.observer = observer;
         this.nodeProvider = nodeProvider;

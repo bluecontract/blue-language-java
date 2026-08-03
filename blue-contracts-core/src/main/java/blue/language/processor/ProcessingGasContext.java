@@ -57,6 +57,30 @@ final class ProcessingGasContext {
             ProcessingSnapshotManager snapshotManager) {
         RuntimeWorkSession session = new RuntimeWorkSession(
                 meter, RuntimeWorkSession.Mode.PROCESSING);
+        attachSemanticOutputBoundary(
+                session,
+                languageRuntime,
+                snapshotManager);
+        return session;
+    }
+
+    /** Opens admission work against this invocation's shared live budget. */
+    RuntimeWorkSession newAdmissionRuntimeWorkSession(
+            LanguageRuntimeAccess languageRuntime,
+            ProcessingSnapshotManager snapshotManager) {
+        RuntimeWorkSession session = new RuntimeWorkSession(
+                meter, RuntimeWorkSession.Mode.ADMISSION);
+        attachSemanticOutputBoundary(
+                session,
+                languageRuntime,
+                snapshotManager);
+        return session;
+    }
+
+    private void attachSemanticOutputBoundary(
+            RuntimeWorkSession session,
+            LanguageRuntimeAccess languageRuntime,
+            ProcessingSnapshotManager snapshotManager) {
         if (languageRuntime != null) {
             session.attachSemanticOutputBoundary(
                     new SemanticOutputBoundary(
@@ -66,7 +90,6 @@ final class ProcessingGasContext {
                             meter.semantic(),
                             outputAdmissionMemo));
         }
-        return session;
     }
 
     void merge(GasMeter.ChildGasLedger ledger) {

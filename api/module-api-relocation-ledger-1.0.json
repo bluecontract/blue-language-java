@@ -4,13 +4,13 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 380,
-    "publicTypeIdentity": "sha256:38ca6143f426bd8c157cf7ad615766be0ba78d9c555b18d7ba4fa57c4419bbfa",
+    "publicProductionTypeCount": 386,
+    "publicTypeIdentity": "sha256:8d2e08541263b84918e5675e931162f795f8b0d3ba5f8bedae483208cec1b4e3",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
       "intentional-next-major-break": 17,
       "internal-type-removed-from-public-surface": 105,
-      "new-supported-api-spi": 58
+      "new-supported-api-spi": 64
     }
   },
   "allowedClassifications": [
@@ -2670,6 +2670,17 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.processor.ExternalSubscriptionOccurrenceKey",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ExternalSubscriptionOccurrenceKey.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ExternalSubscriptionOccurrenceKey",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.FrozenJsonPatch",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/FrozenJsonPatch.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -2868,6 +2879,39 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.processor.IndexedDeliveryDiagnostic",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryDiagnostic.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.IndexedDeliveryDiagnostic",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.IndexedDeliveryEvaluator",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryEvaluator.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.IndexedDeliveryEvaluator",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.IndexedDeliveryPreparation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryPreparation.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.IndexedDeliveryPreparation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.InvalidExecutionEvidenceException",
@@ -3222,6 +3266,17 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.processor.ProcessorRuntimeAccess",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorRuntimeAccess.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ProcessorRuntimeAccess",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.ProcessorStatus",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorStatus.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -3396,6 +3451,17 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.processor.SubscriptionSurfaceProjection",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceProjection.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.SubscriptionSurfaceProjection",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.SubscriptionSurfaceValidationContext",

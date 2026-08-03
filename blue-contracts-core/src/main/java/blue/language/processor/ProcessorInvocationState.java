@@ -85,7 +85,7 @@ final class ProcessorInvocationState {
         this.checkpointTransaction =
                 new ProcessingCheckpointTransaction(
                         runtime,
-                        owner.matchingService().blue(),
+                        owner.languageRuntimeAccess(),
                         owner.observer());
         this.terminationService = new TerminationService(runtime);
         this.channelRunner = new ChannelRunner(
@@ -158,7 +158,7 @@ final class ProcessorInvocationState {
         this.checkpointTransaction =
                 new ProcessingCheckpointTransaction(
                         runtime,
-                        owner.matchingService().blue(),
+                        owner.languageRuntimeAccess(),
                         owner.observer());
         this.terminationService = new TerminationService(runtime);
         this.channelRunner = new ChannelRunner(
@@ -461,7 +461,7 @@ final class ProcessorInvocationState {
     }
 
     LanguageRuntimeAccess blue() {
-        return owner.matchingService().blue();
+        return owner.languageRuntimeAccess();
     }
 
     boolean hasProcessEvent() {

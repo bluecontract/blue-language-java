@@ -31,7 +31,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.patching` | 1 | present |
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
-| `blue.language.processor` | 91 | present |
+| `blue.language.processor` | 97 | present |
 | `blue.language.processor.model` | 18 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -296,6 +296,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.ExternalDeliveryPlanDeriver`
 - `blue.language.processor.ExternalDeliverySnapshot`
 - `blue.language.processor.ExternalOrderKey`
+- `blue.language.processor.ExternalSubscriptionOccurrenceKey`
 - `blue.language.processor.FrozenJsonPatch`
 - `blue.language.processor.GasChargeContext`
 - `blue.language.processor.GasLimitExceededException`
@@ -306,6 +307,9 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.HandlerMatchContext`
 - `blue.language.processor.HandlerProcessor`
 - `blue.language.processor.HandlerRegistrationContext`
+- `blue.language.processor.IndexedDeliveryDiagnostic`
+- `blue.language.processor.IndexedDeliveryEvaluator`
+- `blue.language.processor.IndexedDeliveryPreparation`
 - `blue.language.processor.InvalidExecutionEvidenceException`
 - `blue.language.processor.JfrProcessingObserver`
 - `blue.language.processor.NoOpProcessingObserver`
@@ -334,6 +338,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.ProcessorExecutionContext`
 - `blue.language.processor.ProcessorFailureException`
 - `blue.language.processor.ProcessorFatalException`
+- `blue.language.processor.ProcessorRuntimeAccess`
 - `blue.language.processor.ProcessorStatus`
 - `blue.language.processor.RecordingProcessingObserver`
 - `blue.language.processor.RootExternalDeliveryEvidenceVerifier`
@@ -346,6 +351,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.SemanticOutputBoundary`
 - `blue.language.processor.SubscriptionDelta`
 - `blue.language.processor.SubscriptionSurfaceInvalidException`
+- `blue.language.processor.SubscriptionSurfaceProjection`
 - `blue.language.processor.SubscriptionSurfaceValidationContext`
 - `blue.language.processor.SubscriptionSurfaceValidator`
 - `blue.language.processor.VerifiedExecutionEvidence`

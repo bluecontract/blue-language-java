@@ -22,8 +22,32 @@ final class ExternalDeliveryPlanVerifier {
             Node event,
             VerifiedExecutionEvidence evidence,
             ExternalDeliveryPlan plan) {
+        verifyHeadersAndDeliveries(evidence, plan);
+
+        /*
+         * A deriver's "exact" bit is only a claim. The retained,
+         * revision-complete active index is the independent completeness
+         * companion; re-run registered PRESELECTS/ACCEPTS only for those exact
+         * indexed occurrences.
+         */
+        preselectionVerifier.verify(root, event, evidence);
+    }
+
+    void verify(
+            Node root,
+            Node event,
+            VerifiedExecutionEvidence evidence,
+            ExternalDeliveryPlan plan,
+            ExternalPreselectionVerifier.EvaluationResult evaluated) {
         Objects.requireNonNull(root, "root");
         Objects.requireNonNull(event, "event");
+        verifyHeadersAndDeliveries(evidence, plan);
+        preselectionVerifier.verify(evidence, evaluated);
+    }
+
+    private void verifyHeadersAndDeliveries(
+            VerifiedExecutionEvidence evidence,
+            ExternalDeliveryPlan plan) {
         Objects.requireNonNull(evidence, "evidence");
         Objects.requireNonNull(plan, "plan");
         if (!plan.exactRuntimeState()) {
@@ -57,17 +81,9 @@ final class ExternalDeliveryPlanVerifier {
                             + "surface mismatch");
         }
         verifyExactDeliveries(evidence.deliveries(), plan.deliveries());
-
-        /*
-         * A deriver's "exact" bit is only a claim. The retained,
-         * revision-complete active index is the independent completeness
-         * companion; re-run registered PRESELECTS/ACCEPTS only for those exact
-         * indexed occurrences.
-         */
-        preselectionVerifier.verify(root, event, evidence);
     }
 
-    private void verifyExactDeliveries(
+    static void verifyExactDeliveries(
             List<ExternalDeliverySnapshot> actual,
             List<ExternalDeliverySnapshot> expected) {
         if (actual.size() != expected.size()) {
@@ -103,7 +119,7 @@ final class ExternalDeliveryPlanVerifier {
         }
     }
 
-    private boolean sameDelivery(
+    private static boolean sameDelivery(
             ExternalDeliverySnapshot left,
             ExternalDeliverySnapshot right) {
         return left.scopePath().equals(right.scopePath())

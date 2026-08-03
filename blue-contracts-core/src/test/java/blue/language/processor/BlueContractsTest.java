@@ -45,6 +45,40 @@ final class BlueContractsTest {
     }
 
     @Test
+    void shouldExposeManagedHostServicesOnlyWhileOpen() {
+        // given
+        BlueLanguage language = BlueLanguage.builder().build();
+        BlueContracts contracts = BlueContracts.builder(
+                language.processing()).build();
+
+        // when
+        ProcessorRuntimeAccess runtimeAccess = contracts.runtimeAccess();
+        SubscriptionSurfaceProjection projection =
+                contracts.subscriptionSurfaceProjection();
+        IndexedDeliveryEvaluator evaluator =
+                contracts.indexedDeliveryEvaluator();
+        ExternalDeliveryPlanDeriver deriver =
+                contracts.currentRootDeliveryPlanDeriver(
+                        0L,
+                        ExternalOrderKey.of(Collections.emptyList()),
+                        Collections.<SubscriptionDelta.Entry>emptyList());
+        contracts.close();
+
+        // then
+        assertNotNull(projection);
+        assertNotNull(evaluator);
+        assertNotNull(deriver);
+        assertFalse(runtimeAccess.isCurrent());
+        assertThrows(IllegalStateException.class,
+                contracts::runtimeAccess);
+        assertThrows(IllegalStateException.class,
+                contracts::subscriptionSurfaceProjection);
+        assertThrows(IllegalStateException.class,
+                contracts::indexedDeliveryEvaluator);
+        language.close();
+    }
+
+    @Test
     void shouldTranslateExactProviderAbsenceToNull() {
         // given
         String absentBlueId = DirectBlueIdCalculator.calculateBlueId(

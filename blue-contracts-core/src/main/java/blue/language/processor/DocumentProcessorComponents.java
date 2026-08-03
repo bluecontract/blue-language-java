@@ -5,6 +5,7 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.mapping.TypeClassResolver;
 import blue.language.provider.NodeProvider;
+import blue.language.runtime.LanguageRuntimeAccess;
 
 import java.util.Objects;
 
@@ -26,6 +27,8 @@ final class DocumentProcessorComponents {
     final ConformanceEngine conformanceEngine;
     final ConformancePlannerOverride conformancePlannerOverride;
     final ProcessingSnapshotManager snapshotManager;
+    final LanguageRuntimeAccess languageRuntimeAccess;
+    final ProcessorRuntimeAccess.GenerationGuard runtimeGenerationGuard;
     final ContractMatchingService matchingService;
     final ProcessingObserver observer;
     final GasSchedule gasSchedule;
@@ -49,13 +52,19 @@ final class DocumentProcessorComponents {
         converter = new NodeToObjectConverter(typeResolver);
         matchingService = Objects.requireNonNull(
                 configuration.matchingService, "matchingService");
+        languageRuntimeAccess =
+                configuration.languageRuntimeAccess != null
+                        ? configuration.languageRuntimeAccess
+                        : matchingService.blue();
+        runtimeGenerationGuard =
+                configuration.runtimeGenerationGuard;
         cachePolicy = configuration.cachePolicy != null
                 ? configuration.cachePolicy
                 : matchingService.cachePolicy();
         nodeProvider = configuration.nodeProvider != null
                 ? configuration.nodeProvider
-                : matchingService.blue() != null
-                        ? matchingService.blue().getNodeProvider()
+                : languageRuntimeAccess != null
+                        ? languageRuntimeAccess.getNodeProvider()
                         : null;
         loader = new ContractLoader(
                 registry,

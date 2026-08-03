@@ -105,6 +105,12 @@ final class DocumentProcessorBuilderSupport {
         return builder;
     }
 
+    /** Imports one complete verified runtime and snapshot generation. */
+    <B> B runtimeAccess(ProcessorRuntimeAccess access, B builder) {
+        configuration.runtimeAccess(access);
+        return builder;
+    }
+
     /** Selects the contract matching service. */
     <B> B matchingService(ContractMatchingService service, B builder) {
         configuration.matchingService(service);
@@ -171,8 +177,11 @@ final class DocumentProcessorBuilderSupport {
         return builder;
     }
 
-    /** Freezes the current builder state for one processor generation. */
-    DocumentProcessorConfiguration configurationSnapshot() {
-        return configuration.snapshot();
+    /** Builds while retaining the complete imported source generation. */
+    DocumentProcessor build() {
+        try (ProcessorRuntimeAccess.GenerationLease ignored =
+                     configuration.openRuntimeGeneration()) {
+            return new DocumentProcessor(configuration.snapshot());
+        }
     }
 }

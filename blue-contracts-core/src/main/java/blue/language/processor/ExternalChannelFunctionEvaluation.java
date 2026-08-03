@@ -587,7 +587,7 @@ final class ExternalChannelFunctionEvaluation {
                 right.headerIdentityBlueId());
     }
 
-    private String payloadBlueId() {
+    String payloadBlueId() {
         return payloadBlueId;
     }
 

@@ -34,7 +34,7 @@ final class ExternalSubscriptionSelection {
             EffectiveContractSnapshot snapshot,
             blue.language.model.Node event,
             List<String> effectiveContractKeys) {
-        ExternalChannelFunctionEvaluation evaluation =
+        return immutableEvaluation(
                 ExternalChannelFunctionEvaluation.evaluate(
                         registry,
                         converter,
@@ -44,7 +44,31 @@ final class ExternalSubscriptionSelection {
                         bundle,
                         snapshot,
                         event,
-                        effectiveContractKeys);
+                        effectiveContractKeys));
+    }
+
+    ExternalSubscriptionEvaluation evaluate(
+            ContractBundle bundle,
+            EffectiveContractSnapshot snapshot,
+            blue.language.model.Node event,
+            List<String> effectiveContractKeys,
+            RuntimeWorkSession runtimeWorkSession) {
+        return immutableEvaluation(
+                ExternalChannelFunctionEvaluation.evaluate(
+                        registry,
+                        converter,
+                        ExternalChannelFunctionEvaluation
+                                .verifiedMatcherSessions(
+                                        snapshotManager),
+                        bundle,
+                        snapshot,
+                        event,
+                        effectiveContractKeys,
+                        runtimeWorkSession));
+    }
+
+    private ExternalSubscriptionEvaluation immutableEvaluation(
+            ExternalChannelFunctionEvaluation evaluation) {
         return new ExternalSubscriptionEvaluation(
                 evaluation.channelKeys(),
                 evaluation.eventKeys(),
@@ -52,7 +76,10 @@ final class ExternalSubscriptionSelection {
                 evaluation.accepts(),
                 evaluation.checkpointDomainBlueId(),
                 evaluation.checkpointSubjectBlueId(),
-                evaluation.dependencies());
+                evaluation.dependencies(),
+                evaluation.payloadBlueId(),
+                evaluation.handlerChannelKey(),
+                evaluation.logicalDeliveryKey());
     }
 
     boolean intersects(List<String> left, List<String> right) {
@@ -188,6 +215,9 @@ final class ExternalSubscriptionEvaluation {
     final String checkpointDomainBlueId;
     final String checkpointSubjectBlueId;
     final ExternalChannelDependencySnapshot dependencies;
+    final String payloadBlueId;
+    final String handlerChannelKey;
+    final String logicalDeliveryKey;
 
     ExternalSubscriptionEvaluation(
             List<String> channelKeys,
@@ -196,7 +226,10 @@ final class ExternalSubscriptionEvaluation {
             boolean accepts,
             String checkpointDomainBlueId,
             String checkpointSubjectBlueId,
-            ExternalChannelDependencySnapshot dependencies) {
+            ExternalChannelDependencySnapshot dependencies,
+            String payloadBlueId,
+            String handlerChannelKey,
+            String logicalDeliveryKey) {
         this.channelKeys = channelKeys;
         this.eventKeys = eventKeys;
         this.preselects = preselects;
@@ -207,6 +240,9 @@ final class ExternalSubscriptionEvaluation {
         this.checkpointSubjectBlueId = checkpointSubjectBlueId;
         this.dependencies = Objects.requireNonNull(
                 dependencies, "dependencies");
+        this.payloadBlueId = payloadBlueId;
+        this.handlerChannelKey = handlerChannelKey;
+        this.logicalDeliveryKey = logicalDeliveryKey;
     }
 
     @Override
@@ -225,7 +261,14 @@ final class ExternalSubscriptionEvaluation {
                 && Objects.equals(
                 checkpointSubjectBlueId,
                 evaluation.checkpointSubjectBlueId)
-                && dependencies.equals(evaluation.dependencies);
+                && dependencies.equals(evaluation.dependencies)
+                && Objects.equals(payloadBlueId, evaluation.payloadBlueId)
+                && Objects.equals(
+                handlerChannelKey,
+                evaluation.handlerChannelKey)
+                && Objects.equals(
+                logicalDeliveryKey,
+                evaluation.logicalDeliveryKey);
     }
 
     @Override
@@ -237,6 +280,9 @@ final class ExternalSubscriptionEvaluation {
                 accepts,
                 checkpointDomainBlueId,
                 checkpointSubjectBlueId,
-                dependencies);
+                dependencies,
+                payloadBlueId,
+                handlerChannelKey,
+                logicalDeliveryKey);
     }
 }

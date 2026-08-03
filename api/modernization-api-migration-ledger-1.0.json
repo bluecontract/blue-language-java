@@ -679,6 +679,22 @@
         "public/protected class added: blue.language.processor.EmbeddedScopePlanView",
         "public/protected class added: blue.language.processor.EmbeddedScopePlanView$Origin"
       ]
+    },
+    {
+      "id": "phase-7-public-runtime-projection-and-indexed-delivery",
+      "requirement": "latest-language-public-api-gap.md",
+      "rationale": "Approve the exact additive JVM API needed for lifecycle-bound runtime composition, configured subscription-surface projection, and authoritative indexed-delivery preparation with deterministic evidence. These additions expose no mutable registry, cache, matcher, or Coordination type and do not change the semantic baseline.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "method added: blue.language.processor.DocumentProcessor$Builder :: runtimeAccess(Lblue/language/processor/ProcessorRuntimeAccess;)Lblue/language/processor/DocumentProcessor$Builder;",
+        "method added: blue.language.processor.SubscriptionSurfaceValidationContext :: usesRetainedIntervalInputSurface()Z",
+        "public/protected class added: blue.language.processor.ExternalSubscriptionOccurrenceKey",
+        "public/protected class added: blue.language.processor.IndexedDeliveryDiagnostic",
+        "public/protected class added: blue.language.processor.IndexedDeliveryEvaluator",
+        "public/protected class added: blue.language.processor.IndexedDeliveryPreparation",
+        "public/protected class added: blue.language.processor.ProcessorRuntimeAccess",
+        "public/protected class added: blue.language.processor.SubscriptionSurfaceProjection"
+      ]
     }
   ]
 }

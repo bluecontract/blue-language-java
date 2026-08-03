@@ -8,6 +8,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.mapping.TypeClassResolver;
+import blue.language.runtime.LanguageRuntimeAccess;
 
 import java.util.Objects;
 
@@ -31,6 +32,9 @@ public class DocumentProcessor implements AutoCloseable {
     private ConformanceEngine conformanceEngine;
     private ConformancePlannerOverride conformancePlannerOverride;
     private ProcessingSnapshotManager snapshotManager;
+    private LanguageRuntimeAccess languageRuntimeAccess;
+    private ProcessorRuntimeAccess.GenerationGuard
+            runtimeGenerationGuard;
     private ContractMatchingService matchingService;
     private volatile ProcessingObserver observer;
     private final GasSchedule gasSchedule;
@@ -63,6 +67,9 @@ public class DocumentProcessor implements AutoCloseable {
         this.conformancePlannerOverride =
                 components.conformancePlannerOverride;
         this.snapshotManager = components.snapshotManager;
+        this.languageRuntimeAccess = components.languageRuntimeAccess;
+        this.runtimeGenerationGuard =
+                components.runtimeGenerationGuard;
         this.matchingService = components.matchingService;
         this.observer = components.observer;
         this.gasSchedule = components.gasSchedule;
@@ -87,7 +94,8 @@ public class DocumentProcessor implements AutoCloseable {
                         DocumentProcessor.this
                                 .detachRuntimeCollaborators();
                     }
-                });
+                },
+                runtimeGenerationGuard);
         DocumentProcessorProcessingSupport processingSupport =
                 new DocumentProcessorProcessingSupport(this);
         this.nodeOperations = new DocumentProcessorNodeOperations(
@@ -358,6 +366,14 @@ public class DocumentProcessor implements AutoCloseable {
 
     ProcessingSnapshotManager snapshotManager() { return snapshotManager; }
 
+    LanguageRuntimeAccess languageRuntimeAccess() {
+        return languageRuntimeAccess;
+    }
+
+    ProcessorRuntimeAccess.GenerationGuard runtimeGenerationGuard() {
+        return runtimeGenerationGuard;
+    }
+
     ProcessingSnapshotManager scopeIdentitySnapshotManager() {
         return administration.scopeIdentitySnapshotManager();
     }
@@ -467,6 +483,8 @@ public class DocumentProcessor implements AutoCloseable {
         conformanceEngine = null;
         conformancePlannerOverride = null;
         snapshotManager = null;
+        languageRuntimeAccess = null;
+        runtimeGenerationGuard = null;
         matchingService = null;
         observer = NoOpProcessingObserver.INSTANCE;
     }
@@ -630,6 +648,25 @@ public class DocumentProcessor implements AutoCloseable {
         }
 
         /**
+         * Imports one exact processor runtime and snapshot generation.
+         *
+         * <p>The access view is consulted while its source processor is live.
+         * The resulting processor borrows the same Language runtime and
+         * snapshot manager, and configures its provider, cache policy, and
+         * matching service from that single generation.</p>
+         *
+         * @param access live processor runtime access view
+         * @return this builder
+         * @throws NullPointerException if {@code access} is {@code null}
+         * @throws IllegalStateException if the source generation is closed,
+         *         incomplete, or no longer current
+         */
+        public Builder runtimeAccess(
+                ProcessorRuntimeAccess access) {
+            return support.runtimeAccess(access, this);
+        }
+
+        /**
          * Replaces contract matching behavior.
          *
          * @param service matching service
@@ -739,7 +776,7 @@ public class DocumentProcessor implements AutoCloseable {
          * @return independent processor generation
          */
         public DocumentProcessor build() {
-            return new DocumentProcessor(support.configurationSnapshot());
+            return support.build();
         }
     }
 }

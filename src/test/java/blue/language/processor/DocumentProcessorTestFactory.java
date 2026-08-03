@@ -22,6 +22,8 @@ final class DocumentProcessorTestFactory {
                 null,
                 null,
                 null,
+                null,
+                null,
                 new ContractMatchingService(),
                 NoOpProcessingObserver.INSTANCE,
                 null,

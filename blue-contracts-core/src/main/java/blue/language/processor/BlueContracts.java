@@ -4,6 +4,7 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.runtime.LanguageProcessing;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
@@ -152,6 +153,65 @@ public final class BlueContracts implements AutoCloseable {
     public EffectiveFragmentationCatalog effectiveFragmentationCatalog(
             Node root) {
         return call(() -> processor.administration().effectiveFragmentationCatalog(root));
+    }
+
+    /**
+     * Returns the borrowed Language runtime capability owned by this service.
+     *
+     * <p>The access remains valid only while this service is open. A custom
+     * processor can import it atomically through
+     * {@link DocumentProcessor.Builder#runtimeAccess(ProcessorRuntimeAccess)}.
+     * </p>
+     *
+     * @return lifecycle-bound processor runtime access
+     * @throws IllegalStateException when this service is closed
+     */
+    public ProcessorRuntimeAccess runtimeAccess() {
+        return call(() -> processor.administration().runtimeAccess());
+    }
+
+    /**
+     * Returns the configured subscription-surface projection service.
+     *
+     * @return lifecycle-bound read-only projection service
+     * @throws IllegalStateException when this service is closed
+     */
+    public SubscriptionSurfaceProjection subscriptionSurfaceProjection() {
+        return call(() -> processor.administration()
+                .subscriptionSurfaceProjection());
+    }
+
+    /**
+     * Returns the authoritative indexed-delivery evaluator.
+     *
+     * @return lifecycle-bound indexed-delivery evaluator
+     * @throws IllegalStateException when this service is closed
+     */
+    public IndexedDeliveryEvaluator indexedDeliveryEvaluator() {
+        return call(() -> processor.administration()
+                .indexedDeliveryEvaluator());
+    }
+
+    /**
+     * Creates a compatibility deriver backed by authoritative evaluation of
+     * every retained active occurrence.
+     *
+     * @param rootRevision non-negative managed and indexed Root revision
+     * @param eventOrderKey exact order of the event supplied to the deriver
+     * @param completeActiveIntervals complete retained subscription surface
+     * @return immutable plan deriver borrowing this service
+     * @throws IllegalStateException when this service is closed
+     */
+    public ExternalDeliveryPlanDeriver currentRootDeliveryPlanDeriver(
+            long rootRevision,
+            ExternalOrderKey eventOrderKey,
+            List<SubscriptionDelta.Entry> completeActiveIntervals) {
+        return call(() -> processor.administration()
+                .indexedDeliveryEvaluator()
+                .currentRootDeriver(
+                        rootRevision,
+                        eventOrderKey,
+                        completeActiveIntervals));
     }
 
     /**

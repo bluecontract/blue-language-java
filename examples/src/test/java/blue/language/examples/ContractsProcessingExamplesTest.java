@@ -123,4 +123,22 @@ final class ContractsProcessingExamplesTest {
         assertEquals(result.getLessonCParticipantBlueId(),
                 result.getParentParticipantBlueId());
     }
+
+    @Test
+    void shouldRunRuntimeProjectionAndIndexedDeliveryExample() {
+        // given
+        String expectedResolvedName = "Managed host example";
+
+        // when
+        RuntimeProjectionAndIndexedDeliveryExample.Result result =
+                RuntimeProjectionAndIndexedDeliveryExample.run();
+
+        // then
+        assertEquals(expectedResolvedName, result.resolvedName());
+        assertEquals(0, result.addedSubscriptions());
+        assertEquals(0, result.diagnosticCount());
+        assertEquals(0, result.deliveryCount());
+        assertTrue(result.importedRuntimeCurrent());
+        assertTrue(result.compatibilityPlanExact());
+    }
 }

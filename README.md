@@ -293,6 +293,9 @@ and gas traces across equivalent representations.
   neutral Channel or Handler.
 - [Embedded collection paths](docs/guides/embedded-collection-paths.md): select
   stable-key child scopes, bind local Channels, and handle activation deltas.
+- [Runtime projection and indexed delivery](docs/guides/runtime-projection-and-indexed-delivery.md):
+  compose custom processors, project persistent subscriptions, and verify
+  physical-index candidates without private kernel access.
 - [Collection-paths migration report](docs/collection-paths-and-cohesion-migration-report.md):
   review conformance, locality, gas, API, benchmark, and cohesion evidence.
 - [Developer process](docs/developer-process.md): fixtures, identity-bearing

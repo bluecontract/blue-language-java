@@ -37,5 +37,15 @@
  * Hosts may inspect the read-only public projection through
  * {@link blue.language.processor.EmbeddedScopePlanView}; it contains no
  * executable behavior and consumes no Contracts gas.</p>
+ *
+ * <p><strong>Managed-host evidence.</strong> A host that persists Root
+ * revisions and external subscription intervals should obtain
+ * {@link blue.language.processor.SubscriptionSurfaceProjection} and
+ * {@link blue.language.processor.IndexedDeliveryEvaluator} from its configured
+ * Contracts service or processor administration view. A custom processor can
+ * import the same verified Language generation through
+ * {@link blue.language.processor.ProcessorRuntimeAccess}; none of these
+ * boundaries exposes mutable loaders, registries, caches, or matcher
+ * sessions.</p>
  */
 package blue.language.processor;

@@ -957,8 +957,22 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                 "child",
                 rootWithChannels(childChannel));
         Node event = event("topic");
-        ExternalDeliveryPlan plan = plan(
-                snapshot("/", "root", rootChannel, event));
+        ExternalDeliverySnapshot rootDelivery =
+                snapshot("/", "root", rootChannel, event);
+        ExternalDeliverySnapshot childOccurrence =
+                snapshot("/child", "child", childChannel, event);
+        ExternalDeliveryPlan plan = ExternalDeliveryPlan.builder()
+                .revisions(7L, 7L)
+                .eventOrderKey(EVENT_ORDER)
+                .activeSubscriptionIntervals(
+                        Collections.<SubscriptionDelta.Entry>emptyList())
+                .activeSubscriptionInterval(
+                        activeInterval(rootDelivery))
+                .activeSubscriptionInterval(
+                        activeInterval(childOccurrence))
+                .delivery(rootDelivery)
+                .exactRuntimeState()
+                .build();
 
         Map<String, Node> providerNodes = new LinkedHashMap<>();
         providerNodes.put(CHANNEL_TYPE_BLUE_ID, CHANNEL_TYPE);

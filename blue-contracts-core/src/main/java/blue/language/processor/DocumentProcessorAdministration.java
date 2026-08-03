@@ -20,12 +20,23 @@ public final class DocumentProcessorAdministration {
 
     private final DocumentProcessor processor;
     private final DocumentProcessorLifecycle lifecycle;
+    private final ProcessorRuntimeAccess runtimeAccess;
+    private final SubscriptionSurfaceProjection subscriptionSurfaceProjection;
+    private final IndexedDeliveryEvaluator indexedDeliveryEvaluator;
 
     DocumentProcessorAdministration(
             DocumentProcessor processor,
             DocumentProcessorLifecycle lifecycle) {
         this.processor = processor;
         this.lifecycle = lifecycle;
+        this.runtimeAccess = new ProcessorRuntimeAccess(
+                processor, lifecycle);
+        this.subscriptionSurfaceProjection =
+                new SubscriptionSurfaceProjection(
+                        processor, lifecycle);
+        this.indexedDeliveryEvaluator =
+                new IndexedDeliveryEvaluator(
+                        processor, lifecycle);
     }
 
     /** Registers an annotated processor under one atomic revision. */
@@ -145,11 +156,8 @@ public final class DocumentProcessorAdministration {
         if (configured != null) {
             return configured;
         }
-        ContractMatchingService matchingService =
-                processor.matchingService();
-        LanguageRuntimeAccess languageRuntime = matchingService != null
-                ? matchingService.blue()
-                : null;
+        LanguageRuntimeAccess languageRuntime =
+                processor.languageRuntimeAccess();
         if (languageRuntime == null) {
             return new RegisteredContractScopeIdentitySnapshotManager(
                     processor.registry());
@@ -176,6 +184,39 @@ public final class DocumentProcessorAdministration {
         return DocumentProcessorConfigurationSupport
                 .copyContractTypeResolver(
                         processor.contractTypeResolverInternal());
+    }
+
+    /**
+     * Returns the lifecycle-bound Language runtime view for this generation.
+     *
+     * <p>The returned value borrows this processor. It can be imported by a
+     * custom processor builder, but it must not outlive this processor.</p>
+     *
+     * @return immutable borrowed runtime access
+     * @throws IllegalStateException when this generation is closed or lacks
+     *         a verified Language runtime or snapshot manager
+     */
+    public ProcessorRuntimeAccess runtimeAccess() {
+        runtimeAccess.binding();
+        return runtimeAccess;
+    }
+
+    /**
+     * Returns the configured subscription-surface projection service.
+     *
+     * @return lifecycle-bound read-only projection service
+     */
+    public SubscriptionSurfaceProjection subscriptionSurfaceProjection() {
+        return subscriptionSurfaceProjection;
+    }
+
+    /**
+     * Returns the configured authoritative indexed-delivery evaluator.
+     *
+     * @return lifecycle-bound indexed-delivery service
+     */
+    public IndexedDeliveryEvaluator indexedDeliveryEvaluator() {
+        return indexedDeliveryEvaluator;
     }
 
     /**

@@ -34,6 +34,7 @@ public final class SubscriptionSurfaceValidationContext {
     private final Set<String> replacedScopePaths;
     private final List<SubscriptionDelta.Entry> activeSubscriptionIntervals;
     private final boolean activeSubscriptionIntervalsSupplied;
+    private final boolean retainedIntervalInputSurface;
     private final GasSchedule gasSchedule;
     private final ExternalOrderKey currentEventOrderKey;
     private final Long committingRootRevision;
@@ -59,6 +60,8 @@ public final class SubscriptionSurfaceValidationContext {
                         builder.activeSubscriptionIntervals);
         this.activeSubscriptionIntervalsSupplied =
                 builder.activeSubscriptionIntervalsSupplied;
+        this.retainedIntervalInputSurface =
+                builder.retainedIntervalInputSurface;
         this.gasSchedule = Objects.requireNonNull(
                 builder.gasSchedule, "gasSchedule");
         this.currentEventOrderKey = builder.currentEventOrderKey;
@@ -92,6 +95,12 @@ public final class SubscriptionSurfaceValidationContext {
     /**
      * Returns the exact input Root retained by this context.
      *
+     * <p>When {@link #usesRetainedIntervalInputSurface()} is {@code true}, no
+     * distinct structural before-Root was supplied. In that mode this value is
+     * a detached copy of the resulting Root for compatibility, and
+     * {@link #activeSubscriptionIntervals()} is the authoritative prior
+     * subscription surface.</p>
+     *
      * @return caller-supplied mutable input Root reference
      */
     public Node inputRoot() {
@@ -109,6 +118,10 @@ public final class SubscriptionSurfaceValidationContext {
 
     /**
      * Returns the optional resolved input companion.
+     *
+     * <p>For a retained-interval input surface this is the same immutable
+     * resulting snapshot returned by {@link #tentativeSnapshot()}; validators
+     * must use the retained intervals as prior-state evidence.</p>
      *
      * @return immutable input snapshot, or {@code null}
      */
@@ -128,10 +141,26 @@ public final class SubscriptionSurfaceValidationContext {
     /**
      * Returns changed paths captured when the context was built.
      *
+     * <p>A host projection may add canonically ordered retained descendant
+     * scopes that require conservative re-evaluation. Those scopes are
+     * deterministic invalidation inputs; the caller-owned set is not changed.
+     * </p>
+     *
      * @return immutable insertion-ordered path set
      */
     public Set<String> changedPaths() {
         return changedPaths;
+    }
+
+    /**
+     * Reports whether retained intervals, rather than a distinct structural
+     * before-Root, define the authoritative input subscription surface.
+     *
+     * @return {@code true} for host projection from a resulting Root and a
+     *         retained active interval index
+     */
+    public boolean usesRetainedIntervalInputSurface() {
+        return retainedIntervalInputSurface;
     }
 
     /** Reports whether current-event membership was frozen for one scope. */
@@ -248,6 +277,7 @@ public final class SubscriptionSurfaceValidationContext {
         private final List<SubscriptionDelta.Entry>
                 activeSubscriptionIntervals = new ArrayList<>();
         private boolean activeSubscriptionIntervalsSupplied;
+        private boolean retainedIntervalInputSurface;
         private ResolvedSnapshot inputSnapshot;
         private ResolvedSnapshot tentativeSnapshot;
         private ExternalOrderKey currentEventOrderKey;
@@ -345,6 +375,12 @@ public final class SubscriptionSurfaceValidationContext {
                     Objects.requireNonNull(
                             factory,
                             "runtimeWorkSessionFactory");
+            return this;
+        }
+
+        /** Marks retained intervals as the authoritative prior surface. */
+        Builder retainedIntervalInputSurface() {
+            this.retainedIntervalInputSurface = true;
             return this;
         }
 

@@ -130,9 +130,20 @@ final class ExternalDeliveryResolution implements AutoCloseable {
             throw ExternalEvidenceVerificationSupport.invalid(
                     "Scope is absent: " + scopePath);
         }
-        FrozenNode selectedFrozen = snapshot != null
-                ? snapshot.canonicalAt(scopePath)
-                : FrozenNode.fromResolvedNode(selected);
+        FrozenNode selectedFrozen;
+        if (snapshot != null) {
+            FrozenNode canonical = snapshot.canonicalAt(scopePath);
+            /*
+             * A pure-reference canonical fragment carries only its identity.
+             * Contract contribution proof needs the verified exact selected
+             * content that selectedNodeAt already materialized.
+             */
+            selectedFrozen = canonical != null && canonical.isReferenceOnly()
+                    ? FrozenNode.fromResolvedNode(selected)
+                    : canonical;
+        } else {
+            selectedFrozen = FrozenNode.fromResolvedNode(selected);
+        }
         return contractLoader.load(
                 selectedFrozen,
                 projectionBuilder.subscriptionProjection(

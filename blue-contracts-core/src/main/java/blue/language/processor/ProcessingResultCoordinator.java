@@ -97,7 +97,7 @@ final class ProcessingResultCoordinator {
                                 runtime.replacedEmbeddedScopePaths())
                         .runtimeWorkSessions(() -> runtime
                                 .newRuntimeWorkSession(
-                                        owner.matchingService().blue()));
+                                        owner.languageRuntimeAccess()));
         VerifiedExecutionEvidence evidence = evidenceSupplier.get();
         if (evidence != null) {
             long revision = evidence.managedRootRevision();

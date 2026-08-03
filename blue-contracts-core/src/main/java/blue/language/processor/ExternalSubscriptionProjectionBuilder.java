@@ -139,8 +139,14 @@ final class ExternalSubscriptionProjectionBuilder {
                 || snapshotManager == null) {
             return selected;
         }
-        return snapshotManager.materializeVerifiedExactReference(
-                FrozenNode.fromResolvedNode(selected)).toNode();
+        FrozenNode reference = FrozenNode.fromResolvedNode(selected);
+        FrozenNode materialized = snapshotManager
+                .materializeVerifiedExactReference(reference);
+        return requireMaterialized(
+                reference,
+                materialized,
+                "Exact selected scope content is unavailable")
+                .toNode();
     }
 
     /** Opens effective pure-reference scope content through verified evidence. */
@@ -149,8 +155,14 @@ final class ExternalSubscriptionProjectionBuilder {
                 || snapshotManager == null) {
             return effective;
         }
-        return snapshotManager.materializeVerifiedReference(
-                FrozenNode.fromResolvedNode(effective)).toNode();
+        FrozenNode reference = FrozenNode.fromResolvedNode(effective);
+        FrozenNode materialized = snapshotManager
+                .materializeVerifiedReference(reference);
+        return requireMaterialized(
+                reference,
+                materialized,
+                "Effective scope content is unavailable")
+                .toNode();
     }
 
     /** Creates a planner bound to this projection's verified provider view. */
@@ -454,8 +466,27 @@ final class ExternalSubscriptionProjectionBuilder {
                     "Enumeration-selector exact header materialization "
                             + "is unavailable");
         }
-        return snapshotManager.materializeVerifiedExactReference(
-                FrozenNode.fromNode(node)).toNode();
+        FrozenNode reference = FrozenNode.fromNode(node);
+        FrozenNode materialized = snapshotManager
+                .materializeVerifiedExactReference(reference);
+        return requireMaterialized(
+                reference,
+                materialized,
+                "Enumeration-selector exact header content is unavailable")
+                .toNode();
+    }
+
+    private FrozenNode requireMaterialized(
+            FrozenNode reference,
+            FrozenNode materialized,
+            String message) {
+        if (materialized != null) {
+            return materialized;
+        }
+        throw ExternalEvidenceVerificationSupport.unavailable(
+                message,
+                Collections.singleton(
+                        reference.getReferenceBlueId()));
     }
 
     private Map<String, String> exactContractTypes(

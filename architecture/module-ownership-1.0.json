@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 585,
+    "productionSourceCount": 591,
     "productionResourceCount": 370,
-    "productionSourcePathIdentity": "sha256:502bc262906950dc74c34a4064f4c360ae84d5917b9caf47b563920b5eea34cd",
+    "productionSourcePathIdentity": "sha256:cd68f3345cd5c6e239a2c43e4a66b4183a6fdc505c8d11413671ba40b70348ca",
     "productionResourcePathIdentity": "sha256:a1ccc0c0105048804474a0ac9ac7a2b095e05d3b094a60a046295e78e5203797"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -1183,6 +1183,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ExternalSubscriptionOccurrenceKey.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ExternalSubscriptionOccurrenceKey.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ExternalSubscriptionProjection.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1299,6 +1306,27 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ImmutablePatchPlanner.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryDiagnostic.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryDiagnostic.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryEvaluator.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryEvaluator.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryPreparation.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/IndexedDeliveryPreparation.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1855,6 +1883,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorRuntimeAccess.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorRuntimeAccess.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorStatus.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -2069,6 +2104,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceInvalidException.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceProjection.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceProjection.java",
       "targetPackage": "blue.language.processor"
     },
     {

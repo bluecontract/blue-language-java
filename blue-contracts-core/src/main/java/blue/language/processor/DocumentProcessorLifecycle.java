@@ -19,6 +19,8 @@ final class DocumentProcessorLifecycle {
     }
 
     private final Resources resources;
+    private volatile ProcessorRuntimeAccess.GenerationGuard
+            runtimeGenerationGuard;
     private final ReentrantReadWriteLock lock =
             new ReentrantReadWriteLock();
     private final Lock readLock = lock.readLock();
@@ -28,19 +30,41 @@ final class DocumentProcessorLifecycle {
     private volatile boolean clearRequested;
 
     DocumentProcessorLifecycle(Resources resources) {
+        this(resources, null);
+    }
+
+    DocumentProcessorLifecycle(
+            Resources resources,
+            ProcessorRuntimeAccess.GenerationGuard
+                    runtimeGenerationGuard) {
         this.resources = resources;
+        this.runtimeGenerationGuard = runtimeGenerationGuard;
     }
 
     /** Acquires one registry/configuration revision and lifecycle read. */
     ReadScope openRead(ContractProcessorRegistry registry) {
+        ProcessorRuntimeAccess.GenerationLease generationLease =
+                runtimeGenerationGuard != null
+                        ? runtimeGenerationGuard.open()
+                        : null;
         Lock configurationRead = registry.configurationReadLock();
-        configurationRead.lock();
-        readLock.lock();
         try {
-            ensureOpen();
-            return new ReadScope(this, configurationRead);
+            configurationRead.lock();
+            readLock.lock();
+            try {
+                ensureOpen();
+                return new ReadScope(
+                        this,
+                        configurationRead,
+                        generationLease);
+            } catch (RuntimeException | Error failure) {
+                releaseReadAndConfiguration(configurationRead);
+                throw failure;
+            }
         } catch (RuntimeException | Error failure) {
-            releaseReadAndConfiguration(configurationRead);
+            if (generationLease != null) {
+                generationLease.close();
+            }
             throw failure;
         }
     }
@@ -141,6 +165,7 @@ final class DocumentProcessorLifecycle {
                 cachesCleared = true;
             }
             resources.detachRuntimeCollaborators();
+            runtimeGenerationGuard = null;
             clearRequested = false;
         } else if (clearRequested) {
             resources.clearCaches();
@@ -175,20 +200,31 @@ final class DocumentProcessorLifecycle {
     static final class ReadScope implements AutoCloseable {
         private DocumentProcessorLifecycle lifecycle;
         private Lock configurationRead;
+        private ProcessorRuntimeAccess.GenerationLease generationLease;
 
         private ReadScope(
                 DocumentProcessorLifecycle lifecycle,
-                Lock configurationRead) {
+                Lock configurationRead,
+                ProcessorRuntimeAccess.GenerationLease generationLease) {
             this.lifecycle = lifecycle;
             this.configurationRead = configurationRead;
+            this.generationLease = generationLease;
         }
 
         @Override
         public void close() {
             if (lifecycle != null) {
-                lifecycle.releaseReadAndConfiguration(configurationRead);
-                lifecycle = null;
-                configurationRead = null;
+                try {
+                    lifecycle.releaseReadAndConfiguration(
+                            configurationRead);
+                } finally {
+                    lifecycle = null;
+                    configurationRead = null;
+                    if (generationLease != null) {
+                        generationLease.close();
+                        generationLease = null;
+                    }
+                }
             }
         }
     }
