@@ -30,12 +30,51 @@ final class ExecutableBodyPathCatalog {
             Iterable<String> openedScopePaths,
             Map<String, List<String>> executableBodyFieldsByType,
             ProcessingSnapshotManager exactMaterializer) {
+        return fromNodeDirectContracts(
+                document,
+                openedScopePaths,
+                executableBodyFieldsByType,
+                exactMaterializer);
+    }
+
+    /**
+     * Finds executable fields contributed by direct contracts and exact
+     * scope-type ancestry for strict evidence-selected processing.
+     */
+    static Set<String> fromNodeIncludingTypeContracts(
+            Node document,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            ProcessingSnapshotManager exactMaterializer) {
+        Set<String> result = new LinkedHashSet<>();
+        Set<String> selectedScopes = openedScopes(openedScopePaths);
+        for (String scopePath : selectedScopes) {
+            Node scope = JsonPointer.ROOT.equals(scopePath)
+                    ? document
+                    : NodePathEditor.getOrNull(document, scopePath);
+            collectIncludingTypeContracts(
+                    scope,
+                    JsonPointer.split(scopePath),
+                    executableBodyFieldsByType,
+                    result,
+                    exactMaterializer,
+                    selectedScopes);
+        }
+        return result;
+    }
+
+    /** Finds only executable fields declared directly on opened scopes. */
+    static Set<String> fromNodeDirectContracts(
+            Node document,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            ProcessingSnapshotManager exactMaterializer) {
         Set<String> result = new LinkedHashSet<>();
         for (String scopePath : openedScopes(openedScopePaths)) {
             Node scope = JsonPointer.ROOT.equals(scopePath)
                     ? document
                     : NodePathEditor.getOrNull(document, scopePath);
-            collect(
+            collectLegacyDirectContracts(
                     scope,
                     JsonPointer.split(scopePath),
                     executableBodyFieldsByType,
@@ -43,6 +82,54 @@ final class ExecutableBodyPathCatalog {
                     exactMaterializer);
         }
         return result;
+    }
+
+    /**
+     * Preserves the established manager semantics for configured processor
+     * calls, while retaining exact BlueId verification for any reference-
+     * backed contracts map or contract header that recognition must open.
+     */
+    private static void collectLegacyDirectContracts(
+            Node node,
+            List<String> path,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Set<String> result,
+            ProcessingSnapshotManager materializer) {
+        if (node == null
+                || executableBodyFieldsByType == null
+                || executableBodyFieldsByType.isEmpty()) {
+            return;
+        }
+        Node contracts = node.getContracts();
+        if (contracts != null && contracts.isReferenceOnly()
+                && materializer != null) {
+            contracts = materializeVerifiedExact(
+                    materializer,
+                    FrozenNode.fromNode(contracts),
+                    "Contracts-map recognition").toNode();
+        }
+        if (contracts == null || contracts.getProperties() == null) {
+            return;
+        }
+        for (Map.Entry<String, Node> entry
+                : contracts.getProperties().entrySet()) {
+            Node contract = entry.getValue();
+            if (contract != null && contract.isReferenceOnly()
+                    && materializer != null) {
+                contract = materializeVerifiedExact(
+                        materializer,
+                        FrozenNode.fromNode(contract),
+                        "Contract-header recognition").toNode();
+            }
+            List<String> fields = executableBodyFieldsByType.get(
+                    exactTypeBlueId(contract));
+            if (fields != null) {
+                addEventMatcherPath(contract, path, entry.getKey(), result);
+                for (String field : fields) {
+                    addBodyPath(path, entry.getKey(), field, result);
+                }
+            }
+        }
     }
 
     static Set<String> fromFrozen(
@@ -73,12 +160,41 @@ final class ExecutableBodyPathCatalog {
         FrozenNode checkedRoot = Objects.requireNonNull(
                 canonicalRoot, "canonicalRoot");
         Node document = checkedRoot.toNode();
-        Set<String> preserved = fromNode(
+        Set<String> preserved = fromNodeDirectContracts(
                 document,
                 openedScopePaths,
                 executableBodyFieldsByType,
                 checkedManager);
-        preserved.addAll(ordinaryReferencePaths(document));
+        preserved.addAll(opaqueCyclicMemberPaths(document));
+        if (preserved.isEmpty()) {
+            return checkedManager.fromDocumentTransient(document);
+        }
+        return forceDeferredResolution(
+                checkedManager.fromDocumentTransientPreservingPaths(
+                        document, preserved));
+    }
+
+    /**
+     * Resolves an evidence-selected platform scope while keeping inherited
+     * bodies and ordinary reference values physically deferred.
+     */
+    static ResolvedSnapshot resolveCanonicalTransientIncludingTypeContracts(
+            ProcessingSnapshotManager manager,
+            FrozenNode canonicalRoot,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType) {
+        ProcessingSnapshotManager checkedManager = Objects.requireNonNull(
+                manager, "snapshotManager");
+        FrozenNode checkedRoot = Objects.requireNonNull(
+                canonicalRoot, "canonicalRoot");
+        Node document = checkedRoot.toNode();
+        Set<String> preserved = fromNodeIncludingTypeContracts(
+                document,
+                openedScopePaths,
+                executableBodyFieldsByType,
+                checkedManager);
+        preserved.addAll(ordinaryReferencePaths(
+                document, openedScopePaths));
         preserved.addAll(opaqueCyclicMemberPaths(document));
         if (preserved.isEmpty()) {
             return checkedManager.fromDocumentTransient(document);
@@ -99,11 +215,27 @@ final class ExecutableBodyPathCatalog {
     }
 
     static Set<String> ordinaryReferencePaths(Node document) {
+        return ordinaryReferencePaths(document, null);
+    }
+
+    /**
+     * Finds references that are ordinary relative to the selected scope
+     * closure. Type, contracts-map, and list-replacement references are
+     * structural only on a selected scope or one of its ancestors; the same
+     * references on an unopened sibling must remain physically cold.
+     */
+    static Set<String> ordinaryReferencePaths(
+            Node document,
+            Iterable<String> openedScopePaths) {
         Set<String> result = new LinkedHashSet<>();
+        Set<String> selectedClosure = openedScopePaths != null
+                ? openedScopes(openedScopePaths)
+                : null;
         collectOrdinaryReferencePaths(
                 document,
                 JsonPointer.ROOT,
                 false,
+                selectedClosure,
                 result,
                 new IdentityHashMap<Node, Boolean>());
         return result;
@@ -201,40 +333,43 @@ final class ExecutableBodyPathCatalog {
         if (node == null || visited.put(node, Boolean.TRUE) != null) {
             return;
         }
-        result.add(path);
-        if (node.isReferenceOnly()) {
-            return;
-        }
-        if (node.getProperties() != null) {
-            for (Map.Entry<String, Node> entry
-                    : node.getProperties().entrySet()) {
-                collectAuthoredNodePaths(
-                        entry.getValue(),
-                        JsonPointer.append(path, entry.getKey()),
-                        result,
-                        visited);
+        try {
+            result.add(path);
+            if (node.isReferenceOnly()) {
+                return;
             }
-        }
-        if (node.getItems() != null) {
-            for (int index = 0; index < node.getItems().size(); index++) {
-                collectAuthoredNodePaths(
-                        node.getItems().get(index),
-                        JsonPointer.append(path, Integer.toString(index)),
-                        result,
-                        visited);
+            if (node.getProperties() != null) {
+                for (Map.Entry<String, Node> entry
+                        : node.getProperties().entrySet()) {
+                    collectAuthoredNodePaths(
+                            entry.getValue(),
+                            JsonPointer.append(path, entry.getKey()),
+                            result,
+                            visited);
+                }
             }
+            if (node.getItems() != null) {
+                for (int index = 0; index < node.getItems().size(); index++) {
+                    collectAuthoredNodePaths(
+                            node.getItems().get(index),
+                            JsonPointer.append(path, Integer.toString(index)),
+                            result,
+                            visited);
+                }
+            }
+        } finally {
+            visited.remove(node);
         }
     }
 
-    private static void collect(
+    private static void collectIncludingTypeContracts(
             Node node,
             List<String> path,
             Map<String, List<String>> executableBodyFieldsByType,
             Set<String> result,
-            ProcessingSnapshotManager exactMaterializer) {
-        if (node == null
-                || executableBodyFieldsByType == null
-                || executableBodyFieldsByType.isEmpty()) {
+            ProcessingSnapshotManager exactMaterializer,
+            Set<String> selectedScopes) {
+        if (node == null) {
             return;
         }
         collectTypeContracts(
@@ -244,7 +379,8 @@ final class ExecutableBodyPathCatalog {
                 result,
                 exactMaterializer,
                 new LinkedHashSet<String>(),
-                0);
+                0,
+                selectedScopes);
         collectDirectContracts(
                 node,
                 path,
@@ -265,7 +401,8 @@ final class ExecutableBodyPathCatalog {
             Set<String> result,
             ProcessingSnapshotManager exactMaterializer,
             Set<String> activeTypes,
-            int depth) {
+            int depth,
+            Set<String> selectedScopes) {
         if (declaredType == null) {
             return;
         }
@@ -305,16 +442,111 @@ final class ExecutableBodyPathCatalog {
                     result,
                     exactMaterializer,
                     activeTypes,
-                    depth + 1);
+                    depth + 1,
+                    selectedScopes);
             collectDirectContracts(
                     exactType,
                     path,
                     executableBodyFieldsByType,
                     result,
                     exactMaterializer);
+            collectTypeProvidedScopes(
+                    exactType,
+                    path,
+                    executableBodyFieldsByType,
+                    result,
+                    exactMaterializer,
+                    selectedScopes);
         } finally {
             activeTypes.remove(identity);
         }
+    }
+
+    /**
+     * Catalogs selected descendants supplied only by a scope type. Effective
+     * paths are rebased onto the instance path because resolver limits track
+     * the merged document, not the physical path inside the type fragment.
+     * Whole unopened descendants are preserved so their structural metadata
+     * cannot trigger an unrelated provider read.
+     */
+    private static void collectTypeProvidedScopes(
+            Node typeContribution,
+            List<String> scopePath,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Set<String> result,
+            ProcessingSnapshotManager exactMaterializer,
+            Set<String> selectedScopes) {
+        if (typeContribution == null) {
+            return;
+        }
+        if (typeContribution.getProperties() != null) {
+            for (Map.Entry<String, Node> entry
+                    : typeContribution.getProperties().entrySet()) {
+                List<String> childPath = new ArrayList<>(scopePath);
+                childPath.add(entry.getKey());
+                collectTypeProvidedScope(
+                        entry.getValue(),
+                        childPath,
+                        executableBodyFieldsByType,
+                        result,
+                        exactMaterializer,
+                        selectedScopes);
+            }
+        }
+        if (typeContribution.getItems() != null) {
+            for (int index = 0;
+                    index < typeContribution.getItems().size();
+                    index++) {
+                List<String> childPath = new ArrayList<>(scopePath);
+                childPath.add(Integer.toString(index));
+                collectTypeProvidedScope(
+                        typeContribution.getItems().get(index),
+                        childPath,
+                        executableBodyFieldsByType,
+                        result,
+                        exactMaterializer,
+                        selectedScopes);
+            }
+        }
+    }
+
+    /** Handles one rebased child contributed by an exact scope type. */
+    private static void collectTypeProvidedScope(
+            Node child,
+            List<String> childPath,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Set<String> result,
+            ProcessingSnapshotManager exactMaterializer,
+            Set<String> selectedScopes) {
+        String effectivePath = JsonPointer.toPointer(childPath);
+        if (!participatesInOpenedClosure(
+                effectivePath, selectedScopes)) {
+            result.add(effectivePath);
+            return;
+        }
+        Node exactChild = child;
+        if (child != null && child.isReferenceOnly()
+                && exactMaterializer != null) {
+            exactChild = materializeVerifiedExact(
+                    exactMaterializer,
+                    FrozenNode.fromNode(child),
+                    "Type-provided selected-scope recognition")
+                    .toNode();
+        }
+        collectIncludingTypeContracts(
+                exactChild,
+                childPath,
+                executableBodyFieldsByType,
+                result,
+                exactMaterializer,
+                selectedScopes);
+        collectTypeProvidedScopes(
+                exactChild,
+                childPath,
+                executableBodyFieldsByType,
+                result,
+                exactMaterializer,
+                selectedScopes);
     }
 
     /** Adds executable paths declared by one exact scope contribution. */
@@ -324,6 +556,10 @@ final class ExecutableBodyPathCatalog {
             Map<String, List<String>> executableBodyFieldsByType,
             Set<String> result,
             ProcessingSnapshotManager exactMaterializer) {
+        if (executableBodyFieldsByType == null
+                || executableBodyFieldsByType.isEmpty()) {
+            return;
+        }
         Node contracts = node.getContracts();
         if (contracts != null
                 && contracts.isReferenceOnly()
@@ -391,7 +627,7 @@ final class ExecutableBodyPathCatalog {
             String path,
             Set<String> result,
             IdentityHashMap<Node, Boolean> visited) {
-        if (node == null || visited.put(node, Boolean.TRUE) != null) {
+        if (node == null) {
             return;
         }
         if (node.isReferenceOnly()) {
@@ -400,36 +636,44 @@ final class ExecutableBodyPathCatalog {
             }
             return;
         }
-        if (node.getItems() != null) {
-            for (int index = 0; index < node.getItems().size(); index++) {
-                collectOpaqueCyclicMemberPaths(
-                        node.getItems().get(index),
-                        JsonPointer.append(path, String.valueOf(index)),
-                        result,
-                        visited);
-            }
+        if (visited.put(node, Boolean.TRUE) != null) {
+            return;
         }
-        if (node.getProperties() != null) {
-            for (Map.Entry<String, Node> entry
-                    : node.getProperties().entrySet()) {
-                collectOpaqueCyclicMemberPaths(
-                        entry.getValue(),
-                        JsonPointer.append(path, entry.getKey()),
-                        result,
-                        visited);
+        try {
+            if (node.getItems() != null) {
+                for (int index = 0; index < node.getItems().size(); index++) {
+                    collectOpaqueCyclicMemberPaths(
+                            node.getItems().get(index),
+                            JsonPointer.append(path, String.valueOf(index)),
+                            result,
+                            visited);
+                }
             }
+            if (node.getProperties() != null) {
+                for (Map.Entry<String, Node> entry
+                        : node.getProperties().entrySet()) {
+                    collectOpaqueCyclicMemberPaths(
+                            entry.getValue(),
+                            JsonPointer.append(path, entry.getKey()),
+                            result,
+                            visited);
+                }
+            }
+            collectOpaqueCyclicMemberPaths(
+                    node.getContracts(),
+                    JsonPointer.append(
+                            path, ProcessorContractConstants.KEY_CONTRACTS),
+                    result,
+                    visited);
+        } finally {
+            visited.remove(node);
         }
-        collectOpaqueCyclicMemberPaths(
-                node.getContracts(),
-                JsonPointer.append(
-                        path, ProcessorContractConstants.KEY_CONTRACTS),
-                result,
-                visited);
     }
 
     /**
      * Keeps non-structural references physically cold while resolving the
-     * selected scope's type and contracts-map structure. Once those two
+     * selected scope closure's type and contracts-map structure. Structural
+     * references outside that closure are cold as well. Once selected
      * structural references have been opened, contract entries and nested
      * header/body values remain deferred for the contract loader to admit on
      * demand.
@@ -438,9 +682,10 @@ final class ExecutableBodyPathCatalog {
             Node node,
             String path,
             boolean structuralReference,
+            Set<String> openedScopePaths,
             Set<String> result,
             IdentityHashMap<Node, Boolean> visited) {
-        if (node == null || visited.put(node, Boolean.TRUE) != null) {
+        if (node == null) {
             return;
         }
         if (node.isReferenceOnly()) {
@@ -449,41 +694,101 @@ final class ExecutableBodyPathCatalog {
             }
             return;
         }
-        collectOrdinaryReferencePaths(
-                node.getType(),
-                JsonPointer.append(
-                        path, BlueLanguageConstants.OBJECT_TYPE),
-                true,
-                result,
-                visited);
-        collectOrdinaryReferencePaths(
-                node.getContracts(),
-                JsonPointer.append(
-                        path, ProcessorContractConstants.KEY_CONTRACTS),
-                true,
-                result,
-                visited);
-        if (node.getProperties() != null) {
-            for (Map.Entry<String, Node> entry
-                    : node.getProperties().entrySet()) {
-                collectOrdinaryReferencePaths(
-                        entry.getValue(),
-                        JsonPointer.append(path, entry.getKey()),
-                        false,
-                        result,
-                        visited);
+        if (visited.put(node, Boolean.TRUE) != null) {
+            return;
+        }
+        try {
+            boolean selectedStructure = participatesInOpenedClosure(
+                    path, openedScopePaths);
+            if (!selectedStructure
+                    && hasResolutionSensitiveStructure(node)) {
+                result.add(path);
+                return;
+            }
+            collectOrdinaryReferencePaths(
+                    node.getType(),
+                    JsonPointer.append(
+                            path, BlueLanguageConstants.OBJECT_TYPE),
+                    selectedStructure,
+                    openedScopePaths,
+                    result,
+                    visited);
+            collectOrdinaryReferencePaths(
+                    node.getContracts(),
+                    JsonPointer.append(
+                            path, ProcessorContractConstants.KEY_CONTRACTS),
+                    selectedStructure,
+                    openedScopePaths,
+                    result,
+                    visited);
+            if (node.getProperties() != null) {
+                for (Map.Entry<String, Node> entry
+                        : node.getProperties().entrySet()) {
+                    collectOrdinaryReferencePaths(
+                            entry.getValue(),
+                            JsonPointer.append(path, entry.getKey()),
+                            selectedStructure
+                                    && BlueLanguageConstants
+                                    .LIST_CONTROL_REPLACE.equals(
+                                            entry.getKey()),
+                            openedScopePaths,
+                            result,
+                            visited);
+                }
+            }
+            if (node.getItems() != null) {
+                for (int index = 0; index < node.getItems().size(); index++) {
+                    collectOrdinaryReferencePaths(
+                            node.getItems().get(index),
+                            JsonPointer.append(path, Integer.toString(index)),
+                            false,
+                            openedScopePaths,
+                            result,
+                            visited);
+                }
+            }
+        } finally {
+            visited.remove(node);
+        }
+    }
+
+    /** Returns whether resolving this node can open structural evidence. */
+    private static boolean hasResolutionSensitiveStructure(Node node) {
+        if (node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null
+                || node.getSchema() != null
+                || isReference(node.getContracts())) {
+            return true;
+        }
+        Node replacement = node.getProperties() != null
+                ? node.getProperties().get(
+                        BlueLanguageConstants.LIST_CONTROL_REPLACE)
+                : null;
+        return isReference(replacement);
+    }
+
+    private static boolean isReference(Node node) {
+        return node != null && node.isReferenceOnly();
+    }
+
+    /** Returns whether a path is selected or is an ancestor of a selection. */
+    private static boolean participatesInOpenedClosure(
+            String path,
+            Set<String> openedScopePaths) {
+        if (openedScopePaths == null) {
+            return true;
+        }
+        String normalizedPath = PointerUtils.normalizeScope(path);
+        for (String openedScopePath : openedScopePaths) {
+            if (PointerUtils.descendantOrEqual(
+                    PointerUtils.normalizeScope(openedScopePath),
+                    normalizedPath)) {
+                return true;
             }
         }
-        if (node.getItems() != null) {
-            for (int index = 0; index < node.getItems().size(); index++) {
-                collectOrdinaryReferencePaths(
-                        node.getItems().get(index),
-                        JsonPointer.append(path, Integer.toString(index)),
-                        false,
-                        result,
-                        visited);
-            }
-        }
+        return false;
     }
 
     private static void addEventMatcherPath(

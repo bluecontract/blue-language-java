@@ -38,6 +38,7 @@ final class ProcessorInvocationServices implements AutoCloseable {
     private final ExternalDeliveryEvidenceVerifier deliveryEvidenceVerifier;
     private final SubscriptionSurfaceValidator subscriptionSurfaceValidator;
     private final boolean ownsProviderDerivedCaches;
+    private final boolean strictPlatformInvocation;
 
     private ProcessorInvocationServices(
             ContractProcessorRegistry registry,
@@ -55,7 +56,8 @@ final class ProcessorInvocationServices implements AutoCloseable {
             String runtimeRegistryIdentity,
             ExternalDeliveryEvidenceVerifier deliveryEvidenceVerifier,
             SubscriptionSurfaceValidator subscriptionSurfaceValidator,
-            boolean ownsProviderDerivedCaches) {
+            boolean ownsProviderDerivedCaches,
+            boolean strictPlatformInvocation) {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.contractTypeResolver = Objects.requireNonNull(
                 contractTypeResolver, "contractTypeResolver");
@@ -82,6 +84,7 @@ final class ProcessorInvocationServices implements AutoCloseable {
                 subscriptionSurfaceValidator,
                 "subscriptionSurfaceValidator");
         this.ownsProviderDerivedCaches = ownsProviderDerivedCaches;
+        this.strictPlatformInvocation = strictPlatformInvocation;
     }
 
     /** Captures the ordinary immutable processor generation. */
@@ -104,6 +107,7 @@ final class ProcessorInvocationServices implements AutoCloseable {
                 processor.runtimeRegistryIdentity(),
                 processor.deliveryEvidenceVerifier(),
                 processor.subscriptionSurfaceValidator(),
+                false,
                 false);
     }
 
@@ -129,7 +133,8 @@ final class ProcessorInvocationServices implements AutoCloseable {
                 processor.contractConverter(),
                 processor.contractTypeResolverInternal(),
                 processor.cachePolicy(),
-                provider);
+                provider,
+                true);
         loader.gasSchedule(processor.gasSchedule());
         ContractMatchingService matching =
                 new ContractMatchingService(runtime);
@@ -162,6 +167,7 @@ final class ProcessorInvocationServices implements AutoCloseable {
                 processor.runtimeRegistryIdentity(),
                 verifier,
                 surfaceValidator,
+                true,
                 true);
     }
 
@@ -223,6 +229,11 @@ final class ProcessorInvocationServices implements AutoCloseable {
 
     SubscriptionSurfaceValidator subscriptionSurfaceValidator() {
         return subscriptionSurfaceValidator;
+    }
+
+    /** Returns whether this call uses the strict request-local provider domain. */
+    boolean strictPlatformInvocation() {
+        return strictPlatformInvocation;
     }
 
     /**

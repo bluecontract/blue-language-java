@@ -43,7 +43,8 @@ final class ExternalSubscriptionProjectionBuilder {
         }
         Node exactRoot = materializeSelectedScope(root.clone());
         ResolvedSnapshot snapshot = snapshotManager != null
-                ? ExecutableBodyPathCatalog.resolveCanonicalTransient(
+                ? ExecutableBodyPathCatalog
+                        .resolveCanonicalTransientIncludingTypeContracts(
                         snapshotManager,
                         FrozenNode.fromNode(exactRoot),
                         ExecutableBodyPathCatalog.authoredNodePaths(

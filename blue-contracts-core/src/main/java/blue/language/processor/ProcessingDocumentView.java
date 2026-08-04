@@ -80,7 +80,7 @@ final class ProcessingDocumentView {
                     && manager != null
                     && (selected.isReferenceOnly()
                     || requiresDeferredScopeResolution(
-                            current, selected))) {
+                            normalized, current, selected))) {
                 return resolvedDeferredScope(
                         normalized, selected, manager);
             }
@@ -178,21 +178,31 @@ final class ProcessingDocumentView {
                 ? exactReferencedScope(
                         normalizedPath, selected, manager)
                 : selected;
-        FrozenNode resolved = DocumentProcessingRuntime
-                .resolveCanonicalTransient(
+        ResolvedSnapshot deferred = runtime.strictPlatformInvocation
+                ? DocumentProcessingRuntime
+                        .resolveCanonicalTransientIncludingTypeContracts(
+                                manager,
+                                exact,
+                                Collections.singleton(JsonPointer.ROOT),
+                                runtime.executableBodyFieldsByType)
+                : DocumentProcessingRuntime.resolveCanonicalTransient(
                         manager,
                         exact,
                         Collections.singleton(JsonPointer.ROOT),
-                        runtime.executableBodyFieldsByType)
-                .frozenResolvedRoot();
+                        runtime.executableBodyFieldsByType);
+        FrozenNode resolved = deferred.frozenResolvedRoot();
         resolvedDeferredScopes.put(normalizedPath, resolved);
         return resolved;
     }
 
     private boolean requiresDeferredScopeResolution(
+            String normalizedPath,
             ResolvedSnapshot current,
             FrozenNode selected) {
-        if (current.isResolutionComplete()) {
+        if (!runtime.strictPlatformInvocation
+                || current.isResolutionComplete()
+                || !runtime.evidenceScopePaths()
+                        .contains(normalizedPath)) {
             return false;
         }
         return selected.getType() != null
@@ -269,13 +279,24 @@ final class ProcessingDocumentView {
                     manager.materializeVerifiedReference(effectiveContract);
             if (materialized.getType() == null) {
                 if (refreshedEffectiveScope == null) {
+                    ResolvedSnapshot refreshed =
+                            runtime.strictPlatformInvocation
+                                    ? DocumentProcessingRuntime
+                                            .resolveCanonicalTransientIncludingTypeContracts(
+                                                    manager,
+                                                    selectedScope,
+                                                    Collections.singleton(
+                                                            JsonPointer.ROOT),
+                                                    runtime.executableBodyFieldsByType)
+                                    : DocumentProcessingRuntime
+                                            .resolveCanonicalTransient(
+                                                    manager,
+                                                    selectedScope,
+                                                    Collections.singleton(
+                                                            JsonPointer.ROOT),
+                                                    runtime.executableBodyFieldsByType);
                     refreshedEffectiveScope =
-                            DocumentProcessingRuntime.resolveCanonicalTransient(
-                                    manager,
-                                    selectedScope,
-                                    Collections.singleton(JsonPointer.ROOT),
-                                    runtime.executableBodyFieldsByType)
-                                    .frozenResolvedRoot();
+                            refreshed.frozenResolvedRoot();
                 }
                 FrozenNode refreshedContract =
                         refreshedEffectiveScope.getContracts() != null
@@ -368,7 +389,8 @@ final class ProcessingDocumentView {
                     runtime.scopes().keySet(),
                     runtime.executableBodyFieldsByType,
                     runtime.entryEmbeddedScopePlans(),
-                    current.isResolutionComplete());
+                    current.isResolutionComplete(),
+                    runtime.strictPlatformInvocation);
         }
         Node root = runtime.materializedView.copyRoot();
         FrozenNode canonical =
@@ -389,7 +411,8 @@ final class ProcessingDocumentView {
                 runtime.scopes().keySet(),
                 runtime.executableBodyFieldsByType,
                 runtime.entryEmbeddedScopePlans(),
-                true);
+                true,
+                runtime.strictPlatformInvocation);
     }
 
     boolean hasInitializationMarker(String scopePath) {

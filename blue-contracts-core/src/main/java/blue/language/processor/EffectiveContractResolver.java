@@ -106,6 +106,15 @@ final class EffectiveContractResolver {
                             EffectiveContractSnapshotConstants
                                     .DispatchField.EVENT);
                 }
+                if (effectiveTypeBlueId != null) {
+                    for (String nodeField
+                            : registry.nodeValuedHeaderFields(
+                                    effectiveTypeBlueId)) {
+                        if (!deferredFields.contains(nodeField)) {
+                            deferredFields.add(nodeField);
+                        }
+                    }
+                }
                 contracts.put(entry.getKey(),
                         materialized != null
                                 ? contributions.materializeVerifiedHeader(

@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.model.Node;
+import blue.language.model.wire.JsonPointer;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
@@ -105,7 +106,8 @@ final class ProcessorInvocationState {
                 owner.observer(),
                 owner.newGasMeter(),
                 owner.registry()
-                        .executableBodyFieldsByType());
+                        .executableBodyFieldsByType(),
+                owner.strictPlatformInvocation());
         this.contractRecognitionMeter =
                 new ContractRecognitionMeter(
                         runtime.gasMeter());
@@ -198,7 +200,8 @@ final class ProcessorInvocationState {
                 owner.observer(),
                 owner.newGasMeter(),
                 owner.registry()
-                        .executableBodyFieldsByType());
+                        .executableBodyFieldsByType(),
+                owner.strictPlatformInvocation());
         this.contractRecognitionMeter =
                 new ContractRecognitionMeter(
                         runtime.gasMeter());
@@ -298,6 +301,9 @@ final class ProcessorInvocationState {
 
     void admitEvidence() {
         if (executionEvidence != null) {
+            if (owner.strictPlatformInvocation()) {
+                runtime.admitEvidenceScopePath(JsonPointer.ROOT);
+            }
             for (ExternalDeliverySnapshot delivery
                     : executionEvidence.deliveries()) {
                 runtime.admitEvidenceScopePath(delivery.scopePath());

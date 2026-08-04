@@ -405,7 +405,8 @@ final class RuntimeLanguageProcessing extends NodeProviderWrapper
                         document,
                         preservedPaths,
                         cache,
-                        scopeNodeProvider);
+                        scopeNodeProvider,
+                        isolatedProviderDomain);
                 if (!publish) {
                     return resolved;
                 }
@@ -736,14 +737,21 @@ final class RuntimeLanguageProcessing extends NodeProviderWrapper
             Node document,
             Set<String> preservedPaths,
             ResolvedReferenceCache cache,
-            NodeProvider provider) {
+            NodeProvider provider,
+            boolean isolatedProviderDomain) {
         Node preprocessed = preprocessor(provider).preprocess(
                 document.clone());
+        // A request-local scope must never probe a preserved path: it has no
+        // hidden fallback provider. Configured scopes retain the established
+        // defer-and-restore behavior for backward-compatible snapshot reuse.
         ResolutionLimits limits = preservedPaths.isEmpty()
                 ? ResolutionLimits.NO_LIMITS
                 : ResolutionLimits.allOf(
                 ResolutionLimits.NO_LIMITS,
-                ResolutionLimits.deferringReferencesAt(preservedPaths));
+                isolatedProviderDomain
+                        ? ResolutionLimits.excluding(preservedPaths)
+                        : ResolutionLimits.deferringReferencesAt(
+                                preservedPaths));
         Node resolved = merger(provider, cache).resolve(
                 preprocessed.clone(), limits);
         if (!preservedPaths.isEmpty()) {

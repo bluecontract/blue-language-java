@@ -275,6 +275,67 @@ final class BlueContractsTest {
     }
 
     @Test
+    void shouldKeepUnrelatedReferenceColdForPureReferenceEmptyPlanRoot() {
+        // given
+        Node cold = new Node().properties(
+                "value", new Node().value("must stay cold"));
+        String coldBlueId = DirectBlueIdCalculator.calculateBlueId(cold);
+        Node root = new Node()
+                .properties("name", new Node().value("Empty-plan Root"))
+                .properties("cold", new Node().blueId(coldBlueId));
+        Node event = new Node().properties(
+                "kind", new Node().value("empty-plan-event"));
+        String rootBlueId = DirectBlueIdCalculator.calculateBlueId(root);
+        AtomicInteger coldReads = new AtomicInteger();
+        NodeProvider invocationProvider = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                return rootBlueId.equals(blueId)
+                        ? Collections.singletonList(root.clone())
+                        : null;
+            }
+
+            @Override
+            public NodeProviderResult fetchResultByBlueId(String blueId) {
+                if (rootBlueId.equals(blueId)) {
+                    return NodeProviderResult.found(
+                            Collections.singletonList(root.clone()));
+                }
+                if (coldBlueId.equals(blueId)) {
+                    coldReads.incrementAndGet();
+                    return NodeProviderResult.invalidEvidence(
+                            "unrelated empty-plan reference was demanded");
+                }
+                return NodeProviderResult.notFound();
+            }
+        };
+
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             BlueContracts contracts = BlueContracts.builder(
+                     language.processing()).build()) {
+            PlatformProcessInvocation invocation = invocation(
+                    prepareEmptyPlan(contracts, root, event)
+                            .deliveryPlan(),
+                    invocationProvider);
+
+            // when
+            PlatformProcessingResult result =
+                    contracts.processForPlatformCommit(
+                            new Node().blueId(rootBlueId),
+                            event,
+                            invocation);
+
+            // then
+            assertEquals(ProcessorStatus.NO_MATCH,
+                    result.processResult().status());
+            assertEquals(0, coldReads.get());
+            assertEquals(coldBlueId,
+                    result.processResult().document()
+                            .getProperties().get("cold").getBlueId());
+        }
+    }
+
+    @Test
     void shouldRejectPreparedPlanBoundToDifferentRootOrEvent() {
         // given
         Node root = new Node().properties(

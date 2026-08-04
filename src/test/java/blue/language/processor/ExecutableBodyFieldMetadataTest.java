@@ -14,6 +14,8 @@ import blue.language.processor.model.Contract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -30,12 +32,226 @@ import java.util.function.BooleanSupplier;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExecutableBodyFieldMetadataTest {
+
+    @Test
+    void shouldKeepOrdinaryReferenceIntroducedByScopeTypeCold() {
+        // given
+        Node coldSibling = new Node()
+                .name("Type-provided cold sibling")
+                .properties("payload", new Node().value("must stay cold"));
+        String coldSiblingBlueId =
+                DirectBlueIdCalculator.calculateBlueId(coldSibling);
+        Node scopeType = new Node()
+                .name("Scope type with a cold sibling")
+                .properties(
+                        "coldSibling",
+                        new Node().blueId(coldSiblingBlueId));
+        String scopeTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(scopeType);
+        Node document = new Node()
+                .type(new Node().blueId(scopeTypeBlueId));
+        List<String> providerRequests = new ArrayList<>();
+        NodeProvider provider = blueId -> {
+            providerRequests.add(blueId);
+            if (scopeTypeBlueId.equals(blueId)) {
+                return Collections.singletonList(scopeType.clone());
+            }
+            if (coldSiblingBlueId.equals(blueId)) {
+                return Collections.singletonList(coldSibling.clone());
+            }
+            return null;
+        };
+
+        // when
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            ProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(scope);
+            ExecutableBodyPathCatalog
+                    .resolveCanonicalTransientIncludingTypeContracts(
+                            manager,
+                            FrozenNode.fromNode(document),
+                            Collections.singleton("/"),
+                            Collections.singletonMap(
+                                    "unused-executable-type",
+                                    Collections.<String>emptyList()));
+        }
+
+        // then
+        assertTrue(providerRequests.contains(scopeTypeBlueId));
+        assertFalse(
+                providerRequests.contains(coldSiblingBlueId),
+                "opening a structural scope type must not demand an unrelated nested reference");
+    }
+
+    @Test
+    void shouldKeepExecutableBodyIntroducedByTypeProvidedChildCold() {
+        // given
+        Node program = new Node()
+                .properties("payload", new Node().value("must stay cold"));
+        String programBlueId =
+                DirectBlueIdCalculator.calculateBlueId(program);
+        Node handlerType = new Node().name("Type-provided child handler");
+        String handlerTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(handlerType);
+        Node childType = new Node()
+                .name("Type-provided child scope")
+                .contracts(new Node().properties(
+                        "handler",
+                        new Node()
+                                .type(new Node().blueId(handlerTypeBlueId))
+                                .properties(
+                                        "program",
+                                        new Node().blueId(programBlueId))));
+        String childTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(childType);
+        Node rootType = new Node()
+                .name("Scope type providing a child")
+                .properties(
+                        "child",
+                        new Node()
+                                .type(new Node().blueId(childTypeBlueId))
+                                .properties(
+                                        "state",
+                                        new Node().value("inherited")));
+        String rootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(rootType);
+        Node document = new Node()
+                .type(new Node().blueId(rootTypeBlueId))
+                .properties(
+                        "child",
+                        new Node().properties(
+                                "authoredState",
+                                new Node().value("authored")));
+        List<String> providerRequests = new ArrayList<>();
+        Map<String, Node> content = new LinkedHashMap<>();
+        content.put(rootTypeBlueId, rootType);
+        content.put(childTypeBlueId, childType);
+        content.put(handlerTypeBlueId, handlerType);
+        content.put(programBlueId, program);
+        NodeProvider provider = blueId -> {
+            providerRequests.add(blueId);
+            Node exact = content.get(blueId);
+            return exact == null
+                    ? null
+                    : Collections.singletonList(exact.clone());
+        };
+
+        // when
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            ProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(scope);
+            ExecutableBodyPathCatalog
+                    .resolveCanonicalTransientIncludingTypeContracts(
+                            manager,
+                            FrozenNode.fromNode(document),
+                            Collections.singleton("/child"),
+                            Collections.singletonMap(
+                                    handlerTypeBlueId,
+                                    Collections.singletonList("program")));
+        }
+
+        // then
+        assertFalse(
+                providerRequests.contains(programBlueId),
+                "merging an authored child with its type contribution must not demand an unselected executable body");
+    }
+
+    @Test
+    void shouldOpenReferencedContractHeaderWithoutDemandingItsColdBody() {
+        // given
+        Node program = new Node()
+                .properties("payload", new Node().value("must stay cold"));
+        String programBlueId =
+                DirectBlueIdCalculator.calculateBlueId(program);
+        Node handlerType = new Node().name("Referenced header handler");
+        String handlerTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(handlerType);
+        Node contractHeader = new Node()
+                .type(new Node().blueId(handlerTypeBlueId))
+                .properties(
+                        "program",
+                        new Node().blueId(programBlueId));
+        String contractHeaderBlueId =
+                DirectBlueIdCalculator.calculateBlueId(contractHeader);
+        Node document = new Node().contracts(
+                new Node().properties(
+                        "coldHandler",
+                        new Node().blueId(contractHeaderBlueId)));
+        List<String> providerRequests = new ArrayList<>();
+        Map<String, Node> content = new LinkedHashMap<>();
+        content.put(contractHeaderBlueId, contractHeader);
+        content.put(handlerTypeBlueId, handlerType);
+        content.put(programBlueId, program);
+        NodeProvider provider = blueId -> {
+            providerRequests.add(blueId);
+            Node exact = content.get(blueId);
+            return exact == null
+                    ? null
+                    : Collections.singletonList(exact.clone());
+        };
+
+        // when
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            ProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(scope);
+            ExecutableBodyPathCatalog
+                    .resolveCanonicalTransientIncludingTypeContracts(
+                            manager,
+                            FrozenNode.fromNode(document),
+                            Collections.singleton("/"),
+                            Collections.singletonMap(
+                                    handlerTypeBlueId,
+                                    Collections.singletonList("program")));
+        }
+
+        // then
+        assertTrue(
+                providerRequests.contains(contractHeaderBlueId),
+                "contract recognition must establish the referenced header");
+        assertFalse(
+                providerRequests.contains(programBlueId),
+                "recognizing an unselected contract header must not demand its executable body");
+    }
+
+    @Test
+    void shouldCatalogEveryPhysicalPathForSharedReferenceInstance() {
+        // given
+        Node sharedReference = new Node().blueId(
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().value("shared cold value")));
+        Node document = new Node()
+                .properties("left", sharedReference)
+                .properties("right", sharedReference);
+
+        // when
+        Set<String> paths =
+                ExecutableBodyPathCatalog.ordinaryReferencePaths(
+                        document);
+
+        // then
+        assertEquals(2, paths.size());
+        assertTrue(paths.contains("/left"));
+        assertTrue(paths.contains("/right"));
+    }
 
     @Test
     void shouldVerifyHandlerEventMatcherIsPreservedAsAuthoredPartialData() {
@@ -204,6 +420,54 @@ class ExecutableBodyFieldMetadataTest {
         assertEquals(programIdentity, repeatedProgramIdentity);
         assertFalse(programIdentity.equals(bodyIdentity));
         assertFalse(programIdentity.equals(channelIdentity));
+    }
+
+    @Test
+    void shouldBindRegistryIdentityToNodeValuedHeaderMetadata() {
+        // given
+        Node canonicalType = new Node().name(
+                "Node-valued registry generation test type");
+        String blueId = DirectBlueIdCalculator.calculateBlueId(
+                canonicalType);
+        ContractProcessorRegistry nodeRegistry = registry(
+                blueId,
+                canonicalType,
+                new HandlerProcessor<NodeValuedRegistryHandler>() {
+                    @Override
+                    public Class<NodeValuedRegistryHandler> contractType() {
+                        return NodeValuedRegistryHandler.class;
+                    }
+
+                    @Override
+                    public void execute(
+                            NodeValuedRegistryHandler contract,
+                            ProcessorExecutionContext context) {
+                        // No execution is needed for registry identity.
+                    }
+                });
+        ContractProcessorRegistry textRegistry = registry(
+                blueId,
+                canonicalType,
+                new HandlerProcessor<TextValuedRegistryHandler>() {
+                    @Override
+                    public Class<TextValuedRegistryHandler> contractType() {
+                        return TextValuedRegistryHandler.class;
+                    }
+
+                    @Override
+                    public void execute(
+                            TextValuedRegistryHandler contract,
+                            ProcessorExecutionContext context) {
+                        // No execution is needed for registry identity.
+                    }
+                });
+
+        // when
+        String nodeIdentity = nodeRegistry.generationIdentity();
+        String textIdentity = textRegistry.generationIdentity();
+
+        // then
+        assertNotEquals(nodeIdentity, textIdentity);
     }
 
     private static ContractProcessorRegistry registry(
@@ -990,6 +1254,32 @@ class ExecutableBodyFieldMetadataTest {
 
         public void setBody(Node body) {
             this.body = body;
+        }
+    }
+
+    public static final class NodeValuedRegistryHandler
+            extends HandlerContract {
+        private Node payload;
+
+        public Node getPayload() {
+            return payload;
+        }
+
+        public void setPayload(Node payload) {
+            this.payload = payload;
+        }
+    }
+
+    public static final class TextValuedRegistryHandler
+            extends HandlerContract {
+        private String payload;
+
+        public String getPayload() {
+            return payload;
+        }
+
+        public void setPayload(String payload) {
+            this.payload = payload;
         }
     }
 

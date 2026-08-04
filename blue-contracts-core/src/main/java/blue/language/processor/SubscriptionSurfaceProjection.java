@@ -144,7 +144,8 @@ public final class SubscriptionSurfaceProjection {
                     "transientSequence");
             try {
                 Set<String> executableBodyPaths =
-                        ExecutableBodyPathCatalog.fromNode(
+                        ExecutableBodyPathCatalog
+                                .fromNodeIncludingTypeContracts(
                                 tentativeRoot,
                                 ExecutableBodyPathCatalog.authoredNodePaths(
                                         tentativeRoot),

@@ -46,6 +46,7 @@ final class DocumentProcessingRuntime {
     final ProcessingObserver metrics;
     final boolean lazyMaterializedCommits;
     final boolean selectedDocumentBacked;
+    final boolean strictPlatformInvocation;
 
     ResolvedSnapshot snapshot;
     ProcessingSnapshotManager activeSequenceSnapshotManager;
@@ -118,6 +119,20 @@ final class DocumentProcessingRuntime {
             ProcessingObserver metrics,
             GasMeter gasMeter,
             Map<String, List<String>> executableBodyFieldsByType) {
+        this(document, conformanceEngine, conformancePlannerOverride,
+                snapshotManager, metrics, gasMeter,
+                executableBodyFieldsByType, false);
+    }
+
+    DocumentProcessingRuntime(
+            Node document,
+            ConformanceEngine conformanceEngine,
+            ConformancePlannerOverride conformancePlannerOverride,
+            ProcessingSnapshotManager snapshotManager,
+            ProcessingObserver metrics,
+            GasMeter gasMeter,
+            Map<String, List<String>> executableBodyFieldsByType,
+            boolean strictPlatformInvocation) {
         this.materializedView = new MaterializedDocumentView(
                 Objects.requireNonNull(document, "document"));
         this.executableBodyFieldsByType =
@@ -130,6 +145,7 @@ final class DocumentProcessingRuntime {
                 ? metrics : NoOpProcessingObserver.INSTANCE;
         this.lazyMaterializedCommits = false;
         this.selectedDocumentBacked = true;
+        this.strictPlatformInvocation = strictPlatformInvocation;
         this.scopeRegistry = new ProcessingScopeRegistry();
         this.eventQueue = new ProcessingEventQueue();
         this.outputCollector = new ProcessingOutputCollector();
@@ -192,6 +208,20 @@ final class DocumentProcessingRuntime {
             ProcessingObserver metrics,
             GasMeter gasMeter,
             Map<String, List<String>> executableBodyFieldsByType) {
+        this(snapshot, conformanceEngine, conformancePlannerOverride,
+                snapshotManager, metrics, gasMeter,
+                executableBodyFieldsByType, false);
+    }
+
+    DocumentProcessingRuntime(
+            ResolvedSnapshot snapshot,
+            ConformanceEngine conformanceEngine,
+            ConformancePlannerOverride conformancePlannerOverride,
+            ProcessingSnapshotManager snapshotManager,
+            ProcessingObserver metrics,
+            GasMeter gasMeter,
+            Map<String, List<String>> executableBodyFieldsByType,
+            boolean strictPlatformInvocation) {
         this.metrics = metrics != null
                 ? metrics : NoOpProcessingObserver.INSTANCE;
         this.gasContext = new ProcessingGasContext(
@@ -211,6 +241,7 @@ final class DocumentProcessingRuntime {
         this.snapshot = prepared;
         this.lazyMaterializedCommits = true;
         this.selectedDocumentBacked = false;
+        this.strictPlatformInvocation = strictPlatformInvocation;
         this.scopeRegistry = new ProcessingScopeRegistry();
         this.eventQueue = new ProcessingEventQueue();
         this.outputCollector = new ProcessingOutputCollector();
@@ -658,6 +689,22 @@ final class DocumentProcessingRuntime {
             Map<String, List<String>> executableBodyFieldsByType,
             Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
             boolean resolutionComplete) {
+        return workingPlanningContext(canonicalRoot, resolvedRoot,
+                exactReplacement, snapshotManager, openedScopePaths,
+                executableBodyFieldsByType, entryEmbeddedScopePlans,
+                resolutionComplete, false);
+    }
+
+    static PatchPlanningContext workingPlanningContext(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            boolean exactReplacement,
+            ProcessingSnapshotManager snapshotManager,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
+            boolean resolutionComplete,
+            boolean strictPlatformInvocation) {
         return new PatchPlanningContext(null,
                 ImmutablePatchPlanner.forFrozen(canonicalRoot),
                 ImmutablePatchPlanner.forFrozen(resolvedRoot),
@@ -667,7 +714,8 @@ final class DocumentProcessingRuntime {
                 openedScopePaths,
                 executableBodyFieldsByType,
                 entryEmbeddedScopePlans,
-                resolutionComplete);
+                resolutionComplete,
+                strictPlatformInvocation);
     }
 
     List<DocumentUpdateData> commitBatchPatchResult(
@@ -721,6 +769,19 @@ final class DocumentProcessingRuntime {
         return ExecutableBodyPathCatalog.resolveCanonicalTransient(manager,
                 canonicalRoot, openedScopePaths,
                 executableBodyFieldsByType);
+    }
+
+    static ResolvedSnapshot resolveCanonicalTransientIncludingTypeContracts(
+            ProcessingSnapshotManager manager,
+            FrozenNode canonicalRoot,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType) {
+        return ExecutableBodyPathCatalog
+                .resolveCanonicalTransientIncludingTypeContracts(
+                        manager,
+                        canonicalRoot,
+                        openedScopePaths,
+                        executableBodyFieldsByType);
     }
 
     void markStateAdvanced(boolean sharedSnapshotInserted) {

@@ -15,6 +15,7 @@ import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.mapping.TypeClassResolver;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -54,6 +55,7 @@ final class ContractHeaderLoader {
     private final ContractContributionCollector contributions;
     private final ExecutableBodyLoader executableBodies;
     private final ContractSnapshotFactory snapshots;
+    private final boolean canonicalContractOrder;
     private GasSchedule gasSchedule = GasSchedule.contracts10();
 
     ContractHeaderLoader(
@@ -63,7 +65,8 @@ final class ContractHeaderLoader {
             EffectiveContractResolver effectiveContracts,
             ContractContributionCollector contributions,
             ExecutableBodyLoader executableBodies,
-            ContractSnapshotFactory snapshots) {
+            ContractSnapshotFactory snapshots,
+            boolean canonicalContractOrder) {
         this.registry = Objects.requireNonNull(registry, "registry");
         this.converter = Objects.requireNonNull(converter, "converter");
         this.typeResolver = Objects.requireNonNull(typeResolver, "typeResolver");
@@ -72,6 +75,7 @@ final class ContractHeaderLoader {
         this.contributions = Objects.requireNonNull(contributions, "contributions");
         this.executableBodies = Objects.requireNonNull(executableBodies, "executableBodies");
         this.snapshots = Objects.requireNonNull(snapshots, "snapshots");
+        this.canonicalContractOrder = canonicalContractOrder;
     }
 
     void gasSchedule(GasSchedule gasSchedule) {
@@ -159,14 +163,20 @@ final class ContractHeaderLoader {
             }
         }
 
-        for (Map.Entry<String, FrozenNode> entry : contractNodes.entrySet()) {
+        List<String> recognitionKeys = new ArrayList<>(
+                contractNodes.keySet());
+        if (canonicalContractOrder) {
+            recognitionKeys.sort(
+                    ExternalOrderKey::compareTextCodePoints);
+        }
+        for (String key : recognitionKeys) {
             recognize(
                     bundle,
                     exactSelectedScope,
                     effectiveScopeNode,
                     scopePath,
-                    entry.getKey(),
-                    entry.getValue(),
+                    key,
+                    contractNodes.get(key),
                     typeBlueIds,
                     contractNodes,
                     recognitionMeter,

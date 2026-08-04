@@ -8,6 +8,9 @@ import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -147,6 +150,184 @@ final class EvidenceClassificationViewTest {
         assertTrue(requests.contains(scopeTypeBlueId));
         assertFalse(requests.contains(forbiddenHeaderBlueId));
         assertFalse(requests.contains(forbiddenBodyBlueId));
+    }
+
+    @Test
+    void shouldKeepTypeProvidedUnrelatedSiblingTypeColdDuringClassification() {
+        // given
+        Node unrelatedSiblingType = new Node()
+                .name("Phase-B unrelated sibling type")
+                .properties("payload", new Node().value("must stay cold"));
+        String unrelatedSiblingTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        unrelatedSiblingType);
+        Node rootType = new Node()
+                .name("Phase-B root type with unrelated sibling")
+                .contracts(new Node().properties(
+                        SELECTED_CHANNEL,
+                        new Node().value("selected")))
+                .properties(
+                        UNRELATED_SCOPE,
+                        new Node().type(new Node().blueId(
+                                unrelatedSiblingTypeBlueId)));
+        String rootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(rootType);
+        List<String> requests = new ArrayList<>();
+        NodeProvider provider = blueId -> {
+            requests.add(blueId);
+            if (rootTypeBlueId.equals(blueId)) {
+                return Collections.singletonList(rootType.clone());
+            }
+            if (unrelatedSiblingTypeBlueId.equals(blueId)) {
+                throw new AssertionError(
+                        "Phase-B demanded an unrelated sibling type");
+            }
+            return null;
+        };
+        Node root = new Node().type(new Node().blueId(rootTypeBlueId));
+        Map<String, Set<String>> selectedKeys = new LinkedHashMap<>();
+        selectedKeys.put(
+                JsonPointer.ROOT,
+                Collections.singleton(SELECTED_CHANNEL));
+        Set<String> preserved = new LinkedHashSet<>();
+
+        // when
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope(provider);
+             DocumentProcessor processor = new DocumentProcessor();
+             ProcessorInvocationServices services =
+                     ProcessorInvocationServices.platform(
+                             processor,
+                             new LanguageProcessingSnapshotManager(scope),
+                             scope.runtimeAccess(),
+                             scope.newConformanceEngine())) {
+            EvidenceClassificationView view =
+                    new EvidenceClassificationView(
+                            services,
+                            null,
+                            root,
+                            null,
+                            () -> null);
+            view.pruneContracts(root, JsonPointer.ROOT, selectedKeys);
+            view.collectInheritedColdContractPaths(
+                    root,
+                    JsonPointer.ROOT,
+                    selectedKeys,
+                    preserved,
+                    new LinkedHashSet<String>());
+            view.collectColdReferencePaths(
+                    root,
+                    JsonPointer.ROOT,
+                    false,
+                    selectedKeys.keySet(),
+                    preserved);
+            services.snapshotManager()
+                    .fromDocumentTransientPreservingPaths(root, preserved);
+        }
+
+        // then
+        assertTrue(requests.contains(rootTypeBlueId));
+        assertFalse(
+                requests.contains(unrelatedSiblingTypeBlueId),
+                "Phase-B classification must not demand a type-provided sibling outside the retained channel surface");
+    }
+
+    @Test
+    void shouldRetainTypeThatSuppliesSelectedDescendantContract() {
+        // given
+        Node unrelatedType = new Node()
+                .name("Cold type-provided sibling")
+                .properties("payload", new Node().value("must stay cold"));
+        String unrelatedTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(unrelatedType);
+        Node selectedContract = new Node().value("selected");
+        Node rootType = new Node()
+                .name("Root type supplying the selected child")
+                .properties(
+                        "child",
+                        new Node().contracts(new Node().properties(
+                                SELECTED_CHANNEL,
+                                selectedContract.clone())))
+                .properties(
+                        UNRELATED_SCOPE,
+                        new Node().type(new Node().blueId(
+                                unrelatedTypeBlueId)));
+        String rootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(rootType);
+        List<String> requests = new ArrayList<>();
+        NodeProvider provider = blueId -> {
+            requests.add(blueId);
+            if (rootTypeBlueId.equals(blueId)) {
+                return Collections.singletonList(rootType.clone());
+            }
+            if (unrelatedTypeBlueId.equals(blueId)) {
+                throw new AssertionError(
+                        "Phase-B demanded a type outside the selected spine");
+            }
+            return null;
+        };
+        Node root = new Node()
+                .type(new Node().blueId(rootTypeBlueId))
+                .properties(
+                        "child",
+                        new Node().properties(
+                                "authoredState",
+                                new Node().value(true)));
+        ExternalDeliverySnapshot delivery =
+                ExternalDeliverySnapshot.builder(
+                                "/child", SELECTED_CHANNEL)
+                        .effectiveTypeBlueId("selected-type")
+                        .checkpointDomainBlueId("checkpoint-domain")
+                        .checkpointSubjectBlueId("checkpoint-subject")
+                        .build();
+        VerifiedExecutionEvidence evidence =
+                VerifiedExecutionEvidence.builder("root", "event")
+                        .revisions(1L, 1L)
+                        .runtimeRegistryIdentity("registry")
+                        .eventOrderKey(ExternalOrderKey.of(
+                                Collections.<Object>singletonList(1)))
+                        .delivery(delivery)
+                        .build();
+        FrozenNode selected;
+        FrozenNode resolved;
+
+        // when
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope(provider);
+             DocumentProcessor processor = new DocumentProcessor();
+             ProcessorInvocationServices services =
+                     ProcessorInvocationServices.platform(
+                             processor,
+                             new LanguageProcessingSnapshotManager(scope),
+                             scope.runtimeAccess(),
+                             scope.newConformanceEngine())) {
+            EvidenceClassificationView view =
+                    new EvidenceClassificationView(
+                            services,
+                            null,
+                            root,
+                            null,
+                            () -> evidence);
+            selected = view.selectedAt("/child");
+            resolved = view.resolvedAt("/child");
+        }
+
+        // then
+        assertNotNull(root.getType());
+        assertEquals(rootTypeBlueId, root.getType().getBlueId());
+        assertNotNull(selected);
+        assertNotNull(resolved);
+        assertTrue(selected.getProperties().containsKey("authoredState"));
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(selectedContract),
+                DirectBlueIdCalculator.calculateBlueId(
+                        resolved.getContracts()
+                                .property(SELECTED_CHANNEL)
+                                .toNode()));
+        assertTrue(requests.contains(rootTypeBlueId));
+        assertFalse(requests.contains(unrelatedTypeBlueId));
     }
 
     @Test

@@ -71,7 +71,8 @@ final class ProcessingSnapshotTransaction {
                     runtime.scopes().keySet(),
                     runtime.executableBodyFieldsByType,
                     runtime.entryEmbeddedScopePlans(),
-                    true);
+                    true,
+                    runtime.strictPlatformInvocation);
         }
         ResolvedSnapshot base = runtime.snapshot != null
                 ? runtime.snapshot
@@ -86,7 +87,8 @@ final class ProcessingSnapshotTransaction {
                 runtime.scopes().keySet(),
                 runtime.executableBodyFieldsByType,
                 runtime.entryEmbeddedScopePlans(),
-                base.isResolutionComplete());
+                base.isResolutionComplete(),
+                runtime.strictPlatformInvocation);
     }
 
     List<DocumentUpdateData> commitBatchPatchResult(
@@ -181,17 +183,28 @@ final class ProcessingSnapshotTransaction {
             Set<String> preservedPaths = new LinkedHashSet<>();
             Set<String> openedScopePaths = new LinkedHashSet<>(
                     runtime.scopes().keySet());
-            openedScopePaths.addAll(runtime.evidenceScopePaths());
-            preservedPaths.addAll(
-                    ExecutableBodyPathCatalog.fromNode(
-                            document,
-                            openedScopePaths,
-                            runtime.executableBodyFieldsByType,
-                            manager));
-            if (runtime.selectedDocumentBacked) {
+            if (runtime.selectedDocumentBacked
+                    && !runtime.strictPlatformInvocation) {
+                preservedPaths.addAll(
+                        ExecutableBodyPathCatalog.fromNodeDirectContracts(
+                                document,
+                                openedScopePaths,
+                                runtime.executableBodyFieldsByType,
+                                manager));
+            }
+            if (runtime.strictPlatformInvocation) {
                 preservedPaths.addAll(
                         ExecutableBodyPathCatalog
-                                .ordinaryReferencePaths(document));
+                                .fromNodeIncludingTypeContracts(
+                                        document,
+                                        runtime.evidenceScopePaths(),
+                                        runtime.executableBodyFieldsByType,
+                                        manager));
+                preservedPaths.addAll(
+                        ExecutableBodyPathCatalog
+                                .ordinaryReferencePaths(
+                                        document,
+                                        runtime.evidenceScopePaths()));
             }
             preservedPaths.addAll(
                     ExecutableBodyPathCatalog

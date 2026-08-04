@@ -47,9 +47,18 @@ final class ProcessingInputAdmission {
                             ProcessorPointerConstants.RELATIVE_TERMINATED,
                             ProcessorContractConstants.KEY_REASON)));
     private final ProcessingSnapshotManager snapshotManager;
+    private final boolean missingReferenceIsUnavailable;
 
     ProcessingInputAdmission(ProcessingSnapshotManager snapshotManager) {
+        this(snapshotManager, false);
+    }
+
+    ProcessingInputAdmission(
+            ProcessingSnapshotManager snapshotManager,
+            boolean missingReferenceIsUnavailable) {
         this.snapshotManager = snapshotManager;
+        this.missingReferenceIsUnavailable =
+                missingReferenceIsUnavailable;
     }
 
     static DocumentProcessingResult validateDocument(Node document) {
@@ -269,6 +278,9 @@ final class ProcessingInputAdmission {
                     exception);
         }
         if (materialized == null) {
+            if (missingReferenceIsUnavailable) {
+                throw unavailable(label, expectedBlueId, null);
+            }
             throw invalid(
                     label + " provider returned no content for "
                             + expectedBlueId,

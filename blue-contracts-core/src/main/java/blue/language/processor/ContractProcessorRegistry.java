@@ -9,7 +9,10 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.NodeProvider;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -47,6 +50,8 @@ public class ContractProcessorRegistry {
     private final Map<Class<? extends MarkerContract>, ContractProcessor<? extends MarkerContract>> markerProcessors = new LinkedHashMap<>();
     private final Map<String, HandlerProcessor<? extends HandlerContract>> handlerProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, List<String>> handlerExecutableBodyFieldsByBlueId =
+            new LinkedHashMap<>();
+    private final Map<String, List<String>> nodeValuedHeaderFieldsByBlueId =
             new LinkedHashMap<>();
     private final Map<String, ChannelProcessor<? extends ChannelContract>> channelProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ContractProcessor<? extends MarkerContract>> markerProcessorsByBlueId = new LinkedHashMap<>();
@@ -146,6 +151,13 @@ public class ContractProcessorRegistry {
                     : source.handlerExecutableBodyFieldsByBlueId
                             .entrySet()) {
                 this.handlerExecutableBodyFieldsByBlueId.put(
+                        entry.getKey(),
+                        Collections.unmodifiableList(
+                                new ArrayList<>(entry.getValue())));
+            }
+            for (Map.Entry<String, List<String>> entry
+                    : source.nodeValuedHeaderFieldsByBlueId.entrySet()) {
+                this.nodeValuedHeaderFieldsByBlueId.put(
                         entry.getKey(),
                         Collections.unmodifiableList(
                                 new ArrayList<>(entry.getValue())));
@@ -415,6 +427,17 @@ public class ContractProcessorRegistry {
     }
 
     /**
+     * Returns mapped fields whose Java value preserves Blue node structure.
+     * Such fields remain authored references until an owning runtime phase
+     * explicitly selects them; scalar header fields may be materialized for
+     * contract-function evaluation.
+     */
+    synchronized List<String> nodeValuedHeaderFields(String blueId) {
+        List<String> fields = nodeValuedHeaderFieldsByBlueId.get(blueId);
+        return fields != null ? fields : Collections.emptyList();
+    }
+
+    /**
      * Looks up the processor matching the contract's identity, then its exact
      * Java class as a compatibility fallback.
      *
@@ -546,11 +569,11 @@ public class ContractProcessorRegistry {
      * <p>The normative, empty application registry keeps the released runtime
      * package identity. Application registrations extend that identity with
      * their portable registration surface: exact type identity, processor
-     * role, declared type identities, executable-body fields, and whether the
-     * generation carries canonical type content. Evidence prepared by one
-     * custom generation therefore cannot be replayed against a registry with
-     * the same keys but different processing metadata. Java class names and
-     * object identities never participate.</p>
+     * role, declared type identities, executable-body fields, Node-valued
+     * header fields, and whether the generation carries canonical type
+     * content. Evidence prepared by one custom generation therefore cannot be
+     * replayed against a registry with the same keys but different processing
+     * metadata. Java class names and object identities never participate.</p>
      */
     synchronized String generationIdentity() {
         if (processorsByBlueId.isEmpty()) {
@@ -581,6 +604,12 @@ public class ContractProcessorRegistry {
             updateDigest(digest, Integer.toString(bodyFields.size()));
             for (String bodyField : bodyFields) {
                 updateDigest(digest, bodyField);
+            }
+            List<String> nodeFields =
+                    nodeValuedHeaderFieldsByBlueId.get(blueId);
+            updateDigest(digest, Integer.toString(nodeFields.size()));
+            for (String nodeField : nodeFields) {
+                updateDigest(digest, nodeField);
             }
         }
         return "sha256:" + toHex(digest.digest());
@@ -716,7 +745,11 @@ public class ContractProcessorRegistry {
                 && !Objects.equals(existing.contractType(), processor.contractType())) {
             throw new IllegalStateException("Duplicate BlueId value: " + blueId);
         }
+        List<String> nodeValuedHeaderFields =
+                nodeValuedHeaderFields(processor.contractType());
         processorsByBlueId.put(blueId, processor);
+        nodeValuedHeaderFieldsByBlueId.put(
+                blueId, nodeValuedHeaderFields);
         version++;
         if (kind == ProcessorKind.HANDLER) {
             @SuppressWarnings("unchecked")
@@ -758,6 +791,41 @@ public class ContractProcessorRegistry {
         }
         return Collections.unmodifiableList(
                 new ArrayList<>(unique));
+    }
+
+    /** Finds deterministic Jackson field names that map directly to Node. */
+    private static List<String> nodeValuedHeaderFields(
+            Class<? extends Contract> contractType) {
+        if (contractType == null) {
+            return Collections.emptyList();
+        }
+        Set<String> fields = new LinkedHashSet<>();
+        Class<?> current = contractType;
+        while (current != null && current != Object.class) {
+            for (Field field : current.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers())
+                        && !field.isSynthetic()
+                        && Node.class.isAssignableFrom(field.getType())) {
+                    fields.add(jsonPropertyName(field));
+                }
+            }
+            current = current.getSuperclass();
+        }
+        List<String> ordered = new ArrayList<>(fields);
+        ordered.sort(ExternalOrderKey::compareTextCodePoints);
+        return Collections.unmodifiableList(ordered);
+    }
+
+    /** Mirrors the mapping module's effective Jackson property-name rule. */
+    private static String jsonPropertyName(Field field) {
+        JsonProperty property = field.getAnnotation(JsonProperty.class);
+        if (property != null
+                && property.value() != null
+                && !property.value().isEmpty()
+                && !JsonProperty.USE_DEFAULT_NAME.equals(property.value())) {
+            return property.value();
+        }
+        return field.getName();
     }
 
     private ProcessorKind requireSupportedProcessor(

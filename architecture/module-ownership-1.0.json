@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 594,
+    "productionSourceCount": 595,
     "productionResourceCount": 370,
-    "productionSourcePathIdentity": "sha256:af8b46afa8d1250d5e6d66c648bf5e06c067e40cd3fd466f921a4aa6cf100507",
+    "productionSourcePathIdentity": "sha256:98e4e41c68e937876306d3e5dd052ca3d1e1f84fa0559311a7ff59b30152f3d0",
     "productionResourcePathIdentity": "sha256:a1ccc0c0105048804474a0ac9ac7a2b095e05d3b094a60a046295e78e5203797"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -928,6 +928,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EventOccurrence.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EvidenceClassificationTypeCatalog.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EvidenceClassificationTypeCatalog.java",
       "targetPackage": "blue.language.processor"
     },
     {

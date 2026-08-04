@@ -24,6 +24,7 @@ class PatchPlanningContext {
     private final Map<String, List<String>> executableBodyFieldsByType;
     private final Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans;
     private final boolean resolutionComplete;
+    private final boolean strictPlatformInvocation;
 
     PatchPlanningContext(
             ResolvedSnapshot baseSnapshot,
@@ -44,7 +45,8 @@ class PatchPlanningContext {
                 openedScopePaths,
                 executableBodyFieldsByType,
                 Collections.<String, EmbeddedScopePlan>emptyMap(),
-                resolutionComplete);
+                resolutionComplete,
+                false);
     }
 
     PatchPlanningContext(
@@ -58,6 +60,25 @@ class PatchPlanningContext {
             Map<String, List<String>> executableBodyFieldsByType,
             Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
             boolean resolutionComplete) {
+        this(baseSnapshot, canonicalPlanner, resolvedPlanner,
+                exactReplacement, authoritativeSnapshotManager,
+                invocationEvidenceSnapshotManager, openedScopePaths,
+                executableBodyFieldsByType, entryEmbeddedScopePlans,
+                resolutionComplete, false);
+    }
+
+    PatchPlanningContext(
+            ResolvedSnapshot baseSnapshot,
+            ImmutablePatchPlanner canonicalPlanner,
+            ImmutablePatchPlanner resolvedPlanner,
+            boolean exactReplacement,
+            ProcessingSnapshotManager authoritativeSnapshotManager,
+            ProcessingSnapshotManager invocationEvidenceSnapshotManager,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
+            boolean resolutionComplete,
+            boolean strictPlatformInvocation) {
         this.baseSnapshot = baseSnapshot;
         this.canonicalPlanner = canonicalPlanner;
         this.resolvedPlanner = resolvedPlanner;
@@ -72,6 +93,7 @@ class PatchPlanningContext {
         this.entryEmbeddedScopePlans = immutableEntryEmbeddedScopePlans(
                 entryEmbeddedScopePlans);
         this.resolutionComplete = resolutionComplete;
+        this.strictPlatformInvocation = strictPlatformInvocation;
     }
 
     ResolvedSnapshot baseSnapshot() {
@@ -115,16 +137,27 @@ class PatchPlanningContext {
         return resolutionComplete;
     }
 
+    boolean strictPlatformInvocation() {
+        return strictPlatformInvocation;
+    }
+
     ResolvedSnapshot resolveCanonical(FrozenNode canonicalRoot) {
         if (!exactReplacement || authoritativeSnapshotManager == null) {
             throw new IllegalStateException(
                     "Authoritative snapshot resolution is unavailable");
         }
-        return DocumentProcessingRuntime.resolveCanonicalTransient(
-                authoritativeSnapshotManager,
-                canonicalRoot,
-                openedScopePaths,
-                executableBodyFieldsByType);
+        return strictPlatformInvocation
+                ? DocumentProcessingRuntime
+                        .resolveCanonicalTransientIncludingTypeContracts(
+                                authoritativeSnapshotManager,
+                                canonicalRoot,
+                                openedScopePaths,
+                                executableBodyFieldsByType)
+                : DocumentProcessingRuntime.resolveCanonicalTransient(
+                        authoritativeSnapshotManager,
+                        canonicalRoot,
+                        openedScopePaths,
+                        executableBodyFieldsByType);
     }
 
     private static Map<String, EmbeddedScopePlan>

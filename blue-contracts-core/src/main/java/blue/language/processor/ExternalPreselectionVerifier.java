@@ -59,8 +59,7 @@ final class ExternalPreselectionVerifier {
         this.selection = new ExternalSubscriptionSelection(
                 snapshotManager, registry, converter);
         this.projectionBuilder =
-                new ExternalSubscriptionProjectionBuilder(
-                        contractLoader,
+                new ExternalSubscriptionProjectionBuilder(contractLoader,
                         snapshotManager,
                         selection,
                         registry != null

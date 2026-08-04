@@ -6,7 +6,6 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.wire.JsonPointer;
 import java.util.Collections;
@@ -21,10 +20,11 @@ import java.util.function.Supplier;
  * Builds the read-only, delivery-selected view used by external-candidate
  * classification.
  *
- * <p>The projection retains only feeder-selected Channels, their declared
- * dependencies, processor-owned checkpoint/termination state, and Process
- * Embedded routes needed to reach selected scopes. It never mutates the
- * invocation document.</p>
+ * <p>Strict platform calls project only feeder-selected Channels, their
+ * declared dependencies, processor-owned checkpoint/termination state, and
+ * Process Embedded routes needed to reach selected scopes. Configured
+ * snapshot calls retain their established snapshot view. Neither lane mutates
+ * the invocation document.</p>
  */
 final class EvidenceClassificationView {
 
@@ -33,6 +33,7 @@ final class EvidenceClassificationView {
     private final Node inputDocument;
     private final ResolvedSnapshot inputSnapshot;
     private final Supplier<VerifiedExecutionEvidence> evidenceSupplier;
+    private final EvidenceClassificationTypeCatalog typeCatalog;
     private Node classificationDocument;
     private ResolvedSnapshot classificationSnapshot;
 
@@ -47,6 +48,7 @@ final class EvidenceClassificationView {
         this.inputDocument = inputDocument;
         this.inputSnapshot = inputSnapshot;
         this.evidenceSupplier = evidenceSupplier;
+        this.typeCatalog = new EvidenceClassificationTypeCatalog(owner);
     }
 
     /**
@@ -137,6 +139,10 @@ final class EvidenceClassificationView {
 
     FrozenNode selectedAt(String scopePath) {
         String normalized = ProcessorEngine.normalizeScope(scopePath);
+        if (inputSnapshot != null
+                && !owner.strictPlatformInvocation()) {
+            return selectedAt(inputSnapshot, normalized);
+        }
         ensureProjected();
         if (classificationSnapshot != null) {
             return selectedAt(classificationSnapshot, normalized);
@@ -151,6 +157,10 @@ final class EvidenceClassificationView {
 
     FrozenNode resolvedAt(String scopePath) {
         String normalized = ProcessorEngine.normalizeScope(scopePath);
+        if (inputSnapshot != null
+                && !owner.strictPlatformInvocation()) {
+            return resolvedAt(inputSnapshot, normalized);
+        }
         ensureProjected();
         if (classificationSnapshot != null) {
             return resolvedAt(classificationSnapshot, normalized);
@@ -180,12 +190,19 @@ final class EvidenceClassificationView {
             return snapshot.resolvedAt(normalizedScope);
         }
         FrozenNode exact = selectedAt(snapshot, normalizedScope);
-        return DocumentProcessingRuntime.resolveCanonicalTransient(
-                manager,
-                exact,
-                Collections.singleton(JsonPointer.ROOT),
-                runtime.executableBodyFieldsByType)
-                .frozenResolvedRoot();
+        ResolvedSnapshot resolved = owner.strictPlatformInvocation()
+                ? DocumentProcessingRuntime
+                        .resolveCanonicalTransientIncludingTypeContracts(
+                                manager,
+                                exact,
+                                Collections.singleton(JsonPointer.ROOT),
+                                runtime.executableBodyFieldsByType)
+                : DocumentProcessingRuntime.resolveCanonicalTransient(
+                        manager,
+                        exact,
+                        Collections.singleton(JsonPointer.ROOT),
+                        runtime.executableBodyFieldsByType);
+        return resolved.frozenResolvedRoot();
     }
 
     SubscriptionDelta.Entry activeSubscriptionInterval(
@@ -267,24 +284,28 @@ final class EvidenceClassificationView {
                                 delivery.channelKey()));
             }
         }
-        Node projected = admittedProjectionRoot(selectedKeys);
+        Node projected = owner.strictPlatformInvocation()
+                ? admittedProjectionRoot(selectedKeys)
+                : inputDocument.clone();
         pruneContracts(projected, JsonPointer.ROOT, selectedKeys);
         ProcessingSnapshotManager manager = owner.snapshotManager();
         if (manager != null) {
             Set<String> preservedPaths = new LinkedHashSet<>(
                     executableBodyPaths(selectedTypes));
-            collectInheritedColdContractPaths(
-                    projected,
-                    JsonPointer.ROOT,
-                    selectedKeys,
-                    preservedPaths,
-                    new LinkedHashSet<String>());
-            collectColdReferencePaths(
-                    projected,
-                    JsonPointer.ROOT,
-                    false,
-                    selectedKeys.keySet(),
-                    preservedPaths);
+            if (owner.strictPlatformInvocation()) {
+                collectInheritedColdContractPaths(
+                        projected,
+                        JsonPointer.ROOT,
+                        selectedKeys,
+                        preservedPaths,
+                        new LinkedHashSet<String>());
+                collectColdReferencePaths(
+                        projected,
+                        JsonPointer.ROOT,
+                        false,
+                        selectedKeys.keySet(),
+                        preservedPaths);
+            }
             classificationSnapshot = preservedPaths.isEmpty()
                     ? manager.fromDocumentTransient(projected)
                     : manager.fromDocumentTransientPreservingPaths(
@@ -513,13 +534,20 @@ final class EvidenceClassificationView {
         boolean includeProcessEmbedded = requiresEmbeddedRouting(
                 scopePath,
                 selectedKeys.keySet());
-        if (!RootExternalDeliveryEvidenceVerifier
+        boolean retainedType = RootExternalDeliveryEvidenceVerifier
                 .typeContributesToSubscriptionSurface(
                         owner.snapshotManager(),
                         node.getType(),
                         selected,
                         includeProcessEmbedded,
-                        new LinkedHashSet<String>())) {
+                        new LinkedHashSet<String>());
+        if (!retainedType && owner.strictPlatformInvocation()) {
+            retainedType = typeCatalog.retainsSelectedDescendantSpine(
+                    node.getType(),
+                    scopePath,
+                    selectedKeys.keySet());
+        }
+        if (!retainedType) {
             node.type((Node) null);
         }
         Node contracts = node.getContracts();
@@ -614,245 +642,12 @@ final class EvidenceClassificationView {
             Map<String, Set<String>> selectedKeys,
             Set<String> preserved,
             Set<String> activeTypes) {
-        if (scope == null || scope.isReferenceOnly()) {
-            return;
-        }
-        collectTypeColdContractPaths(
-                scope.getType(),
-                scopePath,
-                selectedKeys,
-                preserved,
-                activeTypes,
-                0);
-        if (scope.getProperties() != null) {
-            for (Map.Entry<String, Node> entry
-                    : scope.getProperties().entrySet()) {
-                String childPath = PointerUtils.appendPointer(
-                        scopePath, entry.getKey());
-                if (participatesInSelectedClosure(
-                        childPath, selectedKeys.keySet())) {
-                    collectInheritedColdContractPaths(
-                            entry.getValue(),
-                            childPath,
-                            selectedKeys,
-                            preserved,
-                            activeTypes);
-                }
-            }
-        }
-        if (scope.getItems() != null) {
-            for (int index = 0; index < scope.getItems().size(); index++) {
-                String childPath = PointerUtils.appendPointer(
-                        scopePath, Integer.toString(index));
-                if (participatesInSelectedClosure(
-                        childPath, selectedKeys.keySet())) {
-                    collectInheritedColdContractPaths(
-                            scope.getItems().get(index),
-                            childPath,
-                            selectedKeys,
-                            preserved,
-                            activeTypes);
-                }
-            }
-        }
-    }
-
-    /** Walks exact type headers without opening any contract-entry reference. */
-    private void collectTypeColdContractPaths(
-            Node declaredType,
-            String scopePath,
-            Map<String, Set<String>> selectedKeys,
-            Set<String> preserved,
-            Set<String> activeTypes,
-            int depth) {
-        if (declaredType == null) {
-            return;
-        }
-        long maximumTypeEdges = GasSchedule.contracts10().portableLimit(
-                GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES);
-        if (depth >= maximumTypeEdges) {
-            throw new PortableLimitExceededException(
-                    ProcessorErrorCategory.DirectNodeLimitExceeded,
-                    GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES,
-                    depth + 1L,
-                    maximumTypeEdges);
-        }
-        ProcessingSnapshotManager manager = owner.snapshotManager();
-        if (declaredType.isReferenceOnly() && manager == null) {
-            return;
-        }
-        Node exactType = declaredType.isReferenceOnly()
-                ? requireExactClassificationContent(
-                        declaredType,
-                        manager.materializeVerifiedExactReference(
-                                FrozenNode.fromNode(declaredType)))
-                : declaredType;
-        String identity = declaredType.getBlueId() != null
-                ? declaredType.getBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(exactType);
-        if (!activeTypes.add(identity)) {
-            throw new InvalidExecutionEvidenceException(
-                    "Cyclic scope type hierarchy in Phase-B classification: "
-                            + identity);
-        }
-        try {
-            collectTypeColdContractPaths(
-                    exactType.getType(),
-                    scopePath,
-                    selectedKeys,
-                    preserved,
-                    activeTypes,
-                    depth + 1);
-            addUnselectedContractPaths(
-                    exactType.getContracts(),
-                    scopePath,
-                    selectedKeys,
-                    preserved);
-            collectTypeProvidedDescendantPaths(
-                    exactType,
-                    scopePath,
-                    selectedKeys,
-                    preserved,
-                    activeTypes);
-        } finally {
-            activeTypes.remove(identity);
-        }
-    }
-
-    /** Traverses only type-provided branches on the selected scope spine. */
-    private void collectTypeProvidedDescendantPaths(
-            Node typeContribution,
-            String scopePath,
-            Map<String, Set<String>> selectedKeys,
-            Set<String> preserved,
-            Set<String> activeTypes) {
-        if (typeContribution.getProperties() != null) {
-            for (Map.Entry<String, Node> entry
-                    : typeContribution.getProperties().entrySet()) {
-                String childPath = PointerUtils.appendPointer(
-                        scopePath, entry.getKey());
-                if (participatesInSelectedClosure(
-                        childPath, selectedKeys.keySet())) {
-                    collectTypeProvidedScopePaths(
-                            entry.getValue(),
-                            childPath,
-                            selectedKeys,
-                            preserved,
-                            activeTypes);
-                }
-            }
-        }
-        if (typeContribution.getItems() != null) {
-            for (int index = 0;
-                    index < typeContribution.getItems().size();
-                    index++) {
-                String childPath = PointerUtils.appendPointer(
-                        scopePath, Integer.toString(index));
-                if (participatesInSelectedClosure(
-                        childPath, selectedKeys.keySet())) {
-                    collectTypeProvidedScopePaths(
-                            typeContribution.getItems().get(index),
-                            childPath,
-                            selectedKeys,
-                            preserved,
-                            activeTypes);
-                }
-            }
-        }
-    }
-
-    /** Catalogs one selected descendant authored by a type contribution. */
-    private void collectTypeProvidedScopePaths(
-            Node selectedScope,
-            String scopePath,
-            Map<String, Set<String>> selectedKeys,
-            Set<String> preserved,
-            Set<String> activeTypes) {
-        if (selectedScope == null) {
-            return;
-        }
-        Node exactScope = selectedScope;
-        if (selectedScope.isReferenceOnly()) {
-            ProcessingSnapshotManager manager = owner.snapshotManager();
-            if (manager == null) {
-                return;
-            }
-            exactScope = requireExactClassificationContent(
-                    selectedScope,
-                    manager.materializeVerifiedExactReference(
-                            FrozenNode.fromNode(selectedScope)));
-        }
-        addUnselectedContractPaths(
-                exactScope.getContracts(),
-                scopePath,
-                selectedKeys,
-                preserved);
-        collectTypeColdContractPaths(
-                exactScope.getType(),
-                scopePath,
-                selectedKeys,
-                preserved,
-                activeTypes,
-                0);
-        collectTypeProvidedDescendantPaths(
-                exactScope,
+        typeCatalog.collectInheritedColdContractPaths(
+                scope,
                 scopePath,
                 selectedKeys,
                 preserved,
                 activeTypes);
-    }
-
-    /** Adds effective paths for inherited entries outside the retained set. */
-    private void addUnselectedContractPaths(
-            Node contracts,
-            String scopePath,
-            Map<String, Set<String>> selectedKeys,
-            Set<String> preserved) {
-        if (contracts == null) {
-            return;
-        }
-        Node exactContracts = contracts;
-        if (contracts.isReferenceOnly()) {
-            ProcessingSnapshotManager manager = owner.snapshotManager();
-            if (manager == null) {
-                return;
-            }
-            exactContracts = requireExactClassificationContent(
-                    contracts,
-                    manager.materializeVerifiedExactReference(
-                            FrozenNode.fromNode(contracts)));
-        }
-        if (exactContracts.getProperties() == null) {
-            return;
-        }
-        Set<String> selected = selectedKeys.getOrDefault(
-                ProcessorEngine.normalizeScope(scopePath),
-                Collections.emptySet());
-        boolean includeProcessEmbedded = requiresEmbeddedRouting(
-                scopePath,
-                selectedKeys.keySet());
-        String contractsPath = PointerUtils.appendPointer(
-                scopePath, ProcessorContractConstants.KEY_CONTRACTS);
-        for (String key : exactContracts.getProperties().keySet()) {
-            if (!selected.contains(key)
-                    && !(includeProcessEmbedded
-                    && ProcessorContractConstants.KEY_EMBEDDED.equals(key))) {
-                preserved.add(PointerUtils.appendPointer(
-                        contractsPath, key));
-            }
-        }
-    }
-
-    /** Maps a definitive provider miss to stable invalid execution evidence. */
-    private Node requireExactClassificationContent(
-            Node reference,
-            FrozenNode materialized) {
-        if (materialized != null) {
-            return materialized.toNode();
-        }
-        throw new InvalidExecutionEvidenceException(
-                "Exact Phase-B classification content was not found for "
-                        + reference.getBlueId());
     }
 
 }

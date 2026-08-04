@@ -187,7 +187,7 @@ public final class IndexedDeliveryEvaluator {
             }
             requireReleasedGasSchedule();
             ProcessingInputAdmission admission =
-                    new ProcessingInputAdmission(snapshotManager);
+                    new ProcessingInputAdmission(snapshotManager, true);
             ProcessingInputAdmission.AdmittedNode admittedRoot =
                     admission.materializeTopLevel(
                             exactRoot,

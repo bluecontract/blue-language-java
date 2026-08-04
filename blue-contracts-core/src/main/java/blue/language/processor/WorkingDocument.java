@@ -59,6 +59,7 @@ public final class WorkingDocument implements AutoCloseable {
     private final Map<String, List<String>>
             executableBodyFieldsByType;
     private final Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans;
+    private final boolean strictPlatformInvocation;
     private ProcessingSnapshotManager workingSequenceManager;
     private ResolvedSnapshot snapshot;
     private boolean resolutionComplete;
@@ -122,7 +123,8 @@ public final class WorkingDocument implements AutoCloseable {
                 openedScopePaths,
                 executableBodyFieldsByType,
                 Collections.<String, EmbeddedScopePlan>emptyMap(),
-                resolutionComplete);
+                resolutionComplete,
+                false);
     }
 
     WorkingDocument(String originScope,
@@ -141,6 +143,29 @@ public final class WorkingDocument implements AutoCloseable {
                             executableBodyFieldsByType,
                     Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
                     boolean resolutionComplete) {
+        this(originScope, canonicalRoot, resolvedRoot, conformanceEngine,
+                conformancePlannerOverride, snapshotManager, snapshot,
+                materializedFallback, exactReplacement, mutablePatchSource,
+                metrics, openedScopePaths, executableBodyFieldsByType,
+                entryEmbeddedScopePlans, resolutionComplete, false);
+    }
+
+    WorkingDocument(String originScope,
+                    FrozenNode canonicalRoot,
+                    FrozenNode resolvedRoot,
+                    ConformanceEngine conformanceEngine,
+                    ConformancePlannerOverride conformancePlannerOverride,
+                    ProcessingSnapshotManager snapshotManager,
+                    ResolvedSnapshot snapshot,
+                    boolean materializedFallback,
+                    boolean exactReplacement,
+                    PatchSource mutablePatchSource,
+                    ProcessingObserver metrics,
+                    Iterable<String> openedScopePaths,
+                    Map<String, List<String>> executableBodyFieldsByType,
+                    Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
+                    boolean resolutionComplete,
+                    boolean strictPlatformInvocation) {
         this.originScope = PointerUtils.normalizeScope(originScope);
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
@@ -164,6 +189,7 @@ public final class WorkingDocument implements AutoCloseable {
                         entryEmbeddedScopePlans,
                         "entryEmbeddedScopePlans")));
         this.resolutionComplete = resolutionComplete;
+        this.strictPlatformInvocation = strictPlatformInvocation;
         this.workingSequenceManager = snapshotManager != null
                 ? snapshotManager.transientSequence()
                 : null;
@@ -310,7 +336,8 @@ public final class WorkingDocument implements AutoCloseable {
                         openedScopePaths,
                         executableBodyFieldsByType,
                         entryEmbeddedScopePlans,
-                        resolutionComplete);
+                        resolutionComplete,
+                        strictPlatformInvocation);
         SequentialPatchPlanningSession planningSession = new SequentialPatchPlanningSession(
                 this.originScope,
                 planning,
@@ -443,14 +470,24 @@ public final class WorkingDocument implements AutoCloseable {
         boolean currentResolutionScope = workingSequenceManager == null
                 || workingSequenceManager.isTransientStateCurrent();
         ProcessingSnapshotManager publicationManager = workingSequenceManager();
-        ResolvedSnapshot authoritative = exactReplacement && currentResolutionScope
-                ? current
-                : DocumentProcessingRuntime
-                .resolveCanonicalTransient(
-                        publicationManager,
-                        current.frozenCanonicalRoot(),
-                        openedScopePaths,
-                        executableBodyFieldsByType);
+        ResolvedSnapshot authoritative;
+        if (exactReplacement && currentResolutionScope) {
+            authoritative = current;
+        } else if (strictPlatformInvocation) {
+            authoritative = DocumentProcessingRuntime
+                    .resolveCanonicalTransientIncludingTypeContracts(
+                            publicationManager,
+                            current.frozenCanonicalRoot(),
+                            openedScopePaths,
+                            executableBodyFieldsByType);
+        } else {
+            authoritative = DocumentProcessingRuntime
+                    .resolveCanonicalTransient(
+                            publicationManager,
+                            current.frozenCanonicalRoot(),
+                            openedScopePaths,
+                            executableBodyFieldsByType);
+        }
         snapshot = authoritative.isResolutionComplete()
                 ? Objects.requireNonNull(
                 publicationManager.cacheSnapshot(

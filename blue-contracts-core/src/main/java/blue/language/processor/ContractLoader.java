@@ -50,10 +50,22 @@ final class ContractLoader {
             TypeClassResolver typeResolver,
             BlueCachePolicy cachePolicy,
             NodeProvider contributionProvider) {
+        this(registry, converter, typeResolver, cachePolicy,
+                contributionProvider, false);
+    }
+
+    ContractLoader(
+            ContractProcessorRegistry registry,
+            NodeToObjectConverter converter,
+            TypeClassResolver typeResolver,
+            BlueCachePolicy cachePolicy,
+            NodeProvider contributionProvider,
+            boolean canonicalContractOrder) {
         Objects.requireNonNull(registry, "registry");
         Objects.requireNonNull(converter, "converter");
         Objects.requireNonNull(typeResolver, "typeResolver");
-        this.contributions = new ContractContributionCollector(contributionProvider);
+        this.contributions = new ContractContributionCollector(
+                contributionProvider);
         this.effectiveContracts = new EffectiveContractResolver(
                 registry, converter, typeResolver, contributions);
         this.executableBodies = new ExecutableBodyLoader(converter);
@@ -64,7 +76,8 @@ final class ContractLoader {
                 effectiveContracts,
                 contributions,
                 executableBodies,
-                new ContractSnapshotFactory());
+                new ContractSnapshotFactory(),
+                canonicalContractOrder);
         this.refresh = new ContractRefreshService(
                 registry,
                 effectiveContracts,

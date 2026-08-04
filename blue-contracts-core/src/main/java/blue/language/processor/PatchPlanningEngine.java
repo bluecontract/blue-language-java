@@ -48,6 +48,7 @@ final class PatchPlanningEngine {
     private final Map<String, List<String>> executableBodyFieldsByType;
     private final boolean initialResolutionComplete;
     private final EmbeddedScopePlan originEmbeddedScopePlan;
+    private final boolean strictPlatformInvocation;
 
     PatchPlanningEngine(String originScopePath,
                         PatchPlanningContext planning,
@@ -117,6 +118,8 @@ final class PatchPlanningEngine {
                 planning.executableBodyFieldsByType();
         this.initialResolutionComplete =
                 planning.isResolutionComplete();
+        this.strictPlatformInvocation =
+                planning.strictPlatformInvocation();
         this.originEmbeddedScopePlan = planning.entryEmbeddedScopePlan(
                 this.originScopePath);
     }
@@ -304,9 +307,14 @@ final class PatchPlanningEngine {
                     ProcessingMetricId.FULL_CANONICAL_ROOT_MATERIALIZATIONS, 1L);
             ProcessingObservations.record(metrics,
                     ProcessingMetricId.FULL_FROZEN_ROOT_TO_NODE_MATERIALIZATIONS, 1L);
-            ResolvedSnapshot authoritative =
-                    DocumentProcessingRuntime
-                    .resolveCanonicalTransient(
+            ResolvedSnapshot authoritative = strictPlatformInvocation
+                    ? DocumentProcessingRuntime
+                            .resolveCanonicalTransientIncludingTypeContracts(
+                                    authoritativeSnapshotManager,
+                                    finalCanonical,
+                                    openedScopePaths,
+                                    executableBodyFieldsByType)
+                    : DocumentProcessingRuntime.resolveCanonicalTransient(
                             authoritativeSnapshotManager,
                             finalCanonical,
                             openedScopePaths,
@@ -556,12 +564,28 @@ final class PatchPlanningEngine {
                                     openedScopePaths,
                                     executableBodyFieldsByType));
             if (invocationEvidenceSnapshotManager != null) {
+                Node canonicalDocument = canonicalRoot.toNode();
                 preservedBodies.addAll(
-                        ExecutableBodyPathCatalog.fromNode(
-                                canonicalRoot.toNode(),
-                                openedScopePaths,
-                                executableBodyFieldsByType,
-                                invocationEvidenceSnapshotManager));
+                        strictPlatformInvocation
+                                ? ExecutableBodyPathCatalog
+                                        .fromNodeIncludingTypeContracts(
+                                        canonicalDocument,
+                                        openedScopePaths,
+                                        executableBodyFieldsByType,
+                                        invocationEvidenceSnapshotManager)
+                                : ExecutableBodyPathCatalog
+                                        .fromNodeDirectContracts(
+                                                canonicalDocument,
+                                                openedScopePaths,
+                                                executableBodyFieldsByType,
+                                                invocationEvidenceSnapshotManager));
+                if (strictPlatformInvocation) {
+                    preservedBodies.addAll(
+                            ExecutableBodyPathCatalog
+                                    .ordinaryReferencePaths(
+                                            canonicalDocument,
+                                            openedScopePaths));
+                }
             }
             ConformancePlan plan =
                     conformanceEngine
