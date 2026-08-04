@@ -141,7 +141,6 @@ final class EvidenceClassificationView {
         String normalized = ProcessorEngine.normalizeScope(scopePath);
         if (inputSnapshot != null
                 && !owner.strictPlatformInvocation()) {
-            ensureConfiguredSnapshotAdmission();
             return selectedAt(inputSnapshot, normalized);
         }
         ensureProjected();
