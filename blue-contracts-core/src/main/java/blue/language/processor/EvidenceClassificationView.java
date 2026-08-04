@@ -141,6 +141,7 @@ final class EvidenceClassificationView {
         String normalized = ProcessorEngine.normalizeScope(scopePath);
         if (inputSnapshot != null
                 && !owner.strictPlatformInvocation()) {
+            ensureConfiguredSnapshotAdmission();
             return selectedAt(inputSnapshot, normalized);
         }
         ensureProjected();
@@ -159,6 +160,7 @@ final class EvidenceClassificationView {
         String normalized = ProcessorEngine.normalizeScope(scopePath);
         if (inputSnapshot != null
                 && !owner.strictPlatformInvocation()) {
+            ensureConfiguredSnapshotAdmission();
             return resolvedAt(inputSnapshot, normalized);
         }
         ensureProjected();
@@ -284,9 +286,7 @@ final class EvidenceClassificationView {
                                 delivery.channelKey()));
             }
         }
-        Node projected = owner.strictPlatformInvocation()
-                ? admittedProjectionRoot(selectedKeys)
-                : inputDocument.clone();
+        Node projected = admittedProjectionRoot(selectedKeys);
         pruneContracts(projected, JsonPointer.ROOT, selectedKeys);
         ProcessingSnapshotManager manager = owner.snapshotManager();
         if (manager != null) {
@@ -314,6 +314,16 @@ final class EvidenceClassificationView {
         } else {
             classificationDocument = projected;
         }
+    }
+
+    /**
+     * Retains the configured lane's original snapshot as its classification
+     * surface while performing the established one-time exact admission of
+     * evidence-selected paths. Admission verifies and primes those references
+     * for later recognition phases without widening the returned snapshot.
+     */
+    private void ensureConfiguredSnapshotAdmission() {
+        ensureProjected();
     }
 
     /**
