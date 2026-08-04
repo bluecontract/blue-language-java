@@ -9,13 +9,13 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
 | `blue-conformance` | 19 | 164 | 57 | 240 |
-| `blue-contracts-core` | 160 | 1070 | 587 | 1817 |
-| `blue-language-core` | 160 | 812 | 96 | 1068 |
+| `blue-contracts-core` | 162 | 1077 | 587 | 1826 |
+| `blue-language-core` | 160 | 818 | 96 | 1074 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 95 | 1 | 121 |
 | `blue-language-model` | 23 | 210 | 80 | 313 |
-| **Distribution** | **393** | **2399** | **821** | **3613** |
+| **Distribution** | **395** | **2412** | **821** | **3628** |
 
 ## blue-conformance
 
@@ -860,6 +860,7 @@ method blue.language.processor.BlueContracts#indexedDeliveryEvaluator descriptor
 method blue.language.processor.BlueContracts#isClosed descriptor=()Z access=public signature=- throws=-
 method blue.language.processor.BlueContracts#process descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Lblue/language/processor/DocumentProcessingResult; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#processAttempt descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Lblue/language/processor/ProcessAttemptResult; access=public signature=- throws=-
+method blue.language.processor.BlueContracts#processForPlatformCommit descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/processor/PlatformProcessInvocation;)Lblue/language/processor/PlatformProcessingResult; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#processForPlatformCommit descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/processor/VerifiedExecutionEvidence;)Lblue/language/processor/PlatformProcessingResult; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#runtimeAccess descriptor=()Lblue/language/processor/ProcessorRuntimeAccess; access=public signature=- throws=-
 method blue.language.processor.BlueContracts#subscriptionSurfaceProjection descriptor=()Lblue/language/processor/SubscriptionSurfaceProjection; access=public signature=- throws=-
@@ -1427,6 +1428,12 @@ method blue.language.processor.PlatformCommitCompanion#expectedRootBlueId descri
 method blue.language.processor.PlatformCommitCompanion#expectedRootRevision descriptor=()J access=public signature=- throws=-
 method blue.language.processor.PlatformCommitCompanion#resultingRootRevision descriptor=()J access=public signature=- throws=-
 method blue.language.processor.PlatformCommitCompanion#subscriptionDelta descriptor=()Lblue/language/processor/SubscriptionDelta; access=public signature=- throws=-
+method blue.language.processor.PlatformProcessInvocation#builder descriptor=()Lblue/language/processor/PlatformProcessInvocation$Builder; access=public,static signature=- throws=-
+method blue.language.processor.PlatformProcessInvocation#deliveryPlan descriptor=()Lblue/language/processor/ExternalDeliveryPlan; access=public signature=- throws=-
+method blue.language.processor.PlatformProcessInvocation#nodeProvider descriptor=()Lblue/language/provider/NodeProvider; access=public signature=- throws=-
+method blue.language.processor.PlatformProcessInvocation$Builder#build descriptor=()Lblue/language/processor/PlatformProcessInvocation; access=public signature=- throws=-
+method blue.language.processor.PlatformProcessInvocation$Builder#deliveryPlan descriptor=(Lblue/language/processor/ExternalDeliveryPlan;)Lblue/language/processor/PlatformProcessInvocation$Builder; access=public signature=- throws=-
+method blue.language.processor.PlatformProcessInvocation$Builder#nodeProvider descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/processor/PlatformProcessInvocation$Builder; access=public signature=- throws=-
 method blue.language.processor.PlatformProcessingResult#commitCompanion descriptor=()Lblue/language/processor/PlatformCommitCompanion; access=public signature=- throws=-
 method blue.language.processor.PlatformProcessingResult#processResult descriptor=()Lblue/language/processor/DocumentProcessingResult; access=public signature=- throws=-
 method blue.language.processor.PortableLimitExceededException#<init> descriptor=(Lblue/language/processor/ProcessorErrorCategory;Ljava/lang/String;JJ)V access=public signature=- throws=-
@@ -2004,6 +2011,8 @@ type blue.language.processor.NoOpProcessingObserver access=public,final super=ja
 type blue.language.processor.ObservationKind access=public,final,enum super=java.lang.Enum interfaces=- signature=Ljava/lang/Enum<Lblue/language/processor/ObservationKind;>;
 type blue.language.processor.PatchSource access=public,final,enum super=java.lang.Enum interfaces=- signature=Ljava/lang/Enum<Lblue/language/processor/PatchSource;>;
 type blue.language.processor.PlatformCommitCompanion access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.PlatformProcessInvocation access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.PlatformProcessInvocation$Builder access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.PlatformProcessingResult access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.PortableLimitExceededException access=public,final super=java.lang.RuntimeException interfaces=- signature=-
 type blue.language.processor.ProcessAttemptResult access=public,final super=java.lang.Object interfaces=- signature=-
@@ -2778,6 +2787,8 @@ method blue.language.registry.BootstrapProvider#fetchByBlueId descriptor=(Ljava/
 method blue.language.registry.NodeProviderWrapper#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.registry.NodeProviderWrapper#isExplicitlyHostTrusted descriptor=(Lblue/language/provider/NodeProvider;)Z access=public,static signature=- throws=-
 method blue.language.registry.NodeProviderWrapper#unverified descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/provider/NodeProvider; access=public,static signature=- throws=-
+method blue.language.registry.NodeProviderWrapper#verifyOnly descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/provider/NodeProvider; access=protected,static signature=- throws=-
+method blue.language.registry.NodeProviderWrapper#verifyOnlyGuarded descriptor=(Lblue/language/provider/NodeProvider;Ljava/util/function/Consumer;)Lblue/language/provider/NodeProvider; access=protected,static signature=(Lblue/language/provider/NodeProvider;Ljava/util/function/Consumer<Ljava/lang/Runnable;>;)Lblue/language/provider/NodeProvider; throws=-
 method blue.language.registry.NodeProviderWrapper#wrap descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/provider/NodeProvider; access=public,static signature=- throws=-
 method blue.language.resolve.BlueResolution#isSubtype descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Z access=public,abstract signature=- throws=-
 method blue.language.resolve.BlueResolution#minimize descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public,abstract signature=- throws=-
@@ -2859,6 +2870,8 @@ method blue.language.runtime.LanguageMatchingService#matches descriptor=(Lblue/l
 method blue.language.runtime.LanguageMatchingService#matchesLimited descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/api/BlueOperationLimits;)Lblue/language/api/BlueOperationResult; access=public signature=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/api/BlueOperationLimits;)Lblue/language/api/BlueOperationResult<Ljava/lang/Boolean;>; throws=-
 method blue.language.runtime.LanguageProcessing#newConformanceEngine descriptor=()Lblue/language/conformance/ConformanceEngine; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing#openScope descriptor=()Lblue/language/runtime/LanguageProcessing$Scope; access=public,abstract signature=- throws=-
+method blue.language.runtime.LanguageProcessing#openScope descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/runtime/LanguageProcessing$Scope; access=public signature=- throws=-
+method blue.language.runtime.LanguageProcessing#openScope descriptor=(Lblue/language/provider/NodeProvider;Lblue/language/runtime/LanguageProcessing$Observer;)Lblue/language/runtime/LanguageProcessing$Scope; access=public signature=- throws=-
 method blue.language.runtime.LanguageProcessing#openScope descriptor=(Lblue/language/runtime/LanguageProcessing$Observer;)Lblue/language/runtime/LanguageProcessing$Scope; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing#runtimeAccess descriptor=()Lblue/language/runtime/LanguageRuntimeAccess; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Observer#snapshotCacheHit descriptor=()V access=public signature=- throws=-
@@ -2869,12 +2882,14 @@ method blue.language.runtime.LanguageProcessing$Scope#close descriptor=()V acces
 method blue.language.runtime.LanguageProcessing$Scope#forkTransientSequence descriptor=()Lblue/language/runtime/LanguageProcessing$Scope; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#isTransientStateCurrent descriptor=()Z access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#materializeVerifiedExactReference descriptor=(Lblue/language/snapshot/FrozenNode;)Lblue/language/api/BlueOperationResult; access=public,abstract signature=(Lblue/language/snapshot/FrozenNode;)Lblue/language/api/BlueOperationResult<Lblue/language/snapshot/FrozenNode;>; throws=-
+method blue.language.runtime.LanguageProcessing$Scope#newConformanceEngine descriptor=()Lblue/language/conformance/ConformanceEngine; access=public signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#publish descriptor=(Lblue/language/merge/ResolvedSnapshot;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolve descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolvePreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolveTransient descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolveTransientPreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.LanguageProcessing$Scope#retainTransientState descriptor=(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;)V access=public,abstract signature=- throws=-
+method blue.language.runtime.LanguageProcessing$Scope#runtimeAccess descriptor=()Lblue/language/runtime/LanguageRuntimeAccess; access=public signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#supportsIncrementalValueResolution descriptor=()Z access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#supportsIncrementalValueResolution descriptor=(Lblue/language/merge/IncrementalValueResolutionRequest;)Z access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#transientConformanceEngine descriptor=(Lblue/language/conformance/ConformanceEngine;)Lblue/language/conformance/ConformanceEngine; access=public,abstract signature=- throws=-

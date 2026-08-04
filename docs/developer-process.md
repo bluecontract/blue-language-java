@@ -262,6 +262,107 @@ modules. Run one root-owned benchmark with the repository-owned regex filter:
   -PblueJmhIncludes='.*DeepGraphPhysicalLocalityBenchmark.*'
 ```
 
+The deep-graph class deliberately retains three entry points. Run them
+independently so the legacy processor path, PROCESS-only platform latency, and
+setup-inclusive platform cost are never averaged together:
+
+```bash
+# Legacy generic Contracts kernel: 2 body forms x 2 entry modes x 2 cache
+# modes x 2 batch modes.
+./gradlew --no-daemon jmh \
+  -PblueJmhIncludes='.*DeepGraphPhysicalLocalityBenchmark\.processSelectedLeaf.*'
+
+# Public platform-commit boundary: 4 Root representations x 2 cache modes x
+# 2 batch modes. Per-invocation fixture setup and close are outside the score.
+./gradlew --no-daemon jmh \
+  -PblueJmhIncludes='.*DeepGraphPhysicalLocalityBenchmark\.processPlatformCommit$'
+
+# Public platform boundary including fresh scenario, Language/Contracts
+# services, provider, plan, Root/Event, optional warming, PROCESS, and close.
+./gradlew --no-daemon jmh \
+  -PblueJmhIncludes='.*DeepGraphPhysicalLocalityBenchmark\.processPlatformCommitIncludingSetup$'
+```
+
+Both public platform methods run all sixteen combinations of:
+
+| Parameter | Values |
+| --- | --- |
+| `representation` | `INLINE`, `PURE_REFERENCE`, `PARTIAL`, `FRAGMENTED` |
+| `cacheMode` | `COLD`, `WARM` |
+| `batchMode` | `UNBATCHED`, `BOUNDED_BATCH` |
+
+`processPlatformCommit` times only the public PROCESS call. Its
+`PlatformLocalityState` prepares and closes a fresh single-use invocation at
+`Level.Invocation`, outside the method score. The method consumes request
+count, backend trips, backend bytes, unrelated-provider requests,
+selected-body demand, and unselected-body demand. Those counters prevent
+benchmark-code elimination and describe locality; none is portable gas or a
+semantic input.
+
+`processPlatformCommitIncludingSetup` has parameter-only JMH state. Its timed
+method constructs the scenario, Language scope, Contracts service, provider,
+plan, Root, and Event; applies the requested warm/cold policy; calls PROCESS;
+consumes the same locality counters; and closes the invocation. Use this lane
+for complete per-call time and allocation observations. It intentionally
+includes setup and close and must not be described as PROCESS-only latency.
+
+The final-quality gate requires the PROCESS-only public platform method, in
+addition to the reference-validation and warm-selection smoke benchmarks.
+Final-quality JMH smoke uses zero warmup iterations, one 25 ms measurement
+iteration, and one fork; it proves that each required benchmark executes, not
+that it meets a performance threshold. `benchmarkClasses` still compiles the
+setup-inclusive lane, but final quality does not multiply that intentionally
+expensive full-fixture allocation campaign into the required release smoke.
+
+For complete per-call allocation observations, build the executable JMH jar
+with Gradle and add JMH's GC profiler to the setup-inclusive method:
+
+```bash
+./gradlew --no-daemon jmhJar
+JMH_JAR="$(find build/libs -maxdepth 1 -type f -name '*-jmh.jar' \
+  -print | sort | tail -n 1)"
+test -n "$JMH_JAR"
+java -jar "$JMH_JAR" \
+  '.*DeepGraphPhysicalLocalityBenchmark\.processPlatformCommitIncludingSetup$' \
+  -prof gc
+```
+
+Use one parameter tuple and deliberately minimal iteration settings only as an
+execution smoke while editing the harness:
+
+```bash
+java -jar "$JMH_JAR" \
+  '.*DeepGraphPhysicalLocalityBenchmark\.processPlatformCommitIncludingSetup$' \
+  -p representation=INLINE \
+  -p cacheMode=COLD \
+  -p batchMode=UNBATCHED \
+  -wi 0 -i 1 -f 1 -r 25ms -prof gc -foe true
+```
+
+That command proves the entry executes and exposes profiler fields; its single
+short iteration is not publishable performance evidence. Omit the three `-p`
+restrictions to exercise all sixteen tuples, and use enough warmup, iterations,
+and forks for the intended measurement campaign.
+
+Interpret `gc.alloc.rate.norm` as approximate bytes allocated per measured
+operation and `gc.alloc.rate` as throughput-dependent allocation per second.
+`gc.count` and `gc.time` describe collections observed during the fork; they
+are noisy and are not latency or conformance assertions. In the setup-inclusive
+lane, `gc.alloc.rate.norm` covers the complete timed lifecycle plus unavoidable
+JMH measurement overhead. In the PROCESS-only lane, setup and teardown remain
+outside the method score and profiler accounting around invocation hooks may be
+harness-dependent. Do not label either value as processor-internal allocation;
+report the exact benchmark method and parameter tuple.
+
+There is no retained hidden warm state between measured platform invocations.
+Both lanes create and close a fresh scenario, Language scope, Contracts
+service, provider, plan, Root, and Event for each single-use call. `WARM`
+explicitly primes only permitted provider content, while `COLD` leaves that
+invocation's measured provider cold. Preparation and warming are outside the
+`processPlatformCommit` score and inside the
+`processPlatformCommitIncludingSetup` score; always report the two methods and
+warm/cold modes separately.
+
 The collection-path campaign can be run independently at one smoke size with:
 
 ```bash

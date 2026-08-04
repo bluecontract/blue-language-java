@@ -297,3 +297,36 @@ different source tree and is deliberately not described as clean-built.
 The task stayed within `blue-language-java`; BEX and Coordination were not
 modified, `.cz.toml` was preserved, and the unrelated user-owned `LICENSE`
 change was excluded.
+
+## Successor candidate: indexed invocation and pure-reference Phase B
+
+This section records the scope of the later platform-invocation candidate; it
+does not retroactively change the executed evidence, commit, counts, or hashes
+above. Those values remain bound only to `63a9ed6` until a clean successor
+release receipt says otherwise.
+
+The successor adds one immutable public `PlatformProcessInvocation` and an
+additive `BlueContracts.processForPlatformCommit(...)` overload. A host can
+prepare a plan through the public indexed evaluator, supply a strict
+request-local provider, and process that exact plan without invoking the
+construction-time plan deriver. Root and event remain the only semantic inputs.
+The supplied plan remains evidence: its Root, event, revision, order, registry,
+activation, dependency, completeness, and canonical-delivery bindings are
+independently checked by Contracts.
+
+Language supplies a strict invocation scope with fresh provider-derived state.
+There is no implicit construction-provider, bootstrap-provider, or shared-cache
+fallback, and closing the scope does not close the caller's provider. The
+Phase-B classifier now materializes the admitted selected scope/header chain
+before pruning it, preserving selected dependency headers and processor state
+while leaving unrelated siblings and executable bodies cold. This corrects the
+pure-reference ordering defect without removing the dependency-drift check or
+introducing a whole-Root scan.
+
+Only a clean successor release receipt can bind an exact commit to the complete
+Language/Contracts fixture totals, platform-plan forgery matrix, provider
+outcome and concurrent-isolation tests, inline/pure-reference/partial/fragmented
+matrix, Java 8 and API gates, zero-cycle architecture report, reproducible
+artifact hashes, and passing `finalQualityVerify` and `rcVerify`. This authored
+section is a reviewed change inventory rather than executed release evidence;
+the generated receipt remains authoritative whenever that certification runs.

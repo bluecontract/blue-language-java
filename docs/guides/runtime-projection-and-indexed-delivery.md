@@ -1,7 +1,7 @@
 # Runtime projection and indexed delivery
 
 This guide is for a host that keeps Root revisions and an external subscription
-index outside the Contracts kernel. It covers three related public services:
+index outside the Contracts kernel. It covers four related public services:
 
 - `ProcessorRuntimeAccess` lets a custom `DocumentProcessor` borrow the exact
   Language runtime and snapshot generation of an existing processor;
@@ -9,6 +9,8 @@ index outside the Contracts kernel. It covers three related public services:
   subscription surface with the processor's configured validator;
 - `IndexedDeliveryEvaluator` reopens a complete retained surface, verifies an
   ordered physical-index candidate set, and prepares an exact delivery plan.
+- `PlatformProcessInvocation` carries that plan and one strict request-local
+  provider into the public platform-commit PROCESS lane.
 
 These services contain no persistence or Coordination policy. The host still
 owns transactions, revision allocation, index storage, and event ordering.
@@ -200,6 +202,139 @@ processor configured with a different gas package is rejected before function
 evaluation, preventing one call from mixing configured limits with 1.0
 selection and embedded-routing limits.
 
+## Process an already prepared plan
+
+Use the explicit platform lane when the host already holds the exact plan and
+has assembled the complete provider graph for this request. The following is a
+complete method body. It deliberately prepares from an indexed materialized
+view and processes pure references; each pair must identify the same exact Root
+or event. These are two physical representations of the same two semantic
+inputs, not four semantic values.
+
+<!-- blue-example: examples/src/main/java/blue/language/examples/RuntimeProjectionAndIndexedDeliveryExample.java#platform-process-invocation -->
+```java
+        IndexedDeliveryPreparation preparation = contracts
+                .indexedDeliveryEvaluator()
+                .prepare(
+                        indexedRoot,
+                        indexedEvent,
+                        rootRevision,
+                        eventOrderKey,
+                        completeActiveIntervals,
+                        orderedCandidateOccurrenceKeys);
+
+        PlatformProcessInvocation invocation =
+                PlatformProcessInvocation.builder()
+                        .deliveryPlan(preparation.deliveryPlan())
+                        .nodeProvider(requestLocalProvider)
+                        .build();
+
+        PlatformProcessingResult result =
+                contracts.processForPlatformCommit(
+                        rootReference,
+                        eventReference,
+                        invocation);
+```
+
+Preparation runs in the evaluator's processor-owned runtime generation. The
+`requestLocalProvider` becomes authoritative only when the platform PROCESS
+call opens its invocation scope. In the example it must establish
+`rootReference`, `eventReference`, and every exact reference demanded by the
+selected processing path.
+
+`PlatformProcessInvocation` accepts a plan returned by the public indexed
+evaluator. A separately assembled `ExternalDeliveryPlan.Builder` value has no
+evaluator-established Root/event/registry binding and is rejected by the
+invocation builder. The context retains one immutable plan and one borrowed
+provider; it does not ask callers to assemble a potentially inconsistent plan
+and `VerifiedExecutionEvidence` pair.
+
+This overload has exactly the same two Blue semantic inputs as every other
+PROCESS call:
+
+```text
+PROCESS(Root, event) -> ProcessResult
+```
+
+The plan, managed revision, active intervals, event order, provider, and commit
+companion are host execution environment and evidence. Different physical
+representations of the same Root/event therefore cannot choose different Blue
+semantics. Before execution, Contracts checks the evaluator binding against the
+Root BlueId, event BlueId, equal managed/indexed revision, event order, and the
+active immutable runtime-registry identity. It then verifies the supplied plan
+directly with the core delivery-plan and preselection verifier, including its
+complete interval surface, exact-runtime-state certificate, active bounds,
+delivery identities, dependency catalog, completeness, and canonical order.
+Omitted, extra, duplicate, stale, inactive, wrong-order, wrong-revision, or
+wrong-registry evidence fails closed.
+
+Direct verification is distinct from derivation. This overload never invokes
+the `ExternalDeliveryPlanDeriver` captured when `BlueContracts` was built. The
+existing `process(root, event)`, evidence overload, and current-Root
+compatibility deriver keep their established behavior.
+
+The runtime-registry generation in that binding is also portable metadata,
+not a Java implementation fingerprint. It is derived from the released
+runtime package identity plus lexically ordered registered BlueIds, processor
+kind, canonical-versus-provider type-evidence mode, declared type identities,
+and ordered executable-body field names. Java class names, processor object
+identity, and allocation identity are excluded. Equivalent registrations can
+therefore establish the same evidence boundary in another runtime language.
+
+### One strict provider domain
+
+The supplied provider is used for every provider-backed read in the attempt:
+
+- Root/event and selected embedded-scope materialization;
+- referenced contracts, schemas, type chains, Channel headers, declared
+  Channel dependencies, and selected Handler bodies;
+- runtime value reads and patch-path opening;
+- final soundness and subscription-surface validation.
+
+Language verifies every returned candidate against its requested BlueId. It
+does not append the construction-time provider or bootstrap registry, consult
+provider-derived state retained by another invocation, or publish discovered
+provider content into the service's shared cache. Every call receives fresh
+invocation-owned cache state; child processing sequences remain inside that
+same provider domain. Concurrent calls on one `BlueContracts` generation can
+therefore use different providers without cross-provider reads or cache
+contamination.
+
+Provider batching, fragment count, cache temperature, call count, and latency
+remain host metrics. They cannot change the semantic result, named portable-gas
+trace, or admitted-gas total for equivalent exact evidence.
+
+The provider is borrowed. Closing the invocation scope clears invocation-owned
+state but does not close the provider or the borrowed Language runtime. If the
+request needs application, registry, or transport fallback, compose that
+fallback into `requestLocalProvider` before the call.
+
+### Phase-B classification across representations
+
+Phase B classifies the exact feeder-selected source Channels and their declared
+same-scope dependencies. For a pure-reference or fragmented Root, the
+classification projection now materializes the admitted Root and selected
+scope ancestor chain before pruning contracts. It retains selected headers,
+processor-owned checkpoint and termination state, and required
+`Process Embedded` routing markers. Selected executable-body paths and
+unrelated reference branches remain authored and cold until a later phase
+selects them.
+
+This order makes inline, pure-reference, partial, and fragmented Root forms
+expose the same selected dependency surface without turning classification into
+a whole-Root scan. The Phase-B/Phase-C dependency-equality check remains in
+place: a real header, contribution, catalog, ordering, or dependency change is
+still rejected as stale or invalid evidence.
+
+### Use the result atomically
+
+`PlatformProcessingResult.processResult()` is the five-field semantic result.
+`commitCompanion()` carries the expected Root/event identity, expected and
+resulting revision, external order, and verified subscription delta. Persist
+both in one compare-and-swap transaction. A committing success advances the
+Root revision and installs the returned Root/outbox; a noncommitting terminal
+result retains the revision and advances only revision-bound delivery progress.
+
 ## Current-Root compatibility deriver
 
 When a compatibility API requires `ExternalDeliveryPlanDeriver`, create one
@@ -239,8 +374,9 @@ key, active intervals, and candidate keys, the result is fixed because:
 
 JavaScript and other implementations reproduce the same result by implementing
 the same Language/Contracts specification, fixture package, ordering rules, gas
-manifest, and evidence boundaries. Java class names are API conveniences, not
-part of the semantic protocol.
+manifest, portable registration metadata, and evidence boundaries. Java class
+names and object identities are API/runtime conveniences, not part of the
+semantic protocol.
 
 ## Failure boundaries
 

@@ -132,6 +132,50 @@ back, while the admitted child-ledger gas and its exact ordered trace remain in
 `totalGas`. This is the Contracts 1.0 §12.3 rule that deterministic failures
 report all gas admitted before the failure.
 
+### Additive indexed platform invocation
+
+Hosts that have already evaluated an exact indexed-delivery surface can now use
+`PlatformProcessInvocation` with the additive
+`BlueContracts.processForPlatformCommit(Node, Node,
+PlatformProcessInvocation)` overload. The immutable invocation carries the
+`ExternalDeliveryPlan` returned by `IndexedDeliveryEvaluator.prepare(...)` and
+one request-local `NodeProvider`. It does not expose processor internals or ask
+the host to construct a separate evidence value.
+
+This is an execution-boundary addition, not a third semantic input. Root and
+event remain the complete Blue input pair. Contracts checks the plan's hidden
+evaluator binding against both exact identities, the managed/indexed revision,
+external order, and the active runtime-registry generation, then sends the
+complete supplied plan through the authoritative verifier. It does not invoke
+the plan deriver captured during service construction. The prior PROCESS,
+evidence, attempt, snapshot, and compatibility-deriver APIs remain unchanged.
+
+The runtime-registry generation is derived from portable registration
+metadata: registered BlueIds, processor role, canonical-versus-provider type
+evidence, declared type identities, and ordered executable-body fields. It is
+not derived from Java class names, object identity, or processor instance
+identity. The plan can therefore bind equivalent runtime-neutral registrations
+without making Java implementation details part of Contracts evidence.
+
+The Language processing bridge adds strict-provider scope overloads. A strict
+scope verifies exactly the provider graph supplied for that invocation, starts
+with isolated provider-derived cache state, and never appends the
+construction-time provider or bootstrap provider. Scoped runtime and
+conformance capabilities keep every admission, match, type/reference read,
+patch, and final subscription check in that same evidence domain. Scope close
+does not close the caller-owned provider or borrowed Language runtime. The new
+SPI methods have fail-closed defaults, preserving existing bridge linkage while
+requiring a bridge to implement strict scopes before it can support this lane.
+
+The Phase-B dependency projection is also corrected for representation
+invariance. It materializes the admitted Root and feeder-selected scope/header
+chain before pruning, rather than pruning an opaque `{blueId: ...}` wrapper and
+then resolving the full Root. Selected source and declared dependency headers,
+processor state, and required embedded-routing markers remain available;
+unselected sibling scopes and executable bodies remain cold. The existing
+Phase-B/Phase-C equality check is retained, so genuine dependency drift still
+fails closed.
+
 ## Removed pre-release behavior
 
 The following preview behavior is not part of Contracts 1.0:

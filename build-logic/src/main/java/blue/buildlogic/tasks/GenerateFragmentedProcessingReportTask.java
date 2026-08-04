@@ -5,6 +5,7 @@ import blue.buildlogic.support.CleanBuildEvidence;
 import blue.buildlogic.support.DeterministicHashing;
 import blue.buildlogic.support.DeterministicJson;
 import blue.buildlogic.support.JUnitEvidence;
+import blue.buildlogic.support.PlatformInvocationMatrixEvidence;
 import blue.buildlogic.support.SourceSnapshot;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -77,6 +78,10 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
     public abstract RegularFileProperty getRuntimeTraceReport();
+
+    @InputFile
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract RegularFileProperty getPlatformInvocationMatrixReport();
 
     @InputFile
     @Optional
@@ -175,6 +180,9 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
                 paths(getFocusedTestResults()), ":fragmentedProcessingTest", true);
         JsonNode conformance = read(getReleaseConformanceReport());
         JsonNode runtimeTrace = read(getRuntimeTraceReport());
+        Map<String, Object> platformInvocationMatrix =
+                PlatformInvocationMatrixEvidence.analyze(
+                        read(getPlatformInvocationMatrixReport()));
         requireSchema(conformance, RELEASE_CONFORMANCE_SCHEMA, "release conformance");
         requireSchema(runtimeTrace, RUNTIME_TRACE_SCHEMA, "runtime trace");
 
@@ -197,13 +205,20 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
         Map<String, Object> sourceVerification =
                 plain(read(getSourceReleaseVerificationFile()));
         List<Map<String, Object>> requiredCases = requiredCases(focused);
-        if (requiredCases.size() != 4) {
+        if (requiredCases.size() != 5) {
             throw new GradleException(
-                    "Release evidence requires exactly four locality test cases");
+                    "Release evidence requires exactly five locality test cases");
         }
         boolean localityConformant = requiredCases.stream().allMatch(value ->
                 Boolean.TRUE.equals(value.get("executed"))
-                        && Boolean.TRUE.equals(value.get("passed")));
+                        && Boolean.TRUE.equals(value.get("passed")))
+                && Boolean.TRUE.equals(platformInvocationMatrix.get("conformant"));
+        Path platformMatrixPath = getPlatformInvocationMatrixReport()
+                .get().getAsFile().toPath();
+        platformInvocationMatrix.put("evidenceIdentity",
+                DeterministicHashing.sha256(platformMatrixPath));
+        platformInvocationMatrix.put("evidencePath",
+                relative(root, platformMatrixPath));
         Map<String, Object> hostedRuntime = hostedRuntime(allTests);
         boolean hostedConformant = hostedRuntime.values().stream()
                 .allMatch(GenerateFragmentedProcessingReportTask::passingSuiteEvidence);
@@ -254,7 +269,11 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
                 commitAutomationUntouched,
                 apiBaselineIndependent));
         report.put("representationAndLocality", representationAndLocality(
-                root, focused, requiredCases, localityConformant));
+                root,
+                focused,
+                requiredCases,
+                platformInvocationMatrix,
+                localityConformant));
         report.put("runtimeTrace", plain(runtimeTrace));
         report.put("schema", SCHEMA);
         report.put("source", source(getSourceCommit().get(), status));
@@ -317,6 +336,8 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
         values.put("jarRepeatabilityReport", artifact(getJarReplicaReportFile()));
         values.put("releaseConformanceReport", artifact(getReleaseConformanceReport()));
         values.put("runtimeTraceEvidence", artifact(getRuntimeTraceReport()));
+        values.put("platformInvocationMatrixEvidence",
+                artifact(getPlatformInvocationMatrixReport()));
         values.put("sourceArchiveRepeatabilityReport",
                 artifact(getSourceReleaseReplicaReportFile()));
         values.put("sourceRelease", artifact(getSourceReleaseFile()));
@@ -573,6 +594,7 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
             Path root,
             JUnitEvidence.Summary focused,
             List<Map<String, Object>> cases,
+            Map<String, Object> platformInvocationMatrix,
             boolean conformant) {
         List<Map<String, Object>> sources = new ArrayList<>();
         List<Path> sorted = paths(getLocalitySourceFiles());
@@ -607,6 +629,8 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
                 "ExactNodeGraphFragmentsTest", true));
         value.put("measurementEvidence", measurements);
         value.put("measurementExport", export);
+        value.put("publicPlatformInvocationMatrix",
+                platformInvocationMatrix);
         value.put("providerFailureMatrix", focused.suiteEvidence(
                 "FragmentedProcessingFailureMatrixTest", true));
         value.put("representationMatrix", focused.suiteEvidence(

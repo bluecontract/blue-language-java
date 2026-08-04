@@ -356,7 +356,9 @@ final class ConventionPluginsTest {
                 "blue.language.ReferenceBlueIdValidationBenchmark."
                         + "resolveDeepValidReferenceDocument",
                 "blue.language.ProcessingSelectionCacheBenchmark."
-                        + "processWarmSameNode");
+                        + "processWarmSameNode",
+                "blue.language.processor.DeepGraphPhysicalLocalityBenchmark."
+                        + "processPlatformCommit");
 
         // when
         List<String> includes =
@@ -371,6 +373,15 @@ final class ConventionPluginsTest {
         assertFalse(combined.matcher(
                 "blue.language.ProcessingSelectionCacheBenchmark."
                         + "processWarmClone").matches());
+        assertFalse(combined.matcher(
+                "blue.language.processor.DeepGraphPhysicalLocalityBenchmark."
+                        + "processSelectedLeaf").matches());
+        assertFalse(combined.matcher(
+                "blue.language.processor.DeepGraphPhysicalLocalityBenchmark."
+                        + "processPlatformCommitIncludingSetup").find());
+        assertFalse(combined.matcher(
+                "blue.language.processor.DeepGraphPhysicalLocalityBenchmark."
+                        + "processPlatformCommitUnexpectedSuffix").find());
     }
 
     @Test

@@ -4,6 +4,7 @@ import blue.buildlogic.BuildLogicConstants;
 import blue.buildlogic.support.CleanBuildEvidence;
 import blue.buildlogic.support.DeterministicHashing;
 import blue.buildlogic.support.DeterministicJson;
+import blue.buildlogic.support.PlatformInvocationMatrixEvidence;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -350,7 +351,7 @@ public abstract class VerifyReleaseEvidenceReportTask extends DefaultTask {
     private static void verifyLocality(JsonNode report, List<String> violations) {
         JsonNode locality = report.path("representationAndLocality");
         boolean cases = locality.path("requiredTestCases").isArray()
-                && locality.path("requiredTestCases").size() == 4;
+                && locality.path("requiredTestCases").size() == 5;
         for (JsonNode value : locality.path("requiredTestCases")) {
             cases &= value.path("executed").asBoolean() && value.path("passed").asBoolean();
         }
@@ -363,6 +364,36 @@ public abstract class VerifyReleaseEvidenceReportTask extends DefaultTask {
                     && value.path("valuesExported").isBoolean()
                     && !value.path("valuesExported").asBoolean();
         }
+        JsonNode platform = locality.path("publicPlatformInvocationMatrix");
+        JsonNode platformTotals = platform.path("totals");
+        boolean publicPlatformMatrix = platform.path("conformant").asBoolean()
+                && PlatformInvocationMatrixEvidence.SCHEMA.equals(
+                        platform.path("schema").asText())
+                && platform.path("variantCount").asInt(-1)
+                        == PlatformInvocationMatrixEvidence.EXPECTED_VARIANT_COUNT
+                && platform.path("observations").isArray()
+                && platform.path("observations").size()
+                        == PlatformInvocationMatrixEvidence.EXPECTED_VARIANT_COUNT
+                && platform.path("evidenceIdentity").asText()
+                        .matches(SHA_256_PATTERN)
+                && !platform.path("evidencePath").asText().isEmpty()
+                && platform.path("semanticProjection").path("status")
+                        .asText().equals("SUCCESS")
+                && !platform.path("semanticProjection")
+                        .path("resultingRootBlueId").asText().isEmpty()
+                && platform.path("semanticProjection").path("totalGas")
+                        .asLong(-1L) >= 0L
+                && platformTotals.path("providerRequestCount")
+                        .asLong(0L) > 0L
+                && platformTotals.path("selectedBodyDemandCount")
+                        .asLong(-1L)
+                        == PlatformInvocationMatrixEvidence.EXPECTED_VARIANT_COUNT
+                && platformTotals.path("unselectedBodyDemandCount")
+                        .asLong(-1L) == 0L
+                && platformTotals.path("unrelatedProviderRequestCount")
+                        .asLong(-1L) == 0L
+                && platformTotals.path("constructionDeriverCalls")
+                        .asLong(-1L) == 0L;
         check(violations,
                 locality.path("conformant").asBoolean()
                         && locality.path("representationMatrix").path("executed").asBoolean()
@@ -370,7 +401,8 @@ public abstract class VerifyReleaseEvidenceReportTask extends DefaultTask {
                         && locality.path("sourceFiles").isArray()
                         && locality.path("sourceFiles").size() == 4
                         && cases
-                        && measurements,
+                        && measurements
+                        && publicPlatformMatrix,
                 "representation-locality-evidence-incomplete");
     }
 

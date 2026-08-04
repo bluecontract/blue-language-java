@@ -83,6 +83,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             + "shouldVerifyExactRootAndEventFragmentsHaveIdenticalSemanticsAcrossMatrix",
                     "blue.language.processor.DeepGraphPhysicalLocalityIntegrationTest#"
                             + "shouldVerifyDeepGraphHasSemanticParityAndPhysicalLocalityAcrossRepresentationsAndProviders",
+                    "blue.language.processor.DeepGraphPhysicalLocalityIntegrationTest#"
+                            + "shouldVerifyPublicPlatformCommitMatrixPreservesSemanticsAndStrictLocality",
                     "blue.language.provider.ExactNodeGraphFragmentsTest#"
                             + "shouldSplitOnlySelectedCutsAndTheirAncestorSpine",
                     "blue.language.processor.FragmentedProcessingFailureMatrixTest#"
@@ -660,6 +662,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         verification.add(sourceRelease.comparison);
         verification.add(sourceRelease.verification);
         verification.add(semanticEvidence.fragmentedReport);
+        verification.add(semanticEvidence.platformInvocationMatrix);
         verification.add(semanticEvidence.releaseEvidenceVerification);
         verification.add(semanticEvidence.semanticBaselineVerification);
         root.getTasks().named("verifyReleaseEvidenceInputs").configure(task ->

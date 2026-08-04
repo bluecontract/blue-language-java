@@ -199,6 +199,41 @@ stable status, category, details, and exact admitted-gas prefix. See
 [Contracts processing](docs/guides/contracts-processing.md) and
 [statuses and diagnostics](docs/reference/statuses-and-diagnostics.md).
 
+An indexed host can prepare one exact delivery plan and then process it with a
+strict request-local provider:
+
+<!-- blue-example: examples/src/main/java/blue/language/examples/RuntimeProjectionAndIndexedDeliveryExample.java#platform-process-invocation -->
+```java
+        IndexedDeliveryPreparation preparation = contracts
+                .indexedDeliveryEvaluator()
+                .prepare(
+                        indexedRoot,
+                        indexedEvent,
+                        rootRevision,
+                        eventOrderKey,
+                        completeActiveIntervals,
+                        orderedCandidateOccurrenceKeys);
+
+        PlatformProcessInvocation invocation =
+                PlatformProcessInvocation.builder()
+                        .deliveryPlan(preparation.deliveryPlan())
+                        .nodeProvider(requestLocalProvider)
+                        .build();
+
+        PlatformProcessingResult result =
+                contracts.processForPlatformCommit(
+                        rootReference,
+                        eventReference,
+                        invocation);
+```
+
+Root and event are still the only Blue semantic inputs. The plan and provider
+are verified execution environment. Contracts independently checks the exact
+supplied plan; this lane does not call the service-construction plan deriver.
+The request provider is strict, borrowed, and invocation-local: Language adds
+no bootstrap, construction-provider, or retained-cache fallback. See
+[Runtime projection and indexed delivery](docs/guides/runtime-projection-and-indexed-delivery.md#process-an-already-prepared-plan).
+
 ### 4. Observe fragmented processing demand exactly
 
 <!-- blue-example: examples/src/main/java/blue/language/examples/PureReferenceFragmentsExample.java#pure-reference-fragments -->
@@ -298,6 +333,9 @@ and gas traces across equivalent representations.
   physical-index candidates without private kernel access.
 - [Collection-paths migration report](docs/collection-paths-and-cohesion-migration-report.md):
   review conformance, locality, gas, API, benchmark, and cohesion evidence.
+- [Platform invocation and pure-reference correction report](docs/platform-invocation-and-pure-reference-release-report.md):
+  review the strict invocation boundary, Phase-B correction, required matrix,
+  and pending successor certification.
 - [Developer process](docs/developer-process.md): fixtures, identity-bearing
   registries, API baselines, benchmarks, and RC workflow.
 - [Contributing](CONTRIBUTING.md): review contract and checklist.

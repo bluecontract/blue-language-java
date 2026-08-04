@@ -14,9 +14,13 @@ import blue.language.processor.ExternalSubscriptionOccurrenceKey;
 import blue.language.processor.GasSchedule;
 import blue.language.processor.IndexedDeliveryDiagnostic;
 import blue.language.processor.IndexedDeliveryPreparation;
+import blue.language.processor.PlatformProcessInvocation;
+import blue.language.processor.PlatformProcessingResult;
 import blue.language.processor.ProcessorRuntimeAccess;
 import blue.language.processor.SubscriptionDelta;
 import blue.language.processor.SubscriptionSurfaceProjection;
+import blue.language.provider.ExactNodeGraphFragments;
+import blue.language.provider.NodeProvider;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Arrays;
@@ -32,7 +36,7 @@ public final class RuntimeProjectionAndIndexedDeliveryExample {
     }
 
     /**
-     * Runs an empty-surface host projection through all three public services.
+     * Runs an empty-surface host projection through all four public services.
      *
      * @return deterministic runtime, projection, and delivery observations
      */
@@ -72,6 +76,25 @@ public final class RuntimeProjectionAndIndexedDeliveryExample {
                                 order,
                                 initial.added())
                         .derive(root, event);
+                ExactNodeGraphFragments invocationFragments =
+                        new ExactNodeGraphFragments(root, event);
+                PlatformProcessingResult platform = processPreparedPlan(
+                        contracts,
+                        root,
+                        event,
+                        invocationFragments.roots().get(0)
+                                .pureReference(),
+                        invocationFragments.roots().get(1)
+                                .pureReference(),
+                        0L,
+                        order,
+                        initial.added(),
+                        Collections
+                                .<ExternalSubscriptionOccurrenceKey>
+                                emptyList(),
+                        invocationFragments.provider());
+                ExampleSupport.require(platform != null,
+                        "Platform invocation must return a result");
                 return new Result(
                         snapshot.resolvedRoot().getName(),
                         initial.added().size(),
@@ -83,6 +106,59 @@ public final class RuntimeProjectionAndIndexedDeliveryExample {
                         compatible.exactRuntimeState());
             }
         }
+    }
+
+    /**
+     * Processes one publicly prepared plan through a strict request provider.
+     *
+     * @param contracts configured Contracts service
+     * @param indexedRoot exact materialized Root used for preparation
+     * @param indexedEvent exact materialized event used for preparation
+     * @param rootReference processing representation of the same exact Root
+     * @param eventReference processing representation of the same exact event
+     * @param rootRevision managed and indexed Root revision
+     * @param eventOrderKey exact external event order
+     * @param completeActiveIntervals complete active subscription surface
+     * @param orderedCandidateOccurrenceKeys exact physical candidate order
+     * @param requestLocalProvider complete strict invocation provider
+     * @return atomic platform processing result
+     */
+    public static PlatformProcessingResult processPreparedPlan(
+            BlueContracts contracts,
+            Node indexedRoot,
+            Node indexedEvent,
+            Node rootReference,
+            Node eventReference,
+            long rootRevision,
+            ExternalOrderKey eventOrderKey,
+            List<SubscriptionDelta.Entry> completeActiveIntervals,
+            List<ExternalSubscriptionOccurrenceKey>
+                    orderedCandidateOccurrenceKeys,
+            NodeProvider requestLocalProvider) {
+        // tag::platform-process-invocation[]
+        IndexedDeliveryPreparation preparation = contracts
+                .indexedDeliveryEvaluator()
+                .prepare(
+                        indexedRoot,
+                        indexedEvent,
+                        rootRevision,
+                        eventOrderKey,
+                        completeActiveIntervals,
+                        orderedCandidateOccurrenceKeys);
+
+        PlatformProcessInvocation invocation =
+                PlatformProcessInvocation.builder()
+                        .deliveryPlan(preparation.deliveryPlan())
+                        .nodeProvider(requestLocalProvider)
+                        .build();
+
+        PlatformProcessingResult result =
+                contracts.processForPlatformCommit(
+                        rootReference,
+                        eventReference,
+                        invocation);
+        // end::platform-process-invocation[]
+        return result;
     }
 
     /**

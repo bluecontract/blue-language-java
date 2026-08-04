@@ -281,6 +281,34 @@ Root/checkpoints/lifecycle commit atomically
 Feeder indexes and transport progress are platform state. They do not become a
 third authored input to `PROCESS`.
 
+An indexed host can make that boundary explicit. It first asks the public
+indexed-delivery evaluator to verify the complete retained interval surface and
+the ordered physical candidate set. It then passes the resulting exact plan,
+together with one request-local provider, through
+`PlatformProcessInvocation` to `BlueContracts.processForPlatformCommit(...)`.
+
+```text
+semantic inputs:       Root + event
+execution environment: exact verified plan + invocation provider
+host result:           PROCESS result + atomic commit companion
+```
+
+Contracts binds the plan back to the exact Root BlueId, event BlueId, managed
+and indexed revision, event order, and immutable runtime-registry generation.
+It also replays the complete supplied plan through the authoritative verifier.
+Supplying a prepared plan avoids acquiring the same environmental state again;
+it never turns that plan into trusted semantic input and never bypasses
+verification.
+
+The invocation provider is the complete provider graph for that attempt. It is
+used for Root/event admission, selected embedded scopes, contract and type
+chains, selected Channel and Handler content, patch opening, and final
+subscription validation. Language verifies its returned nodes but does not add
+the service provider, bootstrap provider, or a prior invocation's cache as a
+fallback. The caller composes any intended fallback explicitly. Closing the
+invocation releases only invocation-owned state and never closes that borrowed
+provider.
+
 ## 14. One Root and embedded scopes
 
 An embedded scope is an owned object path declared by an effective Process
@@ -370,9 +398,11 @@ More gas cannot repair a portable-limit failure.
 - [Preprocessing and the `blue` directive](guides/preprocessing-and-blue-directive.md)
 - [Resolve, canonicalize, and minimize](guides/expand-collapse-resolve-canonicalize-minimize.md)
 - [Providers and evidence](guides/providers-and-evidence.md)
+- [Runtime projection and indexed delivery](guides/runtime-projection-and-indexed-delivery.md)
 - [Contracts processing](guides/contracts-processing.md)
 - [Embedded collection paths](guides/embedded-collection-paths.md)
 - [Collection-paths migration report](collection-paths-and-cohesion-migration-report.md)
+- [Platform invocation and pure-reference correction report](platform-invocation-and-pure-reference-release-report.md)
 - [Statuses and diagnostics](reference/statuses-and-diagnostics.md)
 - [Architecture overview](architecture/overview.md)
 - [Developer process](developer-process.md)

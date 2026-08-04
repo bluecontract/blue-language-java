@@ -24,7 +24,8 @@ final class FinalQualityOrchestration {
     private static final List<String> REQUIRED_SMOKE_BENCHMARKS =
             Collections.unmodifiableList(Arrays.asList(
                     "blue.language.ReferenceBlueIdValidationBenchmark.resolveDeepValidReferenceDocument",
-                    "blue.language.ProcessingSelectionCacheBenchmark.processWarmSameNode"));
+                    "blue.language.ProcessingSelectionCacheBenchmark.processWarmSameNode",
+                    "blue.language.processor.DeepGraphPhysicalLocalityBenchmark.processPlatformCommit"));
 
     private FinalQualityOrchestration() {}
 
@@ -160,11 +161,11 @@ final class FinalQualityOrchestration {
         return false;
     }
 
-    /** Returns one exact alternation regex while retaining two report requirements. */
+    /** Returns one exact alternation regex for every required smoke benchmark. */
     static List<String> requiredSmokeIncludes() {
         List<String> exactPatterns = new ArrayList<>();
         for (String benchmark : REQUIRED_SMOKE_BENCHMARKS) {
-            exactPatterns.add(Pattern.quote(benchmark));
+            exactPatterns.add("^" + Pattern.quote(benchmark) + "$");
         }
         return JmhConventionsPlugin.combineIncludePatterns(
                 exactPatterns);

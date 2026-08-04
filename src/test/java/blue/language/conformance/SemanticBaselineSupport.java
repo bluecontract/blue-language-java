@@ -65,6 +65,12 @@ final class SemanticBaselineSupport {
                     "deep-graph-matrix.json",
                     "fragmented-matrix.json",
                     "root-only-event.json")));
+    static final Set<String> BASELINE_LOCALITY_TEST_METHODS =
+            Collections.unmodifiableSet(new TreeSet<>(Arrays.asList(
+                    "shouldVerifyExactRootAndEventFragmentsHaveIdenticalSemanticsAcrossMatrix",
+                    "shouldVerifyDeepGraphHasSemanticParityAndPhysicalLocalityAcrossRepresentationsAndProviders",
+                    "shouldSplitOnlySelectedCutsAndTheirAncestorSpine",
+                    "shouldVerifySelectedBodyUnavailableSuspendsWithoutPortableGasAndRetryMatches")));
 
     private SemanticBaselineSupport() {
     }
@@ -363,6 +369,7 @@ final class SemanticBaselineSupport {
                     "Fragmented evidence has no required locality tests");
         }
         Set<String> identities = new TreeSet<>();
+        ArrayNode baselineTests = JSON.createArrayNode();
         for (JsonNode requiredTest : requiredTests) {
             String identity = requiredTestIdentity(requiredTest);
             if (!identities.add(identity)) {
@@ -374,8 +381,19 @@ final class SemanticBaselineSupport {
                 throw new IllegalStateException(
                         "Required locality test did not pass: " + identity);
             }
+            if (BASELINE_LOCALITY_TEST_METHODS.contains(identity)) {
+                baselineTests.add(requiredTest.deepCopy());
+            }
         }
-        return requiredTests.deepCopy();
+        Set<String> baselineIdentities = new TreeSet<>();
+        for (JsonNode baselineTest : baselineTests) {
+            baselineIdentities.add(requiredTestIdentity(baselineTest));
+        }
+        requireEquals(
+                "complete baseline locality test set",
+                BASELINE_LOCALITY_TEST_METHODS,
+                baselineIdentities);
+        return baselineTests;
     }
 
     /** Converts trailing CLI arguments into normalized locality input paths. */

@@ -7,6 +7,8 @@ import blue.buildlogic.tasks.GenerateFragmentedProcessingReportTask;
 import blue.buildlogic.tasks.VerifyReleaseEvidenceReportTask;
 import blue.buildlogic.tasks.VerifySourceReleaseArchiveTask;
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -33,6 +35,11 @@ final class SemanticEvidenceOrchestration {
 
     private static final int JAVA_VERSION = 8;
     private static final String GROUP = BuildLogicConstants.VERIFICATION_GROUP;
+    private static final List<String> LEGACY_SEMANTIC_LOCALITY_FILES =
+            Collections.unmodifiableList(Arrays.asList(
+                    "deep-graph-matrix.json",
+                    "fragmented-matrix.json",
+                    "root-only-event.json"));
 
     private SemanticEvidenceOrchestration() {}
 
@@ -83,6 +90,14 @@ final class SemanticEvidenceOrchestration {
                         "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures");
         Directory localityEvidence = project.getLayout()
                 .getBuildDirectory().dir("reports/semantic-baseline/locality").get();
+        RegularFile platformInvocationMatrix = localityEvidence.file(
+                "platform-invocation-matrix.json");
+        ConfigurableFileCollection legacySemanticLocalityEvidence =
+                project.files();
+        for (String fileName : LEGACY_SEMANTIC_LOCALITY_FILES) {
+            legacySemanticLocalityEvidence.from(
+                    localityEvidence.file(fileName));
+        }
 
         TaskProvider<Jar> distributionApiJar = project.getTasks().register(
                 BuildLogicConstants.TASK_SEMANTIC_DISTRIBUTION_API_JAR,
@@ -216,6 +231,8 @@ final class SemanticEvidenceOrchestration {
                             task.getFocusedTestResults().from(focusedTestResults);
                             task.getReleaseConformanceReport().set(releaseConformance);
                             task.getRuntimeTraceReport().set(runtimeTrace);
+                            task.getPlatformInvocationMatrixReport().set(
+                                    platformInvocationMatrix);
                             task.getCleanBuildEvidenceFile().set(cleanBuildEvidence);
                             task.getJarFile().set(aggregateJar);
                             task.getSourcesJarFile().set(aggregateSourcesJar);
@@ -324,8 +341,11 @@ final class SemanticEvidenceOrchestration {
                             relativeArgument(verificationWorkspace, migrationLedger.getAsFile()),
                             relativeArgument(verificationWorkspace, apiBaseline.getAsFile()),
                             relativeArgument(verificationWorkspace, binaryApiReport.get()
-                                    .getAsFile()),
-                            "build/reports/semantic-baseline/locality");
+                                    .getAsFile()));
+                    for (String fileName : LEGACY_SEMANTIC_LOCALITY_FILES) {
+                        task.args("build/reports/semantic-baseline/locality/"
+                                + fileName);
+                    }
                     task.getInputs().file(semanticBaseline);
                     task.getInputs().file(releaseConformance);
                     task.getInputs().file(fragmentedReport.flatMap(
@@ -335,7 +355,7 @@ final class SemanticEvidenceOrchestration {
                     task.getInputs().file(apiBaseline);
                     task.getInputs().file(binaryApiReport);
                     task.getInputs().dir(contractsFixtures);
-                    task.getInputs().dir(localityEvidence);
+                    task.getInputs().files(legacySemanticLocalityEvidence);
                     task.getInputs().files(semanticWorkspace);
                     task.getOutputs().file(semanticVerification);
                 });
@@ -360,20 +380,24 @@ final class SemanticEvidenceOrchestration {
                                     .get().getAsFile()),
                             project.relativePath(semanticApiInventory.get().getAsFile()),
                             project.relativePath(contractsFixtures.getAsFile()),
-                            project.relativePath(semanticBaseline.getAsFile()),
-                            project.relativePath(localityEvidence.getAsFile()));
+                            project.relativePath(semanticBaseline.getAsFile()));
+                    for (String fileName : LEGACY_SEMANTIC_LOCALITY_FILES) {
+                        task.args(project.relativePath(
+                                localityEvidence.file(fileName).getAsFile()));
+                    }
                     task.getInputs().file(releaseConformance);
                     task.getInputs().file(fragmentedReport.flatMap(
                             GenerateFragmentedProcessingReportTask::getReportFile));
                     task.getInputs().file(semanticApiInventory);
                     task.getInputs().dir(contractsFixtures);
-                    task.getInputs().dir(localityEvidence);
+                    task.getInputs().files(legacySemanticLocalityEvidence);
                     task.getOutputs().file(semanticBaseline);
                 });
         return new Tasks(
                 fragmentedReport,
                 releaseEvidenceVerification,
-                semanticBaselineVerification);
+                semanticBaselineVerification,
+                platformInvocationMatrix);
     }
 
     private static TaskProvider<Sync> registerSemanticVerificationWorkspace(
@@ -410,9 +434,17 @@ final class SemanticEvidenceOrchestration {
                     task.from(project.file("README.md"));
                     task.from(project.getLayout().getBuildDirectory().dir(
                                     "reports/semantic-baseline/locality"),
-                            contents -> contents.into(
-                                    "build/reports/semantic-baseline/locality"));
+                            contents -> {
+                                contents.include(LEGACY_SEMANTIC_LOCALITY_FILES);
+                                contents.into(
+                                        "build/reports/semantic-baseline/locality");
+                            });
                 });
+    }
+
+    /** Exact legacy payload set retained by the frozen semantic baseline. */
+    static List<String> legacySemanticLocalityEvidenceFiles() {
+        return LEGACY_SEMANTIC_LOCALITY_FILES;
     }
 
     private static Provider<RegularFile> moduleArchive(
@@ -449,14 +481,17 @@ final class SemanticEvidenceOrchestration {
         final TaskProvider<GenerateFragmentedProcessingReportTask> fragmentedReport;
         final TaskProvider<VerifyReleaseEvidenceReportTask> releaseEvidenceVerification;
         final TaskProvider<JavaExec> semanticBaselineVerification;
+        final RegularFile platformInvocationMatrix;
 
         private Tasks(
                 TaskProvider<GenerateFragmentedProcessingReportTask> fragmentedReport,
                 TaskProvider<VerifyReleaseEvidenceReportTask> releaseEvidenceVerification,
-                TaskProvider<JavaExec> semanticBaselineVerification) {
+                TaskProvider<JavaExec> semanticBaselineVerification,
+                RegularFile platformInvocationMatrix) {
             this.fragmentedReport = fragmentedReport;
             this.releaseEvidenceVerification = releaseEvidenceVerification;
             this.semanticBaselineVerification = semanticBaselineVerification;
+            this.platformInvocationMatrix = platformInvocationMatrix;
         }
     }
 }

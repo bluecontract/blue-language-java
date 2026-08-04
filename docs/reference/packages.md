@@ -31,7 +31,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.patching` | 1 | present |
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
-| `blue.language.processor` | 97 | present |
+| `blue.language.processor` | 98 | present |
 | `blue.language.processor.model` | 18 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -316,6 +316,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.ObservationKind`
 - `blue.language.processor.PatchSource`
 - `blue.language.processor.PlatformCommitCompanion`
+- `blue.language.processor.PlatformProcessInvocation`
 - `blue.language.processor.PlatformProcessingResult`
 - `blue.language.processor.PortableLimitExceededException`
 - `blue.language.processor.ProcessAttemptResult`
