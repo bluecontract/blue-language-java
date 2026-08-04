@@ -18,10 +18,24 @@ final class ProcessorEngine {
     private ProcessorEngine() {
     }
     static DocumentProcessingResult initializeDocument(DocumentProcessor owner, Node document) {
+        return initializeDocument(
+                ProcessorInvocationServices.configured(owner), document);
+    }
+
+    static DocumentProcessingResult initializeDocument(
+            ProcessorInvocationServices owner,
+            Node document) {
         return ProcessorInvocationOrchestrator.initialize(owner, document);
     }
 
     static DocumentProcessingResult initializeDocument(DocumentProcessor owner, ResolvedSnapshot snapshot) {
+        return initializeDocument(
+                ProcessorInvocationServices.configured(owner), snapshot);
+    }
+
+    static DocumentProcessingResult initializeDocument(
+            ProcessorInvocationServices owner,
+            ResolvedSnapshot snapshot) {
         return ProcessorInvocationOrchestrator.initialize(owner, snapshot);
     }
 
@@ -32,11 +46,36 @@ final class ProcessorEngine {
     static DocumentProcessingResult processDocument(
             DocumentProcessor owner, Node document, Node event,
             VerifiedExecutionEvidence evidence) {
-        return processDocumentWithTrace(owner, document, event, evidence).processResult();
+        return processDocument(
+                ProcessorInvocationServices.configured(owner),
+                document,
+                event,
+                evidence);
+    }
+
+    static DocumentProcessingResult processDocument(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node event,
+            VerifiedExecutionEvidence evidence) {
+        return processDocumentWithTrace(
+                owner, document, event, evidence).processResult();
     }
 
     static ProcessingDebugResult processDocumentWithTrace(
             DocumentProcessor owner, Node document, Node event,
+            VerifiedExecutionEvidence evidence) {
+        return processDocumentWithTrace(
+                ProcessorInvocationServices.configured(owner),
+                document,
+                event,
+                evidence);
+    }
+
+    static ProcessingDebugResult processDocumentWithTrace(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node event,
             VerifiedExecutionEvidence evidence) {
         return ProcessorInvocationOrchestrator.process(owner, document, event, evidence);
     }
@@ -56,11 +95,36 @@ final class ProcessorEngine {
     static DocumentProcessingResult processDocument(
             DocumentProcessor owner, ResolvedSnapshot snapshot, Node event,
             VerifiedExecutionEvidence evidence) {
-        return processDocumentWithTrace(owner, snapshot, event, evidence).processResult();
+        return processDocument(
+                ProcessorInvocationServices.configured(owner),
+                snapshot,
+                event,
+                evidence);
+    }
+
+    static DocumentProcessingResult processDocument(
+            ProcessorInvocationServices owner,
+            ResolvedSnapshot snapshot,
+            Node event,
+            VerifiedExecutionEvidence evidence) {
+        return processDocumentWithTrace(
+                owner, snapshot, event, evidence).processResult();
     }
 
     static ProcessingDebugResult processDocumentWithTrace(
             DocumentProcessor owner, ResolvedSnapshot snapshot, Node event,
+            VerifiedExecutionEvidence evidence) {
+        return processDocumentWithTrace(
+                ProcessorInvocationServices.configured(owner),
+                snapshot,
+                event,
+                evidence);
+    }
+
+    static ProcessingDebugResult processDocumentWithTrace(
+            ProcessorInvocationServices owner,
+            ResolvedSnapshot snapshot,
+            Node event,
             VerifiedExecutionEvidence evidence) {
         return ProcessorInvocationOrchestrator.process(owner, snapshot, event, evidence);
     }
@@ -169,7 +233,7 @@ final class ProcessorEngine {
     }
 
     @SuppressWarnings("unchecked")
-    static void executeHandler(DocumentProcessor owner, HandlerContract contract, ProcessorExecutionContext context) {
+    static void executeHandler(ProcessorInvocationServices owner, HandlerContract contract, ProcessorExecutionContext context) {
         HandlerProcessor<? extends HandlerContract> processor = owner.registry()
                 .lookupHandler(contract)
                 .orElseThrow(() -> new IllegalStateException(
@@ -179,7 +243,7 @@ final class ProcessorEngine {
     }
 
     @SuppressWarnings("unchecked")
-    static boolean matchesHandler(DocumentProcessor owner,
+    static boolean matchesHandler(ProcessorInvocationServices owner,
                                   HandlerContract contract,
                                   HandlerMatchContext context) {
         HandlerProcessor<? extends HandlerContract> processor = owner.registry()

@@ -170,6 +170,57 @@ final class DocumentProcessorNodeOperations {
         }
     }
 
+    /** Processes one strict invocation with an already evaluated exact plan. */
+    PlatformProcessingResult processDocumentForPlatformCommit(
+            Node document,
+            Node event,
+            PlatformProcessInvocation invocation,
+            ProcessorInvocationServices services) {
+        Objects.requireNonNull(invocation, "invocation");
+        Objects.requireNonNull(services, "services");
+        ExternalDeliveryPlan plan = invocation.deliveryPlan();
+        VerifiedExecutionEvidence evidence =
+                invocation.verifiedEvidence();
+        try (DocumentProcessorLifecycle.ReadScope ignored =
+                     lifecycle.openRead(processor.registry())) {
+            ProcessingInputAdmission admission =
+                    support.admission(services);
+            admission.requireProcessableTopLevel(
+                    event, PROCESSING_EVENT_LABEL);
+            ProcessingInputAdmission.AdmittedNode admittedRoot =
+                    admission.materializeTopLevel(
+                            document, PROCESSING_ROOT_LABEL);
+            Node admittedEvent = admission.materializeTopLevel(
+                    event, PROCESSING_EVENT_LABEL).node();
+            admittedRoot = support.admitDeliveryScopes(
+                    admission,
+                    admittedRoot,
+                    plan.deliveries());
+            support.verifySuppliedPlan(
+                    admittedRoot.node(),
+                    admittedEvent,
+                    plan,
+                    evidence,
+                    services);
+            return support.platformResult(
+                    support.processAdmittedWithTrace(
+                            admission,
+                            admittedRoot,
+                            admittedEvent,
+                            evidence,
+                            services));
+        } catch (SubscriptionSurfaceInvalidException exception) {
+            return support.platformFailure(
+                    evidence,
+                    support.subscriptionSurfaceInvalidResult(
+                            document, exception));
+        } catch (PortableLimitExceededException exception) {
+            return support.platformFailure(
+                    evidence,
+                    support.portableLimitResult(document, exception));
+        }
+    }
+
     /** Processes with derived evidence and returns an out-of-band trace. */
     ProcessingDebugResult processDocumentWithTrace(
             Node document,

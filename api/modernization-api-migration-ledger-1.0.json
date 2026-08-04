@@ -695,6 +695,16 @@
         "public/protected class added: blue.language.processor.ProcessorRuntimeAccess",
         "public/protected class added: blue.language.processor.SubscriptionSurfaceProjection"
       ]
+    },
+    {
+      "id": "phase-8-platform-invocation-and-pure-reference-fix",
+      "requirement": "01-CODEX-PROMPT-blue-language-java-platform-invocation-and-pure-reference-fix.md",
+      "rationale": "Approve the cohesive additive invocation value required to execute one publicly prepared exact plan through a strict request-local provider. Root and event remain the only Blue semantic inputs, and the Phase-B correction adds no public type.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "public/protected class added: blue.language.processor.PlatformProcessInvocation",
+        "public/protected class added: blue.language.processor.PlatformProcessInvocation$Builder"
+      ]
     }
   ]
 }

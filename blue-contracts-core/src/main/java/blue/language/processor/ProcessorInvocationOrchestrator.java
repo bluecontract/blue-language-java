@@ -19,7 +19,7 @@ final class ProcessorInvocationOrchestrator {
     }
 
     static DocumentProcessingResult initialize(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             Node document) {
         Objects.requireNonNull(document, "document");
         DocumentProcessingResult invalid =
@@ -73,7 +73,7 @@ final class ProcessorInvocationOrchestrator {
     }
 
     static DocumentProcessingResult initialize(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ResolvedSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
         DocumentProcessingResult invalid = ProcessingInputAdmission
@@ -127,7 +127,7 @@ final class ProcessorInvocationOrchestrator {
     }
 
     static ProcessingDebugResult process(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             Node document,
             Node event,
             VerifiedExecutionEvidence evidence) {
@@ -259,7 +259,7 @@ final class ProcessorInvocationOrchestrator {
     }
 
     static ProcessingDebugResult process(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ResolvedSnapshot snapshot,
             Node event,
             VerifiedExecutionEvidence evidence) {

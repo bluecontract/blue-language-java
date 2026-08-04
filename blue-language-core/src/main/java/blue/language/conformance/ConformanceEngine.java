@@ -19,13 +19,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 /**
  * Checks resolved Blue conformance and plans immutable type generalization.
  *
  * <p>The engine verifies provider content through a wrapped
  * {@link NodeProvider}. It may borrow a caller cache or own an isolated cache;
- * only an owned cache is released by {@link #close()}.</p>
+ * only an owned cache is released by {@link #close()}. Closing any engine
+ * invalidates that engine and waits for active work to finish.</p>
  */
 public final class ConformanceEngine implements AutoCloseable {
 
@@ -33,6 +36,11 @@ public final class ConformanceEngine implements AutoCloseable {
     private final MergingProcessor mergingProcessor;
     private final ResolvedReferenceCache resolvedReferenceCache;
     private final boolean ownsReferenceCache;
+    private final ReentrantReadWriteLock lifecycle =
+            new ReentrantReadWriteLock(true);
+    private final ThreadLocal<Integer> operationDepth =
+            new ThreadLocal<>();
+    private volatile boolean closed;
 
     /**
      * Creates an engine without retained resolved-reference caching.
@@ -115,16 +123,16 @@ public final class ConformanceEngine implements AutoCloseable {
      * Creates a planning view that can read published reference content while
      * retaining all newly discovered reference and graph entries locally.
      *
-     * @return transient planning view, or this engine when uncached
+     * @return independently closeable transient planning view
      */
     public ConformanceEngine transientView() {
-        if (resolvedReferenceCache == null) {
-            return this;
-        }
-        return new ConformanceEngine(nodeProvider,
+        return call(() -> new ConformanceEngine(
+                nodeProvider,
                 mergingProcessor,
-                resolvedReferenceCache.transientChild(),
-                true);
+                resolvedReferenceCache == null
+                        ? null
+                        : resolvedReferenceCache.transientChild(),
+                resolvedReferenceCache != null));
     }
 
     /**
@@ -134,16 +142,32 @@ public final class ConformanceEngine implements AutoCloseable {
      * @return transient planning view
      */
     public ConformanceEngine transientView(ResolvedReferenceCache transientReferenceCache) {
-        return new ConformanceEngine(nodeProvider,
+        return call(() -> new ConformanceEngine(nodeProvider,
                 mergingProcessor,
-                Objects.requireNonNull(transientReferenceCache, "transientReferenceCache"),
-                false);
+                Objects.requireNonNull(
+                        transientReferenceCache,
+                        "transientReferenceCache"),
+                false));
     }
 
     @Override
     public void close() {
-        if (ownsReferenceCache && resolvedReferenceCache != null) {
-            resolvedReferenceCache.close();
+        Integer depth = operationDepth.get();
+        if (depth != null && depth > 0) {
+            throw new IllegalStateException(
+                    "Conformance engine cannot close from active work");
+        }
+        lifecycle.writeLock().lock();
+        try {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            if (ownsReferenceCache && resolvedReferenceCache != null) {
+                resolvedReferenceCache.close();
+            }
+        } finally {
+            lifecycle.writeLock().unlock();
         }
     }
 
@@ -154,9 +178,10 @@ public final class ConformanceEngine implements AutoCloseable {
      * @return whether incremental value resolution is supported
      */
     public boolean supportsIncrementalValueResolution() {
-        return mergingProcessor instanceof IncrementalMergingProcessorCapability
+        return call(() -> mergingProcessor
+                instanceof IncrementalMergingProcessorCapability
                 && ((IncrementalMergingProcessorCapability) mergingProcessor)
-                .supportsIncrementalValueResolution();
+                .supportsIncrementalValueResolution());
     }
 
     /**
@@ -166,9 +191,10 @@ public final class ConformanceEngine implements AutoCloseable {
      * @return whether incremental resolution is safe
      */
     public boolean supportsIncrementalValueResolution(IncrementalValueResolutionRequest request) {
-        return mergingProcessor instanceof IncrementalMergingProcessorCapability
+        return call(() -> mergingProcessor
+                instanceof IncrementalMergingProcessorCapability
                 && ((IncrementalMergingProcessorCapability) mergingProcessor)
-                .supportsIncrementalValueResolution(request);
+                .supportsIncrementalValueResolution(request));
     }
 
     /**
@@ -179,15 +205,21 @@ public final class ConformanceEngine implements AutoCloseable {
      * @return conformance result
      */
     public ConformanceResult check(Node node) {
-        if (node == null) {
-            return ConformanceResult.conformant();
-        }
-        try {
-            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache).resolve(node.clone(), ResolutionLimits.NO_LIMITS);
-            return ConformanceResult.conformant();
-        } catch (RuntimeException ex) {
-            return ConformanceResult.nonConformant(ex.getMessage());
-        }
+        return call(() -> {
+            if (node == null) {
+                return ConformanceResult.conformant();
+            }
+            try {
+                new Merger(
+                        mergingProcessor,
+                        nodeProvider,
+                        resolvedReferenceCache).resolve(
+                        node.clone(), ResolutionLimits.NO_LIMITS);
+                return ConformanceResult.conformant();
+            } catch (RuntimeException ex) {
+                return ConformanceResult.nonConformant(ex.getMessage());
+            }
+        });
     }
 
     /**
@@ -233,8 +265,11 @@ public final class ConformanceEngine implements AutoCloseable {
      * @return immutable conformance plan
      */
     public ConformancePlan planGeneralization(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {
-        return new FrozenConformancePlanner(nodeProvider, mergingProcessor, resolvedReferenceCache)
-                .plan(canonicalRoot, resolvedRoot, changedPath);
+        return call(() -> new FrozenConformancePlanner(
+                nodeProvider,
+                mergingProcessor,
+                resolvedReferenceCache).plan(
+                canonicalRoot, resolvedRoot, changedPath));
     }
 
     /**
@@ -271,36 +306,47 @@ public final class ConformanceEngine implements AutoCloseable {
             FrozenNode resolvedRoot,
             List<String> changedPaths,
             Collection<String> preservedReferencePaths) {
-        if (changedPaths == null || changedPaths.isEmpty()) {
-            return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
-        }
-        FrozenNode nextCanonical = canonicalRoot;
-        FrozenNode nextResolved = resolvedRoot;
-        boolean generalized = false;
-        List<CanonicalGeneralizationPatch> canonicalPatches = new ArrayList<>();
-        List<String> allChangedPaths = new ArrayList<>();
-        FrozenConformancePlanner planner = new FrozenConformancePlanner(nodeProvider,
-                mergingProcessor,
-                resolvedReferenceCache,
-                preservedReferencePaths);
-        for (String changedPath : changedPaths) {
-            ConformancePlan plan = planner.plan(nextCanonical, nextResolved, changedPath);
-            nextCanonical = plan.canonicalRoot() != null ? plan.canonicalRoot() : nextCanonical;
-            nextResolved = plan.root();
-            if (plan.generalized()) {
-                generalized = true;
-                canonicalPatches.addAll(plan.canonicalPatches());
-                allChangedPaths.addAll(plan.changedPaths());
+        return call(() -> {
+            if (changedPaths == null || changedPaths.isEmpty()) {
+                return ConformancePlan.unchanged(
+                        canonicalRoot, resolvedRoot);
             }
-        }
-        if (!generalized) {
-            return ConformancePlan.unchanged(nextCanonical, nextResolved);
-        }
-        return ConformancePlan.generalized(nextCanonical,
-                nextResolved,
-                canonicalPatches,
-                allChangedPaths,
-                nextCanonical != null);
+            FrozenNode nextCanonical = canonicalRoot;
+            FrozenNode nextResolved = resolvedRoot;
+            boolean generalized = false;
+            List<CanonicalGeneralizationPatch> canonicalPatches =
+                    new ArrayList<>();
+            List<String> allChangedPaths = new ArrayList<>();
+            FrozenConformancePlanner planner =
+                    new FrozenConformancePlanner(
+                            nodeProvider,
+                            mergingProcessor,
+                            resolvedReferenceCache,
+                            preservedReferencePaths);
+            for (String changedPath : changedPaths) {
+                ConformancePlan plan = planner.plan(
+                        nextCanonical, nextResolved, changedPath);
+                nextCanonical = plan.canonicalRoot() != null
+                        ? plan.canonicalRoot()
+                        : nextCanonical;
+                nextResolved = plan.root();
+                if (plan.generalized()) {
+                    generalized = true;
+                    canonicalPatches.addAll(plan.canonicalPatches());
+                    allChangedPaths.addAll(plan.changedPaths());
+                }
+            }
+            if (!generalized) {
+                return ConformancePlan.unchanged(
+                        nextCanonical, nextResolved);
+            }
+            return ConformancePlan.generalized(
+                    nextCanonical,
+                    nextResolved,
+                    canonicalPatches,
+                    allChangedPaths,
+                    nextCanonical != null);
+        });
     }
 
     /**
@@ -313,18 +359,45 @@ public final class ConformanceEngine implements AutoCloseable {
      * @return whether the candidate is the same type or a verified subtype
      */
     public boolean isSubtypeOf(String candidateBlueId, String expectedAncestorBlueId) {
-        if (candidateBlueId == null || expectedAncestorBlueId == null) {
-            return false;
-        }
-        String current = candidateBlueId;
-        Set<String> seen = new HashSet<>();
-        while (current != null && seen.add(current)) {
-            if (Objects.equals(current, expectedAncestorBlueId)) {
-                return true;
+        return call(() -> {
+            if (candidateBlueId == null || expectedAncestorBlueId == null) {
+                return false;
             }
-            current = parentTypeBlueId(current);
+            String current = candidateBlueId;
+            Set<String> seen = new HashSet<>();
+            while (current != null && seen.add(current)) {
+                if (Objects.equals(current, expectedAncestorBlueId)) {
+                    return true;
+                }
+                current = parentTypeBlueId(current);
+            }
+            return false;
+        });
+    }
+
+    private <T> T call(Supplier<T> work) {
+        lifecycle.readLock().lock();
+        Integer previous = operationDepth.get();
+        try {
+            ensureOpen();
+            operationDepth.set(
+                    previous == null ? 1 : previous + 1);
+            return work.get();
+        } finally {
+            if (previous == null) {
+                operationDepth.remove();
+            } else {
+                operationDepth.set(previous);
+            }
+            lifecycle.readLock().unlock();
         }
-        return false;
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException(
+                    "Conformance engine is closed");
+        }
     }
 
     private String parentTypeBlueId(String blueId) {

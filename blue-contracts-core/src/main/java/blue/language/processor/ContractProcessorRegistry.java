@@ -1,14 +1,18 @@
 package blue.language.processor;
 
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
-import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.NodeProvider;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -533,6 +537,97 @@ public class ContractProcessorRegistry {
 
     synchronized long version() {
         return version;
+    }
+
+    /**
+     * Returns a deterministic identity for this immutable processor
+     * generation.
+     *
+     * <p>The normative, empty application registry keeps the released runtime
+     * package identity. Application registrations extend that identity with
+     * their portable registration surface: exact type identity, processor
+     * role, declared type identities, executable-body fields, and whether the
+     * generation carries canonical type content. Evidence prepared by one
+     * custom generation therefore cannot be replayed against a registry with
+     * the same keys but different processing metadata. Java class names and
+     * object identities never participate.</p>
+     */
+    synchronized String generationIdentity() {
+        if (processorsByBlueId.isEmpty()) {
+            return RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
+        }
+        MessageDigest digest = sha256();
+        updateDigest(digest, RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY);
+        List<String> blueIds = new ArrayList<>(processorsByBlueId.keySet());
+        Collections.sort(blueIds);
+        for (String blueId : blueIds) {
+            updateDigest(digest, blueId);
+            ContractProcessor<? extends Contract> processor =
+                    processorsByBlueId.get(blueId);
+            ProcessorKind kind = requireSupportedProcessor(processor);
+            updateDigest(digest, kind.name());
+            updateDigest(
+                    digest,
+                    canonicalTypeNodesByBlueId.containsKey(blueId)
+                            ? "canonical-type-content"
+                            : "provider-type-content");
+            for (String declaredBlueId
+                    : declaredBlueIds(processor.contractType())) {
+                updateDigest(digest, declaredBlueId);
+            }
+            List<String> bodyFields = kind == ProcessorKind.HANDLER
+                    ? handlerExecutableBodyFieldsByBlueId.get(blueId)
+                    : Collections.<String>emptyList();
+            updateDigest(digest, Integer.toString(bodyFields.size()));
+            for (String bodyField : bodyFields) {
+                updateDigest(digest, bodyField);
+            }
+        }
+        return "sha256:" + toHex(digest.digest());
+    }
+
+    private static List<String> declaredBlueIds(
+            Class<? extends Contract> contractType) {
+        TypeBlueId declaration = contractType != null
+                ? contractType.getAnnotation(TypeBlueId.class)
+                : null;
+        if (declaration == null) {
+            return Collections.emptyList();
+        }
+        List<String> identities = new ArrayList<>();
+        Collections.addAll(identities, declaration.value());
+        if (identities.isEmpty()
+                && !declaration.defaultValue().isEmpty()) {
+            identities.add(declaration.defaultValue());
+        }
+        Collections.sort(identities);
+        return identities;
+    }
+
+    private static MessageDigest sha256() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException exception) {
+            throw new AssertionError("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private static void updateDigest(MessageDigest digest, String value) {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        digest.update((byte) (bytes.length >>> 24));
+        digest.update((byte) (bytes.length >>> 16));
+        digest.update((byte) (bytes.length >>> 8));
+        digest.update((byte) bytes.length);
+        digest.update(bytes);
+    }
+
+    private static String toHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) {
+            result.append(Character.forDigit((value >>> 4) & 0x0f, 16));
+            result.append(Character.forDigit(value & 0x0f, 16));
+        }
+        return result.toString();
     }
 
     private <T extends Contract> void registerBlueIds(Class<T> contractType, ContractProcessor<T> processor) {

@@ -179,13 +179,19 @@ final class ProcessingSnapshotTransaction {
         long start = System.nanoTime();
         try {
             Set<String> preservedPaths = new LinkedHashSet<>();
+            Set<String> openedScopePaths = new LinkedHashSet<>(
+                    runtime.scopes().keySet());
+            openedScopePaths.addAll(runtime.evidenceScopePaths());
+            preservedPaths.addAll(
+                    ExecutableBodyPathCatalog.fromNode(
+                            document,
+                            openedScopePaths,
+                            runtime.executableBodyFieldsByType,
+                            manager));
             if (runtime.selectedDocumentBacked) {
                 preservedPaths.addAll(
-                        ExecutableBodyPathCatalog.fromNode(
-                                document,
-                                runtime.scopes().keySet(),
-                                runtime.executableBodyFieldsByType,
-                                manager));
+                        ExecutableBodyPathCatalog
+                                .ordinaryReferencePaths(document));
             }
             preservedPaths.addAll(
                     ExecutableBodyPathCatalog

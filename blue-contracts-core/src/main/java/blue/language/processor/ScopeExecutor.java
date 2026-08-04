@@ -23,7 +23,7 @@ import java.util.Set;
  */
 final class ScopeExecutor {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
     private final ChannelRunner channelRunner;
@@ -34,7 +34,7 @@ final class ScopeExecutor {
     private final ExternalCandidateProjector candidateProjector;
     private final ScopeMutationExecutor mutationExecutor;
 
-    ScopeExecutor(DocumentProcessor owner,
+    ScopeExecutor(ProcessorInvocationServices owner,
                   ProcessorInvocationState execution,
                   DocumentProcessingRuntime runtime,
                   Map<String, ContractBundle> bundles,

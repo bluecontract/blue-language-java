@@ -14,12 +14,12 @@ import java.util.Objects;
 /** Matches and invokes handler contracts for one frozen same-scope Channel. */
 final class ScopeHandlerDispatcher {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
 
     ScopeHandlerDispatcher(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ProcessorInvocationState execution,
             DocumentProcessingRuntime runtime) {
         this.owner = Objects.requireNonNull(owner, "owner");

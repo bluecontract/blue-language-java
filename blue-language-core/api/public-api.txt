@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-language-core
-# entryCount: 1068
+# entryCount: 1074
 field blue.language.api.BlueLanguageErrorCategory#CanonicalizationError descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.api.BlueLanguageErrorCategory#CircularSetError descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.api.BlueLanguageErrorCategory#DuplicateKey descriptor=Lblue/language/api/BlueLanguageErrorCategory; access=public,static,final,enum signature=- constant=-
@@ -692,6 +692,8 @@ method blue.language.registry.BootstrapProvider#fetchByBlueId descriptor=(Ljava/
 method blue.language.registry.NodeProviderWrapper#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.registry.NodeProviderWrapper#isExplicitlyHostTrusted descriptor=(Lblue/language/provider/NodeProvider;)Z access=public,static signature=- throws=-
 method blue.language.registry.NodeProviderWrapper#unverified descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/provider/NodeProvider; access=public,static signature=- throws=-
+method blue.language.registry.NodeProviderWrapper#verifyOnly descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/provider/NodeProvider; access=protected,static signature=- throws=-
+method blue.language.registry.NodeProviderWrapper#verifyOnlyGuarded descriptor=(Lblue/language/provider/NodeProvider;Ljava/util/function/Consumer;)Lblue/language/provider/NodeProvider; access=protected,static signature=(Lblue/language/provider/NodeProvider;Ljava/util/function/Consumer<Ljava/lang/Runnable;>;)Lblue/language/provider/NodeProvider; throws=-
 method blue.language.registry.NodeProviderWrapper#wrap descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/provider/NodeProvider; access=public,static signature=- throws=-
 method blue.language.resolve.BlueResolution#isSubtype descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;)Z access=public,abstract signature=- throws=-
 method blue.language.resolve.BlueResolution#minimize descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public,abstract signature=- throws=-
@@ -773,6 +775,8 @@ method blue.language.runtime.LanguageMatchingService#matches descriptor=(Lblue/l
 method blue.language.runtime.LanguageMatchingService#matchesLimited descriptor=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/api/BlueOperationLimits;)Lblue/language/api/BlueOperationResult; access=public signature=(Lblue/language/model/Node;Lblue/language/model/Node;Lblue/language/api/BlueOperationLimits;)Lblue/language/api/BlueOperationResult<Ljava/lang/Boolean;>; throws=-
 method blue.language.runtime.LanguageProcessing#newConformanceEngine descriptor=()Lblue/language/conformance/ConformanceEngine; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing#openScope descriptor=()Lblue/language/runtime/LanguageProcessing$Scope; access=public,abstract signature=- throws=-
+method blue.language.runtime.LanguageProcessing#openScope descriptor=(Lblue/language/provider/NodeProvider;)Lblue/language/runtime/LanguageProcessing$Scope; access=public signature=- throws=-
+method blue.language.runtime.LanguageProcessing#openScope descriptor=(Lblue/language/provider/NodeProvider;Lblue/language/runtime/LanguageProcessing$Observer;)Lblue/language/runtime/LanguageProcessing$Scope; access=public signature=- throws=-
 method blue.language.runtime.LanguageProcessing#openScope descriptor=(Lblue/language/runtime/LanguageProcessing$Observer;)Lblue/language/runtime/LanguageProcessing$Scope; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing#runtimeAccess descriptor=()Lblue/language/runtime/LanguageRuntimeAccess; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Observer#snapshotCacheHit descriptor=()V access=public signature=- throws=-
@@ -783,12 +787,14 @@ method blue.language.runtime.LanguageProcessing$Scope#close descriptor=()V acces
 method blue.language.runtime.LanguageProcessing$Scope#forkTransientSequence descriptor=()Lblue/language/runtime/LanguageProcessing$Scope; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#isTransientStateCurrent descriptor=()Z access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#materializeVerifiedExactReference descriptor=(Lblue/language/snapshot/FrozenNode;)Lblue/language/api/BlueOperationResult; access=public,abstract signature=(Lblue/language/snapshot/FrozenNode;)Lblue/language/api/BlueOperationResult<Lblue/language/snapshot/FrozenNode;>; throws=-
+method blue.language.runtime.LanguageProcessing$Scope#newConformanceEngine descriptor=()Lblue/language/conformance/ConformanceEngine; access=public signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#publish descriptor=(Lblue/language/merge/ResolvedSnapshot;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolve descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolvePreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolveTransient descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolveTransientPreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.LanguageProcessing$Scope#retainTransientState descriptor=(Lblue/language/snapshot/FrozenNode;Lblue/language/snapshot/FrozenNode;)V access=public,abstract signature=- throws=-
+method blue.language.runtime.LanguageProcessing$Scope#runtimeAccess descriptor=()Lblue/language/runtime/LanguageRuntimeAccess; access=public signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#supportsIncrementalValueResolution descriptor=()Z access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#supportsIncrementalValueResolution descriptor=(Lblue/language/merge/IncrementalValueResolutionRequest;)Z access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#transientConformanceEngine descriptor=(Lblue/language/conformance/ConformanceEngine;)Lblue/language/conformance/ConformanceEngine; access=public,abstract signature=- throws=-

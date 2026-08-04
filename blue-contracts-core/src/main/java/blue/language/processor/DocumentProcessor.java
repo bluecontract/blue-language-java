@@ -177,6 +177,16 @@ public class DocumentProcessor implements AutoCloseable {
                 document, event, evidence);
     }
 
+    /** Runs the strict supplied-plan lane through invocation-local services. */
+    PlatformProcessingResult processDocumentForPlatformCommit(
+            Node document,
+            Node event,
+            PlatformProcessInvocation invocation,
+            ProcessorInvocationServices services) {
+        return nodeOperations.processDocumentForPlatformCommit(
+                document, event, invocation, services);
+    }
+
     /**
      * Processes mutable inputs and returns a non-semantic debug trace.
      *

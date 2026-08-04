@@ -15,14 +15,14 @@ import java.util.Objects;
  */
 final class ScopeMutationExecutor {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
     private final PatchPreflight preflight;
     private final DocumentUpdateRouter updateRouter;
 
     ScopeMutationExecutor(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ProcessorInvocationState execution,
             DocumentProcessingRuntime runtime,
             PatchPreflight preflight,

@@ -4,13 +4,13 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 386,
-    "publicTypeIdentity": "sha256:8d2e08541263b84918e5675e931162f795f8b0d3ba5f8bedae483208cec1b4e3",
+    "publicProductionTypeCount": 388,
+    "publicTypeIdentity": "sha256:ea7d1416282051fd3db00c0705f61b21a593b2c26ec28fb87ea8eac8536bceec",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
       "intentional-next-major-break": 17,
       "internal-type-removed-from-public-surface": 105,
-      "new-supported-api-spi": 64
+      "new-supported-api-spi": 66
     }
   },
   "allowedClassifications": [
@@ -2978,6 +2978,28 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.processor.PlatformProcessInvocation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/PlatformProcessInvocation.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.PlatformProcessInvocation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The platform PROCESS lane exposes one immutable plan and invocation-provider environment without adding a semantic input."
+    },
+    {
+      "type": "blue.language.processor.PlatformProcessInvocation$Builder",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/PlatformProcessInvocation.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.PlatformProcessInvocation$Builder",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "The immutable platform invocation value exposes its supported construction boundary."
     },
     {
       "type": "blue.language.processor.PlatformProcessingResult",

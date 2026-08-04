@@ -30,6 +30,7 @@ public final class ExternalDeliveryPlan {
     private final Set<String> availableExactNodeBlueIds;
     private final Set<String> requiredExactNodeBlueIds;
     private final boolean exactRuntimeState;
+    private final VerifiedExecutionEvidence verifiedBinding;
 
     private ExternalDeliveryPlan(Builder builder) {
         if (builder.managedRootRevision < 0L
@@ -58,6 +59,7 @@ public final class ExternalDeliveryPlan {
         this.requiredExactNodeBlueIds = immutableSet(
                 builder.requiredExactNodeBlueIds);
         this.exactRuntimeState = builder.exactRuntimeState;
+        this.verifiedBinding = null;
         if (managedRootRevision != indexedRootRevision) {
             throw new IllegalArgumentException(
                     "External delivery plan is not revision-complete");
@@ -70,6 +72,26 @@ public final class ExternalDeliveryPlan {
                                 + delivery.channelKey());
             }
         }
+    }
+
+    private ExternalDeliveryPlan(
+            ExternalDeliveryPlan source,
+            VerifiedExecutionEvidence verifiedBinding) {
+        this.managedRootRevision = source.managedRootRevision;
+        this.indexedRootRevision = source.indexedRootRevision;
+        this.eventOrderKey = source.eventOrderKey;
+        this.deliveries = source.deliveries;
+        this.activeSubscriptionIntervals =
+                source.activeSubscriptionIntervals;
+        this.activeSubscriptionIntervalsSupplied =
+                source.activeSubscriptionIntervalsSupplied;
+        this.availableExactNodeBlueIds =
+                source.availableExactNodeBlueIds;
+        this.requiredExactNodeBlueIds =
+                source.requiredExactNodeBlueIds;
+        this.exactRuntimeState = source.exactRuntimeState;
+        this.verifiedBinding = Objects.requireNonNull(
+                verifiedBinding, "verifiedBinding");
     }
 
     /**
@@ -192,6 +214,21 @@ public final class ExternalDeliveryPlan {
             evidence.requiredExactNode(blueId);
         }
         return evidence.build();
+    }
+
+    /** Retains the exact binding established by the public indexed evaluator. */
+    ExternalDeliveryPlan withVerifiedBinding(
+            Node root,
+            Node event,
+            String runtimeRegistryIdentity) {
+        VerifiedExecutionEvidence binding = bind(
+                root, event, runtimeRegistryIdentity);
+        return new ExternalDeliveryPlan(this, binding);
+    }
+
+    /** Returns the evaluator-established binding, or {@code null} if absent. */
+    VerifiedExecutionEvidence verifiedBinding() {
+        return verifiedBinding;
     }
 
     private static Set<String> immutableSet(Set<String> source) {

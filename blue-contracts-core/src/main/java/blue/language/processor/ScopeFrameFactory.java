@@ -11,13 +11,13 @@ import java.util.Set;
 /** Creates and refreshes the exact immutable contract frame for a scope. */
 final class ScopeFrameFactory {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
     private final ScopeParticipationRegistry participation;
 
     ScopeFrameFactory(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ProcessorInvocationState execution,
             DocumentProcessingRuntime runtime,
             ScopeParticipationRegistry participation) {

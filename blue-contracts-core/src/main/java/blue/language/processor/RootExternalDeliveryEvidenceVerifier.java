@@ -97,6 +97,22 @@ public final class RootExternalDeliveryEvidenceVerifier
         planVerifier.verify(root, event, evidence, derivedPlan);
     }
 
+    /** Replays a supplied plan through one exact invocation environment. */
+    void verifyDerived(
+            Node root,
+            Node event,
+            VerifiedExecutionEvidence evidence,
+            ExternalDeliveryPlan derivedPlan,
+            ExternalPreselectionVerifier.RuntimeWorkSessionFactory
+                    runtimeWorkSessions) {
+        planVerifier.verify(
+                root,
+                event,
+                evidence,
+                derivedPlan,
+                runtimeWorkSessions);
+    }
+
     ExternalDeliveryPlan derivePlan(Node root, Node event) {
         Objects.requireNonNull(root, "root");
         Objects.requireNonNull(event, "event");

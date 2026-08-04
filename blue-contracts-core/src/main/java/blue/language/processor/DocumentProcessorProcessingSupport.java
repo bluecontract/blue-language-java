@@ -2,8 +2,10 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,6 +31,13 @@ final class DocumentProcessorProcessingSupport {
     ProcessingInputAdmission admission() {
         return new ProcessingInputAdmission(
                 processor.snapshotManager());
+    }
+
+    ProcessingInputAdmission admission(
+            ProcessorInvocationServices services) {
+        return new ProcessingInputAdmission(
+                Objects.requireNonNull(services, "services")
+                        .snapshotManager());
     }
 
     ProcessingSnapshotManager requireSnapshotManager() {
@@ -79,6 +88,62 @@ final class DocumentProcessorProcessingSupport {
         return evidence;
     }
 
+    VerifiedExecutionEvidence verifySuppliedPlan(
+            Node document,
+            Node event,
+            ExternalDeliveryPlan plan,
+            VerifiedExecutionEvidence evidence,
+            ProcessorInvocationServices services) {
+        Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(evidence, "evidence")
+                .revalidateBinding(
+                        document,
+                        event,
+                        services.runtimeRegistryIdentity());
+        establishRequiredExactResources(plan, services);
+        ExternalDeliveryEvidenceVerifier verifier =
+                services.deliveryEvidenceVerifier();
+        if (verifier instanceof RootExternalDeliveryEvidenceVerifier) {
+            ((RootExternalDeliveryEvidenceVerifier) verifier)
+                    .verifyDerived(
+                            document,
+                            event,
+                            evidence,
+                            plan,
+                            services.externalPlanVerificationSessions(
+                                    event));
+        } else {
+            verifier.verifyDerived(
+                    document, event, evidence, plan);
+        }
+        return evidence;
+    }
+
+    /**
+     * Establishes the plan's declared exact-resource closure through this
+     * invocation's isolated provider domain before semantic execution.
+     */
+    private void establishRequiredExactResources(
+            ExternalDeliveryPlan plan,
+            ProcessorInvocationServices services) {
+        List<String> required = new ArrayList<>(
+                plan.requiredExactNodeBlueIds());
+        Collections.sort(required);
+        ProcessingSnapshotManager manager =
+                Objects.requireNonNull(
+                        services.snapshotManager(),
+                        "invocation snapshotManager");
+        for (String blueId : required) {
+            FrozenNode established = manager.materializeVerifiedExactReference(
+                    FrozenNode.fromNode(new Node().blueId(blueId)));
+            if (established == null) {
+                throw ExternalEvidenceVerificationSupport.invalid(
+                        "Required exact provider content is definitively "
+                                + "absent for " + blueId);
+            }
+        }
+    }
+
     ExternalDeliveryPlan deriveExternalDeliveryPlan(
             Node document,
             Node event) {
@@ -127,6 +192,26 @@ final class DocumentProcessorProcessingSupport {
                 processor, admittedRoot.node(), event, evidence);
     }
 
+    DocumentProcessingResult processAdmitted(
+            ProcessingInputAdmission admission,
+            ProcessingInputAdmission.AdmittedNode admittedRoot,
+            Node event,
+            VerifiedExecutionEvidence evidence,
+            ProcessorInvocationServices services) {
+        if (admittedRoot.wasMaterialized()) {
+            return ProcessorEngine.processDocument(
+                    services,
+                    admission.deferredSnapshot(admittedRoot),
+                    event,
+                    evidence);
+        }
+        return ProcessorEngine.processDocument(
+                services,
+                admittedRoot.node(),
+                event,
+                evidence);
+    }
+
     ProcessingDebugResult processAdmittedWithTrace(
             ProcessingInputAdmission admission,
             ProcessingInputAdmission.AdmittedNode admittedRoot,
@@ -141,6 +226,26 @@ final class DocumentProcessorProcessingSupport {
         }
         return ProcessorEngine.processDocumentWithTrace(
                 processor, admittedRoot.node(), event, evidence);
+    }
+
+    ProcessingDebugResult processAdmittedWithTrace(
+            ProcessingInputAdmission admission,
+            ProcessingInputAdmission.AdmittedNode admittedRoot,
+            Node event,
+            VerifiedExecutionEvidence evidence,
+            ProcessorInvocationServices services) {
+        if (admittedRoot.wasMaterialized()) {
+            return ProcessorEngine.processDocumentWithTrace(
+                    services,
+                    admission.deferredSnapshot(admittedRoot),
+                    event,
+                    evidence);
+        }
+        return ProcessorEngine.processDocumentWithTrace(
+                services,
+                admittedRoot.node(),
+                event,
+                evidence);
     }
 
     ProcessAttemptResult completeAttempt(

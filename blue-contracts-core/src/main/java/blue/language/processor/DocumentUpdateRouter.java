@@ -21,7 +21,7 @@ import java.util.Objects;
  */
 final class DocumentUpdateRouter {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
     private final ScopeParticipationRegistry participation;
@@ -31,7 +31,7 @@ final class DocumentUpdateRouter {
     private final ChannelRunner channelRunner;
 
     DocumentUpdateRouter(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ProcessorInvocationState execution,
             DocumentProcessingRuntime runtime,
             ScopeParticipationRegistry participation,

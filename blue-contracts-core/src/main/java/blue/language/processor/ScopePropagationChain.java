@@ -21,7 +21,7 @@ import java.util.Objects;
  */
 final class ScopePropagationChain {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
     private final ScopeParticipationRegistry participation;
@@ -32,7 +32,7 @@ final class ScopePropagationChain {
     private int drainDeferralDepth;
 
     ScopePropagationChain(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ProcessorInvocationState execution,
             DocumentProcessingRuntime runtime,
             ScopeParticipationRegistry participation,

@@ -21,7 +21,7 @@ import java.util.TreeSet;
  */
 final class ChannelRunner {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
     private final ProcessingCheckpointTransaction checkpointTransaction;
@@ -37,6 +37,16 @@ final class ChannelRunner {
             new LinkedHashMap<>();
 
     ChannelRunner(DocumentProcessor owner,
+                  ProcessorInvocationState execution,
+                  DocumentProcessingRuntime runtime,
+                  ProcessingCheckpointTransaction checkpointTransaction) {
+        this(ProcessorInvocationServices.configured(owner),
+                execution,
+                runtime,
+                checkpointTransaction);
+    }
+
+    ChannelRunner(ProcessorInvocationServices owner,
                   ProcessorInvocationState execution,
                   DocumentProcessingRuntime runtime,
                   ProcessingCheckpointTransaction checkpointTransaction) {
@@ -64,6 +74,16 @@ final class ChannelRunner {
     }
 
     ChannelRunner(DocumentProcessor owner,
+                  ProcessorInvocationState execution,
+                  DocumentProcessingRuntime runtime,
+                  CheckpointManager checkpointManager) {
+        this(ProcessorInvocationServices.configured(owner),
+                execution,
+                runtime,
+                checkpointManager);
+    }
+
+    ChannelRunner(ProcessorInvocationServices owner,
                   ProcessorInvocationState execution,
                   DocumentProcessingRuntime runtime,
                   CheckpointManager checkpointManager) {

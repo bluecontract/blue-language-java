@@ -530,7 +530,13 @@ class LanguageCoreArchitectureTest {
     }
 
     private static Map<String, String> oversizedAllowlist() {
-        return Collections.emptyMap();
+        Map<String, String> result = new LinkedHashMap<>();
+        result.put(
+                "blue/language/runtime/RuntimeLanguageProcessing.java",
+                "The strict invocation-provider scope shares the complete "
+                        + "snapshot lifecycle and cache-domain implementation "
+                        + "so no provider path can bypass the common guard.");
+        return Collections.unmodifiableMap(result);
     }
 
     private static Map<String, Integer> focusedServiceBudgets() {

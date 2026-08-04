@@ -19,7 +19,7 @@ import java.util.function.Supplier;
  */
 final class ProcessingResultCoordinator {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final DocumentProcessingRuntime runtime;
     private final Node inputDocument;
     private final ResolvedSnapshot inputSnapshot;
@@ -35,7 +35,7 @@ final class ProcessingResultCoordinator {
     private SubscriptionDelta subscriptionDelta = SubscriptionDelta.empty();
 
     ProcessingResultCoordinator(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             DocumentProcessingRuntime runtime,
             Node inputDocument,
             ResolvedSnapshot inputSnapshot,

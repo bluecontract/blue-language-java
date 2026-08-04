@@ -16,14 +16,14 @@ import java.util.Objects;
  */
 final class ExternalSourceEvaluator {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
     private final ProcessingCheckpointTransaction checkpointTransaction;
     private final HandlerChannelSelector handlerSelector;
 
     ExternalSourceEvaluator(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ProcessorInvocationState execution,
             DocumentProcessingRuntime runtime,
             ProcessingCheckpointTransaction checkpointTransaction,

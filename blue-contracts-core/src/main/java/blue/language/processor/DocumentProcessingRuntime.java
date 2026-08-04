@@ -55,6 +55,8 @@ final class DocumentProcessingRuntime {
     final Set<String> changedPaths = new LinkedHashSet<>();
     private final Set<String> replacedEmbeddedScopePaths =
             new LinkedHashSet<>();
+    private final Set<String> evidenceScopePaths =
+            new LinkedHashSet<>();
 
     /** Creates a node-backed invocation with default services. */
     public DocumentProcessingRuntime(Node document) {
@@ -237,6 +239,21 @@ final class DocumentProcessingRuntime {
             context.setEmbeddedDepth(0);
         }
         return context;
+    }
+
+    /** Records the feeder-selected scope ancestry for lazy body cataloging. */
+    void admitEvidenceScopePath(String scopePath) {
+        List<String> segments = JsonPointer.split(
+                PointerUtils.normalizeScope(scopePath));
+        for (int depth = 0; depth <= segments.size(); depth++) {
+            evidenceScopePaths.add(JsonPointer.toPointer(
+                    segments.subList(0, depth)));
+        }
+    }
+
+    /** Returns the invocation-local feeder-selected scope ancestry. */
+    Set<String> evidenceScopePaths() {
+        return Collections.unmodifiableSet(evidenceScopePaths);
     }
 
     /** Returns an existing scope occurrence, or {@code null}. */

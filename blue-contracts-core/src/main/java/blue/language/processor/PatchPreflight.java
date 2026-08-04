@@ -15,7 +15,7 @@ final class PatchPreflight {
     private final DirectContractMutationPreflight contractMutation;
     private final DocumentProcessingRuntime runtime;
 
-    PatchPreflight(DocumentProcessor owner,
+    PatchPreflight(ProcessorInvocationServices owner,
                    DocumentProcessingRuntime runtime) {
         Objects.requireNonNull(owner, "owner");
         this.runtime = Objects.requireNonNull(runtime, "runtime");

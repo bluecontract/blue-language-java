@@ -20,7 +20,7 @@ import java.util.Map;
  * event-snapshot publication to concurrent observers within that invocation.</p>
  */
 final class ProcessorInvocationState {
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final DocumentProcessingRuntime runtime;
     private final Node inputDocument;
     private final ResolvedSnapshot inputSnapshot;
@@ -39,18 +39,50 @@ final class ProcessorInvocationState {
     private VerifiedExecutionEvidence executionEvidence;
 
     ProcessorInvocationState(DocumentProcessor owner, Node document) {
-        this(owner, document, null);
+        this(ProcessorInvocationServices.configured(owner), document);
+    }
+
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            Node document) {
+        this(owner, document, null, FrozenNode::fromResolvedNode);
     }
 
     ProcessorInvocationState(
             DocumentProcessor owner,
             Node document,
             Node processEventSource) {
-        this(owner, document, processEventSource, FrozenNode::fromResolvedNode);
+        this(ProcessorInvocationServices.configured(owner),
+                document,
+                processEventSource,
+                FrozenNode::fromResolvedNode);
     }
 
     ProcessorInvocationState(
             DocumentProcessor owner,
+            Node document,
+            Node processEventSource,
+            VerifiedExecutionEvidence executionEvidence) {
+        this(ProcessorInvocationServices.configured(owner),
+                document,
+                processEventSource,
+                FrozenNode::fromResolvedNode);
+        this.executionEvidence = executionEvidence;
+    }
+
+    ProcessorInvocationState(
+            DocumentProcessor owner,
+            Node document,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory) {
+        this(ProcessorInvocationServices.configured(owner),
+                document,
+                processEventSource,
+                processEventSnapshotFactory);
+    }
+
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
             Node document,
             Node processEventSource,
             VerifiedExecutionEvidence executionEvidence) {
@@ -59,7 +91,7 @@ final class ProcessorInvocationState {
     }
 
     ProcessorInvocationState(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             Node document,
             Node processEventSource,
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory) {
@@ -121,18 +153,38 @@ final class ProcessorInvocationState {
     }
 
     ProcessorInvocationState(DocumentProcessor owner, ResolvedSnapshot snapshot) {
-        this(owner, snapshot, null);
+        this(ProcessorInvocationServices.configured(owner), snapshot);
+    }
+
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            ResolvedSnapshot snapshot) {
+        this(owner, snapshot, null, FrozenNode::fromResolvedNode);
     }
 
     ProcessorInvocationState(
             DocumentProcessor owner,
             ResolvedSnapshot snapshot,
             Node processEventSource) {
-        this(owner, snapshot, processEventSource, FrozenNode::fromResolvedNode);
+        this(ProcessorInvocationServices.configured(owner),
+                snapshot,
+                processEventSource,
+                FrozenNode::fromResolvedNode);
     }
 
     ProcessorInvocationState(
             DocumentProcessor owner,
+            ResolvedSnapshot snapshot,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory) {
+        this(ProcessorInvocationServices.configured(owner),
+                snapshot,
+                processEventSource,
+                processEventSnapshotFactory);
+    }
+
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
             ResolvedSnapshot snapshot,
             Node processEventSource,
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory) {
@@ -198,6 +250,18 @@ final class ProcessorInvocationState {
             ResolvedSnapshot snapshot,
             Node processEventSource,
             VerifiedExecutionEvidence executionEvidence) {
+        this(ProcessorInvocationServices.configured(owner),
+                snapshot,
+                processEventSource,
+                FrozenNode::fromResolvedNode);
+        this.executionEvidence = executionEvidence;
+    }
+
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            ResolvedSnapshot snapshot,
+            Node processEventSource,
+            VerifiedExecutionEvidence executionEvidence) {
         this(owner,
                 snapshot,
                 processEventSource,
@@ -233,6 +297,12 @@ final class ProcessorInvocationState {
     }
 
     void admitEvidence() {
+        if (executionEvidence != null) {
+            for (ExternalDeliverySnapshot delivery
+                    : executionEvidence.deliveries()) {
+                runtime.admitEvidenceScopePath(delivery.scopePath());
+            }
+        }
         evidenceDeliveryOrchestrator.admitEvidence();
     }
 

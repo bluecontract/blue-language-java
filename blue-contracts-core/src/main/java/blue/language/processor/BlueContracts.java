@@ -21,6 +21,7 @@ import java.util.function.Supplier;
 public final class BlueContracts implements AutoCloseable {
 
     private final DocumentProcessor processor;
+    private final LanguageProcessing languageProcessing;
     private final LanguageProcessingSnapshotManager snapshotManager;
     private final ConformanceEngine conformanceEngine;
     private final ReentrantReadWriteLock lifecycle =
@@ -49,6 +50,9 @@ public final class BlueContracts implements AutoCloseable {
                             .nodeProvider(processing.runtimeAccess()
                                     .getNodeProvider())
                             .runtimeRegistry(registryGeneration)
+                            .runtimeRegistryIdentity(
+                                    registryGeneration
+                                            .generationIdentity())
                             .gasSchedule(builder.gasSchedule)
                             .snapshotStore(manager)
                             .observer(builder.observer)
@@ -80,6 +84,7 @@ public final class BlueContracts implements AutoCloseable {
             throw failure;
         }
         this.processor = builtProcessor;
+        this.languageProcessing = processing;
         this.snapshotManager = manager;
         this.conformanceEngine = engine;
     }
@@ -141,6 +146,44 @@ public final class BlueContracts implements AutoCloseable {
             VerifiedExecutionEvidence evidence) {
         return call(() -> processor.processDocumentForPlatformCommit(
                 root, event, evidence));
+    }
+
+    /**
+     * Processes one Root/event pair for an atomic host commit using an already
+     * evaluated exact plan and one strict request-local provider.
+     *
+     * <p>Root and event remain the only Blue semantic inputs. The invocation
+     * value is verified execution environment: its hidden indexed-evaluator
+     * binding is checked against both inputs and this immutable registry
+     * generation, while its plan is replayed through the authoritative core
+     * verifier without consulting the construction-time plan deriver. Every
+     * provider-backed operation in admission, classification, execution,
+     * patching, and final validation shares one isolated provider domain.</p>
+     *
+     * @param root exact Root document supplied to the processor
+     * @param event exact event supplied to the processor
+     * @param invocation exact plan and borrowed request-local provider
+     * @return the prepared platform-commit result
+     * @throws NullPointerException if an argument is {@code null}
+     * @throws InvalidExecutionEvidenceException when the plan or its binding
+     *         is forged, stale, incomplete, or belongs to another generation
+     * @throws ExecutionEvidenceUnavailableException when required exact
+     *         provider evidence is temporarily unavailable
+     * @throws UnsupportedOperationException when a custom Language bridge
+     *         does not implement strict invocation-provider scopes
+     * @throws IllegalStateException when this service is closed
+     */
+    public PlatformProcessingResult processForPlatformCommit(
+            Node root,
+            Node event,
+            PlatformProcessInvocation invocation) {
+        Objects.requireNonNull(root, "root");
+        Objects.requireNonNull(event, "event");
+        Objects.requireNonNull(invocation, "invocation");
+        final Node exactRoot = root.clone();
+        final Node exactEvent = event.clone();
+        return call(() -> processInvocation(
+                exactRoot, exactEvent, invocation));
     }
 
     /**
@@ -275,6 +318,34 @@ public final class BlueContracts implements AutoCloseable {
                 operationDepth.set(previous);
             }
             lifecycle.readLock().unlock();
+        }
+    }
+
+    private PlatformProcessingResult processInvocation(
+            Node root,
+            Node event,
+            PlatformProcessInvocation invocation) {
+        try (LanguageProcessing.Scope scope =
+                     languageProcessing.openScope(
+                             invocation.nodeProvider(),
+                             LanguageProcessingSnapshotManager.observer(
+                                     processor.observer()))) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(scope);
+            try (ConformanceEngine invocationConformance =
+                         scope.newConformanceEngine();
+                 ProcessorInvocationServices services =
+                         ProcessorInvocationServices.platform(
+                                 processor,
+                                 manager,
+                                 scope.runtimeAccess(),
+                                 invocationConformance)) {
+                return processor.processDocumentForPlatformCommit(
+                        root,
+                        event,
+                        invocation,
+                        services);
+            }
         }
     }
 

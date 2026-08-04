@@ -186,6 +186,21 @@ public final class IndexedDeliveryEvaluator {
                         SNAPSHOT_GENERATION_EXPIRED);
             }
             requireReleasedGasSchedule();
+            ProcessingInputAdmission admission =
+                    new ProcessingInputAdmission(snapshotManager);
+            ProcessingInputAdmission.AdmittedNode admittedRoot =
+                    admission.materializeTopLevel(
+                            exactRoot,
+                            ProcessingInputAdmission.PROCESSING_ROOT_LABEL);
+            List<String> activeScopePaths = new ArrayList<>();
+            for (SubscriptionDelta.Entry interval : activeIntervals) {
+                activeScopePaths.add(interval.scopePath());
+            }
+            final Node evaluationRoot = admission.materializeScopePaths(
+                    admittedRoot, activeScopePaths).node();
+            final Node evaluationEvent = admission.materializeTopLevel(
+                    exactEvent,
+                    ProcessingInputAdmission.PROCESSING_EVENT_LABEL).node();
             ExternalPreselectionVerifier preselectionVerifier =
                     new ExternalPreselectionVerifier(
                             processor.contractLoader(),
@@ -196,13 +211,13 @@ public final class IndexedDeliveryEvaluator {
                     new ExternalDeliveryPlanVerifier(
                             preselectionVerifier);
             preselectionVerifier.verifyCompleteActiveSurface(
-                    exactRoot, activeIntervals);
+                    evaluationRoot, activeIntervals);
             GasMeter invocationMeter = processor.newGasMeter();
             ProcessingGasContext invocationGas =
                     new ProcessingGasContext(invocationMeter);
             ExternalPreselectionVerifier.RuntimeWorkSessionFactory
                     derivationSessions = runtimeWorkSessions(
-                            exactEvent,
+                            evaluationEvent,
                             eventBlueId,
                             languageRuntime,
                             snapshotManager,
@@ -210,8 +225,8 @@ public final class IndexedDeliveryEvaluator {
 
             ExternalPreselectionVerifier.EvaluationResult evaluated =
                     preselectionVerifier.evaluate(
-                            exactRoot,
-                            exactEvent,
+                            evaluationRoot,
+                            evaluationEvent,
                             rootRevision,
                             exactOrder,
                             activeIntervals,
@@ -234,11 +249,13 @@ public final class IndexedDeliveryEvaluator {
                     : evaluated.deliveries()) {
                 planBuilder.delivery(delivery);
             }
-            ExternalDeliveryPlan plan = planBuilder.build();
-            VerifiedExecutionEvidence evidence = plan.bind(
-                    exactRoot,
-                    exactEvent,
-                    processor.runtimeRegistryIdentity());
+            ExternalDeliveryPlan plan = planBuilder.build()
+                    .withVerifiedBinding(
+                            evaluationRoot,
+                            evaluationEvent,
+                            processor.runtimeRegistryIdentity());
+            VerifiedExecutionEvidence evidence =
+                    plan.verifiedBinding();
 
             /*
              * The replay proves determinism against the same aggregate budget,
@@ -252,13 +269,13 @@ public final class IndexedDeliveryEvaluator {
                     new ProcessingGasContext(replayMeter);
             ExternalPreselectionVerifier.EvaluationResult replayed =
                     preselectionVerifier.evaluate(
-                            exactRoot,
-                            exactEvent,
+                            evaluationRoot,
+                            evaluationEvent,
                             rootRevision,
                             exactOrder,
                             activeIntervals,
                             runtimeWorkSessions(
-                                    exactEvent,
+                                    evaluationEvent,
                                     eventBlueId,
                                     languageRuntime,
                                     snapshotManager,
@@ -269,8 +286,8 @@ public final class IndexedDeliveryEvaluator {
                     invocationMeter.trace(),
                     replayMeter.trace());
             planVerifier.verify(
-                    exactRoot,
-                    exactEvent,
+                    evaluationRoot,
+                    evaluationEvent,
                     evidence,
                     plan,
                     replayed);

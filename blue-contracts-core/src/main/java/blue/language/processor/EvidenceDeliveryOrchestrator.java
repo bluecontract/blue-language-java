@@ -438,7 +438,7 @@ final class EvidenceDeliveryOrchestrator {
                     || bundle.channelBinding(handlerChannelKey) == null
                     || target == null
                     || first.handlerChannel() != null
-                    && !sameChannelMember(
+                    && !sameChannelBinding(
                     first.handlerChannel(),
                     finalTarget)) {
                 throw new IllegalStateException(
@@ -648,6 +648,33 @@ final class EvidenceDeliveryOrchestrator {
                 right.deterministicDependencyNodeBlueIds())
                 && left.headerIdentityBlueId().equals(
                 right.headerIdentityBlueId());
+    }
+
+    /**
+     * Compares the semantic Channel binding established independently by
+     * classification and participating-closure preflight. Classification has
+     * already completed and verified the effective header, while preflight can
+     * retain the exact sparse authored header from an incomplete admission
+     * snapshot. The ordered source contribution identities bind that authored
+     * content, so the synthetic completed-header identity is intentionally not
+     * compared across these two representation lanes. Type, role, order,
+     * deterministic dependencies, and all source identities remain mandatory.
+     */
+    private boolean sameChannelBinding(
+            ChannelMemberSnapshot left,
+            ChannelMemberSnapshot right) {
+        return left == right
+                || left != null
+                && right != null
+                && left.channelKey().equals(right.channelKey())
+                && left.order() == right.order()
+                && left.effectiveTypeBlueId().equals(
+                right.effectiveTypeBlueId())
+                && left.role().equals(right.role())
+                && left.sourceContributionNodeBlueIds().equals(
+                right.sourceContributionNodeBlueIds())
+                && left.deterministicDependencyNodeBlueIds().equals(
+                right.deterministicDependencyNodeBlueIds());
     }
 
     /** Immutable route selected during read-only evidence classification. */

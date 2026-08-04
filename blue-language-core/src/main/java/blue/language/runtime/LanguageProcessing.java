@@ -5,10 +5,12 @@ import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.provider.NodeProvider;
 import blue.language.snapshot.BluePatch;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Collection;
+import java.util.Objects;
 
 /**
  * Language-owned bridge for deterministic document-processing snapshots.
@@ -59,6 +61,42 @@ public interface LanguageProcessing {
     Scope openScope(Observer observer);
 
     /**
+     * Opens a strict processing scope over exactly one invocation provider.
+     *
+     * <p>The supplied provider is verified but is not combined with the
+     * construction-time provider, the Language bootstrap provider, or retained
+     * provider-derived cache state. The caller must explicitly compose every
+     * fallback needed by the invocation. Closing the scope never closes the
+     * borrowed provider.</p>
+     *
+     * @param invocationProvider complete borrowed provider graph for this scope
+     * @return isolated processing scope
+     * @throws NullPointerException if {@code invocationProvider} is {@code null}
+     * @throws IllegalStateException if the owning Language runtime is closed
+     */
+    default Scope openScope(NodeProvider invocationProvider) {
+        throw new UnsupportedOperationException(
+                "This Language processing bridge does not support strict invocation providers");
+    }
+
+    /**
+     * Opens an observed strict scope over one invocation provider.
+     *
+     * @param invocationProvider complete borrowed provider graph for this scope
+     * @param observer telemetry callback receiver
+     * @return isolated processing scope
+     * @throws NullPointerException if either argument is {@code null}
+     * @throws IllegalStateException if the owning Language runtime is closed
+     */
+    default Scope openScope(
+            NodeProvider invocationProvider,
+            Observer observer) {
+        Objects.requireNonNull(observer, "observer");
+        return openScope(Objects.requireNonNull(
+                invocationProvider, "invocationProvider"));
+    }
+
+    /**
      * Language-neutral observation boundary for processing snapshot reuse.
      *
      * <p>Callbacks are telemetry only and cannot affect semantic results.</p>
@@ -90,6 +128,31 @@ public interface LanguageProcessing {
      * closed when the invocation or working-document sequence ends.</p>
      */
     interface Scope extends AutoCloseable {
+
+        /**
+         * Returns a lifecycle-bound Language capability using this scope's
+         * exact provider and cache domain.
+         *
+         * @return provider-scoped Language runtime access
+         * @throws IllegalStateException if this scope or its runtime is closed
+         */
+        default LanguageRuntimeAccess runtimeAccess() {
+            throw new UnsupportedOperationException(
+                    "This Language processing scope does not expose scoped runtime access");
+        }
+
+        /**
+         * Creates a conformance engine borrowing this scope's exact provider
+         * and cache domain. Closing the engine does not close the scope;
+         * closing the scope or its runtime invalidates the engine.
+         *
+         * @return scope-bound conformance engine
+         * @throws IllegalStateException if this scope or its runtime is closed
+         */
+        default ConformanceEngine newConformanceEngine() {
+            throw new UnsupportedOperationException(
+                    "This Language processing scope does not expose scoped conformance");
+        }
 
         /**
          * Resolves and publishes one complete authored document snapshot.

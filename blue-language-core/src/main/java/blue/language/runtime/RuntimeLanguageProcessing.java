@@ -1,8 +1,12 @@
 package blue.language.runtime;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.NodeProviderOutcome;
 import blue.language.conformance.ConformanceEngine;
+import blue.language.graph.NodeExpander;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.IncrementalMergingProcessorCapability;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.Merger;
@@ -24,7 +28,10 @@ import blue.language.snapshot.ImmutableBluePatch;
 import blue.language.identity.BlueIds;
 import blue.language.identity.CanonicalIdentityInputBuilder;
 import blue.language.model.NodePathEditor;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.resolve.ResolutionLimits;
+import blue.language.provider.ProviderUnavailableException;
+import blue.language.registry.NodeProviderWrapper;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,7 +45,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 /** Runtime implementation kept package-private behind {@link LanguageProcessing}. */
-final class RuntimeLanguageProcessing implements LanguageProcessing {
+final class RuntimeLanguageProcessing extends NodeProviderWrapper
+        implements LanguageProcessing {
 
     private static final Observer NO_OP_OBSERVER = new Observer() {
     };
@@ -50,6 +58,8 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
     private final Map<String, String> directiveAliases;
     private final Map<String, String> environmentImports;
     private final ReferenceCacheAdmissionPolicy referenceCacheAdmission;
+    private final ProcessingScopeLifecycle scopeLifecycle =
+            new ProcessingScopeLifecycle();
 
     RuntimeLanguageProcessing(
             BlueLanguageRuntime runtime,
@@ -95,17 +105,54 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
 
     @Override
     public Scope openScope(Observer observer) {
-        return runtime.admitted(() -> new RuntimeScope(
+        return runtime.admitted(() -> retainScope(new RuntimeScope(
                 Objects.requireNonNull(observer, "observer"),
-                null));
+                nodeProvider,
+                null,
+                false)));
+    }
+
+    @Override
+    public Scope openScope(NodeProvider invocationProvider) {
+        return openScope(invocationProvider, NO_OP_OBSERVER);
+    }
+
+    @Override
+    public Scope openScope(
+            NodeProvider invocationProvider,
+            Observer observer) {
+        return runtime.admitted(() -> retainScope(new RuntimeScope(
+                Objects.requireNonNull(observer, "observer"),
+                verifyOnly(
+                        Objects.requireNonNull(
+                                invocationProvider,
+                                "invocationProvider")),
+                new ResolvedReferenceCache(runtime.cachePolicy()),
+                true)));
+    }
+
+    void closeScopes() {
+        scopeLifecycle.closeAll();
+    }
+
+    private Scope retainScope(RuntimeScope scope) {
+        return scopeLifecycle.retain(scope);
     }
 
     private final class RuntimeScope implements Scope {
 
         private final Observer observer;
+        private final NodeProvider scopeNodeProvider;
         private final ResolvedReferenceCache sequenceCache;
+        private final boolean isolatedProviderDomain;
+        private final NodeProvider guardedNodeProvider;
+        private final LanguageRuntimeAccess scopedRuntimeAccess;
+        private final ProcessingScopeLifecycle.ConformanceEngines
+                scopedConformanceEngines =
+                new ProcessingScopeLifecycle.ConformanceEngines();
         private final ReentrantReadWriteLock lifecycle =
                 new ReentrantReadWriteLock(true);
+        private final Object closeMonitor = new Object();
         private final ThreadLocal<Integer> operationDepth =
                 new ThreadLocal<>();
 
@@ -113,9 +160,32 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
 
         private RuntimeScope(
                 Observer observer,
-                ResolvedReferenceCache sequenceCache) {
+                NodeProvider scopeNodeProvider,
+                ResolvedReferenceCache sequenceCache,
+                boolean isolatedProviderDomain) {
             this.observer = observer;
+            this.scopeNodeProvider = Objects.requireNonNull(
+                    scopeNodeProvider, "scopeNodeProvider");
             this.sequenceCache = sequenceCache;
+            this.isolatedProviderDomain = isolatedProviderDomain;
+            this.guardedNodeProvider = verifyOnlyGuarded(
+                    scopeNodeProvider,
+                    this::guardProviderOperation);
+            this.scopedRuntimeAccess = new ScopeRuntimeAccess();
+        }
+
+        @Override
+        public LanguageRuntimeAccess runtimeAccess() {
+            return call(() -> scopedRuntimeAccess);
+        }
+
+        @Override
+        public ConformanceEngine newConformanceEngine() {
+            return call(() -> retainConformanceEngine(
+                    new ConformanceEngine(
+                            guardedNodeProvider,
+                            mergingProcessor,
+                            activeCache())));
         }
 
         @Override
@@ -174,18 +244,22 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
 
         @Override
         public Scope transientSequence() {
-            return call(() -> new RuntimeScope(
+            return call(() -> retainScope(new RuntimeScope(
                     observer,
-                    activeCache().transientChild()));
+                    scopeNodeProvider,
+                    activeCache().transientChild(),
+                    isolatedProviderDomain)));
         }
 
         @Override
         public Scope forkTransientSequence() {
-            return call(() -> new RuntimeScope(
+            return call(() -> retainScope(new RuntimeScope(
                     observer,
+                    scopeNodeProvider,
                     sequenceCache == null
                             ? activeCache().transientChild()
-                            : sequenceCache.forkTransient()));
+                            : sequenceCache.forkTransient(),
+                    isolatedProviderDomain)));
         }
 
         @Override
@@ -241,9 +315,19 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
                 if (conformanceEngine == null) {
                     return null;
                 }
-                return sequenceCache != null
+                if (isolatedProviderDomain) {
+                    return retainConformanceEngine(
+                            new ConformanceEngine(
+                                    guardedNodeProvider,
+                                    mergingProcessor,
+                                    activeCache()));
+                }
+                ConformanceEngine view = sequenceCache != null
                         ? conformanceEngine.transientView(sequenceCache)
                         : conformanceEngine.transientView();
+                return view == conformanceEngine
+                        ? view
+                        : retainConformanceEngine(view);
             });
         }
 
@@ -255,14 +339,16 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
                     applyCanonicalPatch(
                             Objects.requireNonNull(snapshot, "snapshot"),
                             Objects.requireNonNull(patch, "patch"),
-                            cache)));
+                            cache,
+                            scopeNodeProvider)));
         }
 
         @Override
         public ResolvedSnapshot publish(ResolvedSnapshot snapshot) {
             return call(() -> publishSnapshot(
                     Objects.requireNonNull(snapshot, "snapshot"),
-                    sequenceCache));
+                    sequenceCache,
+                    isolatedProviderDomain));
         }
 
         @Override
@@ -272,25 +358,43 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
                 throw new IllegalStateException(
                         "Language processing scope cannot close from active work");
             }
-            lifecycle.writeLock().lock();
-            try {
-                if (closed) {
-                    return;
+            synchronized (closeMonitor) {
+                lifecycle.writeLock().lock();
+                try {
+                    if (closed) {
+                        return;
+                    }
+                    closed = true;
+                } finally {
+                    lifecycle.writeLock().unlock();
                 }
-                closed = true;
-                if (sequenceCache != null) {
-                    sequenceCache.close();
+                try {
+                    scopedConformanceEngines.closeAll();
+                    lifecycle.writeLock().lock();
+                    try {
+                        if (sequenceCache != null) {
+                            sequenceCache.close();
+                        }
+                    } finally {
+                        lifecycle.writeLock().unlock();
+                    }
+                } finally {
+                    scopeLifecycle.release(this);
                 }
-            } finally {
-                lifecycle.writeLock().unlock();
             }
+        }
+
+        private ConformanceEngine retainConformanceEngine(
+                ConformanceEngine engine) {
+            return scopedConformanceEngines.retain(engine);
         }
 
         private ResolvedSnapshot resolveDocument(
                 Node document,
                 Set<String> preservedPaths,
                 boolean publish) {
-            if (preservedPaths.isEmpty()) {
+            if (!isolatedProviderDomain
+                    && preservedPaths.isEmpty()) {
                 ResolvedSnapshot cached = lookupRecent(document);
                 if (cached != null) {
                     return cached;
@@ -298,14 +402,21 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
             }
             return withResolutionCache(cache -> {
                 ResolvedSnapshot resolved = resolveWithCache(
-                        document, preservedPaths, cache);
+                        document,
+                        preservedPaths,
+                        cache,
+                        scopeNodeProvider);
                 if (!publish) {
                     return resolved;
                 }
                 ResolvedSnapshot published = publishSnapshot(
-                        resolved, cache);
-                snapshotStore.rememberProcessingSnapshot(
-                        structuralKey(document), published);
+                        resolved,
+                        cache,
+                        isolatedProviderDomain);
+                if (!isolatedProviderDomain) {
+                    snapshotStore.rememberProcessingSnapshot(
+                            structuralKey(document), published);
+                }
                 return published;
             });
         }
@@ -343,7 +454,7 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
             }
 
             NodeProviderResult providerResult =
-                    nodeProvider.fetchResultByBlueId(blueId);
+                    scopeNodeProvider.fetchResultByBlueId(blueId);
             if (providerResult.outcome()
                     == NodeProviderOutcome.NOT_FOUND) {
                 return BlueOperationResult.absent(
@@ -419,22 +530,43 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
 
         private <T> T call(Supplier<T> work) {
             return runtime.admitted(() -> {
-                lifecycle.readLock().lock();
-                Integer previous = operationDepth.get();
+                enterScopeOperation();
                 try {
-                    ensureOpen();
-                    operationDepth.set(
-                            previous == null ? 1 : previous + 1);
                     return work.get();
                 } finally {
-                    if (previous == null) {
-                        operationDepth.remove();
-                    } else {
-                        operationDepth.set(previous);
-                    }
-                    lifecycle.readLock().unlock();
+                    exitScopeOperation();
                 }
             });
+        }
+
+        private void guardProviderOperation(Runnable providerCall) {
+            run(providerCall);
+        }
+
+        private void enterScopeOperation() {
+            lifecycle.readLock().lock();
+            Integer previous = operationDepth.get();
+            try {
+                ensureOpen();
+                operationDepth.set(
+                        previous == null ? 1 : previous + 1);
+            } catch (RuntimeException failure) {
+                lifecycle.readLock().unlock();
+                throw failure;
+            } catch (Error failure) {
+                lifecycle.readLock().unlock();
+                throw failure;
+            }
+        }
+
+        private void exitScopeOperation() {
+            Integer depth = operationDepth.get();
+            if (depth == null || depth <= 1) {
+                operationDepth.remove();
+            } else {
+                operationDepth.set(depth - 1);
+            }
+            lifecycle.readLock().unlock();
         }
 
         private void run(Runnable work) {
@@ -462,19 +594,157 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
         private void observeNanos(long nanos) {
             observe(() -> observer.snapshotCacheLookupNanos(nanos));
         }
+
+        private Node canonicalizeInScope(Node source) {
+            Node preprocessed = preprocessor(scopeNodeProvider).preprocess(
+                    Objects.requireNonNull(source, "source").clone());
+            Node resolved = merger(
+                    scopeNodeProvider,
+                    activeCache()).resolve(
+                    preprocessed.clone(), ResolutionLimits.NO_LIMITS);
+            return new CanonicalIdentityInputBuilder().build(
+                    resolved, preprocessed);
+        }
+
+        private FrozenNode materializeTypeReference(
+                FrozenNode reference) {
+            Objects.requireNonNull(reference, "reference");
+            if (!reference.isReferenceOnly()
+                    || reference.getReferenceBlueId() == null) {
+                throw new IllegalArgumentException(
+                        "Matching materialization requires a pure reference");
+            }
+            BlueOperationResult<FrozenNode> result = materializeExact(
+                    reference);
+            if (result.outcome()
+                    == BlueOperationOutcome.ABSENT) {
+                return null;
+            }
+            if (result.outcome()
+                    == BlueOperationOutcome.INCOMPLETE) {
+                throw new ProviderUnavailableException(
+                        result.reason().orElse(
+                                "Matching type evidence is unavailable"));
+            }
+            if (result.outcome()
+                    == BlueOperationOutcome.INVALID) {
+                throw new IllegalArgumentException(
+                        result.reason().orElse(
+                                "Matching type evidence is invalid"));
+            }
+            Node exact = NodeToBlueIdInput
+                    .stripResolvedBlueIdMetadata(
+                            result.requireEstablished().toNode());
+            Node preprocessed = preprocessor(
+                    scopeNodeProvider).preprocess(exact);
+            Node resolved = merger(
+                    scopeNodeProvider,
+                    activeCache()).resolve(
+                    preprocessed, ResolutionLimits.NO_LIMITS);
+            return FrozenNode.fromResolvedNode(resolved);
+        }
+
+        private final class ScopeRuntimeAccess
+                implements LanguageRuntimeAccess {
+            @Override
+            public NodeProvider getNodeProvider() {
+                return call(() -> guardedNodeProvider);
+            }
+
+            @Override
+            public BlueCachePolicy matchingCachePolicy() {
+                return call(runtime::matchingCachePolicy);
+            }
+
+            @Override
+            public BlueCachePolicy cachePolicy() {
+                return call(runtime::cachePolicy);
+            }
+
+            @Override
+            public String languageVersion() {
+                return call(runtime::languageVersion);
+            }
+
+            @Override
+            public Map<String, String> preprocessingAliases() {
+                return call(runtime::preprocessingAliases);
+            }
+
+            @Override
+            public Map<String, String> environmentImports() {
+                return call(runtime::environmentImports);
+            }
+
+            @Override
+            public String canonicalRegistryIdentity() {
+                return call(runtime::canonicalRegistryIdentity);
+            }
+
+            @Override
+            public Node canonicalizeSourceContent(Node source) {
+                return call(() -> canonicalizeInScope(source));
+            }
+
+            @Override
+            public Node preprocessForMatching(Node source) {
+                return call(() -> preprocessor(
+                        scopeNodeProvider).preprocess(
+                        Objects.requireNonNull(source, "source").clone()));
+            }
+
+            @Override
+            public void expandForMatching(
+                    Node source,
+                    ResolutionLimits limits) {
+                run(() -> new NodeExpander(scopeNodeProvider).expand(
+                        Objects.requireNonNull(source, "source"),
+                        Objects.requireNonNull(limits, "limits")));
+            }
+
+            @Override
+            public Node resolveForMatching(
+                    Node source,
+                    ResolutionLimits limits) {
+                return call(() -> merger(
+                        scopeNodeProvider,
+                        activeCache()).resolve(
+                        Objects.requireNonNull(source, "source").clone(),
+                        Objects.requireNonNull(limits, "limits")));
+            }
+
+            @Override
+            public FrozenNode materializeTypeReferenceForMatching(
+                    FrozenNode reference) {
+                return call(() -> materializeTypeReference(reference));
+            }
+
+            @Override
+            public Node canonicalize(Node source) {
+                return call(() -> canonicalizeInScope(source));
+            }
+
+            @Override
+            public String calculateSourceDocumentBlueId(Node source) {
+                return call(() -> DirectBlueIdCalculator.calculateBlueId(
+                        canonicalizeInScope(source)));
+            }
+        }
     }
 
     private ResolvedSnapshot resolveWithCache(
             Node document,
             Set<String> preservedPaths,
-            ResolvedReferenceCache cache) {
-        Node preprocessed = preprocessor().preprocess(document.clone());
+            ResolvedReferenceCache cache,
+            NodeProvider provider) {
+        Node preprocessed = preprocessor(provider).preprocess(
+                document.clone());
         ResolutionLimits limits = preservedPaths.isEmpty()
                 ? ResolutionLimits.NO_LIMITS
                 : ResolutionLimits.allOf(
                 ResolutionLimits.NO_LIMITS,
                 ResolutionLimits.deferringReferencesAt(preservedPaths));
-        Node resolved = merger(cache).resolve(
+        Node resolved = merger(provider, cache).resolve(
                 preprocessed.clone(), limits);
         if (!preservedPaths.isEmpty()) {
             restorePreservedPaths(
@@ -494,12 +764,13 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
     private ResolvedSnapshot applyCanonicalPatch(
             ResolvedSnapshot snapshot,
             BluePatch patch,
-            ResolvedReferenceCache cache) {
+            ResolvedReferenceCache cache,
+            NodeProvider provider) {
         CanonicalPatchResult patched =
                 new CanonicalOverlayPatchEngine(
                         snapshot.frozenCanonicalRoot()).apply(patch);
         ResolvedSnapshot patchedSnapshot = snapshotFromCanonical(
-                patched.root(), cache);
+                patched.root(), cache, provider);
         if (!canMinimizePatchedOverride(patch)) {
             return patchedSnapshot;
         }
@@ -513,7 +784,7 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
             return patchedSnapshot;
         }
         ResolvedSnapshot inheritedSnapshot = snapshotFromCanonical(
-                withoutOverride.root(), cache);
+                withoutOverride.root(), cache, provider);
         FrozenNode patchedEffective = patchedSnapshot.resolvedAt(
                 patched.path());
         FrozenNode inheritedEffective = inheritedSnapshot.resolvedAt(
@@ -529,9 +800,10 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
 
     private ResolvedSnapshot snapshotFromCanonical(
             FrozenNode canonicalRoot,
-            ResolvedReferenceCache cache) {
+            ResolvedReferenceCache cache,
+            NodeProvider provider) {
         Node canonical = canonicalRoot.toNode();
-        Node resolved = merger(cache).resolve(
+        Node resolved = merger(provider, cache).resolve(
                 canonical.clone(), ResolutionLimits.NO_LIMITS);
         return new ResolvedSnapshot(
                 canonicalRoot,
@@ -541,9 +813,13 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
 
     private ResolvedSnapshot publishSnapshot(
             ResolvedSnapshot snapshot,
-            ResolvedReferenceCache transientCache) {
+            ResolvedReferenceCache transientCache,
+            boolean isolatedProviderDomain) {
         if (!snapshot.isResolutionComplete()) {
             return snapshot;
+        }
+        if (isolatedProviderDomain) {
+            return snapshot.toStrictBlueIdValidatedCanonical();
         }
         if (transientCache != null
                 && transientCache.isCurrentGeneration()) {
@@ -562,18 +838,20 @@ final class RuntimeLanguageProcessing implements LanguageProcessing {
         return published;
     }
 
-    private Merger merger(ResolvedReferenceCache cache) {
+    private Merger merger(
+            NodeProvider provider,
+            ResolvedReferenceCache cache) {
         return new Merger(
                 mergingProcessor,
-                nodeProvider,
+                provider,
                 cache,
                 referenceCacheAdmission);
     }
 
-    private Preprocessor preprocessor() {
+    private Preprocessor preprocessor(NodeProvider provider) {
         return new Preprocessor(
                 Preprocessor.getStandardProvider(),
-                nodeProvider,
+                provider,
                 directiveAliases,
                 environmentImports);
     }

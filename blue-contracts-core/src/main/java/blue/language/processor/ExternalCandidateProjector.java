@@ -16,12 +16,12 @@ import java.util.Objects;
  */
 final class ExternalCandidateProjector {
 
-    private final DocumentProcessor owner;
+    private final ProcessorInvocationServices owner;
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
 
     ExternalCandidateProjector(
-            DocumentProcessor owner,
+            ProcessorInvocationServices owner,
             ProcessorInvocationState execution,
             DocumentProcessingRuntime runtime) {
         this.owner = Objects.requireNonNull(owner, "owner");

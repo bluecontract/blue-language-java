@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 591,
+    "productionSourceCount": 594,
     "productionResourceCount": 370,
-    "productionSourcePathIdentity": "sha256:cd68f3345cd5c6e239a2c43e4a66b4183a6fdc505c8d11413671ba40b70348ca",
+    "productionSourcePathIdentity": "sha256:af8b46afa8d1250d5e6d66c648bf5e06c067e40cd3fd466f921a4aa6cf100507",
     "productionResourcePathIdentity": "sha256:a1ccc0c0105048804474a0ac9ac7a2b095e05d3b094a60a046295e78e5203797"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -1498,6 +1498,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/PlatformProcessInvocation.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/PlatformProcessInvocation.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/PlatformProcessingResult.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1852,6 +1859,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationServices.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationServices.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -3658,6 +3672,13 @@
       "currentPackage": "blue.language.runtime",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/runtime/LanguageRuntimeSnapshotStore.java",
+      "targetPackage": "blue.language.runtime"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/runtime/ProcessingScopeLifecycle.java",
+      "currentPackage": "blue.language.runtime",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/runtime/ProcessingScopeLifecycle.java",
       "targetPackage": "blue.language.runtime"
     },
     {

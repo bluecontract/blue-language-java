@@ -540,8 +540,9 @@ final class PatchPlanningEngine {
         }
         try {
             Set<String> preservedBodies =
-                    DocumentProcessingRuntime
-                            .executableBodyPaths(
+                    new LinkedHashSet<>(
+                            DocumentProcessingRuntime
+                                    .executableBodyPaths(
                                     /*
                                      * Reference-only contracts maps and contract
                                      * entries have no direct type header in the
@@ -553,7 +554,15 @@ final class PatchPlanningEngine {
                                      */
                                     resolvedRoot,
                                     openedScopePaths,
-                                    executableBodyFieldsByType);
+                                    executableBodyFieldsByType));
+            if (invocationEvidenceSnapshotManager != null) {
+                preservedBodies.addAll(
+                        ExecutableBodyPathCatalog.fromNode(
+                                canonicalRoot.toNode(),
+                                openedScopePaths,
+                                executableBodyFieldsByType,
+                                invocationEvidenceSnapshotManager));
+            }
             ConformancePlan plan =
                     conformanceEngine
                             .planGeneralizationPreservingPaths(

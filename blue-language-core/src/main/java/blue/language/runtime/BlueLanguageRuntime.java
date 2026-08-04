@@ -96,6 +96,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
     private final LanguageRuntimeSnapshotStore snapshotsStore;
     private final ReentrantReadWriteLock lifecycle =
             new ReentrantReadWriteLock(true);
+    private final Object closeMonitor = new Object();
     private final ThreadLocal<Integer> operationDepth =
             new ThreadLocal<>();
 
@@ -107,7 +108,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
     private final BlueSnapshots snapshots;
     private final BlueMatching matching;
     private final BluePatching patching;
-    private final LanguageProcessing processing;
+    private final RuntimeLanguageProcessing processing;
 
     private volatile boolean closed;
 
@@ -117,7 +118,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
                                 Map<String, String> environmentImports,
                                 ReferenceCacheAdmissionPolicy
                                         referenceCacheAdmission) {
-        this.nodeProvider = blue.language.registry.NodeProviderWrapper.wrap(
+        this.nodeProvider = blue.language.registry.NodeProviderWrapper.unverified(
                 Objects.requireNonNull(nodeProvider, "nodeProvider"));
         this.cachePolicy = Objects.requireNonNull(
                 cachePolicy, "cachePolicy");
@@ -459,7 +460,10 @@ public final class BlueLanguageRuntime implements NodeResolver,
     /**
      * Releases runtime-owned caches after all admitted operations complete.
      * Closing from inside an admitted operation is rejected to avoid a lock
-     * upgrade that would wait for itself.
+     * upgrade that would wait for itself. Concurrent close callers serialize
+     * through the complete teardown after this reentrancy check, so an active
+     * provider callback can always fail fast instead of waiting on a closer
+     * that is itself waiting for that callback.
      */
     @Override
     public void close() {
@@ -468,15 +472,23 @@ public final class BlueLanguageRuntime implements NodeResolver,
             throw new IllegalStateException(
                     "Blue Language runtime cannot close from active work");
         }
-        lifecycle.writeLock().lock();
-        try {
-            if (closed) {
-                return;
+        synchronized (closeMonitor) {
+            lifecycle.writeLock().lock();
+            try {
+                if (closed) {
+                    return;
+                }
+                closed = true;
+            } finally {
+                lifecycle.writeLock().unlock();
             }
-            closed = true;
-            snapshotsStore.close();
-        } finally {
-            lifecycle.writeLock().unlock();
+            processing.closeScopes();
+            lifecycle.writeLock().lock();
+            try {
+                snapshotsStore.close();
+            } finally {
+                lifecycle.writeLock().unlock();
+            }
         }
     }
 
@@ -726,6 +738,31 @@ public final class BlueLanguageRuntime implements NodeResolver,
         run(work);
     }
 
+    private void enterAdmittedOperation() {
+        lifecycle.readLock().lock();
+        Integer previous = operationDepth.get();
+        try {
+            ensureOpen();
+            operationDepth.set(previous == null ? 1 : previous + 1);
+        } catch (RuntimeException failure) {
+            lifecycle.readLock().unlock();
+            throw failure;
+        } catch (Error failure) {
+            lifecycle.readLock().unlock();
+            throw failure;
+        }
+    }
+
+    private void exitAdmittedOperation() {
+        Integer depth = operationDepth.get();
+        if (depth == null || depth <= 1) {
+            operationDepth.remove();
+        } else {
+            operationDepth.set(depth - 1);
+        }
+        lifecycle.readLock().unlock();
+    }
+
     private Node rawPreprocess(Node source) {
         return new Preprocessor(
                 Preprocessor.getStandardProvider(),
@@ -789,19 +826,11 @@ public final class BlueLanguageRuntime implements NodeResolver,
     }
 
     private <T> T call(Supplier<T> work) {
-        lifecycle.readLock().lock();
-        Integer previous = operationDepth.get();
+        enterAdmittedOperation();
         try {
-            ensureOpen();
-            operationDepth.set(previous == null ? 1 : previous + 1);
             return work.get();
         } finally {
-            if (previous == null) {
-                operationDepth.remove();
-            } else {
-                operationDepth.set(previous);
-            }
-            lifecycle.readLock().unlock();
+            exitAdmittedOperation();
         }
     }
 

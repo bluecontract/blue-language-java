@@ -60,7 +60,12 @@ final class ExternalPreselectionVerifier {
                 snapshotManager, registry, converter);
         this.projectionBuilder =
                 new ExternalSubscriptionProjectionBuilder(
-                        contractLoader, snapshotManager, selection);
+                        contractLoader,
+                        snapshotManager,
+                        selection,
+                        registry != null
+                                ? registry.executableBodyFieldsByType()
+                                : Collections.<String, List<String>>emptyMap());
     }
 
     /**

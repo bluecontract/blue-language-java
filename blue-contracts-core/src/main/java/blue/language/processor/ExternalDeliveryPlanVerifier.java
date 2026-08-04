@@ -24,13 +24,38 @@ final class ExternalDeliveryPlanVerifier {
             ExternalDeliveryPlan plan) {
         verifyHeadersAndDeliveries(evidence, plan);
 
+        if (!evidence.hasActiveSubscriptionIntervals()) {
+            throw ExternalEvidenceVerificationSupport.unavailable(
+                    "Complete retained external subscription and activation "
+                            + "evidence is unavailable",
+                    ExternalEvidenceVerificationSupport.referencedBlueIds(
+                            root, event));
+        }
         /*
-         * A deriver's "exact" bit is only a claim. The retained,
-         * revision-complete active index is the independent completeness
-         * companion; re-run registered PRESELECTS/ACCEPTS only for those exact
-         * indexed occurrences.
+         * The public evaluator established completeness before sealing the
+         * plan. Re-run every retained occurrence here without enumerating the
+         * entire Root again: a whole-surface scan would open unrelated
+         * embedded scopes and violate the invocation's selected-read domain.
          */
         preselectionVerifier.verify(root, event, evidence);
+    }
+
+    /** Verifies through an explicitly invocation-bound runtime session. */
+    void verify(
+            Node root,
+            Node event,
+            VerifiedExecutionEvidence evidence,
+            ExternalDeliveryPlan plan,
+            ExternalPreselectionVerifier.RuntimeWorkSessionFactory
+                    runtimeWorkSessions) {
+        verifyHeadersAndDeliveries(evidence, plan);
+        preselectionVerifier.verify(
+                root,
+                event,
+                evidence,
+                Objects.requireNonNull(
+                        runtimeWorkSessions,
+                        "runtimeWorkSessions"));
     }
 
     void verify(

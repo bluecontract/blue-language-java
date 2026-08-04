@@ -13,13 +13,13 @@
     "technicalPublicGateways": []
   },
   "counts": {
-    "productionSourceFiles": 279,
-    "topLevelTypes": 276,
-    "PUBLIC_API": 95,
+    "productionSourceFiles": 281,
+    "topLevelTypes": 278,
+    "PUBLIC_API": 96,
     "PUBLIC_SPI": 10,
     "PUBLIC_MODEL": 18,
     "INTERNAL_ENGINE": 81,
-    "INTERNAL_SUPPORT": 72
+    "INTERNAL_SUPPORT": 73
   },
   "classifications": [
     {
@@ -75,6 +75,7 @@
         "blue.language.processor.ObservationKind",
         "blue.language.processor.PatchSource",
         "blue.language.processor.PlatformCommitCompanion",
+        "blue.language.processor.PlatformProcessInvocation",
         "blue.language.processor.PlatformProcessingResult",
         "blue.language.processor.PortableLimitExceededException",
         "blue.language.processor.ProcessAttemptResult",
@@ -308,6 +309,7 @@
         "blue.language.processor.ProcessingScopeRegistry",
         "blue.language.processor.ProcessorGasCharges",
         "blue.language.processor.ProcessorIdentityConstants",
+        "blue.language.processor.ProcessorInvocationServices",
         "blue.language.processor.ProcessorInvocationState",
         "blue.language.processor.ProcessorManagedChannelTypes",
         "blue.language.processor.ProcessorMarkerFactory",
