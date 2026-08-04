@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
@@ -77,6 +78,7 @@ final class ExecutableBodyPathCatalog {
                 openedScopePaths,
                 executableBodyFieldsByType,
                 checkedManager);
+        preserved.addAll(ordinaryReferencePaths(document));
         preserved.addAll(opaqueCyclicMemberPaths(document));
         if (preserved.isEmpty()) {
             return checkedManager.fromDocumentTransient(document);
@@ -91,6 +93,17 @@ final class ExecutableBodyPathCatalog {
         collectOpaqueCyclicMemberPaths(
                 document,
                 JsonPointer.ROOT,
+                result,
+                new IdentityHashMap<Node, Boolean>());
+        return result;
+    }
+
+    static Set<String> ordinaryReferencePaths(Node document) {
+        Set<String> result = new LinkedHashSet<>();
+        collectOrdinaryReferencePaths(
+                document,
+                JsonPointer.ROOT,
+                false,
                 result,
                 new IdentityHashMap<Node, Boolean>());
         return result;
@@ -164,6 +177,55 @@ final class ExecutableBodyPathCatalog {
         return scopes;
     }
 
+    /**
+     * Enumerates authored ordinary-node paths without crossing type,
+     * contracts, schema, or pure-reference boundaries. Complete subscription
+     * projection uses this physical catalog to defer executable fields at all
+     * directly present scope candidates before resolving the Root.
+     */
+    static Set<String> authoredNodePaths(Node document) {
+        Set<String> paths = new LinkedHashSet<>();
+        collectAuthoredNodePaths(
+                document,
+                JsonPointer.ROOT,
+                paths,
+                new IdentityHashMap<Node, Boolean>());
+        return paths;
+    }
+
+    private static void collectAuthoredNodePaths(
+            Node node,
+            String path,
+            Set<String> result,
+            IdentityHashMap<Node, Boolean> visited) {
+        if (node == null || visited.put(node, Boolean.TRUE) != null) {
+            return;
+        }
+        result.add(path);
+        if (node.isReferenceOnly()) {
+            return;
+        }
+        if (node.getProperties() != null) {
+            for (Map.Entry<String, Node> entry
+                    : node.getProperties().entrySet()) {
+                collectAuthoredNodePaths(
+                        entry.getValue(),
+                        JsonPointer.append(path, entry.getKey()),
+                        result,
+                        visited);
+            }
+        }
+        if (node.getItems() != null) {
+            for (int index = 0; index < node.getItems().size(); index++) {
+                collectAuthoredNodePaths(
+                        node.getItems().get(index),
+                        JsonPointer.append(path, Integer.toString(index)),
+                        result,
+                        visited);
+            }
+        }
+    }
+
     private static void collect(
             Node node,
             List<String> path,
@@ -175,6 +237,93 @@ final class ExecutableBodyPathCatalog {
                 || executableBodyFieldsByType.isEmpty()) {
             return;
         }
+        collectTypeContracts(
+                node.getType(),
+                path,
+                executableBodyFieldsByType,
+                result,
+                exactMaterializer,
+                new LinkedHashSet<String>(),
+                0);
+        collectDirectContracts(
+                node,
+                path,
+                executableBodyFieldsByType,
+                result,
+                exactMaterializer);
+    }
+
+    /**
+     * Catalogs executable fields contributed through exact scope-type
+     * ancestry. Contract headers may be opened for Phase-C recognition, but
+     * declared body fields are only recorded at their effective scope paths.
+     */
+    private static void collectTypeContracts(
+            Node declaredType,
+            List<String> path,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Set<String> result,
+            ProcessingSnapshotManager exactMaterializer,
+            Set<String> activeTypes,
+            int depth) {
+        if (declaredType == null) {
+            return;
+        }
+        long maxTypeEdges = GasSchedule.contracts10().portableLimit(
+                GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES);
+        if (depth >= maxTypeEdges) {
+            throw new PortableLimitExceededException(
+                    ProcessorErrorCategory.DirectNodeLimitExceeded,
+                    GasScheduleConstants.PortableLimit.TYPE_CHAIN_EDGES,
+                    depth + 1L,
+                    maxTypeEdges);
+        }
+        if (declaredType.isReferenceOnly()
+                && exactMaterializer == null) {
+            return;
+        }
+        Node exactType = declaredType.isReferenceOnly()
+                ? materializeVerifiedExact(
+                        exactMaterializer,
+                        FrozenNode.fromNode(declaredType),
+                        "Scope-type executable-header recognition")
+                        .toNode()
+                : declaredType;
+        String identity = declaredType.getBlueId() != null
+                ? declaredType.getBlueId()
+                : DirectBlueIdCalculator.calculateBlueId(exactType);
+        if (!activeTypes.add(identity)) {
+            throw new MustUnderstandFailureException(
+                    "Cyclic type contribution while cataloging executable fields",
+                    ProcessorErrorCategory.InvalidContractBinding);
+        }
+        try {
+            collectTypeContracts(
+                    exactType.getType(),
+                    path,
+                    executableBodyFieldsByType,
+                    result,
+                    exactMaterializer,
+                    activeTypes,
+                    depth + 1);
+            collectDirectContracts(
+                    exactType,
+                    path,
+                    executableBodyFieldsByType,
+                    result,
+                    exactMaterializer);
+        } finally {
+            activeTypes.remove(identity);
+        }
+    }
+
+    /** Adds executable paths declared by one exact scope contribution. */
+    private static void collectDirectContracts(
+            Node node,
+            List<String> path,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Set<String> result,
+            ProcessingSnapshotManager exactMaterializer) {
         Node contracts = node.getContracts();
         if (contracts != null
                 && contracts.isReferenceOnly()
@@ -276,6 +425,65 @@ final class ExecutableBodyPathCatalog {
                         path, ProcessorContractConstants.KEY_CONTRACTS),
                 result,
                 visited);
+    }
+
+    /**
+     * Keeps non-structural references physically cold while resolving the
+     * selected scope's type and contracts-map structure. Once those two
+     * structural references have been opened, contract entries and nested
+     * header/body values remain deferred for the contract loader to admit on
+     * demand.
+     */
+    private static void collectOrdinaryReferencePaths(
+            Node node,
+            String path,
+            boolean structuralReference,
+            Set<String> result,
+            IdentityHashMap<Node, Boolean> visited) {
+        if (node == null || visited.put(node, Boolean.TRUE) != null) {
+            return;
+        }
+        if (node.isReferenceOnly()) {
+            if (!structuralReference && !JsonPointer.ROOT.equals(path)) {
+                result.add(path);
+            }
+            return;
+        }
+        collectOrdinaryReferencePaths(
+                node.getType(),
+                JsonPointer.append(
+                        path, BlueLanguageConstants.OBJECT_TYPE),
+                true,
+                result,
+                visited);
+        collectOrdinaryReferencePaths(
+                node.getContracts(),
+                JsonPointer.append(
+                        path, ProcessorContractConstants.KEY_CONTRACTS),
+                true,
+                result,
+                visited);
+        if (node.getProperties() != null) {
+            for (Map.Entry<String, Node> entry
+                    : node.getProperties().entrySet()) {
+                collectOrdinaryReferencePaths(
+                        entry.getValue(),
+                        JsonPointer.append(path, entry.getKey()),
+                        false,
+                        result,
+                        visited);
+            }
+        }
+        if (node.getItems() != null) {
+            for (int index = 0; index < node.getItems().size(); index++) {
+                collectOrdinaryReferencePaths(
+                        node.getItems().get(index),
+                        JsonPointer.append(path, Integer.toString(index)),
+                        false,
+                        result,
+                        visited);
+            }
+        }
     }
 
     private static void addEventMatcherPath(

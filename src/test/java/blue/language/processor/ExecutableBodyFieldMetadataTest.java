@@ -9,6 +9,8 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.HandlerContract;
+import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.Contract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -160,6 +162,58 @@ class ExecutableBodyFieldMetadataTest {
                 mutablePaths.contains(
                         "/contracts/run/body"),
                 "ordinary data named body is not executable metadata");
+    }
+
+    @Test
+    void shouldBindRegistryGenerationIdentityToPortableProcessorMetadata() {
+        // given
+        Node canonicalType = new Node().name(
+                "Portable registry generation test type");
+        String blueId = DirectBlueIdCalculator.calculateBlueId(
+                canonicalType);
+        ProgramHandlerProcessor programHandler =
+                new ProgramHandlerProcessor(false);
+        ProgramHandlerProcessor bodyHandler =
+                new ProgramHandlerProcessor(false);
+        bodyHandler.declaredExecutableFields.clear();
+        bodyHandler.declaredExecutableFields.add("body");
+        ContractProcessorRegistry programRegistry =
+                registry(blueId, canonicalType, programHandler);
+        ContractProcessorRegistry bodyRegistry =
+                registry(blueId, canonicalType, bodyHandler);
+        ContractProcessorRegistry channelRegistry =
+                registry(blueId, canonicalType,
+                        new ChannelProcessor<ChannelContract>() {
+                            @Override
+                            public Class<ChannelContract> contractType() {
+                                return ChannelContract.class;
+                            }
+                        });
+
+        // when
+        String programIdentity = programRegistry.generationIdentity();
+        String repeatedProgramIdentity = registry(
+                blueId,
+                canonicalType,
+                new ProgramHandlerProcessor(false))
+                .generationIdentity();
+        String bodyIdentity = bodyRegistry.generationIdentity();
+        String channelIdentity = channelRegistry.generationIdentity();
+
+        // then
+        assertEquals(programIdentity, repeatedProgramIdentity);
+        assertFalse(programIdentity.equals(bodyIdentity));
+        assertFalse(programIdentity.equals(channelIdentity));
+    }
+
+    private static ContractProcessorRegistry registry(
+            String blueId,
+            Node canonicalType,
+            ContractProcessor<? extends Contract> processor) {
+        ContractProcessorRegistry registry =
+                new ContractProcessorRegistry();
+        registry.register(blueId, canonicalType, processor);
+        return registry.snapshot();
     }
 
     @Test

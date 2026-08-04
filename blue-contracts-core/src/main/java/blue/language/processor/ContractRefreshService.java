@@ -186,7 +186,8 @@ final class ContractRefreshService {
                 continue;
             }
             Node selectedNode = selectedEntry.getValue();
-            FrozenNode effectiveNode = effectiveContractMap.getProperties().get(key);
+            FrozenNode effectiveNode =
+                    effectiveContractMap.getProperties().get(key);
             EffectiveContractResolver.MarkerValue markerValue =
                     effectiveContracts.directMarker(key, selectedNode, effectiveNode);
             if (markerValue == null

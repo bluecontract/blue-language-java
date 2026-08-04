@@ -23,14 +23,17 @@ final class ExternalSubscriptionProjectionBuilder {
     private final ContractLoader contractLoader;
     private final ProcessingSnapshotManager snapshotManager;
     private final ExternalSubscriptionSelection selection;
+    private final Map<String, List<String>> executableBodyFieldsByType;
 
     ExternalSubscriptionProjectionBuilder(
             ContractLoader contractLoader,
             ProcessingSnapshotManager snapshotManager,
-            ExternalSubscriptionSelection selection) {
+            ExternalSubscriptionSelection selection,
+            Map<String, List<String>> executableBodyFieldsByType) {
         this.contractLoader = contractLoader;
         this.snapshotManager = snapshotManager;
         this.selection = selection;
+        this.executableBodyFieldsByType = executableBodyFieldsByType;
     }
 
     ExternalDeliveryResolution resolution(Node root) {
@@ -38,11 +41,17 @@ final class ExternalSubscriptionProjectionBuilder {
             throw ExternalEvidenceVerificationSupport.invalid(
                     "Effective-contract resolver is unavailable");
         }
+        Node exactRoot = materializeSelectedScope(root.clone());
         ResolvedSnapshot snapshot = snapshotManager != null
-                ? snapshotManager.fromDocumentTransient(root.clone())
+                ? ExecutableBodyPathCatalog.resolveCanonicalTransient(
+                        snapshotManager,
+                        FrozenNode.fromNode(exactRoot),
+                        ExecutableBodyPathCatalog.authoredNodePaths(
+                                exactRoot),
+                        executableBodyFieldsByType)
                 : null;
         return new ExternalDeliveryResolution(
-                contractLoader, this, root, snapshot);
+                contractLoader, this, exactRoot, snapshot);
     }
 
     ExternalSubscriptionProjection subscriptionIndexProjection(
@@ -145,7 +154,7 @@ final class ExternalSubscriptionProjectionBuilder {
         return requireMaterialized(
                 reference,
                 materialized,
-                "Exact selected scope content is unavailable")
+                "Exact selected scope content was not found")
                 .toNode();
     }
 
@@ -161,7 +170,7 @@ final class ExternalSubscriptionProjectionBuilder {
         return requireMaterialized(
                 reference,
                 materialized,
-                "Effective scope content is unavailable")
+                "Effective scope content was not found")
                 .toNode();
     }
 
@@ -312,19 +321,18 @@ final class ExternalSubscriptionProjectionBuilder {
                             .requiresEmbeddedRouting(
                                     scopePath,
                                     projection.requestedKeys.keySet());
-            Map<String, String> types = exactContractTypes(
+            Set<String> contractKeys = exactContractKeys(
                     exactScopeContributionsAt(
                             projection.root, scopePath));
-            for (Map.Entry<String, String> entry
-                    : types.entrySet()) {
-                if (requested.contains(entry.getKey())
-                        || isSubscriptionProcessorStateKey(entry.getKey())
+            for (String contractKey : contractKeys) {
+                if (requested.contains(contractKey)
+                        || isSubscriptionProcessorStateKey(contractKey)
                         || includeRouting
-                        && RuntimeBlueIds.PROCESS_EMBEDDED.equals(
-                        entry.getValue())) {
+                        && ProcessorContractConstants.KEY_EMBEDDED.equals(
+                        contractKey)) {
                     continue;
                 }
-                paths.add(contractPath(scopePath, entry.getKey()));
+                paths.add(contractPath(scopePath, contractKey));
             }
         }
         return paths;
@@ -472,21 +480,37 @@ final class ExternalSubscriptionProjectionBuilder {
         return requireMaterialized(
                 reference,
                 materialized,
-                "Enumeration-selector exact header content is unavailable")
+                "Enumeration-selector exact header content was not found")
                 .toNode();
     }
 
-    private FrozenNode requireMaterialized(
+    private static FrozenNode requireMaterialized(
             FrozenNode reference,
             FrozenNode materialized,
             String message) {
         if (materialized != null) {
             return materialized;
         }
-        throw ExternalEvidenceVerificationSupport.unavailable(
-                message,
-                Collections.singleton(
-                        reference.getReferenceBlueId()));
+        throw ExternalEvidenceVerificationSupport.invalid(
+                message + " for " + reference.getReferenceBlueId());
+    }
+
+    /** Enumerates effective keys without opening individual contract values. */
+    private Set<String> exactContractKeys(
+            List<Node> scopeContributions) {
+        Set<String> result = new LinkedHashSet<>();
+        for (Node scopeContribution : scopeContributions) {
+            for (Node source : exactNodeAndTypeLineage(
+                    scopeContribution)) {
+                Node contracts = exactHeaderNode(source.getContracts());
+                if (contracts == null
+                        || contracts.getProperties() == null) {
+                    continue;
+                }
+                result.addAll(contracts.getProperties().keySet());
+            }
+        }
+        return result;
     }
 
     private Map<String, String> exactContractTypes(
@@ -594,9 +618,13 @@ final class ExternalSubscriptionProjectionBuilder {
         if (snapshotManager == null) {
             return true;
         }
+        FrozenNode declaredTypeReference = FrozenNode.fromNode(declaredType);
         FrozenNode exactType = declaredType.isReferenceOnly()
-                ? snapshotManager.materializeVerifiedExactReference(
-                FrozenNode.fromNode(declaredType))
+                ? requireMaterialized(
+                declaredTypeReference,
+                snapshotManager.materializeVerifiedExactReference(
+                        declaredTypeReference),
+                "Subscription-surface scope type content was not found")
                 : FrozenNode.fromNode(declaredType.clone());
         String identity = declaredType.getBlueId() != null
                 ? declaredType.getBlueId()
@@ -609,21 +637,28 @@ final class ExternalSubscriptionProjectionBuilder {
 
         FrozenNode contracts = exactType.getContracts();
         if (contracts != null && contracts.isReferenceOnly()) {
-            contracts = snapshotManager
-                    .materializeVerifiedExactReference(contracts);
+            FrozenNode contractsReference = contracts;
+            contracts = requireMaterialized(
+                    contractsReference,
+                    snapshotManager.materializeVerifiedExactReference(
+                            contractsReference),
+                    "Subscription-surface type contracts content was not found");
         }
         if (contracts != null
                 && contracts.getProperties() != null) {
-            for (Map.Entry<String, FrozenNode> entry
-                    : contracts.getProperties().entrySet()) {
-                if (requestedChannelKeys.contains(entry.getKey())) {
+            Map<String, FrozenNode> entries = contracts.getProperties();
+            for (String requestedChannelKey : requestedChannelKeys) {
+                if (entries.containsKey(requestedChannelKey)) {
                     return true;
                 }
-                if (includeProcessEmbedded
-                        && isExactProcessEmbeddedContract(
-                        snapshotManager, entry.getValue())) {
-                    return true;
-                }
+            }
+            FrozenNode embedded = includeProcessEmbedded
+                    ? entries.get(ProcessorContractConstants.KEY_EMBEDDED)
+                    : null;
+            if (embedded != null
+                    && isExactProcessEmbeddedContract(
+                    snapshotManager, embedded)) {
+                return true;
             }
         }
         FrozenNode parent = exactType.getType();
@@ -641,8 +676,12 @@ final class ExternalSubscriptionProjectionBuilder {
             FrozenNode contract) {
         FrozenNode exact = contract;
         if (exact != null && exact.isReferenceOnly()) {
-            exact = snapshotManager
-                    .materializeVerifiedExactReference(exact);
+            FrozenNode reference = exact;
+            exact = requireMaterialized(
+                    reference,
+                    snapshotManager.materializeVerifiedExactReference(
+                            reference),
+                    "Process Embedded contract header content was not found");
         }
         FrozenNode type = exact != null ? exact.getType() : null;
         return type != null

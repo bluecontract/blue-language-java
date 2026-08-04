@@ -26,6 +26,8 @@ final class ProcessingDocumentView {
     private final DocumentProcessingRuntime runtime;
     private final Map<String, FrozenNode> exactReferencedScopes =
             new LinkedHashMap<>();
+    private final Map<String, FrozenNode> resolvedDeferredScopes =
+            new LinkedHashMap<>();
     private long exactReferencedScopesVersion = Long.MIN_VALUE;
 
     ProcessingDocumentView(DocumentProcessingRuntime runtime) {
@@ -72,20 +74,15 @@ final class ProcessingDocumentView {
         ResolvedSnapshot current = snapshot();
         if (current != null) {
             FrozenNode selected = selectedCanonicalFrozenAt(normalized);
-            if (selected != null && selected.isReferenceOnly()) {
-                ProcessingSnapshotManager manager =
-                        runtime.currentSnapshotManager();
-                if (manager != null) {
-                    FrozenNode exact = exactReferencedScope(
-                            normalized, selected, manager);
-                    return DocumentProcessingRuntime
-                            .resolveCanonicalTransient(
-                                    manager,
-                                    exact,
-                                    Collections.singleton(JsonPointer.ROOT),
-                                    runtime.executableBodyFieldsByType)
-                            .frozenResolvedRoot();
-                }
+            ProcessingSnapshotManager manager =
+                    runtime.currentSnapshotManager();
+            if (selected != null
+                    && manager != null
+                    && (selected.isReferenceOnly()
+                    || requiresDeferredScopeResolution(
+                            current, selected))) {
+                return resolvedDeferredScope(
+                        normalized, selected, manager);
             }
             return current.resolvedAt(normalized);
         }
@@ -148,10 +145,7 @@ final class ProcessingDocumentView {
             String normalizedPath,
             FrozenNode reference,
             ProcessingSnapshotManager manager) {
-        if (exactReferencedScopesVersion != runtime.stateVersion) {
-            exactReferencedScopes.clear();
-            exactReferencedScopesVersion = runtime.stateVersion;
-        }
+        resetScopeCachesIfStateChanged();
         FrozenNode cached = exactReferencedScopes.get(normalizedPath);
         if (cached != null) {
             return cached;
@@ -160,6 +154,62 @@ final class ProcessingDocumentView {
                 manager, reference, "Selected processing scope");
         exactReferencedScopes.put(normalizedPath, exact);
         return exact;
+    }
+
+    /**
+     * Resolves one exact scope from an intentionally incomplete admission
+     * snapshot. A top-level pure reference is admitted as exact canonical
+     * content before processing; its descendants are therefore concrete even
+     * though their declared types have not yet contributed effective
+     * contracts. Treating that concrete fragment as already resolved would
+     * make handler discovery, gas, and must-understand behavior depend on the
+     * caller's physical representation.
+     */
+    private FrozenNode resolvedDeferredScope(
+            String normalizedPath,
+            FrozenNode selected,
+            ProcessingSnapshotManager manager) {
+        resetScopeCachesIfStateChanged();
+        FrozenNode cached = resolvedDeferredScopes.get(normalizedPath);
+        if (cached != null) {
+            return cached;
+        }
+        FrozenNode exact = selected.isReferenceOnly()
+                ? exactReferencedScope(
+                        normalizedPath, selected, manager)
+                : selected;
+        FrozenNode resolved = DocumentProcessingRuntime
+                .resolveCanonicalTransient(
+                        manager,
+                        exact,
+                        Collections.singleton(JsonPointer.ROOT),
+                        runtime.executableBodyFieldsByType)
+                .frozenResolvedRoot();
+        resolvedDeferredScopes.put(normalizedPath, resolved);
+        return resolved;
+    }
+
+    private boolean requiresDeferredScopeResolution(
+            ResolvedSnapshot current,
+            FrozenNode selected) {
+        if (current.isResolutionComplete()) {
+            return false;
+        }
+        return selected.getType() != null
+                || selected.getItemType() != null
+                || selected.getKeyType() != null
+                || selected.getValueType() != null
+                || selected.getContracts() != null
+                && selected.getContracts().isReferenceOnly();
+    }
+
+    private void resetScopeCachesIfStateChanged() {
+        if (exactReferencedScopesVersion == runtime.stateVersion) {
+            return;
+        }
+        exactReferencedScopes.clear();
+        resolvedDeferredScopes.clear();
+        exactReferencedScopesVersion = runtime.stateVersion;
     }
 
     Node nodeAt(String path) {

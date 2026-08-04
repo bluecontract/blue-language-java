@@ -9,8 +9,10 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.mapping.TypeClassResolver;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -82,11 +84,34 @@ final class EffectiveContractResolver {
         for (Map.Entry<String, FrozenNode> entry : fields.entrySet()) {
             if (!isDirectProcessorStateKey(entry.getKey())) {
                 FrozenNode contribution = entry.getValue();
-                contracts.put(
-                        entry.getKey(),
-                        contribution != null && contribution.isReferenceOnly()
-                                ? contributions.materializeVerifiedReference(contribution)
-                                : contribution);
+                FrozenNode materialized = contribution != null
+                        && contribution.isReferenceOnly()
+                        ? contributions.materializeVerifiedReference(
+                                contribution)
+                        : contribution;
+                String effectiveTypeBlueId = typeBlueId(materialized);
+                List<String> deferredFields =
+                        effectiveTypeBlueId != null
+                                ? new ArrayList<>(
+                                registry.executableBodyFields(
+                                        effectiveTypeBlueId))
+                                : new ArrayList<String>();
+                if (effectiveTypeBlueId != null
+                        && registry.lookupHandler(effectiveTypeBlueId)
+                        .isPresent()
+                        && !deferredFields.contains(
+                        EffectiveContractSnapshotConstants
+                                .DispatchField.EVENT)) {
+                    deferredFields.add(
+                            EffectiveContractSnapshotConstants
+                                    .DispatchField.EVENT);
+                }
+                contracts.put(entry.getKey(),
+                        materialized != null
+                                ? contributions.materializeVerifiedHeader(
+                                        materialized,
+                                        deferredFields)
+                                : null);
             }
         }
         return contracts;

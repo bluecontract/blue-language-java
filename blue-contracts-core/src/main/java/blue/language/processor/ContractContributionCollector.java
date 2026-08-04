@@ -33,6 +33,14 @@ final class ContractContributionCollector {
         return resolver.materializeVerifiedReference(reference);
     }
 
+    FrozenNode materializeVerifiedHeader(
+            FrozenNode contribution,
+            Collection<String> executableBodyFields) {
+        return resolver.materializeVerifiedHeader(
+                contribution,
+                executableBodyFields);
+    }
+
     ContractContributionResolver.BindingResolution collect(
             Node selectedScope,
             FrozenNode effectiveScope,

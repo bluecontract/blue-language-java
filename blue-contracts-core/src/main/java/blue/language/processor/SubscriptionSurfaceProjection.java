@@ -143,9 +143,22 @@ public final class SubscriptionSurfaceProjection {
                     configuredManager.transientSequence(),
                     "transientSequence");
             try {
+                Set<String> executableBodyPaths =
+                        ExecutableBodyPathCatalog.fromNode(
+                                tentativeRoot,
+                                ExecutableBodyPathCatalog.authoredNodePaths(
+                                        tentativeRoot),
+                                processor.registry()
+                                        .executableBodyFieldsByType(),
+                                sequence);
                 ResolvedSnapshot exactSnapshot = Objects.requireNonNull(
-                        sequence.fromDocumentTransient(
-                                tentativeRoot.clone()),
+                        executableBodyPaths.isEmpty()
+                                ? sequence.fromDocumentTransient(
+                                        tentativeRoot.clone())
+                                : sequence
+                                        .fromDocumentTransientPreservingPaths(
+                                                tentativeRoot.clone(),
+                                                executableBodyPaths),
                         "exactSnapshot");
                 ProcessingGasContext gasContext =
                         new ProcessingGasContext(

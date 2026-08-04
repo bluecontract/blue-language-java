@@ -3,11 +3,15 @@ package blue.language.conformance;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.CanonicalIdentityInputBuilder;
 import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
+
+import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -340,6 +344,57 @@ public class ConformanceEngineTest {
         assertEquals("2", resolvedRoot.at("/x").getValue().toString());
         assertEquals(nodeProvider.getBlueIdByName("Fixed One"), canonicalRoot.getType().getReferenceBlueId());
         assertEquals("2", canonicalRoot.at("/x").getValue().toString());
+    }
+
+    @Test
+    void shouldKeepPreservedHandlerBodyColdWhenPlanningInsideItsSubtree() {
+        // given
+        BasicNodeProvider content = new BasicNodeProvider();
+        content.addSingleDocs("name: Cold Handler Body\npayload: secret");
+        String coldBodyBlueId = content.getBlueIdByName("Cold Handler Body");
+        content.addSingleDocs(
+                "name: Handler Type\n"
+                        + "state:\n"
+                        + "  type: Text\n"
+                        + "body:\n"
+                        + "  blueId: " + coldBodyBlueId);
+        String handlerTypeBlueId = content.getBlueIdByName("Handler Type");
+        AtomicInteger coldBodyReads = new AtomicInteger();
+        NodeProvider strictProvider = blueId -> {
+            if (coldBodyBlueId.equals(blueId)) {
+                coldBodyReads.incrementAndGet();
+                throw new AssertionError("Preserved handler body was read");
+            }
+            return content.fetchByBlueId(blueId);
+        };
+        Blue blue = new Blue(strictProvider);
+        Node document = new Node().properties(
+                "handler",
+                new Node()
+                        .type(new Node().blueId(handlerTypeBlueId))
+                        .properties(
+                                "state",
+                                new Node()
+                                        .type(new Node().blueId(
+                                                BlueLanguageConstants
+                                                        .TEXT_TYPE_BLUE_ID))
+                                        .value("ready"),
+                                "body",
+                                new Node().blueId(coldBodyBlueId)));
+        FrozenNode canonicalRoot = FrozenNode.fromNode(document);
+        FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
+
+        // when
+        ConformancePlan plan = blue.conformanceEngine()
+                .planGeneralizationPreservingPaths(
+                        canonicalRoot,
+                        resolvedRoot,
+                        Collections.singletonList("/handler/state"),
+                        Collections.singleton("/handler"));
+
+        // then
+        assertFalse(plan.generalized());
+        assertEquals(0, coldBodyReads.get());
     }
 
     public static BasicNodeProvider priceProvider() {

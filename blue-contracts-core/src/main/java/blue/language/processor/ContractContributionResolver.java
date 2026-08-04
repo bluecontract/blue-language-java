@@ -2,7 +2,9 @@ package blue.language.processor;
 
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.NodeProviderResult;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
@@ -54,6 +56,25 @@ final class ContractContributionResolver {
         String blueId = reference.getReferenceBlueId();
         return FrozenNode.fromResolvedNode(
                 materialize(reference.toNode(), blueId));
+    }
+
+    /**
+     * Materializes provider-backed header values without opening any declared
+     * executable-body field. Type references remain references and continue
+     * through the ordinary type-contribution resolver.
+     */
+    FrozenNode materializeVerifiedHeader(
+            FrozenNode contribution,
+            Collection<String> executableBodyFields) {
+        Objects.requireNonNull(contribution, "contribution");
+        Set<String> deferred = executableBodyFields == null
+                ? Collections.<String>emptySet()
+                : new LinkedHashSet<>(executableBodyFields);
+        Node exact = materializeHeaderNode(
+                contribution.toNode(),
+                deferred,
+                new LinkedHashSet<String>());
+        return FrozenNode.fromResolvedNode(exact);
     }
 
     List<String> resolve(Node selectedScope,
@@ -261,25 +282,49 @@ final class ContractContributionResolver {
         if (provider == null || blueId == null) {
             throw unavailable(blueId, null);
         }
-        final List<Node> nodes;
+        final NodeProviderResult providerResult;
         try {
-            nodes = provider.fetchByBlueId(blueId);
+            providerResult = provider.fetchResultByBlueId(blueId);
         } catch (ExecutionEvidenceUnavailableException exception) {
+            throw exception;
+        } catch (InvalidExecutionEvidenceException exception) {
             throw exception;
         } catch (RuntimeException exception) {
             if (BlueLanguageErrorClassifier.classify(exception)
                     == BlueLanguageErrorCategory.ProviderUnavailable) {
-                throw unavailable(blueId, exception);
+                throw unavailable(blueId, exception.getMessage());
             }
             throw exception;
         }
-        if (nodes == null || nodes.isEmpty()) {
-            throw unavailable(blueId, null);
+        if (providerResult == null) {
+            throw invalidEvidence(
+                    blueId,
+                    "Provider returned no typed result",
+                    null);
         }
-        if (nodes.size() != 1 || nodes.get(0) == null) {
+        if (providerResult.outcome() == NodeProviderOutcome.NOT_FOUND) {
             throw new MustUnderstandFailureException(
-                    "Expected one verified type contribution for " + blueId,
+                    "Exact Source contribution was not found for " + blueId,
                     ProcessorErrorCategory.InvalidContractBinding);
+        }
+        if (providerResult.outcome() == NodeProviderOutcome.UNAVAILABLE) {
+            throw unavailable(
+                    blueId,
+                    providerDiagnostic(providerResult));
+        }
+        if (providerResult.outcome()
+                == NodeProviderOutcome.INVALID_EVIDENCE) {
+            throw invalidEvidence(
+                    blueId,
+                    "Provider returned invalid exact Source contribution",
+                    providerDiagnostic(providerResult));
+        }
+        List<Node> nodes = providerResult.nodes();
+        if (nodes.size() != 1 || nodes.get(0) == null) {
+            throw invalidEvidence(
+                    blueId,
+                    "Expected one verified Source contribution",
+                    null);
         }
         Node node = nodes.get(0);
         Node canonicalContent = node.clone();
@@ -303,25 +348,96 @@ final class ContractContributionResolver {
         String calculated =
                 DirectBlueIdCalculator.calculateBlueId(canonicalContent);
         if (!blueId.equals(calculated)) {
-            throw new MustUnderstandFailureException(
-                    "Type contribution BlueId mismatch for " + blueId,
-                    ProcessorErrorCategory.InvalidContractBinding);
+            throw invalidEvidence(
+                    blueId,
+                    "Source contribution BlueId mismatch",
+                    null);
         }
         return canonicalContent;
     }
 
+    private String providerDiagnostic(
+            NodeProviderResult providerResult) {
+        return providerResult.diagnostic().orElse(null);
+    }
+
+    private InvalidExecutionEvidenceException invalidEvidence(
+            String blueId,
+            String reason,
+            String diagnostic) {
+        String message = reason + " for "
+                + (blueId != null ? blueId : "<unknown>");
+        if (diagnostic != null && !diagnostic.isEmpty()) {
+            message += ": " + diagnostic;
+        }
+        return new InvalidExecutionEvidenceException(
+                message,
+                ProcessorErrorCategory.InvalidContractBinding);
+    }
+
+    private Node materializeHeaderNode(
+            Node authored,
+            Set<String> deferredDirectFields,
+            Set<String> activeReferences) {
+        if (authored == null) {
+            return null;
+        }
+        Node exact = authored;
+        String activeBlueId = null;
+        if (authored.isReferenceOnly()) {
+            activeBlueId = referenceIdentity(authored);
+            if (!activeReferences.add(activeBlueId)) {
+                throw new MustUnderstandFailureException(
+                        "Cyclic exact reference while materializing contract "
+                                + "header " + activeBlueId,
+                        ProcessorErrorCategory.InvalidContractBinding);
+            }
+            exact = materialize(authored, activeBlueId);
+        }
+        Node result = exact.clone();
+        if (result.getContracts() != null) {
+            result.contracts(materializeHeaderNode(
+                    result.getContracts(),
+                    Collections.<String>emptySet(),
+                    activeReferences));
+        }
+        if (result.getProperties() != null) {
+            for (Map.Entry<String, Node> entry
+                    : result.getProperties().entrySet()) {
+                if (!deferredDirectFields.contains(entry.getKey())) {
+                    entry.setValue(materializeHeaderNode(
+                            entry.getValue(),
+                            Collections.<String>emptySet(),
+                            activeReferences));
+                }
+            }
+        }
+        if (result.getItems() != null) {
+            for (int index = 0; index < result.getItems().size(); index++) {
+                result.getItems().set(
+                        index,
+                        materializeHeaderNode(
+                                result.getItems().get(index),
+                                Collections.<String>emptySet(),
+                                activeReferences));
+            }
+        }
+        if (activeBlueId != null) {
+            activeReferences.remove(activeBlueId);
+        }
+        return result;
+    }
+
     private ExecutionEvidenceUnavailableException unavailable(
             String blueId,
-            RuntimeException cause) {
+            String diagnostic) {
         String identity =
                 blueId != null ? blueId : "<unknown>";
         String message =
                 "Exact Source contribution is unavailable for "
                         + identity;
-        if (cause != null
-                && cause.getMessage() != null
-                && !cause.getMessage().isEmpty()) {
-            message += ": " + cause.getMessage();
+        if (diagnostic != null && !diagnostic.isEmpty()) {
+            message += ": " + diagnostic;
         }
         return new ExecutionEvidenceUnavailableException(
                 message,

@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
@@ -883,6 +884,119 @@ final class ExternalChannelDependencyContextTest {
                     result.status());
             assertEquals(0, unavailableBodyDemands.get());
         }
+    }
+
+    @Test
+    void shouldClassifyInlineAndPureReferenceRootsWithTheSameDeclaredDependencies() {
+        // given
+        Node document = root(
+                aggregate("outer", "leaf", "explicit"),
+                leaf(
+                        "leaf",
+                        "topic",
+                        "leaf-domain",
+                        "timeline-a"),
+                other(
+                        "unselected",
+                        "other-topic",
+                        "other-domain"));
+        Node event = event("topic", 10L);
+        String documentBlueId =
+                DirectBlueIdCalculator.calculateBlueId(document);
+        ExactNodeGraphFragments fragments =
+                new ExactNodeGraphFragments(document);
+        AtomicInteger rootReads = new AtomicInteger();
+        NodeProvider provider = blueId -> {
+            if (documentBlueId.equals(blueId)) {
+                rootReads.incrementAndGet();
+            }
+            return fragments.provider().fetchByBlueId(blueId);
+        };
+
+        DocumentProcessingResult inline;
+        DocumentProcessingResult reference;
+        List<String> selectedDependencyKeys;
+        try (Blue language = runtime(provider, false)) {
+            SubscriptionDelta initial = validate(
+                    language,
+                    new Node(),
+                    document,
+                    "/contracts/outer");
+            ExternalOrderKey activationOrder =
+                    ExternalOrderKey.of(
+                            Collections.<Object>singletonList(
+                                    "activation-order"));
+            List<SubscriptionDelta.Entry> activeIntervals =
+                    new ArrayList<>();
+            for (SubscriptionDelta.Entry added : initial.added()) {
+                activeIntervals.add(
+                        added.activatedAt(0L, activationOrder));
+            }
+            SubscriptionDelta.Entry active =
+                    entry(activeIntervals, "outer");
+            selectedDependencyKeys = dependencyKeys(
+                    active.dependencies());
+            DocumentProcessor preparation =
+                    language.getDocumentProcessor();
+            ExternalDeliveryPlan plan = preparation.administration()
+                    .indexedDeliveryEvaluator()
+                    .prepare(
+                            document,
+                            event,
+                            0L,
+                            TEST_ORDER,
+                            activeIntervals,
+                            Arrays.asList(
+                                    ExternalSubscriptionOccurrenceKey.of(
+                                            "/", "leaf"),
+                                    ExternalSubscriptionOccurrenceKey.of(
+                                            "/", "outer")))
+                    .deliveryPlan();
+            DocumentProcessor processor = processorForPlan(
+                    language,
+                    plan,
+                    false);
+            processor = DocumentProcessor.Builder.from(processor)
+                    .evidenceVerifier(
+                            (ignoredRoot,
+                             ignoredEvent,
+                             ignoredEvidence) -> {
+                                // Isolates the Phase-B representation boundary.
+                            })
+                    .build();
+
+            // when
+            inline = processor.processDocument(
+                    document.clone(),
+                    event.clone());
+            reference = processor.processDocument(
+                    reference(documentBlueId),
+                    event.clone());
+        }
+
+        // then
+        assertEquals(
+                Collections.singletonList("leaf"),
+                selectedDependencyKeys);
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                inline.status(),
+                inline.diagnostic() != null
+                        ? inline.diagnostic().message()
+                        : null);
+        assertEquals(
+                inline.status(),
+                reference.status(),
+                reference.diagnostic() != null
+                        ? reference.diagnostic().message()
+                        : null);
+        assertEquals(inline.totalGas(), reference.totalGas());
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(
+                        inline.document()),
+                DirectBlueIdCalculator.calculateBlueId(
+                        reference.document()));
+        assertTrue(rootReads.get() > 0);
     }
 
     @Test

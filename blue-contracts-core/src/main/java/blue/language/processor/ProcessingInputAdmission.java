@@ -11,8 +11,11 @@ import blue.language.identity.BlueIdReferenceValidator;
 import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodePathEditor;
+import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.ProcessorPointerConstants;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -34,7 +37,15 @@ final class ProcessingInputAdmission {
     static final String PROCESSING_ROOT_LABEL = "Processing Root";
     /** Stable diagnostic label for the top-level Processing Event. */
     static final String PROCESSING_EVENT_LABEL = "Processing Event";
-
+    private static final List<String> DIRECT_ROOT_TERMINATION_PATHS =
+            Collections.unmodifiableList(Arrays.asList(
+                    ProcessorPointerConstants.RELATIVE_TERMINATED,
+                    JsonPointer.append(
+                            ProcessorPointerConstants.RELATIVE_TERMINATED,
+                            ProcessorContractConstants.KEY_CAUSE),
+                    JsonPointer.append(
+                            ProcessorPointerConstants.RELATIVE_TERMINATED,
+                            ProcessorContractConstants.KEY_REASON)));
     private final ProcessingSnapshotManager snapshotManager;
 
     ProcessingInputAdmission(ProcessingSnapshotManager snapshotManager) {
@@ -97,11 +108,16 @@ final class ProcessingInputAdmission {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(label, "label");
         requireProcessableTopLevel(input, label);
-        if (snapshotManager == null || !input.isReferenceOnly()) {
-            return AdmittedNode.unchanged(input);
-        }
-        return AdmittedNode.materialized(
-                exactContent(input, label));
+        AdmittedNode admitted = snapshotManager == null
+                || !input.isReferenceOnly()
+                ? AdmittedNode.unchanged(input)
+                : AdmittedNode.materialized(
+                        exactContent(input, label));
+        return PROCESSING_ROOT_LABEL.equals(label)
+                ? materializeScopePaths(
+                        admitted,
+                        DIRECT_ROOT_TERMINATION_PATHS)
+                : admitted;
     }
 
     void requireProcessableTopLevel(Node input, String label) {

@@ -1,6 +1,8 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.provider.NodeProvider;
+import blue.language.provider.NodeProviderResult;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
@@ -156,7 +158,9 @@ class ContractContributionResolverTest {
         ExecutionEvidenceUnavailableException failure =
                 captureFailure(
                         () -> new ContractContributionResolver(
-                                blueId -> null)
+                                providerReturning(
+                                        NodeProviderResult.unavailable(
+                                                "fixture unavailable")))
                                 .resolveBinding(
                                         selectedScope,
                                         null,
@@ -172,6 +176,109 @@ class ContractContributionResolverTest {
                 Collections.singletonList(
                         typeBlueId),
                 failure.requiredExactBlueIds());
+    }
+
+    @Test
+    void shouldMaterializeNestedHeaderWhenProviderReportsFound() {
+        // given
+        Node nestedHeader = new Node()
+                .properties("mode", new Node().value("strict"));
+        String nestedBlueId =
+                DirectBlueIdCalculator.calculateBlueId(nestedHeader);
+        FrozenNode contribution = FrozenNode.fromResolvedNode(
+                new Node().properties(
+                        "metadata",
+                        new Node().blueId(nestedBlueId)));
+
+        // when
+        FrozenNode materialized = new ContractContributionResolver(
+                providerReturning(NodeProviderResult.found(
+                        Collections.singletonList(nestedHeader))))
+                .materializeVerifiedHeader(
+                        contribution,
+                        Collections.<String>emptyList());
+
+        // then
+        assertEquals(
+                "strict",
+                materialized.getProperties()
+                        .get("metadata")
+                        .getProperties()
+                        .get("mode")
+                        .getValue());
+    }
+
+    @Test
+    void shouldTreatNestedHeaderNotFoundAsDefinitiveMissingContractBinding() {
+        // given
+        FrozenNode contribution = nestedHeaderReference("missing-header");
+
+        // when
+        Throwable failure = captureFailure(
+                () -> new ContractContributionResolver(
+                        providerReturning(NodeProviderResult.notFound()))
+                        .materializeVerifiedHeader(
+                                contribution,
+                                Collections.<String>emptyList()));
+
+        // then
+        assertEquals(MustUnderstandFailureException.class,
+                failure.getClass());
+        assertEquals(
+                ProcessorErrorCategory.InvalidContractBinding,
+                ((MustUnderstandFailureException) failure)
+                        .errorCategory());
+        assertFalse(failure
+                instanceof ExecutionEvidenceUnavailableException);
+    }
+
+    @Test
+    void shouldPreserveUnavailableNestedHeaderAsExactRetryDemand() {
+        // given
+        FrozenNode contribution = nestedHeaderReference(
+                "unavailable-header");
+        String nestedBlueId = contribution.getProperties()
+                .get("metadata")
+                .getReferenceBlueId();
+
+        // when
+        ExecutionEvidenceUnavailableException failure = captureFailure(
+                () -> new ContractContributionResolver(
+                        providerReturning(NodeProviderResult.unavailable(
+                                "fixture unavailable")))
+                        .materializeVerifiedHeader(
+                                contribution,
+                                Collections.<String>emptyList()));
+
+        // then
+        assertEquals(ExecutionEvidenceUnavailableException.class,
+                failure.getClass());
+        assertEquals(
+                Collections.singletonList(nestedBlueId),
+                failure.requiredExactBlueIds());
+    }
+
+    @Test
+    void shouldRejectInvalidNestedHeaderEvidenceDeterministically() {
+        // given
+        FrozenNode contribution = nestedHeaderReference("invalid-header");
+
+        // when
+        Throwable failure = captureFailure(
+                () -> new ContractContributionResolver(
+                        providerReturning(NodeProviderResult.invalidEvidence(
+                                "fixture rejected")))
+                        .materializeVerifiedHeader(
+                                contribution,
+                                Collections.<String>emptyList()));
+
+        // then
+        assertEquals(InvalidExecutionEvidenceException.class,
+                failure.getClass());
+        assertEquals(
+                ProcessorErrorCategory.InvalidContractBinding,
+                ((InvalidExecutionEvidenceException) failure)
+                        .errorCategory());
     }
 
     @Test
@@ -253,5 +360,33 @@ class ContractContributionResolverTest {
                                 .get("program")));
         assertEquals("/program", source.sourcePointer());
         assertFalse(source.pureReference());
+    }
+
+    private static FrozenNode nestedHeaderReference(String value) {
+        Node nestedHeader = new Node().value(value);
+        return FrozenNode.fromResolvedNode(
+                new Node().properties(
+                        "metadata",
+                        new Node().blueId(
+                                DirectBlueIdCalculator.calculateBlueId(
+                                        nestedHeader))));
+    }
+
+    private static NodeProvider providerReturning(
+            NodeProviderResult result) {
+        return new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                return result.outcome()
+                        == blue.language.api.NodeProviderOutcome.FOUND
+                        ? result.nodes()
+                        : null;
+            }
+
+            @Override
+            public NodeProviderResult fetchResultByBlueId(String blueId) {
+                return result;
+            }
+        };
     }
 }

@@ -397,16 +397,20 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     private void mergeObject(Node target, Node source, ResolutionLimits limits) {
-        referenceResolver.materializeReferenceBackedSchema(source);
-        referenceResolver.materializeReferenceBackedContracts(source);
         ResolutionState state = activeResolutionState();
+        if (state.referenceExpansionAllowed) {
+            referenceResolver.materializeReferenceBackedSchema(source);
+            referenceResolver.materializeReferenceBackedContracts(source);
+        }
         String path = currentPath(state);
         CompletedValueValidator.ContributionFrame frame =
                 completedValueValidator.beginContribution(
                         state, target, source, path);
         try {
 
-            resolveTypeMetadata(source, limits);
+            if (state.referenceExpansionAllowed) {
+                resolveTypeMetadata(source, limits);
+            }
             mergingProcessor.process(target, source, nodeProvider, this);
 
             List<Node> children = source.getItems();

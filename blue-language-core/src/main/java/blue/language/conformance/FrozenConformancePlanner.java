@@ -31,10 +31,42 @@ import java.util.Set;
  */
 final class FrozenConformancePlanner {
 
+    /**
+     * Keeps every reference below an independently planned merge root cold.
+     * The root's own declared type remains available to conformance planning,
+     * while references reached through its contributed or authored children do
+     * not escape the enclosing document-level preservation boundary.
+     */
+    private static final ResolutionLimits
+            DEFER_ALL_DESCENDANT_REFERENCES = new ResolutionLimits() {
+                @Override
+                public boolean shouldExpandPathSegment(
+                        String pathSegment, Node currentNode) {
+                    return false;
+                }
+
+                @Override
+                public boolean shouldMergePathSegment(
+                        String pathSegment, Node currentNode) {
+                    return true;
+                }
+
+                @Override
+                public void enterPathSegment(
+                        String pathSegment, Node currentNode) {
+                    // Stateless: every descendant has the same cold boundary.
+                }
+
+                @Override
+                public void exitPathSegment() {
+                    // Stateless: there is no traversal state to unwind.
+                }
+            };
+
     private final NodeProvider nodeProvider;
     private final MergingProcessor mergingProcessor;
     private final ResolvedReferenceCache resolvedReferenceCache;
-    private final ResolutionLimits resolutionLimits;
+    private final Set<String> deferredReferencePaths;
 
     FrozenConformancePlanner(NodeProvider nodeProvider,
                              MergingProcessor mergingProcessor,
@@ -52,10 +84,7 @@ final class FrozenConformancePlanner {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = Objects.requireNonNull(mergingProcessor, "mergingProcessor");
         this.resolvedReferenceCache = resolvedReferenceCache;
-        this.resolutionLimits = deferredReferencePaths == null
-                || deferredReferencePaths.isEmpty()
-                ? ResolutionLimits.NO_LIMITS
-                : ResolutionLimits.deferringReferencesAt(deferredReferencePaths);
+        this.deferredReferencePaths = canonicalPaths(deferredReferencePaths);
     }
 
     ConformancePlan plan(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {
@@ -71,7 +100,7 @@ final class FrozenConformancePlanner {
         for (int depth = existingSegments.size(); depth >= 0; depth--) {
             String path = pointer(existingSegments, depth);
             FrozenNode current = read(nextResolvedRoot, path);
-            GeneralizedNode generalizedNode = generalizeNode(current);
+            GeneralizedNode generalizedNode = generalizeNode(current, path);
             if (!generalizedNode.generalized()) {
                 continue;
             }
@@ -104,7 +133,9 @@ final class FrozenConformancePlanner {
                 nextCanonicalRoot != null);
     }
 
-    private GeneralizedNode generalizeNode(FrozenNode node) {
+    private GeneralizedNode generalizeNode(
+            FrozenNode node,
+            String nodePath) {
         if (node == null) {
             return GeneralizedNode.unchanged(node);
         }
@@ -112,9 +143,12 @@ final class FrozenConformancePlanner {
             return GeneralizedNode.unchanged(node);
         }
 
+        ResolutionLimits resolutionLimits =
+                resolutionLimitsAt(nodePath);
         Node source = new MinimizedOverlayBuilder().build(node.toNode());
         Node canonical = source.clone();
-        ConformanceResult result = checkCanonical(canonical);
+        ConformanceResult result = checkCanonical(
+                canonical, resolutionLimits);
         FrozenNode type = node.getType();
         FrozenNode itemType = node.getItemType();
         FrozenNode keyType = node.getKeyType();
@@ -122,7 +156,12 @@ final class FrozenConformancePlanner {
         List<String> metadataFields = new ArrayList<>();
         boolean generalized = false;
         while (!result.isConformant()) {
-            GeneralizationStep step = nextGeneralizationStep(type, itemType, keyType, valueType);
+            GeneralizationStep step = nextGeneralizationStep(
+                    type,
+                    itemType,
+                    keyType,
+                    valueType,
+                    resolutionLimits);
             if (step == null) {
                 throw new IllegalArgumentException("Node cannot be generalized to a conforming type: " + result.getMessage());
             }
@@ -145,7 +184,7 @@ final class FrozenConformancePlanner {
             }
             metadataFields.add(step.metadataField());
             generalized = true;
-            result = checkCanonical(canonical);
+            result = checkCanonical(canonical, resolutionLimits);
         }
         if (!generalized) {
             return GeneralizedNode.unchanged(node);
@@ -168,15 +207,9 @@ final class FrozenConformancePlanner {
                 || node.getValueType() != null;
     }
 
-    private ConformanceResult check(FrozenNode node) {
-        if (node == null) {
-            return ConformanceResult.conformant();
-        }
-        return checkCanonical(
-                new MinimizedOverlayBuilder().build(node.toNode()));
-    }
-
-    private ConformanceResult checkCanonical(Node canonical) {
+    private ConformanceResult checkCanonical(
+            Node canonical,
+            ResolutionLimits resolutionLimits) {
         try {
             new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
                     .resolve(canonical, resolutionLimits);
@@ -189,40 +222,41 @@ final class FrozenConformancePlanner {
     private GeneralizationStep nextGeneralizationStep(FrozenNode typeNode,
                                                       FrozenNode itemTypeNode,
                                                       FrozenNode keyTypeNode,
-                                                      FrozenNode valueTypeNode) {
-        GeneralizationStep type = generalizationStep(BlueLanguageConstants.OBJECT_TYPE, typeNode);
+                                                      FrozenNode valueTypeNode,
+                                                      ResolutionLimits resolutionLimits) {
+        GeneralizationStep type = generalizationStep(
+                BlueLanguageConstants.OBJECT_TYPE,
+                typeNode,
+                resolutionLimits);
         if (type != null) {
             return type;
         }
-        GeneralizationStep itemType = generalizationStep(BlueLanguageConstants.OBJECT_ITEM_TYPE, itemTypeNode);
+        GeneralizationStep itemType = generalizationStep(
+                BlueLanguageConstants.OBJECT_ITEM_TYPE,
+                itemTypeNode,
+                resolutionLimits);
         if (itemType != null) {
             return itemType;
         }
-        GeneralizationStep keyType = generalizationStep(BlueLanguageConstants.OBJECT_KEY_TYPE, keyTypeNode);
+        GeneralizationStep keyType = generalizationStep(
+                BlueLanguageConstants.OBJECT_KEY_TYPE,
+                keyTypeNode,
+                resolutionLimits);
         if (keyType != null) {
             return keyType;
         }
-        return generalizationStep(BlueLanguageConstants.OBJECT_VALUE_TYPE, valueTypeNode);
+        return generalizationStep(
+                BlueLanguageConstants.OBJECT_VALUE_TYPE,
+                valueTypeNode,
+                resolutionLimits);
     }
 
-    private GeneralizationStep nextGeneralizationStep(FrozenNode node) {
-        GeneralizationStep type = generalizationStep(BlueLanguageConstants.OBJECT_TYPE, node.getType());
-        if (type != null) {
-            return type;
-        }
-        GeneralizationStep itemType = generalizationStep(BlueLanguageConstants.OBJECT_ITEM_TYPE, node.getItemType());
-        if (itemType != null) {
-            return itemType;
-        }
-        GeneralizationStep keyType = generalizationStep(BlueLanguageConstants.OBJECT_KEY_TYPE, node.getKeyType());
-        if (keyType != null) {
-            return keyType;
-        }
-        return generalizationStep(BlueLanguageConstants.OBJECT_VALUE_TYPE, node.getValueType());
-    }
-
-    private GeneralizationStep generalizationStep(String metadataField, FrozenNode typeNode) {
-        FrozenNode parentType = parentType(typeNode);
+    private GeneralizationStep generalizationStep(
+            String metadataField,
+            FrozenNode typeNode,
+            ResolutionLimits resolutionLimits) {
+        FrozenNode parentType = parentType(
+                typeNode, resolutionLimits);
         return parentType != null ? new GeneralizationStep(metadataField, parentType) : null;
     }
 
@@ -246,7 +280,9 @@ final class FrozenConformancePlanner {
         }
     }
 
-    private FrozenNode parentType(FrozenNode type) {
+    private FrozenNode parentType(
+            FrozenNode type,
+            ResolutionLimits resolutionLimits) {
         if (type == null) {
             return null;
         }
@@ -258,6 +294,60 @@ final class FrozenConformancePlanner {
                 .resolve(type.toNode(), resolutionLimits);
         Node parentType = resolvedType.getType();
         return parentType != null ? resolvedReferenceCache.freezeResolved(parentType) : null;
+    }
+
+    /**
+     * Relativizes document-root preservation paths for the subtree currently
+     * being checked. Conformance evaluates every typed ancestor as an
+     * independent merge root, so absolute paths would otherwise stop matching
+     * as soon as planning moved below the document root.
+     */
+    private ResolutionLimits resolutionLimitsAt(String nodePath) {
+        if (deferredReferencePaths.isEmpty()) {
+            return ResolutionLimits.NO_LIMITS;
+        }
+        List<String> base = JsonPointer.split(
+                JsonPointer.canonicalize(nodePath));
+        Set<String> relative = new LinkedHashSet<>();
+        for (String deferredPath : deferredReferencePaths) {
+            List<String> candidate = JsonPointer.split(deferredPath);
+            if (startsWith(base, candidate)) {
+                return DEFER_ALL_DESCENDANT_REFERENCES;
+            }
+            if (startsWith(candidate, base)) {
+                relative.add(JsonPointer.toPointer(
+                        candidate.subList(base.size(), candidate.size())));
+            }
+        }
+        return relative.isEmpty()
+                ? ResolutionLimits.NO_LIMITS
+                : ResolutionLimits.deferringReferencesAt(relative);
+    }
+
+    private static Set<String> canonicalPaths(
+            Collection<String> paths) {
+        if (paths == null || paths.isEmpty()) {
+            return Collections.emptySet();
+        }
+        Set<String> canonical = new LinkedHashSet<>();
+        for (String path : paths) {
+            canonical.add(JsonPointer.canonicalize(path));
+        }
+        return Collections.unmodifiableSet(canonical);
+    }
+
+    private static boolean startsWith(
+            List<String> candidate,
+            List<String> prefix) {
+        if (candidate.size() < prefix.size()) {
+            return false;
+        }
+        for (int index = 0; index < prefix.size(); index++) {
+            if (!candidate.get(index).equals(prefix.get(index))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private String typeReferenceBlueId(FrozenNode type) {

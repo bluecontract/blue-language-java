@@ -7,6 +7,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.model.wire.JsonPointer;
 import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.Nodes;
+import blue.language.resolve.MinimizedOverlayBuilder;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -426,7 +427,8 @@ final class ProtectedStateGuard {
         if (embedded == null) {
             return null;
         }
-        Node stripped = embedded.toNode();
+        Node stripped = new MinimizedOverlayBuilder().build(
+                embedded.toNode());
         if (stripped.getProperties() != null) {
             stripped.getProperties().remove(
                     ProcessorContractConstants.KEY_PATHS);
