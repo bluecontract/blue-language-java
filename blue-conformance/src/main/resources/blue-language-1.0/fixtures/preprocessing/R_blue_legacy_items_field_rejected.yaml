@@ -1,0 +1,14 @@
+id: R_blue_legacy_items_field_rejected
+category: Resolution
+operation: preprocess
+description: transformations use the transformations field rather than a list-payload items field
+expectError: true
+expectedErrorCategory: InvalidReservedField
+source:
+  blue:
+    items:
+      - type:
+          blueId: D2DxVxaddbJT5k2YYj3sG35cSdotw1Mz9GpxrdP43nzN
+        field: text
+        suffix: B
+  text: A

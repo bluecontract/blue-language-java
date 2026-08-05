@@ -1,0 +1,13 @@
+id: R_positional_canonical_final_payload
+category: Canonicalization
+operation: canonicalize
+parent:
+  type: List
+  mergePolicy: positional
+  items: [A, B]
+source:
+  items:
+    - $pos: 1
+      value: C
+expectedCanonicalItems: [A, C]
+expectedCanonicalContainsControls: false

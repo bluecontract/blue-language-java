@@ -1,8 +1,0 @@
-id: runtimeRegistryTriggeredEventChannelNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: TriggeredEventChannel
-registryPath: registry/blue-contracts-1.0/TriggeredEventChannel.blue
-expectedBlueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ
-semanticDescriptionIdentityBearing: true

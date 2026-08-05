@@ -41,6 +41,12 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+.jqwik-database
+__pycache__/
+*.py[cod]
+
+# Local repository snapshots and downloaded release bundles.
+/*.zip
 
 .cicd
 .fake

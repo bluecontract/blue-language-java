@@ -1,26 +1,33 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.TerminateScopeContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.TestEventChannel;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.identity.DirectBlueIdCalculator;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -28,89 +35,108 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 final class TerminationConformanceTest {
 
-    private static final String TEST_EVENT_CHANNEL = "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L";
-    private static final String TERMINATE_SCOPE = "AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4";
-    private static final String SET_PROPERTY = "8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts";
+    private static final String TEST_EVENT_CHANNEL = ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
+    private static final String TEST_EVENT_TYPE = ProcessorTestTypeBlueIds.TEST_EVENT;
+    private static final String TERMINATE_SCOPE = ProcessorTestTypeBlueIds.TERMINATE_SCOPE;
+    private static final String SET_PROPERTY = ProcessorTestTypeBlueIds.SET_PROPERTY;
     private static final String LIFECYCLE_CHANNEL = RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL;
 
     @Test
-    void gracefulTerminationVisitsAllLifecycleChannelsInOrder() {
+    void shouldVerifyGracefulTerminationVisitsAllLifecycleChannelsInOrder() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful",
                 lifecycleHandler("firstLifecycle", 1, "/first"),
                 lifecycleHandler("secondLifecycle", 2, "/second")))).document();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("all-lifecycle"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("all-lifecycle"));
 
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, result.status());
         assertEquals(Arrays.asList("/first", "/second"), observed);
         assertEquals(new BigInteger("1"), nodeAt(result.document(), "/first").getValue());
         assertEquals(new BigInteger("2"), nodeAt(result.document(), "/second").getValue());
-        assertEquals(ProcessorStatus.SUCCESS, result.status());
-        assertTerminationEventSequence(result.triggeredEvents(), RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED);
+        assertTrue(result.events().isEmpty(),
+                "processor-generated termination lifecycle is local");
     }
 
     @Test
-    void fatalTerminationVisitsAllLifecycleChannelsInOrder() {
+    void shouldVerifyLegacyFatalModeRollsBackWithoutLifecycleOrMarker() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("fatal",
                 lifecycleHandler("firstLifecycle", 1, "/first"),
                 lifecycleHandler("secondLifecycle", 2, "/second")))).document();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("fatal-lifecycle"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("fatal-lifecycle"));
 
-        assertEquals(Arrays.asList("/first", "/second"), observed);
-        assertEquals(new BigInteger("1"), nodeAt(result.document(), "/first").getValue());
-        assertEquals(new BigInteger("2"), nodeAt(result.document(), "/second").getValue());
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertTerminationEventSequence(result.triggeredEvents(),
-                RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED,
-                RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR);
+        assertTrue(observed.isEmpty());
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
+        assertEquals("first", diagnosticMessage(result));
+        assertRolledBack(initialized, result);
     }
 
     @Test
-    void reentrantGracefulRequestPreservesFirstCauseAndEarlierEffects() {
+    void shouldVerifyReentrantGracefulRequestPreservesFirstCauseAndEarlierEffects() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful",
                 lifecycleHandler("reentrantLifecycle", 1, "/reentrant"),
                 lifecycleHandler("secondLifecycle", 2, "/after")))).document();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("reentrant"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("reentrant"));
+        Node marker =
+                result.document().getAsNode(
+                        "/contracts/terminated");
 
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, result.status());
         assertEquals(Arrays.asList("/reentrant", "/after"), observed);
         assertEquals(new BigInteger("1"), nodeAt(result.document(), "/reentrant").getValue());
         assertEquals(new BigInteger("2"), nodeAt(result.document(), "/after").getValue());
-        Node marker = result.document().getAsNode("/contracts/terminated");
         assertEquals("graceful", marker.getAsText("/cause"));
         assertEquals("first", marker.getAsText("/reason"));
-        assertEquals(1, countEvents(result.triggeredEvents(), RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED));
-        assertEquals(0, countEvents(result.triggeredEvents(), RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR));
+        assertTrue(result.events().isEmpty(),
+                "processor-generated termination lifecycle is local");
     }
 
     @Test
-    void reentrantFatalRequestPreservesTheFirstGracefulTermination() {
+    void shouldVerifyFatalCallDuringGracefulTerminationRollsBackTheInvocation() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful",
                 lifecycleHandler("firstLifecycle", 1, "/reentrantFatal"),
                 lifecycleHandler("secondLifecycle", 2, "/after")))).document();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("reentrant-fatal"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("reentrant-fatal"));
 
-        assertEquals(Arrays.asList("/reentrantFatal", "/after"), observed);
-        assertEquals(new BigInteger("1"), nodeAt(result.document(), "/reentrantFatal").getValue());
-        assertEquals(new BigInteger("2"), nodeAt(result.document(), "/after").getValue());
-        Node marker = result.document().getAsNode("/contracts/terminated");
-        assertEquals("graceful", marker.getAsText("/cause"));
-        assertEquals("first", marker.getAsText("/reason"));
-        assertEquals(ProcessorStatus.SUCCESS, result.status());
-        assertTerminationEventSequence(result.triggeredEvents(), RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED);
+        // then
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertEquals(Collections.singletonList("/reentrantFatal"), observed);
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
+        assertEquals("ignored reentrant fatal request", diagnosticMessage(result));
+        assertRolledBack(initialized, result);
     }
 
     @Test
-    void terminationLifecyclePatchRunsImmediateDocumentUpdateCascade() {
+    void shouldVerifyTerminationLifecyclePatchRunsImmediateDocumentUpdateCascade() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         String document = terminationDocument("graceful", lifecycleHandler("lifecycle", 1, "/lifecycleEffect"))
@@ -127,15 +153,20 @@ final class TerminationConformanceTest {
         Node initialized = blue.initializeDocument(blue.yamlToNode(document)).document();
         observed.clear();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("ordinary-cutoff"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("ordinary-cutoff"));
 
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, result.status());
         assertEquals(Arrays.asList("/lifecycleEffect", "/ordinary"), observed);
         assertEquals(new BigInteger("1"), nodeAt(result.document(), "/lifecycleEffect").getValue());
         assertNull(nodeOrNull(result.document(), "/ordinary"));
     }
 
     @Test
-    void childTerminationLifecycleEmissionRemainsBridgeable() {
+    void shouldVerifyChildTerminationEmissionReachesAncestorAsAnExactWrapper() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node document = blue.yamlToNode("name: Parent\n"
@@ -150,21 +181,105 @@ final class TerminationConformanceTest {
                 + "      type:\n"
                 + "        blueId: " + SET_PROPERTY + "\n"
                 + "      propertyKey: /emitLifecycle\n"
-                + "      propertyValue: 1\n");
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
-        execution.loadBundles("/child");
+                + "      propertyValue: 1\n"
+                + "contracts:\n"
+                + "  childEvents:\n"
+                + "    type:\n"
+                + "      blueId: "
+                + RuntimeBlueIds.EMBEDDED_NODE_CHANNEL + "\n"
+                + "    sourcePath: /child\n");
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
+        execution.preflightScope("/");
+        execution.preflightScope("/child");
+        execution.runtime().attachScopeOccurrence("/", "/child");
 
+        // when
         execution.enterGracefulTermination("/child", execution.bundleForScope("/child"), "child graceful");
+        DocumentProcessingResult result = execution.result();
+        List<ProcessingTraceRecord> dequeued =
+                execution.runtime().conformanceTrace().records(
+                        ProcessingTraceRecord.Kind.EVENT_DEQUEUED);
+        List<ProcessingTraceRecord> ancestorDeliveries =
+                ancestorDeliveries(execution);
+        String dequeuedEventBlueId =
+                dequeued.size() == 1
+                        ? CheckpointIdentityCalculator.identity(
+                        dequeued.get(0).node(),
+                        blue)
+                        : null;
 
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, result.status());
         assertEquals(Arrays.asList("/emitLifecycle"), observed);
-        List<Node> bridgeable = execution.runtime().scope("/child").drainBridgeableEvents();
-        assertEquals(2, bridgeable.size());
-        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED, bridgeable.get(0).getType().getBlueId());
-        assertEquals("termination-lifecycle", bridgeable.get(1).getAsText("/kind"));
+        assertEquals(1, dequeued.size());
+        assertEquals("termination-lifecycle",
+                dequeued.get(0).node().getAsText("/kind"));
+        assertEquals("invocation-event-fifo",
+                dequeued.get(0).detail("drainOwner"));
+
+        assertEquals(1, ancestorDeliveries.size());
+        assertEmbeddedEventDelivery(
+                ancestorDeliveries.get(0).node(),
+                "/child",
+                dequeuedEventBlueId);
+        assertTrue(result.events().isEmpty(),
+                "child events remain internal unless Root emits");
     }
 
     @Test
-    void terminationLifecycleEmissionFifoIsClearedBeforeDrain() {
+    void shouldVerifyLifecycleCutOffDiscardsChildMarkerButCompletesTheBusinessRun() {
+        // given
+        AtomicReference<ProcessorInvocationState> executionRef =
+                new AtomicReference<>();
+        Blue blue = blueWithLifecycleProbe(new ArrayList<String>());
+        blue.registerContractProcessor(
+                new CutOffOnLifecycleProcessor(executionRef));
+        Node document = blue.yamlToNode(
+                "name: Parent\n" +
+                "child:\n" +
+                "  name: Child\n" +
+                "  contracts:\n" +
+                "    lifecycle:\n" +
+                "      type:\n" +
+                "        blueId: " + LIFECYCLE_CHANNEL + "\n" +
+                "    cutOff:\n" +
+                "      channel: lifecycle\n" +
+                "      type:\n" +
+                "        blueId: " + SET_PROPERTY + "\n");
+        ProcessorInvocationState execution =
+                new ProcessorInvocationState(
+                        blue.getDocumentProcessor(),
+                        document,
+                        new Node().value("event"));
+        executionRef.set(execution);
+        execution.preflightScope("/child");
+
+        // when
+        execution.enterGracefulTermination(
+                "/child",
+                execution.bundleForScope("/child"),
+                "completed",
+                "replaced during lifecycle");
+        DocumentProcessingResult result = execution.result();
+        boolean childWasCutOff =
+                execution.runtime()
+                        .scope("/child")
+                        .isCutOff();
+        Node terminationMarker =
+                nodeOrNull(
+                        execution.runtime().document(),
+                        "/child/contracts/terminated");
+
+        // then
+        assertEquals(ProcessorStatus.SUCCESS,
+                result.status());
+        assertTrue(childWasCutOff);
+        assertNull(terminationMarker);
+    }
+
+    @Test
+    void shouldVerifyRootEmissionFromTerminationLifecycleIsPublic() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         String document = terminationDocument("graceful", lifecycleHandler("lifecycle", 1, "/emitTriggered"))
@@ -179,18 +294,25 @@ final class TerminationConformanceTest {
                 + "    propertyValue: 1\n";
         Node initialized = blue.initializeDocument(blue.yamlToNode(document)).document();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("fifo-clear"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("fifo-clear"));
 
-        assertEquals(Arrays.asList("/emitTriggered"), observed);
-        assertEquals(2, result.triggeredEvents().size());
-        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED,
-                result.triggeredEvents().get(0).getType().getBlueId());
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, result.status());
+        assertEquals(Collections.singletonList("/emitTriggered"), observed);
+        assertNull(nodeOrNull(
+                result.document(), "/triggeredDrained"));
+        assertTerminationEventSequence(
+                result.events(),
+                TEST_EVENT_TYPE);
         assertEquals("termination-lifecycle-emission",
-                result.triggeredEvents().get(1).getAsText("/eventId"));
+                result.events().get(0).getAsText("/eventId"));
     }
 
     @Test
-    void explicitInitializationTerminationDoesNotWriteInitializedMarker() {
+    void shouldVerifyExplicitInitializationTerminationDoesNotWriteInitializedMarker() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         String document = "name: Initialization Termination\n"
@@ -205,19 +327,21 @@ final class TerminationConformanceTest {
                 + "    propertyKey: /terminateOnInitialize\n"
                 + "    propertyValue: 1\n";
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(document));
 
-        assertEquals(Arrays.asList("/terminateOnInitialize"), observed);
+        // then
         assertEquals(ProcessorStatus.SUCCESS, result.status());
+        assertEquals(Arrays.asList("/terminateOnInitialize"), observed);
         assertEquals("graceful", result.document().getAsNode("/contracts/terminated").getAsText("/cause"));
         assertNull(nodeOrNull(result.document(), "/contracts/initialized"));
-        assertTerminationEventSequence(result.triggeredEvents(),
-                RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
-                RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED);
+        assertTrue(result.events().isEmpty(),
+                "processor-generated lifecycle occurrences are local");
     }
 
     @Test
-    void implicitInitializationTerminationStopsTheExternalPhase() {
+    void shouldVerifyImplicitInitializationTerminationStopsTheExternalPhase() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         String document = "name: Implicit Initialization Termination\n"
@@ -241,47 +365,68 @@ final class TerminationConformanceTest {
                 + "    propertyKey: /terminateOnInitialize\n"
                 + "    propertyValue: 1\n";
 
-        DocumentProcessingResult result = blue.processDocument(blue.yamlToNode(document), testEvent("implicit-init"));
+        // when
+        Node uninitialized = blue.yamlToNode(document);
+        DocumentProcessingResult result =
+                processExternal(blue, uninitialized, testEvent("implicit-init"));
 
-        assertEquals(Arrays.asList("/terminateOnInitialize"), observed);
+        // then
         assertEquals(ProcessorStatus.SUCCESS, result.status());
+        assertEquals(Arrays.asList("/terminateOnInitialize"), observed);
         assertEquals("graceful", result.document().getAsNode("/contracts/terminated").getAsText("/cause"));
         assertNull(nodeOrNull(result.document(), "/contracts/initialized"));
         assertNull(nodeOrNull(result.document(), "/external"));
-        assertTerminationEventSequence(result.triggeredEvents(),
-                RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
-                RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED);
+        assertTrue(result.events().isEmpty(),
+                "processor-generated lifecycle occurrences are local");
     }
 
     @Test
-    void terminationPreventsCheckpointAdvancementButRetainsLazyCheckpoint() {
+    void shouldVerifyTerminationDoesNotCreateOrAdvanceCheckpoint() {
+        // given
         Blue blue = blueWithLifecycleProbe(new ArrayList<String>());
         Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful"))).document();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("checkpoint-cutoff"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("checkpoint-cutoff"));
+        Node checkpoint =
+                nodeOrNull(
+                        result.document(),
+                        "/contracts/checkpoint");
+        Node marker =
+                nodeOrNull(
+                        result.document(),
+                        "/contracts/terminated");
 
-        assertNotNull(nodeOrNull(result.document(), "/contracts/checkpoint"));
-        Node lastEvents = nodeOrNull(result.document(), "/contracts/checkpoint/lastEvents");
-        assertNotNull(lastEvents);
-        assertNotNull(lastEvents.getProperties());
-        assertTrue(lastEvents.getProperties().isEmpty());
-    }
-
-    @Test
-    void successfulGracefulTerminationHasNoFailureReason() {
-        Blue blue = blueWithLifecycleProbe(new ArrayList<String>());
-        Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful"))).document();
-
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("graceful-result"));
-
+        // then
         assertEquals(ProcessorStatus.SUCCESS, result.status());
-        assertNull(result.errorCategory());
-        assertNull(result.failureReason());
+        assertTrue(result.commits());
+        assertNotNull(marker);
+        assertEquals("graceful", marker.getAsText("/cause"));
+        assertEquals("first", marker.getAsText("/reason"));
+        assertNull(checkpoint);
+    }
+
+    @Test
+    void shouldVerifySuccessfulGracefulTerminationHasNoFailureReason() {
+        // given
+        Blue blue = blueWithLifecycleProbe(new ArrayList<String>());
+        Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful"))).document();
+
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("graceful-result"));
+
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, result.status());
+        assertNull(diagnosticCategory(result));
+        assertNull(diagnosticMessage(result));
         assertEquals("first", result.document().getAsNode("/contracts/terminated").getAsText("/reason"));
     }
 
     @Test
-    void earlierChildEscalationDoesNotOverrideLaterRootFatalDiagnostic() {
+    void shouldVerifyChildLifecycleFailureAbortsImmediatelyAndRollsBack() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node document = blue.yamlToNode("name: Parent\n"
@@ -298,45 +443,58 @@ final class TerminationConformanceTest {
                 + "        blueId: " + SET_PROPERTY + "\n"
                 + "      propertyKey: /failing\n"
                 + "      propertyValue: 1\n");
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
-        execution.loadBundles("/child");
-        execution.enterGracefulTermination("/child", execution.bundleForScope("/child"), "child graceful");
-
-        assertThrows(RunTerminationException.class,
-                () -> execution.enterFatalTermination("/", null, ProcessorErrorCategory.GasError, "later root fatal"));
-
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
+        // when
+        execution.preflightScope("/child");
+        Throwable failure = captureFailure(
+                () -> execution.enterGracefulTermination(
+                        "/child",
+                        execution.bundleForScope("/child"),
+                        "child graceful"));
         DocumentProcessingResult result = execution.result();
-        assertEquals(Arrays.asList("/failing"), observed);
+
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertEquals(ProcessorErrorCategory.GasError, result.errorCategory());
-        assertEquals("later root fatal", result.failureReason());
+        assertInstanceOf(RunTerminationException.class, failure);
+        assertEquals(Arrays.asList("/failing"), observed);
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
+        assertEquals("termination lifecycle handler failed",
+                diagnosticMessage(result));
+        assertRolledBack(document, result);
     }
 
     @Test
-    void rootGracefulReasonDoesNotMaskChildFatalDiagnostic() {
+    void shouldVerifyDirectRuntimeFailureAbortsBeforeAnyLaterTerminationRequest() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         Node document = new Node()
                 .name("Parent")
                 .contracts(new Node())
                 .properties("child", new Node().name("Child"));
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
 
-        execution.enterFatalTermination("/child",
-                null,
-                ProcessorErrorCategory.BoundaryViolation,
-                "child fatal");
-        assertThrows(RunTerminationException.class,
-                () -> execution.enterGracefulTermination("/", null, "root graceful"));
-
+        // when
+        Throwable failure = captureFailure(
+                () -> execution.abortRuntimeFailure(
+                        "/child",
+                        null,
+                        ProcessorErrorCategory.PatchBoundaryViolation,
+                        "child failure"));
         DocumentProcessingResult result = execution.result();
+
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertEquals(ProcessorErrorCategory.BoundaryViolation, result.errorCategory());
-        assertEquals("child fatal", result.failureReason());
-        assertEquals("root graceful", result.document().getAsNode("/contracts/terminated").getAsText("/reason"));
+        assertInstanceOf(RunTerminationException.class, failure);
+        assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
+                diagnosticCategory(result));
+        assertEquals("child failure", diagnosticMessage(result));
+        assertRolledBack(document, result);
     }
 
     @Test
-    void earlierBufferedFailurePreventsQueuedGracefulTermination() {
+    void shouldVerifyEarlierBufferedFailurePreventsQueuedGracefulTermination() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new FailingBeforeTerminationProcessor());
@@ -360,19 +518,20 @@ final class TerminationConformanceTest {
                 + "    propertyKey: /invalidThenTerminate\n"
                 + "    propertyValue: 2\n")).document();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("buffered-failure"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("buffered-failure"));
 
-        assertEquals(new BigInteger("1"), nodeAt(result.document(), "/prior").getValue());
-        assertNull(nodeOrNull(result.document(), "/invalidThenTerminate"));
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertEquals("fatal", result.document().getAsNode("/contracts/terminated").getAsText("/cause"));
-        assertTerminationEventSequence(result.triggeredEvents(),
-                RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED,
-                RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR);
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
+        assertRolledBack(initialized, result);
     }
 
     @Test
-    void rootEscalationCategoryAndReasonComeFromSameRecord() {
+    void shouldVerifyLifecycleFailureRollsBackEarlierTerminationEffects() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node initialized = blue.initializeDocument(blue.yamlToNode(terminationDocument("graceful",
@@ -380,26 +539,22 @@ final class TerminationConformanceTest {
                 lifecycleHandler("bFailingLifecycle", 2, "/failing"),
                 lifecycleHandler("cThirdLifecycle", 3, "/third")))).document();
 
-        DocumentProcessingResult result = blue.processDocument(initialized, testEvent("escalation"));
+        // when
+        DocumentProcessingResult result =
+                processExternal(blue, initialized, testEvent("escalation"));
 
-        assertEquals(Arrays.asList("/first", "/failing"), observed);
-        assertEquals(new BigInteger("1"), nodeAt(result.document(), "/first").getValue());
-        assertNull(nodeOrNull(result.document(), "/failing"), "failing handler effects must be discarded");
-        assertNull(nodeOrNull(result.document(), "/third"), "later lifecycle channels must not run");
-        Node marker = result.document().getAsNode("/contracts/terminated");
-        assertEquals("graceful", marker.getAsText("/cause"));
-        assertEquals("first", marker.getAsText("/reason"));
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertEquals(ProcessorErrorCategory.HandlerExecutionError, result.errorCategory());
-        assertEquals("termination lifecycle handler failed", result.failureReason());
-        assertTerminationEventSequence(result.triggeredEvents(),
-                RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED,
-                RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR);
-        assertEquals(1, countEvents(result.triggeredEvents(), RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR));
+        assertEquals(Arrays.asList("/first", "/failing"), observed);
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
+        assertEquals("termination lifecycle handler failed", diagnosticMessage(result));
+        assertRolledBack(initialized, result);
     }
 
     @Test
-    void fatalDuringChildTerminationStaysScopedAndRetainsTerminationBridge() {
+    void shouldVerifyChildTerminationFailureDoesNotCommitMarkerOrBridgeEvent() {
+        // given
         List<String> observed = new ArrayList<>();
         Blue blue = blueWithLifecycleProbe(observed);
         Node document = blue.yamlToNode("name: Parent\n"
@@ -415,39 +570,50 @@ final class TerminationConformanceTest {
                 + "        blueId: " + SET_PROPERTY + "\n"
                 + "      propertyKey: /failing\n"
                 + "      propertyValue: 1\n");
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
-        execution.loadBundles("/child");
-
-        execution.enterGracefulTermination("/child", execution.bundleForScope("/child"), "first");
-
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
+        // when
+        execution.preflightScope("/child");
+        Throwable failure = captureFailure(
+                () -> execution.enterGracefulTermination(
+                        "/child",
+                        execution.bundleForScope("/child"),
+                        "first"));
         DocumentProcessingResult result = execution.result();
-        assertEquals(Arrays.asList("/failing"), observed);
+
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertEquals(ProcessorErrorCategory.HandlerExecutionError, result.errorCategory());
-        assertNull(nodeOrNull(result.document(), "/contracts/terminated"));
-        assertEquals("graceful", nodeAt(result.document(), "/child/contracts/terminated/cause").getValue());
-        assertTrue(result.triggeredEvents().isEmpty(), "A child escalation must not create root fatal evidence");
-        List<Node> bridgeable = execution.runtime().scope("/child").drainBridgeableEvents();
-        assertTerminationEventSequence(bridgeable, RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED);
+        assertInstanceOf(RunTerminationException.class, failure);
+        assertEquals(Arrays.asList("/failing"), observed);
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
+        assertRolledBack(document, result);
     }
 
     @Test
-    void rootMalformedContractsUsesSingleFallbackWrite() {
+    void shouldVerifyMalformedRootContractsRollBackTerminationMarkerFailure() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         Node document = new Node().name("Malformed Root").contracts(new Node().value("not-an-object"));
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
 
-        assertThrows(RunTerminationException.class,
-                () -> execution.enterGracefulTermination("/", null, "fallback"));
-
+        // when
+        Throwable failure = captureFailure(
+                () -> execution.enterGracefulTermination("/", null, "cannot write"));
         DocumentProcessingResult result = execution.result();
-        assertEquals(ProcessorStatus.SUCCESS, result.status());
-        assertEquals("graceful", result.document().getAsNode("/contracts/terminated").getAsText("/cause"));
-        assertEquals(50L, result.totalGas());
+
+        // then
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertInstanceOf(RunTerminationException.class, failure);
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
+        assertEquals("not-an-object", result.document().getContracts().getValue());
+        assertNull(nodeOrNull(result.document(), "/contracts/terminated"));
+        assertRolledBack(document, result);
     }
 
     @Test
-    void childMalformedContractsFallbackReplacesOnlyChildContractsAndPreservesCheckpoint() {
+    void shouldVerifyMalformedChildContractsRollBackWithoutReplacingApplicationContracts() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         Node checkpoint = new Node().properties("lastEvents", new Node().properties("events", new Node().value("kept")));
         Node malformedChildContracts = new Node()
@@ -458,21 +624,33 @@ final class TerminationConformanceTest {
                 .name("Parent")
                 .contracts(new Node().properties("rootOnly", new Node().value("preserve")))
                 .properties("child", new Node().name("Child").contracts(malformedChildContracts));
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(blue.getDocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
 
-        execution.enterGracefulTermination("/child", null, "child fallback");
-
+        // when
+        Throwable failure = captureFailure(
+                () -> execution.enterGracefulTermination(
+                        "/child", null, "child fallback"));
         DocumentProcessingResult result = execution.result();
-        assertEquals(ProcessorStatus.SUCCESS, result.status());
+
+        // then
+        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
+        assertInstanceOf(RunTerminationException.class, failure);
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
         assertEquals("preserve", nodeAt(result.document(), "/contracts/rootOnly").getValue());
         assertNull(nodeOrNull(result.document(), "/contracts/terminated"));
-        assertEquals("graceful", nodeAt(result.document(), "/child/contracts/terminated/cause").getValue());
+        assertNull(nodeOrNull(result.document(), "/child/contracts/terminated"));
+        assertEquals("not-an-object",
+                nodeAt(result.document(), "/child/contracts").getValue());
         assertEquals("kept", nodeAt(result.document(), "/child/contracts/checkpoint/lastEvents/events").getValue());
-        assertNull(nodeOrNull(result.document(), "/child/contracts/ordinaryContract"));
+        assertEquals("drop",
+                nodeAt(result.document(), "/child/contracts/ordinaryContract").getValue());
+        assertRolledBack(document, result);
     }
 
     @Test
-    void fallbackFailureReturnsLastValidStateWithTerminationError() {
+    void shouldVerifyMarkerFailureReturnsExactInputWithRuntimeFailure() {
+        // given
         Node invalidUnrelatedContent = new Node()
                 .value("invalid")
                 .properties("alsoInvalid", new Node().value("content"));
@@ -480,25 +658,135 @@ final class TerminationConformanceTest {
                 .name("Broken Fallback")
                 .contracts(new Node().value("malformed"))
                 .properties("unrelated", invalidUnrelatedContent);
-        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(new DocumentProcessor(), document);
+        ProcessorInvocationState execution = new ProcessorInvocationState(new DocumentProcessor(), document);
 
-        assertThrows(RunTerminationException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> execution.enterGracefulTermination("/", null, "cannot write"));
-
         DocumentProcessingResult result = execution.result();
+
+        // then
         assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status());
-        assertEquals(ProcessorErrorCategory.TerminationError, result.errorCategory());
+        assertInstanceOf(RunTerminationException.class, failure);
+        assertEquals(ProcessorErrorCategory.RuntimeExecutionFailure,
+                diagnosticCategory(result));
         assertEquals("malformed", result.document().getContracts().getValue());
         assertNull(nodeOrNull(result.document(), "/contracts/terminated"));
-        assertFalse(result.failureReason().isEmpty());
+        assertFalse(diagnosticMessage(result).isEmpty());
+        assertRolledBack(document, result);
+    }
+
+    private static Throwable captureFailure(Runnable operation) {
+        try {
+            operation.run();
+            return null;
+        } catch (Throwable failure) {
+            return failure;
+        }
+    }
+
+    private static List<ProcessingTraceRecord> ancestorDeliveries(
+            ProcessorInvocationState execution) {
+        List<ProcessingTraceRecord> deliveries =
+                new ArrayList<>();
+        for (ProcessingTraceRecord delivered
+                : execution.runtime().conformanceTrace().records(
+                ProcessingTraceRecord.Kind.EVENT_DELIVERED)) {
+            if ("/".equals(delivered.scopePath())
+                    && "childEvents".equals(
+                    delivered.contractKey())) {
+                deliveries.add(delivered);
+            }
+        }
+        return deliveries;
     }
 
     private Blue blueWithLifecycleProbe(List<String> observed) {
         Blue blue = ProcessorTestSupport.blue();
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                new TerminationTestEventChannelProcessor());
         blue.registerContractProcessor(new TerminateScopeContractProcessor());
         blue.registerContractProcessor(new LifecycleProbeProcessor(observed));
         return blue;
+    }
+
+    /**
+     * Termination conformance is downstream of feeder-plan verification. Supply
+     * an exact, revision-bound occurrence directly so these tests exercise the
+     * Contracts kernel instead of the default unavailable feeder.
+     */
+    private DocumentProcessingResult processExternal(
+            Blue blue,
+            Node document,
+            Node event) {
+        Node channel = nodeAt(document, "/contracts/events");
+        String contributionBlueId =
+                DirectBlueIdCalculator.calculateBlueId(channel);
+        String checkpointDomainBlueId =
+                CheckpointDomain.derive(
+                        TEST_EVENT_CHANNEL,
+                        Collections.singletonList(
+                                contributionBlueId),
+                        null);
+        String eventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(event);
+        ExternalOrderKey eventOrder =
+                ExternalOrderKey.of(
+                        Collections.singletonList(eventBlueId));
+        ExternalDeliverySnapshot delivery =
+                ExternalDeliverySnapshot.builder("/", "events")
+                        .order(0)
+                        .sourceContribution(
+                                contributionBlueId)
+                        .effectiveTypeBlueId(
+                                TEST_EVENT_CHANNEL)
+                        .subscriptionKey(
+                                TEST_EVENT_TYPE)
+                        .checkpointDomainBlueId(
+                                checkpointDomainBlueId)
+                        .checkpointSubjectBlueId(
+                                eventBlueId)
+                        .build();
+        VerifiedExecutionEvidence evidence =
+                VerifiedExecutionEvidence.builder(
+                                DirectBlueIdCalculator
+                                        .calculateBlueId(document),
+                                eventBlueId)
+                        .revisions(1L, 1L)
+                        .runtimeRegistryIdentity(
+                                RuntimeBlueIds
+                                        .REGISTRY_PACKAGE_IDENTITY)
+                        .eventOrderKey(eventOrder)
+                        .delivery(delivery)
+                        .activeSubscriptionInterval(
+                                new SubscriptionDelta.Entry(
+                                        "/",
+                                        "events",
+                                        TEST_EVENT_CHANNEL,
+                                        Collections.singletonList(
+                                                contributionBlueId),
+                                        0,
+                                        Collections.singletonList(
+                                                TEST_EVENT_TYPE),
+                                        checkpointDomainBlueId,
+                                        1L,
+                                        null,
+                                        null))
+                        .build();
+        return ProcessorEngine.processDocument(
+                blue.getDocumentProcessor(),
+                document,
+                event,
+                evidence);
+    }
+
+    private void assertRolledBack(
+            Node input,
+            DocumentProcessingResult result) {
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(input.toString(),
+                result.document().toString());
     }
 
     private String terminationDocument(String mode, String... lifecycleHandlers) {
@@ -542,14 +830,26 @@ final class TerminationConformanceTest {
         }
     }
 
-    private int countEvents(List<Node> events, String typeBlueId) {
-        int count = 0;
-        for (Node event : events) {
-            if (event.getType() != null && typeBlueId.equals(event.getType().getBlueId())) {
-                count++;
-            }
-        }
-        return count;
+    private void assertEmbeddedEventDelivery(
+            Node delivery,
+            String expectedSourcePath,
+            String expectedEventBlueId) {
+        assertNotNull(delivery);
+        assertNotNull(delivery.getType());
+        assertEquals(RuntimeBlueIds.EMBEDDED_EVENT_DELIVERY,
+                delivery.getType().getBlueId());
+        assertNotNull(delivery.getProperties());
+        assertEquals(2, delivery.getProperties().size());
+        assertEquals(expectedSourcePath,
+                delivery.getAsText("/sourcePath"));
+        assertFalse(delivery.getProperties()
+                .containsKey("childPath"));
+        Node eventReference =
+                delivery.getProperties().get("event");
+        assertNotNull(eventReference);
+        assertTrue(eventReference.isReferenceOnly());
+        assertEquals(expectedEventBlueId,
+                eventReference.getBlueId());
     }
 
     private Node nodeAt(Node document, String pointer) {
@@ -616,11 +916,72 @@ final class TerminationConformanceTest {
                 context.terminateGracefully("ignored reentrant request");
             }
             if ("/reentrantFatal".equals(propertyKey)) {
-                context.terminateFatally("ignored reentrant fatal request");
+                context.throwFatal("ignored reentrant fatal request");
             }
             if ("/failing".equals(propertyKey)) {
                 throw new IllegalStateException("termination lifecycle handler failed");
             }
+        }
+    }
+
+    private static final class CutOffOnLifecycleProcessor
+            implements HandlerProcessor<SetProperty> {
+        private final AtomicReference<ProcessorInvocationState>
+                execution;
+
+        private CutOffOnLifecycleProcessor(
+                AtomicReference<ProcessorInvocationState> execution) {
+            this.execution = execution;
+        }
+
+        @Override
+        public Class<SetProperty> contractType() {
+            return SetProperty.class;
+        }
+
+        @Override
+        public void execute(
+                SetProperty contract,
+                ProcessorExecutionContext context) {
+            execution.get().markCutOff(context.scopePath());
+        }
+    }
+
+    private static final class TerminationTestEventChannelProcessor
+            extends TestEventChannelProcessor {
+
+        @Override
+        public ExternalChannelSubscriptionFunctions<TestEventChannel>
+        externalSubscriptionFunctions() {
+            return new ExternalChannelSubscriptionFunctions<TestEventChannel>() {
+                @Override
+                public List<String> channelKeys(
+                        TestEventChannel channel) {
+                    String eventType =
+                            channel.getEventType() != null
+                                    ? channel.getEventType()
+                                    : TEST_EVENT_TYPE;
+                    return Collections.singletonList(eventType);
+                }
+
+                @Override
+                public List<String> eventKeys(Node event) {
+                    Node type = event != null
+                            ? event.getType() : null;
+                    String eventType = type != null
+                            ? type.getBlueId() : null;
+                    return eventType != null
+                            ? Collections.singletonList(
+                            eventType)
+                            : Collections.<String>emptyList();
+                }
+
+                @Override
+                public String checkpointDomainDiscriminator(
+                        TestEventChannel channel) {
+                    return null;
+                }
+            };
         }
     }
 

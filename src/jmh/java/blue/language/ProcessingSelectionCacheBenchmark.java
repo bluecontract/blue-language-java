@@ -2,8 +2,8 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.merge.ResolvedSnapshot;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -33,7 +33,7 @@ public class ProcessingSelectionCacheBenchmark {
                 .contracts(new Node());
         DocumentProcessingResult initialized = blue.initializeDocument(compact);
         selected = initialized.document();
-        snapshot = initialized.snapshot();
+        snapshot = blue.loadSnapshot(selected);
         resolvedSelected = snapshot.resolvedRoot();
         event = new Node().properties("kind", new Node().value("noop"));
     }

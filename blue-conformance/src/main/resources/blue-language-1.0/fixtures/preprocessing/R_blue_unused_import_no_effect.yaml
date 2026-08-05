@@ -1,0 +1,17 @@
+id: R_blue_unused_import_no_effect
+category: Resolution
+operation: preprocess
+description: an unused import does not change the preprocessed result
+source:
+  blue:
+    imports:
+      Unused:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  count: 7
+alsoEquivalentTo:
+  count: 7
+expectedPreprocessed:
+  count:
+    type:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+    value: 7

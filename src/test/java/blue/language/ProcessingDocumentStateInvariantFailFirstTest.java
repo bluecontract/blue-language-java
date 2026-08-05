@@ -1,28 +1,47 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture;
 import blue.language.model.Node;
-import blue.language.processor.DocumentProcessingRuntime;
+import blue.language.processor.CheckpointDomain;
+import blue.language.processor.DocumentProcessingRuntimeTestAccess;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.ProcessorStatus;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.MergeReverser;
-import blue.language.utils.NodeToMapListOrValue;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.resolve.MinimizedOverlayBuilder;
+import blue.language.model.NodeWireForm;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static blue.language.utils.Properties.BOOLEAN_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,7 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProcessingDocumentStateInvariantFailFirstTest {
 
     @Test
-    void snapshotConstructionPreservesSelectedStateBeforeAnyWrite() {
+    void shouldPreserveSelectedStateBeforeAnyWriteDuringSnapshotConstruction() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
         Node callerInput = fixture.materializedSource();
@@ -48,10 +68,14 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 throw new AssertionError("no write is allowed in this boundary characterization");
             }
         };
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(runtimeOwnedSelection, null, manager);
+        DocumentProcessingRuntimeTestAccess.RuntimeSnapshot runtime =
+                DocumentProcessingRuntimeTestAccess.snapshot(
+                        runtimeOwnedSelection, manager);
 
+        // when
         ResolvedSnapshot snapshot = runtime.snapshot();
 
+        // then
         assertEquals(callerBefore, blue.nodeToJson(callerInput));
         assertTrue(hasSelectedContract(callerInput, "audit"));
         assertEquals("materialized", callerInput.getAsText("/materializedField"));
@@ -64,12 +88,14 @@ class ProcessingDocumentStateInvariantFailFirstTest {
     }
 
     @Test
-    void initializationMarkerInsertionSatisfiesThreeViewInvariant() {
+    void shouldSatisfyThreeViewInvariantAfterInitializationMarkerInsertion() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node before = fixture.materializedSource();
         Node expected = expectedInitializedSelected(fixture, before);
         Blue executionBlue = fixture.newBlue(new AtomicInteger());
 
+        // when
         Observation observation = observe(fixture,
                 "initialization marker",
                 executionBlue,
@@ -77,11 +103,13 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 expected,
                 () -> executionBlue.initializeDocument(before));
 
+        // then
         observation.assertThreeViewInvariant();
     }
 
     @Test
-    void checkpointDirectWritesWithoutHandlerPatchSatisfyThreeViewInvariant() {
+    void shouldSatisfyThreeViewInvariantAfterCheckpointDirectWritesWithoutHandlerPatch() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
         Node before = expectedInitializedSelected(fixture, fixture.materializedSource());
@@ -89,6 +117,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         AtomicInteger executions = new AtomicInteger();
         Blue executionBlue = fixture.newBlueWithoutHandlerPatch(executions);
 
+        // when
         Observation observation = observe(fixture,
                 "checkpoint Direct Writes without handler patch",
                 executionBlue,
@@ -96,12 +125,14 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 expected,
                 () -> executionBlue.processDocument(before, eventA));
 
+        // then
         assertEquals(1, executions.get());
         observation.assertThreeViewInvariant();
     }
 
     @Test
-    void ordinaryHandlerPatchAndCheckpointDirectWritesSatisfyThreeViewInvariant() {
+    void shouldSatisfyThreeViewInvariantAfterOrdinaryHandlerPatchAndCheckpointDirectWrites() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
         Node before = expectedInitializedSelected(fixture, fixture.materializedSource());
@@ -109,6 +140,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         AtomicInteger executions = new AtomicInteger();
         Blue executionBlue = fixture.newBlue(executions);
 
+        // when
         Observation observation = observe(fixture,
                 "ordinary handler patch and checkpoint Direct Writes",
                 executionBlue,
@@ -116,12 +148,14 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 expected,
                 () -> executionBlue.processDocument(before, eventA));
 
+        // then
         assertEquals(1, executions.get());
         observation.assertThreeViewInvariant();
     }
 
     @Test
-    void combinedInitializationHandlerPatchAndCheckpointSatisfyThreeViewInvariant() {
+    void shouldSatisfyThreeViewInvariantAfterCombinedInitializationHandlerPatchAndCheckpoint() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
         Node before = fixture.materializedSource();
@@ -130,6 +164,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         AtomicInteger executions = new AtomicInteger();
         Blue executionBlue = fixture.newBlue(executions);
 
+        // when
         Observation observation = observe(fixture,
                 "combined initialization, handler patch, and checkpoint",
                 executionBlue,
@@ -137,62 +172,82 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                 expected,
                 () -> executionBlue.processDocument(before, eventA));
 
+        // then
         assertEquals(1, executions.get());
         observation.assertThreeViewInvariant();
     }
 
     @Test
-    void completedProcessingResultMinimizesAndReloadsWithSameIdentity() {
+    void shouldMinimizeCompletedProcessingResultAndReloadWithSameIdentity() {
+        // given
         AuditFixture fixture = new AuditFixture();
         Node eventA = fixture.auditEvent("A");
+        String eventBlueId = DirectBlueIdCalculator.calculateBlueId(eventA);
         AtomicInteger executions = new AtomicInteger();
         Blue processor = fixture.newBlue(executions);
+        // when
         DocumentProcessingResult completed = processor.processDocument(
                 fixture.materializedSource(), eventA);
-
-        assertEquals(ProcessorStatus.SUCCESS, completed.status(), completed.failureReason());
-        assertEquals(1, executions.get());
-        assertTrue(hasSelectedContract(completed.document(), "audit"));
-        assertEquals(Boolean.TRUE, completed.document().get("/auditRan"));
-
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(completed.resolvedDocument());
+        ResolvedSnapshot completedSnapshot =
+                snapshot(processor, completed);
+        Node minimized = new MinimizedOverlayBuilder().build(
+                completedSnapshot.resolvedRoot());
         Node transported = processor.jsonToNode(processor.nodeToJson(minimized));
         Blue reloader = fixture.newBlue(new AtomicInteger());
         ResolvedSnapshot reloaded = reloader.resolveToSnapshot(transported);
 
-        assertEquals(completed.blueId(), reloaded.blueId());
-        assertNull(firstDifference(completed.resolvedDocument(), reloaded.resolvedRoot()));
+        // then
+        assertEquals(ProcessorStatus.SUCCESS, completed.status(), diagnosticMessage(completed));
+        assertEquals(1, executions.get());
+        assertFalse(hasSelectedContract(completed.document(), "audit"),
+                "the committed Root is Canonical, not a fifth materialized selection form");
+        assertTrue(hasSelectedContract(
+                completedSnapshot.resolvedRoot(), "audit"));
+        assertEquals(Boolean.TRUE, completed.document().get("/auditRan"));
+        assertEquals(completedSnapshot.blueId(), reloaded.blueId());
+        assertNull(firstDifference(
+                completedSnapshot.resolvedRoot(),
+                reloaded.resolvedRoot()));
         assertEquals(Boolean.TRUE, reloaded.resolvedNodeAt("/auditRan").getValue());
-        assertEquals("A", reloaded.resolvedNodeAt(
-                "/contracts/checkpoint/lastEvents/incoming/checkpointIdentity").getValue());
+        assertEquals(eventBlueId, reloaded.resolvedNodeAt(
+                "/contracts/checkpoint/entries/incoming/subject").getBlueId());
     }
 
     private static Observation observe(AuditFixture fixture,
                                        String label,
                                        Blue executionBlue,
                                        Node callerInput,
-                                       Node expectedSelected,
+                                       Node expectedSource,
                                        Transition transition) {
         String callerBefore = executionBlue.nodeToJson(callerInput);
         DocumentProcessingResult result = transition.apply();
         assertEquals(callerBefore, executionBlue.nodeToJson(callerInput), label + " mutated caller input");
-        assertEquals(ProcessorStatus.SUCCESS, result.status(), label + ": " + result.failureReason());
-        assertNotNull(result.snapshot(), label + " must return its semantic snapshot");
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), label + ": " + diagnosticMessage(result));
+        ResolvedSnapshot actualSnapshot =
+                snapshot(executionBlue, result);
+        assertNotNull(actualSnapshot,
+                label + " must retain an out-of-band snapshot");
 
         Blue verifier = fixture.newBlue(new AtomicInteger());
-        ResolvedSnapshot expectedSnapshot = verifier.resolveToSnapshot(expectedSelected.clone());
-        return new Observation(label, expectedSelected, expectedSnapshot, result);
+        ResolvedSnapshot expectedSnapshot = verifier.resolveToSnapshot(expectedSource.clone());
+        return new Observation(
+                label,
+                expectedSnapshot.canonicalRoot(),
+                expectedSnapshot,
+                result,
+                actualSnapshot);
     }
 
     private static Node expectedInitializedSelected(AuditFixture fixture, Node selectedBefore) {
         Node expected = selectedBefore.clone();
         Blue identityBlue = fixture.newBlue(new AtomicInteger());
-        String preInitializationIdentity = identityBlue.resolveToSnapshot(selectedBefore.clone())
-                .frozenCanonicalRoot()
-                .blueId();
+        ResolvedSnapshot preInitialization = identityBlue
+                .resolveToSnapshot(selectedBefore.clone());
         Node marker = new Node()
                 .type(reference(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
-                .properties("documentId", text(preInitializationIdentity));
+                .properties(
+                        "document",
+                        reference(preInitialization.blueId()));
         expected.getContracts().properties("initialized", marker);
         return expected;
     }
@@ -202,11 +257,19 @@ class ProcessingDocumentStateInvariantFailFirstTest {
                                            Node event,
                                            boolean handlerPatches) {
         Node expected = selectedBefore.clone();
-        Blue normalizationBlue = fixture.newBlue(new AtomicInteger());
-        Node normalizedEvent = normalizationBlue.preprocess(event.clone());
+        Node channel = selectedBefore.getContracts().getProperties().get("incoming");
+        String contributionBlueId = DirectBlueIdCalculator.calculateBlueId(channel);
+        String domainBlueId = CheckpointDomain.derive(
+                fixture.channelBlueId,
+                Collections.singletonList(contributionBlueId),
+                "audit-kind-v1");
+        String subjectBlueId = DirectBlueIdCalculator.calculateBlueId(event);
+        Node entry = new Node()
+                .properties("domain", reference(domainBlueId))
+                .properties("subject", reference(subjectBlueId));
         Node checkpoint = new Node()
                 .type(reference(RuntimeBlueIds.CHANNEL_EVENT_CHECKPOINT))
-                .properties("lastEvents", new Node().properties("incoming", normalizedEvent));
+                .properties("entries", new Node().properties("incoming", entry));
         expected.getContracts().properties("checkpoint", checkpoint);
         if (handlerPatches) {
             expected.properties("auditRan", bool(true));
@@ -234,7 +297,7 @@ class ProcessingDocumentStateInvariantFailFirstTest {
     }
 
     private static String firstDifference(Node expected, Node actual) {
-        return firstDifference(NodeToMapListOrValue.get(expected), NodeToMapListOrValue.get(actual), "");
+        return firstDifference(NodeWireForm.get(expected), NodeWireForm.get(actual), "");
     }
 
     private static String firstDifference(Object expected, Object actual, String path) {
@@ -291,37 +354,46 @@ class ProcessingDocumentStateInvariantFailFirstTest {
 
     private static final class Observation {
         private final String label;
-        private final Node expectedSelected;
+        private final Node expectedDocument;
         private final ResolvedSnapshot expectedSnapshot;
         private final DocumentProcessingResult actual;
+        private final ResolvedSnapshot actualSnapshot;
 
         private Observation(String label,
-                            Node expectedSelected,
+                            Node expectedDocument,
                             ResolvedSnapshot expectedSnapshot,
-                            DocumentProcessingResult actual) {
+                            DocumentProcessingResult actual,
+                            ResolvedSnapshot actualSnapshot) {
             this.label = label;
-            this.expectedSelected = expectedSelected;
+            this.expectedDocument = expectedDocument;
             this.expectedSnapshot = expectedSnapshot;
             this.actual = actual;
+            this.actualSnapshot = actualSnapshot;
         }
 
         private void assertThreeViewInvariant() {
-            String selectedDifference = firstDifference(expectedSelected, actual.document());
-            String canonicalDifference = firstDifference(expectedSnapshot.canonicalRoot(), actual.canonicalDocument());
-            String resolvedDifference = firstDifference(expectedSnapshot.resolvedRoot(), actual.resolvedDocument());
+            String documentDifference = firstDifference(expectedDocument, actual.document());
+            String canonicalDifference = firstDifference(expectedSnapshot.canonicalRoot(), actual.document());
+            String resolvedDifference = firstDifference(
+                    expectedSnapshot.resolvedRoot(),
+                    actualSnapshot.resolvedRoot());
             List<String> diagnostics = new ArrayList<>();
-            diagnostics.add("selected=" + selectedDifference);
+            diagnostics.add("document=" + documentDifference);
             diagnostics.add("canonical=" + canonicalDifference);
             diagnostics.add("resolved=" + resolvedDifference);
             diagnostics.add("expectedBlueId=" + expectedSnapshot.blueId());
-            diagnostics.add("actualBlueId=" + actual.blueId());
+            diagnostics.add("actualBlueId="
+                    + actualSnapshot.blueId());
             String message = label + " divergence: " + diagnostics;
 
             assertAll(label,
-                    () -> assertNull(selectedDifference, message),
+                    () -> assertNull(documentDifference, message),
                     () -> assertNull(canonicalDifference, message),
                     () -> assertNull(resolvedDifference, message),
-                    () -> assertEquals(expectedSnapshot.blueId(), actual.blueId(), message));
+                    () -> assertEquals(
+                            expectedSnapshot.blueId(),
+                            actualSnapshot.blueId(),
+                            message));
         }
     }
 }

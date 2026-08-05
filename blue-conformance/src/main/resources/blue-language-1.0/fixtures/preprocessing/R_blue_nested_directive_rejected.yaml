@@ -1,0 +1,10 @@
+id: R_blue_nested_directive_rejected
+category: Resolution
+operation: preprocess
+description: blue is valid only at the Source Document root
+expectError: true
+expectedErrorCategory: InvalidReservedField
+source:
+  child:
+    blue: {}
+    value: x

@@ -1,0 +1,13 @@
+id: F_direct_node_verification_without_descendants
+category: Provider
+operation: verifyDirectNode
+description: an object can be verified from its complete direct manifest while transitive children remain collapsed
+requestedBlueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk
+directNode:
+  left:
+    blueId: 5nWrS5wTB22MN7HHhyRUy7zQ83Qbf6QEcUY4soFir2Sq
+  right:
+    blueId: FVynRTHup63DBwrc8M741Uhnyp4oonzMdbuuKpAnEeSf
+expectedVerified: true
+expectedNodeBlueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk
+expectedDescendantRequests: []

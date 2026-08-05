@@ -1,12 +1,25 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.CyclicAwareNodeProvider;
+import blue.language.provider.CyclicSetProof;
+import blue.language.provider.CyclicSetProofResult;
 import blue.language.provider.NodeContentHandler;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.CircularBlueIdCalculator;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CircularSetIdentityCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -14,19 +27,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static blue.language.processor.FailureCapture.captureFailure;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RecursiveTypeResolutionTest {
 
     @Test
-    void selfRecursiveFieldTypeResolvesToFiniteReferenceBoundary() {
+    void shouldResolveSelfRecursiveFieldTypeToFiniteReferenceBoundary() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Recursive Entry\n"
                         + "  previous:\n"
@@ -34,15 +47,18 @@ class RecursiveTypeResolutionTest {
                         + "      blueId: this#0\n");
         String entryId = fixture.id("Recursive Entry");
 
-        Node resolved = assertDoesNotThrow(() -> fixture.blue.resolve(instanceOf(entryId)));
-
+        // when
+        Node resolved = fixture.blue.resolve(instanceOf(entryId));
         Node recursiveType = resolved.getAsNode("/previous/type");
+
+        // then
         assertEquals(entryId, recursiveType.getBlueId());
         assertTrue(recursiveType.isReferenceOnly());
     }
 
     @Test
-    void mutualFieldTypesResolveEachMemberOnceAndCloseWithReference() {
+    void shouldResolveEachMutualFieldTypeOnceAndCloseWithReference() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Person\n"
                         + "  pet:\n"
@@ -55,16 +71,19 @@ class RecursiveTypeResolutionTest {
         String personId = fixture.id("Person");
         String dogId = fixture.id("Dog");
 
-        Node resolved = assertDoesNotThrow(() -> fixture.blue.resolve(instanceOf(personId)));
-
-        assertEquals(dogId, resolved.getAsNode("/pet/type").getBlueId());
+        // when
+        Node resolved = fixture.blue.resolve(instanceOf(personId));
         Node personBoundary = resolved.getAsNode("/pet/owner/type");
+
+        // then
+        assertEquals(dogId, resolved.getAsNode("/pet/type").getBlueId());
         assertEquals(personId, personBoundary.getBlueId());
         assertTrue(personBoundary.isReferenceOnly());
     }
 
     @Test
-    void typedReferenceToRecursiveInstanceIsFiniteAndCacheIndependent() {
+    void shouldKeepTypedReferenceToRecursiveInstanceFiniteAndCacheIndependent() {
+        // given
         Node documents = YAML_MAPPER.readValue(
                 "- name: Person\n"
                         + "  pet:\n"
@@ -83,22 +102,26 @@ class RecursiveTypeResolutionTest {
         String dogIdReference = provider.getBlueIdByName("Fido");
         Node source = instanceOf(personId).properties("pet", reference(dogIdReference));
 
+        // when
         Blue coldBlue = new Blue(provider);
-        Node cold = assertDoesNotThrow(() -> coldBlue.resolve(source.clone()));
+        Node cold = coldBlue.resolve(source.clone());
         Blue prewarmedBlue = new Blue(provider);
-        assertDoesNotThrow(() -> prewarmedBlue.resolveToSnapshot(dog.clone()));
-        Node prewarmed = assertDoesNotThrow(() -> prewarmedBlue.resolve(source.clone()));
-        Node repeated = assertDoesNotThrow(() -> prewarmedBlue.resolve(source.clone()));
+        prewarmedBlue.resolveToSnapshot(dog.clone());
+        Node prewarmed = prewarmedBlue.resolve(source.clone());
+        Node repeated = prewarmedBlue.resolve(source.clone());
+        Node canonical = prewarmedBlue.canonicalize(source.clone());
 
+        // then
         assertReference(cold.getAsNode("/pet/type/owner/type/pet/type"), dogId);
         assertEquals(JSON_MAPPER.valueToTree(cold), JSON_MAPPER.valueToTree(prewarmed));
         assertEquals(JSON_MAPPER.valueToTree(prewarmed), JSON_MAPPER.valueToTree(repeated));
         assertEquals(JSON_MAPPER.valueToTree(source),
-                JSON_MAPPER.valueToTree(prewarmedBlue.canonicalize(source.clone())));
+                JSON_MAPPER.valueToTree(canonical));
     }
 
     @Test
-    void recursiveCollectionMetadataUsesFiniteReferenceBoundaries() {
+    void shouldUseFiniteReferenceBoundariesForRecursiveCollectionMetadata() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Recursive Container\n"
                         + "  children:\n"
@@ -112,10 +135,12 @@ class RecursiveTypeResolutionTest {
                         + "      blueId: this#0\n");
         String containerId = fixture.id("Recursive Container");
 
-        Node resolved = assertDoesNotThrow(() -> fixture.blue.resolve(instanceOf(containerId)));
-
+        // when
+        Node resolved = fixture.blue.resolve(instanceOf(containerId));
         Node itemType = resolved.getAsNode("/children/itemType");
         Node valueType = resolved.getAsNode("/byName/valueType");
+
+        // then
         assertEquals(containerId, itemType.getBlueId());
         assertEquals(containerId, valueType.getBlueId());
         assertTrue(itemType.isReferenceOnly());
@@ -123,7 +148,8 @@ class RecursiveTypeResolutionTest {
     }
 
     @Test
-    void repeatedRecursiveFieldsRemainIndependentReferenceBoundaries() {
+    void shouldKeepRepeatedRecursiveFieldsAsIndependentReferenceBoundaries() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Binary Node\n"
                         + "  left:\n"
@@ -134,16 +160,19 @@ class RecursiveTypeResolutionTest {
                         + "      blueId: this#0\n");
         String nodeId = fixture.id("Binary Node");
 
-        Node first = assertDoesNotThrow(() -> fixture.blue.resolve(instanceOf(nodeId)));
-        Node second = assertDoesNotThrow(() -> fixture.blue.resolve(instanceOf(nodeId)));
+        // when
+        Node first = fixture.blue.resolve(instanceOf(nodeId));
+        Node second = fixture.blue.resolve(instanceOf(nodeId));
 
+        // then
         assertReference(first.getAsNode("/left/type"), nodeId);
         assertReference(first.getAsNode("/right/type"), nodeId);
         assertEquals(JSON_MAPPER.valueToTree(first), JSON_MAPPER.valueToTree(second));
     }
 
     @Test
-    void cyclicTypedValueMergedIntoInheritedSlotKeepsFiniteBoundary() {
+    void shouldKeepFiniteBoundaryWhenCyclicTypedValueMergesIntoInheritedSlot() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Recursive Entry\n"
                         + "  previous:\n"
@@ -157,10 +186,12 @@ class RecursiveTypeResolutionTest {
         Node source = instanceOf(holderId)
                 .properties("entry", instanceOf(entryId));
 
-        Node first = assertDoesNotThrow(() -> fixture.blue.resolve(source.clone()));
-        Node repeated = assertDoesNotThrow(() -> fixture.blue.resolve(source.clone()));
-
+        // when
+        Node first = fixture.blue.resolve(source.clone());
+        Node repeated = fixture.blue.resolve(source.clone());
         Node previous = first.getAsNode("/entry/previous");
+
+        // then
         assertReference(previous.getType(), entryId);
         assertTrue(previous.getProperties() == null
                 || !previous.getProperties().containsKey("previous"));
@@ -169,19 +200,21 @@ class RecursiveTypeResolutionTest {
     }
 
     @Test
-    void materializedRecursiveValueCanBeResolvedAgainWithoutExpandingBoundary() {
+    void shouldResolveMaterializedRecursiveValueAgainWithoutExpandingBoundary() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Recursive Entry\n"
                         + "  previous:\n"
                         + "    type:\n"
                         + "      blueId: this#0\n");
         String entryId = fixture.id("Recursive Entry");
-        Node first = assertDoesNotThrow(() -> fixture.blue.resolve(instanceOf(entryId)));
-
-        Node repeated = assertDoesNotThrow(() -> fixture.blue.resolve(first.clone()));
-
-        assertFalse(repeated.getType().isReferenceOnly());
+        // when
+        Node first = fixture.blue.resolve(instanceOf(entryId));
+        Node repeated = fixture.blue.resolve(first.clone());
         Node previous = repeated.getProperties().get("previous");
+
+        // then
+        assertFalse(repeated.getType().isReferenceOnly());
         assertReference(previous.getType(), entryId);
         assertTrue(previous.getProperties() == null
                 || !previous.getProperties().containsKey("previous"));
@@ -189,7 +222,8 @@ class RecursiveTypeResolutionTest {
     }
 
     @Test
-    void recursiveInstanceOccurrencesApplyInheritedValidationOnDemand() {
+    void shouldApplyInheritedValidationToRecursiveInstanceOccurrencesOnDemand() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Recursive A\n"
                         + "  next:\n"
@@ -207,37 +241,49 @@ class RecursiveTypeResolutionTest {
         Node valid = recursiveInstance(aId, "GOOD");
         Node invalid = recursiveInstance(aId, "TOO_LONG");
 
-        Node resolved = assertDoesNotThrow(() -> fixture.blue.resolve(valid));
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> fixture.blue.resolve(invalid));
-
-        assertEquals("GOOD", resolved.getAsText("/next/previous/code"));
+        // when
+        Node resolved = fixture.blue.resolve(valid);
+        IllegalArgumentException failure =
+                captureFailure(() -> fixture.blue.resolve(invalid));
         Node nestedCode = resolved.getProperties().get("next")
                 .getProperties().get("previous")
                 .getProperties().get("code");
         Schema nestedSchema = nestedCode.getSchema();
+        BlueLanguageErrorCategory errorCategory =
+                BlueLanguageErrorClassifier.classify(failure);
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
+        assertEquals("GOOD", resolved.getAsText("/next/previous/code"));
         assertNotNull(nestedSchema);
         assertEquals(4, ((Number) nestedSchema.getMaxLength().getValue()).intValue());
         assertEquals(BlueLanguageErrorCategory.SchemaViolation,
-                BlueLanguageErrorClassifier.classify(failure));
+                errorCategory);
     }
 
     @Test
-    void directSelfInheritanceRemainsTypeCycle() {
+    void shouldKeepDirectSelfInheritanceAsTypeCycle() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Invalid Self Parent\n"
                         + "  type:\n"
                         + "    blueId: this#0\n");
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> fixture.blue.resolve(instanceOf(fixture.id("Invalid Self Parent"))));
+        BlueLanguageErrorCategory errorCategory =
+                BlueLanguageErrorClassifier.classify(failure);
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertEquals(BlueLanguageErrorCategory.TypeCycle,
-                BlueLanguageErrorClassifier.classify(failure));
+                errorCategory);
     }
 
     @Test
-    void mutualInheritanceRemainsTypeCycle() {
+    void shouldKeepMutualInheritanceAsTypeCycle() {
+        // given
         CyclicFixture fixture = new CyclicFixture(
                 "- name: Invalid Parent A\n"
                         + "  type:\n"
@@ -246,30 +292,42 @@ class RecursiveTypeResolutionTest {
                         + "  type:\n"
                         + "    blueId: this#0\n");
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> fixture.blue.resolve(instanceOf(fixture.id("Invalid Parent A"))));
+        BlueLanguageErrorCategory errorCategory =
+                BlueLanguageErrorClassifier.classify(failure);
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertEquals(BlueLanguageErrorCategory.TypeCycle,
-                BlueLanguageErrorClassifier.classify(failure));
+                errorCategory);
     }
 
     @Test
-    void canonicalizationPreservesPureReferenceOnDeclaredUntypedField() {
+    void shouldPreservePureReferenceOnDeclaredUntypedFieldDuringCanonicalization() {
+        // given
         Node holder = new Node().name("Reference Holder")
                 .properties("previous", new Node().description("Optional predecessor reference."));
         BasicNodeProvider provider = new BasicNodeProvider(holder);
         Blue blue = new Blue(provider);
         String holderId = provider.getBlueIdByName("Reference Holder");
-        String previousId = BlueIdCalculator.calculateBlueId(new Node().name("Previous Entry"));
+        String previousId = DirectBlueIdCalculator.calculateBlueId(new Node().name("Previous Entry"));
         Node source = instanceOf(holderId).properties("previous", reference(previousId));
+        Node expected = instanceOf(holderId)
+                .properties("previous", reference(previousId));
 
+        // when
         Node canonical = blue.canonicalize(source);
+        String expectedBlueId =
+                DirectBlueIdCalculator.calculateBlueId(expected);
+        String canonicalBlueId =
+                DirectBlueIdCalculator.calculateBlueId(canonical);
 
+        // then
         assertEquals(holderId, canonical.getType().getBlueId());
         assertReference(canonical.getProperties().get("previous"), previousId);
-        Node expected = instanceOf(holderId).properties("previous", reference(previousId));
-        assertEquals(BlueIdCalculator.calculateBlueId(expected),
-                BlueIdCalculator.calculateBlueId(canonical));
+        assertEquals(expectedBlueId, canonicalBlueId);
     }
 
     private static Node instanceOf(String typeBlueId) {
@@ -323,15 +381,18 @@ class RecursiveTypeResolutionTest {
             implements NodeProvider, CyclicAwareNodeProvider {
         private final String memberId;
         private final Node content;
+        private final CyclicSetProof proof;
         private final Map<String, String> idsByName = new LinkedHashMap<>();
 
         private SingletonCyclicProvider(Node source) {
             Node preprocessed = new Blue().preprocess(source.clone());
-            memberId = CircularBlueIdCalculator
+            memberId = CircularSetIdentityCalculator
                     .calculateCircularSetBlueIds(Collections.singletonList(preprocessed)).get(0);
             String masterId = memberId.substring(0, memberId.indexOf('#'));
             content = JSON_MAPPER.treeToValue(NodeContentHandler.resolveThisReferences(
                     JSON_MAPPER.valueToTree(preprocessed), masterId, true), Node.class);
+            proof = CyclicSetProof.fromDeclaredPlaceholderSet(
+                    Collections.singletonList(preprocessed));
             idsByName.put(source.getName(), memberId);
         }
 
@@ -343,8 +404,10 @@ class RecursiveTypeResolutionTest {
         }
 
         @Override
-        public boolean hasVerifiedContentForBlueId(String blueId) {
-            return memberId.equals(blueId);
+        public CyclicSetProofResult cyclicSetProofFor(String blueId) {
+            return memberId.equals(blueId)
+                    ? CyclicSetProofResult.found(proof)
+                    : CyclicSetProofResult.notFound();
         }
     }
 }

@@ -1,41 +1,38 @@
 contracts:
   embedded:
     type:
-      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q
+      blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
     paths:
       - /payment
       - /shipping
   documentUpdate:
     type:
-      blueId: Ac9LC5T7pHVa1TtkhMBjBRtxecShzvbe7ugUdXT1Mu2o
+      blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An
     path: /
   triggered:
     type:
-      blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ
+      blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
   lifecycleChannel:
     type:
-      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ
+      blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
   embeddedNode:
     type:
-      blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i
-    childPath: /payment
+      blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
+    sourcePath: /payment
   checkpoint:
     type:
-      blueId: 9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1
-    lastEvents:
+      blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+    entries:
       external:
-        type:
+        domain:
+          blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L
+        subject:
           blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf
-        eventId: evt-001
   initialized:
     type:
-      blueId: 6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q
-    documentId: doc-123
-  failure:
-    type:
-      blueId: 33kfH8pfk7F1P5zMsuK1Jm3GcSdmTXoFHKjP16DesEco
-    code: RuntimeFatal
-    reason: boundary violation
+      blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+    document:
+      sample: doc-123
   setProperty:
     type:
       blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts

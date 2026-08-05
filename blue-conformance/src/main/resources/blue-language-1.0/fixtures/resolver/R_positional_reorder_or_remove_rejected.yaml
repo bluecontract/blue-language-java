@@ -1,0 +1,16 @@
+id: R_positional_reorder_or_remove_rejected
+category: Resolution
+operation: resolveVariants
+parent:
+  type: List
+  mergePolicy: positional
+  items: [A, B]
+variants:
+  - source:
+      items: [B, A]
+    expectedErrorCategory: ListControlViolation
+  - source:
+      items:
+        - $pos: 1
+          $replace: {$empty: true}
+    expectedErrorCategory: FixedValueConflict

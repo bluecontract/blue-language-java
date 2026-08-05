@@ -1,0 +1,9 @@
+plugins {
+    id 'blue.java8-library-conventions'
+}
+
+description = 'Compiled runnable examples for Blue Language Java documentation.'
+
+dependencies {
+    implementation project(':blue-language-java')
+}

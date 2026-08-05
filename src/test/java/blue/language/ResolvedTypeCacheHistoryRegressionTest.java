@@ -1,26 +1,38 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.merge.Merger;
 import blue.language.model.Node;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
-import blue.language.provider.BootstrapProvider;
+import blue.language.registry.BootstrapProvider;
 import blue.language.provider.PotentialBlueIdNodeProvider;
 import blue.language.provider.SequentialNodeProvider;
-import blue.language.snapshot.ResolvedReferenceCache;
-import blue.language.utils.NodePathEditor;
+import blue.language.merge.ResolvedReferenceCache;
+import blue.language.model.NodePathEditor;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class ResolvedTypeCacheHistoryRegressionTest {
 
     @Test
-    void resolvedTypeShapeDoesNotDependOnReferenceCacheHistory() {
+    void shouldKeepResolvedTypeShapeIndependentOfReferenceCacheHistory() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
         Blue blue = fixture.newBlue(new AtomicInteger());
@@ -43,9 +55,11 @@ class ResolvedTypeCacheHistoryRegressionTest {
 
         Node cold = new Merger(blue.getMergingProcessor(), processingProvider, cache)
                 .resolve(source.clone());
+        // when
         Node warm = new Merger(blue.getMergingProcessor(), processingProvider, cache)
                 .resolve(source.clone());
 
+        // then
         assertNotNull(NodePathEditor.getOrNull(cold, "/type/contracts/audit/type/type/order"),
                 "cold resolution must materialize the Handler field inherited from Contract");
         assertNotNull(NodePathEditor.getOrNull(warm, "/type/contracts/audit/type/type/order"),

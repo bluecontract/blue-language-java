@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "phase": "02-language-core",
+  "status": "implemented-with-deferred-phase-04-debt",
+  "scope": {
+    "productionRoot": "src/main/java",
+    "languageCoreDefinition": "blue.language.* excluding api compatibility adapters, conformance, processor runtime, and the blue.language root aggregate",
+    "sizeGateDefinition": "All production sources except blue.language.processor.*, with three exact stale-checked root aggregate/conformance allowances",
+    "sourceLevelOnly": true,
+    "newAnalysisDependencies": 0
+  },
+  "verification": {
+    "architectureGate": "src/test/java/blue/language/architecture/LanguageCoreArchitectureTest.java",
+    "architectureStandalone": {
+      "executed": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "initialFullRegression": {
+      "executed": 2117,
+      "passed": 2114,
+      "failed": 3,
+      "failureScope": "source-style conventions only",
+      "correctionsApplied": true,
+      "finalGreenClaim": false
+    },
+    "sourceStyleFocusedRerun": {
+      "executed": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    "graphExtractionFocusedVerification": {
+      "behavior": {
+        "executed": 264,
+        "passed": 264,
+        "failed": 0
+      },
+      "lifecycle": {
+        "executed": 2,
+        "passed": 2,
+        "failed": 0
+      }
+    },
+    "documentationExamples": {
+      "test": "blue.language.docs.LanguageDocumentationExamplesTest",
+      "executed": 1,
+      "passed": 1,
+      "failed": 0,
+      "compiledAndExecutedMarkdownPrograms": 8,
+      "evidenceStatus": "clean-focused-pass"
+    },
+    "finalUncontendedFullSuite": {
+      "executed": 2130,
+      "passed": 2130,
+      "failed": 0,
+      "skipped": 0,
+      "buildResult": "BUILD SUCCESSFUL"
+    },
+    "semanticBaselineVerify": {
+      "verified": true,
+      "languageFixtures": 153,
+      "contractsFixtures": 140,
+      "gasFixtures": 58,
+      "releaseConformanceFixtures": 293,
+      "releaseConformanceFailures": 0,
+      "approvedIncompatibleApiChanges": 40,
+      "approvedAdditiveApiChanges": 106,
+      "unapprovedApiChanges": 0,
+      "deterministicJarVerified": true,
+      "deterministicSourceArchivesVerified": true
+    },
+    "performanceComparison": {
+      "status": "pass",
+      "thresholdPercent": 10.0,
+      "method": "Isolated Phase 1 and Phase 2 checkouts; identical JDK 17 JMH campaign with three warmups, five measurements, two forks, 500 ms iterations, width 500, and gc profiler",
+      "benchmarks": [
+        {
+          "name": "RecursiveProcessingLocalityBenchmark.acyclic",
+          "metric": "throughput",
+          "baseline": 14623.183,
+          "candidate": 14628.409,
+          "changePercent": 0.036,
+          "allocationChangePercent": 0.185
+        },
+        {
+          "name": "ReferenceResolutionLocalityBenchmark.wide",
+          "metric": "throughput",
+          "baseline": 2261.009,
+          "candidate": 2272.877,
+          "changePercent": 0.525,
+          "allocationChangePercent": 0.041
+        },
+        {
+          "name": "SchemaResolutionLocalityBenchmark.wide",
+          "metric": "throughput",
+          "baseline": 2212.581,
+          "candidate": 2138.642,
+          "changePercent": -3.341,
+          "allocationChangePercent": 2.902
+        },
+        {
+          "name": "FrozenNodeCanonicalizationBenchmark.width500",
+          "metric": "throughput",
+          "baseline": 2565.145,
+          "candidate": 2539.576,
+          "changePercent": -0.997,
+          "allocationChangePercent": 0.096
+        },
+        {
+          "name": "FrozenNodeIdentityBenchmark.list",
+          "metric": "throughput",
+          "baseline": 1080.343,
+          "candidate": 1095.592,
+          "changePercent": 1.411,
+          "allocationChangePercent": -0.00001
+        },
+        {
+          "name": "CanonicalHashBenchmark.hash",
+          "metric": "average-time-us-per-operation",
+          "baseline": 25.714,
+          "candidate": 25.798,
+          "changePercent": 0.327,
+          "allocationChangePercent": 0.0
+        }
+      ],
+      "maximumThroughputRegressionPercent": 3.341,
+      "maximumAllocationIncreasePercent": 2.902,
+      "materialRegressionDetected": false
+    }
+  },
+  "enforcedInvariants": {
+    "languageCoreForbiddenImportViolations": 0,
+    "forbiddenImports": [
+      "blue.language.processor.*",
+      "blue.language.conformance.*",
+      "blue.language.Blue"
+    ],
+    "maximumPhase02NonProcessorProductionLines": 800,
+    "maximumFocusedServicePublicMethods": 19,
+    "typeCreatorRegistryPresent": false,
+    "mappingMutableStaticFields": 0,
+    "removedApiSymbolsPresent": false,
+    "newCyclePackagesOutsideDeferredBoundary": 0
+  },
+  "focusedServicePublicMethodCounts": {
+    "blue.language.api.BlueLanguage": 14,
+    "blue.language.codec.BlueCodec": 4,
+    "blue.language.preprocess.BluePreprocessing": 2,
+    "blue.language.graph.BlueGraph": 4,
+    "blue.language.resolve.BlueResolution": 5,
+    "blue.language.identity.BlueIdentity": 4,
+    "blue.language.snapshot.BlueSnapshots": 8,
+    "blue.language.matching.BlueMatching": 4,
+    "blue.language.patching.BluePatching": 2
+  },
+  "classBudget": {
+    "largestNonAllowlistedPhase02File": {
+      "path": "src/main/java/blue/language/model/Node.java",
+      "lines": 800
+    },
+    "resolvedReferenceCacheLines": 796,
+    "narrowAllowlist": [
+      {
+        "path": "src/main/java/blue/language/Blue.java",
+        "lines": 4187,
+        "reason": "Legacy aggregate retained only as the Phase 4 compatibility facade"
+      },
+      {
+        "path": "src/main/java/blue/language/BlueConformanceSuiteRunner.java",
+        "lines": 3272,
+        "reason": "Release conformance harness decomposition is a Phase 4 module task"
+      },
+      {
+        "path": "src/main/java/blue/language/BlueContractsConformanceReport.java",
+        "lines": 1166,
+        "reason": "Contracts conformance report extraction belongs to the Phase 4 module boundary"
+      }
+    ]
+  },
+  "packageDependencyGraph": {
+    "method": "Java package declarations plus named non-wildcard explicit and static imports, resolved to the longest declared package prefix",
+    "wholeProduction": {
+      "sourceFiles": 402,
+      "packages": 29,
+      "edges": 156,
+      "cyclicStronglyConnectedComponents": [
+        [
+          "blue.language",
+          "blue.language.conformance",
+          "blue.language.dictionary",
+          "blue.language.graph",
+          "blue.language.identity",
+          "blue.language.mapping",
+          "blue.language.matching",
+          "blue.language.matching.internal",
+          "blue.language.merge",
+          "blue.language.model",
+          "blue.language.patching",
+          "blue.language.preprocess",
+          "blue.language.preprocess.processor",
+          "blue.language.processor",
+          "blue.language.processor.conformance",
+          "blue.language.processor.model",
+          "blue.language.processor.registry",
+          "blue.language.processor.util",
+          "blue.language.provider",
+          "blue.language.registry",
+          "blue.language.resolve",
+          "blue.language.snapshot",
+          "blue.language.utils",
+          "blue.language.utils.limits"
+        ]
+      ]
+    },
+    "languageCoreInducedGraph": {
+      "sourceFiles": 207,
+      "packages": 20,
+      "edges": 64,
+      "cyclicStronglyConnectedComponents": [
+        [
+          "blue.language.identity",
+          "blue.language.matching",
+          "blue.language.matching.internal",
+          "blue.language.merge",
+          "blue.language.model",
+          "blue.language.patching",
+          "blue.language.preprocess",
+          "blue.language.preprocess.processor",
+          "blue.language.provider",
+          "blue.language.registry",
+          "blue.language.resolve",
+          "blue.language.snapshot",
+          "blue.language.utils",
+          "blue.language.utils.limits"
+        ]
+      ],
+      "claim": "Cycles are measured and bounded; zero package cycles is not claimed for Phase 2"
+    }
+  },
+  "deferredPhase04Blockers": [
+    {
+      "id": "P04-MODULE-BOUNDARIES",
+      "description": "The 24-package production SCC still crosses Language, Contracts processor, conformance, registries, models, and shared utilities. Physical module extraction must break this SCC before a truthful zero-cycle gate is possible."
+    },
+    {
+      "id": "P04-LEGACY-BLUE-BRIDGE",
+      "description": "BlueLanguage and the api.internal LegacyBlue* adapters still delegate through the 4187-line Blue compatibility aggregate. They are deliberately excluded from the core forbidden-import gate until the compatibility facade is isolated in its final module."
+    },
+    {
+      "id": "P04-CONFORMANCE-EXTRACTION",
+      "description": "BlueConformanceSuiteRunner and BlueContractsConformanceReport remain oversized root-package conformance artifacts under explicit temporary allowances."
+    },
+    {
+      "id": "P04-CONTRACTS-SIZE-BUDGET",
+      "description": "Sixteen blue.language.processor or processor.conformance files remain above 800 lines. They are outside the Phase 2 Language-core size gate and must be handled by the Contracts-kernel/module phases rather than hidden in the Language allowlist.",
+      "oversizedFiles": [
+        "processor/conformance/ContractsFixtureHarness.java",
+        "processor/DocumentProcessingRuntime.java",
+        "processor/ProcessorEngine.java",
+        "processor/DocumentProcessor.java",
+        "processor/RootExternalDeliveryEvidenceVerifier.java",
+        "processor/ContractLoader.java",
+        "processor/ExternalChannelFunctionResolver.java",
+        "processor/DirectSubscriptionSurfaceValidator.java",
+        "processor/ScopeExecutor.java",
+        "processor/ProcessingMetricsSink.java",
+        "processor/ExternalChannelDependencySnapshot.java",
+        "processor/ChannelRunner.java",
+        "processor/ProcessorExecutionContext.java",
+        "processor/GasMeter.java",
+        "processor/conformance/ClosedContractsFixtureValidator.java",
+        "processor/SemanticGasMeter.java"
+      ]
+    }
+  ]
+}

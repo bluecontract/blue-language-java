@@ -1,8 +1,0 @@
-id: runtimeRegistryDocumentUpdateEventNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: DocumentUpdate
-registryPath: registry/blue-contracts-1.0/DocumentUpdate.blue
-expectedBlueId: 7HEaG1SpBdsbVHsrwRTZSZGmpJUWHfFoEzecYWpjo1vm
-semanticDescriptionIdentityBearing: true

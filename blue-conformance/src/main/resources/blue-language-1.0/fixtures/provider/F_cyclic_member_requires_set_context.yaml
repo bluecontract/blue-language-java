@@ -1,0 +1,10 @@
+id: F_cyclic_member_requires_set_context
+category: Provider
+operation: expandCyclicMember
+requestedBlueId: 11111111111111111111111111111111111111111111#0
+providerNode:
+  peer:
+    blueId: this#1
+expectedWithoutSetContextErrorCategory: CircularSetError
+expectedWithVerifiedSetContext: success
+note: fixture harness replaces illustrative member identity with the calculated cyclic-set fixture identity

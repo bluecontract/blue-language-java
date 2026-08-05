@@ -1,0 +1,12 @@
+id: R_inherited_integer_large_text
+category: Resolution
+operation: resolve
+source:
+  type:
+    accountId:
+      type: Integer
+  accountId: "9007199254740992"
+expectedEffectiveType:
+  /accountId: Integer
+expectedValue:
+  /accountId: "9007199254740992"

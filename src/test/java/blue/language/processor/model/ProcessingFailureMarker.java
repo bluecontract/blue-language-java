@@ -2,7 +2,7 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("33kfH8pfk7F1P5zMsuK1Jm3GcSdmTXoFHKjP16DesEco")
+@TypeBlueId(ProcessorTestTypeBlueIds.PROCESSING_FAILURE_MARKER)
 public class ProcessingFailureMarker extends MarkerContract {
 
     private String code;

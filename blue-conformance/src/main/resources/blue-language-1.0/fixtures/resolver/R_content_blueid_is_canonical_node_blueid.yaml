@@ -1,0 +1,13 @@
+id: R_content_blueid_is_canonical_node_blueid
+category: Canonicalization
+operation: canonicalize
+description: Content BlueId is exactly the Node BlueId of the unique Canonical Identity Input
+source:
+  type:
+    country: PL
+    amount:
+      type: Integer
+  amount: 10
+expectedContentBlueIdEqualsCanonicalIdentityInput: true
+expectedCanonicalContainsControls: false
+note: The Source Document and complete Resolved Form are not directly substituted for the Canonical Identity Input.

@@ -1,0 +1,88 @@
+plugins {
+    id 'application'
+}
+
+def blueVersion = providers.gradleProperty('blueVersion').get()
+def stagedRepository = providers.gradleProperty('stagingRepository').get()
+def smokeReport = providers.gradleProperty('smokeReport').get()
+def artifacts = [
+        'blue-language-model',
+        'blue-language-core',
+        'blue-language-mapping',
+        'blue-language-ipfs',
+        'blue-contracts-core',
+        'blue-conformance',
+        'blue-language-java'
+]
+
+repositories {
+    maven { url = uri(stagedRepository) }
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+application {
+    mainClass = 'blue.smoke.PublishedArtifactSmoke'
+}
+
+dependencies {
+    implementation "blue.language:blue-language-java:${blueVersion}"
+    implementation "blue.language:blue-conformance:${blueVersion}"
+}
+
+artifacts.each { artifact ->
+    def configuration = configurations.create("resolve${artifact.split('-').collect { it.capitalize() }.join('')}") {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+    dependencies.add(configuration.name, "blue.language:${artifact}:${blueVersion}")
+}
+
+tasks.register('verifyResolvedCoordinates') {
+    outputs.file(smokeReport)
+    outputs.upToDateWhen { false }
+    doLast {
+        def resolved = []
+        configurations.matching { it.name.startsWith('resolveBlue') }.sort { it.name }.each { configuration ->
+            def components = configuration.incoming.resolutionResult.allComponents
+            def resolutionRoot = configuration.incoming.resolutionResult.rootComponent.get().id
+            if (components.any {
+                it.id instanceof org.gradle.api.artifacts.component.ProjectComponentIdentifier &&
+                        it.id != resolutionRoot
+            }) {
+                throw new GradleException("Project substitution leaked into ${configuration.name}")
+            }
+            def direct = components.findAll {
+                it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier &&
+                        it.id.group == 'blue.language'
+            }.collect { "${it.id.group}:${it.id.module}:${it.id.version}" }.sort()
+            if (direct.isEmpty()) {
+                throw new GradleException("No staged Blue module resolved for ${configuration.name}")
+            }
+            resolved.addAll(direct)
+        }
+        def report = file(smokeReport)
+        report.parentFile.mkdirs()
+        report.text = groovy.json.JsonOutput.toJson([
+                schema: 'blue-published-artifact-smoke/1.0',
+                resolvedCoordinates: resolved.unique().sort(),
+                valid: true
+        ]) + '\n'
+    }
+}
+
+tasks.register('publishedSmoke', JavaExec) {
+    dependsOn tasks.named('classes'), tasks.named('verifyResolvedCoordinates')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    args smokeReport
+}
+
+tasks.register('cleanPublishedSmoke') {
+    dependsOn tasks.named('clean'), tasks.named('publishedSmoke')
+    tasks.named('publishedSmoke').get().mustRunAfter tasks.named('clean')
+}

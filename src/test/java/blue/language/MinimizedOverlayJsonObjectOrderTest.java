@@ -1,13 +1,26 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.merge.Merger;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.MergeReverser;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.limits.PathLimits;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.resolve.MinimizedOverlayBuilder;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.resolve.ResolutionLimits;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -25,15 +38,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
-import static blue.language.utils.limits.Limits.NO_LIMITS;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
+import static blue.language.resolve.ResolutionLimits.NO_LIMITS;
 
 class MinimizedOverlayJsonObjectOrderTest {
 
     @Test
-    void conflictingLabelOnInheritedFixedValueIsRejected() {
+    void shouldConflictingLabelOnInheritedFixedValueIsRejected() {
+        // given
         BasicNodeProvider provider = fixedValueProvider();
         Blue blue = new Blue(provider);
         String fixedHolderType = provider.getBlueIdByName("Fixed City Holder");
@@ -43,6 +57,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "city:",
                 "  name: Location",
                 "  value: Warsaw"));
+        // when
+
+        // then
 
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,
@@ -53,7 +70,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void labelMissingFromInheritedFixedValueCanBeAddedAndColdReloaded() throws Exception {
+    void shouldLabelMissingFromInheritedFixedValueCanBeAddedAndColdReloaded() throws Exception {
+        // given
         BasicNodeProvider writerProvider = fixedValueProvider();
         Blue writer = new Blue(writerProvider);
         String holderType = writerProvider.getBlueIdByName("Unlabeled Fixed City Holder");
@@ -65,7 +83,7 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "  description: Instance city label.",
                 "  value: Warsaw"));
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
         String reorderedJson = reorderAsJsonObjectStore(writer.nodeToJson(minimized));
 
         BasicNodeProvider readerProvider = fixedValueProvider();
@@ -73,6 +91,9 @@ class MinimizedOverlayJsonObjectOrderTest {
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(reader.jsonToNode(reorderedJson));
 
         Node resolvedCity = original.resolvedRoot().getProperties().get("city");
+        // when
+
+        // then
         assertEquals("Location", resolvedCity.getName());
         assertEquals("Instance city label.",
                 resolvedCity.getDescription());
@@ -80,13 +101,17 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void inheritedPureReferenceRejectsLabelOverlay() {
+    void shouldInheritedPureReferenceRejectsLabelOverlay() {
+        // given
         BasicNodeProvider provider = fixedValueProvider();
         Blue blue = new Blue(provider);
         String referencedBlueId = provider.getBlueIdByName("Referenced City");
         Node inherited = new Node().blueId(referencedBlueId);
         Node overlay = new Node().name("Location");
         Merger merger = new Merger(blue.getMergingProcessor(), provider);
+        // when
+
+        // then
 
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,
@@ -97,7 +122,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void providerSourceValidatesItsOwnFixedLabelsBeforeReferenceExpansion() {
+    void shouldProviderSourceValidatesItsOwnFixedLabelsBeforeReferenceExpansion() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Fixed City Type",
@@ -117,6 +143,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 .name("Materializing Holder")
                 .properties("payload", new Node().schema(new Schema().minFields(1))));
         String holderId = provider.getBlueIdByName("Materializing Holder");
+        // when
+
+        // then
 
         IllegalArgumentException directFailure = assertThrows(
                 IllegalArgumentException.class,
@@ -132,7 +161,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void cyclicReferenceMaterializationUsesTheOrdinaryExpansionLabelBoundary() {
+    void shouldCyclicReferenceMaterializationUsesTheOrdinaryExpansionLabelBoundary() {
+        // given
         Node cyclicDocuments = YAML_MAPPER.readValue(String.join("\n",
                 "- name: Person",
                 "  friend:",
@@ -151,6 +181,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                         .schema(new Schema().minFields(1))));
         String holderId = provider.getBlueIdByName("Labeled Payload Holder");
         Blue blue = new Blue(provider);
+        // when
+
+        // then
 
         Node cyclic = assertDoesNotThrow(() -> blue.resolve(referenceHolder(
                 holderId, provider.getBlueIdByName("Person"))));
@@ -164,7 +197,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void inlineTypeRootLabelsDoNotBecomeInstanceRootLabelsThroughPublicMerge() {
+    void shouldInlineTypeRootLabelsDoNotBecomeInstanceRootLabelsThroughPublicMerge() {
+        // given
         Node target = new Node();
         Node source = new Node()
                 .type(new Node()
@@ -175,6 +209,9 @@ class MinimizedOverlayJsonObjectOrderTest {
         Merger merger = new Merger(new Blue().getMergingProcessor(), new BasicNodeProvider());
 
         merger.merge(target, source, NO_LIMITS);
+        // when
+
+        // then
 
         assertNull(target.getName());
         assertNull(target.getDescription());
@@ -183,7 +220,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void typedDeclarationStructureDoesNotTurnItsFieldLabelIntoAFixedValue() {
+    void shouldTypedDeclarationStructureDoesNotTurnItsFieldLabelIntoAFixedValue() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Detail Type",
@@ -206,6 +244,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "  name: Specific Item",
                 "  description: Specific label.",
                 "  field: value"));
+        // when
+
+        // then
 
         Node cold = assertDoesNotThrow(() -> blue.resolve(source.clone()));
         Node warm = assertDoesNotThrow(() -> blue.resolve(source.clone()));
@@ -217,13 +258,17 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void typeMetadataChildLabelsAreIndependentOfResolvedTypeCacheHistory() {
+    void shouldTypeMetadataChildLabelsAreIndependentOfResolvedTypeCacheHistory() {
+        // given
         BasicNodeProvider coldProvider = metadataLabelProvider();
         String derivedTypeId = coldProvider.getBlueIdByName("Derived Entry Type");
         Blue coldBlue = new Blue(coldProvider);
         Node cold = coldBlue.resolve(listWithItemType(derivedTypeId));
 
         BasicNodeProvider warmProvider = metadataLabelProvider();
+        // when
+
+        // then
         assertEquals(derivedTypeId, warmProvider.getBlueIdByName("Derived Entry Type"));
         Blue warmBlue = new Blue(warmProvider);
         warmBlue.resolve(new Node().type(new Node().blueId(derivedTypeId)));
@@ -235,9 +280,37 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void declarationLabelProvenanceHonorsPartialResolutionLimits() {
+    void shouldTypeMetadataListChildrenPreserveDerivedLabelsWithoutTreatingRequiredDeclarationsAsValues() {
+        // given
+        BasicNodeProvider coldProvider = metadataListLabelProvider();
+        String derivedTypeId = coldProvider.getBlueIdByName("Derived Metadata List Type");
+        Blue coldBlue = new Blue(coldProvider);
+
+        BasicNodeProvider warmProvider = metadataListLabelProvider();
+        String warmDerivedTypeId =
+                warmProvider.getBlueIdByName("Derived Metadata List Type");
+        Blue warmBlue = new Blue(warmProvider);
+        warmBlue.resolve(listWithItemType(warmDerivedTypeId));
+
+        // when
+        Node cold = coldBlue.resolve(listWithItemType(derivedTypeId));
+        Node warm = warmBlue.resolve(listWithItemType(warmDerivedTypeId));
+
+        // then
+        Node coldEntry = cold.getAsNode("/itemType/entries").getItems().get(0);
+        Node requiredDeclaration = coldEntry.getAsNode("/requiredField");
+        assertEquals(derivedTypeId, warmDerivedTypeId);
+        assertEquals("Derived Entry", coldEntry.getName());
+        assertNull(requiredDeclaration.getValue());
+        assertEquals(Boolean.TRUE, requiredDeclaration.getSchema().getRequiredValue());
+        assertEquals(coldBlue.nodeToJson(cold), warmBlue.nodeToJson(warm));
+    }
+
+    @Test
+    void shouldDeclarationLabelProvenanceHonorsPartialResolutionLimits() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
-        String missingTypeId = BlueIdCalculator.calculateBlueId(
+        String missingTypeId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Unavailable Nested Type"));
         provider.addSingleDocs(String.join("\n",
                 "name: Partially Resolved Type",
@@ -260,9 +333,12 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "visible:",
                 "  name: Specific Value",
                 "  value: shown"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(
-                source, PathLimits.withSinglePath("/visible")));
+                source, ResolutionLimits.withSinglePath("/visible")));
 
         assertEquals("Specific Value", resolved.getProperties().get("visible").getName());
         assertEquals("shown", resolved.getAsText("/visible"));
@@ -271,7 +347,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void partialResolutionKeepsFixedLabelSemanticsForTheOverriddenSubtree() {
+    void shouldPartialResolutionKeepsFixedLabelSemanticsForTheOverriddenSubtree() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Detail With Fixed Child",
@@ -294,6 +371,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "item:",
                 "  name: Specific Item",
                 "  visible: x"));
+        // when
+
+        // then
 
         IllegalArgumentException fullFailure = assertThrows(
                 IllegalArgumentException.class,
@@ -301,7 +381,7 @@ class MinimizedOverlayJsonObjectOrderTest {
         IllegalArgumentException limitedFailure = assertThrows(
                 IllegalArgumentException.class,
                 () -> blue.resolve(
-                        source.clone(), PathLimits.withSinglePath("/item/visible")));
+                        source.clone(), ResolutionLimits.withSinglePath("/item/visible")));
 
         assertEquals(BlueLanguageErrorCategory.FixedValueConflict,
                 BlueLanguageErrorClassifier.classify(fullFailure));
@@ -310,7 +390,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void parentLabelClassificationResolvesRelevantNestedTypesBeyondTheProjection() {
+    void shouldParentLabelClassificationResolvesRelevantNestedTypesBeyondTheProjection() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Fixed Nested Value",
@@ -344,11 +425,14 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "item:",
                 "  name: Specific Item",
                 "  visible: x"));
+        // when
+
+        // then
 
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,
                 () -> blue.resolve(
-                        source, PathLimits.withSinglePath("/item/visible")));
+                        source, ResolutionLimits.withSinglePath("/item/visible")));
 
         assertEquals(BlueLanguageErrorCategory.FixedValueConflict,
                 BlueLanguageErrorClassifier.classify(failure));
@@ -356,7 +440,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void unrelatedLabeledPathDoesNotPreclassifyAnotherTypeOverride() {
+    void shouldUnrelatedLabeledPathDoesNotPreclassifyAnotherTypeOverride() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Detail Declaration",
@@ -383,6 +468,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 .properties("other", new Node().name("Other Value").value("y"));
 
         Blue cold = new Blue(provider);
+        // when
+
+        // then
         Node coldResolved = assertDoesNotThrow(() -> cold.resolve(source.clone()));
 
         Blue warm = new Blue(provider);
@@ -394,7 +482,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void sharedAuthoredNodeIdentityDoesNotDropASecondLabelPath() {
+    void shouldSharedAuthoredNodeIdentityDoesNotDropASecondLabelPath() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Shared Detail Declaration",
@@ -419,6 +508,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 .type(new Node().blueId(holderTypeId))
                 .properties("left", sharedOverlay)
                 .properties("right", sharedOverlay);
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> new Blue(provider).resolve(source));
 
@@ -427,7 +519,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void positionalListLabelUsesItsEffectiveTargetPath() {
+    void shouldPositionalListLabelUsesItsEffectiveTargetPath() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Positional Detail Declaration",
@@ -458,6 +551,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "    - $pos: 2",
                 "      name: Specific Third",
                 "      field: x"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(source));
 
@@ -467,7 +563,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void publicMergeUsesTheMaterializedTargetsTypeProvenance() {
+    void shouldPublicMergeUsesTheMaterializedTargetsTypeProvenance() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Public Merge Detail",
@@ -486,6 +583,9 @@ class MinimizedOverlayJsonObjectOrderTest {
         Node overlay = new Node().properties("item", new Node()
                 .name("Specific Item")
                 .properties("field", new Node().value("x")));
+        // when
+
+        // then
 
         assertDoesNotThrow(() -> new Merger(
                 blue.getMergingProcessor(), provider).merge(target, overlay, NO_LIMITS));
@@ -495,7 +595,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void publicMergeDoesNotRelabelMaterializedInstancePayload() {
+    void shouldPublicMergeDoesNotRelabelMaterializedInstancePayload() {
+        // given
         BasicNodeProvider provider = publicMergeProvider();
         String holderTypeId = provider.getBlueIdByName("Public Merge Holder");
         Blue blue = new Blue(provider);
@@ -507,6 +608,9 @@ class MinimizedOverlayJsonObjectOrderTest {
         Node overlay = new Node().properties("item", new Node()
                 .name("Second Item")
                 .properties("field", new Node().value("x")));
+        // when
+
+        // then
 
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,
@@ -518,7 +622,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void deepRelevantDeclarationClassificationDoesNotOverflowTheVmStack() {
+    void shouldDeepRelevantDeclarationClassificationDoesNotOverflowTheVmStack() {
+        // given
         Node deepDeclaration = new Node().type(new Node().blueId(
                 TEXT_TYPE_BLUE_ID));
         for (int depth = 0; depth < 30_000; depth++) {
@@ -530,21 +635,28 @@ class MinimizedOverlayJsonObjectOrderTest {
         Node source = new Node()
                 .type(holderType)
                 .properties("item", new Node().name("Specific Item"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> new Blue().resolve(
-                source, PathLimits.withSinglePath("/item")));
+                source, ResolutionLimits.withSinglePath("/item")));
 
         assertEquals("Specific Item", resolved.getAsNode("/item").getName());
     }
 
     @Test
-    void failedPublicMergeProvenanceSetupDoesNotPoisonMergerReuse() {
-        String missingTypeId = BlueIdCalculator.calculateBlueId(
+    void shouldFailedPublicMergeProvenanceSetupDoesNotPoisonMergerReuse() {
+        // given
+        String missingTypeId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Unavailable Public Merge Type"));
         Merger merger = new Merger(new Blue().getMergingProcessor(), blueId -> null);
         Node invalidTarget = new Node().type(new Node().blueId(missingTypeId));
         Node labeledOverlay = new Node().properties(
                 "item", new Node().name("Specific Item"));
+        // when
+
+        // then
 
         assertThrows(IllegalArgumentException.class,
                 () -> merger.merge(invalidTarget, labeledOverlay, NO_LIMITS));
@@ -563,7 +675,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void inlineTypePositionalLayerUsesTheEffectiveTargetPath() {
+    void shouldInlineTypePositionalLayerUsesTheEffectiveTargetPath() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Inline Position Detail",
@@ -600,6 +713,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "    - $pos: 2",
                 "      name: Illegal Third",
                 "      field: x"));
+        // when
+
+        // then
 
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,
@@ -610,12 +726,16 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void nearestFixedLabelRemainsFixedAcrossColdAndWarmTypeResolution() {
+    void shouldNearestFixedLabelRemainsFixedAcrossColdAndWarmTypeResolution() {
+        // given
         BasicNodeProvider provider = layeredLabelProvider(false);
         String derivedTypeId = provider.getBlueIdByName("Derived Item Holder");
         Node source = conflictingLayeredLabelSource(derivedTypeId);
 
         Blue cold = new Blue(provider);
+        // when
+
+        // then
         IllegalArgumentException coldFailure = assertThrows(
                 IllegalArgumentException.class,
                 () -> cold.resolve(source.clone()));
@@ -633,12 +753,16 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void descendantDeclarationDoesNotEraseInheritedFixedLabel() {
+    void shouldDescendantDeclarationDoesNotEraseInheritedFixedLabel() {
+        // given
         BasicNodeProvider provider = layeredLabelProvider(true);
         String derivedTypeId = provider.getBlueIdByName("Derived Item Holder");
         Node source = conflictingLayeredLabelSource(derivedTypeId);
 
         Blue cold = new Blue(provider);
+        // when
+
+        // then
         IllegalArgumentException coldFailure = assertThrows(
                 IllegalArgumentException.class,
                 () -> cold.resolve(source.clone()));
@@ -656,11 +780,15 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void declarationOnlyContractsWrapperLabelCanBeOverridden() {
+    void shouldDeclarationOnlyContractsWrapperLabelCanBeOverridden() {
+        // given
         BasicNodeProvider provider = contractsProvider(true);
         Blue blue = new Blue(provider);
         Node source = contractsInstance(
                 blue, provider.getBlueIdByName("Labeled Contracts Holder"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(source));
 
@@ -669,7 +797,8 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void contractsWrapperWithFixedContentCannotBeRelabeled() {
+    void shouldContractsWrapperWithFixedContentCannotBeRelabeled() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Fixed Contracts Holder",
@@ -683,6 +812,9 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "contracts:",
                 "  name: Instance Contracts",
                 "  action: fixed"));
+        // when
+
+        // then
 
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,
@@ -693,26 +825,34 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void absentContractsWrapperLabelCanBeSuppliedByTheInstance() {
+    void shouldAbsentContractsWrapperLabelCanBeSuppliedByTheInstance() {
+        // given
         BasicNodeProvider provider = contractsProvider(false);
         Blue blue = new Blue(provider);
         Node source = contractsInstance(
                 blue, provider.getBlueIdByName("Unlabeled Contracts Holder"));
 
         Node resolved = blue.resolve(source);
+        // when
+
+        // then
 
         assertEquals("Instance Contracts", resolved.getContracts().getName());
         assertEquals("go", resolved.getContracts().getAsText("/action"));
     }
 
     @Test
-    void publicMergeCanRelabelADeclarationOnlyContractsWrapper() {
+    void shouldPublicMergeCanRelabelADeclarationOnlyContractsWrapper() {
+        // given
         Node target = new Node().contracts(new Node()
                 .name("First Contracts")
                 .properties("action", new Node().type(new Node().blueId(TEXT_TYPE_BLUE_ID))));
         Node overlay = new Node().contracts(new Node()
                 .name("Second Contracts")
                 .properties("action", new Node().value("go")));
+        // when
+
+        // then
 
         assertDoesNotThrow(() -> new Merger(
                 new Blue().getMergingProcessor(), new BasicNodeProvider())
@@ -723,13 +863,17 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void publicMergeRejectsRelabelingAContractsWrapperWithFixedContent() {
+    void shouldPublicMergeRejectsRelabelingAContractsWrapperWithFixedContent() {
+        // given
         Node target = new Node().contracts(new Node()
                 .name("First Contracts")
                 .properties("action", new Node().value("fixed")));
         Node overlay = new Node().contracts(new Node()
                 .name("Second Contracts")
                 .properties("action", new Node().value("fixed")));
+        // when
+
+        // then
 
         IllegalArgumentException failure = assertThrows(
                 IllegalArgumentException.class,
@@ -741,12 +885,16 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void publicMergeCanAddAMissingContractsWrapperLabel() {
+    void shouldPublicMergeCanAddAMissingContractsWrapperLabel() {
+        // given
         Node target = new Node().contracts(new Node()
                 .properties("action", new Node().type(new Node().blueId(TEXT_TYPE_BLUE_ID))));
         Node overlay = new Node().contracts(new Node()
                 .name("Instance Contracts")
                 .properties("action", new Node().value("go")));
+        // when
+
+        // then
 
         assertDoesNotThrow(() -> new Merger(
                 new Blue().getMergingProcessor(), new BasicNodeProvider())
@@ -757,11 +905,15 @@ class MinimizedOverlayJsonObjectOrderTest {
     }
 
     @Test
-    void minimizedTypedContractsRetainIdentityAcrossJsonObjectKeyOrdering() throws Exception {
+    void shouldMinimizedTypedContractsRetainIdentityAcrossJsonObjectKeyOrdering() throws Exception {
+        // given
         BasicNodeProvider writerProvider = provider();
         Blue writer = new Blue(writerProvider);
         ResolvedSnapshot original = writer.resolveToSnapshot(source(writer, writerProvider));
-        Node minimized = new MergeReverser().reverseToMinimizedOverlay(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        // when
+
+        // then
         assertEquals("Value to subtract",
                 original.resolvedRoot().getAsNode("/contracts/decrement/request").getDescription());
         assertEquals("Value to subtract",
@@ -901,6 +1053,29 @@ class MinimizedOverlayJsonObjectOrderTest {
                 "field:",
                 "  name: Derived Field",
                 "  description: Derived label."));
+        return provider;
+    }
+
+    private static BasicNodeProvider metadataListLabelProvider() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(String.join("\n",
+                "name: Base Metadata List Type",
+                "entries:",
+                "  type: List",
+                "  items:",
+                "    - name: Base Entry",
+                "      requiredField:",
+                "        type: Text",
+                "        schema:",
+                "          required: true"));
+        String baseTypeId = provider.getBlueIdByName("Base Metadata List Type");
+        provider.addSingleDocs(String.join("\n",
+                "name: Derived Metadata List Type",
+                "type:",
+                "  blueId: " + baseTypeId,
+                "entries:",
+                "  items:",
+                "    - name: Derived Entry"));
         return provider;
     }
 

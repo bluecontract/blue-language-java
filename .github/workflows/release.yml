@@ -44,12 +44,27 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
-    
-      - name: Execute Gradle build
-        run: >-
-          ./gradlew clean build identityDifferentialTest
-          patchSequenceDifferentialTest memoryIntegrationTest cacheLifecycleTest
-          jmhClasses sourceReleaseArchive
+
+      - name: Configure reproducible build timestamp
+        run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+
+      - name: Execute clean Gradle build
+        run: ./gradlew clean build
+
+      - name: Execute RC verification
+        run: ./gradlew rcVerify
+
+      - name: Verify reproducible source release
+        run: |
+          mapfile -t source_archives < <(find build/release -maxdepth 1 -type f -name '*-source-release.zip')
+          test "${#source_archives[@]}" -eq 1
+          first_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
+          ./gradlew sourceReleaseArchive --rerun-tasks
+          second_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
+          test "$first_sha" = "$second_sha"
+
+      - name: Verify final Language 1.0 and Contracts kernel 1.0 API baseline
+        run: ./gradlew verifyFinalApiBaseline
     
       - name: Execute Gradle publish
         run: ./gradlew publish
@@ -70,7 +85,9 @@ jobs:
         with:
           name: artifacts
           path: |
-            build/libs
-            build/publications
+            blue-*/build/libs
+            blue-*/build/publications
+            build/staging-deploy
             build/release
+            build/reports
             build/jreleaser

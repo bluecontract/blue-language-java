@@ -1,13 +1,24 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
-import blue.language.utils.limits.Limits;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.resolve.ResolutionLimits;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -16,14 +27,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TypeAssignerTest {
 
     @Test
-    public void testPropertySubtype() throws Exception {
+    public void shouldAssignPropertySubtype() throws Exception {
+        // given
         Node a = new Node().name("A");
         Node b = new Node().name("B").type(new Node().blueId(calculateBlueId(a)));
         Node c = new Node().name("C").type(new Node().blueId(calculateBlueId(b)));
@@ -49,13 +61,16 @@ public class TypeAssignerTest {
 
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
+        // when
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), ResolutionLimits.NO_LIMITS);
 
+        // then
         assertEquals("C", node.getProperties().get("a").getType().getName());
     }
 
     @Test
-    public void testEmptyTypeIsInherited() throws Exception {
+    public void shouldInheritEmptyType() throws Exception {
+        // given
         Node a = new Node().name("A");
         Node b = new Node().name("B").type(new Node().blueId(calculateBlueId(a)));
         Node c = new Node().name("C").type(new Node().blueId(calculateBlueId(b)));
@@ -81,15 +96,18 @@ public class TypeAssignerTest {
 
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
+        // when
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), ResolutionLimits.NO_LIMITS);
 
+        // then
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
 
 
     @Test
-    public void testPropertySubtypeOnYamlDocsWithNoBlueIds() throws Exception {
+    public void shouldAssignPropertySubtypeFromYamlDocumentsWithoutBlueIds() throws Exception {
 
+        // given
         String a = "name: A";
 
         String b = "name: B\n" +
@@ -130,14 +148,17 @@ public class TypeAssignerTest {
         );
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
+        // when
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
 
+        // then
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
 
     @Test
-    public void testDifferentSubtypeVariations2() throws Exception {
+    public void shouldResolveDeepYamlSubtypeChain() throws Exception {
 
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String generalVoucher = "name: General Hattori Hanzo Voucher\n" +
@@ -174,8 +195,10 @@ public class TypeAssignerTest {
 
         Node source = nodeProvider.findNodeByName("My Voucher").orElse(null);
 
+        // when
         Node node = merger.resolve(source);
 
+        // then
         assertEquals("+1234567890", node.getProperties().get("details")
                 .getProperties().get("customerSupport")
                 .getProperties().get("phone").getValue());

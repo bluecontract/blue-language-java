@@ -2,7 +2,7 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("A8kbVbinjJAPFnbaQgBRCDU6h64xydTHe69kPakvgjbU")
+@TypeBlueId(ProcessorTestTypeBlueIds.CUT_OFF_PROBE)
 public class CutOffProbe extends HandlerContract {
 
     private boolean emitBefore;

@@ -1,242 +1,206 @@
-# Processor Contract Matching
+# Processor contract matching
 
-This document describes the Java processor base that contract-specific modules
-should build on. The goal is to keep `blue-language-java` responsible for the
-deterministic processor runtime while letting concrete contract packages define
-their own channel and handler semantics.
+This document describes the Contracts 1.0 Java extension points. The semantic
+operation has exactly two inputs:
 
-## Core Rule
+```text
+PROCESS(Root, event) -> ProcessResult
+```
 
-Channel and handler matching is contract-specific.
+There is one authoritative Root. A caller cannot submit a target path,
+delivery occurrence, child-processing session, child-commit envelope, or
+public effect log.
 
-The engine owns deterministic orchestration:
+## Exact external-delivery evidence
 
-- scope traversal and embedded-scope isolation
-- channel ordering and handler ordering
-- checkpoints and duplicate gating
-- patch application, cascades, and generalization
-- gas accounting
-- lifecycle delivery and termination
-- must-understand failures for unsupported contract types
+External preselection is environmental evidence, not a third semantic input.
+An `ExternalDeliveryPlanDeriver` reads a revision-complete feeder snapshot for
+the exact Root/event pair and returns an `ExternalDeliveryPlan`. Each
+`ExternalDeliverySnapshot` fixes:
 
-Concrete contract processors own:
+- scope path and raw channel key;
+- channel order;
+- ordered source-contribution BlueIds and effective type BlueId;
+- immutable subscription keys;
+- checkpoint domain and subject BlueIds;
+- activation interval.
 
-- whether a channel accepts an incoming event
-- how a channel turns that event into the event delivered to handlers
-- how a handler derives its channel when the contract type supports an indirect
-  binding
-- whether a handler should run for a channelized event
-- handler execution behavior
-- event identity/newness when the channel has stronger rules than canonical
-  event signatures
+The processor binds this plan to the exact Root BlueId, event BlueId, runtime
+registry identity, and equal managed/indexed revisions. It independently
+revalidates every selected occurrence before execution. Missing, stale, or
+inconsistent evidence produces a noncommitting result. Hosts that cannot prove
+the complete external surface must use `PROCESS_ATTEMPT` and acquire the exact
+resources before retrying.
 
-This is intentional. A Conversation operation, a timeline channel, a document
-update channel, and a future payment channel do not all have the same matching
-logic.
+An exact empty plan is meaningful. It must be explicitly certified with
+`ExternalDeliveryPlan.Builder.exactRuntimeState()`; absence of a plan is not
+evidence that no channel matches.
 
 ## Channel SPI
 
-`ChannelProcessor` now has a first-class evaluation result:
+`ChannelProcessor.evaluate(...)` performs read-only complete acceptance for
+the already preselected occurrence:
 
-```java
-ChannelEvaluation evaluate(T contract, ChannelEvaluationContext context)
+```text
+ChannelEvaluation evaluate(
+        T contract,
+        ChannelEvaluationContext context)
 ```
 
-`ChannelEvaluation` contains:
+It returns either `ChannelEvaluation.noMatch()` or one accepted, optionally
+channelized event with an optional event identity. The evaluation cannot
+manufacture more delivery occurrences.
 
-- `matches`
-- optional channelized event
-- optional event id
-- optional multi-delivery list
+Application channel processors that can appear on the external subscription
+surface must also expose deterministic immutable functions through
+`externalSubscriptionFunctions()`. Those functions derive the finite
+subscription-key set, checkpoint domain, and activation data used by
+preselection and changed-surface validation. A registered external type
+without supported functions fails closed.
 
-Channels can also reject stale non-duplicate events after checkpoint lookup:
+Context-aware functions can consult immutable same-scope channels through
+`ExternalChannelFunctionContext`. `member(key)` and `members()` resolve exact
+headers and record direct/whole-surface dependencies. Aggregate types such as
+All-Timelines should use `membersByEffectiveType(timelineTypeBlueId)`: it
+captures that exact type-family membership, including an empty selection,
+without resolving peer aggregate or unrelated channel types. Member and
+type-family identities are included in checkpoint-domain derivation,
+`SubscriptionDelta.Entry`, retained-interval invalidation, and sparse feeder
+evidence verification.
 
-```java
-boolean isNewerEvent(T contract, ChannelCheckpointContext context)
-```
+Event functions can use `context.matchesPattern(candidate, pattern)` for the
+same frozen structural/type matching semantics across inline nodes and pure
+references. Each deterministic function-evaluation pass gets an independent
+matcher whose only non-core materialization path is the captured
+`ProcessingSnapshotManager` verified exact-reference boundary. Nested selected
+member evaluation shares that pass-local matcher. Closing the pass clears the
+matcher caches and severs its manager-backed materializer; retained contexts
+reject later matching calls. Provider failures and identity mismatches
+propagate; they are not cached as `false`. Header functions, including their
+event-time consistency recomputation, cannot invoke the matcher directly or
+through `ExternalChannelMemberSnapshot.evaluate(...)`. The strict callback
+supplies exact canonical definitions rather than a fully
+preprocessed/merged Language document; exact canonical type lineage is
+followed, but definitions requiring broader resolution remain outside this
+event-scoped primitive.
 
-The default returns `true`. Contract-specific channels should override this
-when event order is stronger than "not the same event", for example timeline
-sequence numbers or ledger heights.
+Event functions can also use
+`context.materializeExactReference(reference)` to obtain one exact direct
+fragment through the same verified, event-scoped snapshot boundary. The
+default context-aware `eventKeys(...)` uses this operation for referenced
+`subscriptionKey` and `subscriptionKeys` fragments. Ambient and header-time
+materialization remain forbidden; application-specific registry projections
+are not defined by the generic kernel.
 
-The compatibility path still supports processors that only implement:
+After accepted-new classification,
+`handlerChannelKey(...)` may select a different frozen same-scope Handler
+channel and `logicalDeliveryKey(...)` may coalesce multiple fresh accepted
+sources with the same exact payload. Defaults return the raw source key.
+Handlers execute once per logical group; every participating raw source keeps
+its own checkpoint, committed only after complete success. The target is not
+evaluated or checkpointed as another external source unless it independently
+appeared in verified delivery evidence.
 
-```java
-boolean matches(T contract, ChannelEvaluationContext context)
-String eventId(T contract, ChannelEvaluationContext context)
-```
-
-but new processors should implement `evaluate(...)` directly.
-
-Composite-style channels can return multiple `ChannelDelivery` entries from
-`ChannelEvaluation.matchDeliveries(...)`. Each delivery has its own handler
-event, optional event id, optional checkpoint key, and optional precomputed
-`shouldProcess` decision. This keeps the engine generic while allowing
-contract-specific fan-out channels.
-
-`ChannelDelivery` always requires a non-null handler event. Returning a matched
-evaluation with no usable deliveries is treated as no match. This makes
-fan-out deterministic: a composite channel either provides concrete deliveries
-or it does not match.
-
-## Immutable Channel Context
-
-`ChannelEvaluationContext.event()` returns a clone. Mutating it does not affect
-the event delivered to handlers.
-
-To normalize or enrich an event, return it:
-
-```java
-public ChannelEvaluation evaluate(MyChannel contract, ChannelEvaluationContext context) {
-    Node event = context.event();
-    if (!accepts(event)) {
-        return ChannelEvaluation.noMatch();
-    }
-    event.properties("kind", new Node().value("channelized"));
-    return ChannelEvaluation.match(event, eventId(event));
-}
-```
-
-This matches the processor model: events passed through the runtime are
-effectively read-only unless a channel explicitly returns a new channelized
-event.
-
-`ChannelCheckpointContext` is also read-only. It exposes the channelized event,
-the current event signature, the previous stored channel event, and the
-previous stored signature. It does not let channel processors mutate checkpoint
-state directly.
-
-`ChannelEvaluationContext` also exposes same-scope channel bindings:
-
-```java
-String bindingKey()
-Set<String> channelKeys()
-ChannelContract channel(String key)
-ChannelProcessor<? extends ChannelContract> channelProcessor(String key)
-ChannelEvaluationContext forBindingKey(String bindingKey)
-```
-
-This is the base support needed by composite channels. A channel such as
-`Conversation/Composite Timeline Channel` can read its child channel contracts,
-ask the registry for the child processors, evaluate them with
-`forBindingKey(childKey)`, and then return one or more `ChannelDelivery`
-entries. The runtime still owns checkpoints, handler dispatch, and gas
-accounting.
+The pre-1.0 `ChannelDelivery` carrier and
+`ChannelEvaluation.matchDeliveries(...)` multi-delivery API have been removed.
+External occurrences can enter the kernel only through verified,
+revision-bound `ExternalDeliveryPlan` evidence.
 
 ## Handler SPI
 
-`HandlerProcessor` now has a channel derivation hook:
+`HandlerProcessor` retains three contract-specific hooks:
 
-```java
-String deriveChannel(T contract, HandlerRegistrationContext context)
+```text
+String deriveChannel(
+        T contract,
+        HandlerRegistrationContext context)
+
+boolean matches(
+        T contract,
+        HandlerMatchContext context)
+
+void execute(
+        T contract,
+        ProcessorExecutionContext context)
 ```
 
-The default returns `null`. The loader first uses an explicit `channel`; when it
-is absent, it calls `deriveChannel(...)`. The derived value must name a
-registered channel in the same `contracts` map. This is the base hook needed by
-contract types such as `Conversation/Sequential Workflow Operation`, where the
-handler points at an `Operation` and the operation declares the channel.
+The loader prefers an explicit handler channel and otherwise invokes
+`deriveChannel(...)`. The result must identify a channel in the same effective
+contracts map. Matching is read-only and runs against the frozen delivery
+snapshot. Execution uses `ProcessorExecutionContext`, so patches, Root
+emissions, internal events, termination requests, gas, and runtime child
+ledgers remain under the processor's atomic run state.
 
-`HandlerRegistrationContext` exposes the current scope path, handler key, the
-same-scope contract keys, each contract's type BlueId, frozen contract nodes,
-mutable copies of contract nodes, and typed conversion through
-`contractAs(key, Class<T>)`.
+Runtime ledger submission is the exception to application-effect rollback:
+`submitRuntimeGasLedger(...)` immediately admits one live-bounded named child
+ledger to the invocation meter before buffered effects are applied. A later
+failure discards patches, events, termination, markers, checkpoints, and
+subscription changes, but reports that admitted gas and its ordered trace.
 
-`HandlerProcessor` also has a matching hook:
+`ContractMatchingService` supplies the shared frozen event-pattern matcher,
+including identity, structural, schema, list, dictionary, primitive-scalar,
+and provider-backed reference/type matching.
 
-```java
-boolean matches(T contract, HandlerMatchContext context)
-```
+## Execution order
 
-The default implementation returns `true`. This is deliberate: the base
-`Handler` contract does not define one universal matching strategy. Contract
-packages can opt in to shared shape/type matching:
+For a verified external occurrence the processor:
 
-```java
-public boolean matches(MyHandler contract, HandlerMatchContext context) {
-    return context.matchesEventPattern(contract.getEvent());
-}
-```
+1. revalidates the immutable occurrence and activation interval;
+2. performs channel preselection and complete acceptance read-only;
+3. freezes payload, checkpoint domain, checkpoint subject, Handler target, and
+   logical-delivery identity;
+4. rejects stale delivery before initialization;
+5. groups fresh accepted sources by same-scope logical-delivery identity and
+   validates target/payload agreement;
+6. pre-admits matching target-handler bodies;
+7. initializes the participating Root-to-target closure top-down;
+8. executes each logical delivery once;
+9. writes every participating source checkpoint only after complete success.
 
-`HandlerMatchContext` exposes:
+The checkpoint subject is an exact node. A runtime-neutral ordered-stream
+Channel can freeze an inline minimal `{stream, sequence}` subject and compare
+`ChannelCheckpointContext.currentSubject()` with the exact prior
+`lastEvent()` in `isNewerEvent(...)`. Their BlueIds are available from
+`eventSignature()` and `lastEventSignature()`. The feeder `eventOrderKey`
+orders occurrence activation; it is not a replacement for the source
+Channel's own sequence-newness rule. Composite functions can delegate the
+selected member's subject unchanged.
 
-- scope path
-- immutable event clone
-- frozen event view
-- markers
-- `matchesEventPattern(Node pattern)`
+Triggered and embedded-node events use the invocation-local deterministic
+queue. Root emissions are appended to `ProcessResult.events` immediately and
+also participate in local delivery. Non-Root emissions remain internal unless
+Root explicitly emits them.
 
-Handlers that do not match are skipped before execution.
+## Changed subscription surface
 
-## Shared Event Pattern Matcher
+Before commit, `SubscriptionSurfaceValidator` compares affected branches of
+the exact input and tentative Root and constructs a deterministic
+`SubscriptionDelta`. Validation covers effective channels, embedded paths,
+present child objects, ancestry cycles, portable limits, immutable
+subscription functions, activation data, source contributions, and checkpoint
+domains. Persistent index storage and feeder queries belong to the host, not
+this repository.
 
-`ContractMatchingService` is the shared event-pattern matcher. It wraps the
-frozen matcher and supports:
+Hosts that persist Root revisions and the external subscription index should
+use `processDocumentForPlatformCommit(...)`. It returns a
+`PlatformProcessingResult` containing the ordinary semantic
+`DocumentProcessingResult` and a separate `PlatformCommitCompanion`. The
+companion binds the expected Root identity and revision, event identity and
+order key, resulting revision, and the exact validator-produced
+`SubscriptionDelta`. These values are committed together with compare-and-swap;
+the companion is platform metadata, not a sixth `ProcessResult` field or a
+public effect log. Rejected, stale, and already-terminated deliveries carry
+progress-only companions and never carry a subscription delta.
 
-- pure `blueId` identity checks
-- shape/property matching
-- schema checks
-- list and dictionary payload matching
-- untyped programmatic scalar events matching core primitive patterns
-- optional use of a `Blue` instance for provider-backed reference/type lookups
+## Atomic failure behavior
 
-When `DocumentProcessor` is created through `Blue`, the matching service is
-provider-backed. Standalone `DocumentProcessor` instances still support local
-frozen matching, but cannot resolve unknown external references unless a
-matching service with `Blue` is supplied.
+All patches, markers, checkpoints, events, termination requests, and
+subscription changes are tentative. A deterministic runtime, evidence,
+portable-limit, gas, or subscription-surface failure returns the exact input
+Root and no Root events. Gas already admitted to the live invocation meter,
+including a submitted runtime child ledger, remains in the total and ordered
+trace. Runtime failure never commits a fatal marker or fatal lifecycle event.
 
-## Runtime Flow
-
-External event processing is now:
-
-1. Load the scope contract bundle.
-2. For each non-processor-managed channel in deterministic order:
-   - call `ChannelProcessor.evaluate(...)`
-   - skip if no match
-   - use returned deliveries, returned channelized event, or raw event
-   - apply checkpoint duplicate gating against the incoming external event
-   - call `ChannelProcessor.isNewerEvent(...)`
-   - run only handlers whose `HandlerProcessor.matches(...)` returns true
-   - persist the incoming external event after successful channel processing
-3. Processor-managed channels still route internally:
-   - lifecycle
-   - document update
-   - triggered events
-   - embedded-node bridges
-
-All handler execution still goes through `ProcessorExecutionContext`, so patch
-boundaries, gas, emissions, termination, and snapshot updates remain centralized.
-
-## What blue-contract-java Should Implement
-
-`blue-contract-java` should register processors for repository contract types,
-for example:
-
-- `Conversation/Timeline Channel`
-- `Conversation/Operation`
-- `Conversation/Sequential Workflow Operation`
-- `Conversation/Update Document`
-- `Conversation/JavaScript Code`
-
-For operation/workflow contracts, channel binding should be derived by that
-handler processor through `deriveChannel(...)`. The engine only needs the final
-handler binding to a channel key.
-
-## Tests Covering This Base
-
-The current test suite covers:
-
-- original external events being stored in checkpoints while channelized events
-  are delivered to handlers
-- multi-delivery channel evaluation with independent checkpoint keys
-- same-scope composite channel evaluation through `ChannelEvaluationContext`
-- event ids overriding canonical checkpoint signatures
-- channel-specific stale event rejection through `isNewerEvent`
-- handler channel derivation from another same-scope contract
-- channel context mutation being ignored unless returned in `ChannelEvaluation`
-- contract-specific handler matching with `HandlerMatchContext`
-- programmatic untyped scalar events matching core primitive patterns
-- existing processor-managed channels and embedded/triggered/lifecycle flows
-
-This gives the next project a stable base: implement repository-specific
-contracts without changing the processor orchestration rules again.
+For the complete status matrix, diagnostic fields, detailed explanations of
+portable-limit and subscription-surface failures, and host retry guidance, see
+[Processor results, diagnostics, and recovery](processor-results-diagnostics-and-recovery.md).

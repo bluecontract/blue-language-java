@@ -2,8 +2,8 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.limits.PathLimits;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.resolve.ResolutionLimits;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Scope;
@@ -36,7 +36,7 @@ public class SchemaValidationResolutionBenchmark {
     private Node warmReferenceTemplate;
     private Blue pathLimitedBlue;
     private Node pathLimitedTemplate;
-    private ThreadLocal<PathLimits> pathLimits;
+    private ThreadLocal<ResolutionLimits> pathLimits;
     private Blue alternatingSnapshotBlue;
     private Node directSnapshotTemplate;
     private Node referencedSnapshotTemplate;
@@ -62,7 +62,10 @@ public class SchemaValidationResolutionBenchmark {
         for (int index = 0; index < 100; index++) {
             allowedPaths.add("/field" + index);
         }
-        pathLimits = ThreadLocal.withInitial(() -> new PathLimits(allowedPaths, 8));
+        pathLimits = ThreadLocal.withInitial(() -> ResolutionLimits.builder()
+                .addPaths(allowedPaths)
+                .setMaxDepth(8)
+                .build());
 
         Fixture dense = constrainedDocument(512, 512);
         denseBlue = dense.blue;
@@ -141,12 +144,12 @@ public class SchemaValidationResolutionBenchmark {
     }
 
     @Benchmark
-    public blue.language.snapshot.ResolvedSnapshot sparseResolveToSnapshot() {
+    public blue.language.merge.ResolvedSnapshot sparseResolveToSnapshot() {
         return sparseBlue.resolveToSnapshot(sparseTemplate.clone());
     }
 
     @Benchmark
-    public blue.language.snapshot.ResolvedSnapshot alternatingEquivalentDirectAndReferencedSnapshots() {
+    public blue.language.merge.ResolvedSnapshot alternatingEquivalentDirectAndReferencedSnapshots() {
         Node source = (alternatingSnapshotOrder.getAndIncrement() & 1) == 0
                 ? directSnapshotTemplate
                 : referencedSnapshotTemplate;
@@ -154,7 +157,7 @@ public class SchemaValidationResolutionBenchmark {
     }
 
     @Benchmark
-    public blue.language.snapshot.ResolvedSnapshot alternatingEquivalentNestedReferenceAndMaterializedSnapshots() {
+    public blue.language.merge.ResolvedSnapshot alternatingEquivalentNestedReferenceAndMaterializedSnapshots() {
         Node source = (alternatingNestedSnapshotOrder.getAndIncrement() & 1) == 0
                 ? nestedMaterializedSnapshotTemplate
                 : nestedReferencedSnapshotTemplate;

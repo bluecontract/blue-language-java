@@ -1,0 +1,20 @@
+id: R_minimized_overlay_round_trip
+category: Minimization
+operation: minimizeAndResolve
+source:
+  type:
+    country: PL
+    amount:
+      type: Integer
+  amount: 10
+expectedResolved:
+  type:
+    country: PL
+    amount:
+      type: Integer
+  country: PL
+  amount:
+    type: Integer
+    value: 10
+expectedRoundTripEqual: true
+expectedSameContentBlueIdThroughPipeline: true

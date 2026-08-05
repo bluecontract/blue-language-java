@@ -2,12 +2,18 @@ package blue.language.conformance;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.utils.Properties;
+import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.resolve.MinimizedOverlayBuilder;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import java.util.Collections;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -17,7 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ConformanceEngineTest {
 
     @Test
-    void detectsFixedValueViolationAndGeneralizesToNearestConformingType() {
+    void shouldDetectFixedValueViolationAndGeneralizeToNearestConformingType() {
+        // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -30,19 +37,24 @@ public class ConformanceEngineTest {
 
         document.getProperties().get("price").getProperties().get("currency").value("USD");
 
+        // when
         ConformanceEngine engine = blue.conformanceEngine();
-        assertFalse(engine.conforms(document));
-
+        boolean initiallyConformant = engine.conforms(document);
         ConformancePlan plan = engine.planGeneralization(FrozenNode.fromResolvedNode(document), "/price/currency");
+        boolean generalizedRootConformant =
+                engine.conforms(plan.rootNode());
 
+        // then
+        assertFalse(initiallyConformant);
         assertTrue(plan.generalized());
-        assertTrue(engine.conforms(plan.rootNode()));
+        assertTrue(generalizedRootConformant);
         assertEquals("Price", plan.root().property("price").getType().getName());
         assertEquals("Global Product", plan.root().getType().getName());
     }
 
     @Test
-    void leavesAlreadyConformantDocumentUnchanged() {
+    void shouldLeaveAlreadyConformantDocumentUnchanged() {
+        // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -53,16 +65,19 @@ public class ConformanceEngineTest {
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(FrozenNode.fromResolvedNode(document), "/price/amount");
 
+        // then
         assertFalse(plan.generalized());
         assertEquals("Price in EUR", plan.root().property("price").getType().getName());
         assertEquals("European Product", plan.root().getType().getName());
     }
 
     @Test
-    void plansGeneralizationWithoutMutatingFrozenRoot() {
+    void shouldPlanGeneralizationWithoutMutatingFrozenRoot() {
+        // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -75,8 +90,10 @@ public class ConformanceEngineTest {
         document.getProperties().get("price").getProperties().get("currency").value("USD");
         FrozenNode patchedRoot = FrozenNode.fromResolvedNode(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine().planGeneralization(patchedRoot, "/price/currency");
 
+        // then
         assertTrue(plan.generalized());
         assertFalse(plan.fullSnapshotRebuildAvoidable());
         assertTrue(plan.canonicalPatches().isEmpty());
@@ -88,7 +105,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void plansCanonicalGeneralizationPatchesAndChangedPaths() {
+    void shouldPlanCanonicalGeneralizationPatchesAndChangedPaths() {
+        // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -102,11 +120,13 @@ public class ConformanceEngineTest {
                 "  currency: EUR", Node.class));
         document.getProperties().get("price").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/price/currency");
 
+        // then
         assertTrue(plan.generalized());
         assertTrue(plan.fullSnapshotRebuildAvoidable());
         assertEquals("Price", plan.root().property("price").getType().getName());
@@ -130,7 +150,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void generalizesRootWhenRootFixedValueIsViolated() {
+    void shouldGeneralizeRootWhenRootFixedValueIsViolated() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Product\n" +
@@ -150,11 +171,13 @@ public class ConformanceEngineTest {
 
         document.getProperties().get("status").value("published");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/status");
 
+        // then
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
         assertTrue(plan.fullSnapshotRebuildAvoidable());
         assertEquals("Product", plan.root().getType().getName());
@@ -171,7 +194,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void generalizesRootWhenSchemaConstraintIsViolated() {
+    void shouldGeneralizeRootWhenSchemaConstraintIsViolated() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Any Score\n" +
@@ -191,16 +215,19 @@ public class ConformanceEngineTest {
 
         document.value(-1);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(FrozenNode.fromResolvedNode(document), "/value");
 
+        // then
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
         assertEquals("Any Score", plan.root().getType().getName());
         assertEquals(-1, plan.rootNode().getAsInteger("/"));
     }
 
     @Test
-    void appendPointerGeneralizationUsesConcreteLastListIndexAndSharesUnchangedItems() {
+    void shouldUseConcreteLastListIndexForAppendPointerGeneralizationAndShareUnchangedItems() {
+        // given
         BasicNodeProvider nodeProvider = basketProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -209,7 +236,7 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("European Basket") + "\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
                 "  items:\n" +
@@ -224,11 +251,13 @@ public class ConformanceEngineTest {
 
         document.getAsNode("/prices/1").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/prices/-/currency");
 
+        // then
         assertTrue(plan.generalized());
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
         assertEquals("Basket", plan.root().getType().getName());
@@ -242,7 +271,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void dictionaryValueTypeGeneralizationUpdatesMetadataAndSharesUnchangedEntries() {
+    void shouldUpdateDictionaryValueTypeMetadataDuringGeneralizationAndShareUnchangedEntries() {
+        // given
         BasicNodeProvider nodeProvider = catalogProvider();
         Blue blue = new Blue(nodeProvider);
         Node document = blue.resolve(YAML_MAPPER.readValue(
@@ -251,9 +281,9 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("European Catalog") + "\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID + "\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
                 "  sku1:\n" +
@@ -269,11 +299,13 @@ public class ConformanceEngineTest {
 
         document.getAsNode("/prices/sku2").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralization(canonicalRoot, resolvedRoot, "/prices/sku2/currency");
 
+        // then
         assertTrue(plan.generalized());
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
         assertEquals("Catalog Type", plan.root().getType().getName());
@@ -287,7 +319,8 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void failedGeneralizationLeavesFrozenRootAndCanonicalRootUntouched() {
+    void shouldLeaveFrozenAndCanonicalRootsUntouchedAfterFailedGeneralization() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Fixed One\n" +
@@ -300,8 +333,10 @@ public class ConformanceEngineTest {
                 "x: 1", Node.class));
         document.getProperties().get("x").value(2);
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(blue.reverse(document.clone()));
+        // when
+        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
 
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> blue.conformanceEngine().planGeneralization(canonicalRoot, resolvedRoot, "/x"));
 
@@ -309,6 +344,57 @@ public class ConformanceEngineTest {
         assertEquals("2", resolvedRoot.at("/x").getValue().toString());
         assertEquals(nodeProvider.getBlueIdByName("Fixed One"), canonicalRoot.getType().getReferenceBlueId());
         assertEquals("2", canonicalRoot.at("/x").getValue().toString());
+    }
+
+    @Test
+    void shouldKeepPreservedHandlerBodyColdWhenPlanningInsideItsSubtree() {
+        // given
+        BasicNodeProvider content = new BasicNodeProvider();
+        content.addSingleDocs("name: Cold Handler Body\npayload: secret");
+        String coldBodyBlueId = content.getBlueIdByName("Cold Handler Body");
+        content.addSingleDocs(
+                "name: Handler Type\n"
+                        + "state:\n"
+                        + "  type: Text\n"
+                        + "body:\n"
+                        + "  blueId: " + coldBodyBlueId);
+        String handlerTypeBlueId = content.getBlueIdByName("Handler Type");
+        AtomicInteger coldBodyReads = new AtomicInteger();
+        NodeProvider strictProvider = blueId -> {
+            if (coldBodyBlueId.equals(blueId)) {
+                coldBodyReads.incrementAndGet();
+                throw new AssertionError("Preserved handler body was read");
+            }
+            return content.fetchByBlueId(blueId);
+        };
+        Blue blue = new Blue(strictProvider);
+        Node document = new Node().properties(
+                "handler",
+                new Node()
+                        .type(new Node().blueId(handlerTypeBlueId))
+                        .properties(
+                                "state",
+                                new Node()
+                                        .type(new Node().blueId(
+                                                BlueLanguageConstants
+                                                        .TEXT_TYPE_BLUE_ID))
+                                        .value("ready"),
+                                "body",
+                                new Node().blueId(coldBodyBlueId)));
+        FrozenNode canonicalRoot = FrozenNode.fromNode(document);
+        FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
+
+        // when
+        ConformancePlan plan = blue.conformanceEngine()
+                .planGeneralizationPreservingPaths(
+                        canonicalRoot,
+                        resolvedRoot,
+                        Collections.singletonList("/handler/state"),
+                        Collections.singleton("/handler"));
+
+        // then
+        assertFalse(plan.generalized());
+        assertEquals(0, coldBodyReads.get());
     }
 
     public static BasicNodeProvider priceProvider() {
@@ -339,13 +425,21 @@ public class ConformanceEngineTest {
         return nodeProvider;
     }
 
+    private static FrozenNode canonicalIdentityRoot(Node resolved) {
+        Node sourceEquivalent =
+                new MinimizedOverlayBuilder().build(resolved.clone());
+        return FrozenNode.fromNode(
+                new CanonicalIdentityInputBuilder().build(
+                        resolved.clone(), sourceEquivalent));
+    }
+
     private static BasicNodeProvider basketProvider() {
         BasicNodeProvider nodeProvider = priceProvider();
         nodeProvider.addSingleDocs(
                 "name: Basket\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price"));
         nodeProvider.addSingleDocs(
@@ -354,7 +448,7 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Basket") + "\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR"));
         return nodeProvider;
@@ -366,9 +460,9 @@ public class ConformanceEngineTest {
                 "name: Catalog Type\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID + "\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price"));
         nodeProvider.addSingleDocs(
@@ -377,9 +471,9 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Catalog Type") + "\n" +
                 "prices:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID + "\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR"));
         return nodeProvider;

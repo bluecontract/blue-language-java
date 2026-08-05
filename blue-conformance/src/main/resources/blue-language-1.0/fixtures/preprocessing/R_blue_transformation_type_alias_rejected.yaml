@@ -1,0 +1,16 @@
+id: R_blue_transformation_type_alias_rejected
+category: Resolution
+operation: preprocess
+description: transformation types must be exact and cannot depend on Source imports
+expectError: true
+expectedErrorCategory: InvalidReservedField
+source:
+  blue:
+    imports:
+      Append:
+        blueId: D2DxVxaddbJT5k2YYj3sG35cSdotw1Mz9GpxrdP43nzN
+    transformations:
+      - type: Append
+        field: text
+        suffix: B
+  text: A

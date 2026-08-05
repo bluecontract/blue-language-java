@@ -11,8 +11,13 @@ on:
       - 'CHANGELOG.md'
       - 'LICENSE*'
       - 'README*'
+      - 'api/**'
+      - 'blue-*/**'
       - 'build.gradle'
+      - 'build-logic/**'
+      - 'examples/**'
       - 'settings.gradle*'
+      - 'smoke-tests/**'
       - 'docs/**'
       - 'gradle.properties'
       - 'gradle/wrapper/**'
@@ -84,11 +89,19 @@ jobs:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: node .github/scripts/verify-release-readiness.js
 
+      - name: Commit RC version
+        run: |
+          git add .cz.toml
+          git commit -m "chore: release ${{ steps.version.outputs.version }}"
+
       - name: Configure reproducible build timestamp
         run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
 
-      - name: Execute Gradle build
-        run: ./gradlew clean build rcVerify jmhClasses
+      - name: Execute clean Gradle build
+        run: ./gradlew clean build
+
+      - name: Execute RC verification
+        run: ./gradlew rcVerify
 
       - name: Verify reproducible source release
         run: |
@@ -99,70 +112,11 @@ jobs:
           second_sha="$(sha256sum "${source_archives[0]}" | awk '{print $1}')"
           test "$first_sha" = "$second_sha"
 
-      - name: Verify binary API compatibility
-        run: |
-          baseline_root="$(mktemp -d)"
-          master_dir="${baseline_root}/master"
-          previous_rc_dir="${baseline_root}/previous-rc"
-          current_version='${{ steps.version.outputs.version }}'
-          rc_series="${current_version%-rc.*}"
-          previous_rc_tag=''
-          while IFS= read -r candidate_tag; do
-            if [[ "$candidate_tag" != "v${current_version}" ]]; then
-              previous_rc_tag="$candidate_tag"
-              break
-            fi
-          done < <(git tag --list "v${rc_series}-rc.*" --sort=-version:refname)
+      - name: Verify final Language 1.0 and Contracts kernel 1.0 API baseline
+        run: ./gradlew verifyFinalApiBaseline
 
-          git worktree add --detach "$master_dir" origin/master
-          if [[ -n "$previous_rc_tag" ]]; then
-            git worktree add --detach "$previous_rc_dir" "$previous_rc_tag"
-          fi
-          cleanup() {
-            git worktree remove --force "$master_dir" || true
-            if [[ -n "$previous_rc_tag" ]]; then
-              git worktree remove --force "$previous_rc_dir" || true
-            fi
-          }
-          trap cleanup EXIT
-
-          BLUE_RELEASE_CHANNEL=stable "$master_dir/gradlew" -p "$master_dir" jar --no-daemon
-          if [[ -n "$previous_rc_tag" ]]; then
-            BLUE_RELEASE_CHANNEL=rc "$previous_rc_dir/gradlew" -p "$previous_rc_dir" jar --no-daemon
-          fi
-          mapfile -t master_jars < <(find "$master_dir/build/libs" -maxdepth 1 -type f \
-            -name 'blue-language-java-*.jar' \
-            ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-jmh.jar')
-          mapfile -t candidate_jars < <(find build/libs -maxdepth 1 -type f \
-            -name 'blue-language-java-*.jar' \
-            ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-jmh.jar')
-          test "${#master_jars[@]}" -eq 1
-          test "${#candidate_jars[@]}" -eq 1
-          tools/check-binary-api.sh \
-            "${master_jars[0]}" \
-            "${candidate_jars[0]}" \
-            build/reports/binary-api/master-to-candidate.txt
-          if [[ -n "$previous_rc_tag" ]]; then
-            mapfile -t previous_rc_jars < <(find "$previous_rc_dir/build/libs" -maxdepth 1 -type f \
-              -name 'blue-language-java-*.jar' \
-              ! -name '*-sources.jar' ! -name '*-javadoc.jar' ! -name '*-jmh.jar')
-            test "${#previous_rc_jars[@]}" -eq 1
-            tools/check-binary-api.sh \
-              "${previous_rc_jars[0]}" \
-              "${candidate_jars[0]}" \
-              build/reports/binary-api/previous-rc-to-candidate.txt
-            printf 'Previous RC baseline: %s\n' "$previous_rc_tag" \
-              > build/reports/binary-api/previous-rc-baseline.txt
-          else
-            printf 'Previous RC baseline: none; master is the only baseline\n' \
-              > build/reports/binary-api/previous-rc-baseline.txt
-          fi
-
-      - name: Commit and tag RC version
-        run: |
-          git add .cz.toml
-          git commit -m "chore: release ${{ steps.version.outputs.version }}"
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+      - name: Tag verified RC version
+        run: git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
 
       # Publish the unique version reservation before any remote artifact upload.
       # A failed release can then advance to a new RC instead of reusing a
@@ -202,8 +156,9 @@ jobs:
         with:
           name: rc-artifacts
           path: |
-            build/libs
-            build/publications
+            blue-*/build/libs
+            blue-*/build/publications
+            build/staging-deploy
             build/release
-            build/reports/binary-api
+            build/reports
             build/jreleaser

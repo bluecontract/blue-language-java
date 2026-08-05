@@ -1,11 +1,22 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.model.Node;
-import blue.language.processor.DocumentProcessingRuntime;
+import blue.language.processor.DocumentProcessingRuntimeTestAccess;
 import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.model.JsonPatch;
-import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.limits.PathLimits;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -19,37 +30,44 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class LimitedCanonicalPatchTest {
 
     @Test
-    void directPatchPreservesCanonicalContentOutsideResolutionLimit() {
+    void shouldPreserveCanonicalContentOutsideResolutionLimitForDirectPatch() {
+        // given
         Blue blue = limitedBlue();
         // The input is already authoritative Canonical Identity Input. Its identity
         // remains complete even though the materialized resolved view is limited.
         ResolvedSnapshot before = blue.loadSnapshot(source());
-        assertLimitedSnapshot(before);
 
+        // when
         ResolvedSnapshot after = blue.applyCanonicalPatch(
                 before, JsonPatch.replace("/a", new Node().value("new")));
 
+        // then
+        assertLimitedSnapshot(before);
         assertEquals("new", after.canonicalNodeAt("/a").getValue());
         assertLimitedSnapshot(after);
     }
 
     @Test
-    void processingPatchPreservesCanonicalContentOutsideResolutionLimit() {
+    void shouldPreserveCanonicalContentOutsideResolutionLimitForProcessingPatch() {
+        // given
         // Processing starts from authoritative Canonical Identity Input, not Source.
         ResolvedSnapshot limited = limitedBlue().loadSnapshot(source());
+        // when
+        ResolvedSnapshot after = DocumentProcessingRuntimeTestAccess.applyPatch(
+                limited,
+                passThroughManager(),
+                "/",
+                JsonPatch.replace("/a", new Node().value("new")));
+
+        // then
         assertLimitedSnapshot(limited);
-        DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(limited, null, passThroughManager());
-
-        runtime.applyPatch("/", JsonPatch.replace("/a", new Node().value("new")));
-
-        ResolvedSnapshot after = runtime.snapshot();
         assertEquals("new", after.canonicalNodeAt("/a").getValue());
         assertLimitedSnapshot(after);
     }
 
     @Test
-    void processingPatchStructurallySharesLargeUntouchedCanonicalSubtree() {
+    void shouldStructurallyShareLargeUntouchedCanonicalSubtreeForProcessingPatch() {
+        // given
         List<Node> items = new ArrayList<>();
         for (int index = 0; index < 20_000; index++) {
             items.add(new Node().value(index));
@@ -58,13 +76,14 @@ class LimitedCanonicalPatchTest {
                 "changed", new Node().value("old"),
                 "untouched", new Node().items(items));
         ResolvedSnapshot before = new Blue().loadSnapshot(source);
-        DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(before, null, passThroughManager());
-
-        runtime.applyPatch("/",
+        // when
+        ResolvedSnapshot after = DocumentProcessingRuntimeTestAccess.applyPatch(
+                before,
+                passThroughManager(),
+                "/",
                 JsonPatch.replace("/changed", new Node().value("new")));
 
-        ResolvedSnapshot after = runtime.snapshot();
+        // then
         assertEquals("new", after.canonicalNodeAt("/changed").getValue());
         assertSame(before.canonicalAt("/untouched"), after.canonicalAt("/untouched"));
         assertSame(before.resolvedAt("/untouched"), after.resolvedAt("/untouched"));
@@ -72,7 +91,7 @@ class LimitedCanonicalPatchTest {
 
     private static Blue limitedBlue() {
         Blue blue = new Blue();
-        blue.setGlobalLimits(PathLimits.withSinglePath("/a"));
+        blue.setGlobalLimits(ResolutionLimits.withSinglePath("/a"));
         return blue;
     }
 

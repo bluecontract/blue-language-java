@@ -1,5 +1,18 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
+import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.merge.Merger;
@@ -12,11 +25,11 @@ import blue.language.merge.processor.SchemaVerifier;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedReferenceCache;
-import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.merge.ResolvedReferenceCache;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -26,68 +39,86 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 
 class ResolvedInstanceSchemaValidationTest {
 
     @Test
-    void materializedSubtypeSatisfiesRequiredTypedField() {
+    void shouldSatisfyRequiredTypedFieldWithMaterializedSubtype() {
+        // given
         Fixture fixture = new Fixture();
 
         Node instance = fixture.holderInstance(new Node()
                 .type(reference(fixture.concreteSubjectId))
                 .properties("identifier", new Node().value("subject-1")));
 
-        Node resolved = assertDoesNotThrow(() -> fixture.blue.resolve(instance));
+        // when
+        Node resolved = fixture.blue.resolve(instance);
 
+        // then
         assertEquals("subject-1", resolved.getProperties().get("subject")
                 .getProperties().get("identifier").getValue());
     }
 
     @Test
-    void missingRequiredTypedFieldFailsAfterCompletedMerge() {
+    void shouldFailMissingRequiredTypedFieldAfterCompletedMerge() {
+        // given
         Fixture fixture = new Fixture();
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> fixture.blue.resolve(fixture.holderInstance(null)));
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains("/subject"));
         assertTrue(failure.getMessage().contains("Required"));
     }
 
     @Test
-    void metadataOnlyAndTypeDerivedBlueIdDoNotSatisfyRequired() {
+    void shouldNotSatisfyRequiredWithMetadataOnlyOrTypeDerivedBlueId() {
+        // given
         Fixture fixture = new Fixture();
 
-        assertThrows(IllegalArgumentException.class, () -> fixture.blue.resolve(
+        // when
+        IllegalArgumentException metadataFailure = captureFailure(() -> fixture.blue.resolve(
                 fixture.holderInstance(new Node().description("declaration metadata"))));
-        assertThrows(IllegalArgumentException.class, () -> fixture.blue.resolve(
+        IllegalArgumentException typeOnlyFailure = captureFailure(() -> fixture.blue.resolve(
                 fixture.holderInstance(new Node().type(reference(fixture.concreteSubjectId)))));
+
+        // then
+        assertTrue(metadataFailure instanceof IllegalArgumentException);
+        assertTrue(typeOnlyFailure instanceof IllegalArgumentException);
     }
 
     @Test
-    void requiredPresenceAcceptsEverySemanticPayloadForm() {
+    void shouldAcceptEverySemanticPayloadFormForRequiredPresence() {
+        // given
         Schema required = new Schema().required(true);
         Blue blue = new Blue(new BasicNodeProvider());
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().schema(required.clone()).value("value")));
-        assertDoesNotThrow(() -> blue.resolve(new Node().schema(required.clone())
-                .properties("field", new Node().value("value"))));
-        assertDoesNotThrow(() -> blue.resolve(new Node().schema(required.clone())
-                .items(new ArrayList<>())));
-        assertDoesNotThrow(() -> blue.resolve(new Node().schema(required.clone())
-                .items(new Node().value("value"))));
-        assertDoesNotThrow(() -> blue.resolve(new Node().schema(required.clone())));
+        // when
+        List<Node> resolved = Arrays.asList(
+                blue.resolve(new Node().schema(required.clone()).value("value")),
+                blue.resolve(new Node().schema(required.clone())
+                        .properties("field", new Node().value("value"))),
+                blue.resolve(new Node().schema(required.clone()).items(new ArrayList<>())),
+                blue.resolve(new Node().schema(required.clone())
+                        .items(new Node().value("value"))),
+                blue.resolve(new Node().schema(required.clone())));
+
+        // then
+        assertEquals(5, resolved.size());
     }
 
     @Test
-    void emptyObjectDoesNotSatisfyNestedRequiredField() {
+    void shouldNotSatisfyNestedRequiredFieldWithEmptyObject() {
+        // given
         Node type = new Node().name("Required Holder")
                 .properties("field", new Node().schema(new Schema().required(true)));
         BasicNodeProvider provider = new BasicNodeProvider(type);
@@ -95,11 +126,16 @@ class ResolvedInstanceSchemaValidationTest {
         Blue blue = new Blue(provider);
         Node instance = new Node().type(reference(typeId)).properties("field", new Node());
 
-        assertThrows(IllegalArgumentException.class, () -> blue.resolve(instance));
+        // when
+        IllegalArgumentException failure = captureFailure(() -> blue.resolve(instance));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
     }
 
     @Test
-    void requiredOnlyReferenceDoesNotFetchProvider() {
+    void shouldNotFetchProviderForRequiredOnlyReference() {
+        // given
         Node payload = new Node().name("Payload").value("content");
         BasicNodeProvider delegate = new BasicNodeProvider(payload);
         String payloadId = delegate.getBlueIdByName("Payload");
@@ -110,14 +146,19 @@ class ResolvedInstanceSchemaValidationTest {
         delegate.addSingleNodes(type);
         String typeId = delegate.getBlueIdByName("Untyped Holder");
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(typeId))
-                .properties("payload", reference(payloadId))));
+        // when
+        Node resolved = blue.resolve(new Node().type(reference(typeId))
+                .properties("payload", reference(payloadId)));
+        int fetchCount = provider.fetches(payloadId);
 
-        assertEquals(0, provider.fetches(payloadId));
+        // then
+        assertTrue(resolved != null);
+        assertEquals(0, fetchCount);
     }
 
     @Test
-    void typedReferenceFetchesOnceAndWarmCacheAvoidsProvider() {
+    void shouldFetchTypedReferenceOnceAndAvoidProviderWithWarmCache() {
+        // given
         Fixture fixture = new Fixture();
         Node referenced = new Node().name("Referenced Subject")
                 .type(reference(fixture.concreteSubjectId))
@@ -126,44 +167,55 @@ class ResolvedInstanceSchemaValidationTest {
         String referenceId = fixture.delegate.getBlueIdByName("Referenced Subject");
         Node instance = fixture.holderInstance(reference(referenceId));
 
-        assertDoesNotThrow(() -> fixture.blue.resolve(instance));
-        assertEquals(1, fixture.provider.fetches(referenceId));
+        // when
+        fixture.blue.resolve(instance);
+        int coldFetchCount = fixture.provider.fetches(referenceId);
+        fixture.blue.resolve(instance);
+        int warmFetchCount = fixture.provider.fetches(referenceId);
 
-        assertDoesNotThrow(() -> fixture.blue.resolve(instance));
-        assertEquals(1, fixture.provider.fetches(referenceId));
+        // then
+        assertEquals(1, coldFetchCount);
+        assertEquals(1, warmFetchCount);
     }
 
     @Test
-    void typedReferenceWithoutRepeatedTypeUsesNormalInheritanceRules() {
+    void shouldUseNormalInheritanceRulesForTypedReferenceWithoutRepeatedType() {
+        // given
         Fixture fixture = new Fixture();
         Node untypedContent = new Node().name("Untyped Subject Content")
                 .properties("identifier", new Node().value("subject-1"));
         fixture.delegate.addSingleNodes(untypedContent);
         String referenceId = fixture.delegate.getBlueIdByName("Untyped Subject Content");
 
-        Node resolved = assertDoesNotThrow(() -> fixture.blue.resolve(
-                fixture.holderInstance(reference(referenceId))));
-
+        // when
+        Node resolved = fixture.blue.resolve(fixture.holderInstance(reference(referenceId)));
         Node subject = resolved.getProperties().get("subject");
+
+        // then
         assertEquals(fixture.baseSubjectId, subject.getType().getBlueId());
         assertEquals("subject-1", subject.getProperties().get("identifier").getValue());
     }
 
     @Test
-    void materializedTypedValueDoesNotFetchItsContentIdentity() {
+    void shouldNotFetchContentIdentityForMaterializedTypedValue() {
+        // given
         Fixture fixture = new Fixture();
         Node materialized = new Node().name("Inline Subject")
                 .type(reference(fixture.concreteSubjectId))
                 .properties("identifier", new Node().value("subject-1"));
         String materializedId = blueIdOf(materialized);
 
-        assertDoesNotThrow(() -> fixture.blue.resolve(fixture.holderInstance(materialized)));
+        // when
+        fixture.blue.resolve(fixture.holderInstance(materialized));
+        int fetchCount = fixture.provider.fetches(materializedId);
 
-        assertEquals(0, fixture.provider.fetches(materializedId));
+        // then
+        assertEquals(0, fetchCount);
     }
 
     @Test
-    void repeatedTypedReferencesFetchSameBlueIdOncePerResolution() {
+    void shouldFetchRepeatedTypedReferenceBlueIdOncePerResolution() {
+        // given
         Fixture fixture = new Fixture(true);
         Node referenced = new Node().name("Shared Subject")
                 .type(reference(fixture.concreteSubjectId))
@@ -175,12 +227,17 @@ class ResolvedInstanceSchemaValidationTest {
                 .properties("subject", reference(referenceId))
                 .properties("secondSubject", reference(referenceId));
 
-        assertDoesNotThrow(() -> fixture.blue.resolve(instance));
-        assertEquals(1, fixture.provider.fetches(referenceId));
+        // when
+        fixture.blue.resolve(instance);
+        int fetchCount = fixture.provider.fetches(referenceId);
+
+        // then
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void incompatibleTypedReferenceFailsWithAffectedPath() {
+    void shouldFailIncompatibleTypedReferenceWithAffectedPath() {
+        // given
         Fixture fixture = new Fixture();
         Node otherType = new Node().name("Other Type");
         fixture.delegate.addSingleNodes(otherType);
@@ -191,14 +248,18 @@ class ResolvedInstanceSchemaValidationTest {
         fixture.delegate.addSingleNodes(incompatible);
         String incompatibleId = fixture.delegate.getBlueIdByName("Incompatible Subject");
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> fixture.blue.resolve(fixture.holderInstance(reference(incompatibleId))));
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertTrue(messageChain(failure).contains("subject"), messageChain(failure));
     }
 
     @Test
-    void payloadConstrainedReferenceMaterializesBeforeValidation() {
+    void shouldMaterializePayloadConstrainedReferenceBeforeValidation() {
+        // given
         Node payload = new Node().name("List Payload")
                 .items(new Node().value("one"), new Node().value("two"));
         BasicNodeProvider delegate = new BasicNodeProvider(payload);
@@ -210,26 +271,35 @@ class ResolvedInstanceSchemaValidationTest {
         CountingProvider provider = new CountingProvider(delegate);
         Blue blue = new Blue(provider);
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))
-                .properties("payload", reference(payloadId))));
+        // when
+        blue.resolve(new Node().type(reference(holderId))
+                .properties("payload", reference(payloadId)));
+        int fetchCount = provider.fetches(payloadId);
 
-        assertEquals(1, provider.fetches(payloadId));
+        // then
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void missingRequiredReferenceContentFailsDeterministically() {
+    void shouldFailMissingRequiredReferenceContentDeterministically() {
+        // given
         Fixture fixture = new Fixture();
         String unavailable = blueIdOf(new Node().name("Unavailable Subject"));
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> fixture.blue.resolve(fixture.holderInstance(reference(unavailable))));
+        int fetchCount = fixture.provider.fetches(unavailable);
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains(unavailable));
-        assertEquals(1, fixture.provider.fetches(unavailable));
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void contextualSnapshotEntryCannotSatisfyLaterTypedReference() {
+    void shouldPreventContextualSnapshotEntryFromSatisfyingLaterTypedReference() {
+        // given
         Fixture fixture = new Fixture();
         String unavailableId = blueIdOf(new Node().name("Unavailable Subject")
                 .properties("identifier", new Node().value("not available")));
@@ -238,17 +308,23 @@ class ResolvedInstanceSchemaValidationTest {
         fixture.delegate.addSingleNodes(untypedHolder);
         String untypedHolderId = fixture.delegate.getBlueIdByName("Untyped Required Holder");
 
-        assertDoesNotThrow(() -> fixture.blue.resolveToSnapshot(new Node()
+        // when
+        ResolvedSnapshot contextualSnapshot = fixture.blue.resolveToSnapshot(new Node()
                 .type(reference(untypedHolderId))
-                .properties("subject", reference(unavailableId))));
-
-        assertThrows(IllegalArgumentException.class, () -> fixture.blue.resolve(
+                .properties("subject", reference(unavailableId)));
+        IllegalArgumentException failure = captureFailure(() -> fixture.blue.resolve(
                 fixture.holderInstance(reference(unavailableId))));
-        assertEquals(1, fixture.provider.fetches(unavailableId));
+        int fetchCount = fixture.provider.fetches(unavailableId);
+
+        // then
+        assertTrue(contextualSnapshot != null);
+        assertTrue(failure instanceof IllegalArgumentException);
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void contextualResolvedGraphCannotSatisfyPayloadConstrainedReference() {
+    void shouldPreventContextualResolvedGraphFromSatisfyingPayloadConstrainedReference() {
+        // given
         String unavailableId = blueIdOf(new Node().name("Unavailable Object")
                 .properties("field", new Node().value("not available")));
         ResolvedReferenceCache cache = new ResolvedReferenceCache();
@@ -260,18 +336,24 @@ class ResolvedInstanceSchemaValidationTest {
         Merger merger = new Merger(defaultProcessor(), provider, cache);
         Node target = new Node().schema(new Schema().minFields(1));
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> merger.merge(target, reference(unavailableId),
-                        blue.language.utils.limits.Limits.NO_LIMITS));
+                        blue.language.resolve.ResolutionLimits.NO_LIMITS));
+        boolean verifiedCanonicalPresent = cache.getVerifiedCanonical(unavailableId).isPresent();
+        int fetchCount = provider.fetches(unavailableId);
 
-        assertFalse(cache.getVerifiedCanonical(unavailableId).isPresent());
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
+        assertFalse(verifiedCanonicalPresent);
         assertNotSame(contextual, referenceView);
         assertTrue(referenceView.isReferenceOnly());
-        assertEquals(1, provider.fetches(unavailableId));
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void typedReferenceUsesExactVerifiedCacheEntry() {
+    void shouldUseExactVerifiedCacheEntryForTypedReference() {
+        // given
         Fixture fixture = new Fixture();
         Node referenced = new Node().type(reference(fixture.concreteSubjectId))
                 .properties("identifier", new Node().value("subject-1"));
@@ -283,16 +365,19 @@ class ResolvedInstanceSchemaValidationTest {
         CountingProvider coldCounter = new CountingProvider(fixture.delegate);
         Merger merger = new Merger(defaultProcessor(), coldCounter, cache);
 
-        Node resolved = assertDoesNotThrow(() -> merger.resolve(
-                fixture.holderInstance(reference(referenceId))));
+        // when
+        Node resolved = merger.resolve(fixture.holderInstance(reference(referenceId)));
+        int coldFetchCount = coldCounter.fetches(referenceId);
 
-        assertEquals(0, coldCounter.fetches(referenceId));
+        // then
+        assertEquals(0, coldFetchCount);
         assertEquals("subject-1", resolved.getProperties().get("subject")
                 .getProperties().get("identifier").getValue());
     }
 
     @Test
-    void providerContentWithWrongBlueIdFailsBeforeValidation() {
+    void shouldFailProviderContentWithWrongBlueIdBeforeValidation() {
+        // given
         Fixture fixture = new Fixture();
         Node expected = new Node().type(reference(fixture.concreteSubjectId))
                 .properties("identifier", new Node().value("expected"));
@@ -304,28 +389,37 @@ class ResolvedInstanceSchemaValidationTest {
                 : fixture.delegate.fetchByBlueId(blueId);
         Blue blue = new Blue(wrongContentProvider);
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(fixture.holderInstance(reference(expectedId))));
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertTrue(messageChain(failure).contains(expectedId));
         assertTrue(messageChain(failure).contains("Provider"), messageChain(failure));
     }
 
     @Test
-    void missingTypedReferenceContentIsProviderUnavailable() {
+    void shouldClassifyMissingTypedReferenceContentAsProviderUnavailable() {
+        // given
         Fixture fixture = new Fixture();
         String missingId = fixture.blue.calculateBlueId(new Node().name("Missing Required Subject"));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> fixture.blue.resolve(fixture.holderInstance(reference(missingId))));
+        int fetchCount = fixture.provider.fetches(missingId);
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertEquals(BlueLanguageErrorCategory.ProviderUnavailable,
                 BlueLanguageErrorClassifier.classify(failure), messageChain(failure));
-        assertEquals(1, fixture.provider.fetches(missingId));
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void multiDocumentProviderResultUsesExistingListSemantics() {
+    void shouldUseExistingListSemanticsForMultiDocumentProviderResult() {
+        // given
         List<Node> documents = Arrays.asList(new Node().value("one"), new Node().value("two"));
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.processNodeList(documents);
@@ -333,20 +427,23 @@ class ResolvedInstanceSchemaValidationTest {
         List<Node> canonicalDocuments = Arrays.asList(
                 blue.preprocess(documents.get(0).clone()),
                 blue.preprocess(documents.get(1).clone()));
-        String referenceId = BlueIdCalculator.calculateBlueId(canonicalDocuments);
+        String referenceId = DirectBlueIdCalculator.calculateBlueId(canonicalDocuments);
         Node holder = new Node().name("Multi-document Holder")
                 .properties("payload", new Node().schema(new Schema().minItems(2)));
         provider.addSingleNodes(holder);
         String holderId = provider.getBlueIdByName("Multi-document Holder");
 
-        Node resolved = assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))
-                .properties("payload", reference(referenceId))));
+        // when
+        Node resolved = blue.resolve(new Node().type(reference(holderId))
+                .properties("payload", reference(referenceId)));
 
+        // then
         assertEquals(2, resolved.getProperties().get("payload").getItems().size());
     }
 
     @Test
-    void cyclicRequiredMaterializationFailsWithoutStackOverflow() {
+    void shouldFailCyclicRequiredMaterializationWithoutStackOverflow() {
+        // given
         Node cyclicTypes = YAML_MAPPER.readValue("- name: Cyclic A\n"
                 + "  type:\n"
                 + "    blueId: this#1\n"
@@ -361,29 +458,37 @@ class ResolvedInstanceSchemaValidationTest {
         String holderId = provider.getBlueIdByName("Recursive Holder");
         Blue blue = new Blue(provider);
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        RuntimeException failure = captureFailure(
                 () -> blue.resolve(new Node().type(reference(holderId))
                         .properties("payload", reference(recursiveContentId))));
 
+        // then
+        assertTrue(failure instanceof RuntimeException);
         assertTrue(messageChain(failure).contains("Cyclic"), messageChain(failure));
     }
 
     @Test
-    void schemaFailureEscapesRfc6901PathSegments() {
+    void shouldEscapeRfc6901PathSegmentsInSchemaFailure() {
+        // given
         String key = "subject/with~markers";
         Node type = new Node().name("Escaped Holder")
                 .properties(key, new Node().schema(required()));
         BasicNodeProvider provider = new BasicNodeProvider(type);
         String typeId = provider.getBlueIdByName("Escaped Holder");
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> new Blue(provider).resolve(new Node().type(reference(typeId))));
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains("/subject~1with~0markers"), failure.getMessage());
     }
 
     @Test
-    void minItemsAndMinFieldsUseCompletedPayload() {
+    void shouldUseCompletedPayloadForMinItemsAndMinFields() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node type = new Node().name("Constrained Holder")
                 .properties("list", new Node().schema(new Schema().minItems(2)))
@@ -397,24 +502,30 @@ class ResolvedInstanceSchemaValidationTest {
                 .properties("object", new Node()
                         .properties("a", new Node().value("a"))
                         .properties("b", new Node().value("b")));
-        assertDoesNotThrow(() -> blue.resolve(valid));
-
         Node invalidList = valid.clone().properties("list", new Node().items(new Node().value("a")));
-        IllegalArgumentException listFailure = assertThrows(IllegalArgumentException.class,
-                () -> blue.resolve(invalidList));
-        assertTrue(listFailure.getMessage().contains("/list"));
-        assertTrue(listFailure.getMessage().contains("minimum required items"), listFailure.getMessage());
-
         Node invalidObject = valid.clone().properties("object", new Node()
                 .properties("a", new Node().value("a")));
-        IllegalArgumentException objectFailure = assertThrows(IllegalArgumentException.class,
-                () -> blue.resolve(invalidObject));
+
+        // when
+        blue.resolve(valid);
+        IllegalArgumentException listFailure =
+                captureFailure(() -> blue.resolve(invalidList));
+        IllegalArgumentException objectFailure =
+                captureFailure(() -> blue.resolve(invalidObject));
+
+        // then
+        assertTrue(listFailure instanceof IllegalArgumentException);
+        assertTrue(listFailure.getMessage().contains("/list"));
+        assertTrue(listFailure.getMessage().contains("minimum required items"),
+                listFailure.getMessage());
+        assertTrue(objectFailure instanceof IllegalArgumentException);
         assertTrue(objectFailure.getMessage().contains("/object"));
         assertTrue(objectFailure.getMessage().contains("minimum required fields"));
     }
 
     @Test
-    void inheritedFixedPayloadsSatisfyRequired() {
+    void shouldSatisfyRequiredWithInheritedFixedPayloads() {
+        // given
         Node referenced = new Node().name("Fixed Reference").value("fixed");
         BasicNodeProvider provider = new BasicNodeProvider(referenced);
         String referenceId = provider.getBlueIdByName("Fixed Reference");
@@ -431,45 +542,57 @@ class ResolvedInstanceSchemaValidationTest {
         provider.addSingleNodes(type);
         String typeId = provider.getBlueIdByName("Fixed Holder");
 
-        assertDoesNotThrow(() -> new Blue(provider).resolve(new Node().type(reference(typeId))));
+        // when
+        Node resolved = new Blue(provider).resolve(new Node().type(reference(typeId)));
+
+        // then
+        assertTrue(resolved != null);
     }
 
     @Test
-    void retainedOrdinaryChildMakesInheritedObjectSemanticallyPresent() {
+    void shouldMakeInheritedObjectSemanticallyPresentWithRetainedOrdinaryChild() {
+        // given
         Node type = new Node().name("Declaration Holder")
                 .properties("field", new Node().schema(required())
                         .properties("nested", new Node().description("metadata only")));
         BasicNodeProvider provider = new BasicNodeProvider(type);
         String typeId = provider.getBlueIdByName("Declaration Holder");
 
-        Node resolved = assertDoesNotThrow(
-                () -> new Blue(provider).resolve(new Node().type(reference(typeId))));
+        // when
+        Node resolved = new Blue(provider).resolve(new Node().type(reference(typeId)));
 
+        // then
         assertEquals("metadata only", resolved.getProperties().get("field")
                 .getProperties().get("nested").getDescription());
     }
 
     @Test
-    void contractsDoNotSatisfyRequiredObjectPresence() {
+    void shouldNotSatisfyRequiredObjectPresenceWithContracts() {
+        // given
         Node type = new Node().name("Contract Metadata Holder")
                 .properties("field", new Node().schema(required())
                         .contracts(new Node().properties("processor", new Node().value("configured"))));
         BasicNodeProvider provider = new BasicNodeProvider(type);
         String typeId = provider.getBlueIdByName("Contract Metadata Holder");
 
-        IllegalArgumentException inheritedFailure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException inheritedFailure = captureFailure(
                 () -> new Blue(provider).resolve(new Node().type(reference(typeId))));
-        IllegalArgumentException instanceFailure = assertThrows(IllegalArgumentException.class,
+        IllegalArgumentException instanceFailure = captureFailure(
                 () -> new Blue(provider).resolve(new Node().type(reference(typeId))
                         .properties("field", new Node().contracts(new Node()
                                 .properties("processor", new Node().value("configured"))))));
 
+        // then
+        assertTrue(inheritedFailure instanceof IllegalArgumentException);
+        assertTrue(instanceFailure instanceof IllegalArgumentException);
         assertTrue(inheritedFailure.getMessage().contains("/field"), inheritedFailure.getMessage());
         assertTrue(instanceFailure.getMessage().contains("/field"), instanceFailure.getMessage());
     }
 
     @Test
-    void omittedOptionalTypedBranchDefersNestedRequiredFieldColdAndWarm() {
+    void shouldDeferNestedRequiredFieldForOmittedOptionalTypedBranchColdAndWarm() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node branch = new Node().name("Optional Branch")
                 .properties("actor", new Node().type("Text").schema(required()));
@@ -481,16 +604,23 @@ class ResolvedInstanceSchemaValidationTest {
         String holderId = provider.getBlueIdByName("Optional Branch Holder");
 
         Blue cold = new Blue(provider);
-        assertDoesNotThrow(() -> cold.resolve(new Node().type(reference(holderId))));
-
         Blue warm = new Blue(provider);
-        assertDoesNotThrow(() -> warm.resolve(new Node().type(reference(holderId))
-                .properties("branch", new Node().properties("actor", new Node().value("Ada")))));
-        assertDoesNotThrow(() -> warm.resolve(new Node().type(reference(holderId))));
+
+        // when
+        Node coldResolved = cold.resolve(new Node().type(reference(holderId)));
+        Node populatedWarm = warm.resolve(new Node().type(reference(holderId))
+                .properties("branch", new Node().properties("actor", new Node().value("Ada"))));
+        Node omittedWarm = warm.resolve(new Node().type(reference(holderId)));
+
+        // then
+        assertTrue(coldResolved != null);
+        assertTrue(populatedWarm != null);
+        assertTrue(omittedWarm != null);
     }
 
     @Test
-    void nestedSchemaFreeTypeCachePreservesOptionalBranchAbsence() {
+    void shouldPreserveOptionalBranchAbsenceInNestedSchemaFreeTypeCache() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node leaf = new Node().name("Declaration Leaf")
                 .properties("leafText", new Node().type("Text"));
@@ -511,14 +641,19 @@ class ResolvedInstanceSchemaValidationTest {
         String holderId = provider.getBlueIdByName("Nested Optional Branch Holder");
         Blue blue = new Blue(provider);
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))
-                .properties("branch", new Node().properties("actor", new Node().value("Ada")))));
+        // when
+        Node populated = blue.resolve(new Node().type(reference(holderId))
+                .properties("branch", new Node().properties("actor", new Node().value("Ada"))));
+        Node omitted = blue.resolve(new Node().type(reference(holderId)));
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))));
+        // then
+        assertTrue(populated != null);
+        assertTrue(omitted != null);
     }
 
     @Test
-    void instanceSchemaOverlayDoesNotReuseExpandedDeclarationsAsPayload() {
+    void shouldNotReuseExpandedDeclarationsAsPayloadForInstanceSchemaOverlay() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node leaf = new Node().name("Overlay Declaration Leaf")
                 .properties("leafText", new Node().type("Text"));
@@ -534,17 +669,21 @@ class ResolvedInstanceSchemaValidationTest {
         String holderId = provider.getBlueIdByName("Overlay Declaration Holder");
         Blue blue = new Blue(provider);
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))));
-
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        Node omitted = blue.resolve(new Node().type(reference(holderId)));
+        IllegalArgumentException failure = captureFailure(
                 () -> blue.resolve(new Node().type(reference(holderId))
                         .properties("branch", new Node().schema(required()))));
 
+        // then
+        assertTrue(omitted != null);
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains("/branch"), failure.getMessage());
     }
 
     @Test
-    void cachedSchemaDiscoveryPreventsLaterExpandedSiblingFromActivatingOptionalParent() {
+    void shouldPreventExpandedSiblingFromActivatingOptionalParentAfterSchemaDiscoveryCache() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node requiredDeclaration = new Node().name("Cached Required Declaration")
                 .schema(required());
@@ -569,14 +708,22 @@ class ResolvedInstanceSchemaValidationTest {
         String holderId = provider.getBlueIdByName("Cached Optional Parent Holder");
         Blue blue = new Blue(provider);
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(requiredDeclarationId))));
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(expandedSiblingId))));
+        // when
+        Node requiredResolved =
+                blue.resolve(new Node().type(reference(requiredDeclarationId)));
+        Node siblingResolved =
+                blue.resolve(new Node().type(reference(expandedSiblingId)));
+        Node holderResolved = blue.resolve(new Node().type(reference(holderId)));
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(holderId))));
+        // then
+        assertTrue(requiredResolved != null);
+        assertTrue(siblingResolved != null);
+        assertTrue(holderResolved != null);
     }
 
     @Test
-    void suppliedOrdinaryChildActivatesNestedRequiredField() {
+    void shouldActivateNestedRequiredFieldWithSuppliedOrdinaryChild() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node branch = new Node().name("Activated Branch")
                 .properties("actor", new Node().type("Text").schema(required()));
@@ -587,16 +734,20 @@ class ResolvedInstanceSchemaValidationTest {
         provider.addSingleNodes(holder);
         String holderId = provider.getBlueIdByName("Activated Branch Holder");
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> new Blue(provider).resolve(new Node().type(reference(holderId))
                         .properties("branch", new Node()
                                 .properties("note", new Node().value("supplied")))));
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains("/branch/actor"), failure.getMessage());
     }
 
     @Test
-    void inheritedFixedFieldActivatesOptionalTypedBranch() {
+    void shouldActivateOptionalTypedBranchWithInheritedFixedField() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node branch = new Node().name("Fixed Branch")
                 .properties("marker", new Node().value("fixed"))
@@ -608,14 +759,18 @@ class ResolvedInstanceSchemaValidationTest {
         provider.addSingleNodes(holder);
         String holderId = provider.getBlueIdByName("Fixed Branch Holder");
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> new Blue(provider).resolve(new Node().type(reference(holderId))));
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains("/branch/actor"), failure.getMessage());
     }
 
     @Test
-    void directlyInheritedObjectSubtreeActivatesOptionalTypedBranch() {
+    void shouldActivateOptionalTypedBranchWithDirectlyInheritedObjectSubtree() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node branch = new Node().name("Declared Branch")
                 .properties("actor", new Node().type("Text").schema(required()));
@@ -627,14 +782,18 @@ class ResolvedInstanceSchemaValidationTest {
         provider.addSingleNodes(holder);
         String holderId = provider.getBlueIdByName("Declared Branch Holder");
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> new Blue(provider).resolve(new Node().type(reference(holderId))));
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains("/branch/actor"), failure.getMessage());
     }
 
     @Test
-    void referenceAndEquivalentMaterializedValueHaveSameCanonicalIdentity() {
+    void shouldGiveReferenceAndEquivalentMaterializedValueSameCanonicalIdentity() {
+        // given
         Fixture fixture = new Fixture();
         Node materialized = new Node().type(reference(fixture.concreteSubjectId))
                 .properties("identifier", new Node().value("subject-1"));
@@ -643,17 +802,23 @@ class ResolvedInstanceSchemaValidationTest {
         Node referencedInstance = fixture.holderInstance(reference(referenceId));
         Node materializedInstance = fixture.holderInstance(materialized.clone());
 
-        assertEquals(fixture.blue.calculateSemanticBlueId(materializedInstance),
-                fixture.blue.calculateSemanticBlueId(referencedInstance));
-
+        // when
+        String materializedBlueId =
+                fixture.blue.calculateSourceDocumentBlueId(materializedInstance);
+        String referencedBlueId =
+                fixture.blue.calculateSourceDocumentBlueId(referencedInstance);
         Node canonical = fixture.blue.canonicalize(referencedInstance);
         Node canonicalSubject = canonical.getProperties().get("subject");
+
+        // then
+        assertEquals(materializedBlueId, referencedBlueId);
         assertTrue(canonicalSubject.isReferenceOnly(), canonicalSubject.toString());
         assertEquals(referenceId, canonicalSubject.getBlueId());
     }
 
     @Test
-    void resolveAndSnapshotAgreeForValidationMaterialization() {
+    void shouldKeepResolveAndSnapshotAlignedForValidationMaterialization() {
+        // given
         Fixture fixture = new Fixture();
         Node referenced = new Node().name("Snapshot Subject")
                 .type(reference(fixture.concreteSubjectId))
@@ -663,8 +828,10 @@ class ResolvedInstanceSchemaValidationTest {
         Node instance = fixture.holderInstance(reference(referenceId));
 
         Node resolved = fixture.blue.resolve(instance);
+        // when
         ResolvedSnapshot snapshot = fixture.blue.resolveToSnapshot(instance);
 
+        // then
         assertEquals(resolved.getProperties().get("subject").getProperties().get("identifier").getValue(),
                 snapshot.resolvedAt("/subject/identifier").getValue());
         assertTrue(snapshot.canonicalAt("/subject").isReferenceOnly(),
@@ -673,17 +840,22 @@ class ResolvedInstanceSchemaValidationTest {
     }
 
     @Test
-    void loadSnapshotAppliesCompletedSchemaValidation() {
+    void shouldApplyCompletedSchemaValidationWhenLoadingSnapshot() {
+        // given
         Fixture fixture = new Fixture();
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> fixture.blue.loadSnapshot(fixture.holderInstance(null)));
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains("/subject"), failure.getMessage());
     }
 
     @Test
-    void canonicalizationIsStableAcrossColdAndWarmReferenceCache() {
+    void shouldKeepCanonicalizationStableAcrossColdAndWarmReferenceCache() {
+        // given
         Fixture fixture = new Fixture();
         Node referenced = new Node().type(reference(fixture.concreteSubjectId))
                 .properties("identifier", new Node().value("subject-1"));
@@ -693,15 +865,18 @@ class ResolvedInstanceSchemaValidationTest {
 
         Node cold = fixture.blue.canonicalize(instance);
         fixture.blue.resolve(instance);
+        // when
         Node warm = fixture.blue.canonicalize(instance);
 
-        assertEquals(BlueIdCalculator.calculateBlueId(cold), BlueIdCalculator.calculateBlueId(warm));
+        // then
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(cold), DirectBlueIdCalculator.calculateBlueId(warm));
         assertTrue(cold.getProperties().get("subject").isReferenceOnly());
         assertTrue(warm.getProperties().get("subject").isReferenceOnly());
     }
 
     @Test
-    void publicAndProcessingSnapshotsPreserveNestedListReferenceIdentityColdAndWarm() {
+    void shouldPreserveNestedListReferenceIdentityAcrossPublicAndProcessingSnapshots() {
+        // given
         Fixture fixture = new Fixture();
         Node referenced = new Node().name("Nested Snapshot Subject")
                 .type(reference(fixture.concreteSubjectId))
@@ -713,10 +888,16 @@ class ResolvedInstanceSchemaValidationTest {
                 fixture.holderInstance(reference(referenceId))));
         ResolvedSnapshot publicCold = fixture.blue.resolveToSnapshot(source);
         fixture.blue.clearResolvedSnapshotCache();
-        ResolvedSnapshot processingCold = fixture.blue.initializeDocument(source).snapshot();
+        ResolvedSnapshot processingCold = snapshot(
+                fixture.blue,
+                fixture.blue.initializeDocument(source));
         ResolvedSnapshot publicWarm = fixture.blue.resolveToSnapshot(source);
-        ResolvedSnapshot processingWarm = fixture.blue.initializeDocument(source).snapshot();
+        // when
+        ResolvedSnapshot processingWarm = snapshot(
+                fixture.blue,
+                fixture.blue.initializeDocument(source));
 
+        // then
         assertEquals(publicCold.blueId(), publicWarm.blueId());
         assertEquals(processingCold.blueId(), processingWarm.blueId());
         assertEquals(referenceId,
@@ -760,9 +941,9 @@ class ResolvedInstanceSchemaValidationTest {
 
     private static String blueIdOf(Node node) {
         BasicNodeProvider provider = new BasicNodeProvider(node);
-        List<Node> fetched = provider.fetchByBlueId(blue.language.utils.BlueIdCalculator.calculateBlueId(node));
+        List<Node> fetched = provider.fetchByBlueId(blue.language.identity.DirectBlueIdCalculator.calculateBlueId(node));
         if (fetched != null) {
-            return blue.language.utils.BlueIdCalculator.calculateBlueId(node);
+            return blue.language.identity.DirectBlueIdCalculator.calculateBlueId(node);
         }
         throw new AssertionError("Unable to calculate fixture BlueId");
     }

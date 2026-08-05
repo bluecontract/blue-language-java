@@ -1,0 +1,15 @@
+id: R_blue_transform_introduces_blue_rejected
+category: Resolution
+operation: preprocess
+description: a transformation must not introduce a new blue directive
+expectError: true
+expectedErrorCategory: InvalidReservedField
+source:
+  blue:
+    transformations:
+      - type:
+          blueId: DS4rHtvxTg1S3tn6e9ciuMNDkeEQtk4VTdiw8KUCfMAu
+        field: blue
+        value:
+          imports: {}
+  value: x

@@ -1,17 +1,30 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.merge.Merger;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.limits.PathLimits;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
-import static blue.language.utils.limits.Limits.NO_LIMITS;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
+import static blue.language.resolve.ResolutionLimits.NO_LIMITS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -19,7 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class LabelOverrideProvenanceEdgeTest {
 
     @Test
-    void resolvedInlineDeclarationRemainsOverridableInPublicMerge() {
+    void shouldResolvedInlineDeclarationRemainsOverridableInPublicMerge() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Blue blue = new Blue(provider);
         Node detailDeclaration = new Node().properties(
@@ -33,6 +47,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "item", new Node()
                         .name("Specific Item")
                         .properties("field", new Node().value("x")));
+        // when
+
+        // then
 
         assertDoesNotThrow(() -> new Merger(blue.getMergingProcessor(), provider)
                 .merge(target, overlay, NO_LIMITS));
@@ -42,7 +59,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void emptyStringPropertyKeyDoesNotCollideWithTheRootPath() {
+    void shouldEmptyStringPropertyKeyDoesNotCollideWithTheRootPath() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleNodes(new Node()
                 .name("Empty Key Detail")
@@ -59,6 +77,9 @@ class LabelOverrideProvenanceEdgeTest {
                 .properties("", new Node()
                         .name("Specific Item")
                         .properties("field", new Node().value("x")));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> new Blue(provider).resolve(source));
 
@@ -68,7 +89,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void nestedResolvedDerivedDeclarationCanReplaceItsBaseLabel() {
+    void shouldNestedResolvedDerivedDeclarationCanReplaceItsBaseLabel() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleNodes(new Node()
                 .name("Leaf Shape")
@@ -92,6 +114,9 @@ class LabelOverrideProvenanceEdgeTest {
         Node source = new Node()
                 .type(reference(holderId))
                 .properties("item", new Node().type(reference(derivedDetailId)));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> new Blue(provider).resolve(source));
 
@@ -99,7 +124,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void deepTypeAncestryDoesNotOverflowTheLabelScanner() {
+    void shouldDeepTypeAncestryDoesNotOverflowTheLabelScanner() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleNodes(new Node()
                 .name("Terminal Holder Type")
@@ -123,16 +149,20 @@ class LabelOverrideProvenanceEdgeTest {
         Node overlay = new Node().properties(
                 "item", new Node().name("Specific Item"));
         Blue blue = new Blue(provider);
+        // when
+
+        // then
 
         assertDoesNotThrow(() -> new Merger(
                 blue.getMergingProcessor(), provider).merge(
-                target, overlay, PathLimits.withSinglePath("/item")));
+                target, overlay, ResolutionLimits.withSinglePath("/item")));
 
         assertEquals("Specific Item", target.getAsNode("/item").getName());
     }
 
     @Test
-    void purePositionDeclarationLayerRemainsOverridable() {
+    void shouldPurePositionDeclarationLayerRemainsOverridable() {
+        // given
         BasicNodeProvider provider = positionalDeclarationProvider(1);
         Blue blue = new Blue(provider);
         String baseId = provider.getBlueIdByName("Positional Base Holder");
@@ -149,6 +179,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - $pos: 0",
                 "      name: Specific Item",
                 "      field: x"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(source));
 
@@ -156,7 +189,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void mixedPositionAndAppendDeclarationUsesTheAppendedEffectivePosition() {
+    void shouldMixedPositionAndAppendDeclarationUsesTheAppendedEffectivePosition() {
+        // given
         BasicNodeProvider provider = positionalDeclarationProvider(3);
         Blue blue = new Blue(provider);
         String baseId = provider.getBlueIdByName("Positional Base Holder");
@@ -177,6 +211,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - $pos: 3",
                 "      name: Specific Appended Item",
                 "      field: x"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(source));
 
@@ -185,7 +222,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void positionalReplacementResetsFixedProvenanceAtTheReplacedPosition() {
+    void shouldPositionalReplacementResetsFixedProvenanceAtTheReplacedPosition() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Replacement Detail",
@@ -217,6 +255,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - $pos: 0",
                 "      name: Specific Item",
                 "      field: y"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(source));
 
@@ -226,7 +267,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void replacingAnEmptyPlaceholderResetsItsProvenance() {
+    void shouldReplacingAnEmptyPlaceholderResetsItsProvenance() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Empty Replacement Detail",
@@ -256,6 +298,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - $pos: 0",
                 "      name: Specific Item",
                 "      field: y"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(source));
 
@@ -263,7 +308,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void replacementStillInheritsTheFixedTypeOfItsPosition() {
+    void shouldReplacementStillInheritsTheFixedTypeOfItsPosition() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(String.join("\n",
                 "name: Fixed Replacement Detail",
@@ -295,12 +341,16 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - $pos: 0",
                 "      name: Illegal Item",
                 "      field: y"));
+        // when
+
+        // then
 
         assertFixedValueConflict(() -> blue.resolve(source));
     }
 
     @Test
-    void appendedFixedDescendantPreventsRelabelingWithFullOrLimitedResolution() {
+    void shouldAppendedFixedDescendantPreventsRelabelingWithFullOrLimitedResolution() {
+        // given
         BasicNodeProvider provider = positionalDeclarationProvider(1);
         Blue blue = new Blue(provider);
         String baseId = provider.getBlueIdByName("Positional Base Holder");
@@ -322,6 +372,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - $pos: 1",
                 "      name: Illegal Item",
                 "      field: x"));
+        // when
+
+        // then
 
         assertFixedValueConflict(() -> blue.resolve(source.clone()));
         assertFixedValueConflict(() -> blue.resolve(
@@ -329,7 +382,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void previousAnchorAppendDeclarationRemainsOverridable() {
+    void shouldPreviousAnchorAppendDeclarationRemainsOverridable() {
+        // given
         BasicNodeProvider provider = previousAppendProvider(false);
         Blue blue = new Blue(provider);
         String derivedId = provider.getBlueIdByName("Previous Derived Holder");
@@ -341,6 +395,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - $pos: 1",
                 "      name: Specific Appended Item",
                 "      field: x"));
+        // when
+
+        // then
 
         Node resolved = assertDoesNotThrow(() -> blue.resolve(source));
 
@@ -349,7 +406,8 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void previousAnchorFixedAppendPreventsRelabelingWithFullOrLimitedResolution() {
+    void shouldPreviousAnchorFixedAppendPreventsRelabelingWithFullOrLimitedResolution() {
+        // given
         BasicNodeProvider provider = previousAppendProvider(true);
         Blue blue = new Blue(provider);
         String derivedId = provider.getBlueIdByName("Previous Derived Holder");
@@ -361,6 +419,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - $pos: 1",
                 "      name: Illegal Appended Item",
                 "      field: x"));
+        // when
+
+        // then
 
         assertFixedValueConflict(() -> blue.resolve(source.clone()));
         assertFixedValueConflict(() -> blue.resolve(
@@ -368,18 +429,15 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void fixedItemTypePreventsPlainAndPositionedRelabeling() {
+    void shouldFixedItemTypePreventsPlainAndPositionedRelabeling() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
-        provider.addSingleDocs(String.join("\n",
-                "name: Fixed Item Shape",
-                "fixed: value"));
-        String fixedItemId = provider.getBlueIdByName("Fixed Item Shape");
         provider.addSingleDocs(String.join("\n",
                 "name: Fixed ItemType Holder",
                 "entries:",
                 "  type: List",
                 "  itemType:",
-                "    blueId: " + fixedItemId,
+                "    fixed: value",
                 "  items:",
                 "    - name: Generic Item"));
         String holderId = provider.getBlueIdByName("Fixed ItemType Holder");
@@ -397,6 +455,9 @@ class LabelOverrideProvenanceEdgeTest {
                 "  items:",
                 "    - $pos: 0",
                 "      name: Illegal Positioned Item"));
+        // when
+
+        // then
 
         assertFixedValueConflict(() -> blue.resolve(plain));
         assertFixedValueConflict(() -> blue.resolve(positioned));
@@ -437,7 +498,7 @@ class LabelOverrideProvenanceEdgeTest {
                 "    - base"));
         Node base = provider.getNodeByName("Previous Base Holder");
         List<Node> baseItems = base.getAsNode("/entries").getItems();
-        String previousId = BlueIdCalculator.calculateBlueId(baseItems);
+        String previousId = DirectBlueIdCalculator.calculateBlueId(baseItems);
         String detailId = provider.getBlueIdByName("Positional Detail");
         String appendedContent = fixedAppend
                 ? "      hidden: fixed\n"
@@ -461,8 +522,8 @@ class LabelOverrideProvenanceEdgeTest {
         return new Node().blueId(blueId);
     }
 
-    private static PathLimits limitedSecondEntryField() {
-        return new PathLimits.Builder()
+    private static ResolutionLimits limitedSecondEntryField() {
+        return ResolutionLimits.builder()
                 .addPath("/entries/0")
                 .addPath("/entries/1/field")
                 .build();

@@ -1,8 +1,0 @@
-id: runtimeRegistryProcessingTerminatedMarkerNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: ProcessingTerminatedMarker
-registryPath: registry/blue-contracts-1.0/ProcessingTerminatedMarker.blue
-expectedBlueId: GBDBthfshBFr4GQKUU1fmy4GnPL7q2y3as4deUWpuBtu
-semanticDescriptionIdentityBearing: true

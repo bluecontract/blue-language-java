@@ -1,0 +1,121 @@
+{
+  "schema": "blue-language-java-processor-package-relocation/1.0",
+  "status": "evidence-backed-target-exception",
+  "evidence": {
+    "kind": "static-validation",
+    "sourceCommit": "fa6654902c0f01e58c877fadb321dd37d01ccdd4",
+    "processorImplementationCommit": "f7d03ac3db4a0400db240a35da06813a9c148bae",
+    "cohesionRefactorCommit": "a7adcb3580568d339222b93790c9bcc83e01590c",
+    "baselineCommit": "4b88f9148c3dfdeea31c715d1ef339b8d8d7c721",
+    "method": "Static source inventory, public API baseline intersection, read-only sibling import scan, lexical package-private dependency graph, and physical Java source line counts.",
+    "runtimeClaims": "none"
+  },
+  "sourcePackage": "blue.language.processor",
+  "classificationInventory": {
+    "path": "api/processor-type-classification-1.0.json",
+    "sha256": "sha256:dce3d9a290d945e37ee43afe08e9ff36a7f07f96754256354804553be95da468",
+    "productionSourceFiles": 273,
+    "topLevelProcessorTreeTypes": 270
+  },
+  "directPackage": {
+    "productionSourceFilesIncludingPackageInfo": 244,
+    "topLevelTypes": 244,
+    "publicTopLevelTypes": 91,
+    "packagePrivateTopLevelTypes": 153,
+    "sourceFileAim": 110,
+    "publicTypeAim": 70,
+    "sourceFileAimReached": false,
+    "publicTypeAimReached": false,
+    "minimumFilesThatWouldNeedRelocation": 134
+  },
+  "publicSurfaceAudit": {
+    "binaryBaseline": "api/blue-language-java-1.0.json",
+    "binaryBaselineSha256": "sha256:406a9eedab5425adfe19d2cf640e720aca7b2f4ad771f3a2a6d0e68f8117f175",
+    "survivingBaselineDirectPublicTypes": 76,
+    "currentDirectPublicTypes": 91,
+    "currentTypesReferencedOutsideDirectProductionPackage": 88,
+    "currentTypesImportedByReadOnlySiblingSources": 56,
+    "readOnlySiblingRoots": [
+      "../blue-bex-java",
+      "../blue-contract-java"
+    ],
+    "visibilityReductions": [],
+    "retainedZeroExternalSourceReferenceCandidates": [
+      {
+        "type": "blue.language.processor.DocumentProcessorAdministration",
+        "reason": "Required return type of the public DocumentProcessor.administration() cohesion surface."
+      },
+      {
+        "type": "blue.language.processor.ProcessingDocumentValidator",
+        "reason": "Surviving binary-baseline raw-admission API documented in the public reference."
+      },
+      {
+        "type": "blue.language.processor.RootExternalDeliveryEvidenceVerifier",
+        "reason": "Surviving binary-baseline default implementation of ExternalDeliveryEvidenceVerifier."
+      }
+    ],
+    "decision": "No public type has sufficient evidence for a safe visibility reduction. The 76 surviving baseline types alone exceed the 70-type aim; the remaining current types are approved modernization surfaces or current protocol additions."
+  },
+  "packagePrivateGraph": {
+    "connectedComponents": 6,
+    "largestConnectedComponentTypes": 148,
+    "rootPublicTypesDependingOnLargestComponent": 19,
+    "largestComponentDependingOnRootPublicTypes": 78,
+    "independentLeaves": [
+      "DeclaredTypeLineageMatcher",
+      "LanguageProcessingSnapshotManager",
+      "ProcessorGasCharges",
+      "RegisteredContractScopeIdentitySnapshotManager",
+      "SemanticGasFormulas"
+    ],
+    "finding": "Moving the dominant component below the root while retaining current public types would create a bidirectional package dependency. Moving a leaf directly would require making its implementation public or adding a public bridge; both are forbidden by the cohesion prompt."
+  },
+  "rules": {
+    "supportedPublicTypesRemainStable": true,
+    "implementationClassesMadePublicForAccess": 0,
+    "technicalPublicBridgesAdded": 0,
+    "publicTypesInInternalNamedPackages": 0,
+    "packageCyclesAdded": 0,
+    "behaviorChanges": 0
+  },
+  "targetExceptions": [
+    {
+      "aim": "blue.language.processor direct package <= 110 production source files",
+      "result": "not-reached",
+      "actual": 244,
+      "rationale": "Reaching 110 now requires relocating at least 134 files from a package-private graph whose 148-type main component has dependencies in both directions across the stable root public API. A source-only relocation would therefore require public implementation bridges, package cycles, or incompatible public API moves. Preserving API compatibility and zero package cycles takes precedence over the numeric aim.",
+      "futurePreconditions": [
+        "Introduce a separately versioned public API/model package boundary.",
+        "Prove consumer migration for all surviving baseline processor types.",
+        "Characterize each package-local state owner before cutting the graph.",
+        "Keep the implementation dependency graph acyclic without public technical gateways."
+      ]
+    },
+    {
+      "aim": "blue.language.processor direct package <= 70 public top-level types",
+      "result": "not-reached",
+      "actual": 91,
+      "rationale": "The 76 surviving direct-package public top-level types from the binary baseline already exceed the aim. Of the 15 additional current types, the inventory identifies approved modernization or protocol surfaces; the three types without external source references are retained for an existing public return type, a surviving raw-admission API, and a surviving default evidence-verifier API. No visibility reduction is supported without an incompatible API change.",
+      "futurePreconditions": [
+        "Version and publish a replacement API package boundary.",
+        "Prove downstream migration for the 76 surviving baseline types.",
+        "Record every approved removal or relocation in the API migration ledger."
+      ]
+    }
+  ],
+  "plannedResponsibilities": [
+    "admission",
+    "contracts",
+    "delivery",
+    "events",
+    "mutation",
+    "checkpoint",
+    "lifecycle",
+    "subscription",
+    "gas",
+    "snapshot",
+    "scope",
+    "support"
+  ],
+  "implementedRelocations": []
+}

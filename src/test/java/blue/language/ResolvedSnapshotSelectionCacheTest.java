@@ -1,93 +1,108 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.model.Node;
-import blue.language.processor.DocumentProcessingResult;
-import blue.language.processor.ProcessingMetricsSink;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.merge.ResolvedSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Cache state is an implementation detail. These assertions compare the
+ * semantic result across warm, cold, cloned, and differently ordered inputs.
+ */
 class ResolvedSnapshotSelectionCacheTest {
 
     @Test
-    void warmNodeCacheKeepsCompactSelectionWhileSnapshotSelectsResolvedView() {
+    void shouldWarmAndFreshResolutionProduceTheSameSnapshotMeaning() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
-        CountingMetrics metrics = new CountingMetrics();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+        Blue warmBlue = fixture.newBlue(new AtomicInteger());
+        Node source = fixture.compact();
 
-        DocumentProcessingResult compact = blue.processDocument(
-                fixture.compact(), fixture.auditEvent("compact-first"));
-        int hitsAfterFirst = metrics.cacheHits.get();
-        DocumentProcessingResult warmCompact = blue.processDocument(
-                compact.document(), fixture.auditEvent("compact-second"));
+        ResolvedSnapshot first = warmBlue.resolveToSnapshot(source);
+        ResolvedSnapshot warm = warmBlue.resolveToSnapshot(source.clone());
+        // when
+        ResolvedSnapshot fresh =
+                fixture.newBlue(new AtomicInteger()).resolveToSnapshot(source.clone());
 
-        assertEquals(0, executions.get(), "cache reuse must not select type-derived contracts");
-        assertFalse(hasContract(warmCompact.document(), "audit"));
-        assertTrue(metrics.cacheHits.get() > hitsAfterFirst,
-                "the unchanged Node continuation must reuse its input snapshot");
-
-        ResolvedSnapshot snapshot = blue.resolveToSnapshot(fixture.compact());
-        DocumentProcessingResult initializedSnapshot = blue.initializeDocument(snapshot);
-        DocumentProcessingResult processedSnapshot = blue.processDocument(
-                initializedSnapshot.snapshot(), fixture.auditEvent("snapshot"));
-
-        assertEquals(1, executions.get());
-        assertTrue(hasContract(processedSnapshot.document(), "audit"));
+        // then
+        assertEquivalent(first, warm, warmBlue);
+        assertEquivalent(first, fresh, warmBlue);
     }
 
     @Test
-    void structurallyEqualCloneHitsAndMutationMissesSelectedSnapshotCache() {
-        Blue blue = new Blue();
-        DocumentProcessingResult initialized = blue.initializeDocument(
-                new Node().properties("counter", new Node().value(0)).contracts(new Node()));
-        CountingMetrics metrics = new CountingMetrics();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
+    void shouldChangeIdentityAfterInputMutationWithoutLosingInheritedMeaning() {
+        // given
+        MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
+                new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
+        Blue blue = fixture.newBlue(new AtomicInteger());
+        Node source = fixture.compact();
+        ResolvedSnapshot original = blue.resolveToSnapshot(source);
 
-        DocumentProcessingResult cloneResult = blue.processDocument(
-                initialized.document().clone(), new Node().properties("kind", new Node().value("noop")));
-        DocumentProcessingResult coldResult = new Blue().processDocument(
-                initialized.document().clone(), new Node().properties("kind", new Node().value("noop")));
+        Node mutated = source.clone();
+        mutated.properties("selectedOnly", new Node().value("changed"));
+        // when
+        ResolvedSnapshot changed = blue.resolveToSnapshot(mutated);
 
-        assertEquals(1, metrics.cacheHits.get(), "an exact clone should reuse the immutable companion snapshot");
-        assertEquals(0, metrics.cacheMisses.get());
-        assertEquals(coldResult.totalGas(), cloneResult.totalGas(),
-                "host snapshot reuse must not alter processor gas");
-
-        Node mutated = initialized.document().clone();
-        mutated.properties("counter", new Node().value(1));
-        blue.processDocument(mutated, new Node().properties("kind", new Node().value("noop-2")));
-
-        assertTrue(metrics.cacheMisses.get() > 0, "a changed selected tree must not reuse the old snapshot");
+        // then
+        assertNotEquals(original.blueId(), changed.blueId());
+        assertEquals("compact", original.resolvedRoot().getAsText("/selectedOnly"));
+        assertEquals("changed", changed.resolvedRoot().getAsText("/selectedOnly"));
+        assertTrue(hasContract(original.resolvedRoot(), "audit"));
+        assertTrue(hasContract(changed.resolvedRoot(), "audit"));
     }
 
     @Test
-    void compactAndResolvedSelectionsWithOneSemanticIdentityDoNotContaminateCache() {
+    void shouldPreventResolutionOrderFromMakingRepresentationHistoryObservable() {
+        // given
         MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture fixture =
                 new MaterializedSelectedProcessingDocumentFailFirstTest.AuditFixture();
-        AtomicInteger executions = new AtomicInteger();
-        Blue blue = fixture.newBlue(executions);
         Node compact = fixture.compact();
-        ResolvedSnapshot snapshot = blue.resolveToSnapshot(compact);
+        Node redundant = fixture.materializedSource();
 
-        assertEquals(snapshot.blueId(), blue.calculateSemanticBlueId(compact));
-        assertEquals(snapshot.blueId(), blue.calculateSemanticBlueId(snapshot.resolvedRoot()));
-        assertNotEquals(blue.nodeToJson(compact), blue.nodeToJson(snapshot.resolvedRoot()));
+        Blue compactFirstBlue = fixture.newBlue(new AtomicInteger());
+        ResolvedSnapshot compactFirst =
+                compactFirstBlue.resolveToSnapshot(compact);
+        ResolvedSnapshot redundantSecond =
+                compactFirstBlue.resolveToSnapshot(redundant);
 
-        DocumentProcessingResult resolved = blue.processDocument(snapshot, fixture.auditEvent("resolved-first"));
-        DocumentProcessingResult compactResult = blue.processDocument(compact, fixture.auditEvent("compact-after"));
+        Blue redundantFirstBlue = fixture.newBlue(new AtomicInteger());
+        ResolvedSnapshot redundantFirst =
+                redundantFirstBlue.resolveToSnapshot(redundant.clone());
+        // when
+        ResolvedSnapshot compactSecond =
+                redundantFirstBlue.resolveToSnapshot(compact.clone());
 
-        assertEquals(1, executions.get(), "only the explicitly resolved selection should execute audit");
-        assertTrue(hasContract(resolved.document(), "audit"));
-        assertFalse(hasContract(compactResult.document(), "audit"));
+        // then
+        assertEquivalent(compactFirst, redundantSecond, compactFirstBlue);
+        assertEquivalent(compactFirst, redundantFirst, compactFirstBlue);
+        assertEquivalent(compactFirst, compactSecond, compactFirstBlue);
+    }
+
+    private static void assertEquivalent(ResolvedSnapshot expected,
+                                         ResolvedSnapshot actual,
+                                         Blue renderer) {
+        assertEquals(expected.blueId(), actual.blueId());
+        assertEquals(renderer.nodeToJson(expected.canonicalRoot()),
+                renderer.nodeToJson(actual.canonicalRoot()));
+        assertEquals(renderer.nodeToJson(expected.resolvedRoot()),
+                renderer.nodeToJson(actual.resolvedRoot()));
     }
 
     private static boolean hasContract(Node document, String key) {
@@ -95,20 +110,5 @@ class ResolvedSnapshotSelectionCacheTest {
                 && document.getContracts() != null
                 && document.getContracts().getProperties() != null
                 && document.getContracts().getProperties().containsKey(key);
-    }
-
-    private static final class CountingMetrics implements ProcessingMetricsSink {
-        private final AtomicInteger cacheHits = new AtomicInteger();
-        private final AtomicInteger cacheMisses = new AtomicInteger();
-
-        @Override
-        public void incrementProcessingSnapshotCacheHits() {
-            cacheHits.incrementAndGet();
-        }
-
-        @Override
-        public void incrementProcessingSnapshotCacheMisses() {
-            cacheMisses.incrementAndGet();
-        }
     }
 }

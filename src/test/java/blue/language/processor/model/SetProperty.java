@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.HandlerContract;
 
-@TypeBlueId("8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts")
+@TypeBlueId(ProcessorTestTypeBlueIds.SET_PROPERTY)
 public class SetProperty extends HandlerContract {
 
     private String propertyKey;

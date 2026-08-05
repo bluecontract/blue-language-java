@@ -3,7 +3,7 @@ package blue.language.processor;
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
@@ -12,13 +12,13 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SequentialPatchPlanningSessionTest {
 
-    private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_METRICS =
-            new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+    private static final UpdateMaterializationMetrics NOOP_METRICS =
+            new UpdateMaterializationMetrics() {
                 @Override
                 public void recordBeforeNodeMaterialization() {
                 }
@@ -29,20 +29,30 @@ class SequentialPatchPlanningSessionTest {
             };
 
     @Test
-    void sequentialSessionFinishesConformanceAfterEachPatchWhileAtomicBatchFinishesOnce() {
+    void shouldFinishConformanceAfterEachSequentialPatch() {
+        // given
         Node initial = typedRoot();
         RecordingConformanceOverride sequentialOverride = new RecordingConformanceOverride();
         SequentialPatchPlanningSession session = session(initial, sequentialOverride);
 
+        // when
         session.planNext(JsonPatch.add("/a", new Node().value("one")));
         session.planNext(JsonPatch.add("/b", new Node().value("two")));
 
+        // then
         assertEquals(2, sequentialOverride.seenRoots.size());
         assertEquals("one", sequentialOverride.seenRoots.get(1).getAsText("/a"));
         assertEquals("two", session.resolvedRoot().at("/b").getValue());
+    }
 
+    @Test
+    void shouldFinishConformanceOnceForAnAtomicPatchBatch() {
+        // given
+        Node initial = typedRoot();
         RecordingConformanceOverride atomicOverride = new RecordingConformanceOverride();
-        DocumentProcessingRuntime.PlanningContext atomicPlanning = planning(initial);
+        PatchPlanningContext atomicPlanning = planning(initial);
+
+        // when
         new BatchPatchTransaction("/",
                 Arrays.asList(
                         JsonPatch.add("/a", new Node().value("one")),
@@ -53,29 +63,36 @@ class SequentialPatchPlanningSessionTest {
                 NOOP_METRICS,
                 false).apply();
 
+        // then
         assertEquals(1, atomicOverride.seenRoots.size());
         assertEquals("one", atomicOverride.seenRoots.get(0).getAsText("/a"));
         assertEquals("two", atomicOverride.seenRoots.get(0).getAsText("/b"));
     }
 
     @Test
-    void failedStepDoesNotAdvanceReusableSession() {
+    void shouldVerifyFailedStepDoesNotAdvanceReusableSession() {
+        // given
         Node initial = new Node().properties("status", new Node().value("idle"));
         SequentialPatchPlanningSession session = session(initial, null);
         session.planNext(JsonPatch.replace("/status", new Node().value("active")));
         FrozenNode canonicalAfterFirst = session.canonicalRoot();
         FrozenNode resolvedAfterFirst = session.resolvedRoot();
 
-        assertThrows(IllegalStateException.class,
-                () -> session.planNext(JsonPatch.remove("/missing")));
+        // when
+        Throwable failure = captureFailure(
+                () -> session.planNext(
+                        JsonPatch.remove("/missing")));
 
+        // then
+        assertInstanceOf(IllegalStateException.class, failure);
         assertSame(canonicalAfterFirst, session.canonicalRoot());
         assertSame(resolvedAfterFirst, session.resolvedRoot());
         assertEquals("active", session.resolvedRoot().at("/status").getValue());
     }
 
     @Test
-    void rebaseMakesTheObservedRuntimeRootsTheNextStepBase() {
+    void shouldVerifyRebaseMakesTheObservedRuntimeRootsTheNextStepBase() {
+        // given
         Node initial = new Node().properties("status", new Node().value("idle"));
         SequentialPatchPlanningSession session = session(initial, null);
         SequentialPatchPlanningSession.PlannedStep first =
@@ -87,10 +104,12 @@ class SequentialPatchPlanningSessionTest {
                 .plan("/", JsonPatch.add("/handlerWrite", new Node().value(true)))
                 .root();
 
+        // when
         session.rebase(actualCanonical, actualResolved);
         SequentialPatchPlanningSession.PlannedStep second =
                 session.planNext(JsonPatch.add("/tail", new Node().value("kept")));
 
+        // then
         assertSame(actualCanonical, second.baseCanonical());
         assertSame(actualResolved, second.baseResolved());
         assertEquals(true, second.result().resolvedRoot().at("/handlerWrite").getValue());
@@ -98,23 +117,43 @@ class SequentialPatchPlanningSessionTest {
     }
 
     @Test
-    void workingDocumentRestoresItsReusableSessionAfterLaterPreviewFailure() {
+    void shouldVerifyWorkingDocumentRestoresItsReusableSessionAfterLaterPreviewFailure() {
+        // given
         Node document = new Node().properties("status", new Node().value("idle"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
         WorkingDocument working = runtime.workingDocument("/");
         working.applyPatch(JsonPatch.replace("/status", new Node().value("active")));
         FrozenNode afterSuccessfulPrefix = working.canonicalRoot();
 
-        assertThrows(IllegalStateException.class, () -> working.applyPatches(Arrays.asList(
-                JsonPatch.replace("/status", new Node().value("uncommitted")),
-                JsonPatch.remove("/missing"))));
+        // when
+        Throwable failure = captureFailure(
+                () -> working.applyPatches(Arrays.asList(
+                        JsonPatch.replace(
+                                "/status",
+                                new Node().value("uncommitted")),
+                        JsonPatch.remove("/missing"))));
+        FrozenNode afterFailedBatch = working.canonicalRoot();
+        WorkingDocument.Preview recovered =
+                working.previewAndApplyPatches(Arrays.asList(
+                        JsonPatch.replace(
+                                "/status",
+                                new Node().value("recovered"))));
 
-        assertSame(afterSuccessfulPrefix, working.canonicalRoot());
-        WorkingDocument.Preview recovered = working.previewAndApplyPatches(Arrays.asList(
-                JsonPatch.replace("/status", new Node().value("recovered"))));
+        // then
+        assertInstanceOf(IllegalStateException.class, failure);
+        assertSame(afterSuccessfulPrefix, afterFailedBatch);
         assertSame(afterSuccessfulPrefix, recovered.patch(0).baseCanonical());
         assertEquals("recovered", working.resolvedAt("/status").getValue());
         assertEquals("idle", document.getAsText("/status"));
+    }
+
+    private static Throwable captureFailure(Runnable operation) {
+        try {
+            operation.run();
+            return null;
+        } catch (Throwable failure) {
+            return failure;
+        }
     }
 
     private SequentialPatchPlanningSession session(Node root,
@@ -126,7 +165,7 @@ class SequentialPatchPlanningSessionTest {
                 NOOP_METRICS);
     }
 
-    private DocumentProcessingRuntime.PlanningContext planning(Node root) {
+    private PatchPlanningContext planning(Node root) {
         FrozenNode canonical = FrozenNode.fromUncheckedCanonicalNode(root.clone());
         FrozenNode resolved = FrozenNode.fromResolvedNode(root.clone());
         return DocumentProcessingRuntime.workingPlanningContext(canonical,
@@ -137,7 +176,7 @@ class SequentialPatchPlanningSessionTest {
 
     private Node typedRoot() {
         return new Node()
-                .type(new Node().blueId(RuntimeBlueIds.BLUE_ID_TYPE))
+                .type(new Node().blueId(ProcessorTestTypeBlueIds.LEGACY_BLUE_ID_TYPE))
                 .properties("seed", new Node().value("value"));
     }
 

@@ -1,0 +1,5 @@
+name: Blue Language Conformance Set Root Field Transformation
+description: >
+  Conformance-only deterministic preprocessing transformation that writes one
+  configured Source node at one direct root object field, replacing any prior
+  value at that field.

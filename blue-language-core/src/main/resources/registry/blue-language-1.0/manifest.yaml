@@ -1,0 +1,40 @@
+registry: blue-language-core
+registryKind: core-type
+specificationVersion: '1.0'
+fixturePackageIdentity: sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55
+entries:
+- key: Boolean
+  path: Boolean.blue
+  blueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2
+  sha256: 92cf78899ae67dcfcdb7cb837190a04545e37966236e1808895ba70eedc5331d
+  semanticDescriptionIdentityBearing: true
+- key: Dictionary
+  path: Dictionary.blue
+  blueId: Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG
+  sha256: f5ae2d363939f16685f3c07e4a1f1f15a2fa0acbd904d03446513ce9056eb9f7
+  semanticDescriptionIdentityBearing: true
+- key: Double
+  path: Double.blue
+  blueId: 9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ
+  sha256: ddb28be72c55b606cc8ebcbe358df498991c8bef6019fb1f37541dbfc3929e9e
+  semanticDescriptionIdentityBearing: true
+- key: Integer
+  path: Integer.blue
+  blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+  sha256: 7ffe52869b7ee4d8587405ce2b770622204f40631d6246620139a5a490fc6de2
+  semanticDescriptionIdentityBearing: true
+- key: List
+  path: List.blue
+  blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+  sha256: 908e86621bc2a84ff28eacc0c4e57504605d0575f714f456d3abbde430de0a08
+  semanticDescriptionIdentityBearing: true
+- key: Text
+  path: Text.blue
+  blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  sha256: db8a4ff45cccfbb92e011ac3c79a70e6a17e57f2a807e10747e9f444c8d15fe5
+  semanticDescriptionIdentityBearing: true
+packageIdentityAlgorithm:
+  digest: sha256
+  encoding: UTF-8 canonical JSON with sorted keys
+  normalization: packageIdentity and fixturePackageIdentity are null before hashing
+packageIdentity: sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e

@@ -1,0 +1,12 @@
+name: Document Processing Terminated
+description: 'Processor lifecycle event for the first successful graceful termination request in a scope during one invocation. The application-defined cause and optional reason explain the business transition; runtime failure never emits this event.
+
+  '
+cause:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+reason:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC

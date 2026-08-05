@@ -1,26 +1,25 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
-import blue.language.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.MergeReverser;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -29,30 +28,28 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Fail-first coverage for the initialization identity of an embedded scope.
+ * Fail-first coverage for the exact initialization identity of a scope.
  *
- * <p>Every expected identity in this class is calculated from an explicitly
- * constructed standalone Source-equivalent document before processing begins.
- * The tests deliberately do not hash a child fragment from the parent's
- * Canonical Identity Input, do not hash a handler-visible Resolved View as if it
- * were Source, and do not reconstruct pre-initialization state from a returned,
- * already-mutated document.</p>
+ * <p>Contracts 1.0 §9.2 records the direct Node BlueId of the exact selected
+ * scope immediately before initialization effects. It explicitly does not
+ * calculate Content BlueId or consult a provider. Every expectation below is
+ * therefore derived from an immutable copy of the selected exact node at that
+ * protocol capture point.</p>
  */
 class SelectedScopeContentBlueIdFailFirstTest {
 
     @Test
-    void typeDerivedSelectedChildUsesStandaloneIdentityInsteadOfEmptyNodeIdentity() {
+    void shouldVerifySelectedChildUsesItsExactDirectIdentityInsteadOfEmptyNodeIdentity() {
+        // given
         ScopeFixture fixture = new ScopeFixture();
         Node source = fixture.source(false);
-        ResolvedSnapshot parentSnapshot = fixture.identityBlue().resolveToSnapshot(source.clone());
-
-        assertNull(parentSnapshot.canonicalAt("/child"),
-                "the selected child must be omitted from the parent identity as fully type-derived");
-
         ExpectedIdentities expected = fixture.expectedBeforeLifecycle(source);
         LifecycleRecorder recorder = new LifecycleRecorder();
+
+        // when
         DocumentProcessingResult result = fixture.executionBlue(recorder).initializeDocument(source);
 
+        // then
         assertSuccessful(result);
         assertScopeIdentity(result.document(), recorder, "/child", expected.child);
         assertNotEquals(emptyNodeBlueId(), expected.child,
@@ -60,32 +57,34 @@ class SelectedScopeContentBlueIdFailFirstTest {
     }
 
     @Test
-    void contextualChildCanonicalFragmentDoesNotReplaceStandaloneInheritedTypeIdentity() {
+    void shouldVerifyResolvedRepresentationDoesNotReplaceTheSelectedExactCanonicalNodeIdentity() {
+        // given
         ScopeFixture fixture = new ScopeFixture();
         Node source = fixture.source(true);
         Blue identityBlue = fixture.identityBlue();
         ResolvedSnapshot parentSnapshot = identityBlue.resolveToSnapshot(source.clone());
         FrozenNode contextualFragment = parentSnapshot.canonicalAt("/child");
-
-        assertNotNull(contextualFragment);
-        assertNull(contextualFragment.getType(),
-                "the parent fragment intentionally omits the type supplied by parent field metadata");
-
-        Node standaloneChild = fixture.standaloneChildBeforeLifecycle(source);
-        assertEquals(fixture.childTypeBlueId, standaloneChild.getType().getBlueId());
-        String expectedChild = identityBlue.calculateSemanticBlueId(standaloneChild);
-        assertNotEquals(contextualFragment.blueId(), expectedChild,
-                "the contextual parent fragment is not the standalone scope Content BlueId input");
-
+        String expectedChild = contextualFragment != null
+                ? contextualFragment.blueId()
+                : null;
         LifecycleRecorder recorder = new LifecycleRecorder();
-        DocumentProcessingResult result = fixture.executionBlue(recorder).initializeDocument(source);
 
+        // when
+        DocumentProcessingResult result =
+                fixture.executionBlue(recorder)
+                        .initializeDocument(source);
+
+        // then
+        assertNotNull(contextualFragment);
+        assertNotEquals(parentSnapshot.resolvedAt("/child").blueId(), expectedChild,
+                "a materialized Resolved Form is not the selected exact canonical node");
         assertSuccessful(result);
         assertScopeIdentity(result.document(), recorder, "/child", expectedChild);
     }
 
     @Test
-    void explicitRootNameEqualToTypeNameRemainsIdentityBearing() {
+    void shouldVerifyExplicitRootNameEqualToTypeNameRemainsIdentityBearing() {
+        // given
         Node canonicalType = new Node().name("Same Label");
         BasicNodeProvider provider = new BasicNodeProvider(canonicalType);
         String typeBlueId = provider.getBlueIdByName(canonicalType.getName());
@@ -93,16 +92,23 @@ class SelectedScopeContentBlueIdFailFirstTest {
                 .name(canonicalType.getName())
                 .type(reference(typeBlueId));
         Blue identityBlue = ProcessorTestSupport.blue(provider);
-        String expected = identityBlue.calculateSemanticBlueId(source.clone());
-        String withoutExplicitName = identityBlue.calculateSemanticBlueId(
-                new Node().type(reference(typeBlueId)));
+        String expected = identityBlue.resolveToSnapshot(
+                source.clone()).blueId();
 
+        // when
+        String withoutExplicitName = identityBlue.resolveToSnapshot(
+                new Node().type(reference(typeBlueId))).blueId();
+        DocumentProcessingResult result =
+                identityBlue.initializeDocument(source.clone());
+
+        // then
         assertNotEquals(withoutExplicitName, expected);
-        assertRootInitializationIdentity(identityBlue, source, expected);
+        assertRootInitializationIdentity(result, expected);
     }
 
     @Test
-    void explicitRootDescriptionEqualToTypeDescriptionRemainsIdentityBearing() {
+    void shouldVerifyExplicitRootDescriptionEqualToTypeDescriptionRemainsIdentityBearing() {
+        // given
         Node canonicalType = new Node()
                 .name("Description Type")
                 .description("Same Description");
@@ -112,16 +118,23 @@ class SelectedScopeContentBlueIdFailFirstTest {
                 .description(canonicalType.getDescription())
                 .type(reference(typeBlueId));
         Blue identityBlue = ProcessorTestSupport.blue(provider);
-        String expected = identityBlue.calculateSemanticBlueId(source.clone());
-        String withoutExplicitDescription = identityBlue.calculateSemanticBlueId(
-                new Node().type(reference(typeBlueId)));
+        String expected = identityBlue.resolveToSnapshot(
+                source.clone()).blueId();
 
+        // when
+        String withoutExplicitDescription = identityBlue.resolveToSnapshot(
+                new Node().type(reference(typeBlueId))).blueId();
+        DocumentProcessingResult result =
+                identityBlue.initializeDocument(source.clone());
+
+        // then
         assertNotEquals(withoutExplicitDescription, expected);
-        assertRootInitializationIdentity(identityBlue, source, expected);
+        assertRootInitializationIdentity(result, expected);
     }
 
     @Test
-    void explicitRootLabelsDifferentFromTypeLabelsRemainIdentityBearing() {
+    void shouldVerifyExplicitRootLabelsDifferentFromTypeLabelsRemainIdentityBearing() {
+        // given
         Node canonicalType = new Node()
                 .name("Type Label")
                 .description("Type Description");
@@ -132,20 +145,29 @@ class SelectedScopeContentBlueIdFailFirstTest {
                 .description("Instance Description")
                 .type(reference(typeBlueId));
         Blue identityBlue = ProcessorTestSupport.blue(provider);
-        String expected = identityBlue.calculateSemanticBlueId(source.clone());
+        String expected = identityBlue.resolveToSnapshot(
+                source.clone()).blueId();
 
-        assertRootInitializationIdentity(identityBlue, source, expected);
+        // when
+        DocumentProcessingResult result =
+                identityBlue.initializeDocument(source.clone());
+
+        // then
+        assertRootInitializationIdentity(result, expected);
     }
 
     @Test
-    void lifecycleMutationIsAfterOwnCaptureAndChildMutationIsBeforeParentCapture() {
+    void shouldVerifyLifecycleMutationIsAfterOwnCaptureAndChildMutationIsBeforeParentCapture() {
+        // given
         ScopeFixture fixture = new ScopeFixture();
         Node source = fixture.source(true);
         ExpectedIdentities expected = fixture.expectedBeforeLifecycle(source);
         LifecycleRecorder recorder = new LifecycleRecorder();
 
+        // when
         DocumentProcessingResult result = fixture.executionBlue(recorder).initializeDocument(source);
 
+        // then
         assertSuccessful(result);
         assertEquals(ScopeFixture.CHILD_MUTATION,
                 result.document().getAsText("/child/lifecycleMutation"));
@@ -156,57 +178,53 @@ class SelectedScopeContentBlueIdFailFirstTest {
     }
 
     @Test
-    void nodeAndResolvedSnapshotInputsUseTheSameStandaloneScopeIdentities() {
+    void shouldVerifyNodeAndSnapshotInputsEachUseTheirOwnExactSelectedRepresentation() {
+        // given
         ScopeFixture fixture = new ScopeFixture();
         Node source = fixture.source(true);
-        ExpectedIdentities expected = fixture.expectedBeforeLifecycle(source);
+        ExpectedIdentities nodeExpected = fixture.expectedBeforeLifecycle(source);
 
         LifecycleRecorder nodeRecorder = new LifecycleRecorder();
         Blue nodeBlue = fixture.executionBlue(nodeRecorder);
-        DocumentProcessingResult nodeResult = nodeBlue.initializeDocument(source.clone());
-
         LifecycleRecorder snapshotRecorder = new LifecycleRecorder();
         Blue snapshotBlue = fixture.executionBlue(snapshotRecorder);
         ResolvedSnapshot inputSnapshot = snapshotBlue.resolveToSnapshot(source.clone());
+        ExpectedIdentities snapshotExpected =
+                fixture.expectedBeforeLifecycle(inputSnapshot.canonicalRoot());
+
+        // when
+        DocumentProcessingResult nodeResult =
+                nodeBlue.initializeDocument(source.clone());
         DocumentProcessingResult snapshotResult = snapshotBlue.initializeDocument(inputSnapshot);
 
+        // then
         assertSuccessful(nodeResult);
         assertSuccessful(snapshotResult);
-        Node nodeRootAtCapture = nodeRecorder.onlyScopeSource("/");
-        Node snapshotRootAtCapture = snapshotRecorder.onlyScopeSource("/");
-        Blue parityOracle = fixture.identityBlue();
-        Node snapshotResolvedChild = inputSnapshot.resolvedNodeAt("/child");
-        Node snapshotMinimizedChild = new MergeReverser()
-                .reverseToMinimizedOverlay(snapshotResolvedChild.clone());
-
-        assertEquals(FrozenNode.fromResolvedNode(nodeRootAtCapture).resolvedStructuralKey(),
-                FrozenNode.fromResolvedNode(snapshotRootAtCapture).resolvedStructuralKey(),
-                () -> "Node and snapshot handler-visible Resolved Views must match at capture.\nnode="
-                        + parityOracle.nodeToJson(nodeRootAtCapture)
-                        + "\nsnapshot=" + parityOracle.nodeToJson(snapshotRootAtCapture));
-        assertScopeIdentity(nodeResult.document(), nodeRecorder, "/child", expected.child);
-        assertScopeIdentity(snapshotResult.document(), snapshotRecorder, "/child", expected.child);
-        assertScopeIdentity(nodeResult.document(), nodeRecorder, "/", expected.rootAfterChildPhase1);
-        assertEquals(expected.rootAfterChildPhase1, snapshotRecorder.onlyId("/"),
-                () -> "Snapshot root Lifecycle identity must use the captured selected root."
-                        + "\ncaptured=" + parityOracle.nodeToJson(snapshotRootAtCapture)
-                        + "\nresolvedChild=" + parityOracle.nodeToJson(snapshotResolvedChild)
-                        + "\nminimizedChild=" + parityOracle.nodeToJson(snapshotMinimizedChild));
-        assertEquals(expected.rootAfterChildPhase1,
+        assertScopeIdentity(nodeResult.document(), nodeRecorder, "/child", nodeExpected.child);
+        assertScopeIdentity(snapshotResult.document(), snapshotRecorder,
+                "/child", snapshotExpected.child);
+        assertScopeIdentity(nodeResult.document(), nodeRecorder,
+                "/", nodeExpected.rootAfterChildPhase1);
+        assertEquals(snapshotExpected.rootAfterChildPhase1,
+                snapshotRecorder.onlyId("/"));
+        assertEquals(snapshotExpected.rootAfterChildPhase1,
                 markerDocumentId(snapshotResult.document(), "/"));
     }
 
     @Test
-    void coldAndWarmCachesKeepTheSameStandaloneScopeIdentities() {
+    void shouldVerifyColdAndWarmCachesKeepTheSameStandaloneScopeIdentities() {
+        // given
         ScopeFixture fixture = new ScopeFixture();
         Node source = fixture.source(true);
         ExpectedIdentities expected = fixture.expectedBeforeLifecycle(source);
         LifecycleRecorder recorder = new LifecycleRecorder();
         Blue blue = fixture.executionBlue(recorder);
 
+        // when
         DocumentProcessingResult cold = blue.initializeDocument(source.clone());
         DocumentProcessingResult warm = blue.initializeDocument(source.clone());
 
+        // then
         assertSuccessful(cold);
         assertSuccessful(warm);
         assertEquals(2, recorder.ids("/child").size());
@@ -218,145 +236,90 @@ class SelectedScopeContentBlueIdFailFirstTest {
     }
 
     @Test
-    void nestedListAndProviderReferenceUseStrictStandaloneContentIdentity() {
+    void shouldVerifyNestedListAndProviderReferenceRemainPartOfTheExactDirectIdentity() {
+        // given
         ScopeFixture fixture = new ScopeFixture();
         Node source = fixture.source(true);
-        Node standaloneChild = fixture.standaloneChildBeforeLifecycle(source);
-        ResolvedSnapshot expectedSnapshot = fixture.identityBlue().resolveToSnapshot(standaloneChild);
-        String expectedChild = expectedSnapshot.blueId();
-        String unchecked = BlueIdCalculator.calculateUncheckedBlueId(
-                expectedSnapshot.frozenCanonicalRoot().toNode());
-        FrozenNode canonicalReference = expectedSnapshot.frozenCanonicalRoot().property("providerPayload");
-
-        assertNotEquals(unchecked, expectedChild,
-                "the nested payload must distinguish unchecked hashing from Content BlueId");
-        assertNotNull(canonicalReference);
-        assertTrue(canonicalReference.isReferenceOnly(),
-                "source pure-reference provenance must survive standalone canonicalization");
-        assertEquals(fixture.providerPayloadBlueId, canonicalReference.getReferenceBlueId());
-
+        Node exactChild = fixture.exactChildBeforeLifecycle(
+                source);
+        String expectedChild = fixture.identityBlue()
+                .resolveToSnapshot(source.clone())
+                .canonicalAt("/child")
+                .blueId();
+        String unchecked = DirectBlueIdCalculator.calculateUncheckedBlueId(
+                exactChild);
+        Node providerReference = exactChild.getProperties().get("providerPayload");
         LifecycleRecorder recorder = new LifecycleRecorder();
-        DocumentProcessingResult result = fixture.executionBlue(recorder).initializeDocument(source);
 
+        // when
+        DocumentProcessingResult result =
+                fixture.executionBlue(recorder)
+                        .initializeDocument(source);
+
+        // then
+        assertNotEquals(unchecked, expectedChild,
+                "unchecked object hashing must not replace direct BlueId rules");
+        assertNotNull(providerReference);
+        assertTrue(providerReference.isReferenceOnly());
+        assertEquals(fixture.providerPayloadBlueId, providerReference.getBlueId());
         assertSuccessful(result);
         assertScopeIdentity(result.document(), recorder, "/child", expectedChild);
         assertNotEquals(unchecked, markerDocumentId(result.document(), "/child"));
     }
 
     @Test
-    void missingProviderContentDuringScopeIdentityTerminatesFatallyBeforeInitiation() {
-        assertIdentityFailureTerminatesBeforeInitiation(
-                new IllegalArgumentException(
-                        "No content found for blueId: scope-identity-missing"),
-                ProcessorErrorCategory.ProviderUnavailable);
-    }
-
-    @Test
-    void providerBlueIdMismatchDuringScopeIdentityTerminatesFatallyBeforeInitiation() {
-        assertIdentityFailureTerminatesBeforeInitiation(
-                new IllegalArgumentException(
-                        "Provider returned content for requested blueId scope-identity-request "
-                                + "but computed BlueId scope-identity-other"),
-                ProcessorErrorCategory.ProviderBlueIdMismatch);
-    }
-
-    @Test
-    void snapshotBackedScopeIdentityMissingProviderContentIsProviderUnavailable() {
-        SnapshotProviderFailureFixture fixture = new SnapshotProviderFailureFixture();
-        ResolvedSnapshot producerSnapshot = fixture.producerSnapshot();
-        Blue consumer = new Blue(blueId -> null);
-
-        DocumentProcessingResult result = consumer.initializeDocument(producerSnapshot);
-
-        assertSnapshotProviderIdentityFailure(
-                result, ProcessorErrorCategory.ProviderUnavailable, fixture.typeBlueId);
-    }
-
-    @Test
-    void snapshotBackedScopeIdentityRejectsProviderBlueIdMismatch() {
-        SnapshotProviderFailureFixture fixture = new SnapshotProviderFailureFixture();
-        ResolvedSnapshot producerSnapshot = fixture.producerSnapshot();
-        Node wrongType = new Node()
-                .name("Wrong Snapshot Scope Type")
-                .properties("fixed", text("wrong-provider-content"));
-        NodeProvider wrongContentProvider = blueId -> fixture.typeBlueId.equals(blueId)
-                ? Collections.singletonList(wrongType.clone())
-                : null;
-        Blue consumer = new Blue(wrongContentProvider);
-
-        DocumentProcessingResult result = consumer.initializeDocument(producerSnapshot);
-
-        assertSnapshotProviderIdentityFailure(
-                result, ProcessorErrorCategory.ProviderBlueIdMismatch, fixture.typeBlueId);
-    }
-
-    private static void assertSnapshotProviderIdentityFailure(
-            DocumentProcessingResult result,
-            ProcessorErrorCategory expectedCategory,
-            String requestedBlueId) {
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
-        assertEquals(expectedCategory, result.errorCategory(), result.failureReason());
-        assertTrue(result.failureReason().contains(requestedBlueId), result.failureReason());
-        assertFalse(hasNode(result.document(), "/contracts/initialized"));
-        assertTrue(hasNode(result.document(), "/contracts/terminated"),
-                "the original provider failure must still produce the fatal termination marker");
-        assertEquals("fatal", result.document().getAsText("/contracts/terminated/cause"));
-        for (Node event : result.triggeredEvents()) {
-            String eventType = event.getType() != null ? event.getType().getBlueId() : null;
-            assertNotEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, eventType,
-                    "provider failure during the scope identity rerun must precede initiation");
-        }
-    }
-
-    private static void assertIdentityFailureTerminatesBeforeInitiation(
-            RuntimeException identityFailure,
-            ProcessorErrorCategory expectedCategory) {
+    void shouldVerifyExactScopeIdentityDoesNotInvokeTheLegacyContentIdentityManager() {
+        // given
         ScopeFixture fixture = new ScopeFixture();
         LifecycleRecorder recorder = new LifecycleRecorder();
-        IdentityFailureRuntime runtime = fixture.identityFailureRuntime(recorder, identityFailure);
+        IdentityFailureRuntime runtime = fixture.identityFailureRuntime(
+                recorder,
+                new IllegalStateException("Content identity manager must not be invoked"));
 
-        DocumentProcessingResult result = runtime.processor.initializeDocument(fixture.source(true));
+        // when
+        DocumentProcessingResult result =
+                runtime.processor.initializeDocument(fixture.source(true));
 
-        assertEquals(ProcessorStatus.RUNTIME_FATAL, result.status(), result.failureReason());
-        assertEquals(expectedCategory, result.errorCategory(), result.failureReason());
-        assertFalse(runtime.manager.requestedScopes.isEmpty());
-        assertEquals("/child", runtime.manager.requestedScopes.get(0));
-        assertTrue(recorder.ids("/child").isEmpty(),
-                "Document Processing Initiated must not be delivered when identity calculation fails");
-        assertTrue(recorder.ids("/").isEmpty(),
-                "an ancestor must not initialize after its child identity calculation fails");
-        assertFalse(hasNode(result.document(), "/child/contracts/initialized"));
-        assertFalse(hasNode(result.document(), "/contracts/initialized"));
-        for (Node event : result.triggeredEvents()) {
-            String eventType = event.getType() != null ? event.getType().getBlueId() : null;
-            assertNotEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED, eventType,
-                    "no initiated event may be published after scope identity failure");
-        }
+        // then
+        assertSuccessful(result);
+        assertTrue(runtime.manager.requestedScopes.isEmpty());
+    }
+
+    @Test
+    void shouldVerifySnapshotBackedRootIdentityUsesTheExactCanonicalNodeWithoutProviderLookup() {
+        // given
+        SnapshotProviderFailureFixture fixture = new SnapshotProviderFailureFixture();
+        ResolvedSnapshot producerSnapshot = fixture.producerSnapshot();
+        IdentityFailingSnapshotManager manager =
+                new IdentityFailingSnapshotManager(
+                        fixture.producerManager(),
+                        new IllegalStateException("Content identity manager must not be invoked"));
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(producerSnapshot, null, manager);
+
+        // when
+        FrozenNode document =
+                runtime.capturePreInitializationScopeDocument("/");
+
+        // then
+        assertTrue(producerSnapshot.frozenCanonicalRoot()
+                .sameResolvedStructure(document));
+        assertTrue(manager.requestedScopes.isEmpty());
     }
 
     private static void assertSuccessful(DocumentProcessingResult result) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertNull(result.errorCategory(), result.failureReason());
+        assertEquals(ProcessorStatus.SUCCESS, result.status(), diagnosticMessage(result));
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        assertNull(diagnosticCategory(result), diagnosticMessage(result));
     }
 
-    private static void assertRootInitializationIdentity(Blue blue,
-                                                         Node source,
-                                                         String expected) {
-        DocumentProcessingResult result = blue.initializeDocument(source.clone());
-
+    private static void assertRootInitializationIdentity(
+            DocumentProcessingResult result,
+            String expected) {
         assertSuccessful(result);
         assertEquals(expected, markerDocumentId(result.document(), "/"));
-        boolean initiated = false;
-        for (Node event : result.triggeredEvents()) {
-            String eventType = event.getType() != null ? event.getType().getBlueId() : null;
-            if (RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED.equals(eventType)
-                    && expected.equals(event.getAsText("/documentId"))) {
-                initiated = true;
-                break;
-            }
-        }
-        assertTrue(initiated,
-                "Lifecycle and initialized marker must reuse the independently computed Content BlueId");
+        assertTrue(result.events().isEmpty(),
+                "processor-generated lifecycle delivery is not a Root handler emission");
     }
 
     private static void assertScopeIdentity(Node document,
@@ -377,19 +340,15 @@ class SelectedScopeContentBlueIdFailFirstTest {
 
     private static String markerDocumentId(Node document, String scope) {
         String prefix = "/".equals(scope) ? "" : scope;
-        return document.getAsText(prefix + "/contracts/initialized/documentId");
-    }
-
-    private static boolean hasNode(Node document, String path) {
-        try {
-            return document.getAsNode(path) != null;
-        } catch (IllegalArgumentException ignored) {
-            return false;
-        }
+        Node initialDocument = document.getAsNode(
+                prefix + "/contracts/initialized/document");
+        return initialDocument != null
+                ? DirectBlueIdCalculator.calculateBlueId(initialDocument)
+                : null;
     }
 
     private static String emptyNodeBlueId() {
-        return BlueIdCalculator.calculateBlueId(new Node());
+        return DirectBlueIdCalculator.calculateBlueId(new Node());
     }
 
     private static Node reference(String blueId) {
@@ -426,11 +385,19 @@ class SelectedScopeContentBlueIdFailFirstTest {
             Node source = new Node()
                     .type(reference(typeBlueId))
                     .properties("local", text("selected-state"));
-            ResolvedSnapshot snapshot = new Blue(producerProvider).resolveToSnapshot(source);
+            ResolvedSnapshot snapshot = producerBlue().resolveToSnapshot(source);
             assertEquals("resolved-by-producer", snapshot.resolvedRoot().getAsText("/fixed"));
             assertEquals(typeBlueId,
                     snapshot.frozenCanonicalRoot().getType().getReferenceBlueId());
             return snapshot;
+        }
+
+        private ProcessingSnapshotManager producerManager() {
+            return producerBlue().getDocumentProcessor().snapshotManager();
+        }
+
+        private Blue producerBlue() {
+            return new Blue(producerProvider);
         }
     }
 
@@ -500,9 +467,9 @@ class SelectedScopeContentBlueIdFailFirstTest {
             IdentityFailingSnapshotManager manager = new IdentityFailingSnapshotManager(
                     configuredProcessor.snapshotManager(), failure);
             DocumentProcessor processor = DocumentProcessor.builder()
-                    .withSnapshotManager(manager)
-                    .withConformanceEngine(configuredProcessor.conformanceEngine())
-                    .withMatchingService(configuredProcessor.matchingService())
+                    .snapshotStore(manager)
+                    .conformanceEngine(configuredProcessor.conformanceEngine())
+                    .matchingService(configuredProcessor.matchingService())
                     .registerContractProcessor(
                             lifecycleHandlerBlueId,
                             new CaptureAndMutateLifecycleProcessor(recorder))
@@ -537,29 +504,42 @@ class SelectedScopeContentBlueIdFailFirstTest {
             return YAML_MAPPER.readValue(yaml.toString(), Node.class);
         }
 
-        private Node standaloneChildBeforeLifecycle(Node source) {
-            Node child = source.getAsNode("/child").clone();
-            child.type(reference(childTypeBlueId));
-            return child;
+        private Node exactChildBeforeLifecycle(Node exactRoot) {
+            return exactRoot.getAsNode("/child").clone();
         }
 
-        private ExpectedIdentities expectedBeforeLifecycle(Node source) {
-            Blue identityBlue = identityBlue();
-            String childId = identityBlue.calculateSemanticBlueId(
-                    standaloneChildBeforeLifecycle(source));
+        private ExpectedIdentities expectedBeforeLifecycle(Node exactRoot) {
+            ResolvedSnapshot snapshot =
+                    identityBlue().resolveToSnapshot(exactRoot.clone());
+            FrozenNode canonicalChild = snapshot.canonicalAt("/child");
+            String childId = canonicalChild != null
+                    ? canonicalChild.blueId()
+                    : DirectBlueIdCalculator.calculateBlueId(
+                    exactChildBeforeLifecycle(exactRoot));
 
-            Node rootAfterChildPhase1 = source.clone();
+            Node rootAfterChildPhase1 = exactRoot.clone();
             Node child = rootAfterChildPhase1.getAsNode("/child");
             child.properties("lifecycleMutation", text(CHILD_MUTATION));
-            child.getContracts().properties("initialized", initializedMarker(childId));
-            String rootId = identityBlue.calculateSemanticBlueId(rootAfterChildPhase1);
+            if (child.getContracts() == null) {
+                child.contracts(new Node());
+            }
+            child.getContracts().properties(
+                    "initialized",
+                    initializedMarker(
+                            canonicalChild != null
+                                    ? canonicalChild.toNode()
+                                    : exactChildBeforeLifecycle(
+                                    exactRoot)));
+            String rootId = identityBlue()
+                    .resolveToSnapshot(rootAfterChildPhase1)
+                    .blueId();
             return new ExpectedIdentities(childId, rootId);
         }
 
-        private Node initializedMarker(String documentId) {
+        private Node initializedMarker(Node document) {
             return new Node()
                     .type(reference(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
-                    .properties("documentId", text(documentId));
+                    .properties("document", document.clone());
         }
 
         private String lifecycleContractsYaml(String propertyKey, String propertyValue) {
@@ -574,9 +554,6 @@ class SelectedScopeContentBlueIdFailFirstTest {
                     + "  channel: lifecycle\n"
                     + "  type:\n"
                     + "    blueId: " + lifecycleHandlerBlueId + "\n"
-                    + "  event:\n"
-                    + "    type:\n"
-                    + "      blueId: " + RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED + "\n"
                     + "  propertyKey: " + propertyKey + "\n"
                     + "  propertyValue: " + propertyValue + "\n";
         }
@@ -623,14 +600,14 @@ class SelectedScopeContentBlueIdFailFirstTest {
 
         @Override
         public void execute(CaptureAndMutateLifecycle contract, ProcessorExecutionContext context) {
-            Node documentId = context.event().getProperties().get("documentId");
-            if (documentId == null) {
+            Node document = context.event().getProperties().get("document");
+            if (document == null) {
                 // The same lifecycle channel also carries termination. This
                 // observer is deliberately scoped to initiation identity.
                 return;
             }
             recorder.record(context.scopePath(),
-                    String.valueOf(documentId.getValue()),
+                    DirectBlueIdCalculator.calculateBlueId(document),
                     context.documentAt(context.scopePath()));
             context.applyPatch(JsonPatch.replace(
                     context.resolvePointer(contract.getPropertyKey()),

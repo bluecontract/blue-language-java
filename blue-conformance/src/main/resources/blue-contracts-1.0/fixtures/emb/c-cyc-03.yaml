@@ -1,0 +1,49 @@
+schema: blue-contracts-fixture/1.0
+id: c-cyc-03
+vectors:
+- C-CYC-03
+category: emb
+description: Process Embedded cannot terminate at or traverse through an opaque cyclic-set member edge.
+operation: process
+input:
+  root:
+    cyclic:
+      blueId: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /cyclic
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: fixture
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - fixture
+    - 1
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: subscription-surface-invalid
+  - actual: result.diagnostic.category
+    op: equals
+    expected: CyclicSetEmbeddedBoundaryUnsupported
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: demands.semantic
+    op: notContains
+    expected: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0

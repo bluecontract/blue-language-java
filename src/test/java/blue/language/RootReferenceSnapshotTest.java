@@ -1,9 +1,20 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.merge.ResolvedSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -15,12 +26,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RootReferenceSnapshotTest {
@@ -31,17 +41,34 @@ class RootReferenceSnapshotTest {
             "EZjMCm64sChaawC4hqoiANWphWxW3mzmWaDUEwauBiW5";
 
     @Test
-    void nestedReferenceThenMaterializedSnapshotsRemainIndependent() {
-        assertNestedSnapshotsRemainIndependent(true);
+    void shouldKeepNestedReferenceThenMaterializedSnapshotsIndependent() {
+        // given
+        boolean referenceFirst = true;
+
+        // when
+        NestedSnapshotObservation observation =
+                observeNestedSnapshots(referenceFirst);
+
+        // then
+        assertNestedSnapshotsRemainIndependent(observation);
     }
 
     @Test
-    void nestedMaterializedThenReferenceSnapshotsRemainIndependent() {
-        assertNestedSnapshotsRemainIndependent(false);
+    void shouldKeepNestedMaterializedThenReferenceSnapshotsIndependent() {
+        // given
+        boolean referenceFirst = false;
+
+        // when
+        NestedSnapshotObservation observation =
+                observeNestedSnapshots(referenceFirst);
+
+        // then
+        assertNestedSnapshotsRemainIndependent(observation);
     }
 
     @Test
-    void nestedEquivalentSnapshotsRetainTwoExactRepresentationsAndOneVerifiedIdentity() {
+    void shouldRetainTwoExactRepresentationsAndOneVerifiedIdentityForEquivalentSnapshots() {
+        // given
         Node subject = new Node().name("Cache Cardinality Subject")
                 .properties("identifier", new Node().value("subject-1"));
         String subjectId = new Blue().calculateBlueId(subject);
@@ -50,8 +77,10 @@ class RootReferenceSnapshotTest {
         Blue blue = new Blue();
 
         ResolvedSnapshot referenced = blue.resolveToSnapshot(referenceHolder);
+        // when
         ResolvedSnapshot materialized = blue.resolveToSnapshot(materializedHolder);
 
+        // then
         assertNotSame(referenced, materialized);
         assertEquals(referenced.blueId(), materialized.blueId());
         assertEquals(2, blue.resolvedSnapshotCacheSize());
@@ -60,11 +89,14 @@ class RootReferenceSnapshotTest {
     }
 
     @Test
-    void rootReferenceSnapshotDoesNotCertifyUnmaterializedContent() {
+    void shouldNotCertifyUnmaterializedContentFromRootReferenceSnapshot() {
+        // given
         Fixture fixture = new Fixture();
 
+        // when
         ResolvedSnapshot snapshot = fixture.blue.resolveToSnapshot(reference(fixture.subjectId));
 
+        // then
         assertTrue(snapshot.frozenCanonicalRoot().isReferenceOnly());
         assertTrue(snapshot.frozenResolvedRoot().isReferenceOnly());
         assertEquals(0, fixture.provider.fetches(fixture.subjectId));
@@ -73,66 +105,90 @@ class RootReferenceSnapshotTest {
     }
 
     @Test
-    void typedUseAfterRootReferenceSnapshotFetchesAndSucceeds() {
+    void shouldFetchAndResolveTypedUseAfterRootReferenceSnapshot() {
+        // given
         Fixture fixture = new Fixture();
         fixture.blue.resolveToSnapshot(reference(fixture.subjectId));
 
+        // when
         Node resolved = fixture.blue.resolve(fixture.typedUse());
 
+        // then
         assertEquals("subject-1", resolved.getAsText("/subject/identifier"));
         assertEquals(1, fixture.provider.fetches(fixture.subjectId));
     }
 
     @Test
-    void missingTypedUseAfterRootReferenceSnapshotFailsDeterministically() {
+    void shouldFailMissingTypedUseDeterministicallyAfterRootReferenceSnapshot() {
+        // given
         Fixture fixture = new Fixture();
         String missingId = fixture.blue.calculateBlueId(new Node().name("Missing Subject"));
         fixture.blue.resolveToSnapshot(reference(missingId));
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> fixture.blue.resolve(fixture.typedUse(missingId)));
+        int fetchCount = fixture.provider.fetches(missingId);
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(messageChain(failure).contains(missingId));
-        assertEquals(1, fixture.provider.fetches(missingId));
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void rootReferenceSnapshotNeverCausesStackOverflow() {
+    void shouldAvoidStackOverflowAfterRootReferenceSnapshot() {
+        // given
         Fixture fixture = new Fixture();
+        // when
         fixture.blue.resolveToSnapshot(reference(fixture.subjectId));
 
-        assertDoesNotThrow(() -> fixture.blue.resolve(fixture.typedUse()));
+        Node resolved = fixture.blue.resolve(fixture.typedUse());
+
+        // then
+        assertEquals("subject-1", resolved.getAsText("/subject/identifier"));
     }
 
     @Test
-    void loadSnapshotAfterRootReferenceStillMaterializesWhenRequired() {
+    void shouldMaterializeLoadSnapshotAfterRootReferenceWhenRequired() {
+        // given
         Fixture fixture = new Fixture();
         fixture.blue.resolveToSnapshot(reference(fixture.subjectId));
 
+        // when
         ResolvedSnapshot loaded = fixture.blue.loadSnapshot(fixture.subjectId);
 
+        // then
         assertEquals("subject-1", loaded.resolvedRoot().getAsText("/identifier"));
         assertEquals(1, fixture.provider.fetches(fixture.subjectId));
     }
 
     @Test
-    void warmVerifiedContentAvoidsASecondProviderFetch() {
+    void shouldAvoidSecondProviderFetchForWarmVerifiedContent() {
+        // given
         Fixture fixture = new Fixture();
         fixture.blue.resolveToSnapshot(reference(fixture.subjectId));
 
         fixture.blue.resolve(fixture.typedUse());
+        // when
         fixture.blue.resolve(fixture.typedUse());
 
+        // then
         assertEquals(1, fixture.provider.fetches(fixture.subjectId));
     }
 
     @Test
-    void parallelTypedUseAfterRootReferenceSnapshotDoesNotRecurseOrCrossContaminate() throws Exception {
+    void shouldNotRecurseOrCrossContaminateParallelTypedUseAfterRootReferenceSnapshot()
+            throws Exception {
+        // given
         Fixture fixture = new Fixture();
         fixture.blue.resolveToSnapshot(reference(fixture.subjectId));
         int workers = 12;
         ExecutorService executor = Executors.newFixedThreadPool(workers);
         CountDownLatch start = new CountDownLatch(1);
+
+        // when
+        java.util.ArrayList<String> identifiers = new java.util.ArrayList<>();
         try {
             @SuppressWarnings("unchecked")
             Future<Node>[] futures = new Future[workers];
@@ -144,14 +200,20 @@ class RootReferenceSnapshotTest {
             }
             start.countDown();
             for (Future<Node> future : futures) {
-                assertEquals("subject-1", future.get(10, TimeUnit.SECONDS)
+                identifiers.add(future.get(10, TimeUnit.SECONDS)
                         .getAsText("/subject/identifier"));
             }
         } finally {
             executor.shutdownNow();
         }
+        int fetchCount = fixture.provider.fetches(fixture.subjectId);
 
-        assertEquals(1, fixture.provider.fetches(fixture.subjectId));
+        // then
+        assertEquals(workers, identifiers.size());
+        for (String identifier : identifiers) {
+            assertEquals("subject-1", identifier);
+        }
+        assertEquals(1, fetchCount);
     }
 
     private static String messageChain(Throwable failure) {
@@ -168,7 +230,7 @@ class RootReferenceSnapshotTest {
         return new Node().blueId(blueId);
     }
 
-    private void assertNestedSnapshotsRemainIndependent(boolean referenceFirst) {
+    private NestedSnapshotObservation observeNestedSnapshots(boolean referenceFirst) {
         Node baseSubject = new Node().name("Scenario Base Subject");
         Node materializedSubject = new Node().name("Scenario Subject")
                 .type(reference(SCENARIO_BASE_SUBJECT_ID))
@@ -178,35 +240,84 @@ class RootReferenceSnapshotTest {
         Node referenceHolder = new Node().properties("subject", reference(SCENARIO_SUBJECT_ID));
         Node materializedHolder = new Node().properties("subject", materializedSubject.clone());
 
-        assertEquals(SCENARIO_BASE_SUBJECT_ID, provider.getBlueIdByName("Scenario Base Subject"));
-        assertEquals(SCENARIO_SUBJECT_ID, provider.getBlueIdByName("Scenario Subject"));
+        String actualBaseSubjectId = provider.getBlueIdByName("Scenario Base Subject");
+        String actualSubjectId = provider.getBlueIdByName("Scenario Subject");
         String holderBlueId = blue.calculateBlueId(referenceHolder);
-        assertEquals(holderBlueId, blue.calculateBlueId(materializedHolder));
+        String materializedHolderBlueId = blue.calculateBlueId(materializedHolder);
 
         ResolvedSnapshot referenced;
         ResolvedSnapshot materialized;
         if (referenceFirst) {
-            referenced = assertDoesNotThrow(() -> blue.resolveToSnapshot(referenceHolder));
-            materialized = assertDoesNotThrow(() -> blue.resolveToSnapshot(materializedHolder));
+            referenced = blue.resolveToSnapshot(referenceHolder);
+            materialized = blue.resolveToSnapshot(materializedHolder);
         } else {
-            materialized = assertDoesNotThrow(() -> blue.resolveToSnapshot(materializedHolder));
-            referenced = assertDoesNotThrow(() -> blue.resolveToSnapshot(referenceHolder));
+            materialized = blue.resolveToSnapshot(materializedHolder);
+            referenced = blue.resolveToSnapshot(referenceHolder);
         }
 
-        assertEquals(holderBlueId, referenced.blueId());
-        assertEquals(holderBlueId, materialized.blueId());
-        assertNotSame(referenced, materialized);
-        assertTrue(referenced.frozenCanonicalRoot().property("subject").isReferenceOnly());
+        return new NestedSnapshotObservation(
+                actualBaseSubjectId,
+                actualSubjectId,
+                holderBlueId,
+                materializedHolderBlueId,
+                referenced,
+                materialized,
+                blue.resolvedSnapshotCacheSize());
+    }
+
+    private static void assertNestedSnapshotsRemainIndependent(
+            NestedSnapshotObservation observation) {
+        assertEquals(SCENARIO_BASE_SUBJECT_ID, observation.actualBaseSubjectId);
+        assertEquals(SCENARIO_SUBJECT_ID, observation.actualSubjectId);
+        assertEquals(observation.holderBlueId, observation.materializedHolderBlueId);
+        assertEquals(observation.holderBlueId, observation.referenced.blueId());
+        assertEquals(observation.holderBlueId, observation.materialized.blueId());
+        assertNotSame(observation.referenced, observation.materialized);
+        assertTrue(observation.referenced.frozenCanonicalRoot()
+                .property("subject").isReferenceOnly());
         assertEquals(SCENARIO_SUBJECT_ID,
-                referenced.frozenCanonicalRoot().property("subject").getReferenceBlueId());
-        assertFalse(materialized.frozenCanonicalRoot().property("subject").isReferenceOnly());
+                observation.referenced.frozenCanonicalRoot()
+                        .property("subject").getReferenceBlueId());
+        assertFalse(observation.materialized.frozenCanonicalRoot()
+                .property("subject").isReferenceOnly());
         assertEquals("Scenario Subject",
-                materialized.frozenCanonicalRoot().property("subject").getName());
+                observation.materialized.frozenCanonicalRoot()
+                        .property("subject").getName());
         assertEquals(SCENARIO_SUBJECT_ID,
-                referenced.frozenResolvedRoot().property("subject").getReferenceBlueId());
-        assertNull(materialized.frozenResolvedRoot().property("subject").getReferenceBlueId());
-        assertEquals("subject-1", materialized.resolvedRoot().getAsText("/subject/identifier"));
-        assertEquals(2, blue.resolvedSnapshotCacheSize());
+                observation.referenced.frozenResolvedRoot()
+                        .property("subject").getReferenceBlueId());
+        assertNull(observation.materialized.frozenResolvedRoot()
+                .property("subject").getReferenceBlueId());
+        assertEquals("subject-1", observation.materialized.resolvedRoot()
+                .getAsText("/subject/identifier"));
+        assertEquals(2, observation.snapshotCacheSize);
+    }
+
+    private static final class NestedSnapshotObservation {
+        private final String actualBaseSubjectId;
+        private final String actualSubjectId;
+        private final String holderBlueId;
+        private final String materializedHolderBlueId;
+        private final ResolvedSnapshot referenced;
+        private final ResolvedSnapshot materialized;
+        private final int snapshotCacheSize;
+
+        private NestedSnapshotObservation(
+                String actualBaseSubjectId,
+                String actualSubjectId,
+                String holderBlueId,
+                String materializedHolderBlueId,
+                ResolvedSnapshot referenced,
+                ResolvedSnapshot materialized,
+                int snapshotCacheSize) {
+            this.actualBaseSubjectId = actualBaseSubjectId;
+            this.actualSubjectId = actualSubjectId;
+            this.holderBlueId = holderBlueId;
+            this.materializedHolderBlueId = materializedHolderBlueId;
+            this.referenced = referenced;
+            this.materialized = materialized;
+            this.snapshotCacheSize = snapshotCacheSize;
+        }
     }
 
     private static final class Fixture {

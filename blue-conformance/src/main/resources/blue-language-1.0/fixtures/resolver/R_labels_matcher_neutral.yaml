@@ -1,0 +1,12 @@
+id: R_labels_matcher_neutral
+category: Matching
+operation: match
+pattern:
+  name: Pattern label
+  value: X
+candidate:
+  name: Different label
+  description: Different description
+  value: X
+expectedMatch: true
+expectedIdentityEqual: false

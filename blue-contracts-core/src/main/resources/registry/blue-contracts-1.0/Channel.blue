@@ -1,0 +1,4 @@
+name: Channel
+type:
+  blueId: 4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4
+description: Base runtime role that transforms one processor-supplied payload into at most one same-scope handler delivery. Processor-managed Channel families are fed only by the processor.

@@ -3,7 +3,6 @@ package blue.language.mapping;
 import blue.language.Blue;
 import blue.language.mapping.model.Y;
 import blue.language.model.Node;
-import blue.language.utils.TypeClassResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +22,8 @@ public class NodeToObjectConverterNullHandlingTest {
     }
 
     @Test
-    public void testNullHandling() throws Exception {
+    public void shouldPreserveExplicitNullValues() throws Exception {
+        // given
         String yaml = "type:\n" +
                       "  blueId: Y-BlueId\n" +
                       "xField:\n" +
@@ -43,8 +43,10 @@ public class NodeToObjectConverterNullHandlingTest {
                       "wildcardXListField: null";
 
         Node node = blue.yamlToNode(yaml);
+        // when
         Y y = converter.convert(node, Y.class);
 
+        // then
         assertNotNull(y);
 
         assertNull(y.xField);
@@ -64,7 +66,8 @@ public class NodeToObjectConverterNullHandlingTest {
     }
 
     @Test
-    public void testPartialNullHandling() throws Exception {
+    public void shouldPreserveNullElementsWithinPartiallyPopulatedObjects() throws Exception {
+        // given
         String yaml = "type:\n" +
                       "  blueId: Y-BlueId\n" +
                       "xField:\n" +
@@ -81,8 +84,10 @@ public class NodeToObjectConverterNullHandlingTest {
                       "name: \"Test Y\"";
 
         Node node = blue.yamlToNode(yaml);
+        // when
         Y y = converter.convert(node, Y.class);
 
+        // then
         assertNotNull(y);
 
         // Check X field
@@ -110,7 +115,8 @@ public class NodeToObjectConverterNullHandlingTest {
     }
 
     @Test
-    public void testEmptyCollectionsAndMaps() throws Exception {
+    public void shouldConvertEmptyCollectionsAccordingToTargetTypes() throws Exception {
+        // given
         String yaml = "type:\n" +
                       "  blueId: Y-BlueId\n" +
                       "x1Field:\n" +
@@ -123,8 +129,10 @@ public class NodeToObjectConverterNullHandlingTest {
                       "x2MapField: {}";
 
         Node node = blue.yamlToNode(yaml);
+        // when
         Y y = converter.convert(node, Y.class);
 
+        // then
         assertNotNull(y);
 
         // Check X1 field

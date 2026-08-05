@@ -1,0 +1,13 @@
+schema: blue-contracts-fixture/1.0
+id: gas-composite-identity-blocks
+vectors:
+- C-GAS-02
+- C-GAS-03
+- C-GAS-04
+- C-GAS-05
+category: gas
+operation: gas-micro
+input:
+  directCanonicalBytes: 120
+expected:
+  directIdentityHashBlock: 3

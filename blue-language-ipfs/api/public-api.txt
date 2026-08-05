@@ -1,0 +1,12 @@
+# schema: blue-java-public-api/1.0
+# module: blue-language-ipfs
+# entryCount: 9
+method blue.language.provider.ipfs.BlueIdToCid#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.provider.ipfs.BlueIdToCid#convert descriptor=(Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=-
+method blue.language.provider.ipfs.IPFSContentFetcher#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.provider.ipfs.IPFSContentFetcher#fetchContent descriptor=(Ljava/lang/String;)Ljava/lang/String; access=public,static signature=- throws=java.io.IOException
+method blue.language.provider.ipfs.IPFSNodeProvider#<init> descriptor=()V access=public signature=- throws=-
+method blue.language.provider.ipfs.IPFSNodeProvider#fetchContentByBlueId descriptor=(Ljava/lang/String;)Lcom/fasterxml/jackson/databind/JsonNode; access=protected signature=- throws=-
+type blue.language.provider.ipfs.BlueIdToCid access=public super=java.lang.Object interfaces=- signature=-
+type blue.language.provider.ipfs.IPFSContentFetcher access=public super=java.lang.Object interfaces=- signature=-
+type blue.language.provider.ipfs.IPFSNodeProvider access=public super=blue.language.provider.AbstractNodeProvider interfaces=- signature=-

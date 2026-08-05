@@ -18,7 +18,10 @@ public class TerminateScopeContractProcessor implements HandlerProcessor<Termina
         String mode = contract.getMode() != null ? contract.getMode() : "graceful";
         String reason = contract.getReason();
         if ("fatal".equalsIgnoreCase(mode)) {
-            context.terminateFatally(reason);
+            context.throwFatal(
+                    reason != null
+                            ? reason
+                            : "Runtime requested fatal termination");
         } else {
             context.terminateGracefully(reason);
         }

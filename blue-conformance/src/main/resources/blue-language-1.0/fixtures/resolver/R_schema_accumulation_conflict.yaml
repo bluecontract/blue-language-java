@@ -1,0 +1,14 @@
+id: R_schema_accumulation_conflict
+category: Schema
+operation: resolve
+source:
+  type:
+    value:
+      type: Integer
+      schema:
+        minimum: 10
+  value:
+    schema:
+      maximum: 5
+    value: 7
+expectedErrorCategory: SchemaViolation

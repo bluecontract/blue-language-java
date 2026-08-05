@@ -1,0 +1,166 @@
+package blue.language.mapping;
+
+import blue.language.model.Node;
+
+import java.lang.reflect.*;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+
+/**
+ * Chooses recursive Node-to-Java converters from reflective target types and
+ * resolved Blue type metadata.
+ */
+public class ConverterFactory {
+    private final TypeClassResolver typeClassResolver;
+    private final ObjectFactoryRegistry objectFactories;
+    private final Map<Class<?>, Converter<?>> converters = new HashMap<>();
+
+    /**
+     * Creates a converter catalog backed by a Blue type resolver.
+     *
+     * @param typeClassResolver resolver for Blue-declared Java types
+     */
+    public ConverterFactory(TypeClassResolver typeClassResolver) {
+        this(typeClassResolver, ObjectFactoryRegistry.defaults());
+    }
+
+    /**
+     * Creates a converter catalog with mapper-owned object factories.
+     *
+     * @param typeClassResolver resolver for Blue-declared Java types
+     * @param objectFactories immutable object factory registry
+     */
+    public ConverterFactory(
+            TypeClassResolver typeClassResolver,
+            ObjectFactoryRegistry objectFactories) {
+        this.typeClassResolver = typeClassResolver != null
+                ? typeClassResolver
+                : new TypeClassResolver();
+        this.objectFactories = Objects.requireNonNull(
+                objectFactories,
+                "objectFactories");
+        registerConverters();
+    }
+
+    private void registerConverters() {
+        PrimitiveConverter primitiveConverter = new PrimitiveConverter();
+        converters.put(
+                Object.class,
+                new ComplexObjectConverter(
+                        this,
+                        this.typeClassResolver,
+                        objectFactories));
+        converters.put(String.class, primitiveConverter);
+        converters.put(Boolean.class, primitiveConverter);
+        converters.put(Byte.class, primitiveConverter);
+        converters.put(Short.class, primitiveConverter);
+        converters.put(Integer.class, primitiveConverter);
+        converters.put(Long.class, primitiveConverter);
+        converters.put(Float.class, primitiveConverter);
+        converters.put(Double.class, primitiveConverter);
+        converters.put(BigInteger.class, primitiveConverter);
+        converters.put(BigDecimal.class, primitiveConverter);
+        CollectionConverter collectionConverter = new CollectionConverter(
+                this,
+                this.typeClassResolver,
+                objectFactories);
+        converters.put(Collection.class, collectionConverter);
+        converters.put(List.class, collectionConverter);
+        converters.put(Set.class, collectionConverter);
+        converters.put(Queue.class, collectionConverter);
+        converters.put(Deque.class, collectionConverter);
+        converters.put(Enum.class, new EnumConverter());
+        converters.put(
+                Map.class,
+                new MapConverter(
+                        this,
+                        this.typeClassResolver,
+                        objectFactories));
+        converters.put(Node.class, new NodeConverter());
+//        converters.put(AnnotatedField.class, new AnnotatedFieldConverter(this));
+
+    }
+
+    /**
+     * Selects a converter using normal Blue-type precedence.
+     *
+     * @param node source node, possibly {@code null}
+     * @param targetType requested Java type
+     * @return converter appropriate for the source and target
+     */
+    public Converter<?> getConverter(Node node, Type targetType) {
+        return getConverter(node, targetType, false);
+    }
+
+    /**
+     * Selects a converter with explicit target-type precedence.
+     *
+     * @param node source node, possibly {@code null}
+     * @param targetType requested Java type
+     * @param prioritizeTargetType whether the target type takes precedence
+     *                             over resolved Blue metadata
+     * @return converter appropriate for the source and target
+     */
+    @SuppressWarnings("unchecked")
+    public Converter<?> getConverter(Node node, Type targetType, boolean prioritizeTargetType) {
+
+        if (node == null) {
+            return new NullConverter();
+        }
+
+        Class<?> rawType = getRawType(targetType);
+
+        if (rawType.isEnum()) {
+            return converters.get(Enum.class);
+        }
+        if (rawType.isArray() || Collection.class.isAssignableFrom(rawType)) {
+            return converters.get(Collection.class);
+        }
+        if (Map.class.isAssignableFrom(rawType)) {
+            return converters.get(Map.class);
+        }
+        if (rawType.isPrimitive() || ValueConverter.isSupportedType(rawType)) {
+            return converters.get(Object.class);
+        }
+        Converter<?> converter = converters.get(rawType);
+        if (converter == null) {
+            return new ComplexObjectConverter(
+                    this,
+                    this.typeClassResolver,
+                    objectFactories);
+        }
+        return converter;
+    }
+
+    private Class<?> getRawType(Type type) {
+        if (type instanceof Class<?>) {
+            return (Class<?>) type;
+        } else if (type instanceof ParameterizedType) {
+            return getRawType(((ParameterizedType) type).getRawType());
+        } else if (type instanceof GenericArrayType) {
+            Type componentType = ((GenericArrayType) type).getGenericComponentType();
+            return Array.newInstance(getRawType(componentType), 0).getClass();
+        } else if (type instanceof TypeVariable) {
+            return Object.class;
+        } else if (type instanceof WildcardType) {
+            return getRawType(((WildcardType) type).getUpperBounds()[0]);
+        }
+        throw new IllegalArgumentException("Unsupported type: " + type);
+    }
+
+    /**
+     * Converts an object node using generic map key/value rules.
+     *
+     * @param node source object node
+     * @param mapType requested map type, including generic arguments
+     * @return converted map, or {@code null} for absent properties
+     */
+    public Map<?, ?> convertMap(Node node, Type mapType) {
+        MapConverter mapConverter = new MapConverter(
+                this,
+                this.typeClassResolver,
+                objectFactories);
+        return mapConverter.convert(node, mapType);
+    }
+}

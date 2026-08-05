@@ -1,0 +1,4 @@
+name: External Channel
+type:
+  blueId: CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR
+description: Portable external Channel role. Its exact runtime type defines immutable dispatch header, subscription keys, event keys, preselection, acceptance, payload, checkpoint domain, and checkpoint subject. Acceptance and payload are independent of mutable Root state.

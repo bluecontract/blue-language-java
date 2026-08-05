@@ -1,0 +1,9 @@
+id: R_resolved_form_not_direct_content_id
+category: Canonicalization
+operation: compareContentAndDirectResolvedBlueId
+source:
+  type:
+    country: PL
+  amount: 10
+expectedContentBlueIdEqualsCanonicalIdentityInput: true
+expectedDirectResolvedBlueIdMayDiffer: true

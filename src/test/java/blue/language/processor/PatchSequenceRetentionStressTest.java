@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PatchSequenceRetentionStressTest {
 
-    private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_METRICS =
-            new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+    private static final UpdateMaterializationMetrics NOOP_METRICS =
+            new UpdateMaterializationMetrics() {
                 @Override
                 public void recordBeforeNodeMaterialization() {
                 }
@@ -27,42 +27,55 @@ class PatchSequenceRetentionStressTest {
             };
 
     @Test
-    void liveReusableSessionDoesNotRetainMostSupersededRoots() {
+    void shouldVerifyLiveReusableSessionDoesNotRetainMostSupersededRoots() {
+        // given
         SequentialPatchPlanningSession session = session(initialDocument());
         List<WeakReference<FrozenNode>> superseded = new ArrayList<>();
+
+        // when
         for (int index = 0; index < 96; index++) {
             superseded.add(new WeakReference<>(session.canonicalRoot()));
             session.planNext(JsonPatch.replace("/repeated", replacement(index)));
         }
-
         int cleared = encourageCollection(superseded, 72);
+        Object finalIndex =
+                session.resolvedRoot()
+                        .at("/repeated/index").getValue();
 
+        // then
         assertTrue(cleared >= 72,
                 "a live session retained too many superseded roots: cleared=" + cleared
                         + "/" + superseded.size());
-        assertEquals(BigInteger.valueOf(95),
-                session.resolvedRoot().at("/repeated/index").getValue());
+        assertEquals(BigInteger.valueOf(95), finalIndex);
     }
 
     @Test
-    void repeatedBoundedSequencesHaveStableFinalIdentity() {
+    void shouldVerifyRepeatedBoundedSequencesHaveStableFinalIdentity() {
+        // given
         List<JsonPatch> patches = stressPatches();
-        String expectedCanonicalId = null;
-        String expectedResolvedId = null;
+
+        // when
+        List<String> canonicalIds = new ArrayList<>();
+        List<String> resolvedIds = new ArrayList<>();
         for (int round = 0; round < 96; round++) {
             SequentialPatchPlanningSession session = session(initialDocument());
             for (JsonPatch patch : patches) {
                 session.planNext(patch);
             }
-            if (expectedCanonicalId == null) {
-                expectedCanonicalId = session.canonicalRoot().blueId();
-                expectedResolvedId = session.resolvedRoot().blueId();
-            } else {
-                assertEquals(expectedCanonicalId, session.canonicalRoot().blueId(),
-                        "canonical identity drift at round " + round);
-                assertEquals(expectedResolvedId, session.resolvedRoot().blueId(),
-                        "resolved identity drift at round " + round);
-            }
+            canonicalIds.add(
+                    session.canonicalRoot().blueId());
+            resolvedIds.add(
+                    session.resolvedRoot().blueId());
+        }
+
+        // then
+        for (int round = 1; round < 96; round++) {
+            assertEquals(canonicalIds.get(0),
+                    canonicalIds.get(round),
+                    "canonical identity drift at round " + round);
+            assertEquals(resolvedIds.get(0),
+                    resolvedIds.get(round),
+                    "resolved identity drift at round " + round);
         }
     }
 

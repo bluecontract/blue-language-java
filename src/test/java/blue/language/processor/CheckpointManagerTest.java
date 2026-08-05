@@ -5,11 +5,11 @@ import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -17,37 +17,205 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 final class CheckpointManagerTest {
 
+    private static final long EXPECTED_MARKER_WRITES = 1L;
+    private static final long EXPECTED_CHECKPOINT_WRITES = 1L;
+    private static final long EXPECTED_IDENTITY_NODES = 8L;
+    private static final long EXPECTED_REBUILT_MEMBERS = 8L;
+    private static final long EXPECTED_DIRECT_HASH_BLOCKS = 15L;
+
     @Test
-    void ensureCheckpointCreatesMarkerWhenAbsent() {
+    void shouldCreateCheckpointMarkerWhenAbsent() {
+        // given
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
         CheckpointManager manager = new CheckpointManager(runtime, node -> null);
         ContractBundle bundle = ContractBundle.builder().build();
 
+        // when
         manager.ensureCheckpointMarker("/", bundle);
+        Node stored = ProcessorEngine.nodeAt(
+                runtime.document(),
+                ProcessorPointerConstants.RELATIVE_CHECKPOINT);
 
-        Node stored = ProcessorEngine.nodeAt(runtime.document(), ProcessorPointerConstants.RELATIVE_CHECKPOINT);
+        // then
         assertNotNull(stored, "checkpoint marker should be written to document");
         assertTrue(bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT) instanceof ChannelEventCheckpoint);
     }
 
     @Test
-    void persistUpdatesCheckpointAndChargesGas() {
+    void shouldUpdateCheckpointAndChargeGasWhenPersisting() {
+        // given
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
         CheckpointManager manager = new CheckpointManager(runtime, node -> node != null ? "sig" : null);
         ContractBundle bundle = ContractBundle.builder().build();
         manager.ensureCheckpointMarker("/", bundle);
 
-        CheckpointManager.CheckpointRecord record = manager.findCheckpoint(bundle, "testChannel");
         Node eventNode = new Node().value("payload");
+        String subjectBlueId = DirectBlueIdCalculator.calculateBlueId(eventNode);
+        String domainBlueId = DirectBlueIdCalculator.calculateBlueId(
+                new Node().name("test checkpoint domain"));
+        CheckpointManager.CheckpointRecord record = manager.findCheckpoint(
+                bundle, "testChannel", domainBlueId);
 
-        manager.persist("/", bundle, record, "nextSig", eventNode);
-
+        // when
+        manager.persist("/", bundle, record, subjectBlueId, eventNode);
         Node stored = ProcessorEngine.nodeAt(runtime.document(),
-                ProcessorPointerConstants.relativeCheckpointLastEvent(record.markerKey, record.channelKey));
+                ProcessorPointerConstants.relativeCheckpointEntry(
+                        record.markerKey, record.channelKey));
+        ProcessingConformanceTrace trace =
+                runtime.conformanceTrace();
+        GasSchedule schedule = runtime.gasMeter().schedule();
+        long expectedGas =
+                EXPECTED_MARKER_WRITES * schedule.weight(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .PROCESSOR_MARKER_WRITTEN)
+                + EXPECTED_CHECKPOINT_WRITES * schedule.weight(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .CHECKPOINT_WRITTEN)
+                + EXPECTED_IDENTITY_NODES * schedule.weight(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .NODE_IDENTITY_ESTABLISHED)
+                + EXPECTED_REBUILT_MEMBERS * schedule.weight(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .OBJECT_MEMBER_REBUILT)
+                + EXPECTED_DIRECT_HASH_BLOCKS * schedule.weight(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .DIRECT_IDENTITY_HASH_BLOCK);
+
+        // then
         assertNotNull(stored);
-        assertEquals("payload", stored.getValue());
-        assertEquals(20L, runtime.totalGas(), "Checkpoint update should charge gas");
-        assertEquals("nextSig", record.lastEventSignature);
+        assertEquals(domainBlueId,
+                stored.getAsText("/domain/blueId"));
+        assertEquals("payload",
+                stored.getAsText("/subject"));
+        assertEquals("payload",
+                ((ChannelEventCheckpoint) bundle.marker(
+                                ProcessorContractConstants
+                                        .KEY_CHECKPOINT))
+                        .entry("testChannel")
+                        .getSubject()
+                        .getValue());
+        assertEquals(
+                EXPECTED_MARKER_WRITES,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .PROCESSOR_MARKER_WRITTEN));
+        assertEquals(
+                EXPECTED_CHECKPOINT_WRITES,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .CHECKPOINT_WRITTEN));
+        assertEquals(
+                EXPECTED_IDENTITY_NODES,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .NODE_IDENTITY_ESTABLISHED));
+        assertEquals(
+                EXPECTED_REBUILT_MEMBERS,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .OBJECT_MEMBER_REBUILT));
+        assertEquals(
+                EXPECTED_DIRECT_HASH_BLOCKS,
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.SEMANTIC,
+                        GasScheduleConstants.SemanticCounter
+                                .DIRECT_IDENTITY_HASH_BLOCK));
+        assertEquals(expectedGas, runtime.totalGas(),
+                "checkpoint gas is 40 processor gas plus 31 identity gas");
+        assertEquals(subjectBlueId, record.lastEventSignature);
+    }
+
+    @Test
+    void shouldReplaceAnExistingRawSourceCheckpointWhenDomainChanges() {
+        // given
+        Node previousSubject = new Node().value("previous");
+        String previousSubjectBlueId =
+                DirectBlueIdCalculator.calculateBlueId(previousSubject);
+        String previousDomainBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("previous domain"));
+        Node currentSubject = new Node().value("current");
+        String currentSubjectBlueId =
+                DirectBlueIdCalculator.calculateBlueId(currentSubject);
+        String currentDomainBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("current domain"));
+        ChannelEventCheckpoint checkpoint =
+                new ChannelEventCheckpoint()
+                        .putEntry(
+                                "source",
+                                previousDomainBlueId,
+                                previousSubjectBlueId);
+        checkpoint.entry("source").subject(previousSubject);
+        ContractBundle bundle = ContractBundle.builder()
+                .addMarker(
+                        ProcessorContractConstants.KEY_CHECKPOINT,
+                        checkpoint)
+                .build();
+        Node entryNode = new Node()
+                .properties(
+                        ProcessorContractConstants.KEY_DOMAIN,
+                        new Node().blueId(previousDomainBlueId))
+                .properties(
+                        ProcessorContractConstants.KEY_SUBJECT,
+                        previousSubject);
+        Node markerNode = new Node()
+                .type(new Node().blueId(
+                        blue.language.processor.registry.RuntimeBlueIds
+                                .CHANNEL_EVENT_CHECKPOINT))
+                .properties(
+                        ProcessorContractConstants.KEY_ENTRIES,
+                        new Node().properties(
+                                "source",
+                                entryNode));
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(
+                        new Node().properties(
+                                ProcessorContractConstants.KEY_CONTRACTS,
+                                new Node().properties(
+                                        ProcessorContractConstants
+                                                .KEY_CHECKPOINT,
+                                        markerNode)));
+        CheckpointManager manager =
+                new CheckpointManager(runtime);
+        CheckpointManager.CheckpointRecord record =
+                manager.findCheckpoint(
+                        bundle,
+                        "source",
+                        currentDomainBlueId);
+
+        // when
+        manager.persist(
+                "/",
+                bundle,
+                record,
+                currentSubjectBlueId,
+                currentSubject);
+        Node stored = runtime.document().getAsNode(
+                "/contracts/checkpoint/entries/source");
+
+        // then
+        assertEquals(
+                currentDomainBlueId,
+                stored.getAsText("/domain/blueId"));
+        assertEquals(
+                "current",
+                stored.getAsText("/subject"));
+        assertEquals(
+                currentDomainBlueId,
+                checkpoint.entry("source").domainBlueId());
+        assertEquals(
+                currentSubjectBlueId,
+                checkpoint.entry("source").subjectBlueId());
     }
 
     private static final class DummyMarker extends MarkerContract {

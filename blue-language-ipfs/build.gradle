@@ -1,0 +1,14 @@
+plugins {
+    id 'blue.java8-library-conventions'
+    id 'blue.reproducible-archives'
+    id 'blue.api-baseline'
+    id 'blue.jreleaser-publishing'
+}
+
+description = 'Optional IPFS provider and HTTP gateway integration.'
+
+dependencies {
+    api project(':blue-language-core')
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+}

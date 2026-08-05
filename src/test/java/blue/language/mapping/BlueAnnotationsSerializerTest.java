@@ -25,74 +25,105 @@ class BlueAnnotationsSerializerTest {
     }
 
     @Test
-    void testTypeBlueIdSerialization() throws Exception {
+    void shouldSerializeAnnotatedTypeBlueId() throws Exception {
+        // given
         TypeBlueIdExample obj = new TypeBlueIdExample();
         obj.field = "value";
+        String expected =
+                "{\"type\":{\"blueId\":\"Example-BlueId\"},\"field\":\"value\"}";
 
+        // when
         String json = mapper.writeValueAsString(obj);
-        String expected = "{\"type\":{\"blueId\":\"Example-BlueId\"},\"field\":\"value\"}";
+
+        // then
         assertEquals(expected, json);
     }
 
     @Test
-    void testBlueIdSerialization() throws Exception {
+    void shouldSerializeAnnotatedFieldAsBlueIdReference() throws Exception {
+        // given
         BlueIdExample obj = new BlueIdExample();
         obj.id = "123";
+        String expected =
+                "{\"type\":{\"blueId\":\"BlueId-Example\"},\"id\":{\"blueId\":\"123\"}}";
 
+        // when
         String json = mapper.writeValueAsString(obj);
-        String expected = "{\"type\":{\"blueId\":\"BlueId-Example\"},\"id\":{\"blueId\":\"123\"}}";
+
+        // then
         assertEquals(expected, json);
     }
 
     @Test
-    void testBlueNameAndDescriptionForCollection() throws Exception {
+    void shouldSerializeBlueNameAndDescriptionForCollectionField() throws Exception {
+        // given
         CollectionExample obj = new CollectionExample();
         obj.teamName = "Dream Team";
         obj.teamDescription = "The best team ever";
         obj.team = Arrays.asList("Alice", "Bob", "Charlie");
+        String expected =
+                "{\"type\":{\"blueId\":\"Collection-Example\"},\"team\":{\"name\":\"Dream Team\",\"description\":\"The best team ever\",\"items\":[\"Alice\",\"Bob\",\"Charlie\"]}}";
 
+        // when
         String json = mapper.writeValueAsString(obj);
-        String expected = "{\"type\":{\"blueId\":\"Collection-Example\"},\"team\":{\"name\":\"Dream Team\",\"description\":\"The best team ever\",\"items\":[\"Alice\",\"Bob\",\"Charlie\"]}}";
+
+        // then
         assertEquals(expected, json);
     }
 
     @Test
-    void testBlueNameAndDescriptionForNonCollection() throws Exception {
+    void shouldSerializeBlueNameAndDescriptionForScalarField() throws Exception {
+        // given
         NonCollectionExample obj = new NonCollectionExample();
         obj.fieldName = "Important Field";
         obj.fieldDescription = "This field is very important";
         obj.field = "Crucial data";
+        String expected =
+                "{\"type\":{\"blueId\":\"NonCollection-Example\"},\"field\":{\"name\":\"Important Field\",\"description\":\"This field is very important\",\"value\":\"Crucial data\"}}";
 
+        // when
         String json = mapper.writeValueAsString(obj);
-        String expected = "{\"type\":{\"blueId\":\"NonCollection-Example\"},\"field\":{\"name\":\"Important Field\",\"description\":\"This field is very important\",\"value\":\"Crucial data\"}}";
+
+        // then
         assertEquals(expected, json);
     }
 
     @Test
-    void serializesJsonPropertyNamesForGeneratedKeywordFields() throws Exception {
+    void shouldSerializeJsonPropertyNamesForGeneratedKeywordFields() throws Exception {
+        // given
         JsonPropertyExample obj = new JsonPropertyExample();
         obj.packageValue = "Conversation";
         obj.classBlueId = "Class-BlueId";
+        String expected =
+                "{\"type\":{\"blueId\":\"JsonProperty-Example\"},\"class\":{\"blueId\":\"Class-BlueId\"},\"package\":\"Conversation\"}";
 
+        // when
         String json = mapper.writeValueAsString(obj);
-        String expected = "{\"type\":{\"blueId\":\"JsonProperty-Example\"},\"class\":{\"blueId\":\"Class-BlueId\"},\"package\":\"Conversation\"}";
+
+        // then
         assertEquals(expected, json);
     }
 
     @Test
-    void serializesBlueNameAndDescriptionToJsonPropertyTarget() throws Exception {
+    void shouldSerializeBlueNameAndDescriptionToJsonPropertyTarget() throws Exception {
+        // given
         JsonPropertyMetadataExample obj = new JsonPropertyMetadataExample();
         obj.packageName = "Package label";
         obj.packageDescription = "Package description";
         obj.packageValue = "Conversation";
+        String expected =
+                "{\"type\":{\"blueId\":\"JsonProperty-Metadata-Example\"},\"package\":{\"name\":\"Package label\",\"description\":\"Package description\",\"value\":\"Conversation\"}}";
 
+        // when
         String json = mapper.writeValueAsString(obj);
-        String expected = "{\"type\":{\"blueId\":\"JsonProperty-Metadata-Example\"},\"package\":{\"name\":\"Package label\",\"description\":\"Package description\",\"value\":\"Conversation\"}}";
+
+        // then
         assertEquals(expected, json);
     }
 
     @TypeBlueId("Example-BlueId")
     public static class TypeBlueIdExample {
+        public static final String PROPERTY_FIELD = "field";
         public String field;
     }
 

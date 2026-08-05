@@ -1,0 +1,6 @@
+id: F_all_language_vectors_pass
+category: MetaConformance
+operation: suiteAssertion
+description: provider conformance includes every BlueId and resolution vector before provider-specific vectors are evaluated
+requiresVectorPrefixes: [B, R]
+expected: pass

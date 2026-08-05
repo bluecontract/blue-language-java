@@ -1,0 +1,21 @@
+id: R_requirement_overlay_valid_and_conflicting
+category: Resolution
+operation: resolveVariants
+base:
+  prop:
+    x: 1
+variants:
+  - name: valid
+    overlay:
+      type:
+        prop:
+          x: 1
+      prop:
+        y: 2
+    expectedValid: true
+  - name: conflicting
+    overlay:
+      type:
+        prop:
+          x: 2
+    expectedErrorCategory: FixedValueConflict

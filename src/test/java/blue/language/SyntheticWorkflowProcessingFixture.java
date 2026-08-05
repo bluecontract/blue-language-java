@@ -1,16 +1,29 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.model.Node;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
 
 final class SyntheticWorkflowProcessingFixture {
 

@@ -1,0 +1,581 @@
+package blue.language.conformance;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.provider.NodeProvider;
+import blue.language.merge.Merger;
+import blue.language.merge.MergingProcessor;
+import blue.language.model.Node;
+import blue.language.snapshot.FrozenNode;
+import blue.language.merge.ResolvedReferenceCache;
+import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.model.wire.JsonPointer;
+import blue.language.resolve.MinimizedOverlayBuilder;
+import blue.language.registry.NodeProviderWrapper;
+import blue.language.resolve.ResolutionLimits;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
+/**
+ * Package-local planner that widens changed frozen nodes through declared type
+ * ancestry until the document conforms again.
+ *
+ * <p>Planning is immutable: it structurally replaces the affected path and its
+ * ancestors and records the corresponding canonical overlay changes.</p>
+ */
+final class FrozenConformancePlanner {
+
+    /**
+     * Keeps every reference below an independently planned merge root cold.
+     * The root's own declared type remains available to conformance planning,
+     * while references reached through its contributed or authored children do
+     * not escape the enclosing document-level preservation boundary.
+     */
+    private static final ResolutionLimits
+            DEFER_ALL_DESCENDANT_REFERENCES = new ResolutionLimits() {
+                @Override
+                public boolean shouldExpandPathSegment(
+                        String pathSegment, Node currentNode) {
+                    return false;
+                }
+
+                @Override
+                public boolean shouldMergePathSegment(
+                        String pathSegment, Node currentNode) {
+                    return true;
+                }
+
+                @Override
+                public void enterPathSegment(
+                        String pathSegment, Node currentNode) {
+                    // Stateless: every descendant has the same cold boundary.
+                }
+
+                @Override
+                public void exitPathSegment() {
+                    // Stateless: there is no traversal state to unwind.
+                }
+            };
+
+    private final NodeProvider nodeProvider;
+    private final MergingProcessor mergingProcessor;
+    private final ResolvedReferenceCache resolvedReferenceCache;
+    private final Set<String> deferredReferencePaths;
+
+    FrozenConformancePlanner(NodeProvider nodeProvider,
+                             MergingProcessor mergingProcessor,
+                             ResolvedReferenceCache resolvedReferenceCache) {
+        this(nodeProvider,
+                mergingProcessor,
+                resolvedReferenceCache,
+                Collections.emptySet());
+    }
+
+    FrozenConformancePlanner(NodeProvider nodeProvider,
+                             MergingProcessor mergingProcessor,
+                             ResolvedReferenceCache resolvedReferenceCache,
+                             Collection<String> deferredReferencePaths) {
+        this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
+        this.mergingProcessor = Objects.requireNonNull(mergingProcessor, "mergingProcessor");
+        this.resolvedReferenceCache = resolvedReferenceCache;
+        this.deferredReferencePaths = canonicalPaths(deferredReferencePaths);
+    }
+
+    ConformancePlan plan(FrozenNode canonicalRoot, FrozenNode resolvedRoot, String changedPath) {
+        Objects.requireNonNull(resolvedRoot, "resolvedRoot");
+        String normalized = JsonPointer.canonicalize(changedPath);
+        List<String> existingSegments = existingPathSegments(resolvedRoot, normalized);
+        FrozenNode nextResolvedRoot = resolvedRoot;
+        FrozenNode nextCanonicalRoot = canonicalRoot;
+        List<CanonicalGeneralizationPatch> canonicalPatches = new ArrayList<>();
+        Set<String> changedPaths = new LinkedHashSet<>();
+        boolean generalized = false;
+
+        for (int depth = existingSegments.size(); depth >= 0; depth--) {
+            String path = pointer(existingSegments, depth);
+            FrozenNode current = read(nextResolvedRoot, path);
+            GeneralizedNode generalizedNode = generalizeNode(current, path);
+            if (!generalizedNode.generalized()) {
+                continue;
+            }
+
+            nextResolvedRoot = replaceAt(nextResolvedRoot, path, generalizedNode.resolved());
+            changedPaths.add(path);
+            for (String metadataField : generalizedNode.metadataFields()) {
+                changedPaths.add(metadataPointer(path, metadataField));
+            }
+            generalized = true;
+
+            if (nextCanonicalRoot != null) {
+                FrozenNode before = read(nextCanonicalRoot, path);
+                FrozenNode after = reuseUnchangedSubtrees(
+                        before,
+                        canonicalize(
+                                generalizedNode.resolved(),
+                                generalizedNode.source(),
+                                nextCanonicalRoot));
+                nextCanonicalRoot = replaceAt(nextCanonicalRoot, path, after);
+                canonicalPatches.add(new CanonicalGeneralizationPatch(path, before, after));
+            }
+        }
+
+        return new ConformancePlan(nextCanonicalRoot,
+                nextResolvedRoot,
+                generalized,
+                canonicalPatches,
+                new ArrayList<>(changedPaths),
+                nextCanonicalRoot != null);
+    }
+
+    private GeneralizedNode generalizeNode(
+            FrozenNode node,
+            String nodePath) {
+        if (node == null) {
+            return GeneralizedNode.unchanged(node);
+        }
+        if (!hasTypeMetadata(node)) {
+            return GeneralizedNode.unchanged(node);
+        }
+
+        ResolutionLimits resolutionLimits =
+                resolutionLimitsAt(nodePath);
+        Node source = new MinimizedOverlayBuilder().build(node.toNode());
+        Node canonical = source.clone();
+        ConformanceResult result = checkCanonical(
+                canonical, resolutionLimits);
+        FrozenNode type = node.getType();
+        FrozenNode itemType = node.getItemType();
+        FrozenNode keyType = node.getKeyType();
+        FrozenNode valueType = node.getValueType();
+        List<String> metadataFields = new ArrayList<>();
+        boolean generalized = false;
+        while (!result.isConformant()) {
+            GeneralizationStep step = nextGeneralizationStep(
+                    type,
+                    itemType,
+                    keyType,
+                    valueType,
+                    resolutionLimits);
+            if (step == null) {
+                throw new IllegalArgumentException("Node cannot be generalized to a conforming type: " + result.getMessage());
+            }
+            applyGeneralizationStep(canonical, step);
+            switch (step.metadataField()) {
+                case BlueLanguageConstants.OBJECT_TYPE:
+                    type = step.parentType();
+                    break;
+                case BlueLanguageConstants.OBJECT_ITEM_TYPE:
+                    itemType = step.parentType();
+                    break;
+                case BlueLanguageConstants.OBJECT_KEY_TYPE:
+                    keyType = step.parentType();
+                    break;
+                case BlueLanguageConstants.OBJECT_VALUE_TYPE:
+                    valueType = step.parentType();
+                    break;
+                default:
+                    throw new IllegalStateException("Unsupported metadata field for generalization: " + step.metadataField());
+            }
+            metadataFields.add(step.metadataField());
+            generalized = true;
+            result = checkCanonical(canonical, resolutionLimits);
+        }
+        if (!generalized) {
+            return GeneralizedNode.unchanged(node);
+        }
+        Node resolved = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
+                .resolve(canonical, resolutionLimits);
+        return new GeneralizedNode(
+                reuseUnchangedSubtrees(
+                        node,
+                        resolvedReferenceCache.freezeResolved(resolved)),
+                true,
+                metadataFields,
+                canonical);
+    }
+
+    private boolean hasTypeMetadata(FrozenNode node) {
+        return node.getType() != null
+                || node.getItemType() != null
+                || node.getKeyType() != null
+                || node.getValueType() != null;
+    }
+
+    private ConformanceResult checkCanonical(
+            Node canonical,
+            ResolutionLimits resolutionLimits) {
+        try {
+            new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
+                    .resolve(canonical, resolutionLimits);
+            return ConformanceResult.conformant();
+        } catch (RuntimeException ex) {
+            return ConformanceResult.nonConformant(ex.getMessage());
+        }
+    }
+
+    private GeneralizationStep nextGeneralizationStep(FrozenNode typeNode,
+                                                      FrozenNode itemTypeNode,
+                                                      FrozenNode keyTypeNode,
+                                                      FrozenNode valueTypeNode,
+                                                      ResolutionLimits resolutionLimits) {
+        GeneralizationStep type = generalizationStep(
+                BlueLanguageConstants.OBJECT_TYPE,
+                typeNode,
+                resolutionLimits);
+        if (type != null) {
+            return type;
+        }
+        GeneralizationStep itemType = generalizationStep(
+                BlueLanguageConstants.OBJECT_ITEM_TYPE,
+                itemTypeNode,
+                resolutionLimits);
+        if (itemType != null) {
+            return itemType;
+        }
+        GeneralizationStep keyType = generalizationStep(
+                BlueLanguageConstants.OBJECT_KEY_TYPE,
+                keyTypeNode,
+                resolutionLimits);
+        if (keyType != null) {
+            return keyType;
+        }
+        return generalizationStep(
+                BlueLanguageConstants.OBJECT_VALUE_TYPE,
+                valueTypeNode,
+                resolutionLimits);
+    }
+
+    private GeneralizationStep generalizationStep(
+            String metadataField,
+            FrozenNode typeNode,
+            ResolutionLimits resolutionLimits) {
+        FrozenNode parentType = parentType(
+                typeNode, resolutionLimits);
+        return parentType != null ? new GeneralizationStep(metadataField, parentType) : null;
+    }
+
+    private void applyGeneralizationStep(Node canonical, GeneralizationStep step) {
+        Node parentType = new Node().blueId(typeReferenceBlueId(step.parentType()));
+        switch (step.metadataField()) {
+            case BlueLanguageConstants.OBJECT_TYPE:
+                canonical.type(parentType);
+                return;
+            case BlueLanguageConstants.OBJECT_ITEM_TYPE:
+                canonical.itemType(parentType);
+                return;
+            case BlueLanguageConstants.OBJECT_KEY_TYPE:
+                canonical.keyType(parentType);
+                return;
+            case BlueLanguageConstants.OBJECT_VALUE_TYPE:
+                canonical.valueType(parentType);
+                return;
+            default:
+                throw new IllegalStateException("Unsupported metadata field for generalization: " + step.metadataField());
+        }
+    }
+
+    private FrozenNode parentType(
+            FrozenNode type,
+            ResolutionLimits resolutionLimits) {
+        if (type == null) {
+            return null;
+        }
+        if (type.getType() != null) {
+            return type.getType();
+        }
+
+        Node resolvedType = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
+                .resolve(type.toNode(), resolutionLimits);
+        Node parentType = resolvedType.getType();
+        return parentType != null ? resolvedReferenceCache.freezeResolved(parentType) : null;
+    }
+
+    /**
+     * Relativizes document-root preservation paths for the subtree currently
+     * being checked. Conformance evaluates every typed ancestor as an
+     * independent merge root, so absolute paths would otherwise stop matching
+     * as soon as planning moved below the document root.
+     */
+    private ResolutionLimits resolutionLimitsAt(String nodePath) {
+        if (deferredReferencePaths.isEmpty()) {
+            return ResolutionLimits.NO_LIMITS;
+        }
+        List<String> base = JsonPointer.split(
+                JsonPointer.canonicalize(nodePath));
+        Set<String> relative = new LinkedHashSet<>();
+        for (String deferredPath : deferredReferencePaths) {
+            List<String> candidate = JsonPointer.split(deferredPath);
+            if (startsWith(base, candidate)) {
+                return DEFER_ALL_DESCENDANT_REFERENCES;
+            }
+            if (startsWith(candidate, base)) {
+                relative.add(JsonPointer.toPointer(
+                        candidate.subList(base.size(), candidate.size())));
+            }
+        }
+        return relative.isEmpty()
+                ? ResolutionLimits.NO_LIMITS
+                : ResolutionLimits.deferringReferencesAt(relative);
+    }
+
+    private static Set<String> canonicalPaths(
+            Collection<String> paths) {
+        if (paths == null || paths.isEmpty()) {
+            return Collections.emptySet();
+        }
+        Set<String> canonical = new LinkedHashSet<>();
+        for (String path : paths) {
+            canonical.add(JsonPointer.canonicalize(path));
+        }
+        return Collections.unmodifiableSet(canonical);
+    }
+
+    private static boolean startsWith(
+            List<String> candidate,
+            List<String> prefix) {
+        if (candidate.size() < prefix.size()) {
+            return false;
+        }
+        for (int index = 0; index < prefix.size(); index++) {
+            if (!candidate.get(index).equals(prefix.get(index))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String typeReferenceBlueId(FrozenNode type) {
+        return type.getReferenceBlueId() != null
+                ? type.getReferenceBlueId()
+                : type.blueId();
+    }
+
+    private FrozenNode canonicalize(FrozenNode resolvedNode,
+                                    Node source,
+                                    FrozenNode canonicalRoot) {
+        Node canonical = new CanonicalIdentityInputBuilder().build(
+                resolvedNode.toNode(), source);
+        if (canonicalRoot != null && !canonicalRoot.isStrictBlueIdValidation()) {
+            return FrozenNode.fromUncheckedCanonicalNode(canonical);
+        }
+        return FrozenNode.fromNode(canonical);
+    }
+
+    private List<String> existingPathSegments(FrozenNode root, String pointer) {
+        if (JsonPointer.ROOT.equals(pointer)) {
+            return Collections.emptyList();
+        }
+        List<String> requested = JsonPointer.split(pointer);
+        List<String> existing = new ArrayList<>(requested.size());
+        FrozenNode current = root;
+        for (String segment : requested) {
+            if (current == null) {
+                break;
+            }
+            String actualSegment = actualSegment(current, segment);
+            FrozenNode child = child(current, actualSegment);
+            if (child == null) {
+                break;
+            }
+            existing.add(actualSegment);
+            current = child;
+        }
+        return existing;
+    }
+
+    private String actualSegment(FrozenNode node, String segment) {
+        if (!"-".equals(segment) || !node.hasItems()) {
+            return segment;
+        }
+        List<FrozenNode> items = node.getItems();
+        return items == null || items.isEmpty() ? segment : String.valueOf(items.size() - 1);
+    }
+
+    private FrozenNode child(FrozenNode node, String segment) {
+        if (node == null) {
+            return null;
+        }
+        if (node.hasItems()) {
+            return node.item(parseArrayIndex(segment));
+        }
+        return node.property(segment);
+    }
+
+    private FrozenNode read(FrozenNode root, String pointer) {
+        if (root == null) {
+            return null;
+        }
+        if (JsonPointer.ROOT.equals(pointer)) {
+            return root;
+        }
+        FrozenNode current = root;
+        for (String segment : JsonPointer.split(pointer)) {
+            current = child(current, segment);
+            if (current == null) {
+                return null;
+            }
+        }
+        return current;
+    }
+
+    private FrozenNode replaceAt(FrozenNode root, String pointer, FrozenNode replacement) {
+        Objects.requireNonNull(root, "root");
+        Objects.requireNonNull(replacement, "replacement");
+        if (JsonPointer.ROOT.equals(pointer)) {
+            return replacement;
+        }
+        List<String> segments = JsonPointer.split(pointer);
+        return replaceAt(root, segments, 0, replacement, pointer);
+    }
+
+    private FrozenNode replaceAt(FrozenNode node,
+                                 List<String> segments,
+                                 int depth,
+                                 FrozenNode replacement,
+                                 String pointer) {
+        String segment = segments.get(depth);
+        boolean leaf = depth == segments.size() - 1;
+        if (node.hasItems()) {
+            int index = parseArrayIndex(segment);
+            List<FrozenNode> items = node.getItems();
+            if (index < 0 || index >= items.size()) {
+                throw new IllegalStateException("Array index out of bounds while replacing conformance path: " + pointer);
+            }
+            List<FrozenNode> nextItems = new ArrayList<>(items);
+            nextItems.set(index, leaf ? replacement : replaceAt(items.get(index), segments, depth + 1, replacement, pointer));
+            return node.withItems(nextItems);
+        }
+
+        FrozenNode child = node.property(segment);
+        if (child == null && !leaf) {
+            child = FrozenNode.empty();
+        }
+        if (child == null && leaf) {
+            return node.withProperty(segment, replacement);
+        }
+        FrozenNode nextChild = leaf ? replacement : replaceAt(child, segments, depth + 1, replacement, pointer);
+        return node.withProperty(segment, nextChild);
+    }
+
+    private String pointer(List<String> segments, int length) {
+        return JsonPointer.toPointer(segments.subList(0, length));
+    }
+
+    private FrozenNode reuseUnchangedSubtrees(FrozenNode previous, FrozenNode candidate) {
+        if (previous == null || candidate == null) {
+            return candidate;
+        }
+        if (previous.blueId().equals(candidate.blueId())) {
+            return previous;
+        }
+
+        FrozenNode result = candidate;
+        if (previous.hasItems() && candidate.hasItems()) {
+            List<FrozenNode> previousItems = previous.getItems();
+            List<FrozenNode> candidateItems = candidate.getItems();
+            List<FrozenNode> nextItems = new ArrayList<>(candidateItems);
+            boolean changed = false;
+            int commonSize = Math.min(previousItems.size(), candidateItems.size());
+            for (int i = 0; i < commonSize; i++) {
+                FrozenNode reused = reuseUnchangedSubtrees(previousItems.get(i), candidateItems.get(i));
+                if (reused != candidateItems.get(i)) {
+                    nextItems.set(i, reused);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                result = result.withItems(nextItems);
+            }
+        }
+
+        if (previous.hasProperties() && candidate.hasProperties()) {
+            for (String key : candidate.getProperties().keySet()) {
+                FrozenNode previousChild = previous.property(key);
+                FrozenNode candidateChild = result.property(key);
+                FrozenNode reused = reuseUnchangedSubtrees(previousChild, candidateChild);
+                if (reused != candidateChild) {
+                    result = result.withProperty(key, reused);
+                }
+            }
+        }
+        return result;
+    }
+
+    private String metadataPointer(String nodePath, String metadataField) {
+        return JsonPointer.append(nodePath, metadataField);
+    }
+
+    private int parseArrayIndex(String segment) {
+        try {
+            int index = Integer.parseInt(segment);
+            return index >= 0 ? index : -1;
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
+    private static final class GeneralizedNode {
+        private final FrozenNode resolved;
+        private final boolean generalized;
+        private final List<String> metadataFields;
+        private final Node source;
+
+        private GeneralizedNode(FrozenNode resolved, boolean generalized) {
+            this(resolved, generalized, Collections.emptyList(), null);
+        }
+
+        private GeneralizedNode(FrozenNode resolved,
+                                boolean generalized,
+                                List<String> metadataFields,
+                                Node source) {
+            this.resolved = resolved;
+            this.generalized = generalized;
+            this.metadataFields = metadataFields;
+            this.source = source;
+        }
+
+        private static GeneralizedNode unchanged(FrozenNode resolved) {
+            return new GeneralizedNode(resolved, false);
+        }
+
+        private FrozenNode resolved() {
+            return resolved;
+        }
+
+        private boolean generalized() {
+            return generalized;
+        }
+
+        private List<String> metadataFields() {
+            return metadataFields;
+        }
+
+        private Node source() {
+            return source;
+        }
+    }
+
+    private static final class GeneralizationStep {
+        private final String metadataField;
+        private final FrozenNode parentType;
+
+        private GeneralizationStep(String metadataField, FrozenNode parentType) {
+            this.metadataField = metadataField;
+            this.parentType = parentType;
+        }
+
+        private String metadataField() {
+            return metadataField;
+        }
+
+        private FrozenNode parentType() {
+            return parentType;
+        }
+    }
+}

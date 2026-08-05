@@ -1,0 +1,24 @@
+id: F_unrelated_missing_reference_does_not_block
+category: LimitedExpansion
+operation: expandLimited
+description: an unavailable sibling outside the semantic demand closure does not make the demanded path incomplete
+source:
+  blueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk
+limits:
+  demandedPaths: [/left/value]
+provider:
+  - requestedBlueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk
+    node:
+      left:
+        blueId: 5nWrS5wTB22MN7HHhyRUy7zQ83Qbf6QEcUY4soFir2Sq
+      right:
+        blueId: FVynRTHup63DBwrc8M741Uhnyp4oonzMdbuuKpAnEeSf
+  - requestedBlueId: 5nWrS5wTB22MN7HHhyRUy7zQ83Qbf6QEcUY4soFir2Sq
+    node:
+      value: wanted
+  - requestedBlueId: FVynRTHup63DBwrc8M741Uhnyp4oonzMdbuuKpAnEeSf
+    outcome: Unavailable
+expectedOutcome: Established
+expectedValue: wanted
+expectedNotRequestedBlueIds:
+  - FVynRTHup63DBwrc8M741Uhnyp4oonzMdbuuKpAnEeSf

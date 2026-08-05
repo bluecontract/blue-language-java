@@ -4,85 +4,44 @@ import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChannelEvaluationTest {
 
     @Test
-    void deliveryRequiresNonNullEvent() {
-        assertThrows(NullPointerException.class,
-                () -> ChannelDelivery.of(null, "event-1", "checkpoint", Boolean.TRUE));
-    }
-
-    @Test
-    void deliveryDefensivelyCopiesEvent() {
+    void shouldDefensivelyCopyEventDuringMatch() {
+        // given
         Node event = amountEvent(1);
 
-        ChannelDelivery delivery = ChannelDelivery.of(event, "event-1", "checkpoint", Boolean.TRUE);
+        // when
+        ChannelEvaluation evaluation =
+                ChannelEvaluation.match(event, "event-1");
         event.properties("amount", new Node().value(BigInteger.TEN));
-        Node firstRead = delivery.event();
+        Node firstRead = evaluation.event();
         firstRead.properties("amount", new Node().value(new BigInteger("20")));
 
-        assertEquals(BigInteger.ONE, delivery.event().get("/amount"));
-        assertNotSame(firstRead, delivery.event());
+        // then
+        assertEquals(BigInteger.ONE, evaluation.event().get("/amount"));
+        assertNotSame(firstRead, evaluation.event());
+        assertEquals("event-1", evaluation.eventId());
     }
 
     @Test
-    void matchDeliveriesTreatsNullOrEmptyOrOnlyNullAsNoMatch() {
-        assertFalse(ChannelEvaluation.matchDeliveries(null).matches());
-        assertFalse(ChannelEvaluation.matchDeliveries(Collections.emptyList()).matches());
+    void shouldVerifyContracts10EvaluationHasOnlyMatchAndNoMatch() {
+        // given
+        ChannelEvaluation matched =
+                ChannelEvaluation.match(amountEvent(4));
 
-        List<ChannelDelivery> onlyNulls = new ArrayList<>();
-        onlyNulls.add(null);
+        // when
+        boolean match = matched.matches();
+        boolean noMatch = ChannelEvaluation.noMatch().matches();
 
-        assertFalse(ChannelEvaluation.matchDeliveries(onlyNulls).matches());
-    }
-
-    @Test
-    void matchDeliveriesFiltersNullEntriesAndDefensivelyCopiesDeliveries() {
-        Node event = amountEvent(3);
-        ChannelDelivery delivery = ChannelDelivery.of(event, "event-1", "checkpoint", null);
-        List<ChannelDelivery> deliveries = new ArrayList<>();
-        deliveries.add(null);
-        deliveries.add(delivery);
-
-        ChannelEvaluation evaluation = ChannelEvaluation.matchDeliveries(deliveries);
-        deliveries.clear();
-        event.properties("amount", new Node().value(BigInteger.TEN));
-        Node firstRead = evaluation.deliveries().get(0).event();
-        firstRead.properties("amount", new Node().value(new BigInteger("20")));
-
-        assertTrue(evaluation.matches());
-        assertEquals(1, evaluation.deliveries().size());
-        assertEquals(BigInteger.valueOf(3), evaluation.deliveries().get(0).event().get("/amount"));
-        assertThrows(UnsupportedOperationException.class, () -> evaluation.deliveries().add(delivery));
-    }
-
-    @Test
-    void deliveryCopiesPreserveRoutingMetadata() {
-        ChannelDelivery delivery = ChannelDelivery.of(amountEvent(4),
-                "event-4",
-                "source-checkpoint",
-                Boolean.TRUE,
-                "effective-channel",
-                "logical-delivery");
-
-        ChannelEvaluation evaluation = ChannelEvaluation.matchDeliveries(Collections.singletonList(delivery));
-
-        ChannelDelivery copied = evaluation.deliveries().get(0);
-        assertEquals("effective-channel", copied.handlerChannelKey());
-        assertEquals("logical-delivery", copied.logicalDeliveryKey());
-        assertEquals("source-checkpoint", copied.checkpointKey());
-        assertEquals("event-4", copied.eventId());
-        assertEquals(Boolean.TRUE, copied.shouldProcess());
+        // then
+        assertTrue(match);
+        assertFalse(noMatch);
     }
 
     private static Node amountEvent(int amount) {

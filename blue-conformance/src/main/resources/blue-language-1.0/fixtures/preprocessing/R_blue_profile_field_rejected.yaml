@@ -1,0 +1,11 @@
+id: R_blue_profile_field_rejected
+category: Resolution
+operation: preprocess
+description: Blue Language 1.0 uses blue.blueId directly and defines no blue.profile wrapper
+expectError: true
+expectedErrorCategory: InvalidReservedField
+source:
+  blue:
+    profile:
+      blueId: 7a4cQNDA9XKdPRcSNiGJA6mP5cCEH1Z6vqfp5Xu8rfBF
+  value: x

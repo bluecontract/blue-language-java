@@ -1,0 +1,15 @@
+id: R_blue_builtin_alias_same_allowed
+category: Resolution
+operation: preprocess
+description: a built-in alias may be repeated only with its canonical BlueId
+source:
+  blue:
+    imports:
+      Text:
+        blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  type: Text
+  value: hello
+expectedPreprocessed:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  value: hello

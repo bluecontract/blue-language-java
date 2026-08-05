@@ -1,0 +1,7 @@
+id: F_list_prefix_anchor_not_direct_manifest
+category: Provider
+operation: retrieveDirectList
+storedOptimization:
+  prefixFoldAvailable: true
+  appendedElementIdentities: 1
+expectedDirectResultStillContainsAllOrderedElementIdentities: true

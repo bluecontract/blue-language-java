@@ -1,5 +1,18 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.BasicTypesVerifier;
 import blue.language.merge.processor.DictionaryProcessor;
@@ -11,8 +24,8 @@ import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.limits.PathLimits;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -28,19 +41,19 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
-import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 
 class ResolvedSchemaValidationLifecycleTest {
 
     @Test
-    void effectiveSchemaIsValidatedOnceAcrossDeepTypeChain() {
+    void shouldValidateEffectiveSchemaOnceAcrossDeepTypeChain() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         Node parent = new Node().name("Required Parent")
                 .properties("field", new Node().schema(new Schema().required(true)));
@@ -57,14 +70,18 @@ class ResolvedSchemaValidationLifecycleTest {
         Blue blue = new Blue(provider, processor(verifier));
         String deepestTypeId = currentTypeId;
 
-        assertDoesNotThrow(() -> blue.resolve(new Node().type(reference(deepestTypeId))
-                .properties("field", new Node().value("present"))));
+        // when
+        blue.resolve(new Node().type(reference(deepestTypeId))
+                .properties("field", new Node().value("present")));
+        int completedValidations = verifier.completedValidations.get();
 
-        assertEquals(1, verifier.completedValidations.get());
+        // then
+        assertEquals(1, completedValidations);
     }
 
     @Test
-    void stringNumericEnumAndWrongKindChecksUseCompletedValue() {
+    void shouldUseCompletedValueForStringNumericEnumAndWrongKindChecks() {
+        // given
         Node type = new Node().name("Payload Constraints")
                 .properties("text", new Node().schema(new Schema().minLength(3)))
                 .properties("number", new Node().schema(new Schema().minimum(BigDecimal.TEN)))
@@ -78,38 +95,63 @@ class ResolvedSchemaValidationLifecycleTest {
                 .properties("text", new Node().value("valid"))
                 .properties("number", new Node().value(10))
                 .properties("choice", new Node().value("red"));
-        assertDoesNotThrow(() -> blue.resolve(valid));
 
-        assertPathFailure(blue, valid.clone().properties("text", new Node().value(12)), "/text", "minLength");
-        assertPathFailure(blue, valid.clone().properties("number", new Node().value(9)), "/number", "minimum");
-        assertPathFailure(blue, valid.clone().properties("choice", new Node().value("green")), "/choice", "enum");
+        // when
+        blue.resolve(valid);
+        IllegalArgumentException textFailure = resolutionFailure(
+                blue, valid.clone().properties("text", new Node().value(12)));
+        IllegalArgumentException numberFailure = resolutionFailure(
+                blue, valid.clone().properties("number", new Node().value(9)));
+        IllegalArgumentException choiceFailure = resolutionFailure(
+                blue, valid.clone().properties("choice", new Node().value("green")));
+
+        // then
+        assertPathFailure(textFailure, "/text", "minLength");
+        assertPathFailure(numberFailure, "/number", "minimum");
+        assertPathFailure(choiceFailure, "/choice", "enum");
     }
 
     @Test
-    void partialResolutionDoesNotCertifySkippedRequiredPath() {
+    void shouldNotCertifySkippedRequiredPathDuringPartialResolution() {
+        // given
         Fixture fixture = new Fixture();
         Node missing = new Node().type(reference(fixture.holderTypeId));
-        PathLimits skipRequired = new PathLimits(Collections.singleton("/unrelated"), 8);
+        ResolutionLimits skipRequired = ResolutionLimits.builder()
+                .addPaths(Collections.singleton("/unrelated"))
+                .setMaxDepth(8)
+                .build();
 
-        Node partial = assertDoesNotThrow(() -> fixture.blue.resolve(missing, skipRequired));
+        // when
+        Node partial = fixture.blue.resolve(missing, skipRequired);
+        IllegalArgumentException fullFailure =
+                resolutionFailure(fixture.blue, missing);
 
+        // then
         assertNull(partial.getProperties());
-        assertThrows(IllegalArgumentException.class, () -> fixture.blue.resolve(missing));
+        assertTrue(fullFailure instanceof IllegalArgumentException);
     }
 
     @Test
-    void requiredValidationInsideIncludedPathStillRuns() {
+    void shouldRunRequiredValidationInsideIncludedPath() {
+        // given
         Fixture fixture = new Fixture();
-        PathLimits includeRequired = new PathLimits(Collections.singleton("/field"), 8);
+        ResolutionLimits includeRequired = ResolutionLimits.builder()
+                .addPaths(Collections.singleton("/field"))
+                .setMaxDepth(8)
+                .build();
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> fixture.blue.resolve(new Node().type(reference(fixture.holderTypeId)), includeRequired));
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains("/field"));
     }
 
     @Test
-    void materializationRespectsDepthLimitAndFullResolutionStillValidates() {
+    void shouldRespectMaterializationDepthLimitAndValidateFullResolution() {
+        // given
         Fixture fixture = new Fixture();
         Node content = new Node().name("Deep Content")
                 .properties("nested", reference(fixture.holderTypeId));
@@ -122,34 +164,55 @@ class ResolvedSchemaValidationLifecycleTest {
         Node instance = new Node().type(reference(constrainedTypeId))
                 .properties("field", reference(contentId));
 
-        Node partial = assertDoesNotThrow(() -> fixture.blue.resolve(instance,
-                new PathLimits(Collections.singleton("*"), 2)));
+        // when
+        Node partial = fixture.blue.resolve(
+                instance, ResolutionLimits.builder()
+                        .addPaths(Collections.singleton("*"))
+                        .setMaxDepth(2)
+                        .build());
+        Node complete = fixture.blue.resolve(instance);
+
+        // then
         assertNotNull(partial.getProperties().get("field"));
-        assertDoesNotThrow(() -> fixture.blue.resolve(instance));
+        assertNotNull(complete);
     }
 
     @Test
-    void pathLimitedMaterializationIsResolvedPerOccurrenceInEitherOrder() {
-        assertLimitSpecificMaterializationOrder("narrow", "broad");
-        assertLimitSpecificMaterializationOrder("broad", "narrow");
+    void shouldResolvePathLimitedMaterializationPerOccurrenceInEitherOrder() {
+        // given
+        // The two orders exercise the same occurrence-specific invariant.
+
+        // when
+        MaterializationObservation narrowFirst =
+                observeLimitSpecificMaterializationOrder("narrow", "broad");
+        MaterializationObservation broadFirst =
+                observeLimitSpecificMaterializationOrder("broad", "narrow");
+
+        // then
+        assertMaterializationObservation(narrowFirst);
+        assertMaterializationObservation(broadFirst);
     }
 
     @Test
-    void pathLimitedPartialMaterializationDoesNotContaminateLaterResolution() {
+    void shouldNotContaminateLaterResolutionWithPathLimitedPartialMaterialization() {
+        // given
         LimitedReferenceFixture fixture = new LimitedReferenceFixture("narrow", "broad");
 
-        Node partial = assertDoesNotThrow(() -> fixture.blue.resolve(
-                fixture.instance(), fixture.limits()));
-        assertNull(partial.getProperties().get("narrow").getProperties());
+        // when
+        Node partial = fixture.blue.resolve(fixture.instance(), fixture.limits());
+        Node complete = fixture.blue.resolve(fixture.instance());
+        int fetchCount = fixture.provider.fetches(fixture.contentId);
 
-        Node complete = assertDoesNotThrow(() -> fixture.blue.resolve(fixture.instance()));
+        // then
+        assertNull(partial.getProperties().get("narrow").getProperties());
         assertEquals("present", complete.getProperties().get("narrow")
                 .getProperties().get("nested").getValue());
-        assertEquals(1, fixture.provider.fetches(fixture.contentId));
+        assertEquals(1, fetchCount);
     }
 
     @Test
-    void everyPayloadKeywordPermitsAbsentOptionalField() {
+    void shouldPermitAbsentOptionalFieldForEveryPayloadKeyword() {
+        // given
         List<Schema> schemas = Arrays.asList(
                 new Schema().minLength(1),
                 new Schema().maxLength(1),
@@ -165,33 +228,67 @@ class ResolvedSchemaValidationLifecycleTest {
                 new Schema().maxFields(1),
                 new Schema().enumValues(Collections.singletonList(new Node().value("allowed"))));
 
+        // when
+        int resolvedCount = 0;
         for (Schema schema : schemas) {
             Node declaration = new Node().properties("optional", new Node().schema(schema));
-            assertDoesNotThrow(() -> new Blue(new BasicNodeProvider()).resolve(declaration),
-                    schema.toString());
+            new Blue(new BasicNodeProvider()).resolve(declaration);
+            resolvedCount++;
+        }
+
+        // then
+        assertEquals(schemas.size(), resolvedCount);
+    }
+
+    @Test
+    void shouldFailPresentWrongKindForEveryPayloadKeywordFamily() {
+        // given
+        List<Schema> schemas = Arrays.asList(
+                new Schema().minLength(1),
+                new Schema().maxLength(1),
+                new Schema().minimum(BigDecimal.ZERO),
+                new Schema().maximum(BigDecimal.ONE),
+                new Schema().exclusiveMinimum(BigDecimal.ZERO),
+                new Schema().exclusiveMaximum(BigDecimal.ONE),
+                new Schema().multipleOf(BigDecimal.ONE),
+                new Schema().minItems(1),
+                new Schema().maxItems(1),
+                new Schema().uniqueItems(true),
+                new Schema().minFields(1),
+                new Schema().maxFields(1),
+                new Schema().enumValues(Collections.singletonList(new Node().value("allowed"))));
+        List<Node> payloads = Arrays.asList(
+                new Node().items(new Node().value("x")),
+                new Node().items(new Node().value("x")),
+                new Node().value("text"),
+                new Node().value("text"),
+                new Node().value("text"),
+                new Node().value("text"),
+                new Node().value("text"),
+                new Node().value("text"),
+                new Node().value("text"),
+                new Node().value("text"),
+                new Node().items(new Node().value("x")),
+                new Node().items(new Node().value("x")),
+                new Node().items(new Node().value("allowed")));
+
+        // when
+        List<IllegalArgumentException> failures = new java.util.ArrayList<>();
+        for (int index = 0; index < schemas.size(); index++) {
+            failures.add(wrongKindFailure(schemas.get(index), payloads.get(index)));
+        }
+
+        // then
+        assertEquals(schemas.size(), failures.size());
+        for (IllegalArgumentException failure : failures) {
+            assertTrue(failure instanceof IllegalArgumentException);
+            assertTrue(failure.getMessage().contains("wrong kind"), failure.getMessage());
         }
     }
 
     @Test
-    void presentWrongKindFailsForEveryPayloadKeywordFamily() {
-        assertWrongKind(new Schema().minLength(1), new Node().items(new Node().value("x")));
-        assertWrongKind(new Schema().maxLength(1), new Node().items(new Node().value("x")));
-        assertWrongKind(new Schema().minimum(BigDecimal.ZERO), new Node().value("text"));
-        assertWrongKind(new Schema().maximum(BigDecimal.ONE), new Node().value("text"));
-        assertWrongKind(new Schema().exclusiveMinimum(BigDecimal.ZERO), new Node().value("text"));
-        assertWrongKind(new Schema().exclusiveMaximum(BigDecimal.ONE), new Node().value("text"));
-        assertWrongKind(new Schema().multipleOf(BigDecimal.ONE), new Node().value("text"));
-        assertWrongKind(new Schema().minItems(1), new Node().value("text"));
-        assertWrongKind(new Schema().maxItems(1), new Node().value("text"));
-        assertWrongKind(new Schema().uniqueItems(true), new Node().value("text"));
-        assertWrongKind(new Schema().minFields(1), new Node().items(new Node().value("x")));
-        assertWrongKind(new Schema().maxFields(1), new Node().items(new Node().value("x")));
-        assertWrongKind(new Schema().enumValues(Collections.singletonList(new Node().value("allowed"))),
-                new Node().items(new Node().value("allowed")));
-    }
-
-    @Test
-    void payloadlessReferenceFailsPayloadConstraintAndEmptyListRemainsValid() {
+    void shouldFailPayloadlessReferenceConstraintWhileAcceptingEmptyList() {
+        // given
         Node payloadless = new Node().name("Payloadless Content")
                 .type(reference(TEXT_TYPE_BLUE_ID));
         BasicNodeProvider provider = new BasicNodeProvider(payloadless);
@@ -199,19 +296,24 @@ class ResolvedSchemaValidationLifecycleTest {
         Node target = new Node().type(reference(TEXT_TYPE_BLUE_ID))
                 .schema(new Schema().minLength(1));
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> new blue.language.merge.Merger(processor(new SchemaVerifier()), provider)
-                        .merge(target, reference(payloadlessId), blue.language.utils.limits.Limits.NO_LIMITS));
-        assertTrue(messageChain(failure).contains("wrong kind"), messageChain(failure));
-
-        assertDoesNotThrow(() -> new Blue(new BasicNodeProvider()).resolve(new Node()
+                        .merge(target, reference(payloadlessId), blue.language.resolve.ResolutionLimits.NO_LIMITS));
+        Node emptyList = new Blue(new BasicNodeProvider()).resolve(new Node()
                 .properties("values", new Node().schema(new Schema()
                         .minItems(0).maxItems(0).uniqueItems(true))
-                        .items(Collections.emptyList()))));
+                        .items(Collections.emptyList())));
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
+        assertTrue(messageChain(failure).contains("wrong kind"), messageChain(failure));
+        assertNotNull(emptyList);
     }
 
     @Test
-    void candidateRegistrationTracksPositionalReplacement() {
+    void shouldTrackPositionalReplacementDuringCandidateRegistration() {
+        // given
         Node listType = new Node().name("Replacement Holder")
                 .properties("values", new Node().items(
                         new Node().schema(new Schema().minLength(3)).value("old")));
@@ -222,20 +324,29 @@ class ResolvedSchemaValidationLifecycleTest {
         Node invalidReplacement = new Node().type(reference(typeId)).properties("values",
                 new Node().type(reference(LIST_TYPE_BLUE_ID)).items(new Node().position(0)
                         .properties("$replace", new Node().schema(new Schema().minLength(3)).value("x"))));
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> blue.resolve(invalidReplacement));
-        assertTrue(failure.getMessage().contains("/values/0"), failure.getMessage());
-
         Node validReplacement = new Node().type(reference(typeId)).properties("values",
                 new Node().type(reference(LIST_TYPE_BLUE_ID)).items(new Node().position(0)
                         .properties("$replace", new Node().schema(new Schema().minLength(3)).value("new"))));
-        assertDoesNotThrow(() -> blue.resolve(validReplacement));
+
+        // when
+        IllegalArgumentException failure = resolutionFailure(blue, invalidReplacement);
+        Node resolved = blue.resolve(validReplacement);
+
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
+        assertTrue(failure.getMessage().contains("/values/0"), failure.getMessage());
+        assertNotNull(resolved);
     }
 
     @Test
-    void parallelResolutionsDoNotSharePresenceState() throws Exception {
+    void shouldNotSharePresenceStateAcrossParallelResolutions() throws Exception {
+        // given
         Fixture fixture = new Fixture();
         ExecutorService executor = Executors.newFixedThreadPool(8);
+
+        // when
+        List<Boolean> results = new java.util.ArrayList<>();
+        boolean terminated;
         try {
             List<Callable<Boolean>> tasks = new java.util.ArrayList<>();
             for (int index = 0; index < 64; index++) {
@@ -252,28 +363,48 @@ class ResolvedSchemaValidationLifecycleTest {
                 });
             }
             for (Future<Boolean> result : executor.invokeAll(tasks)) {
-                assertTrue(result.get());
+                results.add(result.get());
             }
         } finally {
             executor.shutdownNow();
-            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+            terminated = executor.awaitTermination(5, TimeUnit.SECONDS);
+        }
+
+        // then
+        assertTrue(terminated);
+        assertEquals(64, results.size());
+        for (Boolean result : results) {
+            assertTrue(result);
         }
     }
 
     @Test
-    void failedResolutionDoesNotContaminateNextResolution() {
+    void shouldNotContaminateNextResolutionAfterFailure() {
+        // given
         Fixture fixture = new Fixture();
 
-        assertThrows(IllegalArgumentException.class,
-                () -> fixture.blue.resolve(new Node().type(reference(fixture.holderTypeId))));
-        assertDoesNotThrow(() -> fixture.blue.resolve(fixture.validInstance()));
-        assertThrows(IllegalArgumentException.class,
-                () -> fixture.blue.resolve(new Node().type(reference(fixture.holderTypeId))));
+        // when
+        IllegalArgumentException firstFailure = resolutionFailure(
+                fixture.blue, new Node().type(reference(fixture.holderTypeId)));
+        Node valid = fixture.blue.resolve(fixture.validInstance());
+        IllegalArgumentException secondFailure = resolutionFailure(
+                fixture.blue, new Node().type(reference(fixture.holderTypeId)));
+
+        // then
+        assertTrue(firstFailure instanceof IllegalArgumentException);
+        assertNotNull(valid);
+        assertTrue(secondFailure instanceof IllegalArgumentException);
     }
 
-    private static void assertPathFailure(Blue blue, Node node, String path, String keyword) {
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> blue.resolve(node));
+    private static IllegalArgumentException resolutionFailure(Blue blue, Node node) {
+        return captureFailure(() -> blue.resolve(node));
+    }
+
+    private static void assertPathFailure(
+            IllegalArgumentException failure,
+            String path,
+            String keyword) {
+        assertTrue(failure instanceof IllegalArgumentException);
         assertTrue(failure.getMessage().contains(path), failure.getMessage());
         assertTrue(failure.getMessage().contains(keyword), failure.getMessage());
     }
@@ -288,23 +419,44 @@ class ResolvedSchemaValidationLifecycleTest {
         return message.toString();
     }
 
-    private static void assertWrongKind(Schema schema, Node payload) {
+    private static IllegalArgumentException wrongKindFailure(Schema schema, Node payload) {
         Node document = new Node().properties("field", payload.clone().schema(schema));
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        return captureFailure(
                 () -> new Blue(new BasicNodeProvider()).resolve(document));
-        assertTrue(failure.getMessage().contains("wrong kind"), failure.getMessage());
     }
 
-    private static void assertLimitSpecificMaterializationOrder(String first, String second) {
+    private static MaterializationObservation observeLimitSpecificMaterializationOrder(
+            String first,
+            String second) {
         LimitedReferenceFixture fixture = new LimitedReferenceFixture(first, second);
+        Node resolved = fixture.blue.resolve(fixture.instance(), fixture.limits());
+        return new MaterializationObservation(
+                resolved.getProperties().get("broad")
+                        .getProperties().get("nested").getValue(),
+                resolved.getProperties().get("narrow").getProperties(),
+                fixture.provider.fetches(fixture.contentId));
+    }
 
-        Node resolved = assertDoesNotThrow(() -> fixture.blue.resolve(
-                fixture.instance(), fixture.limits()));
+    private static void assertMaterializationObservation(
+            MaterializationObservation observation) {
+        assertEquals("present", observation.broadNestedValue);
+        assertNull(observation.narrowProperties);
+        assertEquals(1, observation.fetchCount);
+    }
 
-        assertEquals("present", resolved.getProperties().get("broad")
-                .getProperties().get("nested").getValue());
-        assertNull(resolved.getProperties().get("narrow").getProperties());
-        assertEquals(1, fixture.provider.fetches(fixture.contentId));
+    private static final class MaterializationObservation {
+        private final Object broadNestedValue;
+        private final java.util.Map<String, Node> narrowProperties;
+        private final int fetchCount;
+
+        private MaterializationObservation(
+                Object broadNestedValue,
+                java.util.Map<String, Node> narrowProperties,
+                int fetchCount) {
+            this.broadNestedValue = broadNestedValue;
+            this.narrowProperties = narrowProperties;
+            this.fetchCount = fetchCount;
+        }
     }
 
     private static MergingProcessor processor(SchemaVerifier verifier) {
@@ -358,20 +510,23 @@ class ResolvedSchemaValidationLifecycleTest {
                     .properties("broad", reference(contentId));
         }
 
-        private PathLimits limits() {
+        private ResolutionLimits limits() {
             Set<String> paths = new LinkedHashSet<>();
             paths.add("/narrow");
             paths.add("/broad/nested");
-            return new PathLimits(paths, 8);
+            return ResolutionLimits.builder()
+                    .addPaths(paths)
+                    .setMaxDepth(8)
+                    .build();
         }
     }
 
-    private static final class CountingProvider implements blue.language.NodeProvider {
-        private final blue.language.NodeProvider delegate;
+    private static final class CountingProvider implements blue.language.provider.NodeProvider {
+        private final blue.language.provider.NodeProvider delegate;
         private final java.util.concurrent.ConcurrentHashMap<String, AtomicInteger> counts =
                 new java.util.concurrent.ConcurrentHashMap<>();
 
-        private CountingProvider(blue.language.NodeProvider delegate) {
+        private CountingProvider(blue.language.provider.NodeProvider delegate) {
             this.delegate = delegate;
         }
 

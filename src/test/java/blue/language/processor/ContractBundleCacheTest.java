@@ -4,19 +4,20 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
-import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ContractBundleCacheTest {
 
     @Test
-    void processingStateChangesReuseBundleAndRefreshCheckpointMarkers() {
+    void shouldVerifyProcessingStateChangesRebuildMeteredBundlesAndRefreshCheckpointMarkers() {
+        // given
         RecordingMetrics metrics = new RecordingMetrics();
         Blue blue = configuredBlue(metrics);
         Node initialized = blue.initializeDocument(blue.yamlToNode(
@@ -24,28 +25,29 @@ class ContractBundleCacheTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  increment:\n" +
                 "    type:\n" +
-                "      blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "    channel: testChannel\n" +
                 "    propertyKey: /count\n")).document();
 
+        // when
         DocumentProcessingResult first = blue.processDocument(initialized, event(blue, "evt-1"));
-        long missesAfterFirst = metrics.bundleLoadCacheMisses;
         DocumentProcessingResult second = blue.processDocument(first.document(), event(blue, "evt-2"));
-        long hitsAfterSecond = metrics.bundleLoadCacheHits;
         DocumentProcessingResult duplicate = blue.processDocument(second.document(), event(blue, "evt-2"));
 
+        // then
         assertEquals(new BigInteger("2"), duplicate.document().get("/count"));
-        assertEquals(missesAfterFirst, metrics.bundleLoadCacheMisses,
-                "checkpoint payload changes should reuse the checkpoint-shaped bundle");
-        assertTrue(hitsAfterSecond > 0, "second run should reuse at least one cached bundle");
-        assertTrue(metrics.bundlesReused > 0, "bundle reuse metric should be incremented");
+        assertEquals(0L, metrics.bundleLoadCacheHits,
+                "metered PROCESS recognition cannot take a physical cache discount");
+        assertEquals(0L, metrics.bundlesReused,
+                "exact recognition rebuilds the observable bundle each run");
     }
 
     @Test
-    void changingContractsInvalidatesBundleCache() {
+    void shouldVerifyChangingContractsInvalidatesBundleCache() {
+        // given
         RecordingMetrics metrics = new RecordingMetrics();
         Blue blue = configuredBlue(metrics);
         Node initialized = blue.initializeDocument(blue.yamlToNode(
@@ -53,61 +55,31 @@ class ContractBundleCacheTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  set:\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    channel: testChannel\n" +
                 "    path: /orders\n" +
                 "    propertyKey: count\n" +
                 "    propertyValue: 1\n")).document();
 
+        // when
         DocumentProcessingResult first = blue.processDocument(initialized, event(blue, "evt-1"));
-        long missesBeforeContractChange = metrics.bundleLoadCacheMisses;
         Node changedContracts = first.document().clone();
         changedContracts.getAsNode("/contracts/set")
                 .properties("propertyValue", new Node().value(2));
         DocumentProcessingResult second = blue.processDocument(changedContracts, event(blue, "evt-2"));
 
+        // then
         assertEquals(new BigInteger("2"), second.document().get("/orders/count"));
-        assertTrue(metrics.bundleLoadCacheMisses > missesBeforeContractChange,
-                "changing /contracts should force a new bundle build");
+        assertEquals(0L, metrics.bundleLoadCacheHits);
+        assertEquals(0L, metrics.bundlesReused);
     }
 
     @Test
-    void changingChannelBindingsInvalidatesBundleCacheKey() {
-        RecordingMetrics metrics = new RecordingMetrics();
-        Blue blue = configuredBlue(metrics);
-        Node initialized = blue.initializeDocument(blue.yamlToNode(
-                "orders: {}\n" +
-                "channelBindings:\n" +
-                "  owner:\n" +
-                "    timelineId: one\n" +
-                "contracts:\n" +
-                "  testChannel:\n" +
-                "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
-                "  set:\n" +
-                "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
-                "    channel: testChannel\n" +
-                "    path: /orders\n" +
-                "    propertyKey: count\n" +
-                "    propertyValue: 1\n")).document();
-
-        DocumentProcessingResult first = blue.processDocument(initialized, event(blue, "evt-1"));
-        long missesBeforeBindingChange = metrics.bundleLoadCacheMisses;
-        Node changedBindings = first.document().clone();
-        changedBindings.getAsNode("/channelBindings/owner")
-                .properties("timelineId", new Node().value("two"));
-        blue.processDocument(changedBindings, event(blue, "evt-2"));
-
-        assertTrue(metrics.bundleLoadCacheMisses > missesBeforeBindingChange,
-                "changing /channelBindings should force a new bundle build");
-    }
-
-    @Test
-    void embeddedScopesCacheIndependently() {
+    void shouldVerifyEmbeddedScopesCacheIndependently() {
+        // given
         RecordingMetrics metrics = new RecordingMetrics();
         Blue blue = configuredBlue(metrics);
         Node initialized = blue.initializeDocument(blue.yamlToNode(
@@ -116,34 +88,39 @@ class ContractBundleCacheTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    increment:\n" +
                 "      type:\n" +
-                "        blueId: GsQfKqSUXxx24JTvsHDaY5pJ2cE6vZnn7j1NQ5RFDCWv\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.INCREMENT_PROPERTY + "\n" +
                 "      channel: testChannel\n" +
                 "      propertyKey: /count\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n")).document();
 
+        // when
         DocumentProcessingResult first = blue.processDocument(initialized, event(blue, "evt-1"));
-        long hitsBeforeSecond = metrics.bundleLoadCacheHits;
         DocumentProcessingResult second = blue.processDocument(first.document(), event(blue, "evt-2"));
 
+        // then
         assertEquals(new BigInteger("2"), second.document().get("/child/count"));
-        assertTrue(metrics.bundleLoadCacheHits - hitsBeforeSecond >= 2,
-                "root and embedded child scopes should be independently reusable");
+        assertEquals(1L, metrics.bundleLoadCacheHits,
+                "feeder preselection may reuse one unmetered structural bundle");
+        assertEquals(1L, metrics.bundlesReused,
+                "physical reuse does not discount metered PROCESS recognition");
     }
 
     private Blue configuredBlue(RecordingMetrics metrics) {
         Blue blue = ProcessorTestSupport.blue();
-        blue.getDocumentProcessor().processingMetricsSink(metrics);
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.processingObserver(metrics);
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport.testEventChannelProcessor());
         blue.registerContractProcessor(new IncrementPropertyContractProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
         return blue;
     }
 
@@ -151,24 +128,26 @@ class ContractBundleCacheTest {
         return blue.objectToNode(new TestEvent().eventId(eventId));
     }
 
-    private static final class RecordingMetrics implements ProcessingMetricsSink {
+    private static final class RecordingMetrics implements ProcessingObserver {
         long bundleLoadCacheHits;
         long bundleLoadCacheMisses;
         long bundlesReused;
 
         @Override
-        public void incrementBundleLoadCacheHits() {
-            bundleLoadCacheHits++;
-        }
-
-        @Override
-        public void incrementBundleLoadCacheMisses() {
-            bundleLoadCacheMisses++;
-        }
-
-        @Override
-        public void incrementBundlesReused() {
-            bundlesReused++;
+        public void record(ProcessingObservation observation) {
+            switch (observation.metricId()) {
+                case BUNDLE_LOAD_CACHE_HITS:
+                    bundleLoadCacheHits += observation.value();
+                    break;
+                case BUNDLE_LOAD_CACHE_MISSES:
+                    bundleLoadCacheMisses += observation.value();
+                    break;
+                case BUNDLES_REUSED:
+                    bundlesReused += observation.value();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

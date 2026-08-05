@@ -1,0 +1,8 @@
+id: R_schema_unknown_keyword_rejected
+category: Schema
+operation: resolve
+source:
+  value: x
+  schema:
+    unknownKeyword: true
+expectedErrorCategory: SchemaVocabularyError

@@ -1,52 +1,141 @@
 package blue.language.processor.util;
 
+import blue.language.processor.FailureCapture;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PointerUtilsTest {
 
     @Test
-    void splitAndJoinUseJsonPointerEscaping() {
-        assertEquals(Arrays.asList("a/b", "c~d", ""), PointerUtils.splitPointer("/a~1b/c~0d/"));
-        assertEquals("/a~1b/c~0d/", PointerUtils.toPointer(Arrays.asList("a/b", "c~d", "")));
-        assertEquals("/a~1b/c~0d", PointerUtils.appendPointer("/a~1b", "c~d"));
+    void shouldDecodeEscapedSegmentsWhenSplittingJsonPointer() {
+        // given
+        String pointer = "/a~1b/c~0d/";
+
+        // when
+        List<String> segments = PointerUtils.splitPointer(pointer);
+
+        // then
+        assertEquals(Arrays.asList("a/b", "c~d", ""), segments);
     }
 
     @Test
-    void resolveAndRelativizeCompareDecodedSegments() {
-        assertEquals("/scope~1a/child~0b", PointerUtils.resolvePointer("/scope~1a", "/child~0b"));
-        assertEquals("/child~0b", PointerUtils.relativizePointer("/scope~1a", "/scope~1a/child~0b"));
-        assertEquals("/scope~1ab/child", PointerUtils.relativizePointer("/scope~1a", "/scope~1ab/child"));
+    void shouldEncodeEscapedSegmentsWhenBuildingJsonPointer() {
+        // given
+        List<String> segments = Arrays.asList("a/b", "c~d", "");
+
+        // when
+        String pointer = PointerUtils.toPointer(segments);
+
+        // then
+        assertEquals("/a~1b/c~0d/", pointer);
     }
 
     @Test
-    void joinRelativePointersEscapesLiteralSegments() {
-        assertEquals("/a~1b/c~0d", PointerUtils.joinRelativePointers("/a~1b", "c~d"));
+    void shouldEscapeChildSegmentWhenAppendingJsonPointer() {
+        // given
+        String parent = "/a~1b";
+        String child = "c~d";
+
+        // when
+        String pointer = PointerUtils.appendPointer(parent, child);
+
+        // then
+        assertEquals("/a~1b/c~0d", pointer);
     }
 
     @Test
-    void descendantChecksAreSegmentAware() {
-        assertTrue(PointerUtils.descendantOrEqual("/a", "/a"));
-        assertTrue(PointerUtils.descendantOrEqual("/a/b", "/a"));
-        assertFalse(PointerUtils.descendantOrEqual("/ab", "/a"));
-        assertFalse(PointerUtils.strictlyInside("/a", "/a"));
-        assertTrue(PointerUtils.strictlyInside("/a/b", "/a"));
+    void shouldCompareDecodedSegmentsWhenResolvingAndRelativizing() {
+        // given
+        String scope = "/scope~1a";
+
+        // when
+        String resolved =
+                PointerUtils.resolvePointer(scope, "/child~0b");
+        String relativeChild =
+                PointerUtils.relativizePointer(
+                        scope, "/scope~1a/child~0b");
+        String relativeSibling =
+                PointerUtils.relativizePointer(
+                        scope, "/scope~1ab/child");
+
+        // then
+        assertEquals("/scope~1a/child~0b", resolved);
+        assertEquals("/child~0b", relativeChild);
+        assertEquals("/scope~1ab/child", relativeSibling);
     }
 
     @Test
-    void runtimePointerValidationRejectsMalformedPointers() {
-        assertEquals("/", PointerUtils.assertValidRuntimePointer("/"));
-        assertEquals("/a~1b/c~0d", PointerUtils.assertValidRuntimePointer("/a~1b/c~0d"));
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer(""));
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer("a"));
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer("/a/"));
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer("/a//b"));
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.assertValidRuntimePointer("/a~2b"));
+    void shouldEscapeLiteralSegmentsWhenJoiningRelativePointers() {
+        // given
+        String parent = "/a~1b";
+        String child = "c~d";
+
+        // when
+        String pointer =
+                PointerUtils.joinRelativePointers(parent, child);
+
+        // then
+        assertEquals("/a~1b/c~0d", pointer);
+    }
+
+    @Test
+    void shouldVerifyDescendantChecksAreSegmentAware() {
+        // given
+        String ancestor = "/a";
+
+        // when
+        boolean sameIsDescendant =
+                PointerUtils.descendantOrEqual("/a", ancestor);
+        boolean childIsDescendant =
+                PointerUtils.descendantOrEqual("/a/b", ancestor);
+        boolean siblingPrefixIsDescendant =
+                PointerUtils.descendantOrEqual("/ab", ancestor);
+        boolean sameIsStrictlyInside =
+                PointerUtils.strictlyInside("/a", ancestor);
+        boolean childIsStrictlyInside =
+                PointerUtils.strictlyInside("/a/b", ancestor);
+
+        // then
+        assertTrue(sameIsDescendant);
+        assertTrue(childIsDescendant);
+        assertFalse(siblingPrefixIsDescendant);
+        assertFalse(sameIsStrictlyInside);
+        assertTrue(childIsStrictlyInside);
+    }
+
+    @Test
+    void shouldVerifyRuntimePointerValidationRejectsMalformedPointers() {
+        // given
+        List<String> invalidPointers =
+                Arrays.asList("", "a", "/a/", "/a//b", "/a~2b");
+
+        // when
+        String root = validateRuntimePointer("/");
+        String escaped =
+                validateRuntimePointer("/a~1b/c~0d");
+        List<Throwable> failures = invalidPointers.stream()
+                .map(pointer -> FailureCapture
+                        .<Throwable>captureFailure(
+                        () -> validateRuntimePointer(pointer)))
+                .collect(Collectors.toList());
+
+        // then
+        assertEquals("/", root);
+        assertEquals("/a~1b/c~0d", escaped);
+        failures.forEach(failure ->
+                assertInstanceOf(
+                        IllegalArgumentException.class, failure));
+    }
+
+    private static String validateRuntimePointer(String pointer) {
+        return PointerUtils.assertValidRuntimePointer(pointer);
     }
 }

@@ -1,0 +1,38 @@
+package blue.language.merge.processor;
+
+import blue.language.merge.MergingProcessor;
+import blue.language.provider.NodeProvider;
+import blue.language.merge.NodeResolver;
+import blue.language.model.Node;
+import blue.language.provider.Types;
+
+import static blue.language.provider.Types.findBasicTypeName;
+
+/**
+ * Rejects resolved instances of scalar core types that also carry list or
+ * object payloads.
+ */
+public class BasicTypesVerifier implements MergingProcessor {
+
+    /** Creates a stateless scalar payload verifier. */
+    public BasicTypesVerifier() {
+    }
+
+    @Override
+    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+        // do nothing
+    }
+
+    @Override
+    public void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+        if (target.getType() != null && Types.isSubtypeOfBasicType(target.getType(), nodeProvider)) {
+            if ((target.getItems() != null && !target.getItems().isEmpty()) ||
+                (target.getProperties() != null && !target.getProperties().isEmpty())) {
+                String basicTypeName = findBasicTypeName(target.getType(), nodeProvider);
+                throw new IllegalArgumentException("Node of type \"" + target.getType().getName() +
+                                                   "\" (which extends basic type \"" + basicTypeName +
+                                                   "\") must not have items or properties.");
+            }
+        }
+    }
+}

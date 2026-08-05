@@ -1,0 +1,12 @@
+plugins {
+    id 'blue.java8-library-conventions'
+    id 'blue.reproducible-archives'
+    id 'blue.api-baseline'
+    id 'blue.jreleaser-publishing'
+}
+
+description = 'Stable Blue Language data, annotation, and wire value types.'
+
+dependencies {
+    api 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+}

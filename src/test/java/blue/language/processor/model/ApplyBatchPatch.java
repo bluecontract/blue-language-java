@@ -2,7 +2,7 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("AjWAjR4NcDYJHMhkAkX9DZKqGbHs8vkCRpjXiHRkLPMw")
+@TypeBlueId(ProcessorTestTypeBlueIds.APPLY_BATCH_PATCH)
 public class ApplyBatchPatch extends HandlerContract {
 
     private boolean addUnsupportedContract;

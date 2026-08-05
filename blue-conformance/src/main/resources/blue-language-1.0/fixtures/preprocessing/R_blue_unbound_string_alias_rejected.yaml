@@ -1,0 +1,9 @@
+id: R_blue_unbound_string_alias_rejected
+category: Resolution
+operation: preprocess
+description: an unbound string directive alias fails deterministically
+expectError: true
+expectedErrorCategory: InvalidReservedField
+source:
+  blue: Missing Directive Alias
+  value: x

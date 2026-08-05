@@ -1,8 +1,0 @@
-id: runtimeRegistryContractNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: Contract
-registryPath: registry/blue-contracts-1.0/Contract.blue
-expectedBlueId: 6WrVQoSpKHUUg5HPrwjkVV6pxe4sdkyGnakMs8ayEGeF
-semanticDescriptionIdentityBearing: true

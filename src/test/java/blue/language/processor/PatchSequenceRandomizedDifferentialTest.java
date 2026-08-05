@@ -12,12 +12,12 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 
 class PatchSequenceRandomizedDifferentialTest {
 
-    private static final DocumentProcessingRuntime.UpdateMaterializationMetrics NOOP_METRICS =
-            new DocumentProcessingRuntime.UpdateMaterializationMetrics() {
+    private static final UpdateMaterializationMetrics NOOP_METRICS =
+            new UpdateMaterializationMetrics() {
                 @Override
                 public void recordBeforeNodeMaterialization() {
                 }
@@ -28,14 +28,17 @@ class PatchSequenceRandomizedDifferentialTest {
             };
 
     @Test
-    void randomizedSequentialCheckpointsUpdatesAndFinalIdsMatchPublicSingletonPatching() {
+    void shouldVerifyRandomizedSequentialCheckpointsUpdatesAndFinalIdsMatchPublicSingletonPatching() {
+        // given
         int[] counts = {0, 1, 2, 4, 8, 16, 32, 64, 128};
+        // when
         for (int count : counts) {
             for (int scenario = 0; scenario < 8; scenario++) {
                 long seed = 0x5E0A11A1L + 1_009L * count + scenario;
                 verifySequence(count, seed);
             }
         }
+    // then
     }
 
     private void verifySequence(int count, long seed) {
@@ -56,9 +59,9 @@ class PatchSequenceRandomizedDifferentialTest {
                     + ", op=" + patch.getOp() + ", path=" + patch.getPath();
 
             SequentialPatchPlanningSession.PlannedStep planned = session.planNext(patch);
-            List<DocumentProcessingRuntime.DocumentUpdateData> plannedUpdates =
+            List<DocumentUpdateData> plannedUpdates =
                     planned.result().updates();
-            DocumentProcessingRuntime.DocumentUpdateData referenceUpdate =
+            DocumentUpdateData referenceUpdate =
                     reference.applyPatch("/", patch);
 
             assertEquals(1, plannedUpdates.size(), context + " update count");
@@ -77,8 +80,8 @@ class PatchSequenceRandomizedDifferentialTest {
                 "final resolved BlueId for seed " + seed + " and count " + count);
     }
 
-    private void assertUpdateEquals(DocumentProcessingRuntime.DocumentUpdateData expected,
-                                    DocumentProcessingRuntime.DocumentUpdateData actual,
+    private void assertUpdateEquals(DocumentUpdateData expected,
+                                    DocumentUpdateData actual,
                                     String context) {
         assertEquals(expected.path(), actual.path(), context + " update path");
         assertEquals(expected.op(), actual.op(), context + " update op");

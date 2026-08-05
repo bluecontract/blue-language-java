@@ -1,0 +1,16 @@
+plugins {
+    id 'blue.java8-library-conventions'
+    id 'blue.reproducible-archives'
+    id 'blue.api-baseline'
+    id 'blue.jreleaser-publishing'
+    id 'blue.jmh-conventions'
+}
+
+description = 'Deterministic Blue Language semantics and provider SPI.'
+
+dependencies {
+    api project(':blue-language-model')
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2'
+    implementation 'io.github.erdtman:java-json-canonicalization:1.1'
+}

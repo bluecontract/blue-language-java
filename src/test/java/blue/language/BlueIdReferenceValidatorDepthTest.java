@@ -1,19 +1,31 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.utils.BlueIdReferenceValidator;
-import blue.language.utils.NodeProviderWrapper;
-import blue.language.utils.limits.PathLimits;
+import blue.language.provider.VerifyingNodeProvider;
+import blue.language.identity.BlueIdReferenceValidator;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueIdReferenceValidatorDepthTest {
@@ -23,29 +35,36 @@ class BlueIdReferenceValidatorDepthTest {
     private static final String NEXT = "next";
 
     @Test
-    void deepValidGraphRespectsResolutionDepthLimitWithoutStackOverflow() {
+    void shouldRespectResolutionDepthLimitForDeepValidGraphWithoutStackOverflow() {
+        // given
         DeepGraph graph = deepGraph(DEEP_LEVELS);
 
-        Node resolved = assertDoesNotThrow(
-                () -> new Blue().resolve(graph.root, PathLimits.withMaxDepth(2)));
+        // when
+        Node resolved = new Blue().resolve(
+                graph.root, ResolutionLimits.withMaxDepth(2));
 
+        // then
         assertEquals(2, propertyDepth(resolved));
     }
 
     @Test
-    void deepMalformedGraphReportsInvalidBlueIdWithoutStackOverflow() {
+    void shouldReportInvalidBlueIdForDeepMalformedGraphWithoutStackOverflow() {
+        // given
         DeepGraph graph = deepGraph(DEEP_LEVELS);
         graph.deepest.blueId(MALFORMED_BLUE_ID);
         AtomicInteger ordinaryFetches = new AtomicInteger();
         AtomicInteger trustedFetches = new AtomicInteger();
         Blue ordinary = new Blue(countingMiss(ordinaryFetches));
-        Blue trusted = new Blue(NodeProviderWrapper.unverified(countingMiss(trustedFetches)));
+        Blue trusted = new Blue(
+                new VerifyingNodeProvider(countingMiss(trustedFetches)));
 
-        RuntimeException ordinaryFailure = assertThrows(RuntimeException.class,
-                () -> ordinary.resolve(graph.root, PathLimits.withMaxDepth(2)));
-        RuntimeException trustedFailure = assertThrows(RuntimeException.class,
-                () -> trusted.resolve(graph.root, PathLimits.withMaxDepth(2)));
+        // when
+        Throwable ordinaryFailure = captureFailure(
+                () -> ordinary.resolve(graph.root, ResolutionLimits.withMaxDepth(2)));
+        Throwable trustedFailure = captureFailure(
+                () -> trusted.resolve(graph.root, ResolutionLimits.withMaxDepth(2)));
 
+        // then
         assertMalformedDeepFailure(ordinaryFailure);
         assertMalformedDeepFailure(trustedFailure);
         assertEquals(0, ordinaryFetches.get());
@@ -53,42 +72,55 @@ class BlueIdReferenceValidatorDepthTest {
     }
 
     @Test
-    void deepObjectCycleTerminatesWithoutMutation() {
+    void shouldTerminateDeepObjectCycleValidationWithoutMutation() {
+        // given
         DeepGraph graph = deepGraph(DEEP_LEVELS);
         Node originalRootChild = property(graph.root, NEXT);
         graph.deepest.properties("cycle", graph.midpoint);
 
-        assertDoesNotThrow(() -> BlueIdReferenceValidator.validate(graph.root));
+        // when
+        Throwable failure = captureFailure(
+                () -> BlueIdReferenceValidator.validate(graph.root));
 
+        // then
+        assertNull(failure);
         assertSame(originalRootChild, property(graph.root, NEXT));
         assertSame(graph.midpoint, property(graph.deepest, "cycle"));
     }
 
     @Test
-    void iterativeTraversalPreservesFirstErrorOrder() {
+    void shouldPreserveFirstErrorOrderDuringIterativeTraversal() {
+        // given
         Node source = new Node()
                 .type(malformedReference())
                 .properties("first", malformedReference())
                 .properties("second", malformedReference())
                 .schema(new Schema().enumValues(Collections.singletonList(malformedReference())));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> BlueIdReferenceValidator.validate(source));
 
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
         assertTrue(failure.getMessage().contains("/type/blueId"), failure.getMessage());
     }
 
     @Test
-    void sharedMalformedNodeReportsItsFirstDeterministicPath() {
+    void shouldReportFirstDeterministicPathForSharedMalformedNode() {
+        // given
         Node shared = malformedReference();
         Node source = new Node()
                 .type(shared)
                 .properties("later", shared)
                 .schema(new Schema().enumValues(Collections.singletonList(shared)));
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> BlueIdReferenceValidator.validate(source));
 
+        // then
+        assertInstanceOf(RuntimeException.class, failure);
         assertTrue(failure.getMessage().contains("/type/blueId"), failure.getMessage());
     }
 
@@ -132,7 +164,8 @@ class BlueIdReferenceValidatorDepthTest {
         };
     }
 
-    private static void assertMalformedDeepFailure(RuntimeException failure) {
+    private static void assertMalformedDeepFailure(Throwable failure) {
+        assertInstanceOf(RuntimeException.class, failure);
         assertEquals(BlueLanguageErrorCategory.InvalidBlueId,
                 BlueLanguageErrorClassifier.classify(failure));
         String message = failure.getMessage();

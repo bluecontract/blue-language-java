@@ -1,0 +1,629 @@
+{
+  "schema": "blue-language-java-collection-paths-final/1.0",
+  "generatedAt": "2026-08-02",
+  "phase": "collection-paths-and-cohesion",
+  "status": "final-evidence-complete-for-verified-implementation",
+  "evidencePolicy": {
+    "executed": "Produced by a command or test run against the current implementation work.",
+    "staticValidation": "Derived by inspecting source-controlled inputs or generated inventories without claiming a runtime gate passed.",
+    "retainedPreviousEvidence": "A prior or externally supplied result retained for context; it is not current Java release-gate evidence.",
+    "notExecuted": "A requested evidence item was not run or cannot be produced from the available baseline; no passing claim is made."
+  },
+  "source": {
+    "repository": "blue-language-java",
+    "branch": "codex/language-final-rc",
+    "verifiedImplementationCommit": "63a9ed6a1a66d47119a80d16ed2ab0beda0d2453",
+    "verifiedImplementationCommitSubject": "chore(quality): remove stale class size exceptions",
+    "verifiedImplementationSourceDateEpoch": 1785685523,
+    "verifiedSourceFileCount": 1557,
+    "verifiedSourceInputIdentity": "sha256:0ae0cef00f7de69733b179fe75226249b84c67c4d3af398ebdaec8631c2f2a20",
+    "baselineCommit": "4b88f9148c3dfdeea31c715d1ef339b8d8d7c721",
+    "reportCommit": null,
+    "reportCommitStatus": "evidence-only-successor-not-clean-built",
+    "reportCommitScope": "The successor records results produced from the verified implementation commit. It is not itself described as clean-built or release-verified.",
+    "boundary": {
+      "repositoriesModified": [
+        "blue-language-java"
+      ],
+      "repositoriesNotModified": [
+        "blue-bex-java",
+        "blue-coordination-java"
+      ],
+      "czTomlModified": false,
+      "userOwnedLicenseEditExcluded": true
+    }
+  },
+  "normativeInputs": {
+    "evidenceStatus": "executed",
+    "correctedArchive": {
+      "path": "/Users/piotr/Downloads/blue-language-contracts-embedded-modules-collection-paths-1.0-enum-normalized-corrected.zip",
+      "sha256": "ba7859cad8eb499fd394d236705d17c48eadb5304526e2ca27a563ee400c5251"
+    },
+    "releasePackageIdentity": "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
+    "specifications": {
+      "languageSha256": "a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869",
+      "contractsSha256": "6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81"
+    },
+    "packages": {
+      "languageRegistry": "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
+      "languageFixtures": "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55",
+      "contractsRegistry": "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
+      "contractsFixtures": "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc",
+      "contractsGas": "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5"
+    },
+    "runtimeBlueIds": {
+      "processEmbedded": "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e",
+      "documentUpdate": "7HZ6UDNxDdGdvhowi92mwB4EAqKfeynpJEFUFVvjmTJ2",
+      "jsonPatchEntry": "5UihWoxkyiUbv9TZk7HcHsa82sz2R3ex1WifQQpKtHpP",
+      "scriptedExternalChannel": "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt",
+      "contractExecutionResult": "3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv",
+      "scriptedHandler": "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw"
+    },
+    "correctedArchiveValidation": {
+      "evidenceStatus": "retainedPreviousEvidence",
+      "checks": 1597,
+      "warnings": 0,
+      "errors": 0,
+      "note": "Supplied package validation; the Java release-conformance execution is recorded separately."
+    },
+    "finalBindingVerification": {
+      "report": "build/reports/final-quality/final-quality.json",
+      "specificationsBound": true,
+      "packageIdentitiesValid": true,
+      "exactlyBound": true
+    }
+  },
+  "implementation": {
+    "evidenceStatus": "staticValidation",
+    "summary": [
+      "ProcessEmbedded owns independent paths and collectionPaths declarations.",
+      "One immutable EmbeddedScopePlan retains explicit and generated path provenance.",
+      "The shared planner performs Runtime Pointer validation, reserved-field checks, Unicode code-point ordering, RFC 6901 escaping, provider-outcome preservation, duplicate and overlap checks, cyclic-boundary checks, and portable limits.",
+      "Entry snapshots freeze collection membership for the current event; additions activate only after commit and removal/re-add starts a fresh occurrence lineage.",
+      "Subscription projection, feeder evidence, processing, mutation boundaries, protected state, checkpoints, fragmentation inspection, final indexability validation, and gas consume the common scope model.",
+      "Revision-bound event validation keeps unselected direct pure-reference branches opaque while strictly reopening selected collection targets and members."
+    ],
+    "enumNormalizationDecision": "Language 1.0 schema.enum values remain a canonical typed-scalar set: authoring order is ignored and duplicates are removed before direct identity calculation.",
+    "staleIdentityAudit": {
+      "evidenceStatus": "staticValidation",
+      "incorrectRuntimeBlueIdsOutsideExplicitCorrectionDocument": 0,
+      "previousPackageIdentitiesOutsideHistoricalBaselineReport": 0
+    }
+  },
+  "conformance": {
+    "evidenceStatus": "executed",
+    "task": "releaseConformanceTest",
+    "report": "blue-conformance/build/reports/conformance/release-conformance.json",
+    "language": {
+      "total": 153,
+      "passed": 153,
+      "failed": 0,
+      "skipped": 0
+    },
+    "contracts": {
+      "behavior": 96,
+      "gas": 58,
+      "total": 154,
+      "passed": 154,
+      "failed": 0,
+      "skipped": 0
+    },
+    "combined": {
+      "total": 307,
+      "passed": 307,
+      "failed": 0,
+      "skipped": 0,
+      "conformant": true
+    }
+  },
+  "tests": {
+    "evidenceStatus": "executed",
+    "latestObserved": [
+      {
+        "task": ":test",
+        "tests": 2279,
+        "passed": 2279,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "task": ":fragmentedProcessingTest",
+        "tests": 85,
+        "passed": 85,
+        "failed": 0,
+        "skipped": 0,
+        "note": "Overlaps the root test inventory and is not added to the ordinary-test total."
+      },
+      {
+        "task": ":blue-contracts-core:test --tests blue.language.processor.EmbeddedScopePlannerTest",
+        "tests": 31,
+        "passed": 31,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "task": ":examples:test",
+        "tests": 19,
+        "passed": 19,
+        "failed": 0,
+        "skipped": 0
+      }
+    ],
+    "ordinaryRootTestTotal": 2279,
+    "focusedInventory": [
+      "blue.language.identity.SchemaEnumCanonicalizerTest",
+      "blue.language.processor.registry.BlueRuntimeTypeRegistryTest",
+      "blue.language.processor.model.ProcessEmbeddedTest",
+      "blue.language.processor.EmbeddedScopePlanTest",
+      "blue.language.processor.EmbeddedScopePlannerTest",
+      "blue.language.model.wire.BlueLanguageConstantsTest",
+      "blue.language.processor.EmbeddedSurfacePreflightTest",
+      "blue.language.processor.EffectiveFragmentationCatalogTest",
+      "blue.language.processor.SubscriptionValidationServicesTest",
+      "blue.language.processor.ProtectedStateGuardTest",
+      "blue.language.processor.ScopeMutationServicesTest",
+      "blue.language.processor.EmbeddedCollectionLifecycleIntegrationTest",
+      "blue.language.processor.PatchPlanningEngineCollectionTest",
+      "blue.language.processor.ProcessingSnapshotBootstrapTest",
+      "blue.language.processor.DocumentUpdateRouterTest",
+      "blue.language.processor.DocumentProcessorResolvedSnapshotParityTest",
+      "blue.language.processor.DeepGraphPhysicalLocalityIntegrationTest"
+    ],
+    "mainTestInventory": {
+      "task": ":test",
+      "tests": 2279,
+      "passed": 2279,
+      "failed": 0,
+      "skipped": 0
+    },
+    "finalQualityAggregate": {
+      "evidenceStatus": "executed",
+      "sourceTask": ":allUnitAndIntegrationTests",
+      "suiteCount": 246,
+      "tests": 2729,
+      "passed": 2729,
+      "failed": 0,
+      "skipped": 0,
+      "note": "Aggregates the main, focused, specialized, module, and example suites; it is not presented as the :test-only count."
+    }
+  },
+  "providerDemandAndLocality": {
+    "evidenceStatus": "executed",
+    "deepGraphMatrix": {
+      "report": "build/reports/semantic-baseline/locality/deep-graph-matrix.json",
+      "variants": 32,
+      "forbiddenRequestedBlueIds": 0,
+      "forbiddenLoadedBlueIds": 0
+    },
+    "fragmentedMatrix": {
+      "report": "build/reports/semantic-baseline/locality/fragmented-matrix.json",
+      "variants": 8,
+      "forbiddenPrimaryRequestedBlueIds": 0,
+      "forbiddenPrimaryLoadedBlueIds": 0,
+      "forbiddenReplayRequestedBlueIds": 0,
+      "forbiddenReplayLoadedBlueIds": 0
+    },
+    "rootOnlyEvent": {
+      "report": "build/reports/semantic-baseline/locality/root-only-event.json",
+      "requiredBlueIds": 3,
+      "requestedBlueIds": 3,
+      "loadedBlueIds": 3,
+      "forbiddenRequestedBlueIds": 0,
+      "forbiddenLoadedBlueIds": 0,
+      "backendBytes": 5175
+    },
+    "collectionSpecificProofs": [
+      "Collection projection does not demand transitive descendants or executable bodies.",
+      "A pure-reference collection target demands one exact target; pure-reference member projection demands exactly one header per member.",
+      "Selected-member processing rejects any unselected executable-body demand.",
+      "Revision-bound processing leaves unrelated explicit pure-reference branches opaque."
+    ]
+  },
+  "gasAndTrace": {
+    "evidenceStatus": "executed",
+    "contractsGasFixtures": {
+      "passed": 58,
+      "failed": 0,
+      "skipped": 0
+    },
+    "collectionPlanner": {
+      "inlineAndPureReferenceLogicalGasEqual": true,
+      "exactTwoMemberInlineTraceVerified": true,
+      "exactTwoMemberReferencedTraceVerified": true,
+      "declarationCollectionOpeningAndGeneratedPathChargesVerified": true
+    },
+    "runtimeTraceEvidence": {
+      "report": "build/reports/runtime-trace/runtime-work-session.json",
+      "scenarios": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "maximumObservedOrderedEntries": 4096
+    }
+  },
+  "benchmarks": {
+    "evidenceStatus": "executed",
+    "kind": "quick-all-size-characterization",
+    "jdk": "26.0.1",
+    "jmhVersion": "1.36",
+    "mode": "AverageTime",
+    "unit": "us/op",
+    "sizes": [
+      10,
+      100,
+      1000,
+      4096
+    ],
+    "configuration": {
+      "warmupIterations": 1,
+      "measurementIterations": 1,
+      "iterationTimeMillis": 100,
+      "forks": 1,
+      "profiler": "gc"
+    },
+    "rawResult": {
+      "path": "/tmp/blue-collection-paths-all-sizes-final.json",
+      "sha256": "sha256:74903aa443f33ca7e316f1cf806d580eb539c4c9a0c362656afbf8fbb4c11958",
+      "resultCount": 40
+    },
+    "statisticalAudit": {
+      "finiteScores": 40,
+      "scoreErrorNaN": 40,
+      "statisticallyBounded": false,
+      "reason": "One fork and one measurement iteration produce finite characterization scores but no finite scoreError bounds."
+    },
+    "selectedLatencyUsPerOp": {
+      "initialCollectionProjection": {
+        "10": 14.154961686808948,
+        "100": 116.4256955602537,
+        "1000": 1215.054032967033,
+        "4096": 5352.041666666667
+      },
+      "pureReferenceCollectionTarget": {
+        "10": 13.750591714434602,
+        "100": 116.79824282560706,
+        "1000": 1207.2427608695652,
+        "4096": 5521.6479
+      },
+      "pureReferenceMemberHeaders": {
+        "10": 13.342405140016972,
+        "100": 130.54820979899498,
+        "1000": 1216.270578313253,
+        "4096": 5328.69585
+      },
+      "selectedMemberProcessing": {
+        "10": 61531.9375,
+        "100": 178910.5,
+        "1000": 1878786.583,
+        "4096": 510560.416
+      }
+    },
+    "comparison": {
+      "evidenceStatus": "notExecuted",
+      "maximumRegressionPercent": null,
+      "reason": "The retained pre-amendment benchmark corpus has no equivalent collectionPaths measures; a direct before/after percentage would be fabricated. Existing unrelated baseline measures are not used as substitutes."
+    },
+    "finalRequiredSmoke": {
+      "evidenceStatus": "executed",
+      "report": "build/reports/benchmarks/required-smoke.json",
+      "passed": true,
+      "jdk": "26.0.1",
+      "results": {
+        "blue.language.ProcessingSelectionCacheBenchmark.processWarmSameNode": {
+          "score": 627.9289886187871,
+          "unit": "ops/s"
+        },
+        "blue.language.ReferenceBlueIdValidationBenchmark.resolveDeepValidReferenceDocument": {
+          "score": 18.36994309910125,
+          "unit": "ops/s"
+        }
+      }
+    },
+    "finalJmhClassesGate": {
+      "evidenceStatus": "executed",
+      "passed": true
+    },
+    "interpretation": "The 4096-member rows that report gas-limit or portable-limit rejection exercise normative rejection boundaries; their latency is not comparable to smaller successful rows. The quick collection campaign is characterization, not a statistically powered release regression gate. The separately required final smoke benchmark gate passed."
+  },
+  "architecture": {
+    "moduleGraph": {
+      "evidenceStatus": "executed",
+      "report": "build/reports/architecture/module-structure.json",
+      "modules": 7,
+      "moduleCycles": 0,
+      "splitPackages": 0,
+      "undeclaredEdges": 0,
+      "valid": true
+    },
+    "ownershipInventory": {
+      "evidenceStatus": "staticValidation",
+      "path": "architecture/module-ownership-1.0.json",
+      "sha256": "sha256:5fe52bf3270bba55d80fbd5e62472ed4c61011bf94d26c1d6f00acb17e53689b",
+      "productionSources": 585,
+      "resources": 370
+    },
+    "packageCycles": {
+      "value": 0,
+      "evidenceStatus": "executed",
+      "reportCount": 7,
+      "source": "build/reports/final-quality/final-quality.json"
+    }
+  },
+  "api": {
+    "evidenceStatus": "executed",
+    "binaryReport": "build/reports/binary-api/final-1.0-baseline-to-candidate.txt",
+    "baselineApiClasses": 327,
+    "currentApiClasses": 380,
+    "actualIncompatibleChanges": 337,
+    "approvedIncompatibleChanges": 337,
+    "additiveChanges": 300,
+    "approvedAdditiveChanges": 300,
+    "unapprovedChanges": 0,
+    "missingApprovedChanges": 0,
+    "currentClassMajorVersion": 52,
+    "finalQualityPublicTypeCount": 387,
+    "publicTypeInventory": {
+      "types": 380,
+      "identity": "sha256:38ca6143f426bd8c157cf7ad615766be0ba78d9c555b18d7ba4fa57c4419bbfa",
+      "compatibleRelocations": 200,
+      "intentionalNextMajorBreaks": 17,
+      "internalTypesRemovedFromPublicSurface": 105,
+      "newSupportedApiSpi": 58
+    },
+    "collectionPhaseAdditions": [
+      "DocumentProcessorAdministration",
+      "EmbeddedScopePlanView",
+      "EmbeddedScopePlanView.Origin",
+      "ProcessEmbedded.collectionPaths accessors",
+      "collection-specific stable diagnostics"
+    ],
+    "constantInliningCaveat": "The descriptor of SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY is unchanged, but clients that compiled the prior public static final String may have inlined the old value and must recompile."
+  },
+  "cohesion": {
+    "evidenceStatus": "staticValidation",
+    "before": {
+      "processorDirectPackageSources": 232,
+      "processorPublicTopLevelTypes": 89,
+      "documentProcessorLines": 1043,
+      "contractsFixtureHarnessLines": 4378,
+      "blueConformanceSuiteRunnerLines": 3319,
+      "source": "reports/modernization/collection-paths-baseline.json",
+      "sourceEvidenceStatus": "retainedPreviousEvidence"
+    },
+    "after": {
+      "processorTreeProductionSources": 273,
+      "processorTreeTopLevelTypes": 270,
+      "processorDirectPackageSourcesIncludingPackageInfo": 244,
+      "processorDirectPublicTopLevelTypes": 91,
+      "documentProcessorLines": 745,
+      "contractsFixtureHarnessLines": 180,
+      "blueConformanceSuiteRunnerLines": 186,
+      "largestSplitConformanceSupportLines": 941
+    },
+    "processorClassification": {
+      "path": "api/processor-type-classification-1.0.json",
+      "sha256": "sha256:dce3d9a290d945e37ee43afe08e9ff36a7f07f96754256354804553be95da468",
+      "publicApi": 89,
+      "publicSpi": 10,
+      "publicModel": 18,
+      "internalEngine": 81,
+      "internalSupport": 72
+    },
+    "directPackageAim": {
+      "sourceFileAim": 110,
+      "publicTypeAim": 70,
+      "reached": false,
+      "exceptionReport": "reports/modernization/phase-06-processor-cohesion.json",
+      "reason": "The 76 surviving baseline direct public types already exceed the public-type aim. Moving the 148-type package-private component would require public technical bridges, package cycles, or incompatible API moves; preserving stable visibility and an acyclic graph takes precedence."
+    },
+    "facadeLineAim": {
+      "documentProcessorTargetLines": 650,
+      "documentProcessorCurrentLines": 745,
+      "reached": false,
+      "cohesionCommitLines": 641,
+      "cohesionCommit": "a7adcb3580568d339222b93790c9bcc83e01590c",
+      "reason": "The focused facade extraction reached the target before final collection lifecycle integration. The final source retains documented mutable-node and immutable-snapshot overloads plus the supported nested builder while delegating processing mechanics; it does not claim the numerical target after integration."
+    }
+  },
+  "artifacts": {
+    "finalCandidate": {
+      "evidenceStatus": "executed",
+      "verifiedSourceCommit": "63a9ed6a1a66d47119a80d16ed2ab0beda0d2453",
+      "version": "3.1.0-rc.18",
+      "moduleJars": [
+        {
+          "module": "blue-conformance",
+          "sha256": "sha256:7c45ff6bcd31266bd54b73dbf3d1f4ead81d603249ee8c1afd9d817504704fcf"
+        },
+        {
+          "module": "blue-contracts-core",
+          "sha256": "sha256:ec45224ffee3e0c47246869d89c002657c9d1f348af8c553be3b6c0874bf7bae"
+        },
+        {
+          "module": "blue-language-core",
+          "sha256": "sha256:a7d3c72640ab8ac5832feaad576cd1a56457cb87eaf07323fe04a88ae5730740"
+        },
+        {
+          "module": "blue-language-ipfs",
+          "sha256": "sha256:bec7355f39a109c4fe6dfc5f9970232dc0a75cd8e5b4ab055abc311314d24c8e"
+        },
+        {
+          "module": "blue-language-java",
+          "sha256": "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0"
+        },
+        {
+          "module": "blue-language-mapping",
+          "sha256": "sha256:d9141d5c611bde7eb6a21bce3dc4bc0df7d8167f013eeaef2a365dd0a6af329b"
+        },
+        {
+          "module": "blue-language-model",
+          "sha256": "sha256:ef55be8331147442b858474add4782489d993568effe30202a9c4a8b014d5bd8"
+        }
+      ],
+      "moduleSourcesJars": [
+        {
+          "module": "blue-conformance",
+          "sha256": "sha256:995b9f65a186e2622233e9c3aee96a24a740bc03e75e227b3d393aff685b5f29"
+        },
+        {
+          "module": "blue-contracts-core",
+          "sha256": "sha256:4c070daac13f7b4af49ebdfd6f5bc65419fad3f06f7ccc9ba313debfbd8a399e"
+        },
+        {
+          "module": "blue-language-core",
+          "sha256": "sha256:d9ac76d5684b271030b8e25e6791158dff234c3ba8cf312a2af9413cc6c9d8ce"
+        },
+        {
+          "module": "blue-language-ipfs",
+          "sha256": "sha256:a7fd62c141303410d1dba27904e6114afd3a9b997b44493be951b8d1c1a3eab9"
+        },
+        {
+          "module": "blue-language-java",
+          "sha256": "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518"
+        },
+        {
+          "module": "blue-language-mapping",
+          "sha256": "sha256:05ddbc700dd0635927ac6e8b2edb93e778d92c1312c3504539d6799c9e2079db"
+        },
+        {
+          "module": "blue-language-model",
+          "sha256": "sha256:84b48c13cff2594230a23cc248a7c00e7b2d0cb3b352cc90347039035ab472e6"
+        }
+      ],
+      "aggregateJavadocJar": "sha256:f6c714c5d06d4b718ab909b36eb541927a182e96d203c6961ea5bdfe512e6597",
+      "sourceArchive": {
+        "path": "build/release/blue-language-java-3.1.0-rc.18-source-release.zip",
+        "sha256": "sha256:e79bb7a12b4de7c2e0d1e68daf5f426ea1fefab3609d97e0a786508ec2b059fa",
+        "bytes": 3309181,
+        "replicaIdentical": true,
+        "verifiedEntryCount": 1557,
+        "normalizedTimestampMillis": 318211200000
+      },
+      "aggregateReceipt": {
+        "receiptIdentity": "sha256:747df2d486c07259dbc04ed05b00106a48593e787f25f52a44fd51dd108bee1e",
+        "verified": true,
+        "artifactsIdentity": "sha256:c65e5bf2581a2362ecc110d3ddd5485f30688c48055162131fb374ddcedc628f",
+        "artifactFileCount": 37,
+        "testsIdentity": "sha256:6a80579bf38e6369e172b4e0ee59fed9cc6699dab84919bf45c88ecb480f48d9",
+        "testFileCount": 272,
+        "fixturesIdentity": "sha256:e3860c6f1155bab7454d7782200ca0cd7dbf272547e97dd4b3384b4b22a71f7d",
+        "apiIdentity": "sha256:71b63fa4a87aca83af70656e18c95ba5cc91dac63c072e5946f2726c73dd86fb",
+        "verificationIdentity": "sha256:b548aeaf9921176a940541af4a5b8aa1a6fe9346e8d6b71a7f9be0bfd0e5991a"
+      },
+      "publicationSmoke": {
+        "repositoryValid": true,
+        "coordinatesResolved": 7,
+        "smokeValid": true
+      }
+    }
+  },
+  "finalVerification": {
+    "evidenceStatus": "executed",
+    "verifiedSourceCommit": "63a9ed6a1a66d47119a80d16ed2ab0beda0d2453",
+    "sourceDateEpoch": 1785685523,
+    "worktree": "/tmp/blue-language-final-parent.jw5uk2/worktree",
+    "cleanDetachedWorktree": true,
+    "environment": {
+      "CI": true,
+      "pythonPathWorkaround": {
+        "applied": true,
+        "python": "/usr/bin/python3",
+        "reason": "PATH was adjusted to prefer the system Python because the discovered Anaconda python3 executable was broken. This changed only tool discovery, not source or generated semantics."
+      }
+    },
+    "gates": [
+      {
+        "order": 1,
+        "task": "clean build",
+        "passed": true,
+        "durationSeconds": 229,
+        "reportedTaskCount": 134,
+        "cleanMarkerVerified": true,
+        "sourceInputIdentity": "sha256:0ae0cef00f7de69733b179fe75226249b84c67c4d3af398ebdaec8631c2f2a20"
+      },
+      {
+        "order": 2,
+        "task": "releaseConformanceTest",
+        "passed": true,
+        "fixturesPassed": 307,
+        "fixturesFailed": 0,
+        "fixturesSkipped": 0
+      },
+      {
+        "order": 3,
+        "task": "semanticBaselineVerify",
+        "passed": true,
+        "verificationReport": "build/reports/semantic-baseline/verification.json",
+        "approvedIncompatibleChanges": 337,
+        "approvedAdditiveChanges": 300,
+        "unapprovedChanges": 0
+      },
+      {
+        "order": 4,
+        "task": "finalQualityVerify",
+        "passed": true,
+        "reportedTaskCount": 197,
+        "testsPassed": 2729,
+        "testsFailed": 0,
+        "testsSkipped": 0,
+        "releaseEligible": true,
+        "blockers": 0
+      },
+      {
+        "order": 5,
+        "task": "rcVerify",
+        "passed": true,
+        "reportedTaskCount": 188,
+        "aggregateReceiptVerified": true,
+        "publicationRepositorySmokePassed": true
+      },
+      {
+        "order": 6,
+        "task": "jmhClasses",
+        "passed": true
+      }
+    ],
+    "receipts": {
+      "cleanBuild": "build/reports/release-evidence/clean-build-verification.json",
+      "semanticBaseline": "build/reports/semantic-baseline/verification.json",
+      "finalQuality": "build/reports/final-quality/verification.json",
+      "fragmentedProcessing": "build/reports/fragmented-processing/verification.json",
+      "documentation": "build/reports/documentation/verification.json",
+      "sourceReproducibility": "build/reports/reproducibility/source-release-replica.json",
+      "publishedRepository": "build/reports/published-repository/verification.json",
+      "publishedSmoke": "build/reports/published-smoke/verification.json",
+      "aggregateRelease": "build/reports/release-evidence/aggregate-release-verification.json"
+    },
+    "qualitySummary": {
+      "java8Bytecode": true,
+      "moduleCycles": 0,
+      "packageCycles": 0,
+      "splitPackages": 0,
+      "undeclaredModuleEdges": 0,
+      "documentationValid": true,
+      "examplesCompiledAndTested": true,
+      "javadocsValid": true,
+      "sourceArchiveReplicaIdentical": true,
+      "publishedCoordinateCount": 7,
+      "requiredBenchmarkSmokePassed": true,
+      "releaseBlockers": 0
+    },
+    "reportCommitCaveat": "The commit that adds this final report is an evidence-only successor. The clean build, gates, receipts, and artifacts bind exactly to verifiedSourceCommit and are not claimed for the successor commit."
+  },
+  "knownLimitations": [
+    "The evidence-only successor commit containing this report was not clean-built; all release evidence and artifact hashes intentionally bind to 63a9ed6a1a66d47119a80d16ed2ab0beda0d2453.",
+    "No equivalent pre-amendment collectionPaths benchmark exists, so a direct <=10% before/after regression claim is not available.",
+    "The processor direct-package numeric aims were not reached; the evidence-backed exception preserves public compatibility, package-private visibility, and zero cycles.",
+    "DocumentProcessor is 745 lines after final semantic integration, above its 650-line target; processing mechanics remain delegated, but the numerical facade target is not claimed.",
+    "The 4096-member JMH campaign reaches normative gas or portable-limit rejection in some lanes; rejected rows are not successful-throughput measurements.",
+    "All 40 quick-campaign scoreError values are NaN under the one-fork, one-measurement setup, so the finite scores are characterization evidence rather than statistically bounded regression evidence.",
+    "Contracts 1.0 numerical gas weights and portable limits remain provisional in the supplied final implementation baseline specification."
+  ],
+  "releaseDecision": {
+    "verifiedImplementationReleaseReady": true,
+    "verifiedSourceCommit": "63a9ed6a1a66d47119a80d16ed2ab0beda0d2453",
+    "reportCommitCleanBuilt": false,
+    "releaseBlockers": 0,
+    "reason": "The verified implementation commit passed the complete ordered clean release sequence with exact conformance, reproducibility, API, documentation, publication-smoke, and artifact evidence. The evidence-only report successor is outside that build claim."
+  }
+}

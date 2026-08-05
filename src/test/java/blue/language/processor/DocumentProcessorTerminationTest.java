@@ -4,16 +4,17 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.TerminateScopeContractProcessor;
-import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigInteger;
 import java.util.List;
-import java.util.Map;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_CAUSE;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_TERMINATED;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessorTerminationTest {
@@ -23,135 +24,158 @@ class DocumentProcessorTerminationTest {
     @BeforeEach
     void setUp() {
         blue = ProcessorTestSupport.blue();
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport
+                        .testEventChannelProcessor());
         blue.registerContractProcessor(new TerminateScopeContractProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
     }
 
     @Test
-    void rootGracefulTerminationStopsFurtherWork() {
+    void shouldVerifyRootGracefulTerminationStopsFurtherWork() {
+        // given
         Node document = blue.yamlToNode("name: Root Doc\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  terminate:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n" +
                 "    mode: graceful\n" +
                 "    emitAfter: true\n" +
                 "    patchAfter: true\n");
 
+        // when
         Node event = buildTestEvent("evt-1");
-        Node initialized = blue.initializeDocument(document).document();
-        DocumentProcessingResult result = blue.processDocument(initialized, event);
-
+        DocumentProcessingResult initialized = blue.initializeDocument(document);
+        DocumentProcessingResult result =
+                blue.processDocument(snapshot(blue, initialized), event);
         Node processed = result.document();
         Node contracts = processed.getContracts();
+        Node terminated = contracts.getProperties().get(KEY_TERMINATED);
+        Node afterTermination = processed.getProperties() != null
+                ? processed.getProperties().get("afterTermination")
+                : null;
+        List<Node> rootEvents = result.events();
+
+        // then
+        assertEquals(ProcessorStatus.SUCCESS,
+                result.status());
+        assertTrue(result.commits());
         assertNotNull(contracts);
-        Node terminated = contracts.getProperties().get("terminated");
         assertNotNull(terminated);
-        assertEquals("graceful", terminated.getProperties().get("cause").getValue());
-        Node afterTermination = processed.getProperties() != null ? processed.getProperties().get("afterTermination") : null;
+        assertEquals("graceful",
+                terminated.getProperties().get(KEY_CAUSE).getValue());
         assertNotNull(afterTermination, "buffered patches apply before buffered termination");
         assertEquals("should-not-exist", afterTermination.getValue());
-
-        List<Node> triggeredEvents = result.triggeredEvents();
-        assertEquals(2, triggeredEvents.size(), "Buffered emitted event is recorded before termination lifecycle");
-        assertEquals("ShouldNotEmit", triggeredEvents.get(0).getProperties().get("type").getValue());
-        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED, triggeredEvents.get(1).getType().getBlueId());
-        assertEquals("graceful", stringProperty(triggeredEvents.get(1), "cause"));
+        assertEquals(1, rootEvents.size(),
+                "only the explicit application event emitted by Root enters the public outbox");
+        assertEquals("ShouldNotEmit",
+                rootEvents.get(0).getProperties().get("type").getValue());
     }
 
     @Test
-    void rootFatalTerminationRecordsFatalOutbox() {
+    void shouldVerifyFatalTerminationRequestRollsBackWithoutOutboxOrMarker() {
+        // given
         Node document = blue.yamlToNode("name: Root Fatal\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  terminate:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n" +
                 "    mode: fatal\n" +
                 "    reason: panic\n");
 
+        // when
         Node event = buildTestEvent("evt-2");
         Node initialized = blue.initializeDocument(document).document();
-        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        String input = initialized.toString();
+        DocumentProcessingResult result =
+                blue.processDocument(initialized, event);
 
-        List<Node> triggeredEvents = result.triggeredEvents();
-        assertEquals(2, triggeredEvents.size(), "Fatal run should emit terminated and fatal error events");
-        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_TERMINATED, triggeredEvents.get(0).getType().getBlueId());
-        assertEquals("fatal", stringProperty(triggeredEvents.get(0), "cause"));
-        assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_FATAL_ERROR, triggeredEvents.get(1).getType().getBlueId());
-        assertEquals("panic", stringProperty(triggeredEvents.get(1), "reason"));
+        // then
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
+        assertEquals(input, result.document().toString(),
+                "deterministic failure must return the exact input Root");
+        assertTrue(result.events().isEmpty());
+        assertFalse(result.document().getContracts()
+                .getProperties().containsKey(KEY_TERMINATED));
     }
 
     @Test
-    void childTerminationBridgesToParent() {
+    void shouldVerifyChildTerminationLifecycleRemainsLocal() {
+        // given
         Node document = blue.yamlToNode("name: Parent\n" +
                 "child:\n" +
                 "  name: Child\n" +
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    terminate:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n" +
                 "      mode: graceful\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  childBridge:\n" +
                 "    type:\n" +
-                "      blueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i\n" +
-                "    childPath: /child\n" +
+                "      blueId: " + RuntimeBlueIds.EMBEDDED_NODE_CHANNEL + "\n" +
+                "    sourcePath: /child\n" +
                 "  captureChild:\n" +
                 "    channel: childBridge\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /fromChild\n" +
                 "    propertyValue: 7\n");
 
+        // when
         Node event = buildTestEvent("evt-3");
-        Node initialized = blue.initializeDocument(document).document();
-        DocumentProcessingResult result = blue.processDocument(initialized, event);
-
+        DocumentProcessingResult initialized = blue.initializeDocument(document);
+        ProcessingDebugResult debug = blue.getDocumentProcessor()
+                .processDocumentWithTrace(snapshot(blue, initialized), event);
+        DocumentProcessingResult result = debug.processResult();
         Node processed = result.document();
         Node fromChild = processed.getProperties().get("fromChild");
-        assertNotNull(fromChild, "Parent should capture bridged termination event");
-        assertEquals(new BigInteger("7"), fromChild.getValue());
+        Node childContracts = processed.getProperties()
+                .get("child").getContracts();
+        Node childTerminated = childContracts.getProperties()
+                .get(KEY_TERMINATED);
 
-        Node childContracts = processed.getProperties().get("child").getContracts();
+        // then
+        assertEquals(ProcessorStatus.SUCCESS,
+                result.status(),
+                debug.trace().records().stream()
+                        .map(record -> record.kind() + ":"
+                                + record.scopePath() + ":"
+                                + record.contractKey())
+                        .collect(java.util.stream.Collectors.joining(", ")));
+        assertTrue(result.commits());
+        assertNull(fromChild,
+                "processor-generated lifecycle delivery is local to its scope");
         assertNotNull(childContracts);
-        Node childTerminated = childContracts.getProperties().get("terminated");
         assertNotNull(childTerminated);
-        assertEquals("graceful", childTerminated.getProperties().get("cause").getValue());
+        assertEquals("graceful",
+                childTerminated.getProperties().get(KEY_CAUSE).getValue());
+        assertTrue(result.events().isEmpty(),
+                "processor-generated embedded lifecycle events remain internal");
     }
 
     private Node buildTestEvent(String id) {
         TestEvent testEvent = new TestEvent().eventId(id).x(1);
         return blue.objectToNode(testEvent);
-    }
-
-    private String stringProperty(Node node, String key) {
-        Map<String, Node> properties = node.getProperties();
-        if (properties == null) {
-            return null;
-        }
-        Node value = properties.get(key);
-        if (value == null) {
-            return null;
-        }
-        Object raw = value.getValue();
-        return raw != null ? raw.toString() : null;
     }
 }

@@ -1,0 +1,23 @@
+id: F_exact_graph_fragments_canonical_order
+category: Provider
+operation: splitExactGraphFragments
+description: Fragment identity order is canonical and independent of authored cut order or provider batching.
+input:
+  z:
+    value: 3
+  a:
+    value: 1
+  m:
+    value: 2
+cuts:
+  - /z
+  - /a
+  - /m
+variants:
+  - name: authored-order
+    cuts: [/z, /a, /m]
+  - name: reverse-order
+    cuts: [/m, /a, /z]
+expectedSameRootNodeBlueId: true
+expectedSameSemanticResult: true
+expectedDefensiveCopies: true

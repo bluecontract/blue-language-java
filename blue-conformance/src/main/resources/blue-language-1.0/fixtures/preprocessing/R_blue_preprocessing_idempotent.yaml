@@ -1,0 +1,19 @@
+id: R_blue_preprocessing_idempotent
+category: Resolution
+operation: preprocess
+description: applying preprocessing to its own completed output is idempotent
+source:
+  blue:
+    imports:
+      Person:
+        blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  type: Person
+  count: 7
+expectedIdempotent: true
+expectedPreprocessed:
+  type:
+    blueId: F92yoH8U1LPKtsiJ7qjS4nK4N8tuU88opM5ZkqB9WEPy
+  count:
+    type:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+    value: 7

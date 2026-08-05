@@ -1,11 +1,22 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.*;
 import blue.language.model.Schema;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,10 +26,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static blue.language.TestUtils.indent;
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.processor.FailureCapture.captureFailure;
+import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class SchemaVerifierMinLengthTest {
 
@@ -46,21 +59,33 @@ public class SchemaVerifierMinLengthTest {
     }
 
     @Test
-    public void testMinLengthPositive() throws Exception {
+    public void shouldAcceptValueMeetingMinimumLength() throws Exception {
+        // given
         schema.minLength(3);
-        merger.resolve(node);
-        // nothing should be thrown
+
+        // when
+        Node resolved = merger.resolve(node);
+
+        // then
+        assertNotNull(resolved);
     }
 
     @Test
-    public void testMinLengthNegative() throws Exception {
+    public void shouldRejectValueBelowMinimumLength() throws Exception {
+        // given
         schema.minLength(4);
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+
+        // when
+        Throwable failure = captureFailure(() -> merger.resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    public void testMinLengthInheritance() throws Exception {
+    public void shouldAcceptValueMeetingInheritedMinimumLength() throws Exception {
 
+        // given
         String a = "name: A\n" +
                    "schema:\n" +
                    "  minLength: 3";
@@ -90,14 +115,17 @@ public class SchemaVerifierMinLengthTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         merger = new Merger(mergingProcessor, e -> null);
 
+        // when
         Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("C"))).get(0));
+        // then
         assertEquals("Abcd", node.getValue());
 
     }
 
     @Test
-    public void testMinLengthInheritanceStrongestConditionShouldBeUsed() throws Exception {
+    public void shouldRejectValueBelowStrongestInheritedMinimumLength() throws Exception {
 
+        // given
         String a = "name: A\n" +
                    "schema:\n" +
                    "  minLength: 3";
@@ -127,13 +155,20 @@ public class SchemaVerifierMinLengthTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
         merger = new Merger(mergingProcessor, e -> null);
 
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("C"))).get(0)));
+        // when
+        Throwable failure = captureFailure(
+                () -> merger.resolve(nodeProvider.fetchByBlueId(
+                        calculateBlueId(nodes.get("C"))).get(0)));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
 
     }
 
     @Test
-    public void testMinLengthSubInheritancePositive1() throws Exception {
+    public void shouldApplyStricterNestedMinLengthOverride() throws Exception {
 
+        // given
         String a = "name: A\n" +
                    "type: Text\n" +
                    "schema:\n" +
@@ -162,14 +197,17 @@ public class SchemaVerifierMinLengthTest {
         nodeProvider.addSingleDocs(a, b, x, y);
         merger = new Merger(mergingProcessor, e -> null);
 
+        // when
         Node node = merger.resolve(nodeProvider.getNodeByName("Y"));
+        // then
         assertEquals("Abcde", node.getProperties().get("a").getValue());
 
     }
 
     @Test
-    public void testMinLengthSubInheritancePositive2() throws Exception {
+    public void shouldRetainStricterInheritedNestedMinLength() throws Exception {
 
+        // given
         String a = "name: A\n" +
                    "type: Text\n" +
                    "schema:\n" +
@@ -198,15 +236,18 @@ public class SchemaVerifierMinLengthTest {
         nodeProvider.addSingleDocs(a, b, x, y);
         merger = new Merger(mergingProcessor, e -> null);
 
+        // when
         Node node = merger.resolve(nodeProvider.getNodeByName("Y"));
+        // then
         assertEquals("Abcd", node.getProperties().get("a").getValue());
 
     }
 
 
     @Test
-    public void testMinLengthSubInheritanceNegative() throws Exception {
+    public void shouldRejectNestedValueBelowInheritedMinimumLength() throws Exception {
 
+        // given
         String a = "name: A\n" +
                    "schema:\n" +
                    "  minLength: 3";
@@ -234,7 +275,12 @@ public class SchemaVerifierMinLengthTest {
         nodeProvider.addSingleDocs(a, b, x, y);
         merger = new Merger(mergingProcessor, e -> null);
 
-        assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.getNodeByName("Y")));
+        // when
+        Throwable failure = captureFailure(
+                () -> merger.resolve(nodeProvider.getNodeByName("Y")));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
 
     }
 }

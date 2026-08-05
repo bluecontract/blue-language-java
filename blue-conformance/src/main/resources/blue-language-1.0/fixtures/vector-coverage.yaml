@@ -1,0 +1,404 @@
+- id: B1
+  fixtures:
+  - B_empty_list
+- id: B2
+  fixtures:
+  - B_root_list
+- id: B3
+  fixtures:
+  - B_nested_list_not_flattened
+- id: B4
+  fixtures:
+  - B_scalar_sugar_equivalence
+- id: B5
+  fixtures:
+  - B_list_sugar_equivalence
+- id: B6
+  fixtures:
+  - B_root_pure_reference
+- id: B7
+  fixtures:
+  - B_object_field_null_removal
+- id: B8
+  fixtures:
+  - B_empty_list
+- id: B9
+  fixtures:
+  - B_blue_directive_rejected
+- id: B10
+  fixtures:
+  - B_mixed_reference_rejected
+- id: B11
+  fixtures:
+  - B_primitive_inference_all_four
+- id: B12
+  fixtures:
+  - B_empty_placeholder
+- id: B13
+  fixtures:
+  - B_null_list_element_rejected
+- id: B14
+  fixtures:
+  - B_empty_object_list_element_rejected
+- id: B15
+  fixtures:
+  - B_placeholder_changes_list_identity
+- id: B16
+  fixtures:
+  - B_large_integer_quoted_explicit_integer
+  - B_unquoted_large_integer_rejected
+- id: B17
+  fixtures:
+  - B_invalid_this_placeholder_rejected
+  - C_this_placeholder_rejected_outside_cyclic_api
+- id: B18
+  fixtures:
+  - B_integer_1_vs_double_1_0
+  - B_double_1e0
+- id: B19
+  fixtures:
+  - B_root_empty_object
+- id: B20
+  fixtures:
+  - B_root_null_rejected
+- id: B21
+  fixtures:
+  - B_plain_blueid_validation
+- id: B22
+  fixtures:
+  - B_malformed_empty_rejected
+- id: B23
+  fixtures:
+  - B_double_negative_zero
+- id: B24
+  fixtures:
+  - B_double_overflow_rejected
+- id: B25
+  fixtures:
+  - B_double_1e0
+- id: B26
+  fixtures:
+  - B_payload_only_scalar_typed_identity
+- id: B27
+  fixtures:
+  - R_schema_enum_order_and_duplicates_canonical
+- id: B28
+  fixtures:
+  - R_schema_double_multiple_of_exact
+  - R_schema_double_multiple_of_rejects_decimal_approximation
+- id: B29
+  fixtures:
+  - C_duplicate_preliminary_ids_deterministic_or_rejected
+- id: B30
+  fixtures:
+  - F_direct_node_verification_without_descendants
+- id: B31
+  fixtures:
+  - B_direct_child_reference_equivalence
+- id: F1
+  fixtures:
+  - F_all_language_vectors_pass
+- id: F2
+  fixtures:
+  - F_expand_preserves_node_blueid
+  - F_expand_nested_reference_preserves_node_blueid
+- id: F3
+  fixtures:
+  - F_collapse_preserves_node_blueid
+  - F_collapse_does_not_produce_mixed_blueid
+- id: F4
+  fixtures:
+  - F_root_reference_demanded_path_only
+- id: F4a
+  fixtures:
+  - F_root_reference_demanded_path_only
+- id: F4b
+  fixtures:
+  - F_inline_reference_partial_equivalence
+- id: F5
+  fixtures:
+  - F_expand_nested_reference_preserves_node_blueid
+- id: F6
+  fixtures:
+  - F_provider_missing_content_fails
+  - F_expand_missing_nested_content_fails
+- id: F7
+  fixtures:
+  - F_provider_wrong_blueid_rejected
+  - F_expand_wrong_nested_provider_content_fails
+- id: F8
+  fixtures:
+  - F_source_provider_requires_declared_mode
+- id: F9
+  fixtures:
+  - F_cyclic_member_requires_set_context
+  - C_circular_reference_set_ids
+- id: F10
+  fixtures:
+  - F_direct_node_verification_without_descendants
+- id: F11
+  fixtures:
+  - F_direct_list_verification_without_elements
+- id: F11a
+  fixtures:
+  - F_list_prefix_anchor_not_direct_manifest
+- id: F12
+  fixtures:
+  - F_selected_expand_collapse_round_trip
+- id: F13
+  fixtures:
+  - F_root_reference_demanded_path_only
+- id: F14
+  fixtures:
+  - F_prefetch_does_not_change_semantic_result
+- id: F15
+  fixtures:
+  - F_omitted_direct_key_cannot_prove_absence
+- id: F16
+  fixtures:
+  - F_exact_graph_fragments_roundtrip
+- id: F17
+  fixtures:
+  - F_exact_graph_fragments_canonical_order
+- id: F18
+  fixtures:
+  - F_opaque_cyclic_member_fragment
+- id: F19
+  fixtures:
+  - F_opaque_cyclic_member_fragment
+- id: R1
+  fixtures:
+  - R_blue_imports
+- id: R2
+  fixtures:
+  - R_source_null_list_to_empty
+- id: R3
+  fixtures:
+  - R_source_empty_object_list_to_empty
+- id: R4
+  fixtures:
+  - R_type_chain_merge
+- id: R5
+  fixtures:
+  - R_fixed_value_conflict
+- id: R6
+  fixtures:
+  - R_schema_accumulation_conflict
+- id: R7
+  fixtures:
+  - R_schema_unknown_keyword_rejected
+  - R_schema_value_shapes
+- id: R8
+  fixtures:
+  - R_labels_matcher_neutral
+- id: R9
+  fixtures:
+  - R_top_level_type_name_description_not_inherited
+- id: R10
+  fixtures:
+  - R_canonicalization_deterministic_for_same_resolved_view
+- id: R11
+  fixtures:
+  - R_requirement_overlay_valid_and_conflicting
+- id: R12
+  fixtures:
+  - R_previous_anchor_mismatch
+- id: R13
+  fixtures:
+  - R_default_positional_policy
+- id: R14
+  fixtures:
+  - R_append_only_rejects_pos
+- id: R15
+  fixtures:
+  - R_positional_reorder_or_remove_rejected
+- id: R16
+  fixtures:
+  - R_minimized_overlay_round_trip
+- id: R17
+  fixtures:
+  - R_canonical_overlay_no_previous_no_pos
+- id: R18
+  fixtures:
+  - R_resolved_form_not_direct_content_id
+- id: R19
+  fixtures:
+  - R_canonical_overlay_no_previous_no_pos
+- id: R20
+  fixtures:
+  - R_type_aliases_removed_from_canonical_overlay
+- id: R21
+  fixtures:
+  - R_provider_reference_canonicalizes_back
+- id: R22
+  fixtures:
+  - R_inherited_append_only_policy
+- id: R23
+  fixtures:
+  - R_inherited_item_type
+  - R_inherited_keyType_valueType
+- id: R24
+  fixtures:
+  - R_positional_canonical_final_payload
+- id: R25
+  fixtures:
+  - R_positional_minimized_round_trip
+- id: R26
+  fixtures:
+  - R_append_minimized_previous_round_trip
+- id: R27
+  fixtures:
+  - R_inherited_integer_large_text
+- id: R28
+  fixtures:
+  - R_quoted_decimal_without_integer_is_text
+- id: R29
+  fixtures:
+  - R_noncanonical_inherited_integer_rejected
+- id: R30
+  fixtures:
+  - R_label_override_rules
+- id: R31
+  fixtures:
+  - R_type_cycle_rejected
+- id: R32
+  fixtures:
+  - R_required_semantic_presence
+- id: R33
+  fixtures:
+  - R_minfields_counts_ordinary_fields
+- id: R34
+  fixtures:
+  - R_schema_wrong_kind_keywords_rejected
+- id: R35
+  fixtures:
+  - R_inherited_item_type
+  - R_inherited_keyType_valueType
+- id: R36
+  fixtures:
+  - R_dictionary_key_canonicalization
+- id: R37
+  fixtures:
+  - R_source_recursive_empty_object_list_to_empty
+- id: R38
+  fixtures:
+  - R_core_type_compatibility_nominal_by_blueid
+- id: R39
+  fixtures:
+  - R_view_path_root_is_empty_string
+- id: R40
+  fixtures:
+  - R_limited_resolution_equals_complete
+- id: R41
+  fixtures:
+  - R_limit_does_not_prove_absence
+- id: R42
+  fixtures:
+  - R_incomplete_cannot_canonicalize
+- id: R43
+  fixtures:
+  - R_limit_does_not_prove_absence
+  - R_provider_unavailable_does_not_prove_absence
+- id: R44
+  fixtures:
+  - R_reference_wrapper_not_semantic_child
+- id: R45
+  fixtures:
+  - F_inline_reference_partial_equivalence
+- id: R46
+  fixtures:
+  - R_reference_backed_schema
+  - R_reference_backed_contracts
+- id: R47
+  fixtures:
+  - R_reference_backed_schema
+  - R_reference_backed_contracts
+- id: R48
+  fixtures:
+  - R_blue_absent_applies_baseline
+- id: R49
+  fixtures:
+  - R_blue_empty_directive_equals_absent
+- id: R50
+  fixtures:
+  - R_blue_reference_directive_equivalent
+- id: R51
+  fixtures:
+  - R_blue_reference_invalid_evidence
+  - R_blue_reference_backed_components
+  - R_blue_transformation_instance_reference
+- id: R52
+  fixtures:
+  - R_blue_transformations_declared_order
+  - R_blue_transformations_reverse_order
+- id: R53
+  fixtures:
+  - R_blue_inline_imports_and_transformations
+- id: R54
+  fixtures:
+  - R_blue_inline_imports_and_transformations
+- id: R55
+  fixtures:
+  - R_blue_imports_only_type_positions
+- id: R56
+  fixtures:
+  - R_blue_transformation_instance_reference
+- id: R57
+  fixtures:
+  - R_blue_reference_backed_components
+- id: R58
+  fixtures:
+  - R_blue_unsupported_transformation
+- id: R59
+  fixtures:
+  - R_blue_transform_introduces_blue_rejected
+- id: R60
+  fixtures:
+  - R_blue_string_alias_resolves_exact_directive
+  - R_blue_unbound_string_alias_rejected
+- id: R61
+  fixtures:
+  - R_blue_builtin_alias_same_allowed
+  - R_blue_builtin_alias_override_rejected
+- id: R62
+  fixtures:
+  - R_blue_nested_directive_rejected
+- id: R63
+  fixtures:
+  - R_blue_preprocessing_idempotent
+- id: R64
+  fixtures:
+  - R_blue_unused_import_no_effect
+- id: R65
+  fixtures:
+  - R_blue_profile_field_rejected
+  - R_blue_reference_directive_equivalent
+- id: R66
+  fixtures:
+  - R_blue_legacy_items_field_rejected
+- id: R67
+  fixtures:
+  - R_blue_transformation_type_alias_rejected
+- id: R68
+  fixtures:
+  - R_specialization_creates_new_node
+  - F_expand_preserves_node_blueid
+- id: R69
+  fixtures:
+  - R_content_blueid_is_canonical_node_blueid
+  - R_minimized_overlay_round_trip
+- id: R70
+  fixtures:
+  - R_content_blueid_is_canonical_node_blueid
+- id: R71
+  fixtures:
+  - R_resolved_form_not_direct_content_id
+  - R_minimized_overlay_round_trip
+- id: R72
+  fixtures:
+  - R_append_canonicalization_final_payload_three_items
+  - R_append_minimized_previous_round_trip
+- id: R73
+  fixtures:
+  - R_positional_canonical_final_payload
+  - R_positional_minimized_round_trip

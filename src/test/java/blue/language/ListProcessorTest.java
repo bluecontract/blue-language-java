@@ -1,33 +1,45 @@
 package blue.language;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.merge.processor.ListProcessor;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.NodeExtender;
-import blue.language.utils.Properties;
-import blue.language.utils.limits.Limits;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.graph.NodeExpander;
+import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
-import static blue.language.utils.Properties.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
+import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ListProcessorTest {
 
     @Test
-    public void testItemTypeAssignment() {
+    public void shouldAssignDeclaredItemType() {
+        // given
         Node listA = new Node().name("ListA")
                 .type("List")
                 .itemType("Integer");
         Node listB = new Node().name("ListB")
-                .type(new Node().blueId(new Blue().calculateSemanticBlueId(listA)));
+                .type(new Node().blueId(new Blue().calculateSourceDocumentBlueId(listA)));
 
         List<Node> nodes = Arrays.asList(listA, listB);
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
@@ -39,14 +51,17 @@ public class ListProcessorTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listANode = nodeProvider.findNodeByName("ListA").orElseThrow(() -> new IllegalStateException("No \"ListA\" available for NodeProvider."));
-        Node result = merger.resolve(listANode, Limits.NO_LIMITS);
+        // when
+        Node result = merger.resolve(listANode, ResolutionLimits.NO_LIMITS);
 
+        // then
         assertEquals("Integer", CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(result.getItemType().getBlueId()));
     }
 
     @Test
-    public void testListWithValidItemTypes() throws Exception {
+    public void shouldAcceptListWithValidItemTypes() throws Exception {
 
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -64,7 +79,7 @@ public class ListProcessorTest {
 
         String listOfB = "name: ListOfB\n" +
                          "type:\n" +
-                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "  blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                          "itemType:\n" +
                          "  blueId: " + nodeProvider.getBlueIdByName("B") + "\n" +
                          "items:\n" +
@@ -83,9 +98,11 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listOfBNode = nodeProvider.getNodeByName("ListOfB");
-        new NodeExtender(nodeProvider).extend(listOfBNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(listOfBNode, ResolutionLimits.NO_LIMITS);
+        // when
         Node result = merger.resolve(listOfBNode);
 
+        // then
         assertEquals("B", result.getItemType().getName());
         assertEquals(2, result.getItems().size());
         assertEquals("B", result.getItems().get(0).getType().getName());
@@ -93,7 +110,8 @@ public class ListProcessorTest {
     }
 
     @Test
-    public void testListWithInvalidItemType() throws Exception {
+    public void shouldRejectListWithInvalidItemType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -124,13 +142,16 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listOfBNode = nodeProvider.findNodeByName("ListOfB").orElseThrow(() -> new IllegalStateException("No \"ListOfB\" available for NodeProvider."));
-        new NodeExtender(nodeProvider).extend(listOfBNode, Limits.NO_LIMITS);
+        // when
+        new NodeExpander(nodeProvider).expand(listOfBNode, ResolutionLimits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(listOfBNode));
     }
 
     @Test
-    public void testInheritedList() throws Exception {
+    public void shouldResolveInheritedListItems() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -148,7 +169,7 @@ public class ListProcessorTest {
 
         String listOfB = "name: ListOfB\n" +
                          "type:\n" +
-                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "  blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                          "itemType:\n" +
                          "  blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(listOfB);
@@ -172,9 +193,11 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node inheritedListNode = nodeProvider.findNodeByName("InheritedList").orElseThrow(() -> new IllegalStateException("No \"InheritedList\" available for NodeProvider."));
-        new NodeExtender(nodeProvider).extend(inheritedListNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(inheritedListNode, ResolutionLimits.NO_LIMITS);
+        // when
         Node result = merger.resolve(inheritedListNode);
 
+        // then
         assertEquals("B", result.getItemType().getName());
         assertEquals(2, result.getItems().size());
         assertEquals("B", result.getItems().get(0).getType().getName());
@@ -182,7 +205,8 @@ public class ListProcessorTest {
     }
 
     @Test
-    public void testInheritedListWithInvalidItemType() throws Exception {
+    public void shouldRejectInheritedListWithInvalidItemType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -195,7 +219,7 @@ public class ListProcessorTest {
 
         String listOfB = "name: ListOfB\n" +
                          "type:\n" +
-                         "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                         "  blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                          "itemType:\n" +
                          "  blueId: " + nodeProvider.getBlueIdByName("B");
         nodeProvider.addSingleDocs(listOfB);
@@ -219,13 +243,16 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node inheritedListNode = nodeProvider.findNodeByName("InheritedList").orElseThrow(() -> new IllegalStateException("No \"InheritedList\" available for NodeProvider."));
-        new NodeExtender(nodeProvider).extend(inheritedListNode, Limits.NO_LIMITS);
+        // when
+        new NodeExpander(nodeProvider).expand(inheritedListNode, ResolutionLimits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(inheritedListNode));
     }
 
     @Test
-    public void testListWithNoItemType() throws Exception {
+    public void shouldPreserveItemsWhenListHasNoItemType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -233,7 +260,7 @@ public class ListProcessorTest {
 
         String listWithNoItemType = "name: ListWithNoItemType\n" +
                                     "type:\n" +
-                                    "  blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                                    "  blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                                     "items:\n" +
                                     "  - type:\n" +
                                     "      blueId: " + nodeProvider.getBlueIdByName("A");
@@ -248,16 +275,19 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node listNode = nodeProvider.findNodeByName("ListWithNoItemType").orElseThrow(() -> new IllegalStateException("No \"ListWithNoItemType\" available for NodeProvider."));
-        new NodeExtender(nodeProvider).extend(listNode, Limits.NO_LIMITS);
+        new NodeExpander(nodeProvider).expand(listNode, ResolutionLimits.NO_LIMITS);
+        // when
         Node result = merger.resolve(listNode);
 
+        // then
         assertNull(result.getItemType());
         assertEquals(1, result.getItems().size());
         assertEquals("A", result.getItems().get(0).getType().getName());
     }
 
     @Test
-    public void testNonListTypeWithItemType() throws Exception {
+    public void shouldRejectItemTypeOnNonListType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
 
         String a = "name: A";
@@ -279,8 +309,10 @@ public class ListProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node nonListNode = nodeProvider.findNodeByName("NonListWithItemType").orElseThrow(() -> new IllegalStateException("No \"NonListWithItemType\" available for NodeProvider."));
-        new NodeExtender(nodeProvider).extend(nonListNode, Limits.NO_LIMITS);
+        // when
+        new NodeExpander(nodeProvider).expand(nonListNode, ResolutionLimits.NO_LIMITS);
 
+        // then
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nonListNode));
     }
 }

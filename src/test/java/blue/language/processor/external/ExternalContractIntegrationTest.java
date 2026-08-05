@@ -1,36 +1,48 @@
 package blue.language.processor.external;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.ChannelCheckpointContext;
-import blue.language.processor.ChannelDelivery;
 import blue.language.processor.ChannelEvaluation;
 import blue.language.processor.ChannelEvaluationContext;
 import blue.language.processor.ChannelProcessor;
+import blue.language.processor.CheckpointDomain;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.DocumentProcessor;
+import blue.language.processor.ExternalDeliveryPlan;
+import blue.language.processor.ExternalDeliverySnapshot;
+import blue.language.processor.ExternalChannelSubscriptionFunctions;
+import blue.language.processor.ExternalOrderKey;
 import blue.language.processor.HandlerRegistrationContext;
 import blue.language.processor.HandlerMatchContext;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ProcessorExecutionContext;
+import blue.language.processor.SubscriptionDelta;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.identity.DirectBlueIdCalculator;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ExternalContractIntegrationTest {
 
     private static final String CHANNEL_BLUE_ID = "48YcT2K2ghpM7VPcx6u8dFvS2so2DkgCvAbWfNfzKeek";
-    private static final String MUTATING_CHANNEL_BLUE_ID = "H5CsySZCnz5KqbP3N29DPZ3TaYbn73Ku9J3VQaJzyMXs";
-    private static final String SEQUENCE_CHANNEL_BLUE_ID = "j4iiHC8rFNQfrpRTqSeFzHs8SNyiZTcZUYb3autoqUw";
-    private static final String MULTI_DELIVERY_CHANNEL_BLUE_ID = "EzS7MG35zJPCVgV3YyFgG2ucMYrj1qr4V3wR9xitadsw";
+    private static final String MUTATING_CHANNEL_BLUE_ID = "Cq85doC5khSG7xcCMqE33aiRrfwA3rf8bwwy3xmoEHEw";
+    private static final String SEQUENCE_CHANNEL_BLUE_ID = "CCVSpeavwYud6vPbiew11GwU9ig4RWdRBJFLCnsNnQaX";
     private static final String DELEGATING_CHANNEL_BLUE_ID = "A61X264nXcmWE4FxWWXgtmnaAR1ESqJ8j1LQ2MZu8AP7";
     private static final String OPERATION_BLUE_ID = "8wnsu2ad91yewKk69dh5dt8UxDTMXsGuAzMFAcNHDhK8";
     private static final String HANDLER_BLUE_ID = "4uWFGYDqgCiWitoNymc9KQXNoKWRHPLVyTv3qgmTUdEA";
@@ -40,9 +52,11 @@ class ExternalContractIntegrationTest {
     private static final String UNKNOWN_BLUE_ID = "9Y8k2srt1DgxP51iCCQJhrib2tJdjuf7D28MmS5B1udZ";
 
     @Test
-    void builderRegistersExternalContractsByExplicitBlueIdAndExecutesThem() {
+    void shouldVerifyBuilderRegistersExternalContractsByExplicitBlueIdAndExecutesThem() {
+        // given
         ExternalAddAmountProcessor.reset();
-        DocumentProcessor processor = DocumentProcessor.builder()
+        DocumentProcessor processor = exactDeliveryBuilder(
+                "incoming", CHANNEL_BLUE_ID)
                 .registerContractProcessor(CHANNEL_BLUE_ID,
                         externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
                 .registerContractProcessor(HANDLER_BLUE_ID,
@@ -52,12 +66,13 @@ class ExternalContractIntegrationTest {
         Blue blue = new Blue();
         Node document = blue.yamlToNode(counterDocument(HANDLER_BLUE_ID));
 
+        // when
         DocumentProcessingResult initialized = processor.initializeDocument(document);
-        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
-
         DocumentProcessingResult processed = processor.processDocument(initialized.document(), amountEvent(7));
 
-        assertFalse(processed.capabilityFailure(), processed.failureReason());
+        // then
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
+        assertFalse(isCapabilityFailure(processed), diagnosticMessage(processed));
         assertEquals(new BigInteger("7"), processed.document().get("/counter"));
         assertEquals(HANDLER_BLUE_ID, ExternalAddAmountProcessor.lastTypeBlueId);
         assertEquals("incoming", ExternalAddAmountProcessor.lastChannelKey);
@@ -65,8 +80,8 @@ class ExternalContractIntegrationTest {
     }
 
     @Test
-    void blueFacadePreservesExternalContractResolverWhenRuntimeServicesRefresh() {
-        ExternalAddAmountProcessor.reset();
+    void shouldVerifyBlueFacadePreservesExternalContractResolverWhenRuntimeServicesRefresh() {
+        // given
         Blue blue = new Blue();
         blue.registerExternalContractType(CHANNEL_BLUE_ID, externalTypeNode(ExternalAlwaysChannel.class),
                 new ExternalAlwaysChannelProcessor());
@@ -75,42 +90,51 @@ class ExternalContractIntegrationTest {
 
         blue.nodeProvider(ignored -> null);
 
+        // when
         Node document = blue.yamlToNode(counterDocument(HANDLER_BLUE_ID));
         DocumentProcessingResult initialized = blue.initializeDocument(document);
-        DocumentProcessingResult processed = blue.processDocument(initialized.document(), amountEvent(5));
 
-        assertFalse(processed.capabilityFailure(), processed.failureReason());
-        assertEquals(new BigInteger("5"), processed.document().get("/counter"));
-        assertEquals(HANDLER_BLUE_ID, ExternalAddAmountProcessor.lastTypeBlueId);
+        // then
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
+        assertTrue(initialized.document().getContracts().getProperties()
+                .containsKey("initialized"));
     }
 
     @Test
-    void blueFacadeRequiresCanonicalNodeForRegisteredExternalType() {
+    void shouldVerifyBlueFacadeRequiresCanonicalNodeForRegisteredExternalType() {
+        // given
         Blue blue = new Blue();
         blue.registerContractProcessor(CHANNEL_BLUE_ID, new ExternalAlwaysChannelProcessor());
         blue.registerContractProcessor(HANDLER_BLUE_ID, new ExternalAddAmountProcessor());
         Node document = blue.yamlToNode(counterDocument(HANDLER_BLUE_ID));
 
-        RuntimeException failure = assertThrows(RuntimeException.class, () -> blue.initializeDocument(document));
+        // when
+        RuntimeException failure = captureFailure(
+                () -> blue.initializeDocument(document));
 
+        // then
         assertTrue(failure.getMessage().contains(CHANNEL_BLUE_ID)
                 || failure.getMessage().contains(HANDLER_BLUE_ID));
     }
 
     @Test
-    void registeredExternalTypeRejectsWrongCanonicalNode() {
+    void shouldVerifyRegisteredExternalTypeRejectsWrongCanonicalNode() {
+        // given
         Blue blue = new Blue();
         Node wrongTypeNode = new Node().name("WrongExternalType");
 
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+        // when
+        IllegalArgumentException failure = captureFailure(
                 () -> blue.registerExternalContractType(CHANNEL_BLUE_ID, wrongTypeNode,
                         new ExternalAlwaysChannelProcessor()));
 
+        // then
         assertTrue(failure.getMessage().contains("not declared BlueId"));
     }
 
     @Test
-    void unknownExternalContractTypeProducesCapabilityFailureWithoutMutation() {
+    void shouldVerifyUnknownExternalContractTypeProducesCapabilityFailureWithoutMutation() {
+        // given
         DocumentProcessor processor = DocumentProcessor.builder()
                 .registerContractProcessor(CHANNEL_BLUE_ID,
                         externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
@@ -118,18 +142,22 @@ class ExternalContractIntegrationTest {
         Blue blue = new Blue();
         Node document = blue.yamlToNode(counterDocument(UNKNOWN_BLUE_ID));
 
+        // when
         DocumentProcessingResult result = processor.initializeDocument(document);
 
-        assertTrue(result.capabilityFailure());
-        assertTrue(result.failureReason().contains(UNKNOWN_BLUE_ID));
+        // then
+        assertTrue(isCapabilityFailure(result));
+        assertTrue(diagnosticMessage(result).contains(UNKNOWN_BLUE_ID));
         assertFalse(result.document().getContracts().getProperties().containsKey("initialized"));
         assertEquals(new BigInteger("0"), result.document().get("/counter"));
     }
 
     @Test
-    void handlerProcessorCanUseSharedFrozenEventPatternMatching() {
+    void shouldVerifyHandlerProcessorCanUseSharedFrozenEventPatternMatching() {
+        // given
         MatchingAddAmountProcessor.reset();
-        DocumentProcessor processor = DocumentProcessor.builder()
+        DocumentProcessor processor = exactDeliveryBuilder(
+                "incoming", CHANNEL_BLUE_ID)
                 .registerContractProcessor(CHANNEL_BLUE_ID,
                         externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
                 .registerContractProcessor(MATCHING_HANDLER_BLUE_ID,
@@ -151,29 +179,51 @@ class ExternalContractIntegrationTest {
                 "    event:\n" +
                 "      kind: allowed\n");
 
+        // when
         DocumentProcessingResult initialized = processor.initializeDocument(document);
-        assertFalse(new ContractMatchingService().matches(amountEvent(7, "denied"), blue.yamlToNode("kind: allowed")));
+        boolean deniedMatches =
+                new ContractMatchingService().matches(
+                        amountEvent(7, "denied"),
+                        blue.yamlToNode("kind: allowed"));
         DocumentProcessingResult denied = processor.processDocument(initialized.document(), amountEvent(7, "denied"));
-
-        assertFalse(MatchingAddAmountProcessor.lastPatternNull);
-        assertEquals("allowed", MatchingAddAmountProcessor.lastPatternKindValue);
-        assertEquals(new BigInteger("0"), denied.document().get("/counter"));
-        assertEquals(0, MatchingAddAmountProcessor.executions);
-
+        boolean deniedPatternWasNull =
+                MatchingAddAmountProcessor.lastPatternNull;
+        Object deniedPatternKind =
+                MatchingAddAmountProcessor.lastPatternKindValue;
+        int deniedExecutions =
+                MatchingAddAmountProcessor.executions;
         DocumentProcessingResult allowed = processor.processDocument(denied.document(), amountEvent(5, "allowed"));
+        int finalMatchAttempts =
+                MatchingAddAmountProcessor.matchAttempts;
+        boolean finalMatch =
+                MatchingAddAmountProcessor.lastMatch;
+        int finalExecutions =
+                MatchingAddAmountProcessor.executions;
 
-        assertEquals(2, MatchingAddAmountProcessor.matchAttempts);
-        assertTrue(MatchingAddAmountProcessor.lastMatch);
-        assertEquals(1, MatchingAddAmountProcessor.executions);
+        // then
+        assertFalse(deniedMatches);
+        assertFalse(deniedPatternWasNull);
+        assertEquals("allowed", deniedPatternKind);
+        assertEquals(new BigInteger("0"), denied.document().get("/counter"));
+        assertEquals(0, deniedExecutions);
+        assertEquals(2, finalMatchAttempts);
+        assertTrue(finalMatch);
+        assertEquals(1, finalExecutions);
         assertEquals(new BigInteger("5"), allowed.document().get("/counter"));
     }
 
     @Test
-    void channelContextEventMutationIsIgnoredUnlessEvaluationReturnsChannelizedEvent() {
+    void shouldVerifyChannelContextEventMutationIsIgnoredUnlessEvaluationReturnsChannelizedEvent() {
+        // given
         CaptureEventFlagProcessor.reset();
-        DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(MUTATING_CHANNEL_BLUE_ID, new MutatingOnlyChannelProcessor())
-                .registerContractProcessor(CAPTURE_HANDLER_BLUE_ID, new CaptureEventFlagProcessor())
+        DocumentProcessor processor = exactDeliveryBuilder(
+                "incoming", MUTATING_CHANNEL_BLUE_ID)
+                .registerContractProcessor(MUTATING_CHANNEL_BLUE_ID,
+                        externalTypeNode(MutatingOnlyChannel.class),
+                        new MutatingOnlyChannelProcessor())
+                .registerContractProcessor(CAPTURE_HANDLER_BLUE_ID,
+                        externalTypeNode(CaptureEventFlag.class),
+                        new CaptureEventFlagProcessor())
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(
@@ -187,40 +237,59 @@ class ExternalContractIntegrationTest {
                 "      blueId: " + CAPTURE_HANDLER_BLUE_ID + "\n" +
                 "    channel: incoming\n");
 
+        // when
         processor.processDocument(markInitialized(document), amountEvent(1));
 
+        // then
         assertTrue(CaptureEventFlagProcessor.executed);
         assertFalse(CaptureEventFlagProcessor.sawNormalizedFlag);
     }
 
     @Test
-    void channelProcessorCanRejectStaleNonDuplicateEventsUsingCheckpointContext() {
+    void shouldVerifyExactCheckpointSubjectsSuppressDuplicatesAndReachChannelContext() {
+        // given
         ExternalAddAmountProcessor.reset();
         SequenceChannelProcessor.reset();
-        DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(SEQUENCE_CHANNEL_BLUE_ID, new SequenceChannelProcessor())
-                .registerContractProcessor(HANDLER_BLUE_ID, new ExternalAddAmountProcessor())
+        DocumentProcessor processor = exactDeliveryBuilder(
+                "incoming", SEQUENCE_CHANNEL_BLUE_ID)
+                .registerContractProcessor(SEQUENCE_CHANNEL_BLUE_ID,
+                        externalTypeNode(SequenceChannel.class),
+                        new SequenceChannelProcessor())
+                .registerContractProcessor(HANDLER_BLUE_ID,
+                        externalTypeNode(ExternalAddAmount.class),
+                        new ExternalAddAmountProcessor())
                 .build();
         Blue blue = new Blue();
         Node document = blue.yamlToNode(counterDocument(SEQUENCE_CHANNEL_BLUE_ID, HANDLER_BLUE_ID));
 
+        // when
+        Node acceptedEvent = sequencedAmountEvent(7, 10);
+        Node freshEvent = sequencedAmountEvent(5, 11);
         DocumentProcessingResult first = processor.processDocument(
-                markInitialized(document), sequencedAmountEvent(7, 10));
-        DocumentProcessingResult stale = processor.processDocument(first.document(), sequencedAmountEvent(100, 8));
-        DocumentProcessingResult fresh = processor.processDocument(stale.document(), sequencedAmountEvent(5, 11));
+                markInitialized(document), acceptedEvent);
+        DocumentProcessingResult repeated = processor.processDocument(
+                first.document(), acceptedEvent.clone());
+        DocumentProcessingResult fresh = processor.processDocument(
+                repeated.document(), freshEvent);
 
+        // then
         assertEquals(new BigInteger("7"), first.document().get("/counter"));
-        assertEquals(new BigInteger("7"), stale.document().get("/counter"));
+        assertEquals(new BigInteger("7"), repeated.document().get("/counter"));
         assertEquals(new BigInteger("12"), fresh.document().get("/counter"));
         assertEquals(3, SequenceChannelProcessor.newnessChecks);
-        assertEquals(new BigInteger("10"), SequenceChannelProcessor.lastPreviousSequence);
-        assertEquals(new BigInteger("11"), SequenceChannelProcessor.lastAcceptedSequence);
+        assertEquals(Arrays.asList(
+                        DirectBlueIdCalculator.calculateBlueId(acceptedEvent),
+                        DirectBlueIdCalculator.calculateBlueId(acceptedEvent),
+                        DirectBlueIdCalculator.calculateBlueId(freshEvent)),
+                SequenceChannelProcessor.observedSubjectBlueIds);
     }
 
     @Test
-    void handlerProcessorCanDeriveChannelFromAnotherScopeContractDuringLoading() {
+    void shouldVerifyHandlerProcessorCanDeriveChannelFromAnotherScopeContractDuringLoading() {
+        // given
         DerivingAddAmountProcessor.reset();
-        DocumentProcessor processor = DocumentProcessor.builder()
+        DocumentProcessor processor = exactDeliveryBuilder(
+                "incoming", CHANNEL_BLUE_ID)
                 .registerContractProcessor(CHANNEL_BLUE_ID,
                         externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
                 .registerContractProcessor(OPERATION_BLUE_ID,
@@ -246,44 +315,24 @@ class ExternalContractIntegrationTest {
                 "    operation: increment\n" +
                 "    counterPath: /counter\n");
 
+        // when
         DocumentProcessingResult initialized = processor.initializeDocument(document);
         DocumentProcessingResult processed = processor.processDocument(initialized.document(), amountEvent(4));
 
-        assertFalse(processed.capabilityFailure(), processed.failureReason());
+        // then
+        assertFalse(isCapabilityFailure(processed), diagnosticMessage(processed));
         assertEquals("incoming", DerivingAddAmountProcessor.derivedChannel);
         assertEquals(new BigInteger("4"), processed.document().get("/counter"));
         assertEquals(1, DerivingAddAmountProcessor.executions);
     }
 
     @Test
-    void channelEvaluationCanReturnMultipleDeliveriesWithIndependentCheckpoints() {
-        ExternalAddAmountProcessor.reset();
-        DocumentProcessor processor = DocumentProcessor.builder()
-                .registerContractProcessor(MULTI_DELIVERY_CHANNEL_BLUE_ID,
-                        externalTypeNode(MultiDeliveryChannel.class), new MultiDeliveryChannelProcessor())
-                .registerContractProcessor(HANDLER_BLUE_ID,
-                        externalTypeNode(ExternalAddAmount.class), new ExternalAddAmountProcessor())
-                .build();
-        Blue blue = new Blue();
-        Node document = blue.yamlToNode(counterDocument(MULTI_DELIVERY_CHANNEL_BLUE_ID, HANDLER_BLUE_ID));
-
-        DocumentProcessingResult initialized = processor.initializeDocument(document);
-        Node incoming = amountEvent(99, "raw");
-        DocumentProcessingResult first = processor.processDocument(initialized.document(), incoming);
-        DocumentProcessingResult duplicate = processor.processDocument(first.document(), incoming);
-
-        assertEquals(new BigInteger("3"), first.document().get("/counter"));
-        assertEquals(new BigInteger("3"), duplicate.document().get("/counter"));
-        Node checkpoint = first.document().getAsNode("/contracts/checkpoint");
-        assertEquals("raw", checkpoint.getAsText("/lastEvents/incoming::one/kind"));
-        assertEquals("raw", checkpoint.getAsText("/lastEvents/incoming::two/kind"));
-    }
-
-    @Test
-    void channelProcessorCanEvaluateSameScopeChannelFromContext() {
+    void shouldVerifyUnselectedExternalOccurrenceIsInertDuringSelectedDelivery() {
+        // given
         DelegatingChannelProcessor.reset();
         CaptureEventFlagProcessor.reset();
-        DocumentProcessor processor = DocumentProcessor.builder()
+        DocumentProcessor processor = exactDeliveryBuilder(
+                "composite", DELEGATING_CHANNEL_BLUE_ID)
                 .registerContractProcessor(CHANNEL_BLUE_ID,
                         externalTypeNode(ExternalAlwaysChannel.class), new ExternalAlwaysChannelProcessor())
                 .registerContractProcessor(DELEGATING_CHANNEL_BLUE_ID,
@@ -307,19 +356,26 @@ class ExternalContractIntegrationTest {
                 "      blueId: " + CAPTURE_HANDLER_BLUE_ID + "\n" +
                 "    channel: composite\n");
 
+        // when
         DocumentProcessingResult initialized = processor.initializeDocument(document);
-        DocumentProcessingResult processed = processor.processDocument(initialized.document(), amountEvent(1));
+        Node compositeEvent = amountEvent(1).properties(
+                "subscriptionKey",
+                new Node().value("composite"));
+        DocumentProcessingResult processed = processor.processDocument(
+                initialized.document(), compositeEvent);
 
-        assertFalse(processed.capabilityFailure(), processed.failureReason());
-        assertEquals("composite", DelegatingChannelProcessor.lastBindingKey);
-        assertTrue(DelegatingChannelProcessor.sawIncomingChannel);
-        assertTrue(DelegatingChannelProcessor.sawCompositeChannel);
+        // then
+        assertFalse(isCapabilityFailure(processed), diagnosticMessage(processed));
+        assertNull(DelegatingChannelProcessor.lastBindingKey);
+        assertFalse(DelegatingChannelProcessor.sawIncomingChannel);
+        assertFalse(DelegatingChannelProcessor.sawCompositeChannel);
         assertTrue(CaptureEventFlagProcessor.executed);
-        assertTrue(CaptureEventFlagProcessor.sawDelegatedFlag);
+        assertFalse(CaptureEventFlagProcessor.sawDelegatedFlag);
     }
 
     @Test
-    void derivedHandlerWithoutSameScopeChannelIsInert() {
+    void shouldVerifyDerivedHandlerWithoutSameScopeChannelIsInert() {
+        // given
         DocumentProcessor processor = DocumentProcessor.builder()
                 .registerContractProcessor(OPERATION_BLUE_ID,
                         externalTypeNode(ExternalOperation.class), new ExternalOperationProcessor())
@@ -341,10 +397,12 @@ class ExternalContractIntegrationTest {
                 "    operation: increment\n" +
                 "    counterPath: /counter\n");
 
+        // when
         DocumentProcessingResult initialized = processor.initializeDocument(document);
-        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
-
         DocumentProcessingResult processed = processor.processDocument(initialized.document(), amountEvent(7));
+
+        // then
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
         assertEquals(BigInteger.ZERO, processed.document().get("/counter"));
     }
 
@@ -367,7 +425,14 @@ class ExternalContractIntegrationTest {
     }
 
     private static Node amountEvent(int amount) {
-        return new Node().properties("amount", new Node().value(BigInteger.valueOf(amount)));
+        return new Node()
+                .properties(
+                        "amount",
+                        new Node().value(
+                                BigInteger.valueOf(amount)))
+                .properties(
+                        "subscriptionKey",
+                        new Node().value("incoming"));
     }
 
     private static Node amountEvent(int amount, String kind) {
@@ -382,10 +447,115 @@ class ExternalContractIntegrationTest {
         return new Node().name(type.getSimpleName());
     }
 
+    private static DocumentProcessor.Builder exactDeliveryBuilder(
+            String channelKey,
+            String channelTypeBlueId) {
+        return DocumentProcessor.builder()
+                .deliveryPlanDeriver((root, event) ->
+                        exactDeliveryPlan(
+                                root,
+                                event,
+                                channelKey,
+                                channelTypeBlueId));
+    }
+
+    private static ExternalDeliveryPlan exactDeliveryPlan(
+            Node root,
+            Node event,
+            String channelKey,
+            String channelTypeBlueId) {
+        Node channel = root.getContracts().getProperties().get(channelKey);
+        String contributionBlueId =
+                DirectBlueIdCalculator.calculateBlueId(channel);
+        String checkpointDomainBlueId = CheckpointDomain.derive(
+                channelTypeBlueId,
+                Collections.singletonList(contributionBlueId),
+                optionalText(channel, "checkpointDomain"));
+        ExternalDeliverySnapshot delivery =
+                ExternalDeliverySnapshot.builder("/", channelKey)
+                        .order(optionalInteger(channel, "order"))
+                        .sourceContribution(contributionBlueId)
+                        .effectiveTypeBlueId(channelTypeBlueId)
+                        .subscriptionKey(channelKey)
+                        .checkpointDomainBlueId(checkpointDomainBlueId)
+                        .checkpointSubjectBlueId(
+                                DirectBlueIdCalculator.calculateBlueId(event))
+                        .build();
+        ExternalDeliveryPlan.Builder plan =
+                ExternalDeliveryPlan.builder()
+                .revisions(1L, 1L)
+                .eventOrderKey(ExternalOrderKey.of(
+                        Collections.singletonList(
+                                DirectBlueIdCalculator.calculateBlueId(event))))
+                .delivery(delivery)
+                .activeSubscriptionIntervals(
+                        Collections.<SubscriptionDelta.Entry>emptyList())
+                .exactRuntimeState();
+        for (java.util.Map.Entry<String, Node> entry
+                : root.getContracts().getProperties().entrySet()) {
+            Node candidate = entry.getValue();
+            String candidateType = candidate.getType() != null
+                    ? candidate.getType().getBlueId()
+                    : null;
+            if (!isIntegrationExternalChannel(candidateType)) {
+                continue;
+            }
+            String candidateContribution =
+                    DirectBlueIdCalculator.calculateBlueId(candidate);
+            String candidateDomain = CheckpointDomain.derive(
+                    candidateType,
+                    Collections.singletonList(
+                            candidateContribution),
+                    optionalText(candidate, "checkpointDomain"));
+            plan.activeSubscriptionInterval(
+                    new SubscriptionDelta.Entry(
+                            "/",
+                            entry.getKey(),
+                            candidateType,
+                            Collections.singletonList(
+                                    candidateContribution),
+                            optionalInteger(candidate, "order"),
+                            Collections.singletonList(
+                                    entry.getKey()),
+                            candidateDomain,
+                            0L,
+                            null,
+                            null));
+        }
+        return plan.build();
+    }
+
+    private static boolean isIntegrationExternalChannel(
+            String typeBlueId) {
+        return CHANNEL_BLUE_ID.equals(typeBlueId)
+                || MUTATING_CHANNEL_BLUE_ID.equals(typeBlueId)
+                || SEQUENCE_CHANNEL_BLUE_ID.equals(typeBlueId)
+                || DELEGATING_CHANNEL_BLUE_ID.equals(typeBlueId);
+    }
+
+    private static String optionalText(Node node, String key) {
+        Node field = property(node, key);
+        return field != null && field.getValue() instanceof String
+                ? (String) field.getValue() : null;
+    }
+
+    private static int optionalInteger(Node node, String key) {
+        Node field = property(node, key);
+        Object value = field != null ? field.getValue() : null;
+        return value instanceof BigInteger
+                ? ((BigInteger) value).intValueExact() : 0;
+    }
+
+    private static Node property(Node node, String key) {
+        return node != null && node.getProperties() != null
+                ? node.getProperties().get(key) : null;
+    }
+
     private static Node markInitialized(Node document) {
+        Node initialDocument = document.clone();
         document.getContracts().properties("initialized", new Node()
                 .type(new Node().blueId(RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
-                .properties("documentId", new Node().value("existing")));
+                .properties("document", initialDocument));
         return document;
     }
 
@@ -398,9 +568,6 @@ class ExternalContractIntegrationTest {
     public static final class SequenceChannel extends ChannelContract {
     }
 
-    public static final class MultiDeliveryChannel extends ChannelContract {
-    }
-
     public static final class DelegatingChannel extends ChannelContract {
         private String childChannel;
 
@@ -411,6 +578,25 @@ class ExternalContractIntegrationTest {
         public void setChildChannel(String childChannel) {
             this.childChannel = childChannel;
         }
+    }
+
+    private static <T extends ChannelContract>
+    ExternalChannelSubscriptionFunctions<T>
+    integrationSubscriptionFunctions() {
+        return new ExternalChannelSubscriptionFunctions<T>() {
+            @Override
+            public List<String> channelKeys(
+                    T immutableContractSnapshot) {
+                return Collections.singletonList(
+                        immutableContractSnapshot.getKey());
+            }
+
+            @Override
+            public String checkpointDomainDiscriminator(
+                    T immutableContractSnapshot) {
+                return null;
+            }
+        };
     }
 
     public static final class ExternalOperation extends MarkerContract {
@@ -475,9 +661,20 @@ class ExternalContractIntegrationTest {
 
     public static final class ExternalAlwaysChannelProcessor implements ChannelProcessor<ExternalAlwaysChannel> {
 
+        private static final
+        ExternalChannelSubscriptionFunctions<ExternalAlwaysChannel>
+                SUBSCRIPTION_FUNCTIONS =
+                integrationSubscriptionFunctions();
+
         @Override
         public Class<ExternalAlwaysChannel> contractType() {
             return ExternalAlwaysChannel.class;
+        }
+
+        @Override
+        public ExternalChannelSubscriptionFunctions<ExternalAlwaysChannel>
+        externalSubscriptionFunctions() {
+            return SUBSCRIPTION_FUNCTIONS;
         }
 
         @Override
@@ -488,9 +685,20 @@ class ExternalContractIntegrationTest {
 
     public static final class MutatingOnlyChannelProcessor implements ChannelProcessor<MutatingOnlyChannel> {
 
+        private static final
+        ExternalChannelSubscriptionFunctions<MutatingOnlyChannel>
+                SUBSCRIPTION_FUNCTIONS =
+                integrationSubscriptionFunctions();
+
         @Override
         public Class<MutatingOnlyChannel> contractType() {
             return MutatingOnlyChannel.class;
+        }
+
+        @Override
+        public ExternalChannelSubscriptionFunctions<MutatingOnlyChannel>
+        externalSubscriptionFunctions() {
+            return SUBSCRIPTION_FUNCTIONS;
         }
 
         @Override
@@ -505,19 +713,29 @@ class ExternalContractIntegrationTest {
 
     public static final class SequenceChannelProcessor implements ChannelProcessor<SequenceChannel> {
 
+        private static final
+        ExternalChannelSubscriptionFunctions<SequenceChannel>
+                SUBSCRIPTION_FUNCTIONS =
+                integrationSubscriptionFunctions();
+
         static int newnessChecks;
-        static BigInteger lastPreviousSequence;
-        static BigInteger lastAcceptedSequence;
+        static final List<String> observedSubjectBlueIds =
+                new ArrayList<>();
 
         static void reset() {
             newnessChecks = 0;
-            lastPreviousSequence = null;
-            lastAcceptedSequence = null;
+            observedSubjectBlueIds.clear();
         }
 
         @Override
         public Class<SequenceChannel> contractType() {
             return SequenceChannel.class;
+        }
+
+        @Override
+        public ExternalChannelSubscriptionFunctions<SequenceChannel>
+        externalSubscriptionFunctions() {
+            return SUBSCRIPTION_FUNCTIONS;
         }
 
         @Override
@@ -528,14 +746,8 @@ class ExternalContractIntegrationTest {
         @Override
         public boolean isNewerEvent(SequenceChannel contract, ChannelCheckpointContext context) {
             newnessChecks++;
-            BigInteger current = sequence(context.event());
-            BigInteger previous = sequence(context.lastEvent());
-            lastPreviousSequence = previous;
-            boolean accepted = previous == null || current.compareTo(previous) > 0;
-            if (accepted) {
-                lastAcceptedSequence = current;
-            }
-            return accepted;
+            observedSubjectBlueIds.add(context.eventSignature());
+            return true;
         }
 
         private static BigInteger sequence(Node event) {
@@ -549,24 +761,12 @@ class ExternalContractIntegrationTest {
         }
     }
 
-    public static final class MultiDeliveryChannelProcessor implements ChannelProcessor<MultiDeliveryChannel> {
-
-        @Override
-        public Class<MultiDeliveryChannel> contractType() {
-            return MultiDeliveryChannel.class;
-        }
-
-        @Override
-        public ChannelEvaluation evaluate(MultiDeliveryChannel contract, ChannelEvaluationContext context) {
-            Node first = new Node().properties("amount", new Node().value(BigInteger.ONE));
-            Node second = new Node().properties("amount", new Node().value(new BigInteger("2")));
-            return ChannelEvaluation.matchDeliveries(java.util.Arrays.asList(
-                    ChannelDelivery.of(first, null, "incoming::one", null),
-                    ChannelDelivery.of(second, null, "incoming::two", null)));
-        }
-    }
-
     public static final class DelegatingChannelProcessor implements ChannelProcessor<DelegatingChannel> {
+
+        private static final
+        ExternalChannelSubscriptionFunctions<DelegatingChannel>
+                SUBSCRIPTION_FUNCTIONS =
+                integrationSubscriptionFunctions();
 
         static String lastBindingKey;
         static boolean sawIncomingChannel;
@@ -581,6 +781,12 @@ class ExternalContractIntegrationTest {
         @Override
         public Class<DelegatingChannel> contractType() {
             return DelegatingChannel.class;
+        }
+
+        @Override
+        public ExternalChannelSubscriptionFunctions<DelegatingChannel>
+        externalSubscriptionFunctions() {
+            return SUBSCRIPTION_FUNCTIONS;
         }
 
         @Override

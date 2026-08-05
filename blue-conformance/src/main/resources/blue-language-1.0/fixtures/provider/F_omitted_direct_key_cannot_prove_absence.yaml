@@ -1,0 +1,12 @@
+id: F_omitted_direct_key_cannot_prove_absence
+category: Provider
+operation: semanticExists
+requestedBlueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk
+providerResult:
+  partialObject:
+    left:
+      blueId: 5nWrS5wTB22MN7HHhyRUy7zQ83Qbf6QEcUY4soFir2Sq
+  completeDirectManifest: false
+path: /right
+expectedOutcome: Incomplete
+expectedAbsent: false

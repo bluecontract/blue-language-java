@@ -2,20 +2,19 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.conformance.ConformancePlan;
-import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.ConformanceEngineTest;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.provider.BootstrapProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
-import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeToBlueIdInput;
-import blue.language.utils.Properties;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.NodeToBlueIdInput;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -23,7 +22,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.processor.FailureCapture.captureFailure;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,65 +32,81 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DocumentProcessorGeneralizationTest {
 
     @Test
-    void patchGeneralizesChangedNodeAndAncestorsBeforeCommit() {
+    void shouldVerifyPatchGeneralizesChangedNodeAndAncestorsBeforeCommit() {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
-        DocumentProcessingRuntime.DocumentUpdateData update =
+        // when
+        DocumentUpdateData update =
                 runtime.applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
 
+        // then
         assertEquals("USD", update.after().getValue());
-        assertEquals("Price", document.getAsNode("/price/type").getName());
-        assertEquals("Global Product", document.getType().getName());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                document.getAsNode("/price/type").getBlueId());
+        assertEquals(nodeProvider.getBlueIdByName("Global Product"),
+                document.getType().getBlueId());
     }
 
     @Test
-    void nonGeneralizablePatchRollsBackDocument() {
+    void shouldVerifyNonGeneralizablePatchRollsBackDocument() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Fixed One\n" +
                 "x: 1");
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Fixed One") + "\n" +
                 "x: 1", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> runtime.applyPatch("/", JsonPatch.replace("/x", new Node().value(2))));
+        // when
+        Throwable failure = captureFailure(
+                () -> runtime.applyPatch(
+                        "/",
+                        JsonPatch.replace(
+                                "/x",
+                                new Node().value(2))));
 
-        assertEquals("Fixed One", document.getType().getName());
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
+        assertEquals(nodeProvider.getBlueIdByName("Fixed One"),
+                document.getType().getBlueId());
         assertEquals(1, document.getAsInteger("/x"));
     }
 
     @Test
-    void untypedRootPatchesAreNotConformanceEnforced() {
+    void shouldVerifyUntypedRootOrdinaryPatchesAreNotConformanceEnforced() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         Node document = new Node();
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
-        runtime.applyPatch("/", JsonPatch.add("/contracts/initialized",
-                new Node().type(new Node().blueId("6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q"))));
+        // when
+        runtime.applyPatch("/", JsonPatch.add("/status", new Node().value("active")));
 
-        assertNotNull(document.getAsNode("/contracts/initialized"));
-        assertEquals("6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q", document.getAsNode("/contracts/initialized/type").getBlueId());
+        // then
+        assertEquals("active", document.getAsText("/status"));
     }
 
     @Test
-    void batchPatchGeneralizesChangedNodeAndAncestorOnce() {
+    void shouldVerifyBatchPatchGeneralizesChangedNodeAndAncestorOnce() {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
@@ -98,74 +114,101 @@ class DocumentProcessorGeneralizationTest {
                 "  amount: 150\n" +
                 "  currency: EUR\n" +
                 "stock: 5", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
+        // when
+        List<DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/price/currency", new Node().value("USD")),
                 JsonPatch.replace("/stock", new Node().value(6))
         ));
 
+        // then
         assertEquals(2, updates.size());
         assertEquals("USD", document.getAsText("/price/currency"));
         assertEquals(6, document.getAsInteger("/stock"));
-        assertEquals("Price", document.getAsNode("/price/type").getName());
-        assertEquals("Global Product", document.getType().getName());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                document.getAsNode("/price/type").getBlueId());
+        assertEquals(nodeProvider.getBlueIdByName("Global Product"),
+                document.getType().getBlueId());
     }
 
     @Test
-    void nonGeneralizableBatchRollsBackAllPatches() {
+    void shouldVerifyNonGeneralizableBatchRollsBackAllPatches() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Fixed One\n" +
                 "x: 1");
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Fixed One") + "\n" +
                 "x: 1\n" +
                 "y: old", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
-        assertThrows(IllegalArgumentException.class, () -> runtime.applyPatches("/", Arrays.asList(
+        // when
+        Throwable failure = captureFailure(
+                () -> runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/y", new Node().value("new")),
                 JsonPatch.replace("/x", new Node().value(2))
         )));
 
+        // then
+        assertTrue(failure instanceof IllegalArgumentException);
         assertEquals(1, document.getAsInteger("/x"));
         assertEquals("old", document.getAsText("/y"));
-        assertEquals("Fixed One", document.getType().getName());
+        assertEquals(nodeProvider.getBlueIdByName("Fixed One"),
+                document.getType().getBlueId());
     }
 
     @Test
-    void processorManagedInitializedMarkerBypassWorksInBatch() {
+    void shouldVerifyApplicationBatchCannotWriteProcessorManagedInitializedMarker() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
-        Node document = new Node();
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        Node document = new Node().contracts(
+                new Node().properties(
+                        "application",
+                        new Node().properties(
+                                "enabled",
+                                new Node().value(true))));
+        Node original = document.clone();
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
-        runtime.applyPatches("/", Arrays.asList(
-                JsonPatch.add("/contracts/initialized",
-                        new Node().type(new Node().blueId("6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q"))),
-                JsonPatch.add("/status", new Node().value("active"))
-        ));
+        // when
+        ProcessorFailureException failure = captureFailure(
+                () -> runtime.applyPatches("/", Arrays.asList(
+                        JsonPatch.add("/contracts/initialized",
+                                new Node().type(new Node().blueId(
+                                        RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))),
+                        JsonPatch.add("/status", new Node().value("active"))
+                )));
 
-        assertNotNull(document.getAsNode("/contracts/initialized"));
-        assertEquals("active", document.getAsText("/status"));
+        // then
+        assertEquals(ProcessorFailureException.class,
+                failure.getClass());
+        assertEquals(ProcessorErrorCategory.ProtectedProcessorStateMutation,
+                failure.errorCategory());
+        assertEquivalentDocuments(original, document,
+                "protected processor state rejection must roll back the batch");
     }
 
     @Test
-    void batchParentThenChildPatchGeneralizesAndPreservesChildValue() {
+    void shouldVerifyBatchParentThenChildPatchGeneralizesAndPreservesChildValue() {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
+        // when
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/price", YAML_MAPPER.readValue(
                         "amount: 175\n" +
@@ -173,41 +216,50 @@ class DocumentProcessorGeneralizationTest {
                 JsonPatch.replace("/price/currency", new Node().value("USD"))
         ));
 
+        // then
         assertEquals(175, document.getAsInteger("/price/amount"));
         assertEquals("USD", document.getAsText("/price/currency"));
-        assertEquals("Price", document.getAsNode("/price/type").getName());
-        assertEquals("Global Product", document.getType().getName());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                document.getAsNode("/price/type").getBlueId());
+        assertEquals(nodeProvider.getBlueIdByName("Global Product"),
+                document.getType().getBlueId());
     }
 
     @Test
-    void batchChildThenSiblingPatchGeneralizesOnceAndPreservesBothChanges() {
+    void shouldVerifyBatchChildThenSiblingPatchGeneralizesOnceAndPreservesBothChanges() {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
+        // when
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/price/currency", new Node().value("USD")),
                 JsonPatch.replace("/price/amount", new Node().value(200))
         ));
 
+        // then
         assertEquals(200, document.getAsInteger("/price/amount"));
         assertEquals("USD", document.getAsText("/price/currency"));
-        assertEquals("Price", document.getAsNode("/price/type").getName());
-        assertEquals("Global Product", document.getType().getName());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                document.getAsNode("/price/type").getBlueId());
+        assertEquals(nodeProvider.getBlueIdByName("Global Product"),
+                document.getType().getBlueId());
     }
 
     @Test
-    void batchSiblingPatchesRequiringAncestorGeneralizationPreserveBothChanges() {
+    void shouldVerifyBatchSiblingPatchesRequiringAncestorGeneralizationPreserveBothChanges() {
+        // given
         BasicNodeProvider nodeProvider = productWithAvailabilityProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Listed Product") + "\n" +
@@ -216,25 +268,33 @@ class DocumentProcessorGeneralizationTest {
                 "  currency: EUR\n" +
                 "availability:\n" +
                 "  region: EU", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
+        // when
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/price/currency", new Node().value("USD")),
                 JsonPatch.replace("/availability/region", new Node().value("US"))
         ));
 
+        // then
         assertEquals("USD", document.getAsText("/price/currency"));
         assertEquals("US", document.getAsText("/availability/region"));
-        assertEquals("Price", document.getAsNode("/price/type").getName());
-        assertEquals("Availability", document.getAsNode("/availability/type").getName());
-        assertEquals("Global Listed Product", document.getType().getName());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                document.getAsNode("/price/type").getBlueId());
+        assertEquals(nodeProvider.getBlueIdByName("Availability"),
+                runtime.snapshot().resolvedRoot()
+                        .getAsNode("/availability/type").getBlueId());
+        assertEquals(nodeProvider.getBlueIdByName(
+                        "Global Listed Product"),
+                document.getType().getBlueId());
     }
 
     @Test
-    void batchDictionaryValueTypePatchesPreserveValuesAndDictionaryType() {
+    void shouldVerifyBatchDictionaryValueTypePatchesPreserveValuesAndDictionaryType() {
+        // given
         BasicNodeProvider nodeProvider = orderBookProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Book\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Open Order Book") + "\n" +
@@ -243,23 +303,28 @@ class DocumentProcessorGeneralizationTest {
                 "    status: open\n" +
                 "  order-b:\n" +
                 "    status: open", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
+        // when
         runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/orders/order-a/status", new Node().value("closed")),
                 JsonPatch.replace("/orders/order-b/status", new Node().value("closed"))
         ));
 
+        // then
         assertEquals("closed", document.getAsText("/orders/order-a/status"));
         assertEquals("closed", document.getAsText("/orders/order-b/status"));
-        assertEquals("Order", document.getAsNode("/orders/valueType").getName());
+        assertEquals(nodeProvider.getBlueIdByName("Order"),
+                runtime.snapshot().resolvedRoot()
+                        .getAsNode("/orders/valueType").getBlueId());
     }
 
     @Test
-    void batchListItemTypePatchesMatchSequentialBehavior() {
+    void shouldVerifyBatchListItemTypePatchesMatchSequentialBehavior() {
+        // given
         BasicNodeProvider nodeProvider = itemListProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node batchDocument = blue.resolve(YAML_MAPPER.readValue(
+        Node batchDocument = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Batch List\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Open Item List") + "\n" +
@@ -273,23 +338,31 @@ class DocumentProcessorGeneralizationTest {
                 JsonPatch.remove("/entries/1")
         );
 
-        new DocumentProcessingRuntime(batchDocument, blue.conformanceEngine()).applyPatches("/", patches);
-        DocumentProcessingRuntime sequential = new DocumentProcessingRuntime(sequentialDocument, blue.conformanceEngine());
+        // when
+        DocumentProcessingRuntime batchRuntime = runtime(blue, batchDocument);
+        batchRuntime.applyPatches("/", patches);
+        DocumentProcessingRuntime sequential = runtime(blue, sequentialDocument);
         for (JsonPatch patch : patches) {
             sequential.applyPatch("/", patch);
         }
 
+        // then
         assertEquals(sequentialDocument.getAsText("/entries/0/status"), batchDocument.getAsText("/entries/0/status"));
         assertEquals(sequentialDocument.getAsText("/entries/1/status"), batchDocument.getAsText("/entries/1/status"));
-        assertEquals(sequentialDocument.getAsNode("/entries/itemType").getName(),
-                batchDocument.getAsNode("/entries/itemType").getName());
+                assertEquals(sequential.snapshot().resolvedRoot()
+                        .getAsNode("/entries/itemType")
+                        .getBlueId(),
+                batchRuntime.snapshot().resolvedRoot()
+                        .getAsNode("/entries/itemType")
+                        .getBlueId());
     }
 
     @Test
-    void batchGeneralizesTypedChildUnderUntypedRoot() {
+    void shouldVerifyBatchGeneralizesTypedChildUnderUntypedRoot() {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node batchDocument = blue.resolve(YAML_MAPPER.readValue(
+        Node batchDocument = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Untyped Container\n" +
                 "child:\n" +
                 "  type:\n" +
@@ -301,25 +374,30 @@ class DocumentProcessorGeneralizationTest {
                 JsonPatch.replace("/child/currency", new Node().value("USD"))
         );
 
-        new DocumentProcessingRuntime(batchDocument, blue.conformanceEngine()).applyPatches("/", patches);
-        applySequential(sequentialDocument, blue.conformanceEngine(), patches);
+        // when
+        runtime(blue, batchDocument).applyPatches("/", patches);
+        applySequential(sequentialDocument, blue, patches);
 
+        // then
         assertEquivalentDocuments(sequentialDocument, batchDocument, "typed child under untyped root");
         assertEquals("USD", batchDocument.getAsText("/child/currency"));
-        assertEquals("Price", batchDocument.getAsNode("/child/type").getName());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                batchDocument.getAsNode(
+                        "/child/type").getBlueId());
     }
 
     @Test
-    void batchGeneralizesDictionaryValueTypeUnderUntypedRoot() {
+    void shouldVerifyBatchGeneralizesDictionaryValueTypeUnderUntypedRoot() {
+        // given
         BasicNodeProvider nodeProvider = orderBookProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node batchDocument = blue.resolve(YAML_MAPPER.readValue(
+        Node batchDocument = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Untyped Book\n" +
                 "orders:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID + "\n" +
                 "  keyType:\n" +
-                "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.TEXT_TYPE_BLUE_ID + "\n" +
                 "  valueType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Open Order") + "\n" +
                 "  order-a:\n" +
@@ -335,23 +413,28 @@ class DocumentProcessorGeneralizationTest {
                 JsonPatch.replace("/orders/order-a/status", new Node().value("closed"))
         );
 
-        new DocumentProcessingRuntime(batchDocument, blue.conformanceEngine()).applyPatches("/", patches);
-        applySequential(sequentialDocument, blue.conformanceEngine(), patches);
+        // when
+        runtime(blue, batchDocument).applyPatches("/", patches);
+        applySequential(sequentialDocument, blue, patches);
 
+        // then
         assertEquivalentDocuments(sequentialDocument, batchDocument, "dictionary valueType under untyped root");
         assertEquals("closed", batchDocument.getAsText("/orders/order-a/status"));
-        assertEquals("Order", batchDocument.getAsNode("/orders/valueType").getName());
+        assertEquals(nodeProvider.getBlueIdByName("Order"),
+                batchDocument.getAsNode(
+                        "/orders/valueType").getBlueId());
     }
 
     @Test
-    void batchGeneralizesListItemTypeUnderUntypedRoot() {
+    void shouldVerifyBatchGeneralizesListItemTypeUnderUntypedRoot() {
+        // given
         BasicNodeProvider nodeProvider = itemListProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node batchDocument = blue.resolve(YAML_MAPPER.readValue(
+        Node batchDocument = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Untyped List\n" +
                 "entries:\n" +
                 "  type:\n" +
-                "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
+                "    blueId: " + BlueLanguageConstants.LIST_TYPE_BLUE_ID + "\n" +
                 "  itemType:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Open Item") + "\n" +
                 "  items:\n" +
@@ -366,134 +449,228 @@ class DocumentProcessorGeneralizationTest {
                 JsonPatch.replace("/entries/0/status", new Node().value("closed"))
         );
 
-        new DocumentProcessingRuntime(batchDocument, blue.conformanceEngine()).applyPatches("/", patches);
-        applySequential(sequentialDocument, blue.conformanceEngine(), patches);
+        // when
+        runtime(blue, batchDocument).applyPatches("/", patches);
+        applySequential(sequentialDocument, blue, patches);
 
+        // then
         assertEquivalentDocuments(sequentialDocument, batchDocument, "list itemType under untyped root");
         assertEquals("closed", batchDocument.getAsText("/entries/0/status"));
-        assertEquals("Item", batchDocument.getAsNode("/entries/itemType").getName());
+        assertEquals(nodeProvider.getBlueIdByName("Item"),
+                batchDocument.getAsNode(
+                        "/entries/itemType").getBlueId());
     }
 
     @Test
-    void conformanceAffectedUpdateAfterReflectsCommittedResolvedValue() {
+    void shouldVerifyConformanceAffectedUpdateAfterReflectsCommittedResolvedValue() {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine());
+        DocumentProcessingRuntime runtime = runtime(blue, document);
 
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
+        // when
+        List<DocumentUpdateData> updates = runtime.applyPatches("/", Arrays.asList(
                 JsonPatch.replace("/price", YAML_MAPPER.readValue(
                         "amount: 150\n" +
                         "currency: USD", Node.class))
         ));
 
+        // then
         assertEquals(1, updates.size());
         assertEquals("USD", updates.get(0).after().getAsText("/currency"));
-        assertEquals("Price", updates.get(0).after().getType().getName());
-        assertEquals("Price", document.getAsNode("/price/type").getName());
-        assertEquals("Global Product", document.getType().getName());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                updates.get(0).after().getType().getBlueId());
+        assertEquals(nodeProvider.getBlueIdByName("Price"),
+                document.getAsNode("/price/type").getBlueId());
+        assertEquals(nodeProvider.getBlueIdByName("Global Product"),
+                document.getType().getBlueId());
     }
 
     @Test
-    void batchAndSequentialRuntimeProduceEquivalentDocumentsAcrossPatchLists() {
-        assertBatchMatchesSequential(new Node().properties("a", new Node().value("one"),
-                        "b", new Node().value("two")),
-                null,
-                Arrays.asList(
-                        JsonPatch.replace("/a", new Node().value("three")),
-                        JsonPatch.replace("/b", new Node().value("four"))),
-                "multiple object replacements");
+    void shouldVerifyBatchMatchesSequentialRuntimeForUntypedPatchOrdering() {
+        // given
+        List<BatchComparisonCase> cases = Arrays.asList(
+                new BatchComparisonCase(
+                        new Node().properties(
+                                "a", new Node().value("one"),
+                                "b", new Node().value("two")),
+                        null,
+                        Arrays.asList(
+                                JsonPatch.replace(
+                                        "/a",
+                                        new Node().value("three")),
+                                JsonPatch.replace(
+                                        "/b",
+                                        new Node().value("four"))),
+                        "multiple object replacements"),
+                new BatchComparisonCase(
+                        new Node().properties(
+                                "status",
+                                new Node().value("idle")),
+                        null,
+                        Arrays.asList(
+                                JsonPatch.replace(
+                                        "/status",
+                                        new Node().value("first")),
+                                JsonPatch.replace(
+                                        "/status",
+                                        new Node().value("second"))),
+                        "duplicate paths"),
+                new BatchComparisonCase(
+                        new Node(),
+                        null,
+                        Arrays.asList(
+                                JsonPatch.add(
+                                        "/temp",
+                                        new Node().value("value")),
+                                JsonPatch.remove("/temp")),
+                        "add then remove same path"),
+                new BatchComparisonCase(
+                        new Node().properties(
+                                "temp",
+                                new Node().value("old")),
+                        null,
+                        Arrays.asList(
+                                JsonPatch.remove("/temp"),
+                                JsonPatch.add(
+                                        "/temp",
+                                        new Node().value("new"))),
+                        "remove then add same path"),
+                new BatchComparisonCase(
+                        listDocument(),
+                        null,
+                        Arrays.asList(
+                                JsonPatch.add(
+                                        "/values/1",
+                                        new Node().value(99)),
+                                JsonPatch.replace(
+                                        "/values/2",
+                                        new Node().value(100)),
+                                JsonPatch.remove("/values/0")),
+                        "list add replace remove"));
 
-        assertBatchMatchesSequential(new Node().properties("status", new Node().value("idle")),
-                null,
-                Arrays.asList(
-                        JsonPatch.replace("/status", new Node().value("first")),
-                        JsonPatch.replace("/status", new Node().value("second"))),
-                "duplicate paths");
+        // when
+        List<BatchComparison> comparisons =
+                compareBatchCases(cases);
 
-        assertBatchMatchesSequential(new Node(),
-                null,
-                Arrays.asList(
-                        JsonPatch.add("/temp", new Node().value("value")),
-                        JsonPatch.remove("/temp")),
-                "add then remove same path");
+        // then
+        for (BatchComparison comparison : comparisons) {
+            assertBatchMatchesSequential(comparison);
+        }
+    }
 
-        assertBatchMatchesSequential(new Node().properties("temp", new Node().value("old")),
-                null,
-                Arrays.asList(
-                        JsonPatch.remove("/temp"),
-                        JsonPatch.add("/temp", new Node().value("new"))),
-                "remove then add same path");
-
-        assertBatchMatchesSequential(listDocument(),
-                null,
-                Arrays.asList(
-                        JsonPatch.add("/values/1", new Node().value(99)),
-                        JsonPatch.replace("/values/2", new Node().value(100)),
-                        JsonPatch.remove("/values/0")),
-                "list add replace remove");
-
+    @Test
+    void shouldVerifyBatchMatchesSequentialRuntimeForTypedContainerGeneralization()
+            throws Exception {
+        // given
         BasicNodeProvider priceProvider = ConformanceEngineTest.priceProvider();
         Blue priceBlue = ProcessorTestSupport.blue(priceProvider);
-        assertBatchMatchesSequential(priceBlue.resolve(YAML_MAPPER.readValue(
-                        "name: Untyped Container\n" +
-                        "child:\n" +
-                        "  type:\n" +
-                        "    blueId: " + priceProvider.getBlueIdByName("Price in EUR") + "\n" +
-                        "  amount: 100\n" +
-                        "  currency: EUR", Node.class)),
-                priceBlue.conformanceEngine(),
-                Arrays.asList(JsonPatch.replace("/child/currency", new Node().value("USD"))),
-                "typed child generalization");
-
         BasicNodeProvider orderProvider = orderBookProvider();
         Blue orderBlue = ProcessorTestSupport.blue(orderProvider);
-        assertBatchMatchesSequential(orderBlue.resolve(YAML_MAPPER.readValue(
-                        "name: Untyped Book\n" +
-                        "orders:\n" +
-                        "  type:\n" +
-                        "    blueId: " + Properties.DICTIONARY_TYPE_BLUE_ID + "\n" +
-                        "  keyType:\n" +
-                        "    blueId: " + Properties.TEXT_TYPE_BLUE_ID + "\n" +
-                        "  valueType:\n" +
-                        "    blueId: " + orderProvider.getBlueIdByName("Open Order") + "\n" +
-                        "  order-a:\n" +
-                        "    type:\n" +
-                        "      blueId: " + orderProvider.getBlueIdByName("Open Order") + "\n" +
-                        "    status: open", Node.class)),
-                orderBlue.conformanceEngine(),
-                Arrays.asList(JsonPatch.replace("/orders/order-a/status", new Node().value("closed"))),
-                "dictionary valueType update");
-
         BasicNodeProvider itemProvider = itemListProvider();
         Blue itemBlue = ProcessorTestSupport.blue(itemProvider);
-        assertBatchMatchesSequential(itemBlue.resolve(YAML_MAPPER.readValue(
-                        "name: Untyped List\n" +
-                        "entries:\n" +
-                        "  type:\n" +
-                        "    blueId: " + Properties.LIST_TYPE_BLUE_ID + "\n" +
-                        "  itemType:\n" +
-                        "    blueId: " + itemProvider.getBlueIdByName("Open Item") + "\n" +
-                        "  items:\n" +
-                        "    - type:\n" +
-                        "        blueId: " + itemProvider.getBlueIdByName("Open Item") + "\n" +
-                        "      status: open", Node.class)),
-                itemBlue.conformanceEngine(),
-                Arrays.asList(JsonPatch.replace("/entries/0/status", new Node().value("closed"))),
-                "list itemType update");
+        List<BatchComparisonCase> cases = Arrays.asList(
+                new BatchComparisonCase(
+                        canonicalRoot(
+                                priceBlue,
+                                YAML_MAPPER.readValue(
+                                        "name: Untyped Container\n"
+                                                + "child:\n"
+                                                + "  type:\n"
+                                                + "    blueId: "
+                                                + priceProvider.getBlueIdByName("Price in EUR")
+                                                + "\n"
+                                                + "  amount: 100\n"
+                                                + "  currency: EUR",
+                                        Node.class)),
+                        priceBlue,
+                        Collections.singletonList(
+                                JsonPatch.replace(
+                                        "/child/currency",
+                                        new Node().value("USD"))),
+                        "typed child generalization"),
+                new BatchComparisonCase(
+                        canonicalRoot(
+                                orderBlue,
+                                YAML_MAPPER.readValue(
+                                        "name: Untyped Book\n"
+                                                + "orders:\n"
+                                                + "  type:\n"
+                                                + "    blueId: "
+                                                + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID
+                                                + "\n"
+                                                + "  keyType:\n"
+                                                + "    blueId: "
+                                                + BlueLanguageConstants.TEXT_TYPE_BLUE_ID
+                                                + "\n"
+                                                + "  valueType:\n"
+                                                + "    blueId: "
+                                                + orderProvider.getBlueIdByName("Open Order")
+                                                + "\n"
+                                                + "  order-a:\n"
+                                                + "    type:\n"
+                                                + "      blueId: "
+                                                + orderProvider.getBlueIdByName("Open Order")
+                                                + "\n"
+                                                + "    status: open",
+                                        Node.class)),
+                        orderBlue,
+                        Collections.singletonList(
+                                JsonPatch.replace(
+                                        "/orders/order-a/status",
+                                        new Node().value("closed"))),
+                        "dictionary valueType update"),
+                new BatchComparisonCase(
+                        canonicalRoot(
+                                itemBlue,
+                                YAML_MAPPER.readValue(
+                                        "name: Untyped List\n"
+                                                + "entries:\n"
+                                                + "  type:\n"
+                                                + "    blueId: "
+                                                + BlueLanguageConstants.LIST_TYPE_BLUE_ID
+                                                + "\n"
+                                                + "  itemType:\n"
+                                                + "    blueId: "
+                                                + itemProvider.getBlueIdByName("Open Item")
+                                                + "\n"
+                                                + "  items:\n"
+                                                + "    - type:\n"
+                                                + "        blueId: "
+                                                + itemProvider.getBlueIdByName("Open Item")
+                                                + "\n"
+                                                + "      status: open",
+                                        Node.class)),
+                        itemBlue,
+                        Collections.singletonList(
+                                JsonPatch.replace(
+                                        "/entries/0/status",
+                                        new Node().value("closed"))),
+                        "list itemType update"));
+
+        // when
+        List<BatchComparison> comparisons =
+                compareBatchCases(cases);
+
+        // then
+        for (BatchComparison comparison : comparisons) {
+            assertBatchMatchesSequential(comparison);
+        }
     }
 
     @Test
-    void productionGeneralizationPolicyRejectModeFailsWithoutScriptedRuntime() throws Exception {
+    void shouldVerifyProductionGeneralizationPolicyRejectModeFailsWithoutScriptedRuntime() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "price:\n" +
                 "  type:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
@@ -503,11 +680,15 @@ class DocumentProcessorGeneralizationTest {
                 new Node().properties("path", new Node().value("/price"),
                         "mode", new Node().value("reject"))))));
 
-        ProcessorFailureException failure = assertThrows(ProcessorFailureException.class,
-                () -> new DocumentProcessingRuntime(document, blue.conformanceEngine())
+        // when
+        ProcessorFailureException failure = captureFailure(
+                () -> runtime(blue, document)
                         .applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD"))));
 
-        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+        // then
+        assertEquals(ProcessorFailureException.class,
+                failure.getClass());
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure,
                 failure.errorCategory(),
                 "Unexpected category for " + failure.getMessage());
         assertEquals("EUR", document.getAsText("/price/currency"));
@@ -515,10 +696,11 @@ class DocumentProcessorGeneralizationTest {
     }
 
     @Test
-    void productionGeneralizationPolicyFloorAllowsEqualGeneratedType() throws Exception {
+    void shouldVerifyProductionGeneralizationPolicyFloorAllowsEqualGeneratedType() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "price:\n" +
                 "  type:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
@@ -526,21 +708,24 @@ class DocumentProcessorGeneralizationTest {
                 "  currency: EUR", Node.class));
         document.contracts(generalizationPolicy(new Node().items(Arrays.asList(
                 new Node().properties("path", new Node().value("/price"),
-                        "mode", new Node().value("nearest-valid"),
+                        "mode", new Node().value("nearest-valid-ancestor"),
                         "mustRemainSubtypeOf", new Node().blueId(nodeProvider.getBlueIdByName("Price")))))));
 
-        new DocumentProcessingRuntime(document, blue.conformanceEngine())
+        // when
+        runtime(blue, document)
                 .applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
 
+        // then
         assertEquals("USD", document.getAsText("/price/currency"));
         assertEquals(nodeProvider.getBlueIdByName("Price"), document.getAsNode("/price/type").getBlueId());
     }
 
     @Test
-    void productionGeneralizationPolicyFloorAllowsEqualGeneratedTypeWithSnapshotRuntime() throws Exception {
+    void shouldVerifyProductionGeneralizationPolicyFloorAllowsEqualGeneratedTypeWithSnapshotRuntime() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = snapshotBlue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "price:\n" +
                 "  type:\n" +
                 "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
@@ -548,25 +733,28 @@ class DocumentProcessorGeneralizationTest {
                 "  currency: EUR", Node.class));
         document.contracts(generalizationPolicy(new Node().items(Arrays.asList(
                 new Node().properties("path", new Node().value("/price"),
-                        "mode", new Node().value("nearest-valid"),
+                        "mode", new Node().value("nearest-valid-ancestor"),
                         "mustRemainSubtypeOf", new Node().blueId(nodeProvider.getBlueIdByName("Price")))))));
 
+        // when
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(document);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(snapshot,
                 blue.conformanceEngine(),
                 snapshotManager(blue));
         runtime.applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
 
+        // then
         assertEquals("USD", runtime.document().getAsText("/price/currency"));
         assertEquals(nodeProvider.getBlueIdByName("Price"), runtime.document().getAsNode("/price/type").getBlueId());
         assertNotNull(runtime.snapshot());
     }
 
     @Test
-    void productionGeneralizationPolicyFloorRejectsOvergeneralizationWithoutScriptedRuntime() throws Exception {
+    void shouldVerifyProductionGeneralizationPolicyFloorRejectsOvergeneralizationWithoutScriptedRuntime() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = payNoteProvider();
         Blue blue = snapshotBlue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("EUBankTransferPayNote") + "\n" +
                 "paymentKind: bank-transfer\n" +
@@ -574,14 +762,18 @@ class DocumentProcessorGeneralizationTest {
                 "amount: 10", Node.class));
         document.contracts(generalizationPolicy(new Node().items(Arrays.asList(
                 new Node().properties("path", new Node().value("/"),
-                        "mode", new Node().value("nearest-valid"),
+                        "mode", new Node().value("nearest-valid-ancestor"),
                         "mustRemainSubtypeOf", new Node().blueId(nodeProvider.getBlueIdByName("BankTransferPayNote")))))));
 
-        ProcessorFailureException failure = assertThrows(ProcessorFailureException.class,
-                () -> new DocumentProcessingRuntime(document, blue.conformanceEngine())
+        // when
+        ProcessorFailureException failure = captureFailure(
+                () -> runtime(blue, document)
                         .applyPatch("/", JsonPatch.replace("/paymentKind", new Node().value("card"))));
 
-        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+        // then
+        assertEquals(ProcessorFailureException.class,
+                failure.getClass());
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure,
                 failure.errorCategory(),
                 "Unexpected category for " + failure.getMessage());
         assertEquals("bank-transfer", document.getAsText("/paymentKind"));
@@ -589,10 +781,11 @@ class DocumentProcessorGeneralizationTest {
     }
 
     @Test
-    void productionGeneralizationPolicyUsesScopeLocalMarker() throws Exception {
+    void shouldVerifyProductionGeneralizationPolicyUsesScopeLocalMarker() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = snapshotBlue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "child:\n" +
                 "  contracts:\n" +
                 "    generalization:\n" +
@@ -607,11 +800,15 @@ class DocumentProcessorGeneralizationTest {
                 "    amount: 150\n" +
                 "    currency: EUR", Node.class));
 
-        ProcessorFailureException failure = assertThrows(ProcessorFailureException.class,
-                () -> new DocumentProcessingRuntime(document, blue.conformanceEngine())
+        // when
+        ProcessorFailureException failure = captureFailure(
+                () -> runtime(blue, document)
                         .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD"))));
 
-        assertEquals(ProcessorErrorCategory.GeneralizationRejected,
+        // then
+        assertEquals(ProcessorFailureException.class,
+                failure.getClass());
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure,
                 failure.errorCategory(),
                 "Unexpected category for " + failure.getMessage());
         assertEquals("EUR", document.getAsText("/child/price/currency"));
@@ -620,10 +817,11 @@ class DocumentProcessorGeneralizationTest {
     }
 
     @Test
-    void productionGeneralizationPolicyRulePathIsScopeRelative() throws Exception {
+    void shouldVerifyProductionGeneralizationPolicyRulePathIsScopeRelative() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = snapshotBlue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "child:\n" +
                 "  contracts:\n" +
                 "    generalization:\n" +
@@ -631,7 +829,7 @@ class DocumentProcessorGeneralizationTest {
                 "        blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
                 "      rules:\n" +
                 "        - path: /price\n" +
-                "          mode: nearest-valid\n" +
+                "          mode: nearest-valid-ancestor\n" +
                 "          mustRemainSubtypeOf:\n" +
                 "            blueId: " + nodeProvider.getBlueIdByName("Price") + "\n" +
                 "  price:\n" +
@@ -640,18 +838,21 @@ class DocumentProcessorGeneralizationTest {
                 "    amount: 150\n" +
                 "    currency: EUR", Node.class));
 
-        new DocumentProcessingRuntime(document, blue.conformanceEngine())
+        // when
+        runtime(blue, document)
                 .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD")));
 
+        // then
         assertEquals("USD", document.getAsText("/child/price/currency"));
         assertEquals(nodeProvider.getBlueIdByName("Price"), document.getAsNode("/child/price/type").getBlueId());
     }
 
     @Test
-    void rootGeneralizationPolicyDoesNotAccidentallyOverrideChildPolicyUnlessSpecified() throws Exception {
+    void shouldVerifyRootGeneralizationPolicyDoesNotAccidentallyOverrideChildPolicyUnlessSpecified() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = snapshotBlue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
                 "contracts:\n" +
                 "  generalization:\n" +
                 "    type:\n" +
@@ -666,15 +867,18 @@ class DocumentProcessorGeneralizationTest {
                 "    amount: 150\n" +
                 "    currency: EUR", Node.class));
 
-        new DocumentProcessingRuntime(document, blue.conformanceEngine())
+        // when
+        runtime(blue, document)
                 .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD")));
 
+        // then
         assertEquals("USD", document.getAsText("/child/price/currency"));
         assertEquals(nodeProvider.getBlueIdByName("Price"), document.getAsNode("/child/price/type").getBlueId());
     }
 
     @Test
-    void embeddedChildPatchCannotGeneralizeParentWithoutScriptedRuntime() throws Exception {
+    void shouldVerifyEmbeddedChildPatchCannotGeneralizeParentWithoutScriptedRuntime() throws Exception {
+        // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
         Blue blue = ProcessorTestSupport.blue(nodeProvider);
         Node document = YAML_MAPPER.readValue(
@@ -689,15 +893,20 @@ class DocumentProcessorGeneralizationTest {
                 "    amount: 150\n" +
                 "    currency: EUR", Node.class);
 
-        ProcessorFailureException failure = assertThrows(ProcessorFailureException.class,
+        // when
+        ProcessorFailureException failure = captureFailure(
                 () -> new DocumentProcessingRuntime(document,
                         blue.conformanceEngine(),
                         parentGeneralizationOverride(),
-                        null,
+                        snapshotManager(blue),
                         null)
                         .applyPatch("/child", JsonPatch.replace("/child/price/currency", new Node().value("USD"))));
 
-        assertEquals(ProcessorErrorCategory.BoundaryViolation, failure.errorCategory());
+        // then
+        assertEquals(ProcessorFailureException.class,
+                failure.getClass());
+        assertEquals(ProcessorErrorCategory.PatchBoundaryViolation,
+                failure.errorCategory());
         assertEquals("EUR", document.getAsText("/child/price/currency"));
         assertEquals(nodeProvider.getBlueIdByName("Price in EUR"),
                 document.getAsNode("/child/price/type").getBlueId());
@@ -740,6 +949,24 @@ class DocumentProcessorGeneralizationTest {
                 new Node()
                         .type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
                         .properties("rules", rules));
+    }
+
+    private Node canonicalRoot(Blue blue, Node source) {
+        /*
+         * The runtime owns resolution. Passing a minimized or merged synthetic
+         * root here would lose selected fixed values and would violate the
+         * PROCESS boundary's exact-document rule.
+         */
+        return source;
+    }
+
+    private DocumentProcessingRuntime runtime(Blue blue, Node document) {
+        if (blue == null) {
+            return new DocumentProcessingRuntime(document);
+        }
+        return new DocumentProcessingRuntime(document,
+                blue.conformanceEngine(),
+                snapshotManager(blue));
     }
 
     private Blue snapshotBlue(BasicNodeProvider nodeProvider) {
@@ -812,26 +1039,58 @@ class DocumentProcessorGeneralizationTest {
         };
     }
 
-    private void assertBatchMatchesSequential(Node initial,
-                                              ConformanceEngine conformanceEngine,
-                                              List<JsonPatch> patches,
-                                              String label) {
-        Node batchDocument = initial.clone();
-        Node sequentialDocument = initial.clone();
-        List<DocumentProcessingRuntime.DocumentUpdateData> batchUpdates =
-                new DocumentProcessingRuntime(batchDocument, conformanceEngine).applyPatches("/", patches);
-        List<DocumentProcessingRuntime.DocumentUpdateData> sequentialUpdates =
-                applySequential(sequentialDocument, conformanceEngine, patches);
-
-        assertEquivalentDocuments(sequentialDocument, batchDocument, label);
-        assertEquals(updatePaths(sequentialUpdates), updatePaths(batchUpdates), label + " update paths");
+    private List<BatchComparison> compareBatchCases(
+            List<BatchComparisonCase> cases) {
+        List<BatchComparison> comparisons =
+                new ArrayList<>(cases.size());
+        for (BatchComparisonCase comparisonCase : cases) {
+            comparisons.add(compareBatchToSequential(
+                    comparisonCase));
+        }
+        return comparisons;
     }
 
-    private List<DocumentProcessingRuntime.DocumentUpdateData> applySequential(Node document,
-                                                                               ConformanceEngine conformanceEngine,
+    private BatchComparison compareBatchToSequential(
+            BatchComparisonCase comparisonCase) {
+        Node batchDocument =
+                comparisonCase.initial.clone();
+        Node sequentialDocument =
+                comparisonCase.initial.clone();
+        List<DocumentUpdateData> batchUpdates =
+                runtime(comparisonCase.blue, batchDocument)
+                        .applyPatches(
+                                "/",
+                                comparisonCase.patches);
+        List<DocumentUpdateData> sequentialUpdates =
+                applySequential(
+                        sequentialDocument,
+                        comparisonCase.blue,
+                        comparisonCase.patches);
+        return new BatchComparison(
+                comparisonCase.label,
+                batchDocument,
+                sequentialDocument,
+                batchUpdates,
+                sequentialUpdates);
+    }
+
+    private void assertBatchMatchesSequential(
+            BatchComparison comparison) {
+        assertEquivalentDocuments(
+                comparison.sequentialDocument,
+                comparison.batchDocument,
+                comparison.label);
+        assertEquals(
+                updatePaths(comparison.sequentialUpdates),
+                updatePaths(comparison.batchUpdates),
+                comparison.label + " update paths");
+    }
+
+    private List<DocumentUpdateData> applySequential(Node document,
+                                                                               Blue blue,
                                                                                List<JsonPatch> patches) {
-        DocumentProcessingRuntime sequential = new DocumentProcessingRuntime(document, conformanceEngine);
-        List<DocumentProcessingRuntime.DocumentUpdateData> updates = new ArrayList<>();
+        DocumentProcessingRuntime sequential = runtime(blue, document);
+        List<DocumentUpdateData> updates = new ArrayList<>();
         for (JsonPatch patch : patches) {
             updates.add(sequential.applyPatch("/", patch));
         }
@@ -845,16 +1104,59 @@ class DocumentProcessorGeneralizationTest {
     }
 
     private String runtimeDocumentBlueId(Node node) {
-        return BlueIdCalculator.INSTANCE.calculate(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
+        return DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
     }
 
-    private List<String> updatePaths(List<DocumentProcessingRuntime.DocumentUpdateData> updates) {
+    private List<String> updatePaths(List<DocumentUpdateData> updates) {
         List<String> paths = new ArrayList<>();
-        for (DocumentProcessingRuntime.DocumentUpdateData update : updates) {
+        for (DocumentUpdateData update : updates) {
             assertNotNull(update);
             paths.add(update.path());
         }
         return paths;
+    }
+
+    private static final class BatchComparisonCase {
+        private final Node initial;
+        private final Blue blue;
+        private final List<JsonPatch> patches;
+        private final String label;
+
+        private BatchComparisonCase(
+                Node initial,
+                Blue blue,
+                List<JsonPatch> patches,
+                String label) {
+            this.initial = initial;
+            this.blue = blue;
+            this.patches = patches;
+            this.label = label;
+        }
+    }
+
+    private static final class BatchComparison {
+        private final String label;
+        private final Node batchDocument;
+        private final Node sequentialDocument;
+        private final List<DocumentUpdateData>
+                batchUpdates;
+        private final List<DocumentUpdateData>
+                sequentialUpdates;
+
+        private BatchComparison(
+                String label,
+                Node batchDocument,
+                Node sequentialDocument,
+                List<DocumentUpdateData>
+                        batchUpdates,
+                List<DocumentUpdateData>
+                        sequentialUpdates) {
+            this.label = label;
+            this.batchDocument = batchDocument;
+            this.sequentialDocument = sequentialDocument;
+            this.batchUpdates = batchUpdates;
+            this.sequentialUpdates = sequentialUpdates;
+        }
     }
 
     private Node listDocument() {

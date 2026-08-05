@@ -1,14 +1,13 @@
 package blue.language.merge;
 
 import blue.language.Blue;
-import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
-import java.util.Collections;
+import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,6 +22,7 @@ public class MergerIntegrationTest {
 
     @Test
     public void shouldBeIdempotentWhenResolvingTheSameNodeTwice() {
+        // given
         nodeProvider.addSingleDocs(
                 "name: Document Anchor\n" +
                 "template:\n" +
@@ -54,24 +54,50 @@ public class MergerIntegrationTest {
         Node myEntry = nodeProvider.getNodeByName("My Entry");
 
         Node resolvedNode = blue.resolve(myEntry);
+        // when
         Node resolvedNode2 = blue.resolve(resolvedNode);
 
+        // then
         assertEquals(blue.nodeToJson(resolvedNode), blue.nodeToJson(resolvedNode2));
     }
 
     @Test
-    public void remainsExtensibleForBinaryCompatibility() {
-        assertFalse(Modifier.isFinal(Merger.class.getModifiers()));
+    public void shouldExposeMergingProcessorAsItsExtensionPoint() {
+        // given
+        Class<Merger> mergerType = Merger.class;
 
-        Merger merger = new CompatibleMerger();
-        assertNotNull(merger);
+        // when
+        boolean isFinal = Modifier.isFinal(mergerType.getModifiers());
+
+        // then
+        assertTrue(isFinal);
     }
 
-    private static final class CompatibleMerger extends Merger {
+    @Test
+    public void shouldQuotedCanonicalIntegerRefinesThroughANominalIntegerSubtype() {
+        // given
+        nodeProvider.addSingleDocs(
+                "name: Order Number\n" +
+                "type: Integer");
+        String orderNumberBlueId =
+                nodeProvider.getBlueIdByName("Order Number");
+        Blue blue = new Blue(nodeProvider);
+        Node source = blue.yamlToNode(
+                "type:\n" +
+                "  orderNumber:\n" +
+                "    type:\n" +
+                "      blueId: " + orderNumberBlueId + "\n" +
+                "orderNumber: \"9007199254740992\"");
 
-        private CompatibleMerger() {
-            super(new SequentialMergingProcessor(Collections.emptyList()), blueId -> Collections.emptyList());
-        }
+        // when
+        Node resolved = blue.resolve(source);
+        Node orderNumber =
+                resolved.getProperties().get("orderNumber");
+
+        // then
+        assertEquals(new BigInteger("9007199254740992"),
+                orderNumber.getValue());
+        assertEquals(orderNumberBlueId,
+                orderNumber.getType().getBlueId());
     }
 }
-

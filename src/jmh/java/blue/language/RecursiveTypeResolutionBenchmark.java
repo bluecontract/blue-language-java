@@ -1,15 +1,15 @@
 package blue.language;
 
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.Properties;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.model.wire.BlueLanguageConstants;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 
 /**
  * Warm-cache resolution benchmarks for ordinary and recursive type graphs.
@@ -28,7 +28,7 @@ public class RecursiveTypeResolutionBenchmark {
     public void setUp() {
         BasicNodeProvider acyclicProvider = new BasicNodeProvider();
         Node leaf = new Node().name("Benchmark Leaf")
-                .properties("content", new Node().type(reference(Properties.TEXT_TYPE_BLUE_ID)));
+                .properties("content", new Node().type(reference(BlueLanguageConstants.TEXT_TYPE_BLUE_ID)));
         acyclicProvider.addSingleNodes(leaf);
         Node root = new Node().name("Benchmark Root")
                 .properties("child", new Node().type(

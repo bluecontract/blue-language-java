@@ -1,44 +1,53 @@
 package blue.language.processor;
 
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.contracts.ApplyBatchPatchContractProcessor;
 import blue.language.processor.model.TerminateScope;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
 
+import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DocumentProcessorCapabilityTest {
 
     @Test
-    void initializeDocumentFailsWithCapabilityFailureWhenProcessorMissing() {
+    void shouldFailInitializationWithCapabilityFailureWhenProcessorIsMissing() {
+        // given
         String yaml = "name: Doc\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  handler:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
-
         Blue blue = ProcessorTestSupport.blue();
         Node document = blue.yamlToNode(yaml);
         String originalJson = blue.nodeToJson(document.clone());
 
-        DocumentProcessingResult result = blue.initializeDocument(document);
-        assertTrue(result.capabilityFailure());
+        // when
+        DocumentProcessingResult result =
+                blue.initializeDocument(document);
+
+        // then
+        assertTrue(isCapabilityFailure(result));
         assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(originalJson, blue.nodeToJson(result.document()));
-        assertNotNull(result.failureReason());
+        assertNotNull(diagnosticMessage(result));
     }
 
     @Test
-    void initializeDocumentFailsWithCapabilityFailureWhenContractHasNoType() {
+    void shouldFailInitializationWithCapabilityFailureWhenContractHasNoType() {
+        // given
         String yaml = "name: Doc\n" +
                 "contracts:\n" +
                 "  unclear:\n" +
@@ -48,45 +57,53 @@ class DocumentProcessorCapabilityTest {
         Node document = blue.yamlToNode(yaml);
         String originalJson = blue.nodeToJson(document.clone());
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(document);
 
-        assertTrue(result.capabilityFailure());
+        // then
+        assertTrue(isCapabilityFailure(result));
         assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
+        assertTrue(result.events().isEmpty());
         assertEquals(originalJson, blue.nodeToJson(result.document()));
-        assertTrue(result.failureReason().contains("must declare a type"));
+        assertTrue(diagnosticMessage(result).contains("must declare a type"));
     }
 
     @Test
-    void initializeDocumentFailsWithCapabilityFailureWhenContractsIsNotObjectMap() {
+    void shouldFailInitializationWithCapabilityFailureWhenContractsIsNotObjectMap() {
+        // given
         String yaml = "name: Doc\n" +
                 "contracts:\n" +
                 "  - bad\n";
-
         Blue blue = ProcessorTestSupport.blue();
-        assertThrows(RuntimeException.class, () -> blue.yamlToNode(yaml));
+
+        // when
+        RuntimeException failure =
+                captureFailure(() -> blue.yamlToNode(yaml));
+
+        // then
+        assertNotNull(failure);
     }
 
     @Test
-    void processDocumentFailsWithCapabilityFailureWhenNewUnsupportedContractAppears() {
+    void shouldKeepNoMatchForNonparticipatingUnsupportedContract() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new blue.language.processor.contracts.SetPropertyContractProcessor());
-
+        DocumentProcessorExactFeederSupport
+                .installExactEmptyFeeder(blue);
         String baseYaml = "name: Base\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  handler:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
-
         Node initialized = blue.initializeDocument(blue.yamlToNode(baseYaml)).document().clone();
         Node contracts = initialized.getContracts();
-        assertNotNull(contracts);
 
         TerminateScope scope = new TerminateScope();
         scope.setChannelKey("lifecycleChannel");
@@ -96,51 +113,65 @@ class DocumentProcessorCapabilityTest {
         contracts.properties("unsupportedHandler", unsupported);
 
         Node event = new Node().value("event");
-        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        String input = initialized.toString();
 
-        assertTrue(result.capabilityFailure());
-        assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
-        Node resultDoc = result.document();
-        assertNotNull(resultDoc);
-        Node resultContracts = resultDoc.getContracts();
-        assertNotNull(resultContracts);
-        assertNotNull(resultContracts.getProperties().get("unsupportedHandler"));
-        assertNotNull(result.failureReason());
+        // when
+        DocumentProcessingResult result =
+                blue.processDocument(initialized, event);
+
+        // then
+        assertNotNull(contracts);
+        assertEquals(ProcessorStatus.NO_MATCH,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(input, result.document().toString());
+        assertNotNull(result.document().getContracts()
+                .getProperties().get("unsupportedHandler"));
     }
 
     @Test
-    void processDocumentFailsWithCapabilityFailureWhenNewTypelessContractAppears() {
+    void shouldKeepNoMatchForNonparticipatingTypelessContract() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new blue.language.processor.contracts.SetPropertyContractProcessor());
-
+        DocumentProcessorExactFeederSupport
+                .installExactEmptyFeeder(blue);
         String baseYaml = "name: Base\n" +
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: 2DXGQUiQBQ6CT89jwAsTAXaEPhLgiSXhKCGh9Q7Hv3MQ\n" +
+                "      blueId: " + RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL + "\n" +
                 "  handler:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
-
         Node initialized = blue.initializeDocument(blue.yamlToNode(baseYaml)).document().clone();
         Node contracts = initialized.getContracts();
-        assertNotNull(contracts);
         contracts.properties("unclear", new Node().properties("property", new Node().value("value")));
 
-        DocumentProcessingResult result = blue.processDocument(initialized, new Node().value("event"));
+        String input = initialized.toString();
 
-        assertTrue(result.capabilityFailure());
-        assertEquals(0L, result.totalGas());
-        assertTrue(result.triggeredEvents().isEmpty());
-        assertTrue(result.failureReason().contains("must declare a type"));
+        // when
+        DocumentProcessingResult result =
+                blue.processDocument(
+                        initialized,
+                        new Node().value("event"));
+
+        // then
+        assertNotNull(contracts);
+        assertEquals(ProcessorStatus.NO_MATCH,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.events().isEmpty());
+        assertEquals(input, result.document().toString());
     }
 
     @Test
-    void unsupportedContractAddedByPatchCausesRuntimeFatalNotCapabilityFailure() {
+    void shouldRollBackAsRuntimeFatalWhenPatchAddsUnsupportedContract() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         blue.registerContractProcessor(new ApplyBatchPatchContractProcessor());
 
@@ -152,22 +183,37 @@ class DocumentProcessorCapabilityTest {
                 "  addUnsupported:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
-                "      blueId: AjWAjR4NcDYJHMhkAkX9DZKqGbHs8vkCRpjXiHRkLPMw\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.APPLY_BATCH_PATCH + "\n" +
                 "    addUnsupportedContract: true\n";
 
-        DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
+        // when
+        Node input = blue.yamlToNode(yaml);
+        String exactInput = input.toString();
+        DocumentProcessingResult result =
+                blue.initializeDocument(input);
 
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        // then
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
+        assertEquals(ProcessorStatus.RUNTIME_FATAL,
+                result.status());
+        assertFalse(result.commits());
         assertTrue(result.totalGas() > 0L);
-        Node contracts = result.document().getContracts();
-        assertNotNull(contracts);
-        Node terminated = contracts.getProperties().get("terminated");
-        assertNotNull(terminated);
-        assertEquals("fatal", terminated.getProperties().get("cause").getValue());
+        assertTrue(result.events().isEmpty());
+        assertEquals(exactInput,
+                result.document().toString(),
+                "the complete initialization invocation must roll back");
+        assertFalse(result.document().getContracts()
+                .getProperties().containsKey("initialized"));
+        assertFalse(result.document().getContracts()
+                .getProperties().containsKey("terminated"));
+        assertFalse(result.document().getContracts()
+                .getProperties().containsKey(
+                        "runtimeUnsupported"));
     }
 
     @Test
-    void unsupportedContractInsidePreExistingTerminatedEmbeddedScopeIsIgnored() {
+    void shouldIgnoreUnsupportedContractInsidePreExistingTerminatedEmbeddedScope() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
 
         String yaml = "name: Root\n" +
@@ -181,7 +227,7 @@ class DocumentProcessorCapabilityTest {
                 "    unsupported:\n" +
                 "      channel: missing\n" +
                 "      type:\n" +
-                "        blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
@@ -189,18 +235,28 @@ class DocumentProcessorCapabilityTest {
                 "    paths:\n" +
                 "      - /child\n";
 
+        // when
         Node document = blue.yamlToNode(yaml);
-        DocumentProcessingResult result = blue.processDocument(document, new Node().value("event"));
-
-        assertFalse(result.capabilityFailure(), result.failureReason());
-        assertTrue(result.totalGas() > 0L);
+        String input = document.toString();
+        DocumentProcessingResult result =
+                blue.processDocument(
+                        document,
+                        new Node().value("event"));
         Node childContracts = result.document().getProperties().get("child").getContracts();
+
+        // then
+        assertEquals(ProcessorStatus.NO_MATCH,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.totalGas() > 0L);
+        assertEquals(input, result.document().toString());
         assertNotNull(childContracts.getProperties().get("terminated"));
         assertNotNull(childContracts.getProperties().get("unsupported"));
     }
 
     @Test
-    void invalidPreExistingTerminatedMarkerFailsInitialMustUnderstand() {
+    void shouldFailInitialMustUnderstandForInvalidPreExistingTerminatedMarker() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
 
         String yaml = "name: Root\n" +
@@ -212,13 +268,18 @@ class DocumentProcessorCapabilityTest {
                 "  unsupported:\n" +
                 "    channel: missing\n" +
                 "    type:\n" +
-                "      blueId: AZNvNsADqpp7ZwAgpQyaQSz4cq3o3RMHZtB3sgDfudD4\n";
+                "      blueId: " + ProcessorTestTypeBlueIds.TERMINATE_SCOPE + "\n";
 
+        // when
         Node document = blue.yamlToNode(yaml);
         DocumentProcessingResult result = blue.processDocument(document, new Node().value("event"));
 
-        assertTrue(result.capabilityFailure());
-        assertEquals(0L, result.totalGas());
-        assertTrue(result.failureReason().contains("terminated"));
+        // then
+        assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                result.status());
+        assertFalse(result.commits());
+        assertTrue(result.totalGas() > 0L);
+        assertTrue(result.events().isEmpty());
+        assertTrue(diagnosticMessage(result).contains("terminated"));
     }
 }

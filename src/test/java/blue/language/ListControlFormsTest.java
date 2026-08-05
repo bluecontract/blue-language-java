@@ -1,23 +1,38 @@
 package blue.language;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
+import blue.language.api.BlueCachePolicy;
+import blue.language.api.BlueCacheStats;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.api.BlueOperationLimits;
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.api.BlueViewPath;
+import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.provider.NodeProvider;
+
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
-import static blue.language.utils.Properties.LIST_MERGE_POLICY_APPEND_ONLY;
-import static blue.language.utils.Properties.LIST_TYPE_BLUE_ID;
-import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
+import static blue.language.processor.FailureCapture.captureFailure;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_MERGE_POLICY_APPEND_ONLY;
+import static blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID;
+import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class ListControlFormsTest {
 
     @Test
-    void appendOnlyListUsesPreviousAnchorForAppends() {
+    void shouldUsePreviousAnchorForAppendOnlyListAppends() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -28,7 +43,7 @@ class ListControlFormsTest {
                 "  - A\n" +
                 "  - B");
         Node base = nodeProvider.getNodeByName("Base");
-        String baseItemsBlueId = BlueIdCalculator.calculateBlueId(base.getItems());
+        String baseItemsBlueId = DirectBlueIdCalculator.calculateBlueId(base.getItems());
 
         nodeProvider.addSingleDocs(
                 "name: Derived\n" +
@@ -39,8 +54,10 @@ class ListControlFormsTest {
                 "      blueId: " + baseItemsBlueId + "\n" +
                 "  - C");
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
 
+        // then
         assertEquals(LIST_MERGE_POLICY_APPEND_ONLY, resolved.getMergePolicy());
         assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
@@ -49,13 +66,14 @@ class ListControlFormsTest {
     }
 
     @Test
-    void standaloneListCanUsePreviousAnchorAsItsBase() {
+    void shouldAllowStandaloneListToUsePreviousAnchorAsBase() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Node previous = new Blue(nodeProvider).yamlToNode(
                 "items:\n" +
                 "  - A\n" +
                 "  - B");
-        String previousBlueId = BlueIdCalculator.calculateBlueId(previous.getItems());
+        String previousBlueId = DirectBlueIdCalculator.calculateBlueId(previous.getItems());
         nodeProvider.addListAndItsItems(previous.getItems());
 
         Node next = YAML_MAPPER.readValue(
@@ -67,8 +85,10 @@ class ListControlFormsTest {
                 "      blueId: " + previousBlueId + "\n" +
                 "  - C", Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(next);
 
+        // then
         assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
                 resolved.getItems().get(1).getValue(),
@@ -76,9 +96,10 @@ class ListControlFormsTest {
     }
 
     @Test
-    void previousAnchorMustMatchInheritedList() {
+    void shouldRequirePreviousAnchorToMatchInheritedList() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
-        String wrongButValidBlueId = BlueIdCalculator.calculateBlueId(new Node().value("stale"));
+        String wrongButValidBlueId = DirectBlueIdCalculator.calculateBlueId(new Node().value("stale"));
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
                 "type:\n" +
@@ -94,12 +115,17 @@ class ListControlFormsTest {
                 "      blueId: " + wrongButValidBlueId + "\n" +
                 "  - B");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived")));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void appendOnlyListRejectsPositionalOverlay() {
+    void shouldRejectPositionalOverlayForAppendOnlyList() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -116,12 +142,16 @@ class ListControlFormsTest {
                 "  - $pos: 0\n" +
                 "    value: B", Node.class);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Blue(nodeProvider).resolve(derived));
+        // when
+        Throwable failure = captureFailure(() -> new Blue(nodeProvider).resolve(derived));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void appendOnlyListRejectsChangedInheritedPrefixWithoutPreviousAnchor() {
+    void shouldAppendNormalItemsWithoutRequiringPreviousAnchor() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -137,12 +167,19 @@ class ListControlFormsTest {
                 "items:\n" +
                 "  - B");
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived")));
+        // when
+        Node resolved = new Blue(nodeProvider)
+                .resolve(nodeProvider.getNodeByName("Derived"));
+
+        // then
+        assertEquals(Arrays.asList("A", "B"), Arrays.asList(
+                resolved.getItems().get(0).getValue(),
+                resolved.getItems().get(1).getValue()));
     }
 
     @Test
-    void inheritedMergePolicyCannotBeChangedBySubtype() {
+    void shouldPreventSubtypeFromChangingInheritedMergePolicy() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -159,12 +196,17 @@ class ListControlFormsTest {
                 "items:\n" +
                 "  - A");
 
-        assertThrows(IllegalArgumentException.class,
+        // when
+        Throwable failure = captureFailure(
                 () -> new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived")));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void positionalListOverlaysInheritedIndexAndAppendsNormalItems() {
+    void shouldOverlayInheritedIndexAndAppendNormalItemsForPositionalList() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -182,8 +224,10 @@ class ListControlFormsTest {
                 "    value: A\n" +
                 "  - C", Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
+        // then
         assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
                 resolved.getItems().get(1).getValue(),
@@ -191,7 +235,8 @@ class ListControlFormsTest {
     }
 
     @Test
-    void positionalListWithoutInheritedItemsAcceptsContiguousPositions() {
+    void shouldAcceptContiguousPositionsForPositionalListWithoutInheritedItems() {
+        // given
         Node node = YAML_MAPPER.readValue(
                 "type:\n" +
                 "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
@@ -202,8 +247,10 @@ class ListControlFormsTest {
                 "    value: B\n" +
                 "  - C", Node.class);
 
+        // when
         Node resolved = new Blue().resolve(node);
 
+        // then
         assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
                 resolved.getItems().get(1).getValue(),
@@ -211,7 +258,8 @@ class ListControlFormsTest {
     }
 
     @Test
-    void positionalListWithoutInheritedItemsRejectsPositionGaps() {
+    void shouldRejectPositionGapsForPositionalListWithoutInheritedItems() {
+        // given
         Node node = YAML_MAPPER.readValue(
                 "type:\n" +
                 "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
@@ -219,11 +267,16 @@ class ListControlFormsTest {
                 "  - $pos: 1\n" +
                 "    value: B", Node.class);
 
-        assertThrows(IllegalArgumentException.class, () -> new Blue().resolve(node));
+        // when
+        Throwable failure = captureFailure(() -> new Blue().resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void positionalObjectOverlayReplacesEmptyPlaceholder() {
+    void shouldReplaceEmptyPlaceholderWithPositionalObjectOverlay() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -240,27 +293,38 @@ class ListControlFormsTest {
                 "    name: Real item\n" +
                 "    x: A", Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(derived);
         Node item = resolved.getItems().get(0);
 
+        // then
         assertEquals("Real item", item.getName());
         assertEquals("A", item.getProperties().get("x").getValue());
         assertFalse(item.getProperties().containsKey("$empty"));
     }
 
     @Test
-    void malformedEmptyPlaceholderIsRejected() {
+    void shouldRejectMalformedEmptyPlaceholder() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
-        assertThrows(IllegalArgumentException.class, () -> nodeProvider.addSingleDocs(
+        String malformedPlaceholder =
                 "name: Base\n" +
                 "type:\n" +
                 "  blueId: " + LIST_TYPE_BLUE_ID + "\n" +
                 "items:\n" +
-                "  - $empty: false"));
+                "  - $empty: false";
+
+        // when
+        Throwable failure = captureFailure(
+                () -> nodeProvider.addSingleDocs(malformedPlaceholder));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void positionalOverlayCanRefineInheritedItemType() {
+    void shouldAllowPositionalOverlayToRefineInheritedItemType() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: A");
         nodeProvider.addSingleDocs(
@@ -287,13 +351,16 @@ class ListControlFormsTest {
                 "    type:\n" +
                 "      blueId: " + nodeProvider.getBlueIdByName("C"), Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
+        // then
         assertEquals("C", resolved.getItems().get(0).getType().getName());
     }
 
     @Test
-    void positionalListCanOverlayNonZeroInheritedIndex() {
+    void shouldAllowPositionalListToOverlayNonZeroInheritedIndex() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -310,15 +377,18 @@ class ListControlFormsTest {
                 "  - $pos: 1\n" +
                 "    value: B", Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
+        // then
         assertEquals(Arrays.asList("A", "B"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
                 resolved.getItems().get(1).getValue()));
     }
 
     @Test
-    void previousAnchorCanBeCombinedWithPositionalOverlayAndAppend() {
+    void shouldCombinePreviousAnchorWithPositionalOverlayAndAppend() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -328,7 +398,7 @@ class ListControlFormsTest {
                 "  - A\n" +
                 "  - $empty: true");
         Node base = nodeProvider.getNodeByName("Base");
-        String baseItemsBlueId = BlueIdCalculator.calculateBlueId(base.getItems());
+        String baseItemsBlueId = DirectBlueIdCalculator.calculateBlueId(base.getItems());
         Node derived = YAML_MAPPER.readValue(
                 "name: Derived\n" +
                 "type:\n" +
@@ -340,8 +410,10 @@ class ListControlFormsTest {
                 "    value: B\n" +
                 "  - C", Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
+        // then
         assertEquals(Arrays.asList("A", "B", "C"), Arrays.asList(
                 resolved.getItems().get(0).getValue(),
                 resolved.getItems().get(1).getValue(),
@@ -349,17 +421,24 @@ class ListControlFormsTest {
     }
 
     @Test
-    void directListHashRejectsSparsePositionControls() {
+    void shouldRejectSparsePositionControlsDuringDirectListHashing() {
+        // given
         String sparsePosition = "items:\n" +
                 "  - $pos: 1\n" +
                 "    value: B";
+        Node sparseList = YAML_MAPPER.readValue(sparsePosition, Node.class);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> BlueIdCalculator.calculateBlueId(YAML_MAPPER.readValue(sparsePosition, Node.class)));
+        // when
+        Throwable failure = captureFailure(
+                () -> DirectBlueIdCalculator.calculateBlueId(sparseList));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void positionalListRejectsDuplicatePosition() {
+    void shouldRejectDuplicatePositionInPositionalList() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -377,12 +456,16 @@ class ListControlFormsTest {
                         "  - $pos: 0\n" +
                         "    value: C", Node.class);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Blue(nodeProvider).resolve(derived));
+        // when
+        Throwable failure = captureFailure(() -> new Blue(nodeProvider).resolve(derived));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void posReplaceObjectReplacesInheritedObject() {
+    void shouldReplaceInheritedObjectWithPosReplace() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -398,14 +481,17 @@ class ListControlFormsTest {
                 "    $replace:\n" +
                 "      replacement: replaced", Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
+        // then
         assertFalse(resolved.getItems().get(0).getProperties().containsKey("inherited"));
         assertEquals("replaced", resolved.getItems().get(0).getAsText("/replacement"));
     }
 
     @Test
-    void posReplaceListReplacesInheritedList() {
+    void shouldReplaceInheritedListWithPosReplace() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -424,15 +510,18 @@ class ListControlFormsTest {
                 "        - B\n" +
                 "        - C", Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
+        // then
         assertEquals(Arrays.asList("B", "C"), Arrays.asList(
                 resolved.getItems().get(0).getItems().get(0).getValue(),
                 resolved.getItems().get(0).getItems().get(1).getValue()));
     }
 
     @Test
-    void posReplacePureReferenceReplacesInheritedReference() {
+    void shouldReplaceInheritedReferenceWithPosReplace() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: Referenced\nvalue: R");
         String referenceBlueId = nodeProvider.getBlueIdByName("Referenced");
@@ -450,14 +539,17 @@ class ListControlFormsTest {
                 "    $replace:\n" +
                 "      blueId: " + referenceBlueId, Node.class);
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
+        // then
         assertEquals(null, resolved.getItems().get(0).getValue());
         assertEquals(referenceBlueId, resolved.getItems().get(0).getBlueId());
     }
 
     @Test
-    void valueShorthandForScalarWorksAndRejectsCollectionValues() {
+    void shouldSupportScalarValueShorthandAndRejectCollectionValues() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -471,24 +563,31 @@ class ListControlFormsTest {
                 "items:\n" +
                 "  - $pos: 0\n" +
                 "    value: B", Node.class);
+        String objectValue = "items:\n" +
+                "  - $pos: 0\n" +
+                "    value:\n" +
+                "      x: y";
+        String listValue = "items:\n" +
+                "  - $pos: 0\n" +
+                "    value:\n" +
+                "      - A";
 
+        // when
         Node resolved = new Blue(nodeProvider).resolve(scalarOverlay);
+        Throwable objectValueFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(objectValue, Node.class));
+        Throwable listValueFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(listValue, Node.class));
 
+        // then
         assertEquals("B", resolved.getItems().get(0).getValue());
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "items:\n" +
-                "  - $pos: 0\n" +
-                "    value:\n" +
-                "      x: y", Node.class));
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "items:\n" +
-                "  - $pos: 0\n" +
-                "    value:\n" +
-                "      - A", Node.class));
+        assertInstanceOf(RuntimeException.class, objectValueFailure);
+        assertInstanceOf(RuntimeException.class, listValueFailure);
     }
 
     @Test
-    void mapOverlayOnScalarInheritedItemIsRejected() {
+    void shouldRejectMapOverlayOnInheritedScalarItem() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -503,27 +602,39 @@ class ListControlFormsTest {
                 "  - $pos: 0\n" +
                 "    x: B", Node.class);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Blue(nodeProvider).resolve(objectOverlay));
+        // when
+        Throwable failure = captureFailure(() -> new Blue(nodeProvider).resolve(objectOverlay));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void replaceWithoutPosAndReplaceWithSiblingOverlayAreRejected() {
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "items:\n" +
+    void shouldRejectReplaceWithoutPosAndReplaceWithSiblingOverlay() {
+        // given
+        String replaceWithoutPosition = "items:\n" +
                 "  - $replace:\n" +
-                "      value: A", Node.class));
-
-        assertThrows(RuntimeException.class, () -> YAML_MAPPER.readValue(
-                "items:\n" +
+                "      value: A";
+        String replaceWithSibling = "items:\n" +
                 "  - $pos: 0\n" +
                 "    $replace:\n" +
                 "      value: A\n" +
-                "    sibling: B", Node.class));
+                "    sibling: B";
+
+        // when
+        Throwable missingPositionFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(replaceWithoutPosition, Node.class));
+        Throwable siblingFailure = captureFailure(
+                () -> YAML_MAPPER.readValue(replaceWithSibling, Node.class));
+
+        // then
+        assertInstanceOf(RuntimeException.class, missingPositionFailure);
+        assertInstanceOf(RuntimeException.class, siblingFailure);
     }
 
     @Test
-    void positionalListRejectsOutOfRangePosition() {
+    void shouldRejectOutOfRangePositionInPositionalList() {
+        // given
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
@@ -539,17 +650,25 @@ class ListControlFormsTest {
                         "  - $pos: 1\n" +
                         "    value: B", Node.class);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new Blue(nodeProvider).resolve(derived));
+        // when
+        Throwable failure = captureFailure(() -> new Blue(nodeProvider).resolve(derived));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 
     @Test
-    void listControlsRequireListType() {
+    void shouldRequireListTypeForListControls() {
+        // given
         Node node = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - $pos: 0\n" +
                 "    value: A", Node.class);
 
-        assertThrows(IllegalArgumentException.class, () -> new Blue().resolve(node));
+        // when
+        Throwable failure = captureFailure(() -> new Blue().resolve(node));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
     }
 }

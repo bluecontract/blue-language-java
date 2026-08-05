@@ -1,0 +1,241 @@
+package blue.language.runtime;
+
+import blue.language.api.BlueCachePolicy;
+import blue.language.provider.NodeProvider;
+import blue.language.codec.BlueCodec;
+import blue.language.graph.BlueGraph;
+import blue.language.identity.BlueIdentity;
+import blue.language.matching.BlueMatching;
+import blue.language.patching.BluePatching;
+import blue.language.preprocess.BluePreprocessing;
+import blue.language.resolve.BlueResolution;
+import blue.language.merge.BlueSnapshots;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+
+/**
+ * Small immutable composition root for the focused Blue Language services.
+ *
+ * <p>Configuration is frozen by {@link Builder#build()}. The resulting
+ * runtime owns bounded caches and is safe to share subject to the thread-safety
+ * contract of the supplied provider. Closing the composition releases all
+ * runtime-owned state.</p>
+ */
+public final class BlueLanguage implements AutoCloseable {
+
+    private static final NodeProvider EMPTY_PROVIDER = blueId -> null;
+
+    private final BlueLanguageRuntime runtime;
+    private final BlueCodec codec;
+    private final BluePreprocessing preprocessing;
+    private final BlueGraph graph;
+    private final BlueResolution resolution;
+    private final BlueIdentity identity;
+    private final BlueSnapshots snapshots;
+    private final BlueMatching matching;
+    private final BluePatching patching;
+    private final LanguageProcessing processing;
+
+    private BlueLanguage(Builder builder) {
+        this.runtime = BlueLanguageRuntime.create(
+                builder.nodeProvider,
+                builder.cachePolicy,
+                builder.preprocessingAliases,
+                builder.environmentImports);
+        this.codec = runtime.codec();
+        this.preprocessing = runtime.preprocessing();
+        this.graph = runtime.graph();
+        this.resolution = runtime.resolution();
+        this.identity = runtime.identity();
+        this.snapshots = runtime.snapshots();
+        this.matching = runtime.matching();
+        this.patching = runtime.patching();
+        this.processing = runtime.processing();
+    }
+
+    /**
+     * Returns a new independently configurable runtime builder.
+     *
+     * @return mutable builder for one independently owned runtime
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Returns the stateless strict JSON/YAML codec.
+     *
+     * @return runtime codec service
+     */
+    public BlueCodec codec() {
+        return codec;
+    }
+
+    /**
+     * Returns the configured deterministic preprocessing service.
+     *
+     * @return runtime preprocessing service
+     */
+    public BluePreprocessing preprocessing() {
+        return preprocessing;
+    }
+
+    /**
+     * Returns exact expansion, collapse, and specialization operations.
+     *
+     * @return runtime graph service
+     */
+    public BlueGraph graph() {
+        return graph;
+    }
+
+    /**
+     * Returns complete and demand-limited resolution operations.
+     *
+     * @return runtime resolution service
+     */
+    public BlueResolution resolution() {
+        return resolution;
+    }
+
+    /**
+     * Returns direct, Source Document, and cyclic-set identity operations.
+     *
+     * @return runtime identity service
+     */
+    public BlueIdentity identity() {
+        return identity;
+    }
+
+    /**
+     * Returns immutable snapshot and runtime-owned cache operations.
+     *
+     * @return runtime snapshot service
+     */
+    public BlueSnapshots snapshots() {
+        return snapshots;
+    }
+
+    /**
+     * Returns mutable and immutable matching operations.
+     *
+     * @return runtime matching service
+     */
+    public BlueMatching matching() {
+        return matching;
+    }
+
+    /**
+     * Returns immutable canonical patching operations.
+     *
+     * @return runtime patching service
+     */
+    public BluePatching patching() {
+        return patching;
+    }
+
+    /**
+     * Returns the Language-only bridge for deterministic processing scopes.
+     *
+     * @return runtime processing bridge
+     */
+    public LanguageProcessing processing() {
+        return processing;
+    }
+
+    /**
+     * Returns whether terminal shutdown has released runtime-owned state.
+     *
+     * @return {@code true} after this runtime has closed
+     */
+    public boolean isClosed() {
+        return runtime.isClosed();
+    }
+
+    /** Releases bounded caches and rejects later admitted runtime operations. */
+    @Override
+    public void close() {
+        runtime.close();
+    }
+
+    /** Mutable single-threaded configuration scope for one runtime. */
+    public static final class Builder {
+        private NodeProvider nodeProvider = EMPTY_PROVIDER;
+        private BlueCachePolicy cachePolicy =
+                BlueCachePolicy.boundedDefaults();
+        private Map<String, String> preprocessingAliases =
+                Collections.emptyMap();
+        private Map<String, String> environmentImports =
+                Collections.emptyMap();
+
+        private Builder() {
+        }
+
+        /**
+         * Configures the borrowed provider used by graph operations.
+         *
+         * @param nodeProvider borrowed exact-content provider
+         * @return this builder
+         */
+        public Builder nodeProvider(NodeProvider nodeProvider) {
+            this.nodeProvider = Objects.requireNonNull(
+                    nodeProvider, "nodeProvider");
+            return this;
+        }
+
+        /**
+         * Configures immutable runtime-owned cache bounds.
+         *
+         * @param cachePolicy immutable cache bounds
+         * @return this builder
+         */
+        public Builder cachePolicy(BlueCachePolicy cachePolicy) {
+            this.cachePolicy = Objects.requireNonNull(
+                    cachePolicy, "cachePolicy");
+            return this;
+        }
+
+        /**
+         * Freezes explicit aliases used only by root {@code blue} values.
+         *
+         * @param preprocessingAliases aliases mapped to exact BlueIds
+         * @return this builder
+         */
+        public Builder preprocessingAliases(
+                Map<String, String> preprocessingAliases) {
+            this.preprocessingAliases = Collections.unmodifiableMap(
+                    new LinkedHashMap<>(Objects.requireNonNull(
+                            preprocessingAliases,
+                            "preprocessingAliases")));
+            return this;
+        }
+
+        /**
+         * Freezes host type aliases imported into root {@code blue}
+         * directives.
+         *
+         * @param environmentImports host aliases mapped to exact BlueIds
+         * @return this builder
+         */
+        public Builder environmentImports(
+                Map<String, String> environmentImports) {
+            this.environmentImports = Collections.unmodifiableMap(
+                    new LinkedHashMap<>(Objects.requireNonNull(
+                            environmentImports,
+                            "environmentImports")));
+            return this;
+        }
+
+        /**
+         * Builds an independent runtime with no process-global registration.
+         *
+         * @return independently owned runtime
+         */
+        public BlueLanguage build() {
+            return new BlueLanguage(this);
+        }
+    }
+}

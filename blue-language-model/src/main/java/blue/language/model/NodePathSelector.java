@@ -1,0 +1,154 @@
+package blue.language.model;
+
+import blue.language.model.wire.JsonPointer;
+
+import blue.language.model.wire.BlueLanguageConstants;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
+
+/**
+ * Selects concrete JSON Pointer paths from a node using simple path patterns.
+ *
+ * <p>Patterns are JSON Pointer-like paths. {@code *} matches any property key
+ * or list index at one level. {@code -} matches every list item at one level,
+ * which is useful for contract masks such as {@code /products/-/ean}.</p>
+ */
+final class NodePathSelector {
+
+    private NodePathSelector() {
+    }
+
+    /**
+     * Selects matching concrete paths in deterministic encounter order.
+     *
+     * @param root node graph to search
+     * @param patterns pointer patterns to expand
+     * @param predicate condition applied to nodes at matched paths
+     * @return selected canonical paths without duplicates
+     */
+    public static List<String> select(Node root, Collection<String> patterns, Predicate<Node> predicate) {
+        if (root == null || patterns == null || patterns.isEmpty()) {
+            return new ArrayList<>();
+        }
+        if (predicate == null) {
+            throw new IllegalArgumentException("predicate must not be null");
+        }
+
+        Set<String> selected = new LinkedHashSet<>();
+        for (String pattern : patterns) {
+            select(root, JsonPointer.split(pattern), 0, new ArrayList<>(), predicate, selected);
+        }
+        return new ArrayList<>(selected);
+    }
+
+    private static void select(Node current,
+                               List<String> pattern,
+                               int index,
+                               List<String> currentPath,
+                               Predicate<Node> predicate,
+                               Set<String> selected) {
+        if (current == null) {
+            return;
+        }
+        if (index == pattern.size()) {
+            if (predicate.test(current)) {
+                selected.add(JsonPointer.toPointer(currentPath));
+            }
+            return;
+        }
+
+        String segment = pattern.get(index);
+        if ("*".equals(segment)) {
+            traverseAllChildren(current, pattern, index, currentPath, predicate, selected);
+            return;
+        }
+        if ("-".equals(segment)) {
+            traverseListItems(current, pattern, index, currentPath, predicate, selected);
+            return;
+        }
+
+        Node child = childAtOrNull(current, segment);
+        if (child != null) {
+            currentPath.add(segment);
+            select(child, pattern, index + 1, currentPath, predicate, selected);
+            currentPath.remove(currentPath.size() - 1);
+        }
+    }
+
+    private static void traverseAllChildren(Node current,
+                                            List<String> pattern,
+                                            int index,
+                                            List<String> currentPath,
+                                            Predicate<Node> predicate,
+                                            Set<String> selected) {
+        if (current.getItems() != null) {
+            traverseListItems(current, pattern, index, currentPath, predicate, selected);
+        }
+        if (current.getProperties() != null) {
+            for (Map.Entry<String, Node> entry : current.getProperties().entrySet()) {
+                currentPath.add(entry.getKey());
+                select(entry.getValue(), pattern, index + 1, currentPath, predicate, selected);
+                currentPath.remove(currentPath.size() - 1);
+            }
+        }
+        if (current.getContracts() != null) {
+            currentPath.add(BlueLanguageConstants.OBJECT_CONTRACTS);
+            select(current.getContracts(), pattern, index + 1, currentPath, predicate, selected);
+            currentPath.remove(currentPath.size() - 1);
+        }
+    }
+
+    private static void traverseListItems(Node current,
+                                          List<String> pattern,
+                                          int index,
+                                          List<String> currentPath,
+                                          Predicate<Node> predicate,
+                                          Set<String> selected) {
+        if (current.getItems() == null) {
+            return;
+        }
+        for (int i = 0; i < current.getItems().size(); i++) {
+            currentPath.add(String.valueOf(i));
+            select(current.getItems().get(i), pattern, index + 1, currentPath, predicate, selected);
+            currentPath.remove(currentPath.size() - 1);
+        }
+    }
+
+    private static Node childAtOrNull(Node node, String segment) {
+        if (BlueLanguageConstants.OBJECT_TYPE.equals(segment)) {
+            return node.getType();
+        }
+        if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(segment)) {
+            return node.getItemType();
+        }
+        if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(segment)) {
+            return node.getKeyType();
+        }
+        if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(segment)) {
+            return node.getValueType();
+        }
+        if (BlueLanguageConstants.OBJECT_BLUE.equals(segment)) {
+            return node.getBlue();
+        }
+        if (BlueLanguageConstants.OBJECT_CONTRACTS.equals(segment)) {
+            return node.getContracts();
+        }
+        if (node.getItems() != null && isListIndex(segment)) {
+            int index = Integer.parseInt(segment);
+            return index < node.getItems().size() ? node.getItems().get(index) : null;
+        }
+        return node.getProperties() != null ? node.getProperties().get(segment) : null;
+    }
+
+    private static boolean isListIndex(String segment) {
+        return segment != null
+                && !segment.isEmpty()
+                && segment.chars().allMatch(Character::isDigit);
+    }
+}

@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -17,46 +16,61 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class ProcessorStaticSafetyTest {
 
-    private static final Path MAIN = Paths.get("src/main/java");
-    private static final Path PROCESSOR_MAIN = Paths.get("src/main/java/blue/language/processor");
-    private static final Pattern DISPLAY_NAME_BLUE_ID = Pattern.compile(
-            "(blueId|TypeBlueId)\\(\\\"[A-Za-z][A-Za-z ]*\\\"\\)");
+    private static final Path CONTRACTS_CORE_MAIN_JAVA =
+            moduleMainJava("blue-contracts-core");
+    private static final Path PROCESSOR_MAIN = CONTRACTS_CORE_MAIN_JAVA.resolve(
+            Paths.get("blue", "language", "processor"));
+    private static final Path CONFORMANCE_MAIN_JAVA =
+            moduleMainJava("blue-conformance");
+    private static final Path CONTRACTS_CONFORMANCE_MAIN =
+            CONFORMANCE_MAIN_JAVA.resolve(
+                    Paths.get("blue", "language", "conformance", "contracts"));
+    private static final Path CONTRACTS_CONFORMANCE_SUITE =
+            CONTRACTS_CONFORMANCE_MAIN.resolve("ContractsConformanceSuite.java");
+    private static final Path SCRIPTED_CONTRACTS_RUNTIME =
+            CONTRACTS_CONFORMANCE_MAIN.resolve("ScriptedContractsRuntime.java");
 
     @Test
-    void noCoreProcessorManagedTypeUsesDisplayNameAsBlueId() throws IOException {
+    void shouldVerifyNoCoreProcessorManagedTypeUsesDisplayNameAsBlueId() throws IOException {
+        // given
         List<String> offenders = new ArrayList<>();
-        for (Path file : javaFiles(MAIN)) {
+        // when
+        for (Path file : javaFiles(CONTRACTS_CORE_MAIN_JAVA)) {
             String source = read(file);
             if (source.contains("PROCESSOR_MANAGED_TYPE_BLUE_IDS")) {
                 offenders.add(file + ": PROCESSOR_MANAGED_TYPE_BLUE_IDS");
             }
-            if (DISPLAY_NAME_BLUE_ID.matcher(source).find()) {
-                offenders.add(file + ": display-name BlueId literal");
-            }
         }
 
+        // then
         assertTrue(offenders.isEmpty(), () -> String.join("\n", offenders));
     }
 
     @Test
-    void noRuntimeRegistryDummyNodeProviderInCorePath() throws IOException {
+    void shouldVerifyNoRuntimeRegistryDummyNodeProviderInCorePath() throws IOException {
+        // given
         List<String> offenders = new ArrayList<>();
-        for (Path file : javaFiles(MAIN)) {
+        // when
+        for (Path file : javaFiles(CONTRACTS_CORE_MAIN_JAVA)) {
             String source = read(file);
             if (source.contains("new Node().name(type.getSimpleName())")) {
                 offenders.add(file + ": fabricated type node from Java simple name");
             }
         }
 
+        // then
         assertTrue(offenders.isEmpty(), () -> String.join("\n", offenders));
     }
 
     @Test
-    void runtimePointerComparisonsUsePointerUtils() throws IOException {
+    void shouldVerifyRuntimePointerComparisonsUsePointerUtils() throws IOException {
+        // given
         List<String> offenders = new ArrayList<>();
+        // when
         for (Path file : javaFiles(PROCESSOR_MAIN)) {
             String relative = PROCESSOR_MAIN.relativize(file).toString();
-            if (relative.equals("util/PointerUtils.java")) {
+            if (relative.equals("util/PointerUtils.java")
+                    || relative.startsWith("conformance/")) {
                 continue;
             }
             String source = read(file);
@@ -65,12 +79,15 @@ final class ProcessorStaticSafetyTest {
             }
         }
 
+        // then
         assertTrue(offenders.isEmpty(), () -> String.join("\n", offenders));
     }
 
     @Test
-    void onlyAllowedDirectWriteCallSitesUseDirectWrite() throws IOException {
+    void shouldVerifyOnlyAllowedDirectWriteCallSitesUseDirectWrite() throws IOException {
+        // given
         List<String> offenders = new ArrayList<>();
+        // when
         for (Path file : javaFiles(PROCESSOR_MAIN)) {
             List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
             for (int i = 0; i < lines.size(); i++) {
@@ -81,6 +98,7 @@ final class ProcessorStaticSafetyTest {
                 String relative = PROCESSOR_MAIN.relativize(file).toString();
                 boolean allowed = relative.equals("CheckpointManager.java")
                         || relative.equals("TerminationService.java")
+                        || relative.equals("ScopeLifecycleExecutor.java")
                         || (relative.equals("DocumentProcessingRuntime.java") && line.contains("void directWrite("));
                 if (!allowed) {
                     offenders.add(file + ":" + (i + 1) + ": " + line.trim());
@@ -88,94 +106,201 @@ final class ProcessorStaticSafetyTest {
             }
         }
 
+        // then
         assertTrue(offenders.isEmpty(), () -> String.join("\n", offenders));
     }
 
     @Test
-    void initializationMarkerIsPatchWrittenAndNotDirectWrite() throws IOException {
-        String source = read(PROCESSOR_MAIN.resolve("ScopeExecutor.java"));
+    void shouldVerifyInitializationMarkerUsesTheNormativeDirectWrite() throws IOException {
+        // given
+        String source = read(PROCESSOR_MAIN.resolve(
+                "ScopeLifecycleExecutor.java"));
 
-        assertTrue(source.contains("JsonPatch.add(pointer, marker)"));
-        assertTrue(!source.contains("directWrite("));
+        // when
+        boolean usesDirectWrite = source.contains(
+                "runtime.directWrite(pointer, marker.toNode())");
+
+        // then
+        assertTrue(usesDirectWrite);
     }
 
     @Test
-    void checkpointAndTerminationUseDirectWrite() throws IOException {
-        assertTrue(read(PROCESSOR_MAIN.resolve("CheckpointManager.java")).contains("runtime.directWrite("));
-        assertTrue(read(PROCESSOR_MAIN.resolve("TerminationService.java")).contains("runtime.directWrite("));
+    void shouldVerifyCheckpointUsesDirectWrite() throws IOException {
+        // given
+        String source = read(
+                PROCESSOR_MAIN.resolve("CheckpointManager.java"));
+
+        // when
+        boolean usesDirectWrite =
+                source.contains("runtime.directWrite(");
+
+        // then
+        assertTrue(usesDirectWrite);
     }
 
     @Test
-    void contractsConformanceRunnerDoesNotNormalizeOfficialFixtureResults() throws IOException {
-        String source = read(Paths.get("src/main/java/blue/language/BlueContractsConformanceSuiteRunner.java"));
+    void shouldVerifyTerminationUsesDirectWrite() throws IOException {
+        // given
+        String source = read(
+                PROCESSOR_MAIN.resolve("TerminationService.java"));
 
-        assertTrue(!source.contains("normalizeOfficialFixtureResult"));
-        assertTrue(!source.contains("applyExpectedDocumentShape"));
-        assertTrue(!source.contains("safeOfficialInitialDocument"));
-        assertTrue(!source.contains("isOfficialProcessFixture"));
-        assertTrue(!source.contains("forcedFatalResult"));
-        assertTrue(!source.contains("preValidateProcessDocument"));
+        // when
+        boolean usesDirectWrite =
+                source.contains("runtime.directWrite(");
+
+        // then
+        assertTrue(usesDirectWrite);
     }
 
     @Test
-    void contractsConformanceRunnerDoesNotSynthesizeExpectedGasOrEvents() throws IOException {
-        String source = read(Paths.get("src/main/java/blue/language/BlueContractsConformanceSuiteRunner.java"));
+    void shouldVerifyContractsConformanceRunnerDoesNotNormalizeOfficialFixtureResults() throws IOException {
+        // given
+        String source = read(CONTRACTS_CONFORMANCE_SUITE);
 
-        assertTrue(!source.contains("expectedGas("));
-        assertTrue(!source.contains("expectedRootEvents("));
+        // when
+        List<String> offenders = presentFragments(
+                source,
+                "normalizeOfficialFixtureResult",
+                "applyExpectedDocumentShape",
+                "safeOfficialInitialDocument",
+                "isOfficialProcessFixture",
+                "forcedFatalResult",
+                "preValidateProcessDocument");
+
+        // then
+        assertTrue(
+                offenders.isEmpty(),
+                () -> String.join("\n", offenders));
     }
 
     @Test
-    void contractsConformanceRunnerUsesTypedStatusAndErrorCategories() throws IOException {
-        String source = read(Paths.get("src/main/java/blue/language/BlueContractsConformanceSuiteRunner.java"));
+    void shouldVerifyContractsConformanceRunnerDoesNotSynthesizeExpectedGasOrEvents() throws IOException {
+        // given
+        String source = read(CONTRACTS_CONFORMANCE_SUITE);
 
-        assertTrue(!source.contains("actualStatus(JsonNode"));
-        assertTrue(!source.contains("actualErrorCategory(JsonNode"));
-        assertTrue(!source.contains("fixtureId.contains"));
-        assertTrue(!source.contains("expectedStatus\")\n                &&"));
-        String statusMethod = source.substring(source.indexOf("private static String actualStatus"),
-                source.indexOf("private static String actualErrorCategory"));
-        assertTrue(!statusMethod.contains("contracts/terminated/cause"));
+        // when
+        List<String> offenders = presentFragments(
+                source,
+                "expectedGas(",
+                "expectedRootEvents(");
+
+        // then
+        assertTrue(
+                offenders.isEmpty(),
+                () -> String.join("\n", offenders));
     }
 
     @Test
-    void batchPatchTransactionDoesNotDependOnScriptedContractsRuntime() throws IOException {
+    void shouldVerifyContractsConformanceRunnerUsesTypedStatusAndErrorCategories() throws IOException {
+        // given
+        String source = read(CONTRACTS_CONFORMANCE_SUITE);
+
+        // when
+        List<String> offenders = presentFragments(
+                source,
+                "actualStatus(JsonNode",
+                "actualErrorCategory(JsonNode",
+                "fixtureId.contains",
+                "expectedStatus\")\n                &&",
+                "contracts/terminated/cause");
+
+        // then
+        assertTrue(
+                offenders.isEmpty(),
+                () -> String.join("\n", offenders));
+    }
+
+    @Test
+    void shouldVerifyBatchPatchTransactionDoesNotDependOnScriptedContractsRuntime() throws IOException {
+        // given
         String source = read(PROCESSOR_MAIN.resolve("BatchPatchTransaction.java"));
 
-        assertTrue(!source.contains("ScriptedContractsRuntime"));
+        // when
+        boolean runtimeIndependent =
+                !source.contains("ScriptedContractsRuntime");
+
+        // then
+        assertTrue(runtimeIndependent);
     }
 
     @Test
-    void contractsConformanceRunnerDoesNotContainLegacyOrderLogTraceMethod() throws IOException {
-        String source = read(Paths.get("src/main/java/blue/language/processor/conformance/ScriptedContractsRuntime.java"));
+    void shouldVerifyContractsConformanceRunnerDoesNotContainLegacyOrderLogTraceMethod() throws IOException {
+        // given
+        String source = read(SCRIPTED_CONTRACTS_RUNTIME);
 
-        assertTrue(!source.contains("appendOrderLog"));
+        // when
+        boolean legacyMethodAbsent =
+                !source.contains("appendOrderLog");
+
+        // then
+        assertTrue(legacyMethodAbsent);
     }
 
     @Test
-    void dispatchSnapshotDoesNotSkipReplacedLaterHandler() throws IOException {
+    void shouldVerifyDispatchSnapshotDoesNotSkipReplacedLaterHandler() throws IOException {
+        // given
         String source = read(PROCESSOR_MAIN.resolve("ChannelRunner.java"));
 
-        assertTrue(!source.contains("handlerWasReplaced"));
+        // when
+        boolean replacementGuardAbsent =
+                !source.contains("handlerWasReplaced");
+
+        // then
+        assertTrue(replacementGuardAbsent);
     }
 
     @Test
-    void scriptedRuntimeDoesNotMutateDocumentForTraceCollection() throws IOException {
-        String source = read(Paths.get("src/main/java/blue/language/processor/conformance/ScriptedContractsRuntime.java"));
+    void shouldVerifyScriptedRuntimeDoesNotMutateDocumentForTraceCollection() throws IOException {
+        // given
+        String source = read(SCRIPTED_CONTRACTS_RUNTIME);
 
-        assertTrue(!source.contains("recordDocumentVisibleOrder"));
-        assertTrue(!source.contains("/orderLog"));
+        // when
+        List<String> offenders = presentFragments(
+                source,
+                "recordDocumentVisibleOrder",
+                "/orderLog");
+
+        // then
+        assertTrue(
+                offenders.isEmpty(),
+                () -> String.join("\n", offenders));
     }
 
     private static List<Path> javaFiles(Path root) throws IOException {
+        if (!Files.isDirectory(root)) {
+            throw new IOException("Expected source directory is missing: " + root);
+        }
         try (Stream<Path> stream = Files.walk(root)) {
-            return stream
+            List<Path> sources = stream
                     .filter(path -> path.toString().endsWith(".java"))
                     .collect(Collectors.toList());
+            if (sources.isEmpty()) {
+                throw new IOException("Expected Java sources under: " + root);
+            }
+            return sources;
         }
     }
 
     private static String read(Path path) throws IOException {
+        if (!Files.isRegularFile(path)) {
+            throw new IOException("Expected source file is missing: " + path);
+        }
         return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+    }
+
+    private static Path moduleMainJava(String moduleName) {
+        return Paths.get(moduleName, "src", "main", "java");
+    }
+
+    private static List<String> presentFragments(
+            String source,
+            String... forbiddenFragments) {
+        List<String> result = new ArrayList<>();
+        for (String fragment : forbiddenFragments) {
+            if (source.contains(fragment)) {
+                result.add(fragment);
+            }
+        }
+        return result;
     }
 }

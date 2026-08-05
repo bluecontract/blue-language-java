@@ -1,8 +1,0 @@
-id: runtimeRegistryProcessEmbeddedNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: ProcessEmbedded
-registryPath: registry/blue-contracts-1.0/ProcessEmbedded.blue
-expectedBlueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q
-semanticDescriptionIdentityBearing: true

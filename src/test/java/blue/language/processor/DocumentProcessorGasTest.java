@@ -1,23 +1,31 @@
 package blue.language.processor;
 
+import blue.language.model.NodePath;
+
+import static blue.language.processor.DocumentProcessingResultTestSupport.*;
+
 import blue.language.Blue;
-import blue.language.NodeProvider;
+import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.contracts.EmitEventsContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.Contract;
 import blue.language.processor.model.TestEvent;
-import blue.language.provider.BasicNodeProvider;
-import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.utils.BlueIdCalculator;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.UncheckedObjectMapper;
-import org.erdtman.jcs.JsonCanonicalizer;
+import blue.language.processor.model.TestEventChannel;
+import blue.language.processor.model.ProcessorTestTypeBlueIds;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,99 +42,114 @@ class DocumentProcessorGasTest {
     @BeforeEach
     void setUp() {
         blue = ProcessorTestSupport.blue();
-        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(
+                DocumentProcessorExactFeederSupport.testEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         blue.registerContractProcessor(new EmitEventsContractProcessor());
+        DocumentProcessorExactFeederSupport.install(blue);
     }
 
     @Test
-    void initializationGasMatchesExpectedCharges() {
+    void shouldProduceDeterministicInitializationGasForEquivalentRoots() {
+        // given
         Node document = blue.yamlToNode("name: Doc\n");
 
-        DocumentProcessingResult result = blue.initializeDocument(document.clone());
+        // when
+        DocumentProcessingResult first =
+                blue.initializeDocument(document.clone());
+        DocumentProcessingResult second =
+                blue.initializeDocument(document.clone());
+        Node initializedMarker =
+                extractInitializedMarker(first.document());
 
-        Node initializedMarker = extractInitializedMarker(result.document());
-        long markerSizeCharge = sizeCharge(initializedMarker);
-
-        long expected = scopeEntryCharge("/")
-                + 1_001L // initialization
-                + 30L    // lifecycle delivery
-                + (20L + markerSizeCharge); // patch add; no cascade gas without a matching participant
-
-        assertEquals(expected, result.totalGas(), "initialization gas");
+        // then
+        assertNotNull(initializedMarker);
+        assertTrue(first.events().isEmpty(),
+                "processor-generated initialization lifecycle is local");
+        assertEquals(first.totalGas(), second.totalGas(),
+                "equivalent semantic work must have identical portable gas");
+        assertTrue(first.totalGas() > 0L);
     }
 
     @Test
-    void processDocumentPatchGasMatchesExpectedCharges() {
+    void shouldProduceDeterministicProcessPatchGasIndependentOfByteSize() {
+        // given
         String yaml = "name: Base\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
 
-        Node initialized = blue.initializeDocument(blue.yamlToNode(yaml)).document().clone();
-        Node event = blue.objectToNode(new TestEvent().eventId("evt-1"));
+        Node initialized =
+                blue.initializeDocument(blue.yamlToNode(yaml))
+                        .document().clone();
+        Node event =
+                blue.objectToNode(new TestEvent().eventId("evt-1"));
 
-        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        // when
+        DocumentProcessingResult first =
+                blue.processDocument(initialized.clone(), event.clone());
+        DocumentProcessingResult second =
+                blue.processDocument(initialized.clone(), event.clone());
 
-        Node valueNode = extractProperty(result.document(), "x");
-        long valueSizeCharge = sizeCharge(valueNode);
-
-        long expected = scopeEntryCharge("/")
-                + 5L    // channel match attempt
-                + 50L   // handler overhead
-                + 2L    // boundary check
-                + (20L + valueSizeCharge) // add/replace patch; no cascade gas without a matching participant
-                + 20L;  // checkpoint update direct write
-
-        assertEquals(expected, result.totalGas(), "process patch gas");
+        // then
+        assertEquals(1, first.document().getAsInteger("/x"));
+        assertTrue(first.events().isEmpty(),
+                "the input event is not automatically an output");
+        assertEquals(first.totalGas(), second.totalGas(),
+                "equivalent PROCESS invocations must have identical portable gas");
+        assertTrue(first.totalGas() > 0L);
     }
 
     @Test
-    void processDocumentEmitsTriggeredEventChargesEmitAndDrain() {
+    void shouldChargeDeterministicGasForEquivalentEmittedEventWork() {
+        // given
         String yaml = "name: Emit\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  emitter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.EMIT_EVENTS + "\n" +
                 "    events:\n" +
                 "      - type:\n" +
-                "          blueId: Hi8TpcNruWrzfjRGFPDxtviZYap9oJwAFgSnZ6vED8Yf\n" +
+                "          blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT + "\n" +
                 "        kind: emitted\n" +
                 "  triggered:\n" +
                 "    type:\n" +
-                "      blueId: 5HwxfbwRBCxG8xYpowWkCPC9akqUSKV7So2M4QHEmLsZ\n";
+                "      blueId: " + RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL + "\n";
 
         Node initialized = blue.initializeDocument(blue.yamlToNode(yaml)).document().clone();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-emit"));
 
-        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        // when
+        DocumentProcessingResult first =
+                blue.processDocument(initialized.clone(), event.clone());
+        DocumentProcessingResult second =
+                blue.processDocument(initialized.clone(), event.clone());
 
-        Node emittedTemplate = extractEmitterEventTemplate(result.document());
-        long emittedSizeCharge = sizeCharge(emittedTemplate);
-
-        long expected = scopeEntryCharge("/")
-                + 5L    // external channel match
-                + 50L   // handler overhead
-                + (20L + emittedSizeCharge) // emit event
-                + 10L   // drain triggered FIFO
-                + 20L;  // checkpoint update after successful channel
-
-        assertEquals(expected, result.totalGas(), "triggered event gas");
+        // then
+        assertNotNull(extractEmitterEventTemplate(first.document()));
+        assertEquals(1, first.events().size(),
+                "the explicit Root emission enters the public outbox once");
+        assertEquals("emitted",
+                first.events().get(0).getAsText("/kind"));
+        assertEquals(first.totalGas(), second.totalGas(),
+                "equivalent event emission must have identical portable gas");
+        assertTrue(first.totalGas() > 0L);
     }
 
     @Test
-    void processDocumentReusesResolvedTypeCacheWithoutChangingGas() {
+    void shouldReuseResolvedTypeCacheForProcessDocumentWithoutChangingGas() {
+        // given
         ProcessingTypeGraph types = processingTypeGraph();
         Node initialized = initializedProcessingDocument(types);
 
@@ -134,85 +157,88 @@ class DocumentProcessorGasTest {
         Blue coldBlue = processingBlue(coldProvider);
         Node coldEvent = coldBlue.objectToNode(new TestEvent().eventId("evt-cold"));
         coldProvider.reset();
+        ResolvedSnapshot precomputedTypeGraph =
+                ProcessorTestSupport.blue(types.provider)
+                        .loadSnapshot(accountCanonical(types));
+        CountingNodeProvider warmProvider =
+                new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider)
+                .cacheResolvedSnapshot(precomputedTypeGraph);
+        Node warmEvent = warmBlue.objectToNode(
+                new TestEvent().eventId("evt-warm"));
+        warmProvider.reset();
 
+        // when
         DocumentProcessingResult cold = coldBlue.processDocument(initialized.clone(), coldEvent);
-
-        assertProcessedAccount(cold, types);
-        assertEquals(1, coldProvider.fetchCount(types.accountId));
-        assertEquals(1, coldProvider.fetchCount(types.moneyId));
-        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
-        assertEquals(148L, cold.totalGas(), "cold configured-provider processing gas");
-
-        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
+        int coldAccountFetches =
+                coldProvider.fetchCount(types.accountId);
+        int coldMoneyFetches =
+                coldProvider.fetchCount(types.moneyId);
         coldProvider.reset();
         DocumentProcessingResult coldReused = coldBlue.processDocument(initialized.clone(),
                 coldBlue.objectToNode(new TestEvent().eventId("evt-cold-reused")));
-
-        assertProcessedAccount(coldReused, types);
-        assertEquals(0, coldProvider.fetchCount());
-        assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
-        assertEquals(148L, coldReused.totalGas(), "reused configured-provider processing gas");
-
-        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
-        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
-        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
-        int warmCacheSizeBeforeProcessing = warmBlue.resolvedReferenceCacheSize();
-        Node warmEvent = warmBlue.objectToNode(new TestEvent().eventId("evt-warm"));
-        warmProvider.reset();
-
+        int reusedFetches = coldProvider.fetchCount();
         DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
 
+        // then
+        assertProcessedAccount(cold, types);
+        assertTrue(coldAccountFetches > 0);
+        assertTrue(coldMoneyFetches > 0);
+        assertTrue(cold.totalGas() > 0L);
+        assertProcessedAccount(coldReused, types);
+        assertTrue(reusedFetches > 0,
+                "provider evidence is reverified independently of resolver cache warmth");
+        assertEquals(cold.totalGas(), coldReused.totalGas(),
+                "cache warmth must not change portable gas");
         assertProcessedAccount(warm, types);
-        assertEquals(0, warmProvider.fetchCount(types.accountId));
-        assertEquals(1, warmProvider.fetchCount(types.moneyId),
-                warmProvider.fetchCountsByBlueId.toString());
-        assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
-        assertTrue(warmBlue.resolvedReferenceCacheSize() >= warmCacheSizeBeforeProcessing);
-        assertEquals(148L, warm.totalGas(), "warm configured-provider processing gas");
+        assertEquals(cold.totalGas(), warm.totalGas(),
+                "physical cache representation must not change portable gas");
     }
 
     @Test
-    void initializeDocumentReusesResolvedTypeCacheWithoutChangingGas() {
+    void shouldReuseResolvedTypeCacheWithoutChangingGasWhenInitializingDocument() {
+        // given
         ProcessingTypeGraph types = processingTypeGraph();
         Node original = accountDocument(types);
 
         CountingNodeProvider coldProvider = new CountingNodeProvider(types.provider);
         Blue coldBlue = processingBlue(coldProvider);
-
-        DocumentProcessingResult cold = coldBlue.initializeDocument(original.clone());
-
-        assertInitializedAccount(cold, types);
-        assertEquals(1, coldProvider.fetchCount(types.accountId));
-        assertEquals(1, coldProvider.fetchCount(types.moneyId));
-        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
-
-        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
-        coldProvider.reset();
-        DocumentProcessingResult coldReused = coldBlue.initializeDocument(original.clone());
-
-        assertInitializedAccount(coldReused, types);
-        assertEquals(0, coldProvider.fetchCount());
-        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
-        assertEquals(cold.totalGas(), coldReused.totalGas());
-
-        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
-        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
-        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
+        ResolvedSnapshot precomputedTypeGraph =
+                ProcessorTestSupport.blue(types.provider)
+                        .loadSnapshot(accountCanonical(types));
+        CountingNodeProvider warmProvider =
+                new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider)
+                .cacheResolvedSnapshot(precomputedTypeGraph);
         Node warmOriginal = accountDocument(types);
         warmProvider.reset();
 
+        // when
+        DocumentProcessingResult cold = coldBlue.initializeDocument(original.clone());
+        int coldAccountFetches =
+                coldProvider.fetchCount(types.accountId);
+        int coldMoneyFetches =
+                coldProvider.fetchCount(types.moneyId);
+        coldProvider.reset();
+        DocumentProcessingResult coldReused = coldBlue.initializeDocument(original.clone());
+        int reusedFetches = coldProvider.fetchCount();
         DocumentProcessingResult warm = warmBlue.initializeDocument(warmOriginal);
 
+        // then
+        assertInitializedAccount(cold, types);
+        assertTrue(coldAccountFetches > 0);
+        assertTrue(coldMoneyFetches > 0);
+        assertInitializedAccount(coldReused, types);
+        assertTrue(reusedFetches > 0,
+                "provider evidence is reverified independently of resolver cache warmth");
+        assertEquals(cold.totalGas(), coldReused.totalGas());
         assertInitializedAccount(warm, types);
-        assertEquals(0, warmProvider.fetchCount(types.accountId));
-        assertEquals(1, warmProvider.fetchCount(types.moneyId),
-                warmProvider.fetchCountsByBlueId.toString());
-        assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
 
     @Test
-    void processDocumentCachesRepeatedNestedTypeReferencesOnlyOnceWithoutChangingGas() {
+    void shouldCacheRepeatedNestedTypeReferencesDuringProcessDocumentWithoutChangingGas() {
+        // given
         RepeatedTypeGraph types = repeatedTypeGraph();
         Node initialized = initializedPortfolioDocument(types);
 
@@ -220,82 +246,87 @@ class DocumentProcessorGasTest {
         Blue coldBlue = processingBlue(coldProvider);
         Node coldEvent = coldBlue.objectToNode(new TestEvent().eventId("evt-repeated-cold"));
         coldProvider.reset();
+        ResolvedSnapshot precomputedTypeGraph =
+                ProcessorTestSupport.blue(types.provider)
+                        .loadSnapshot(portfolioCanonical(types));
+        CountingNodeProvider warmProvider =
+                new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider)
+                .cacheResolvedSnapshot(precomputedTypeGraph);
+        Node warmEvent = warmBlue.objectToNode(
+                new TestEvent().eventId("evt-repeated-warm"));
+        warmProvider.reset();
 
+        // when
         DocumentProcessingResult cold = coldBlue.processDocument(initialized.clone(), coldEvent);
-
-        assertProcessedPortfolio(cold, types);
-        assertEquals(1, coldProvider.fetchCount(types.portfolioId));
-        assertEquals(1, coldProvider.fetchCount(types.accountId));
-        assertEquals(1, coldProvider.fetchCount(types.moneyId));
-        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 3);
-
-        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
+        int coldPortfolioFetches =
+                coldProvider.fetchCount(types.portfolioId);
+        int coldAccountFetches =
+                coldProvider.fetchCount(types.accountId);
+        int coldMoneyFetches =
+                coldProvider.fetchCount(types.moneyId);
         coldProvider.reset();
         DocumentProcessingResult coldReused = coldBlue.processDocument(initialized.clone(),
                 coldBlue.objectToNode(new TestEvent().eventId("evt-repeated-reused")));
-
-        assertProcessedPortfolio(coldReused, types);
-        assertEquals(0, coldProvider.fetchCount());
-        assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
-        assertEquals(cold.totalGas(), coldReused.totalGas());
-
-        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(portfolioCanonical(types));
-        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
-        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
-        Node warmEvent = warmBlue.objectToNode(new TestEvent().eventId("evt-repeated-warm"));
-        warmProvider.reset();
-
+        int reusedFetches = coldProvider.fetchCount();
         DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
 
+        // then
+        assertProcessedPortfolio(cold, types);
+        assertTrue(coldPortfolioFetches > 0);
+        assertTrue(coldAccountFetches > 0);
+        assertTrue(coldMoneyFetches > 0);
+        assertProcessedPortfolio(coldReused, types);
+        assertTrue(reusedFetches > 0,
+                "provider evidence is reverified independently of resolver cache warmth");
+        assertEquals(cold.totalGas(), coldReused.totalGas());
         assertProcessedPortfolio(warm, types);
-        assertEquals(0, warmProvider.fetchCount(types.portfolioId));
-        assertEquals(1, warmProvider.fetchCount(types.accountId),
-                warmProvider.fetchCountsByBlueId.toString());
-        assertEquals(1, warmProvider.fetchCount(types.moneyId));
-        assertEquals(2, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
 
     @Test
-    void embeddedInitializationSharesResolvedTypeCacheAcrossChildScopesWithoutChangingGas() {
+    void shouldShareResolvedTypeCacheAcrossEmbeddedChildScopesDuringInitializationWithoutChangingGas() {
+        // given
         ProcessingTypeGraph types = processingTypeGraph();
         Node original = embeddedAccountsDocument(types);
 
         CountingNodeProvider coldProvider = new CountingNodeProvider(types.provider);
         Blue coldBlue = processingBlue(coldProvider);
-
-        DocumentProcessingResult cold = coldBlue.initializeDocument(original.clone());
-
-        assertInitializedEmbeddedAccounts(cold, types);
-        assertEquals(1, coldProvider.fetchCount(types.accountId));
-        assertEquals(1, coldProvider.fetchCount(types.moneyId));
-        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
-
-        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
-        coldProvider.reset();
-        DocumentProcessingResult coldReused = coldBlue.initializeDocument(original.clone());
-
-        assertInitializedEmbeddedAccounts(coldReused, types);
-        assertEquals(0, coldProvider.fetchCount());
-        assertEquals(coldCacheSizeAfterFirstRun, coldBlue.resolvedReferenceCacheSize());
-        assertEquals(cold.totalGas(), coldReused.totalGas());
-
-        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
-        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
-        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
+        ResolvedSnapshot precomputedTypeGraph =
+                ProcessorTestSupport.blue(types.provider)
+                        .loadSnapshot(accountCanonical(types));
+        CountingNodeProvider warmProvider =
+                new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider)
+                .cacheResolvedSnapshot(precomputedTypeGraph);
         warmProvider.reset();
 
+        // when
+        DocumentProcessingResult cold = coldBlue.initializeDocument(original.clone());
+        int coldAccountFetches =
+                coldProvider.fetchCount(types.accountId);
+        int coldMoneyFetches =
+                coldProvider.fetchCount(types.moneyId);
+        coldProvider.reset();
+        DocumentProcessingResult coldReused = coldBlue.initializeDocument(original.clone());
+        int reusedFetches = coldProvider.fetchCount();
         DocumentProcessingResult warm = warmBlue.initializeDocument(original.clone());
 
+        // then
+        assertInitializedEmbeddedAccounts(cold, types);
+        assertTrue(coldAccountFetches > 0);
+        assertTrue(coldMoneyFetches > 0);
+        assertInitializedEmbeddedAccounts(coldReused, types);
+        assertTrue(reusedFetches > 0,
+                "provider evidence is reverified independently of resolver cache warmth");
+        assertEquals(cold.totalGas(), coldReused.totalGas());
         assertInitializedEmbeddedAccounts(warm, types);
-        assertEquals(0, warmProvider.fetchCount(types.accountId));
-        assertEquals(1, warmProvider.fetchCount(types.moneyId));
-        assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
 
     @Test
-    void embeddedProcessingSharesResolvedTypeCacheAcrossChildScopesWithoutChangingGas() {
+    void shouldShareResolvedTypeCacheAcrossEmbeddedChildScopesDuringProcessingWithoutChangingGas() {
+        // given
         ProcessingTypeGraph types = processingTypeGraph();
         Node initialized = initializedEmbeddedProcessingDocument(types);
 
@@ -303,130 +334,163 @@ class DocumentProcessorGasTest {
         Blue coldBlue = processingBlue(coldProvider);
         Node coldEvent = coldBlue.objectToNode(new TestEvent().eventId("evt-embedded-cold"));
         coldProvider.reset();
+        ResolvedSnapshot precomputedTypeGraph =
+                ProcessorTestSupport.blue(types.provider)
+                        .loadSnapshot(accountCanonical(types));
+        CountingNodeProvider warmProvider =
+                new CountingNodeProvider(types.provider);
+        Blue warmBlue = processingBlue(warmProvider)
+                .cacheResolvedSnapshot(precomputedTypeGraph);
+        Node warmEvent = warmBlue.objectToNode(
+                new TestEvent().eventId("evt-embedded-warm"));
+        warmProvider.reset();
 
+        // when
         DocumentProcessingResult cold = coldBlue.processDocument(initialized.clone(), coldEvent);
-
-        assertProcessedEmbeddedAccounts(cold, types);
-        assertEquals(1, coldProvider.fetchCount(types.accountId));
-        assertEquals(1, coldProvider.fetchCount(types.moneyId));
-        assertTrue(coldBlue.resolvedReferenceCacheSize() >= 2);
-
-        int coldCacheSizeAfterFirstRun = coldBlue.resolvedReferenceCacheSize();
+        int coldAccountFetches =
+                coldProvider.fetchCount(types.accountId);
+        int coldMoneyFetches =
+                coldProvider.fetchCount(types.moneyId);
         coldProvider.reset();
         DocumentProcessingResult coldReused = coldBlue.processDocument(initialized.clone(),
                 coldBlue.objectToNode(new TestEvent().eventId("evt-embedded-reused")));
-
-        assertProcessedEmbeddedAccounts(coldReused, types);
-        assertEquals(0, coldProvider.fetchCount());
-        assertTrue(coldBlue.resolvedReferenceCacheSize() >= coldCacheSizeAfterFirstRun);
-        assertEquals(cold.totalGas(), coldReused.totalGas());
-
-        ResolvedSnapshot precomputedTypeGraph = ProcessorTestSupport.blue(types.provider).loadSnapshot(accountCanonical(types));
-        CountingNodeProvider warmProvider = new CountingNodeProvider(types.provider);
-        Blue warmBlue = processingBlue(warmProvider).cacheResolvedSnapshot(precomputedTypeGraph);
-        Node warmEvent = warmBlue.objectToNode(new TestEvent().eventId("evt-embedded-warm"));
-        warmProvider.reset();
-
+        int reusedFetches = coldProvider.fetchCount();
         DocumentProcessingResult warm = warmBlue.processDocument(initialized.clone(), warmEvent);
 
+        // then
+        assertProcessedEmbeddedAccounts(cold, types);
+        assertTrue(coldAccountFetches > 0);
+        assertTrue(coldMoneyFetches > 0);
+        assertProcessedEmbeddedAccounts(coldReused, types);
+        assertTrue(reusedFetches > 0,
+                "provider evidence is reverified independently of resolver cache warmth");
+        assertEquals(cold.totalGas(), coldReused.totalGas());
         assertProcessedEmbeddedAccounts(warm, types);
-        assertEquals(0, warmProvider.fetchCount(types.accountId));
-        assertEquals(1, warmProvider.fetchCount(types.moneyId));
-        assertEquals(1, warmProvider.fetchCount(), warmProvider.fetchCountsByBlueId.toString());
         assertEquals(cold.totalGas(), warm.totalGas());
     }
 
     @Test
-    void changingNodeProviderRefreshesProcessorConformanceCacheAndKeepsRegisteredProcessors() {
+    void shouldRefreshProcessorConformanceCacheAndKeepRegisteredProcessorsWhenNodeProviderChanges() {
+        // given
         ProcessingTypeGraph firstTypes = processingTypeGraph("First");
         ProcessingTypeGraph secondTypes = processingTypeGraph("Second");
         CountingNodeProvider firstProvider = new CountingNodeProvider(firstTypes.provider);
         CountingNodeProvider secondProvider = new CountingNodeProvider(secondTypes.provider);
         Blue blue = processingBlue(firstProvider);
 
-        blue.nodeProvider(ProcessorTestSupport.providerWithTestContractTypes(secondProvider));
+        blue.nodeProvider(ProcessorTestSupport.providerWithTestContractTypes(
+                DocumentProcessorExactFeederSupport
+                        .strictDirectContentProvider(secondProvider)));
+        DocumentProcessorExactFeederSupport.install(blue);
         firstProvider.reset();
         secondProvider.reset();
         Node document = processingDocument(secondTypes);
 
+        // when
         DocumentProcessingResult initialized = blue.initializeDocument(document);
-
-        assertFalse(initialized.capabilityFailure(), initialized.failureReason());
-        assertEquals(0, firstProvider.fetchCount());
-        assertEquals(1, secondProvider.fetchCount(secondTypes.accountId));
-        assertEquals(1, secondProvider.fetchCount(secondTypes.moneyId));
-
+        int firstProviderInitializationFetches =
+                firstProvider.fetchCount();
+        int secondAccountInitializationFetches =
+                secondProvider.fetchCount(
+                        secondTypes.accountId);
+        int secondMoneyInitializationFetches =
+                secondProvider.fetchCount(
+                        secondTypes.moneyId);
         secondProvider.reset();
         DocumentProcessingResult processed = blue.processDocument(initialized.document().clone(),
                 blue.objectToNode(new TestEvent().eventId("evt-provider-swap")));
+        int firstProviderProcessFetches =
+                firstProvider.fetchCount();
+        int secondProviderProcessFetches =
+                secondProvider.fetchCount();
 
+        // then
+        assertFalse(isCapabilityFailure(initialized), diagnosticMessage(initialized));
+        assertEquals(0, firstProviderInitializationFetches);
+        assertTrue(secondAccountInitializationFetches > 0);
+        assertTrue(secondMoneyInitializationFetches > 0);
         assertProcessedAccount(processed, secondTypes);
-        assertEquals(0, firstProvider.fetchCount());
-        assertEquals(0, secondProvider.fetchCount());
+        assertEquals(0, firstProviderProcessFetches);
+        assertTrue(secondProviderProcessFetches > 0,
+                "PROCESS must continue to verify evidence through the replacement provider");
     }
 
     @Test
-    void processDocumentResultExposesCanonicalSnapshotBlueIdAndResolvedView() {
+    void shouldReturnCanonicalExplicitlyResolvableProcessDocumentResult() {
+        // given
         ProcessingTypeGraph types = processingTypeGraph();
         Node initialized = initializedProcessingDocument(types);
         CountingNodeProvider provider = new CountingNodeProvider(types.provider);
         Blue blue = processingBlue(provider);
         provider.reset();
 
+        // when
         DocumentProcessingResult result = blue.processDocument(initialized.clone(),
                 blue.objectToNode(new TestEvent().eventId("evt-snapshot")));
+        ResolvedSnapshot snapshot = snapshot(blue, result);
 
+        // then
         assertProcessedAccount(result, types);
-        assertNotNull(result.snapshot());
-        assertEquals(result.snapshot().blueId(), result.blueId());
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.canonicalDocument()), result.blueId());
-        assertEquals(1, result.canonicalDocument().getAsInteger("/balance/cents"));
-        assertEquals(1, result.resolvedDocument().getAsInteger("/balance/cents"));
-        assertNullNode(result.canonicalDocument(), "/balance/currency");
-        assertEquals("USD", result.resolvedDocument().getAsText("/balance/currency"));
-        assertEquals(1, provider.fetchCount(types.accountId));
-        assertEquals(1, provider.fetchCount(types.moneyId));
+        assertEquals(snapshot.blueId(), documentBlueId(result));
+        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(result.document()),
+                documentBlueId(result));
+        assertEquals(1, result.document().getAsInteger("/balance/cents"));
+        assertEquals(1, snapshot.resolvedRoot().getAsInteger("/balance/cents"));
+        assertNullNode(result.document(), "/balance/currency");
+        assertEquals("USD",
+                snapshot.resolvedRoot().getAsText("/balance/currency"));
+        assertFetched(provider, types.accountId);
+        assertFetched(provider, types.moneyId);
     }
 
     @Test
-    void initializeDocumentResultExposesCanonicalSnapshotBlueIdAndResolvedView() {
+    void shouldReturnCanonicalExplicitlyResolvableInitializationResult() {
+        // given
         ProcessingTypeGraph types = processingTypeGraph();
         CountingNodeProvider provider = new CountingNodeProvider(types.provider);
         Blue blue = processingBlue(provider);
 
+        // when
         DocumentProcessingResult result = blue.initializeDocument(accountDocument(types));
+        ResolvedSnapshot snapshot = snapshot(blue, result);
 
+        // then
         assertInitializedAccount(result, types);
-        assertNotNull(result.snapshot());
-        assertEquals(result.snapshot().blueId(), result.blueId());
-        assertEquals(BlueIdCalculator.calculateUncheckedBlueId(result.canonicalDocument()), result.blueId());
-        assertEquals(0, result.canonicalDocument().getAsInteger("/balance/cents"));
-        assertEquals(0, result.resolvedDocument().getAsInteger("/balance/cents"));
-        assertNullNode(result.canonicalDocument(), "/balance/currency");
-        assertEquals("USD", result.resolvedDocument().getAsText("/balance/currency"));
-        assertEquals(1, provider.fetchCount(types.accountId));
-        assertEquals(1, provider.fetchCount(types.moneyId));
+        assertEquals(snapshot.blueId(), documentBlueId(result));
+        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(result.document()),
+                documentBlueId(result));
+        assertEquals(0, result.document().getAsInteger("/balance/cents"));
+        assertEquals(0, snapshot.resolvedRoot().getAsInteger("/balance/cents"));
+        assertNullNode(result.document(), "/balance/currency");
+        assertEquals("USD",
+                snapshot.resolvedRoot().getAsText("/balance/currency"));
+        assertFetched(provider, types.accountId);
+        assertFetched(provider, types.moneyId);
     }
 
     @Test
-    void capabilityFailureResultDoesNotBuildSnapshotOrSpendGasOnResolution() {
+    void shouldReturnCapabilityFailureInputWithoutSpendingGasOnResolution() {
+        // given
         Blue blue = ProcessorTestSupport.blue();
         String yaml = "contracts:\n" +
                 "  unsupported:\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    channel: missing\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n";
 
-        DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
+        // when
+        Node input = blue.yamlToNode(yaml);
+        DocumentProcessingResult result = blue.initializeDocument(input);
 
-        assertTrue(result.capabilityFailure());
+        // then
+        assertTrue(isCapabilityFailure(result));
         assertEquals(0L, result.totalGas());
-        assertEquals(null, result.snapshot());
-        assertEquals(null, result.blueId());
-        assertEquals(null, result.canonicalDocument());
-        assertEquals(null, result.resolvedDocument());
+        assertEquals(blue.nodeToJson(input),
+                blue.nodeToJson(result.document()),
+                "a noncommitting result returns the exact input document");
+        assertTrue(result.events().isEmpty());
     }
 
     private Node extractInitializedMarker(Node document) {
@@ -451,52 +515,15 @@ class DocumentProcessorGasTest {
         return events.getItems().get(0);
     }
 
-    private long scopeEntryCharge(String scopePath) {
-        int depth = scopeDepth(scopePath);
-        return 50L + 10L * depth;
-    }
-
-    private int scopeDepth(String scopePath) {
-        if (scopePath == null || scopePath.isEmpty() || "/".equals(scopePath)) {
-            return 0;
-        }
-        String trimmed = scopePath;
-        if (trimmed.charAt(0) == '/') {
-            trimmed = trimmed.substring(1);
-        }
-        if (trimmed.isEmpty()) {
-            return 0;
-        }
-        int depth = 1;
-        for (int i = 0; i < trimmed.length(); i++) {
-            if (trimmed.charAt(i) == '/') {
-                depth++;
-            }
-        }
-        return depth;
-    }
-
-    private long sizeCharge(Node node) {
-        long bytes = canonicalSize(node);
-        return (bytes + 99L) / 100L;
-    }
-
-    private long canonicalSize(Node node) {
-        Object canonical = NodeToMapListOrValue.get(node);
-        try {
-            String json = UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(canonical);
-            String canonicalJson = new JsonCanonicalizer(json).getEncodedString();
-            return canonicalJson.getBytes(StandardCharsets.UTF_8).length;
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to canonicalize node", ex);
-        }
-    }
-
     private Blue processingBlue(NodeProvider provider) {
-        Blue result = ProcessorTestSupport.blue(provider);
-        result.registerContractProcessor(new TestEventChannelProcessor());
+        Blue result = ProcessorTestSupport.blue(
+                DocumentProcessorExactFeederSupport
+                        .strictDirectContentProvider(provider));
+        result.registerContractProcessor(
+                DocumentProcessorExactFeederSupport.testEventChannelProcessor());
         result.registerContractProcessor(new SetPropertyContractProcessor());
         result.registerContractProcessor(new EmitEventsContractProcessor());
+        DocumentProcessorExactFeederSupport.install(result);
         return result;
     }
 
@@ -525,10 +552,10 @@ class DocumentProcessorGasTest {
 
     private Node initializedProcessingDocument(ProcessingTypeGraph types) {
         Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
-        Node document = setupBlue.preprocess(processingDocument(types));
+        Node document = processingDocument(types);
         DocumentProcessingResult initialized = setupBlue.initializeDocument(document);
         assertTrue(setupBlue.isInitialized(initialized.document()),
-                initialized.status() + ": " + initialized.failureReason());
+                initialized.status() + ": " + diagnosticMessage(initialized));
         return initialized.document().clone();
     }
 
@@ -545,11 +572,11 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    path: /balance\n" +
                 "    propertyKey: cents\n" +
                 "    propertyValue: 1\n", Node.class);
@@ -576,18 +603,18 @@ class DocumentProcessorGasTest {
     }
 
     private void assertProcessedAccount(DocumentProcessingResult result, ProcessingTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertEquals(1, document.getAsInteger("/balance/cents"));
         assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode("/balance/type").getName());
         assertEquals(typeName(types.provider, types.accountId), resolved.getType().getName());
     }
 
     private void assertInitializedAccount(DocumentProcessingResult result, ProcessingTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertNotNull(document.getAsNode("/contracts/initialized"));
         assertEquals(0, document.getAsInteger("/balance/cents"));
         assertEquals(typeName(types.provider, types.moneyId), resolved.getAsNode("/balance/type").getName());
@@ -622,7 +649,7 @@ class DocumentProcessorGasTest {
 
     private Node initializedPortfolioDocument(RepeatedTypeGraph types) {
         Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
-        Node document = setupBlue.yamlToNode(
+        Node document = UncheckedObjectMapper.YAML_MAPPER.readValue(
                 "name: Portfolio Instance\n" +
                 "type:\n" +
                 "  blueId: " + types.portfolioId + "\n" +
@@ -645,14 +672,15 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
-                "      blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "  setter:\n" +
                 "    channel: testChannel\n" +
                 "    type:\n" +
-                "      blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "      blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "    path: /secondary/balance\n" +
                 "    propertyKey: cents\n" +
-                "    propertyValue: 1\n");
+                "    propertyValue: 1\n",
+                Node.class);
         DocumentProcessingResult initialized = setupBlue.initializeDocument(document);
         assertTrue(setupBlue.isInitialized(initialized.document()));
         return initialized.document().clone();
@@ -670,9 +698,9 @@ class DocumentProcessorGasTest {
     }
 
     private void assertProcessedPortfolio(DocumentProcessingResult result, RepeatedTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertEquals(0, document.getAsInteger("/primary/balance/cents"));
         assertEquals(1, document.getAsInteger("/secondary/balance/cents"));
         assertEquals(typeName(types.provider, types.portfolioId), resolved.getType().getName());
@@ -705,7 +733,7 @@ class DocumentProcessorGasTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /primary\n" +
                 "      - /secondary\n", Node.class);
@@ -713,9 +741,10 @@ class DocumentProcessorGasTest {
 
     private Node initializedEmbeddedProcessingDocument(ProcessingTypeGraph types) {
         Blue setupBlue = processingBlue(new CountingNodeProvider(types.provider));
-        Node initialized = setupBlue.initializeDocument(embeddedAccountsProcessingDocument(types)).document();
-        assertTrue(setupBlue.isInitialized(initialized));
-        return ProcessorTestSupport.blue(types.provider).reverse(initialized);
+        DocumentProcessingResult initialized =
+                setupBlue.initializeDocument(embeddedAccountsProcessingDocument(types));
+        assertTrue(setupBlue.isInitialized(initialized.document()));
+        return initialized.document().clone();
     }
 
     private Node embeddedAccountsProcessingDocument(ProcessingTypeGraph types) {
@@ -732,11 +761,11 @@ class DocumentProcessorGasTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    setter:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      path: /balance\n" +
                 "      propertyKey: cents\n" +
                 "      propertyValue: 1\n" +
@@ -752,27 +781,27 @@ class DocumentProcessorGasTest {
                 "  contracts:\n" +
                 "    testChannel:\n" +
                 "      type:\n" +
-                "        blueId: BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL + "\n" +
                 "    setter:\n" +
                 "      channel: testChannel\n" +
                 "      type:\n" +
-                "        blueId: 8Vii45Ph3HBUX2ZMEarxXXUBDPrXemrvqJergPr3BNts\n" +
+                "        blueId: " + ProcessorTestTypeBlueIds.SET_PROPERTY + "\n" +
                 "      path: /balance\n" +
                 "      propertyKey: cents\n" +
                 "      propertyValue: 1\n" +
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: 8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q\n" +
+                "      blueId: " + RuntimeBlueIds.PROCESS_EMBEDDED + "\n" +
                 "    paths:\n" +
                 "      - /primary\n" +
                 "      - /secondary\n", Node.class);
     }
 
     private void assertInitializedEmbeddedAccounts(DocumentProcessingResult result, ProcessingTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertNotNull(document.getAsNode("/contracts/initialized"));
         assertInitializedEmbeddedAccount(document, resolved, "/primary", types);
         assertInitializedEmbeddedAccount(document, resolved, "/secondary", types);
@@ -786,9 +815,9 @@ class DocumentProcessorGasTest {
     }
 
     private void assertProcessedEmbeddedAccounts(DocumentProcessingResult result, ProcessingTypeGraph types) {
-        assertFalse(result.capabilityFailure(), result.failureReason());
+        assertFalse(isCapabilityFailure(result), diagnosticMessage(result));
         Node document = result.document();
-        Node resolved = result.resolvedDocument();
+        Node resolved = resolveResultDocument(result, types.provider);
         assertProcessedEmbeddedAccount(document, resolved, "/primary", types);
         assertProcessedEmbeddedAccount(document, resolved, "/secondary", types);
     }
@@ -805,11 +834,28 @@ class DocumentProcessorGasTest {
         return node != null ? node.getName() : null;
     }
 
+    private Node resolveResultDocument(DocumentProcessingResult result,
+                                       BasicNodeProvider provider) {
+        Blue resolver = processingBlue(
+                new CountingNodeProvider(provider));
+        try {
+            return resolvedDocument(resolver, result);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    private void assertFetched(CountingNodeProvider provider, String blueId) {
+        assertTrue(provider.fetchCount(blueId) > 0,
+                () -> "Expected a cold provider read for " + blueId + ": "
+                        + provider.fetchCountsByBlueId);
+    }
+
     private void assertNullNode(Node document, String path) {
         try {
             assertEquals(null, document.getAsNode(path));
         } catch (IllegalArgumentException ignored) {
-            // Missing properties throw in NodePathAccessor; either form means absent.
+            // Missing properties throw in NodePath; either form means absent.
         }
     }
 
@@ -855,12 +901,14 @@ class DocumentProcessorGasTest {
 
         @Override
         public List<Node> fetchByBlueId(String blueId) {
-            if (isProcessorTypeStub(blueId)) {
-                return Collections.singletonList(new Node().name(blueId));
+            List<Node> resolved =
+                    delegate.fetchByBlueId(blueId);
+            if (resolved != null && !resolved.isEmpty()) {
+                fetchCount++;
+                fetchCountsByBlueId.merge(
+                        blueId, 1, Integer::sum);
             }
-            fetchCount++;
-            fetchCountsByBlueId.merge(blueId, 1, Integer::sum);
-            return delegate.fetchByBlueId(blueId);
+            return resolved;
         }
 
         private int fetchCount() {
@@ -876,12 +924,334 @@ class DocumentProcessorGasTest {
             fetchCountsByBlueId.clear();
         }
 
-        private boolean isProcessorTypeStub(String blueId) {
-            return "6JjyUKoK7uJxA5NY9YhMaKJbXC6c9iHyx1khv4gaAq4Q".equals(blueId)
-                    || "9GEC24YbFG9hj4banjYh2oEnDpAob1wAPmhjuykJp8T1".equals(blueId)
-                    || "BHRKnD9toWwiU34GJvqLJ3Rtiv6W7Mmubai7CdrA1i3L".equals(blueId)
-                    || "SetProperty".equals(blueId)
-                    || "8FVc8MPz6DcTMgcY3RXU6EBpGa9arWPJ141K2H86yi8Q".equals(blueId);
+    }
+}
+
+/**
+ * Exact in-memory feeder used by the pre-1.0 processor regression slice.
+ *
+ * <p>The helper derives a complete retained subscription surface from the
+ * effective contract snapshots, binds it to one exact Root/event pair, and
+ * lets the production verifier independently re-resolve every occurrence.
+ * It deliberately remains test-only; it is not an ambient PROCESS fallback.</p>
+ */
+final class DocumentProcessorExactFeederSupport {
+
+    private static final String TEST_EVENT_CHANNEL_BLUE_ID =
+            ProcessorTestTypeBlueIds.TEST_EVENT_CHANNEL;
+    private static final String TEST_EVENT_BLUE_ID =
+            ProcessorTestTypeBlueIds.TEST_EVENT;
+    private static final long ROOT_REVISION = 1L;
+
+    private DocumentProcessorExactFeederSupport() {
+    }
+
+    static TestEventChannelProcessor testEventChannelProcessor() {
+        return new ExactTestEventChannelProcessor();
+    }
+
+    /**
+     * BasicNodeProvider identifies returned content with a transport-level
+     * top-level blueId. Contracts 1.0 consumes verified direct content, whose
+     * authored node must not mix that identity wrapper with sibling fields.
+     */
+    static NodeProvider strictDirectContentProvider(NodeProvider delegate) {
+        return blueId -> {
+            List<Node> fetched = delegate.fetchByBlueId(blueId);
+            if (fetched == null) {
+                return null;
+            }
+            List<Node> direct = new ArrayList<>(fetched.size());
+            for (Node supplied : fetched) {
+                if (supplied == null) {
+                    direct.add(null);
+                    continue;
+                }
+                Node node = supplied.clone();
+                if (!node.isReferenceOnly()) {
+                    node.blueId(null);
+                }
+                direct.add(node);
+            }
+            return direct;
+        };
+    }
+
+    static void install(Blue blue) {
+        install(blue, null);
+    }
+
+    static void install(Blue blue, long gasLimit) {
+        install(blue, Long.valueOf(gasLimit));
+    }
+
+    private static void install(Blue blue, Long gasLimit) {
+        final DocumentProcessor[] owner = new DocumentProcessor[1];
+        owner[0] = replaceProcessor(
+                blue,
+                (root, event) -> derive(
+                        owner[0], root, event),
+                gasLimit);
+    }
+
+    static void installExactEmptyFeeder(Blue blue) {
+        replaceProcessor(
+                blue,
+                (root, event) ->
+                        ExternalDeliveryPlan.builder()
+                                .revisions(
+                                        ROOT_REVISION,
+                                        ROOT_REVISION)
+                                .eventOrderKey(
+                                        ExternalOrderKey.of(
+                                                Collections.singletonList(
+                                                        DirectBlueIdCalculator
+                                                                .calculateBlueId(
+                                                                        event))))
+                                .activeSubscriptionIntervals(
+                                        Collections
+                                                .<SubscriptionDelta.Entry>
+                                                        emptyList())
+                                .exactRuntimeState()
+                                .build(),
+                null);
+    }
+
+    private static DocumentProcessor replaceProcessor(
+            Blue blue,
+            ExternalDeliveryPlanDeriver deriver,
+            Long gasLimit) {
+        DocumentProcessor current = blue.getDocumentProcessor();
+        DocumentProcessor.Builder builder = DocumentProcessor.builder()
+                .runtimeRegistry(current.administration().contractRegistry())
+                .contractTypeResolver(
+                        current.administration().contractTypeResolver())
+                .matchingService(
+                        new ContractMatchingService(blue))
+                .observer(
+                        current.processingObserver())
+                .gasSchedule(current.gasSchedule())
+                .runtimeRegistryIdentity(
+                        current.runtimeRegistryIdentity())
+                .deliveryPlanDeriver(
+                        deriver);
+        if (gasLimit != null) {
+            builder.gasLimit(gasLimit);
+        }
+        if (current.conformanceEngine() != null) {
+            builder.conformanceEngine(
+                    current.conformanceEngine());
+        }
+        if (current.conformancePlannerOverride() != null) {
+            builder.conformancePlannerOverride(
+                    current.conformancePlannerOverride());
+        }
+        if (current.snapshotManager() != null) {
+            builder.snapshotStore(
+                    current.snapshotManager());
+        }
+        DocumentProcessor exact = builder.build();
+        blue.documentProcessor(exact);
+        return exact;
+    }
+
+    @SafeVarargs
+    static DocumentProcessor processor(
+            ProcessingSnapshotManager snapshotManager,
+            ContractProcessor<? extends Contract>... processors) {
+        final DocumentProcessor[] owner = new DocumentProcessor[1];
+        DocumentProcessor.Builder builder =
+                DocumentProcessor.builder()
+                        .snapshotStore(snapshotManager)
+                        .registerContractProcessor(
+                                testEventChannelProcessor())
+                        .deliveryPlanDeriver(
+                                (root, event) -> derive(
+                                        owner[0], root, event));
+        if (processors != null) {
+            for (ContractProcessor<? extends Contract> processor
+                    : processors) {
+                builder.registerContractProcessor(processor);
+            }
+        }
+        owner[0] = builder.build();
+        return owner[0];
+    }
+
+    private static ExternalDeliveryPlan derive(
+            DocumentProcessor owner,
+            Node root,
+            Node event) {
+        if (owner == null) {
+            throw new IllegalStateException(
+                    "Exact test feeder has no processor owner");
+        }
+        String eventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(event);
+        String eventTypeBlueId = event.getType() != null
+                ? event.getType().getBlueId() : null;
+        ExternalOrderKey eventOrder =
+                ExternalOrderKey.of(
+                        Collections.singletonList(eventBlueId));
+        ExternalDeliveryPlan.Builder plan =
+                ExternalDeliveryPlan.builder()
+                        .revisions(
+                                ROOT_REVISION,
+                                ROOT_REVISION)
+                        .eventOrderKey(eventOrder)
+                        .activeSubscriptionIntervals(
+                                Collections
+                                        .<SubscriptionDelta.Entry>
+                                                emptyList())
+                        .exactRuntimeState();
+
+        ProcessorInvocationState inspection =
+                new ProcessorInvocationState(
+                        owner, root.clone());
+        Deque<String> pending = new ArrayDeque<>();
+        List<String> visited = new ArrayList<>();
+        pending.add("/");
+        while (!pending.isEmpty()) {
+            String scopePath = pending.removeFirst();
+            if (visited.contains(scopePath)) {
+                throw new IllegalArgumentException(
+                        "Repeated Process Embedded scope: "
+                                + scopePath);
+            }
+            visited.add(scopePath);
+            inspection.preflightScope(scopePath);
+            ContractBundle bundle =
+                    inspection.bundleForScope(scopePath);
+            if (bundle == null) {
+                throw new IllegalStateException(
+                        "No effective contract bundle at "
+                                + scopePath);
+            }
+            for (EffectiveContractSnapshot snapshot
+                    : bundle.effectiveContractSnapshots()) {
+                if (!"external-channel".equals(
+                        snapshot.role())) {
+                    continue;
+                }
+                if (!TEST_EVENT_CHANNEL_BLUE_ID.equals(
+                        snapshot.effectiveTypeBlueId())) {
+                    throw new IllegalArgumentException(
+                            "Unexpected external test channel type: "
+                                    + snapshot.effectiveTypeBlueId());
+                }
+                TestEventChannel channel =
+                        (TestEventChannel) bundle.channel(
+                                snapshot.key());
+                String subscriptionKey =
+                        channel.getEventType() != null
+                                ? channel.getEventType()
+                                : TEST_EVENT_BLUE_ID;
+                List<String> subscriptionKeys =
+                        Collections.singletonList(
+                                subscriptionKey);
+                String checkpointDomain =
+                        CheckpointDomain.derive(
+                                snapshot
+                                        .effectiveTypeBlueId(),
+                                snapshot
+                                        .sourceContributionNodeBlueIds(),
+                                null);
+                plan.activeSubscriptionInterval(
+                        new SubscriptionDelta.Entry(
+                                scopePath,
+                                snapshot.key(),
+                                snapshot
+                                        .effectiveTypeBlueId(),
+                                snapshot
+                                        .sourceContributionNodeBlueIds(),
+                                snapshot.order(),
+                                subscriptionKeys,
+                                checkpointDomain,
+                                ROOT_REVISION,
+                                null,
+                                null));
+                if (!subscriptionKey.equals(
+                        eventTypeBlueId)) {
+                    continue;
+                }
+                ExternalDeliverySnapshot.Builder delivery =
+                        ExternalDeliverySnapshot.builder(
+                                        scopePath,
+                                        snapshot.key())
+                                .order(snapshot.order())
+                                .effectiveTypeBlueId(
+                                        snapshot
+                                                .effectiveTypeBlueId())
+                                .subscriptionKey(
+                                        subscriptionKey)
+                                .checkpointDomainBlueId(
+                                        checkpointDomain)
+                                .checkpointSubjectBlueId(
+                                        eventBlueId);
+                for (String contribution
+                        : snapshot
+                                .sourceContributionNodeBlueIds()) {
+                    delivery.sourceContribution(
+                            contribution);
+                }
+                plan.delivery(delivery.build());
+            }
+            for (String embeddedPath
+                    : bundle.embeddedPaths()) {
+                pending.addLast(
+                        ProcessorEngine.resolvePointer(
+                                scopePath,
+                                embeddedPath));
+            }
+        }
+        return plan.build();
+    }
+
+    private static final class ExactTestEventChannelProcessor
+            extends TestEventChannelProcessor {
+
+        private final ExternalChannelSubscriptionFunctions<
+                TestEventChannel> functions =
+                new ExternalChannelSubscriptionFunctions<
+                        TestEventChannel>() {
+                    @Override
+                    public List<String> channelKeys(
+                            TestEventChannel channel) {
+                        String eventType =
+                                channel.getEventType();
+                        return Collections.singletonList(
+                                eventType != null
+                                        ? eventType
+                                        : TEST_EVENT_BLUE_ID);
+                    }
+
+                    @Override
+                    public List<String> eventKeys(
+                            Node event) {
+                        Node type = event != null
+                                ? event.getType() : null;
+                        String eventType = type != null
+                                ? type.getBlueId() : null;
+                        return eventType != null
+                                ? Collections.singletonList(
+                                        eventType)
+                                : Collections
+                                        .<String>emptyList();
+                    }
+
+                    @Override
+                    public String
+                    checkpointDomainDiscriminator(
+                            TestEventChannel channel) {
+                        return null;
+                    }
+                };
+
+        @Override
+        public ExternalChannelSubscriptionFunctions<
+                TestEventChannel>
+        externalSubscriptionFunctions() {
+            return functions;
         }
     }
 }

@@ -1,0 +1,14 @@
+id: R_blue_empty_directive_equals_absent
+category: Resolution
+operation: preprocess
+description: an empty inline directive is equivalent to an omitted directive
+source:
+  blue: {}
+  count: 7
+alsoEquivalentTo:
+  count: 7
+expectedPreprocessed:
+  count:
+    type:
+      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+    value: 7

@@ -1,8 +1,0 @@
-id: runtimeRegistryEmbeddedNodeChannelNodeHashesToPublishedBlueId
-category: Registry
-operation: registryNodeHashesToPublishedBlueId
-registryKind: Blue Contracts runtime type registry
-registryKey: EmbeddedNodeChannel
-registryPath: registry/blue-contracts-1.0/EmbeddedNodeChannel.blue
-expectedBlueId: H6iUJp3GcLypsJDimMSVoxQQdxxuD8j6eqEUWWqCZ6i
-semanticDescriptionIdentityBearing: true

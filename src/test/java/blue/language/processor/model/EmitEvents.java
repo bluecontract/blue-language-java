@@ -7,7 +7,7 @@ import blue.language.processor.model.HandlerContract;
 import java.util.ArrayList;
 import java.util.List;
 
-@TypeBlueId("8L41csGU9GJkoza1159y2pYbJ6yGAi4huvgmu44Ah2d5")
+@TypeBlueId(ProcessorTestTypeBlueIds.EMIT_EVENTS)
 public class EmitEvents extends HandlerContract {
 
     private List<Node> events = new ArrayList<>();

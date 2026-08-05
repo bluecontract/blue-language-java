@@ -1,0 +1,13 @@
+id: F_selected_expand_collapse_round_trip
+category: Provider
+operation: expandThenCollapse
+source:
+  blueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk
+limits:
+  demandedPaths: [/left]
+expectedExpandedDescendantRequests:
+  - 5nWrS5wTB22MN7HHhyRUy7zQ83Qbf6QEcUY4soFir2Sq
+expectedNotRequestedBlueIds:
+  - FVynRTHup63DBwrc8M741Uhnyp4oonzMdbuuKpAnEeSf
+expectedCollapsedRoot:
+  blueId: 6Sa6TDJy5n2hG23nJRhpUfKDFPFZDAPRvxcWZBooVxMk

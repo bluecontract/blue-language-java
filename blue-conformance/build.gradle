@@ -1,0 +1,20 @@
+plugins {
+    id 'blue.java8-library-conventions'
+    id 'blue.reproducible-archives'
+    id 'blue.api-baseline'
+    id 'blue.conformance-package'
+    id 'blue.jreleaser-publishing'
+}
+
+description = 'Executable Language and Contracts conformance fixtures and release reports.'
+
+dependencies {
+    api project(':blue-language-model')
+    api project(':blue-language-core')
+    api project(':blue-language-mapping')
+    api project(':blue-contracts-core')
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2'
+    implementation 'io.github.erdtman:java-json-canonicalization:1.1'
+    implementation 'org.yaml:snakeyaml:2.0'
+}
