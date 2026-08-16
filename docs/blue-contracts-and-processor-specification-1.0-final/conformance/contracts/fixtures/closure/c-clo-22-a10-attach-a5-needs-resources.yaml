@@ -1,0 +1,251 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-clo-22-a10-attach-a5-needs-resources
+vectors:
+- C-CLO-22
+category: history
+operation: process-closure
+description: B attempts to attach historical A epoch 5 while the authoritative managed A is epoch 10. Without exact transition evidence the processor requests resources and does not downgrade or fork A.
+releaseManifest: ../../release-manifest.yaml
+oracle: ../../oracles/history-a10-b-attaches-a5.yaml
+input:
+  graphGeneration: 1
+  cause:
+    kind: external
+    causeIdentity: sha256:f1bd0bbbcbae7e13539f185a7dc47c12431c41524d8718045d5b393aa87da4dc
+    event:
+      type:
+        blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+      subscriptionKey: fixture
+      id: ATTACH-HISTORICAL
+    eventBlueId: EjPyZQvo3QrWXq8Fypkf5Xxa3gvfF1JXt5ttqpzYn2h2
+    sourceOrder:
+    - 270
+    - timeline-history
+    - 1
+    externalOrderPolicyIdentity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+  documents:
+    history-a:
+      documentId: history-a
+      blueId: CfndGVLaADgGoDxt5FxdtpdGyLzb4SAGgsMsF3EhjLc7
+      document:
+        documentId: history-a
+        memberIdentity: history-a
+        counter: 10
+        b:
+          blueId: EYb1xS8k6Wi8NLw3f8nczGyra94TCRQR8MDypRJKnunp
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /b
+          initialized:
+            type:
+              blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+            document:
+              blueId: HeQktJxAZadQe8VLbZmRK2nUQLojWw9pdjmaztJEfyoc
+      initialized: true
+      terminated: false
+      publicRoot: true
+      epoch: 10
+      componentGeneration: 1
+    history-b:
+      documentId: history-b
+      blueId: EYb1xS8k6Wi8NLw3f8nczGyra94TCRQR8MDypRJKnunp
+      document:
+        documentId: history-b
+        memberIdentity: history-b
+        observedA: 0
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /a
+          source:
+            type:
+              blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+            subscriptionKey: fixture
+            eventKey: fixture
+            accept: true
+            checkpointDomain: domain
+            logicalDeliveryKey: attach-history
+          start:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: source
+            order: 0
+          initialized:
+            type:
+              blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+            document:
+              blueId: 9A23ZK1DRGUoRNQ7yRjg74moECZrY2HTeB4FR8j6waU1
+      initialized: true
+      terminated: false
+      publicRoot: false
+      epoch: 0
+      componentGeneration: 1
+  occurrences:
+  - occurrenceIdentity: sha256:b7eb42e12244696f8eb2c69c3ecb3e8e7a44ce0401498ca9191b20bc56867636
+    bindingIdentity: sha256:eea547c8304ff9f9fbf7f0988cd80247d1f8c0738de14b05794caa066e54cea3
+    sourceDocumentId: history-a
+    sourcePath: /b
+    activationGeneration: 1
+    targetDocumentId: history-b
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+    expectedTargetBlueId: EYb1xS8k6Wi8NLw3f8nczGyra94TCRQR8MDypRJKnunp
+    active: true
+    pendingHistoricalEpoch: null
+  - occurrenceIdentity: sha256:e707919f902b2644d1837adc68c8df8adfba39ebc40c207b68f3af4abc06a1cf
+    bindingIdentity: sha256:bcd2c41861fd74adc6b6d9aa44762f7c0564b2a0f94cf8c0108911f4220be8aa
+    sourceDocumentId: history-b
+    sourcePath: /a
+    activationGeneration: 1
+    targetDocumentId: history-a
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+    expectedTargetBlueId: CfndGVLaADgGoDxt5FxdtpdGyLzb4SAGgsMsF3EhjLc7
+    active: false
+    pendingHistoricalEpoch: 5
+  components:
+  - componentIdentity: sha256:d4187c66f6f46f95a90e854850770733e3f3d16ea1280d010c6c9b8a6c9a4064
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - history-b
+    orderedMemberBlueIds:
+    - EYb1xS8k6Wi8NLw3f8nczGyra94TCRQR8MDypRJKnunp
+    componentStateIdentity: sha256:544ab517a81bb1264436e365ee89f9ec568a32523664ac00dcf795f4e63187b2
+  - componentIdentity: sha256:8f32616e38505ee6f3fd30ca37b69aa9155af001239fab43b90de9a92d6a40ea
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - history-a
+    orderedMemberBlueIds:
+    - CfndGVLaADgGoDxt5FxdtpdGyLzb4SAGgsMsF3EhjLc7
+    componentStateIdentity: sha256:5a166e49ccd32f7401b861ee3be18b4cfee441b89b3474a8327545c3a03deeed
+  directDeliveries:
+  - targetDocumentId: history-b
+    scopePath: /
+    activationGeneration: 0
+    channelKey: source
+    logicalDeliveryKey: start
+    rawOccurrenceOrder: 0
+  gasPolicy:
+    policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
+    sharedLimit: 100000
+    usesReleaseDefault: true
+    localLimits: {}
+    label: release-default
+  runtime:
+    handlers:
+      history-b/start:
+        patches:
+        - op: add
+          path: /a
+          val:
+            blueId: DyXbyuuU4NjirUao7MMbkiZj4C6FoqAXRqpwX3ygrfj6
+  admissionCandidate: null
+  admissionCandidateIdentity: null
+  publicRootDocumentIds:
+  - history-a
+  directDeliverySnapshotIdentity: sha256:35e7097eeea280e78fa59f71c861f84718f45176631751fcbc48ad6bd864685c
+  occurrenceBindingSetIdentity: sha256:decbe643f9130c5c6e4fb2cac8fc0809a5dc535e53ec1be9d5baa3f768e06189
+  closureIdentity: sha256:29921ceb7863b87518851be93372fe92a93ceddced0eef0b70bbb61f0ffd0c83
+  invocationIdentity: sha256:6aa52d29f394628265c78c00464804d46eb286a81466c4a49a2a80ae834768b6
+  environment:
+    blueLanguageSpecificationIdentity: sha256:a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869
+    contractsSpecificationIdentity: sha256:cde697e8632174111a3571fa898e7ef8bc93420d092a967256df6fe0b7d6236d
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:5f8e6a724e1323c0abf57ea26668a6fe2bf0d708a9ade67020ed4dc0f0db12be
+    managedDocumentIdentityPolicy:
+      identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+      label: nfc-document-lineage-v1
+    managedBindingPolicy:
+      identity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+      label: exact-document-lineage
+    exactNodeProviderDomain:
+      identity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+      label: fixture-exact-node-provider-v1
+    externalOrderPolicy:
+      identity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+      label: canonical-source-order-v1
+    portableLimitPolicy:
+      identity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+      label: blue-contracts-1.0-portable-limits
+      limits:
+      - name: closureExpansionsPerInvocation
+        value: 4096
+      - name: closureGraphChangesPerInvocation
+        value: 4096
+      - name: closureTentativeFinalizationsPerInvocation
+        value: 8192
+      - name: closureWorkOccurrencesPerInvocation
+        value: 8192
+      - name: contractKeyCodePoints
+        value: 256
+      - name: contractKeyUtf8Bytes
+        value: 1024
+      - name: cyclicCanonicalBytesPerComponent
+        value: 16777216
+      - name: cyclicEdgesPerComponent
+        value: 1024
+      - name: cyclicMembersPerComponent
+        value: 128
+      - name: directCanonicalIdentityInputBytes
+        value: 1048576
+      - name: directInlineIdentityTextCodePoints
+        value: 262144
+      - name: directListItemsMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectEntriesMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectKeyCodePoints
+        value: 4096
+      - name: effectiveContractsPerParticipatingScope
+        value: 8192
+      - name: embeddedDepth
+        value: 256
+      - name: eventsPerContractExecutionResult
+        value: 1024
+      - name: externalChannelsPerScope
+        value: 2048
+      - name: handlersBoundToOneDelivery
+        value: 4096
+      - name: internalEventOccurrencesPerInvocation
+        value: 8192
+      - name: managedDocumentsPerClosure
+        value: 4096
+      - name: nestedDocumentUpdateCascadeDepth
+        value: 256
+      - name: normalizedRuntimePointerUtf8Bytes
+        value: 4096
+      - name: participatingScopesPerEvent
+        value: 4096
+      - name: patchesPerContractExecutionResult
+        value: 1024
+      - name: preselectedExternalOccurrencesPerEvent
+        value: 1024
+      - name: processEmbeddedEdgesPerClosure
+        value: 16384
+      - name: processEmbeddedPathsPerScope
+        value: 4096
+      - name: rootEventsReturned
+        value: 4096
+      - name: runtimeChildLedgerCounterKinds
+        value: 256
+      - name: runtimePointerSegments
+        value: 256
+      - name: subscriptionKeysPerChannel
+        value: 256
+      - name: typeChainEdges
+        value: 256
+    cyclicFinalizerIdentity: sha256:83f84e8eab0b62d3a5bcd362b339dd27786e39d5d6a2d2367dfa84f0508820df
+    cyclicProofVerifierIdentity: sha256:b949a4f7629554393b210f867405597372cc3259ed8c7e765a37fa33182921a5
+expected:
+  attemptOutcome: NeedsResources
+  requiredBlueIds:
+  - 2fyNaqzce7pyG9jDsvQSRWm4Z7XouvXRYtYx1zRPgqFx
+  - 6PcMty6ytucm2dAzF3Z6Jru4n3N4gSc7J13WDfc66R3
+  - B4LuWMVcCndzE799x9vUTcM2Ch86iXPKqaVbx9wyFUog
+  - DvHixMrZUgXjWihrHyckchTpK6UYjFtMQ31pjApfNikT
+  - HeQktJxAZadQe8VLbZmRK2nUQLojWw9pdjmaztJEfyoc

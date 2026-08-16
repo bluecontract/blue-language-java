@@ -1,0 +1,10 @@
+name: Embedded Event Delivery
+description: Internal Channel payload carrying one descendant event occurrence and its source path. It is not automatically a Root emission.
+sourcePath:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+event:
+  schema:
+    required: true

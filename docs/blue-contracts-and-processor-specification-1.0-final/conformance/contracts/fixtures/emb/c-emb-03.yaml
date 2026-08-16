@@ -1,0 +1,63 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-03
+vectors:
+- C-EMB-03
+category: emb
+description: Unrelated embedded branches are not semantically demanded.
+operation: process
+input:
+  root:
+    counter: 0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /selected
+        - /unrelated
+    selected:
+      contracts:
+        in:
+          type:
+            blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        h:
+          type:
+            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          channel: in
+          order: 0
+          result: {}
+    unrelated:
+      blueId: BmGyab5CtVAXfknzyBJDHVUHtK4gswCRdQ3Hjx4FPUcW
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /selected
+      channelKey: in
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    nodes:
+      BmGyab5CtVAXfknzyBJDHVUHtK4gswCRdQ3Hjx4FPUcW:
+        large: unrelated branch
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: demands.semantic
+    op: notContains
+    expected: BmGyab5CtVAXfknzyBJDHVUHtK4gswCRdQ3Hjx4FPUcW

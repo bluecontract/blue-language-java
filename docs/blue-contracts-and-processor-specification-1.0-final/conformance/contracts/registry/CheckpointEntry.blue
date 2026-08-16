@@ -1,0 +1,10 @@
+name: Channel Checkpoint Entry
+description: Checkpoint state bound to one raw Channel key, one exact checkpoint-domain BlueId, and one exact subject node.
+domain:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+subject:
+  schema:
+    required: true

@@ -1,0 +1,14 @@
+name: Processing Terminated Marker
+type:
+  blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
+description: 'Direct processor state at contracts/terminated after one successful graceful termination. A valid pre-existing marker short-circuits the scope before application-contract recognition. Its write produces no Document Update.
+
+  '
+cause:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+reason:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC

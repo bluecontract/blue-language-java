@@ -1,0 +1,12 @@
+name: Handler
+type:
+  blueId: 4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4
+description: Deterministic same-scope logic bound to one Channel key. A Handler may return patches, Root/internal events, runtime counters, and one termination request. It has no other side effects.
+channel:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+  description: Raw same-scope Channel contract key.
+event:
+  description: Optional immutable payload matcher defined by the concrete Handler runtime.

@@ -1,0 +1,45 @@
+schema: blue-contracts-fixture/1.0
+id: c-cyc-01
+vectors:
+- C-CYC-01
+category: snd
+description: A pure cyclic-set member cannot be admitted as an independently mutable processing Root.
+operation: process
+input:
+  root:
+    blueId: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: fixture
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - fixture
+    - 1
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: invalid-processing-document
+  - actual: result.diagnostic.category
+    op: equals
+    expected: CyclicMemberProcessingRootUnsupported
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: result.events
+    op: sequenceEquals
+    expected: []
+  - actual: demands.semantic
+    op: notContains
+    expected: GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0

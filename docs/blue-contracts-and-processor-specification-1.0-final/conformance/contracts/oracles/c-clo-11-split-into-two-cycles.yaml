@@ -1,0 +1,1012 @@
+schema: blue-language-cyclic-oracle/1.0
+id: c-clo-11-split-into-two-cycles
+stages:
+- name: input-0
+  sourceDocumentsWithThisReferences:
+  - documentId: ma
+    memberIdentity: ma
+    b:
+      blueId: this#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /b
+        - /c
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: ma
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: AFip45D27jHpFqBsbpR6zLUi4b4oEDB1nqTx5uUcp37D
+    c:
+      blueId: this#2
+  - documentId: mb
+    memberIdentity: mb
+    a:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /a
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 6wVLtM7Vne7bDero5FjneuULX3td8qb9CCFfGMrRcdTU
+  - documentId: mc
+    memberIdentity: mc
+    d:
+      blueId: this#3
+    a:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /d
+        - /a
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: mc
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 8DfUEGGgXCR2HPWoyGP3dhedW2kRZ85tqVjrGbLwjBve
+  - documentId: md
+    memberIdentity: md
+    c:
+      blueId: this#2
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /c
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: CdyAoDEgTcDd8P56Sju4LC4z6DRD9g89Wo2fxE9pdfL2
+  preliminaryBlueIds:
+    '0': CRJk8fN93yLvLqTbbxzP3UhuaESememuU7NicRgZ3h2e
+    '1': FNffAjK4cYe91LG37omUjduRAZ8YaguBUk2sdLixynJ4
+    '2': 14MkxW7LcRfXWw24vJ6VuDdDYcVj8CCKbb3vRGJngkNj
+    '3': 8UE438JS1mKgk4kBWXQuT12RBDE2weYRfwPkMePrqoWA
+  sortedSourceIndices:
+  - 2
+  - 3
+  - 0
+  - 1
+  canonicalLimitForm:
+  - documentId:
+      blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+    memberIdentity:
+      blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+    d:
+      blueId: this#1
+    a:
+      blueId: this#2
+    contracts:
+      blueId: DKZRNUfNeypoGqdez57bB4bQyGayqbZxH3YzjoLfb9j6
+  - documentId:
+      blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+    memberIdentity:
+      blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+    c:
+      blueId: this#0
+    contracts:
+      blueId: 4PYwdUy4d957gpfvXW7ZurCGNgukKxBc1b14pgJmtfhL
+  - documentId:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    memberIdentity:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    b:
+      blueId: this#3
+    contracts:
+      blueId: 8fRutqC9wFAop87DKRh8K2xxE6po9iJKuXBUAHy4Pqc8
+    c:
+      blueId: this#0
+  - documentId:
+      blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
+    memberIdentity:
+      blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
+    a:
+      blueId: this#2
+    contracts:
+      blueId: CRiP9AmNrwXkt2a2N8f4S9yr5FWmGETmApNJJiJPaQMb
+  canonicalMasterInputUtf8Bytes: 1017
+  masterBlueId: 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC
+  memberBlueIdsInSourceOrder:
+  - 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#2
+  - 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#3
+  - 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#0
+  - 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#1
+  materializedDocuments:
+  - documentId: ma
+    memberIdentity: ma
+    b:
+      blueId: 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#3
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /b
+        - /c
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: ma
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: AFip45D27jHpFqBsbpR6zLUi4b4oEDB1nqTx5uUcp37D
+    c:
+      blueId: 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#0
+  - documentId: mb
+    memberIdentity: mb
+    a:
+      blueId: 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#2
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /a
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 6wVLtM7Vne7bDero5FjneuULX3td8qb9CCFfGMrRcdTU
+  - documentId: mc
+    memberIdentity: mc
+    d:
+      blueId: 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#1
+    a:
+      blueId: 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#2
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /d
+        - /a
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: mc
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 8DfUEGGgXCR2HPWoyGP3dhedW2kRZ85tqVjrGbLwjBve
+  - documentId: md
+    memberIdentity: md
+    c:
+      blueId: 9s6QhLnbukkvwoAbFMVpv4BEXb6k2BNUKADTRmR3fevC#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /c
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: CdyAoDEgTcDd8P56Sju4LC4z6DRD9g89Wo2fxE9pdfL2
+- name: transition-0-initial-ab
+  sourceDocumentsWithThisReferences:
+  - documentId: ma
+    memberIdentity: ma
+    b:
+      blueId: this#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /b
+        - /c
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: ma
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: AFip45D27jHpFqBsbpR6zLUi4b4oEDB1nqTx5uUcp37D
+  - documentId: mb
+    memberIdentity: mb
+    a:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /a
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 6wVLtM7Vne7bDero5FjneuULX3td8qb9CCFfGMrRcdTU
+  preliminaryBlueIds:
+    '0': Fx3Qtx56q1c7S1yKm6uVUcbZ7aBmrCoXPDFVoU8R3rqL
+    '1': FNffAjK4cYe91LG37omUjduRAZ8YaguBUk2sdLixynJ4
+  sortedSourceIndices:
+  - 1
+  - 0
+  canonicalLimitForm:
+  - documentId:
+      blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
+    memberIdentity:
+      blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
+    a:
+      blueId: this#1
+    contracts:
+      blueId: CRiP9AmNrwXkt2a2N8f4S9yr5FWmGETmApNJJiJPaQMb
+  - documentId:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    memberIdentity:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    b:
+      blueId: this#0
+    contracts:
+      blueId: 8fRutqC9wFAop87DKRh8K2xxE6po9iJKuXBUAHy4Pqc8
+  canonicalMasterInputUtf8Bytes: 485
+  masterBlueId: 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm
+  memberBlueIdsInSourceOrder:
+  - 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm#1
+  - 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm#0
+  materializedDocuments:
+  - documentId: ma
+    memberIdentity: ma
+    b:
+      blueId: 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /b
+        - /c
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: ma
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: AFip45D27jHpFqBsbpR6zLUi4b4oEDB1nqTx5uUcp37D
+  - documentId: mb
+    memberIdentity: mb
+    a:
+      blueId: 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /a
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 6wVLtM7Vne7bDero5FjneuULX3td8qb9CCFfGMrRcdTU
+- name: transition-1-initial-cd
+  sourceDocumentsWithThisReferences:
+  - documentId: mc
+    memberIdentity: mc
+    d:
+      blueId: this#1
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /d
+        - /a
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: mc
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 8DfUEGGgXCR2HPWoyGP3dhedW2kRZ85tqVjrGbLwjBve
+  - documentId: md
+    memberIdentity: md
+    c:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /c
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: CdyAoDEgTcDd8P56Sju4LC4z6DRD9g89Wo2fxE9pdfL2
+  preliminaryBlueIds:
+    '0': A3QQuZjYvNKPQGJmYakyQzRPMzRTXSkoEWrhpaJiiyTM
+    '1': 8UE438JS1mKgk4kBWXQuT12RBDE2weYRfwPkMePrqoWA
+  sortedSourceIndices:
+  - 1
+  - 0
+  canonicalLimitForm:
+  - documentId:
+      blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+    memberIdentity:
+      blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+    c:
+      blueId: this#1
+    contracts:
+      blueId: 4PYwdUy4d957gpfvXW7ZurCGNgukKxBc1b14pgJmtfhL
+  - documentId:
+      blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+    memberIdentity:
+      blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+    d:
+      blueId: this#0
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      blueId: DKZRNUfNeypoGqdez57bB4bQyGayqbZxH3YzjoLfb9j6
+  canonicalMasterInputUtf8Bytes: 549
+  masterBlueId: 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM
+  memberBlueIdsInSourceOrder:
+  - 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM#1
+  - 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM#0
+  materializedDocuments:
+  - documentId: mc
+    memberIdentity: mc
+    d:
+      blueId: 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM#0
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /d
+        - /a
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: mc
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 8DfUEGGgXCR2HPWoyGP3dhedW2kRZ85tqVjrGbLwjBve
+  - documentId: md
+    memberIdentity: md
+    c:
+      blueId: 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /c
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: CdyAoDEgTcDd8P56Sju4LC4z6DRD9g89Wo2fxE9pdfL2
+- name: result-0
+  sourceDocumentsWithThisReferences:
+  - documentId: ma
+    memberIdentity: ma
+    b:
+      blueId: this#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /b
+        - /c
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: ma
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: AFip45D27jHpFqBsbpR6zLUi4b4oEDB1nqTx5uUcp37D
+  - documentId: mb
+    memberIdentity: mb
+    a:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /a
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 6wVLtM7Vne7bDero5FjneuULX3td8qb9CCFfGMrRcdTU
+  preliminaryBlueIds:
+    '0': Fx3Qtx56q1c7S1yKm6uVUcbZ7aBmrCoXPDFVoU8R3rqL
+    '1': FNffAjK4cYe91LG37omUjduRAZ8YaguBUk2sdLixynJ4
+  sortedSourceIndices:
+  - 1
+  - 0
+  canonicalLimitForm:
+  - documentId:
+      blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
+    memberIdentity:
+      blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
+    a:
+      blueId: this#1
+    contracts:
+      blueId: CRiP9AmNrwXkt2a2N8f4S9yr5FWmGETmApNJJiJPaQMb
+  - documentId:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    memberIdentity:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    b:
+      blueId: this#0
+    contracts:
+      blueId: 8fRutqC9wFAop87DKRh8K2xxE6po9iJKuXBUAHy4Pqc8
+  canonicalMasterInputUtf8Bytes: 485
+  masterBlueId: 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm
+  memberBlueIdsInSourceOrder:
+  - 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm#1
+  - 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm#0
+  materializedDocuments:
+  - documentId: ma
+    memberIdentity: ma
+    b:
+      blueId: 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /b
+        - /c
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: ma
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: AFip45D27jHpFqBsbpR6zLUi4b4oEDB1nqTx5uUcp37D
+  - documentId: mb
+    memberIdentity: mb
+    a:
+      blueId: 7Ney2PyGnX15VtRqMgnvmCNpZKPvJwC99UDrxs6SnZVm#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /a
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 6wVLtM7Vne7bDero5FjneuULX3td8qb9CCFfGMrRcdTU
+- name: result-1
+  sourceDocumentsWithThisReferences:
+  - documentId: mc
+    memberIdentity: mc
+    d:
+      blueId: this#1
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /d
+        - /a
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: mc
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 8DfUEGGgXCR2HPWoyGP3dhedW2kRZ85tqVjrGbLwjBve
+  - documentId: md
+    memberIdentity: md
+    c:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /c
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: CdyAoDEgTcDd8P56Sju4LC4z6DRD9g89Wo2fxE9pdfL2
+  preliminaryBlueIds:
+    '0': A3QQuZjYvNKPQGJmYakyQzRPMzRTXSkoEWrhpaJiiyTM
+    '1': 8UE438JS1mKgk4kBWXQuT12RBDE2weYRfwPkMePrqoWA
+  sortedSourceIndices:
+  - 1
+  - 0
+  canonicalLimitForm:
+  - documentId:
+      blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+    memberIdentity:
+      blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+    c:
+      blueId: this#1
+    contracts:
+      blueId: 4PYwdUy4d957gpfvXW7ZurCGNgukKxBc1b14pgJmtfhL
+  - documentId:
+      blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+    memberIdentity:
+      blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+    d:
+      blueId: this#0
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      blueId: DKZRNUfNeypoGqdez57bB4bQyGayqbZxH3YzjoLfb9j6
+  canonicalMasterInputUtf8Bytes: 549
+  masterBlueId: 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM
+  memberBlueIdsInSourceOrder:
+  - 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM#1
+  - 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM#0
+  materializedDocuments:
+  - documentId: mc
+    memberIdentity: mc
+    d:
+      blueId: 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM#0
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /d
+        - /a
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: mc
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 8DfUEGGgXCR2HPWoyGP3dhedW2kRZ85tqVjrGbLwjBve
+  - documentId: md
+    memberIdentity: md
+    c:
+      blueId: 2Z2Jwpau22rihJBktq4aoTMf5fCX3EStu1PsVwwhDfEM#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /c
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: CdyAoDEgTcDd8P56Sju4LC4z6DRD9g89Wo2fxE9pdfL2
+- name: checkpoint-settlement-0
+  sourceDocumentsWithThisReferences:
+  - documentId: ma
+    memberIdentity: ma
+    b:
+      blueId: this#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /b
+        - /c
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: ma
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: AFip45D27jHpFqBsbpR6zLUi4b4oEDB1nqTx5uUcp37D
+      checkpoint:
+        type:
+          blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+        entries:
+          source:
+            domain:
+              blueId: HfsFKajdCf4YgjnPa6MrQchmSRQc1XnUtqycK8vibSQw
+            subject:
+              blueId: GhaPnWXpUKDx8ntjpZZk1KgysXgKqfah3yFmVmA4q4o1
+  - documentId: mb
+    memberIdentity: mb
+    a:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /a
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 6wVLtM7Vne7bDero5FjneuULX3td8qb9CCFfGMrRcdTU
+  preliminaryBlueIds:
+    '0': 5sqwK3fWNqXzHG8smVy1Spk3jbaMy7gzNCbFW4YQjifh
+    '1': FNffAjK4cYe91LG37omUjduRAZ8YaguBUk2sdLixynJ4
+  sortedSourceIndices:
+  - 0
+  - 1
+  canonicalLimitForm:
+  - documentId:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    memberIdentity:
+      blueId: F3LnxMEs5eonRD6mA1xM3qMZVby4rrs1ZWNxp9jKyLMw
+    b:
+      blueId: this#1
+    contracts:
+      blueId: 4v5YAperpv51TsSp5B6xsQhKUkac71K1wUiBZYBszkDG
+  - documentId:
+      blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
+    memberIdentity:
+      blueId: 9uQSUnSyJpehm745GCZffXhua6Bx7UKNtcHnnoAtcvWN
+    a:
+      blueId: this#0
+    contracts:
+      blueId: CRiP9AmNrwXkt2a2N8f4S9yr5FWmGETmApNJJiJPaQMb
+  canonicalMasterInputUtf8Bytes: 485
+  masterBlueId: 3QVfXp2ZcSQHKnaF5Lw76ZAjG1kzMGt8uXv7gxHEYHk3
+  memberBlueIdsInSourceOrder:
+  - 3QVfXp2ZcSQHKnaF5Lw76ZAjG1kzMGt8uXv7gxHEYHk3#0
+  - 3QVfXp2ZcSQHKnaF5Lw76ZAjG1kzMGt8uXv7gxHEYHk3#1
+  materializedDocuments:
+  - documentId: ma
+    memberIdentity: ma
+    b:
+      blueId: 3QVfXp2ZcSQHKnaF5Lw76ZAjG1kzMGt8uXv7gxHEYHk3#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /b
+        - /c
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: ma
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: AFip45D27jHpFqBsbpR6zLUi4b4oEDB1nqTx5uUcp37D
+      checkpoint:
+        type:
+          blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+        entries:
+          source:
+            domain:
+              blueId: HfsFKajdCf4YgjnPa6MrQchmSRQc1XnUtqycK8vibSQw
+            subject:
+              blueId: GhaPnWXpUKDx8ntjpZZk1KgysXgKqfah3yFmVmA4q4o1
+  - documentId: mb
+    memberIdentity: mb
+    a:
+      blueId: 3QVfXp2ZcSQHKnaF5Lw76ZAjG1kzMGt8uXv7gxHEYHk3#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /a
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 6wVLtM7Vne7bDero5FjneuULX3td8qb9CCFfGMrRcdTU
+- name: checkpoint-settlement-1
+  sourceDocumentsWithThisReferences:
+  - documentId: mc
+    memberIdentity: mc
+    d:
+      blueId: this#1
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /d
+        - /a
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: mc
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 8DfUEGGgXCR2HPWoyGP3dhedW2kRZ85tqVjrGbLwjBve
+      checkpoint:
+        type:
+          blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+        entries:
+          source:
+            domain:
+              blueId: 9Cprd6vTUPqtoUpSfPVb52C89zv7y8Si3vBNAT8oW6Ld
+            subject:
+              blueId: GhaPnWXpUKDx8ntjpZZk1KgysXgKqfah3yFmVmA4q4o1
+  - documentId: md
+    memberIdentity: md
+    c:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /c
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: CdyAoDEgTcDd8P56Sju4LC4z6DRD9g89Wo2fxE9pdfL2
+  preliminaryBlueIds:
+    '0': FtcnE3F6NktkYJp9WmL1ygbM5xyT8gPCoZbXXRGJowdK
+    '1': 8UE438JS1mKgk4kBWXQuT12RBDE2weYRfwPkMePrqoWA
+  sortedSourceIndices:
+  - 1
+  - 0
+  canonicalLimitForm:
+  - documentId:
+      blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+    memberIdentity:
+      blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+    c:
+      blueId: this#1
+    contracts:
+      blueId: 4PYwdUy4d957gpfvXW7ZurCGNgukKxBc1b14pgJmtfhL
+  - documentId:
+      blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+    memberIdentity:
+      blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+    d:
+      blueId: this#0
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      blueId: 6VeZc9QoJBwLyvnqpe7nkhXVtSnhr4er6wcfMY6BKU41
+  canonicalMasterInputUtf8Bytes: 549
+  masterBlueId: 8dmKsF2ZW2trdZtprvJ4v4Mc1NA9igcARoYWX3cskUce
+  memberBlueIdsInSourceOrder:
+  - 8dmKsF2ZW2trdZtprvJ4v4Mc1NA9igcARoYWX3cskUce#1
+  - 8dmKsF2ZW2trdZtprvJ4v4Mc1NA9igcARoYWX3cskUce#0
+  materializedDocuments:
+  - documentId: mc
+    memberIdentity: mc
+    d:
+      blueId: 8dmKsF2ZW2trdZtprvJ4v4Mc1NA9igcARoYWX3cskUce#0
+    a:
+      blueId: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /d
+        - /a
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        subscriptionKey: fixture
+        eventKey: fixture
+        accept: true
+        checkpointDomain: domain
+        logicalDeliveryKey: mc
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: 8DfUEGGgXCR2HPWoyGP3dhedW2kRZ85tqVjrGbLwjBve
+      checkpoint:
+        type:
+          blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+        entries:
+          source:
+            domain:
+              blueId: 9Cprd6vTUPqtoUpSfPVb52C89zv7y8Si3vBNAT8oW6Ld
+            subject:
+              blueId: GhaPnWXpUKDx8ntjpZZk1KgysXgKqfah3yFmVmA4q4o1
+  - documentId: md
+    memberIdentity: md
+    c:
+      blueId: 8dmKsF2ZW2trdZtprvJ4v4Mc1NA9igcARoYWX3cskUce#1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /c
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: CdyAoDEgTcDd8P56Sju4LC4z6DRD9g89Wo2fxE9pdfL2

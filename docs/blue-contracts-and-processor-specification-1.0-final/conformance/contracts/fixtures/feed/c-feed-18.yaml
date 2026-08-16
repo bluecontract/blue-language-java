@@ -1,0 +1,96 @@
+schema: blue-contracts-fixture/1.0
+id: c-feed-18
+vectors:
+- C-FEED-11
+category: feed
+description: A channel-specific document target selects one collection member even when members reuse one external source.
+operation: process
+input:
+  root:
+    lessons:
+      lesson-a:
+        handled: false
+        contracts:
+          in:
+            type:
+              blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+            order: 0
+            subscriptionKey: document:lesson-a|source:shared-timeline
+            eventKey: document:lesson-a|source:shared-timeline
+            accept: true
+            checkpointDomain: lesson-a-domain
+            sourceIdentity: shared-timeline
+          h:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: in
+            order: 0
+            result:
+              patches:
+              - op: replace
+                path: /handled
+                val: true
+      lesson-b:
+        handled: false
+        contracts:
+          in:
+            type:
+              blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+            order: 0
+            subscriptionKey: document:lesson-b|source:shared-timeline
+            eventKey: document:lesson-b|source:shared-timeline
+            accept: true
+            checkpointDomain: lesson-b-domain
+            sourceIdentity: shared-timeline
+          h:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: in
+            order: 0
+            result:
+              patches:
+              - op: replace
+                path: /handled
+                val: true
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        collectionPaths:
+        - /lessons
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: document:lesson-a|source:shared-timeline
+    id: E-target-a
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - document:lesson-a|source:shared-timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /lessons/lesson-a
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: trace.externalDeliveryOrder
+    op: sequenceEquals
+    expected:
+    - /lessons/lesson-a:in
+  - actual: result.document.lessons.lesson-a.handled
+    op: equals
+    expected: true
+  - actual: result.document.lessons.lesson-b.handled
+    op: equals
+    expected: false

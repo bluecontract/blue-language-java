@@ -1,0 +1,9 @@
+name: Document Update Channel
+type:
+  blueId: CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR
+description: Processor-managed Channel receiving one immutable Document Update per matching scope in the origin-to-Root cascade.
+path:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true

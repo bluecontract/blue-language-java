@@ -1,0 +1,20 @@
+schema: blue-contracts-fixture/1.0
+id: gas-composite-gas-exhaustion-prefix
+vectors:
+- C-GAS-02
+- C-GAS-03
+- C-GAS-04
+- C-GAS-05
+category: gas
+operation: gas-micro
+input:
+  limit: 5
+  charges:
+  - 2
+  - 3
+  - 1
+expected:
+  admitted:
+  - 2
+  - 3
+  failedChargeAbsent: true

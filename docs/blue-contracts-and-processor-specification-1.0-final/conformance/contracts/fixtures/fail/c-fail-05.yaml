@@ -1,0 +1,91 @@
+schema: blue-contracts-fixture/1.0
+id: c-fail-05
+vectors:
+- C-LOOP-01
+category: fail
+description: 'A self-reenqueuing internal event cycle cannot run forever: live gas admission stops the invocation, rolls back Root and public events, and produces a deterministic trace prefix.'
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-v1
+      start:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+        result:
+          events:
+          - kind: loop
+      triggered:
+        type:
+          blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
+        order: 0
+      loop:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: triggered
+        order: 0
+        result:
+          events:
+          - kind: loop
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: route
+    id: E-route
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - source
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: source
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+    gasLimit: 500
+  variants:
+  - name: first
+    sameEvent: true
+  - name: retry
+    sameEvent: true
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: gas-limit-exceeded
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: result.events
+    op: sequenceEquals
+    expected: []
+  - actual: result.totalGas
+    op: lessThan
+    expected: 501
+  - actual: trace.namedEntries
+    op: sameAcrossVariants
+  - actual: trace.eventOccurrencesDequeued
+    op: greaterThan
+    expected: 0
+  - actual: result.document.contracts.checkpoint
+    op: absent

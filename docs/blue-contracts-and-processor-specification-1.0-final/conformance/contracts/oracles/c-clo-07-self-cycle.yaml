@@ -1,0 +1,103 @@
+schema: blue-language-cyclic-oracle/1.0
+id: c-clo-07-self-cycle
+stages:
+- name: input-0
+  sourceDocumentsWithThisReferences:
+  - documentId: self
+    memberIdentity: self
+    self:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /self
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: HKfNQrRyA1NEccrGZRC1LdkVaZVXUSCUzWxGL3jzLCyN
+  preliminaryBlueIds:
+    '0': 5UbTy2692PS7at7VPza1oa44sW7gCGQooPHp6zKFKQH3
+  sortedSourceIndices:
+  - 0
+  canonicalLimitForm:
+  - documentId:
+      blueId: DEm4cVhxm5Sfep8pNpJzFqCBhR7wPrKiigDFBD4zbfUH
+    memberIdentity:
+      blueId: DEm4cVhxm5Sfep8pNpJzFqCBhR7wPrKiigDFBD4zbfUH
+    self:
+      blueId: this#0
+    contracts:
+      blueId: 8SLxYrY3tdzRpGHWeoFDP1erC6XMZ237AtR5uKMVzkWS
+  canonicalMasterInputUtf8Bytes: 246
+  masterBlueId: ALpkipnkMSxyp3rekbxjG3fD2S3V2PSScLTa2LxBDdFp
+  memberBlueIdsInSourceOrder:
+  - ALpkipnkMSxyp3rekbxjG3fD2S3V2PSScLTa2LxBDdFp#0
+  materializedDocuments:
+  - documentId: self
+    memberIdentity: self
+    self:
+      blueId: ALpkipnkMSxyp3rekbxjG3fD2S3V2PSScLTa2LxBDdFp#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /self
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: HKfNQrRyA1NEccrGZRC1LdkVaZVXUSCUzWxGL3jzLCyN
+- name: result-0
+  sourceDocumentsWithThisReferences:
+  - documentId: self
+    memberIdentity: self
+    self:
+      blueId: this#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /self
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: HKfNQrRyA1NEccrGZRC1LdkVaZVXUSCUzWxGL3jzLCyN
+  preliminaryBlueIds:
+    '0': 5UbTy2692PS7at7VPza1oa44sW7gCGQooPHp6zKFKQH3
+  sortedSourceIndices:
+  - 0
+  canonicalLimitForm:
+  - documentId:
+      blueId: DEm4cVhxm5Sfep8pNpJzFqCBhR7wPrKiigDFBD4zbfUH
+    memberIdentity:
+      blueId: DEm4cVhxm5Sfep8pNpJzFqCBhR7wPrKiigDFBD4zbfUH
+    self:
+      blueId: this#0
+    contracts:
+      blueId: 8SLxYrY3tdzRpGHWeoFDP1erC6XMZ237AtR5uKMVzkWS
+  canonicalMasterInputUtf8Bytes: 246
+  masterBlueId: ALpkipnkMSxyp3rekbxjG3fD2S3V2PSScLTa2LxBDdFp
+  memberBlueIdsInSourceOrder:
+  - ALpkipnkMSxyp3rekbxjG3fD2S3V2PSScLTa2LxBDdFp#0
+  materializedDocuments:
+  - documentId: self
+    memberIdentity: self
+    self:
+      blueId: ALpkipnkMSxyp3rekbxjG3fD2S3V2PSScLTa2LxBDdFp#0
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /self
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          blueId: HKfNQrRyA1NEccrGZRC1LdkVaZVXUSCUzWxGL3jzLCyN
