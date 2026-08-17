@@ -6,7 +6,12 @@ category: limits
 operation: limit-micro
 description: The cyclicEdgesPerComponent guard independently measures 1024 against the frozen bound 1024 and returns ACCEPT; this microfixture does not claim that a later gas-expensive invocation phase completes.
 releaseManifest: ../../release-manifest.yaml
-input:
+input: {}
+expected:
+  limitDecision: ACCEPT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+limit:
   limit: cyclicEdgesPerComponent
   configured: 1024
   observed: 1024
@@ -15,7 +20,3 @@ input:
     parameters:
       count: 1024
       members: 128
-expected:
-  limitDecision: ACCEPT
-  rejectedStepAdmitted: false
-  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE

@@ -109,6 +109,7 @@ all resulting component proofs and identities
 all active and inactive prospective occurrence bindings, activation
 generations, and nullable historical catch-up cursors
 public Root events only
+both contiguous publicEventOrdinal and invocation-global eventOccurrenceOrdinal
 one gas trace and rejected next charge
 one atomic commit payload
 ```
@@ -141,11 +142,15 @@ invocationIdentity:
     input closure state + exact cause + frozen direct-delivery snapshot +
     candidate + execution/environment identities
 
-historical resource retry:
-    additional exact transition evidence preserves invocationIdentity only
-    while the state, operation, cause, admission candidate, route, execution
-    policy and environment all revalidate unchanged; consumed transitions
-    remain bound by transition/work identities and completed result evidence
+exact-node resource retry:
+    changing only top-level harness provider availability preserves both
+    inputClosureIdentity and invocationIdentity; NeedsResources requests only
+    exact already-named BlueIds, never a history range
+
+managed revision:
+    each contiguous child revision is a new PROCESS_CLOSURE invocation whose
+    ManagedRevisionCause binds one source receipt and one target occurrence;
+    it seeds one CONTAINING_REFERENCE_UPDATE and has its own gas/commit boundary
 ```
 
 Reject a constructor or storage adapter that includes cause or direct-delivery
@@ -165,6 +170,8 @@ ManagedOccurrenceBinding / stable occurrence identity / exact-state binding iden
 TransitionId
 EventOccurrenceId
 WorkOccurrenceId
+SourceRevisionReceiptIdentity
+ManagedRevisionCauseIdentity
 ComponentIdentity
 ComponentGeneration
 ActivationGeneration
@@ -173,7 +180,12 @@ GraphGeneration
 
 Confirm the comparison rules do not use Java insertion order, authored map insertion order, current BlueId lexical order, thread scheduling, cache state, or admission order.
 
-DocumentId must be nonempty NFC-normalized Unicode, case-sensitive, unique in the selected managed-environment domain, and compared by Unicode scalar/code-point sequence.
+DocumentId must arrive as nonempty NFC Unicode, be rejected rather than silently
+normalized when non-NFC, remain case-sensitive and unique in the selected
+managed-environment domain, and compare by Unicode scalar/code-point sequence.
+Audit the same fail-closed admission/pre-construction rule for every Contracts
+portable-order token named in §4.7, while leaving arbitrary Blue payload Text
+and RFC 8785/BlueId serialization unchanged.
 
 ### 5. Queue semantics
 
@@ -186,10 +198,11 @@ DocumentUpdateDelivery
 TriggeredEventDelivery
 EmbeddedEventDelivery
 LifecycleDelivery
-HistoricalTransitionDelivery
 ContainingReferenceUpdate
 ```
 
+Confirm that `ManagedRevisionCause` is an invocation cause that seeds one
+ordinary `ContainingReferenceUpdate`, not an additional queued work variant.
 `PatchContinuationFrame` and tentative-finalization boundaries are synchronous
 control frames owned by the current work occurrence, not queued work variants.
 Only an actual matching Document Update delivery becomes a queued occurrence.
@@ -214,7 +227,12 @@ new occurrence after removal:
     uses the new graph
 
 remove and re-add:
-    creates a new activation generation; the old cursor/lineage is not reused
+    removal allocates the inactive successor at generation plus one with fresh
+    occurrence/binding identities; the successor is output-only until committed
+    and supplied as a later invocation input; that later re-add preserves
+    generation/occurrence identity while ordinary exact-state churn may rebind;
+    same-invocation remove-then-re-add is unsupported; the old cursor/lineage
+    is not reused
 ```
 
 ### 7. Gas and limits
@@ -245,7 +263,19 @@ immediately after the identity-changing work.
 Do not accept vector-name presence as proof. For every closure fixture:
 
 - validate against `closure-fixture-schema.yaml`;
+- prove `runtime`, `sharedLimitSource`, `provider`, `locality`, `limit`, and
+  oracle-stage routing exist only in the closed top-level harness fields, never
+  in normative invocation or result API shapes;
 - ensure every active Process Embedded edge exists at the exact source document path;
+- ensure each prospective row was supplied in the input except the exact
+  inactive successor derived from an active retirement; prove that successor
+  preserves source/target/policy, advances generation once, and uses fresh
+  occurrence/binding identities without target acquisition; accept an absent
+  pending-null path. C-CLO-12 supplies this full removal half. Use the
+  deterministic validator/reference transition-law self-check—not a claimed
+  released integration fixture—to prove that a committed successor supplied as
+  a later invocation input activates with unchanged generation and occurrence
+  identity and that same-invocation remove-then-re-add is rejected;
 - ensure that source document declares that path through the exact current `Process Embedded` type;
 - ensure direct deliveries name real `ScriptedExternalChannel` contracts, not Handler keys;
 - ensure runtime handler keys name real `ScriptedHandler` contracts and their bound Channel exists;
@@ -259,6 +289,18 @@ Do not accept vector-name presence as proof. For every closure fixture:
 - prove merge and split fixtures assert complete final partition and identities;
 - prove suffix-remap fixtures include an outside reference when claiming outside-reference correctness;
 - prove gas fixtures freeze the accepted trace, total, rejected next work identity and retry parity.
+- prove pure references, verified inline acyclic nodes, and verified materialized
+  cyclic members have exact behavioral parity; mixed blueId objects fail.
+- prove Root scope generation is 0, first embedded reservation/activation is 1,
+  active removal allocates its inactive successor at exactly generation plus
+  one. Require the deterministic transition-law self-check to prove the
+  successor is output-only until supplied as a later invocation input, that
+  later re-add preserves its generation/occurrence identity, and
+  same-invocation remove-then-re-add is rejected. Do not claim an end-to-end
+  released re-add fixture;
+  prove
+  different-lineage retarget of an active or reserved path fails before
+  mutation.
 
 ### 9. Exact flagship scenarios
 
@@ -281,9 +323,15 @@ Same-event infinite loop:
     full rollback and retry-identical trace
 
 A epoch 10, B attaches A epoch 5:
-    without exact revision evidence -> NeedsResources
-    with exact A5->A10 chain -> apply in order without downgrading A
-    if a cycle closes, re-finalize after every identity-affecting application
+    C22 normative input already has the inactive A5 row
+    the separate runtime harness supplies the Handler patch
+    missing A5 node -> NeedsResources[A5]
+    provider-only retry -> identical closure/invocation identities
+    successful external commit -> B->A5 inactive, pending cursor 5
+    Coordination dispatches five separately committed ManagedRevisionCause
+    invocations A5->A6 ... A9->A10 with no live-work overtake
+    final invocation reconciles historical A10 to latest authoritative A,
+    clears the cursor, activates, repartitions and finalizes
 
 Dynamic cycle during initialization:
     cycle is not already present in the input graph
@@ -297,7 +345,7 @@ Merge and split:
 Frozen edge mutation:
     work before removal retains old targets
     work after removal uses new graph
-    remove/re-add receives a new activation generation
+    removal publishes the next inactive activation generation
 ```
 
 ### 10. Mandate boundary

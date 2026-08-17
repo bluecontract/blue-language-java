@@ -6,7 +6,10 @@ category: identity
 operation: admit-closure
 description: The runner derives duplicate preliminary cyclic identities from exact member bodies; the input does not prelabel the proof as invalid.
 releaseManifest: ../../release-manifest.yaml
-oracle: ../../oracles/ambiguous-preliminary-members.yaml
+oracle:
+  path: ../../oracles/ambiguous-preliminary-members.yaml
+  componentStages: []
+  finalizationStages: []
 input:
   graphGeneration: 1
   cause:
@@ -28,16 +31,6 @@ input:
       publicRoot: true
       epoch: 0
       componentGeneration: 0
-    amb-b:
-      documentId: amb-b
-      blueId: B6HcDTpw5xBdtHbCEjJYBnQ2J11ee4wZtTR8zb8BD5AN
-      document:
-        same: true
-      initialized: false
-      terminated: false
-      publicRoot: false
-      epoch: 0
-      componentGeneration: 0
   occurrences: []
   components:
   - componentIdentity: sha256:f8b69b1ba070baa5c9d2b02db8e9d3773224259b25f5069d429a899292f4d147
@@ -48,23 +41,12 @@ input:
     orderedMemberBlueIds:
     - B6HcDTpw5xBdtHbCEjJYBnQ2J11ee4wZtTR8zb8BD5AN
     componentStateIdentity: sha256:a591aa29a7fadd276062fc2d8f7456e37265e3689c32c581045ea86773cf442d
-  - componentIdentity: sha256:c29a51e86c77159ec3932031ad8b0b45623b4824a6010ad9fd8c3d22021bc10e
-    componentGeneration: 0
-    kind: ACYCLIC
-    orderedMemberDocumentIds:
-    - amb-b
-    orderedMemberBlueIds:
-    - B6HcDTpw5xBdtHbCEjJYBnQ2J11ee4wZtTR8zb8BD5AN
-    componentStateIdentity: sha256:7e6b312685b072105e15f32fdabd2fd36cc06da2a3a95476af2f043fd26ec8f7
   directDeliveries: []
   gasPolicy:
     policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
     sharedLimit: 100000
-    usesReleaseDefault: true
     localLimits: {}
     label: release-default
-  runtime:
-    handlers: {}
   admissionCandidate:
     kind: AMBIGUOUS_PRELIMINARY_MEMBERS
     evidence:
@@ -84,13 +66,13 @@ input:
   - amb-a
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
-  closureIdentity: sha256:d2a338f1cd3cb105e0ba3e3a4c5a34bf10e5320b6923431b6a1b68c098b4b8fc
-  invocationIdentity: sha256:e45c29d071281f7a0d3742313b95ef145f6c934f2085ffa4f339afb554f8dbd8
+  closureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
+  invocationIdentity: sha256:b85083b84b9dc6bedc210640787d626b0cc99fdb1d1fa5370e74b0ef1ab08d28
   environment:
-    blueLanguageSpecificationIdentity: sha256:a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869
-    contractsSpecificationIdentity: sha256:cde697e8632174111a3571fa898e7ef8bc93420d092a967256df6fe0b7d6236d
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:66b7645e92c2e9941a63fe217e1447996dcb3c9ed1fcf0f5f1b88899d2db9e3c
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
-    gasManifestIdentity: sha256:5f8e6a724e1323c0abf57ea26668a6fe2bf0d708a9ade67020ed4dc0f0db12be
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
       identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
       label: nfc-document-lineage-v1
@@ -173,14 +155,14 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:83f84e8eab0b62d3a5bcd362b339dd27786e39d5d6a2d2367dfa84f0508820df
-    cyclicProofVerifierIdentity: sha256:b949a4f7629554393b210f867405597372cc3259ed8c7e765a37fa33182921a5
+    cyclicFinalizerIdentity: sha256:acce2d00473b652d0239f5d4483786726c54772528870b1a222ca757c72b66b5
+    cyclicProofVerifierIdentity: sha256:c86366b1a1c826982f0fd78d7c4abfc73d7e96f07681bce79a1fdfb4ed309599
 expected:
   attemptOutcome: Complete
   status: invalid-processing-document
-  invocationIdentity: sha256:e45c29d071281f7a0d3742313b95ef145f6c934f2085ffa4f339afb554f8dbd8
-  inputClosureIdentity: sha256:d2a338f1cd3cb105e0ba3e3a4c5a34bf10e5320b6923431b6a1b68c098b4b8fc
-  outputClosureIdentity: sha256:d2a338f1cd3cb105e0ba3e3a4c5a34bf10e5320b6923431b6a1b68c098b4b8fc
+  invocationIdentity: sha256:b85083b84b9dc6bedc210640787d626b0cc99fdb1d1fa5370e74b0ef1ab08d28
+  inputClosureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
+  outputClosureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
   atomic: true
   workTrace: []
   tentativeFinalizations: []
@@ -199,19 +181,6 @@ expected:
     componentIdentity: sha256:f8b69b1ba070baa5c9d2b02db8e9d3773224259b25f5069d429a899292f4d147
     componentStateIdentity: sha256:a591aa29a7fadd276062fc2d8f7456e37265e3689c32c581045ea86773cf442d
     memberIndex: null
-  - documentId: amb-b
-    beforeBlueId: B6HcDTpw5xBdtHbCEjJYBnQ2J11ee4wZtTR8zb8BD5AN
-    afterBlueId: B6HcDTpw5xBdtHbCEjJYBnQ2J11ee4wZtTR8zb8BD5AN
-    document:
-      same: true
-    initialized: false
-    terminated: false
-    publicRoot: false
-    epoch: 0
-    componentGeneration: 0
-    componentIdentity: sha256:c29a51e86c77159ec3932031ad8b0b45623b4824a6010ad9fd8c3d22021bc10e
-    componentStateIdentity: sha256:7e6b312685b072105e15f32fdabd2fd36cc06da2a3a95476af2f043fd26ec8f7
-    memberIndex: null
   resultingComponents:
   - componentIdentity: sha256:f8b69b1ba070baa5c9d2b02db8e9d3773224259b25f5069d429a899292f4d147
     componentGeneration: 0
@@ -221,14 +190,6 @@ expected:
     orderedMemberBlueIds:
     - B6HcDTpw5xBdtHbCEjJYBnQ2J11ee4wZtTR8zb8BD5AN
     componentStateIdentity: sha256:a591aa29a7fadd276062fc2d8f7456e37265e3689c32c581045ea86773cf442d
-  - componentIdentity: sha256:c29a51e86c77159ec3932031ad8b0b45623b4824a6010ad9fd8c3d22021bc10e
-    componentGeneration: 0
-    kind: ACYCLIC
-    orderedMemberDocumentIds:
-    - amb-b
-    orderedMemberBlueIds:
-    - B6HcDTpw5xBdtHbCEjJYBnQ2J11ee4wZtTR8zb8BD5AN
-    componentStateIdentity: sha256:7e6b312685b072105e15f32fdabd2fd36cc06da2a3a95476af2f043fd26ec8f7
   occurrenceBindings: []
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
   graphChanges: []
@@ -240,8 +201,8 @@ expected:
   publicEvents: []
   publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
   rollbackToInput: true
-  totalGas: 191
-  gasTraceIdentity: sha256:f80f9e7c69b277e6ff0507ddb18186ac749d37740a5a2e21db0cd60f0860a074
+  totalGas: 181
+  gasTraceIdentity: sha256:ed255b45d1f0ac36388438e6da19d08f9d1eda1457dcc0c356e1359f0a9a8e32
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -267,29 +228,13 @@ expected:
     reason: admission.document.amb-a
   - sequence: 3
     namespace: processor
-    counter: managedDocumentOpened
-    quantity: 1
-    weight: 10
-    subtotal: 10
-    documentId: amb-b
-    reason: admission.document.amb-b
-  - sequence: 4
-    namespace: processor
     counter: componentMemberPartitioned
     quantity: 1
     weight: 2
     subtotal: 2
     documentId: amb-a
     reason: admission.component-member
-  - sequence: 5
-    namespace: processor
-    counter: componentMemberPartitioned
-    quantity: 1
-    weight: 2
-    subtotal: 2
-    documentId: amb-b
-    reason: admission.component-member
-  - sequence: 6
+  - sequence: 4
     namespace: semantic
     counter: validationMemberExamined
     quantity: 1
@@ -297,7 +242,7 @@ expected:
     subtotal: 1
     documentId: amb-a
     reason: candidate.ambiguous.member.amb-a
-  - sequence: 7
+  - sequence: 5
     namespace: semantic
     counter: validationMemberExamined
     quantity: 1
@@ -305,7 +250,7 @@ expected:
     subtotal: 1
     documentId: amb-b
     reason: candidate.ambiguous.member.amb-b
-  - sequence: 8
+  - sequence: 6
     namespace: semantic
     counter: nodeIdentityEstablished
     quantity: 1
@@ -313,7 +258,7 @@ expected:
     subtotal: 1
     documentId: amb-a
     reason: candidate.ambiguous.preliminary.node
-  - sequence: 9
+  - sequence: 7
     namespace: semantic
     counter: objectMemberRebuilt
     quantity: 2
@@ -321,7 +266,7 @@ expected:
     subtotal: 2
     documentId: amb-a
     reason: candidate.ambiguous.preliminary.members
-  - sequence: 10
+  - sequence: 8
     namespace: semantic
     counter: directIdentityHashBlock
     quantity: 3
@@ -329,39 +274,53 @@ expected:
     subtotal: 3
     documentId: amb-a
     reason: candidate.ambiguous.preliminary.hash
-  - sequence: 11
+  - sequence: 9
     namespace: semantic
     counter: sortComparison
     quantity: 1
     weight: 1
     subtotal: 1
     reason: candidate.ambiguous.sort
-  - sequence: 12
+  - sequence: 10
     namespace: semantic
     counter: scalarComparison
     quantity: 1
     weight: 1
     subtotal: 1
     reason: candidate.ambiguous.preliminary-identity.scalar
-  - sequence: 13
+  - sequence: 11
     namespace: semantic
     counter: textBlockExamined
     quantity: 2
     weight: 1
     subtotal: 2
     reason: candidate.ambiguous.preliminary-identity.text
-  - sequence: 14
+  - sequence: 12
     namespace: semantic
     counter: scalarComparison
     quantity: 1
     weight: 1
     subtotal: 1
     reason: candidate.ambiguous.canonical-input.scalar
-  - sequence: 15
+  - sequence: 13
     namespace: semantic
     counter: textBlockExamined
-    quantity: 4
+    quantity: 6
     weight: 1
-    subtotal: 4
+    subtotal: 6
     reason: candidate.ambiguous.canonical-input.text
   diagnostic: CyclicPreliminaryMemberAmbiguous
+runtime:
+  handlers: {}
+  initializationHandlers: {}
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds: []
+  expectedLoads: []
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

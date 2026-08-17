@@ -331,37 +331,51 @@ publish B as current while it still references stale A5
 
 ### 4.1 Missing evidence
 
-`c-clo-22-a10-attach-a5-needs-resources.yaml` supplies the intended binding but
-not the exact A5-to-A10 transition chain. The attempt returns:
+`c-clo-22-a10-attach-a5-needs-resources.yaml` supplies the intended exact A5
+binding, but the already-named A5 node is unavailable from the selected exact-
+node provider. The attempt returns:
 
 ```text
 NeedsResources
 ```
 
-No semantic gas or state commits.
+No semantic gas or state commits. The retry changes provider availability only;
+the normative closure and invocation identity remain byte-for-byte unchanged.
 
-### 4.2 Complete exact transition evidence
+### 4.2 Provider-only retry and one-step managed revisions
 
-`c-clo-23-a10-attach-a5-catch-up.yaml` supplies:
+`c-clo-23-00-attach-a5-retry.yaml` retries that same invocation with exact A5
+available. It commits B's inactive historical reference at cursor 5; it does
+not discover or replay a transition range.
+
+Coordination then constructs five separate, sequential invocations:
 
 ```text
-A5 -> A6 -> A7 -> A8 -> A9 -> A10
+c-clo-23-01-a5-to-a6.yaml
+c-clo-23-02-a6-to-a7.yaml
+c-clo-23-03-a7-to-a8.yaml
+c-clo-23-04-a8-to-a9.yaml
+c-clo-23-05-a9-to-a10.yaml
 ```
 
-Each transition is exact, contiguous, identity-linked, and carries its source
-cause evidence. B applies the missing managed revisions in order. If the new
-B->A edge closes a cycle with A->B, the component is re-finalized after every
-identity-affecting application before the next reaction observes it.
+Each file is one exact contiguous `ManagedRevisionCause`, with one processor
+invocation, gas/failure boundary, result, CAS commit, and durable cursor advance.
+Only after one result commits may Coordination construct the next cause from
+the new committed snapshot. Later live work cannot overtake the non-null
+historical cursor. If final activation closes a cycle, exact re-finalization
+occurs at that last invocation's identity-changing boundary before caused work
+can observe it.
 
 The final exact component master in the fixture is:
 
 ```text
-7rRD53yMa1QadPyAZw9hgsfUDr1hJztwqrRmtj2AX2bc
+B4s6BMi4HbXS48DC1GTuozEfbSdbBepRnpP5TrsJTdkE
 ```
 
 Contracts does not discover Timeline history. The coordination/feeder layer
-selects and proves the transition sequence; Contracts verifies and applies the
-exact supplied revision evidence.
+selects and proves one next transition only; Contracts verifies and applies
+that one supplied revision. No invocation accepts a transition array or commits
+an intermediate batch.
 
 ---
 

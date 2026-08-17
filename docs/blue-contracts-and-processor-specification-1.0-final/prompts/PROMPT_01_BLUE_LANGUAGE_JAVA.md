@@ -69,6 +69,9 @@ java-templates/reference/src/main/java/blue/contracts/closure/
 ```
 
 as semantic shapes and validation guidance. Adapt naming/packages to the real codebase. Do not copy a reference class blindly when the real runtime already owns that concept.
+The two template mains are dependency-free **shape smokes only** and must print
+their `*_TEMPLATE_SHAPE_SMOKE_OK` labels; passing them is never reported as
+fixture execution or implementation conformance.
 
 ## Phase 0 — exact baseline
 
@@ -79,6 +82,7 @@ Before editing production code:
 3. Record current Java compatibility gates.
 4. Record exact hashes of:
    - `CircularSetIdentityCalculator.java`;
+   - `NodeContentHandler.java`;
    - `CyclicSetProof.java`;
    - `CyclicSetProofResult.java`;
    - `CyclicAwareNodeProvider.java`;
@@ -104,6 +108,7 @@ Inspect existing Language classes, especially:
 
 ```text
 blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java
+blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java
 blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java
 blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java
 blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java
@@ -143,6 +148,10 @@ Requirements:
 - provider/proof verification is independent from finalization;
 - no Contracts `DocumentId` concept leaks into Blue Language;
 - no cyclic-set implementation cache affects BlueIds, proof or portable gas;
+- the production `NodeContentHandler.parseAndCalculateBlueId` cyclic path and
+  the exposed `CircularSetIdentityCalculator` finalization path return the same
+  canonical member order, rewritten bodies, MASTER and `MASTER#index` mapping
+  for every exact oracle;
 - existing ordinary cyclic API behavior stays binary/source compatible when possible.
 
 Add tests using every exact oracle in `conformance/contracts/oracles/`.
@@ -161,6 +170,7 @@ ClosureInvocationInput
 DirectLogicalDelivery
 ProcessingCause
 ExternalEventCause
+ManagedRevisionCause
 AdmissionCause
 ExecutionPolicy
 ```
@@ -171,13 +181,18 @@ Normative rules:
 
 ```text
 nonempty Unicode
-NFC normalized before admission
+already NFC at admission; reject non-NFC rather than silently normalizing it
 case-sensitive
 unique within the selected managed-environment identity domain
 compared by Unicode scalar/code-point sequence
 not a Blue Language identifier
 not included in a node's BlueId unless authored as Blue content
 ```
+
+This rejection boundary also covers every Contracts portable-order token in
+§4.7 (paths, runtime keys, logical-delivery keys, policy/limit names, and
+registered Text tie keys). It MUST NOT normalize arbitrary Blue payload Text or
+change RFC 8785/BlueId serialization.
 
 ### Managed occurrence binding
 
@@ -209,6 +224,28 @@ not an SCC edge until the authored path appears and the same row activates in
 place. The binding disambiguates two managed lineages with equal BlueIds; it
 does not create another authored graph.
 
+Every row that this invocation may activate must already be present in the
+input snapshot, except for the exact inactive successor derived when an active
+row retires. That successor preserves source path, target lineage, and policy,
+uses exactly the previous generation plus one, and receives fresh occurrence
+and binding identities; it is output-only in the invocation that creates it and
+is not target/binding acquisition. It may activate only after commit and after
+being supplied as an inactive row in a later invocation input; that later
+re-add preserves its allocated generation/occurrence identity.
+Same-invocation remove-then-re-add is unsupported. Do not acquire or infer a
+binding during Contracts execution. A pending-null prospective path may be
+absent until its patch. A historical row may contain its cursor value while
+remaining inactive. Root scope generation is `0`, first embedded reservation
+or activation is `1`, and same-lineage identity churn preserves that lineage
+while updating binding identity as needed. Different-lineage retarget of an
+active or reserved path is unsupported in Contracts 1.0 and fails before
+mutation.
+
+Accept exact path values representation-neutrally: pure reference, verified
+inline acyclic node, and verified materialized cyclic member plus complete
+owning proof are equal when they establish the same BlueId. Reject a mixed
+`blueId` object.
+
 ### AffectedClosureSnapshot
 
 It is authoritative durable closure state and must contain enough exact
@@ -239,12 +276,10 @@ Use one closed input value that owns the snapshot and every invocation adjunct:
 one AffectedClosureSnapshot
 all direct logical deliveries
 the directDeliverySnapshotIdentity recomputed over those deliveries
-one ExternalEventCause or AdmissionCause
+one ExternalEventCause, ManagedRevisionCause, or AdmissionCause
 the nullable admission candidate and identity
 execution policy identity and shared limit
 runtime/repository/registry/environment identities
-the exact historical transition evidence needed by any non-null
-pendingHistoricalEpoch, or the deterministic provider boundary that supplies it
 ```
 
 Every occurrence row carries `pendingHistoricalEpoch` explicitly as a safe
@@ -254,17 +289,56 @@ There is no hidden staged-binding map outside this snapshot. Recompute
 including `pendingHistoricalEpoch`, and reject a claimed mismatch before
 semantic work. Likewise recompute `directDeliverySnapshotIdentity` over the
 complete direct-delivery sequence. A non-null `pendingHistoricalEpoch` requires
-the contiguous, identity-verified historical transition chain before the row
-can catch up and clear the field; missing evidence returns `NeedsResources`.
+one new identity-verified `ManagedRevisionCause` invocation per contiguous
+revision. It is never a transition list inside this input. A managed-revision
+cause has empty direct deliveries and a null admission-candidate pair. Missing
+already-named exact nodes return `NeedsResources`; Contracts never requests or
+discovers a historical range.
 The snapshot and invocation identities bind the complete row set. The API must
 not separately accept another event, cause, route snapshot, execution policy,
 or environment that could disagree with this closed input. For an external
 cause, its external-order-policy identity must equal the one selected by the
 input environment.
 
+Implement the exact constructors
+`sourceRevisionReceiptIdentity` and `managedRevisionCauseIdentity` from the
+registry. The cause fields are exactly `targetOccurrenceIdentity`,
+`childDocumentId`, `fromEpoch`, `toEpoch`, `beforeBlueId`, `afterBlueId`,
+`afterDocument`, `originalSourceCauseIdentity`, and
+`sourceRevisionReceiptIdentity`, plus `kind` and `causeIdentity`. Require
+`toEpoch = fromEpoch + 1` and independently establish
+`afterDocument -> afterBlueId`.
+
 Do not allow caller-authored arbitrary direct targets. The host may construct
 the invocation input's direct-delivery sequence only from a verified
 route/subscription result.
+
+### Contracts 1.0 closure-scope profile
+
+Keep ordinary `PROCESS` nested managed-scope behavior unchanged. The new
+`PROCESS_CLOSURE` and `ADMIT_CLOSURE` API is deliberately Root-scoped in 1.0:
+
+- reject every direct delivery whose `scopePath`/`activationGeneration` is not
+  exactly `/`/`0`;
+- construct every accepted or rejected WorkOccurrence for the Root
+  `ManagedScopeKey(targetDocumentId, "/", 0)` and recompute its identity from
+  that key;
+- emit only Root `ChannelOccurrence` values and require every subscription
+  delta and checkpoint receipt to name the matching Root managed-scope
+  identity;
+- when a closure gas context carries scope fields, require the complete pair
+  `/` and `0`; never copy an embedded source occurrence generation into the
+  target work context;
+- publish an event only when its emitting work targets the Root scope of a
+  declared public Root.
+
+Keep the general versioned identity constructors and ordinary PROCESS routing
+scope-aware. Do not simulate non-Root closure support with source-document
+pointer lookup: pure-reference nested occurrences require a separately closed
+owner/inventory wire model that Contracts 1.0 does not define. Add negative
+constructor, schema/adapter, and conformance-runner probes that fail before
+semantic work; do not add or renumber a release fixture merely for this profile
+guard.
 
 ## Phase 3 — add the closure processor API
 
@@ -336,9 +410,11 @@ DocumentUpdateDelivery
 TriggeredEventDelivery
 EmbeddedEventDelivery
 LifecycleDelivery
-HistoricalTransitionDelivery
 ContainingReferenceUpdate
 ```
+
+A `ManagedRevisionCause` is an invocation cause that seeds one ordinary
+`ContainingReferenceUpdate`; it is not an eighth queued work variant.
 
 `PatchContinuationFrame` is synchronous/LIFO control owned by the current
 Handler execution. It has no `WorkOccurrenceId` and pays no closure work queue
@@ -383,7 +459,7 @@ actual Triggered and frozen-containing Embedded delivery in canonical
 source-then-containing order, and enqueue all of those delivery work
 occurrences before dequeuing the first. Dequeue/deliver them in the same order;
 finish each delivery's synchronous patch/update/finalization continuation
-before dequeuing the next. Every actual occurrence of each of the eight closed
+before dequeuing the next. Every actual occurrence of each of the seven closed
 work kinds pays exactly one closure-work enqueue and one dequeue charge.
 
 This must eliminate the prior ambiguity between "apply all patches then updates" and "patch/update continuation".
@@ -419,7 +495,7 @@ Temporary finalization is private/non-authoritative but is a real exact Blue sta
 Keep the unchanged Language semantic finalization result separate from
 Contracts orchestration evidence. The Language-facing API returns the exact
 master, member mapping/proof and canonical-byte result; it does not receive a
-fixture `oracleStage`. Contracts wraps each call with one invocation-global
+top-level fixture-oracle stage label. Contracts wraps each call with one invocation-global
 `finalizationOrdinal` and one closed boundary:
 
 ```text
@@ -473,15 +549,22 @@ When resources are missing, return `NeedsResources` with only the sorted exact
 required BlueIds and no committed semantic gas/state. Discard that attempt;
 after obtaining and verifying the requested nodes, invoke again from the exact
 input closure and cause. Never resume an execution suffix, continuation, queue,
-or tentative state. Additional exact historical evidence may produce the same
-logical `invocationIdentity` on the fresh attempt only if the state-only input closure,
-operation, cause, admission candidate, direct-delivery snapshot, execution
-policy, and
-environment identities all revalidate unchanged. Otherwise construct a new
-invocation. Bind every consumed
-transition through its transition identity, historical WorkOccurrence identity,
-gas trace, and completed result/commit evidence; do not add resource evidence to
-durable `closureIdentity`.
+or tentative state. Provider availability/load state is top-level harness/host
+evidence, not normative input; changing only availability of the requested
+exact node must preserve both `inputClosureIdentity` and
+`invocationIdentity`. Any normative input change creates a new invocation.
+Never return a range or perform hidden historical discovery.
+
+Implement managed catch-up as one new invocation per revision. Each
+`ManagedRevisionCause` seeds exactly one `CONTAINING_REFERENCE_UPDATE`, pays one
+enqueue/dequeue pair, rewrites one source path, advances the same inactive
+row's cursor, performs semantic identity and immediate finalization/update
+continuation, and independently commits or rolls back. On the final epoch,
+after that first continuation is quiescent, reconcile the historical target
+BlueId to the latest authoritative same-lineage BlueId (which may have churned
+because of containing-reference updates), clear the cursor, activate the edge,
+repartition, and finalize. This is not a Handler patch or a second queued
+historical work kind.
 
 Do not introduce `componentPatches` or another graph mutation protocol.
 
@@ -620,6 +703,7 @@ all changed containing Roots
 before/after exact BlueIds and exact documents
 updated occurrences and activation generations
 closed graph-change, checkpoint-write, subscription-delta and public-event sequences with identities
+every public event's contiguous publicEventOrdinal and required invocation-global eventOccurrenceOrdinal
 retired old masters/proofs where applicable
 one public Root event sequence
 one shared gas trace identity and structured rejected-charge owner when applicable
@@ -707,13 +791,20 @@ The runner must:
 - calculate work/event/transition identities;
 - compare exact temporary masters, final documents/components, public events, gas trace, diagnostic and rollback;
 - execute cold, warm, inline and reference-backed parity modes;
+- move scripted `runtime`, `sharedLimitSource`, provider availability/load
+  assertions, locality probes, limit controls, and oracle stage routing to the
+  closed top-level harness fields; never expose them through production input or
+  result APIs;
+- accept materialized and pure exact occurrence values with identical semantics
+  and reject mixed `blueId` objects;
 - distinguish package validation from implementation conformance.
 
 All existing ordinary fixture families must remain green.
 
 Migrate the existing exact-inventory gates from the historical 154 Contracts
-fixtures / 307 combined fixtures to the manifest-derived 207 Contracts fixtures
-(154 ordinary + 53 closure) / 360 combined fixtures (including 153 Language).
+fixtures / 307 combined fixtures to the manifest-derived 231 Contracts fixtures
+(167 ordinary + 64 closure), 236 Contracts fixture-manifest inventory entries,
+and 384 combined executable fixtures (including 153 Language).
 In particular, update or refactor:
 
 ```text

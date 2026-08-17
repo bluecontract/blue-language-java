@@ -6,7 +6,16 @@ category: identity
 operation: admit-closure
 description: An out-of-band occurrence row cannot create an edge absent from the exact source document and active Process Embedded declaration.
 releaseManifest: ../../release-manifest.yaml
-oracle: ../../oracles/c-clo-29-active-edge-path-validation.yaml
+oracle:
+  path: ../../oracles/c-clo-29-active-edge-path-validation.yaml
+  componentStages:
+  - location: INPUT
+    componentStateIdentity: sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18
+    stage: input-0
+  - location: RESULT
+    componentStateIdentity: sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18
+    stage: input-0
+  finalizationStages: []
 input:
   graphGeneration: 1
   cause:
@@ -111,7 +120,6 @@ input:
     - simple-a
     - simple-b
     masterBlueId: AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR
-    oracleStage: input-0
     orderedMemberBlueIds:
     - AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#0
     - AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#1
@@ -146,12 +154,8 @@ input:
   gasPolicy:
     policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
     sharedLimit: 100000
-    usesReleaseDefault: true
     localLimits: {}
     label: release-default
-  runtime:
-    handlers: {}
-    initializationHandlers: {}
   admissionCandidate:
     kind: INVALID_OCCURRENCE_BINDING
     evidence:
@@ -171,12 +175,12 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:fd4f71dc78c5300c88b3ad097b48742cefa46ad902984a4d4bed480f4eb06708
   closureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
-  invocationIdentity: sha256:ebed2baae7dfa23894b3e9424833d808f7129ab77303c51efcc52343257cc181
+  invocationIdentity: sha256:82dc9360b0cbfc8071e3f2aa09786fc891ac212210eb0ec24921ba62105521e6
   environment:
-    blueLanguageSpecificationIdentity: sha256:a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869
-    contractsSpecificationIdentity: sha256:cde697e8632174111a3571fa898e7ef8bc93420d092a967256df6fe0b7d6236d
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:66b7645e92c2e9941a63fe217e1447996dcb3c9ed1fcf0f5f1b88899d2db9e3c
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
-    gasManifestIdentity: sha256:5f8e6a724e1323c0abf57ea26668a6fe2bf0d708a9ade67020ed4dc0f0db12be
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
       identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
       label: nfc-document-lineage-v1
@@ -259,12 +263,12 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:83f84e8eab0b62d3a5bcd362b339dd27786e39d5d6a2d2367dfa84f0508820df
-    cyclicProofVerifierIdentity: sha256:b949a4f7629554393b210f867405597372cc3259ed8c7e765a37fa33182921a5
+    cyclicFinalizerIdentity: sha256:acce2d00473b652d0239f5d4483786726c54772528870b1a222ca757c72b66b5
+    cyclicProofVerifierIdentity: sha256:c86366b1a1c826982f0fd78d7c4abfc73d7e96f07681bce79a1fdfb4ed309599
 expected:
   attemptOutcome: Complete
   status: invalid-processing-document
-  invocationIdentity: sha256:ebed2baae7dfa23894b3e9424833d808f7129ab77303c51efcc52343257cc181
+  invocationIdentity: sha256:82dc9360b0cbfc8071e3f2aa09786fc891ac212210eb0ec24921ba62105521e6
   inputClosureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
   outputClosureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
   atomic: true
@@ -525,3 +529,17 @@ expected:
     documentId: simple-a
     reason: candidate.invalid-binding.path.missing
   diagnostic: ManagedOccurrenceBindingMissing
+runtime:
+  handlers: {}
+  initializationHandlers: {}
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds: []
+  expectedLoads: []
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

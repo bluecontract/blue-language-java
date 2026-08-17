@@ -29,11 +29,31 @@ steps. Preserve unrelated dirty files.
    result around the existing algorithm. Keep the old API delegating unchanged
    and the proof verifier independent. Verify every packaged oracle.
 3. In `:blue-contracts-core`, add the immutable closure evidence model,
-   normalized `DocumentId`, dual occurrence/binding identities, deterministic
+   reject-before-construction NFC `DocumentId` and Contracts portable-order
+   tokens, dual occurrence/binding identities, deterministic
    SCC index/generations, closed queued work variants, synchronous patch
    continuation frames, and the shared closure gas/limit model. Keep
    `closureIdentity` state-only: graph/documents/bindings/components/public
    Roots. Cause and frozen direct deliveries belong to `invocationIdentity`.
+   Use Root scope generation 0 and first embedded reservation/activation 1.
+   Active removal allocates the exact inactive successor at +1 with fresh
+   occurrence/binding identities; that successor is output-only until committed
+   and supplied as a later invocation input. Later same-lineage re-add preserves
+   its generation and occurrence identity (ordinary exact-state churn may still
+   rebind it); same-invocation remove-then-re-add is unsupported.
+   Add a real blue-contracts-core two-invocation integration test for that
+   commit-then-re-add boundary; the package's deterministic transition-law
+   self-check is not an end-to-end released closure fixture.
+   Different-lineage retarget of an active or reserved path is unsupported and
+   fails before mutation. Require input-
+   supplied prospective rows except for that deterministic successor, and
+   pure/materialized exact-value parity.
+   Preserve ordinary PROCESS nested scopes, but fail closed before semantic
+   work on any Contracts 1.0 closure direct delivery, WorkOccurrence,
+   ChannelOccurrence/subscription delta, checkpoint receipt, or scoped gas
+   context that is not the managed Root (`/`, generation `0`). Public events
+   additionally require proof that the emitting work targeted a declared
+   public Root's Root scope. Keep the general identity constructors unchanged.
 4. Add `PROCESS_CLOSURE` and `ADMIT_CLOSURE` through a separate multi-document
    invocation state and one closed `ClosureInvocationInput`; do not accept
    duplicate event/cause/route/policy/environment arguments. Return the closed
@@ -41,21 +61,26 @@ steps. Preserve unrelated dirty files.
    `PROCESS` and its existing fail-closed cyclic-member boundary.
 5. Implement immediate whole-component finalization, incremental acyclic
    containing-spine identity work, dynamic form/merge/split/expansion without
-   replay, frozen lineage sets with latest-state resolution, historical
-   evidence attempts, whole-component initialized-marker batches, Phase-B
+   replay, frozen lineage sets with latest-state resolution, one-step
+   `ManagedRevisionCause` processing, whole-component initialized-marker batches, Phase-B
    checkpoint comparison, post-quiescence checkpoint settlement (including
    C-CLO-33 replacement-before-cleanup), closed rejection owners/finalization
    ordinals, rollback, complete result evidence, and the platform commit
-   companion. Historical resource supply preserves the logical invocation
-   identity only while state/operation/cause/candidate/route/policies and
-   environment revalidate unchanged.
+   companion. A managed revision seeds one
+   `CONTAINING_REFERENCE_UPDATE` and has one gas/failure/commit boundary; do not
+   add a transition list or historical work kind. Exact-node provider retry
+   changes only harness availability and preserves the same closure/invocation
+   identities.
 6. In `:blue-conformance`, import/bind the exact package assets and execute every
    ordinary and closure fixture through the real implementation. Derive all
    counts from manifests. Migrate the stale 154/307 gates in
    `BuildLogicConstants`, `BlueReleaseConformanceReport`, and
-   `BlueContractsFixturePackage` to 207 Contracts / 360 combined fixtures without
-   creating a second count authority. Generate the required implementation
-   reports.
+   `BlueContractsFixturePackage` to 231 Contracts / 384 combined fixtures and
+   the Contracts fixture-manifest inventory to 236 entries without creating a
+   second count authority. Generate the required implementation reports. Keep
+   `runtime`, `sharedLimitSource`, `provider`, `locality`, `limit`,
+   and oracle-stage routing in the closed top-level harness only, and require
+   every public event's `eventOccurrenceOrdinal`.
 7. Run the full module, release-conformance, Java 8, API baseline, module-shape,
    package-cycle, and publication gates. From a clean commit, stage/publish the
    exact `blue-contracts-core` and conformance artifacts and record coordinates
@@ -116,6 +141,10 @@ filesystem directory name. Do not edit Repository 1 during this phase.
 4. Replace DAG-only planning with the exact component index and occurrence
    lineage/binding model. Freeze minimal affected-closure evidence from exact
    content and the current route snapshot.
+   For A10/A5, Coordination must commit the external A5 attachment, then own a
+   no-overtake barrier and dispatch five separately committed one-revision
+   causes, finishing with latest-authoritative same-lineage reconciliation and
+   cursor-clearing activation.
 5. Replace independent per-document processing with one Contracts closure call
    and one storage-neutral atomic publication/reconciliation boundary. At that
    boundary independently recompute state-only input and staged-output closure

@@ -27,12 +27,19 @@ public final class DirectLogicalDelivery
             long rawOccurrenceOrder) {
         this.targetDocumentId = Objects.requireNonNull(
                 targetDocumentId, "targetDocumentId");
-        this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
+        this.scopePath = CanonicalOrders.requireNfc(
+                Objects.requireNonNull(scopePath, "scopePath"), "scopePath");
         this.activationGeneration = CanonicalOrders.requireSafeInteger(
                 activationGeneration, "activationGeneration");
-        this.channelKey = Objects.requireNonNull(channelKey, "channelKey");
-        this.logicalDeliveryKey = Objects.requireNonNull(
-                logicalDeliveryKey, "logicalDeliveryKey");
+        if (!"/".equals(this.scopePath) || this.activationGeneration != 0L) {
+            throw new IllegalArgumentException(
+                    "Contracts 1.0 closure direct delivery must target Root");
+        }
+        this.channelKey = CanonicalOrders.requireNfc(
+                Objects.requireNonNull(channelKey, "channelKey"), "channelKey");
+        this.logicalDeliveryKey = CanonicalOrders.requireNfc(
+                Objects.requireNonNull(logicalDeliveryKey, "logicalDeliveryKey"),
+                "logicalDeliveryKey");
         this.rawOccurrenceOrder = CanonicalOrders.requireSafeInteger(
                 rawOccurrenceOrder, "rawOccurrenceOrder");
     }
@@ -50,12 +57,15 @@ public final class DirectLogicalDelivery
         if (order != 0) return order;
         order = targetDocumentId.compareTo(other.targetDocumentId);
         if (order != 0) return order;
-        order = scopePath.compareTo(other.scopePath);
+        order = CanonicalOrders.compareUnicodeScalars(
+                scopePath, other.scopePath);
         if (order != 0) return order;
         order = Long.compare(activationGeneration, other.activationGeneration);
         if (order != 0) return order;
-        order = channelKey.compareTo(other.channelKey);
+        order = CanonicalOrders.compareUnicodeScalars(
+                channelKey, other.channelKey);
         if (order != 0) return order;
-        return logicalDeliveryKey.compareTo(other.logicalDeliveryKey);
+        return CanonicalOrders.compareUnicodeScalars(
+                logicalDeliveryKey, other.logicalDeliveryKey);
     }
 }

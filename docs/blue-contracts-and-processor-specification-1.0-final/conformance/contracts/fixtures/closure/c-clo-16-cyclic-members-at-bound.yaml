@@ -6,7 +6,12 @@ category: limits
 operation: limit-micro
 description: The cyclicMembersPerComponent guard independently measures 128 against the frozen bound 128 and returns ACCEPT; this microfixture does not claim that a later gas-expensive invocation phase completes.
 releaseManifest: ../../release-manifest.yaml
-input:
+input: {}
+expected:
+  limitDecision: ACCEPT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+limit:
   limit: cyclicMembersPerComponent
   configured: 128
   observed: 128
@@ -14,7 +19,3 @@ input:
     kind: cyclic-members
     parameters:
       count: 128
-expected:
-  limitDecision: ACCEPT
-  rejectedStepAdmitted: false
-  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE

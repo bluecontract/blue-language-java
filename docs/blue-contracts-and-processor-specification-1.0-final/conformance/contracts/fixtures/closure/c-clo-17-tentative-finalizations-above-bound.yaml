@@ -6,7 +6,14 @@ category: limits
 operation: limit-micro
 description: The closureTentativeFinalizationsPerInvocation guard independently measures 8193 against the frozen bound 8192 and returns REJECT; this microfixture does not claim that a later gas-expensive invocation phase completes.
 releaseManifest: ../../release-manifest.yaml
-input:
+input: {}
+expected:
+  limitDecision: REJECT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+  diagnostic: ClosureTentativeFinalizationLimitExceeded
+  rejectedStep: closureTentativeFinalizationsPerInvocation:8193
+limit:
   limit: closureTentativeFinalizationsPerInvocation
   configured: 8192
   observed: 8193
@@ -14,9 +21,3 @@ input:
     kind: tentative-finalizations
     parameters:
       count: 8193
-expected:
-  limitDecision: REJECT
-  rejectedStepAdmitted: false
-  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
-  diagnostic: ClosureTentativeFinalizationLimitExceeded
-  rejectedStep: closureTentativeFinalizationsPerInvocation:8193

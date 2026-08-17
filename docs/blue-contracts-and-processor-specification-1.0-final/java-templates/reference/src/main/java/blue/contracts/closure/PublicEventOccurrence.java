@@ -5,6 +5,7 @@ import java.util.Objects;
 /** One explicit public-Root event and its invocation-global occurrence identity. */
 public final class PublicEventOccurrence {
     private final long publicEventOrdinal;
+    private final long eventOccurrenceOrdinal;
     private final DocumentId publicRootDocumentId;
     private final String eventOccurrenceIdentity;
     private final String eventBlueId;
@@ -12,12 +13,15 @@ public final class PublicEventOccurrence {
 
     public PublicEventOccurrence(
             long publicEventOrdinal,
+            long eventOccurrenceOrdinal,
             DocumentId publicRootDocumentId,
             String eventOccurrenceIdentity,
             String eventBlueId,
             Object event) {
         this.publicEventOrdinal = CanonicalOrders.requireSafeInteger(
                 publicEventOrdinal, "publicEventOrdinal");
+        this.eventOccurrenceOrdinal = CanonicalOrders.requireSafeInteger(
+                eventOccurrenceOrdinal, "eventOccurrenceOrdinal");
         this.publicRootDocumentId = Objects.requireNonNull(
                 publicRootDocumentId, "publicRootDocumentId");
         this.eventOccurrenceIdentity = Objects.requireNonNull(
@@ -27,6 +31,7 @@ public final class PublicEventOccurrence {
     }
 
     public long publicEventOrdinal() { return publicEventOrdinal; }
+    public long eventOccurrenceOrdinal() { return eventOccurrenceOrdinal; }
     public DocumentId publicRootDocumentId() { return publicRootDocumentId; }
     public String eventOccurrenceIdentity() { return eventOccurrenceIdentity; }
     public String eventBlueId() { return eventBlueId; }

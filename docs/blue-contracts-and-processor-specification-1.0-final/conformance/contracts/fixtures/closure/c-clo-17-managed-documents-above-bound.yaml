@@ -6,7 +6,14 @@ category: limits
 operation: limit-micro
 description: The managedDocumentsPerClosure guard independently measures 4097 against the frozen bound 4096 and returns REJECT; this microfixture does not claim that a later gas-expensive invocation phase completes.
 releaseManifest: ../../release-manifest.yaml
-input:
+input: {}
+expected:
+  limitDecision: REJECT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+  diagnostic: ManagedDocumentsPerClosureExceeded
+  rejectedStep: managedDocumentsPerClosure:4097
+limit:
   limit: managedDocumentsPerClosure
   configured: 4096
   observed: 4097
@@ -14,9 +21,3 @@ input:
     kind: managed-documents
     parameters:
       count: 4097
-expected:
-  limitDecision: REJECT
-  rejectedStepAdmitted: false
-  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
-  diagnostic: ManagedDocumentsPerClosureExceeded
-  rejectedStep: managedDocumentsPerClosure:4097

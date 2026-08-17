@@ -2,12 +2,15 @@
 
 ## 1. Purpose and authority
 
-The harness executes the normative fixture envelope `blue-contracts-fixture/1.0`.
+The harness executes the normative ordinary envelope
+`blue-contracts-fixture/1.0` and the affected-closure envelope
+`blue-contracts-closure-fixture/1.0`.
 
 These files are executable conformance data, not scenario sketches. A conforming runner MUST implement every operation, control, preparation rule, projection, and assertion defined by:
 
 ```text
 fixture-schema.yaml
+closure-fixture-schema.yaml
 CONTROL-LANGUAGE.md
 TRACE-SCHEMA.md
 projection-catalog.yaml
@@ -65,6 +68,21 @@ A platform fixture cannot create an alternative processor result. Whenever seman
 
 Evaluate one exact named counter or one formula declared by the bound Contracts gas manifest. No document processing is implied unless Root/event/runtime fields are also supplied. Trace entries and arithmetic are exact.
 
+### 3.5 `process-closure` and `admit-closure`
+
+Execute the one closed `ClosureInvocationInput` under the operation/cause
+coupling in the closure schema. `process-closure` accepts an external or
+`managed-revision` cause; `admit-closure` accepts an admission cause. Admission
+and managed revision have empty direct-delivery snapshots. Both operations
+return exactly `Complete(ClosureProcessResult)` or
+`NeedsResources(sortedExactBlueIds)`.
+
+One `ManagedRevisionCause` is one invocation and one
+`CONTAINING_REFERENCE_UPDATE`; the runner MUST NOT pass a transition list or
+construct a historical queued work kind. A sequential A5→A10 campaign is six
+commits after the initial missing-resource attempt: the external A5 attachment,
+then five separately metered/committed one-step revision invocations.
+
 ## 4. Fixture controls
 
 `CONTROL-LANGUAGE.md` defines every builder, provider, runtime, feeder, and variant control. Important constraints are:
@@ -74,6 +92,36 @@ Evaluate one exact named counter or one formula declared by the bound Contracts 
 - `input.feeder.deliverySnapshot` is compact fixture shorthand and MUST be expanded and verified as the complete normative `ExternalDelivery` snapshot;
 - representation variants transform exact preparation only and cannot alter semantic values;
 - every variant is an object that explicitly names its transformation; a bare variant label is invalid.
+
+For an affected-closure fixture the following are closed **top-level harness
+fields**, not members of normative `input` or production `expected` result:
+
+- `runtime`: scripted Handler/initialization behavior;
+- `sharedLimitSource`: release-default versus explicit fixture-override
+  provenance for the normative gas-policy value;
+- `provider`: exact available nodes plus expected exact requests/loads;
+- `locality`: unrelated-document setup and expected open count;
+- `limit`: invocation probe or limit-micro generator;
+- `oracle`: oracle path plus component-state/finalization-stage routing.
+
+An availability-only provider retry preserves both normative
+`inputClosureIdentity` and `invocationIdentity`. `NeedsResources` names exact
+already-known BlueIds only; a runner must never turn it into a range query or
+historical discovery operation. Oracle stage labels never appear in component
+or finalization production API records.
+
+Prospective occurrence rows are input-only except for the exact inactive
+successor derived when an active row retires. A pending-null row's declared
+path may be absent; a historical cursor value may be present while the row
+remains inactive. Root managed-scope generation is 0, the first embedded
+reservation/activation is 1, active removal allocates its successor at exactly
+generation plus one, and that successor is output-only until committed and
+supplied as a later invocation input; later re-add preserves its
+generation/occurrence identity (ordinary later exact-state rebind may change
+binding identity). Same-invocation remove-then-re-add and different-lineage
+retarget are unsupported in Contracts 1.0 and fail before mutation. Pure
+references, verified inline acyclic values, and verified materialized cyclic
+members are exact parity variants; mixed `blueId` objects are invalid.
 
 ## 5. Canonical delivery derivation
 
@@ -90,13 +138,19 @@ checkpointDomainBlueId
 
 It MUST verify:
 
-1. every non-root path is transitively declared through either an exact `Process Embedded.paths` entry or a concrete direct member generated from `Process Embedded.collectionPaths`;
-2. the selected scope exists as an object and is not under a direct terminated scope;
+1. `scopePath` is exactly `/` and its activation generation is exactly `0`;
+2. the selected managed Root exists as an object and is not terminated;
 3. the effective contract at `channelKey` is an External Channel;
 4. any asserted `order` and activation frontier agree with the derived state;
 5. the complete ordered hint set equals the canonical preselected occurrence set for the fixture.
 
 The compact hints do not substitute for missing identity fields and are never passed to application contracts.
+The Contracts 1.0 affected-closure harness is deliberately Root-scoped. It
+MUST reject a non-Root direct delivery, WorkOccurrence, ChannelOccurrence,
+subscription delta, checkpoint receipt, or scoped gas context rather than
+silently applying ordinary `PROCESS` nested-scope behavior. Nested exact
+content and `Process Embedded` occurrence paths remain valid graph and patch
+evidence; they are not independent closure work scopes.
 
 ## 6. Projections
 
@@ -138,6 +192,11 @@ A string written in `expected` is always a literal string. Projection comparison
 `TRACE-SCHEMA.md` defines the canonical named entry, logical demand record, and every derived trace. `trace.namedEntries` is the authoritative gas trace. The weighted sum MUST equal `result.totalGas`.
 
 A runner MAY retain richer implementation diagnostics, but fixtures cannot observe them unless they are normalized into a catalogued projection. Host stack traces, object identities, thread schedules, cache hits, and physical provider details are nonportable.
+
+Every closure public-event record contains both ordinals:
+`publicEventOrdinal` is contiguous in the Root-only public projection, while
+`eventOccurrenceOrdinal` is the invocation-global emission ordinal bound by
+`eventOccurrenceIdentity` and may contain public-projection gaps.
 
 ## 9. Failure and rollback
 

@@ -45,12 +45,25 @@ public final class GasCharge {
                 String workOccurrenceId,
                 String reason) {
             this.documentId = documentId;
-            this.scopePath = scopePath;
+            this.scopePath = scopePath == null ? null
+                    : CanonicalOrders.requireRuntimePointer(
+                            scopePath, "scopePath");
             this.activationGeneration = safeNullable(
                     activationGeneration, "activationGeneration");
+            if ((this.scopePath == null) != (this.activationGeneration == null)) {
+                throw new IllegalArgumentException(
+                        "closure gas scopePath/activationGeneration must be a pair");
+            }
+            if (this.scopePath != null
+                    && (!"/".equals(this.scopePath)
+                    || this.activationGeneration.longValue() != 0L)) {
+                throw new IllegalArgumentException(
+                        "Contracts 1.0 closure gas context must target Root");
+            }
             this.componentGeneration = safeNullable(
                     componentGeneration, "componentGeneration");
-            this.contractKey = contractKey;
+            this.contractKey = contractKey == null ? null
+                    : CanonicalOrders.requireNfc(contractKey, "contractKey");
             this.logicalPath = logicalPath;
             this.workOccurrenceId = workOccurrenceId;
             this.reason = reason;
@@ -92,7 +105,7 @@ public final class GasCharge {
             Context context) {
         this.sequence = CanonicalOrders.requireSafeInteger(sequence, "sequence");
         this.namespace = Objects.requireNonNull(namespace, "namespace");
-        this.counter = Objects.requireNonNull(counter, "counter");
+        this.counter = CanonicalOrders.requireNfc(counter, "counter");
         this.quantity = CanonicalOrders.requireSafeInteger(quantity, "quantity");
         this.weight = CanonicalOrders.requireSafeInteger(weight, "weight");
         this.subtotal = CanonicalOrders.requireSafeInteger(

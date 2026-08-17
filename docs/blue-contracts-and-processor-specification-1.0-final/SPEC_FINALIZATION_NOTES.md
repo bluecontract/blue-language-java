@@ -126,7 +126,8 @@ are normative.
     evidence uses one binding-verification charge per row plus exact path and
     declaration traversal. C-CLO-14, C-CLO-15, and C-CLO-29 therefore no longer
     have a zero-gas semantic rejection; their frozen totals are respectively
-    199, 191, and 196 gas.
+    199, 181, and 196 gas. C-CLO-15 compares the complete normalized
+    preliminary BlueId inputs, not the shorter raw fixture representation.
 30. C-CLO-33 combines checkpoint-domain retirement paths in one successful
     external invocation. A present source entry with a verified old domain is
     virtual empty for newness, then is replaced by the accepted source's frozen
@@ -157,7 +158,13 @@ are normative.
     SCC membership, deliveries, or initialization. The occurrence-binding-set
     identity binds `occurrenceIdentity`, `bindingIdentity`, `active`, and
     `pendingHistoricalEpoch` for every row, so no unbound staged map can drive
-    behavior.
+    behavior. Every prospective row used by an invocation is input-only except
+    the exact inactive successor deterministically derived when an active row
+    retires. That successor keeps source path, target lineage, and policy,
+    advances generation exactly once, and receives fresh occurrence/binding
+    identities; it is not dynamic target acquisition. A pending-null path may
+    be absent. A present historical cursor value remains inactive until final
+    managed-revision reconciliation.
 33. The invocation constructor's operation field uses the exact lowercase
     literal `process-closure` or `admit-closure`. Uppercase API spellings and
     obsolete harness labels are never hashed as portable identity input.
@@ -170,15 +177,68 @@ are normative.
     sequential closure compare-and-swap coherent.
 35. `NeedsResources` discards the attempt. Once exact requested BlueIds are
     available, processing starts again from the exact input closure and cause;
-    no queue, continuation, gas prefix, or tentative state resumes. Historical
-    resource evidence may retain the same logical invocation identity only if
-    every identity-bound non-resource input revalidates unchanged.
+    no queue, continuation, gas prefix, or tentative state resumes. It requests
+    only exact already-named BlueIds, never a history range. Provider
+    availability is host/harness evidence outside both closure and invocation
+    identity, so a provider-only availability retry preserves both identities;
+    any normative input change does not.
 36. For one internal event occurrence, all actual Triggered and Embedded
     delivery work is materialized and charged for enqueue in canonical order
     before the first delivery is dequeued. Each delivery then runs in that same
     order and finishes its synchronous patch/update/finalization continuation
     before the next delivery. This fixes both the accepted gas prefix and
     temporary-identity visibility.
+37. Contracts owns no historical-transition list and no distinct historical
+    queued work kind. `ManagedRevisionCause` is a closed `PROCESS_CLOSURE`
+    cause for exactly one contiguous child revision. Its source receipt binds
+    child lineage, before/after epochs and BlueIds, and the auditable original
+    source cause identity; its cause identity additionally binds the one target
+    occurrence. It seeds one `CONTAINING_REFERENCE_UPDATE` and owns one complete
+    meter, failure, compare-and-swap and commit boundary.
+38. Coordination owns the sequential catch-up loop and no-overtake barrier.
+    C22 supplies the exact inactive cursor-5 row and patch, requests A5 when it
+    is unavailable, and its provider-only retry commits B→A5 without activation.
+    Five separate invocations apply A5→A6 through A9→A10. The last invocation
+    explicitly reconciles historical A10 to the latest authoritative
+    same-lineage A BlueId after reciprocal containing-reference churn, then
+    clears the cursor, activates the edge, repartitions and finalizes.
+39. Fixture-only scripted runtime behavior, shared-limit provenance, provider
+    availability/load assertions, locality probes, limit controls and oracle
+    stages are closed top-level harness fields. They are absent from normative
+    invocation and production result shapes. Template mains are labeled
+    dependency-free shape smokes and make no conformance claim.
+40. Exact occurrence values have pure/materialized parity: a pure reference,
+    verified inline acyclic value, and verified materialized cyclic member with
+    its owning proof behave identically. Mixed `blueId` objects remain invalid.
+    Root scope generation is 0, first embedded activation is 1, and successful
+    active removal allocates its inactive successor at exactly generation plus
+    one; the successor is output-only until a later invocation supplies it as
+    input, and that later re-add preserves its generation/occurrence identity;
+    same-invocation remove-then-re-add is unsupported;
+    C-CLO-12 freezes the complete removal half, while the deterministic
+    validator/reference transition-law self-check freezes later activation;
+    the released corpus does not claim an end-to-end re-add fixture;
+    ordinary exact-state churn may still rebind. Different-
+    lineage retarget is unsupported in Contracts 1.0 and fails before mutation;
+    same-lineage churn does not advance. Every public event
+    carries both contiguous `publicEventOrdinal` and the
+    invocation-global `eventOccurrenceOrdinal` bound by its event identity.
+41. Admission cause nullable fields are always present, and operation/cause
+    coupling is closed: process closure accepts external or managed-revision,
+    admission accepts admission only, and both managed-revision and admission
+    require empty direct-delivery snapshots.
+42. Contracts 1.0 closes affected-closure scope ownership by admitting only
+    managed Root work: direct deliveries, all work identities, subscription and
+    checkpoint results, scoped gas evidence, and public-emission ownership use
+    `/` at generation 0. Ordinary `PROCESS` nested-scope semantics and the
+    general versioned identity constructors are unchanged. A future non-Root
+    closure profile must add an explicit active-scope inventory and close
+    source-versus-target ownership; it cannot be inferred from pure references.
+43. Contracts portable-order Text is reject-before-construction NFC. This
+    covers managed identities and paths, runtime keys, logical-delivery keys,
+    policy/limit names and registered Text tie fields. Contracts never silently
+    normalizes those tokens, and the rule does not rewrite arbitrary Blue
+    payload Text or RFC 8785/BlueId input.
 
 ## Review findings explicitly fixed
 
@@ -220,6 +280,14 @@ are normative.
   invocation-operation literal;
 - no attempt-scoped cause or route mixed into durable closure-state identity;
 - no resumable tentative suffix behind `NeedsResources`;
+- no historical range request, transition batch, hidden catch-up loop, or
+  historical queued work kind inside Contracts;
+- no live/public work overtaking a non-null historical catch-up cursor;
+- no fixture runtime/provider/locality/limit/oracle stage mixed into production
+  invocation or result API shapes;
+- no pure/materialized exact-value semantic split and no generation-0 embedded
+  occurrence;
+- no public event record missing its invocation-global emission ordinal;
 - no source-delivery execution before all deliveries of one event occurrence
   have paid their canonical enqueue charges;
 - no local gas ceiling duplicated inside the closed managed-document record;

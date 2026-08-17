@@ -25,14 +25,15 @@ The normative corpus contains:
 
 ```text
 133 normative vectors
-154 ordinary executable fixtures
+167 ordinary executable fixtures
 33 affected-closure/cyclic normative vectors
-35 full affected-closure/cyclic scenario fixture files
+46 full affected-closure/cyclic scenario fixture files
 18 exact named-limit boundary microfixtures
-53 closure fixture files
-207 Contracts fixture files in total
-41 cyclic-identity oracle files
-118 independently recomputed cyclic stages
+64 closure fixture files
+231 Contracts fixture files in total
+236 fixture-manifest inventory entries
+38 cyclic-identity oracle files
+108 independently recomputed cyclic stages
 ```
 
 ## Informative architecture and integration material
@@ -53,13 +54,13 @@ prompts/PROMPT_04_IMPLEMENTATION_SEQUENCE.md
 
 ```text
 java-templates/reference/src/main/java/
-    36 Contracts/closure reference classes
+    35 Contracts/closure reference classes
 
 java-templates/coordination/src/main/java/
     15 Coordination integration reference classes
 ```
 
-All 51 Java sources compile together with:
+All 50 Java sources compile together with:
 
 ```text
 javac --release 8 -Xlint:all,-options -Werror
@@ -69,9 +70,42 @@ The `-options` exclusion suppresses only newer-JDK warnings that Java 8 is an
 old target; all source and bytecode still use `--release 8`, and every other
 lint warning remains fatal.
 
-The reference mains establish the scheduling, identity, gas, rollback,
-historical-revision, closure-planning, and atomic-publication shapes expected
-by the prompts. They are not substitutes for real implementation conformance.
+The reference mains are dependency-free shape smokes for the scheduling,
+identity, gas, rollback, one-step managed-revision, closure-planning, and
+atomic-publication value shapes expected by the prompts. Their output labels
+end in `_TEMPLATE_SHAPE_SMOKE_OK`; they are not fixture runners or substitutes
+for real implementation conformance.
+
+## Managed revision and fixture-harness boundaries
+
+Contracts accepts no historical transition array. One closed
+`ManagedRevisionCause` proves one contiguous child revision, binds its original
+source cause through an authenticated source revision receipt, and seeds one
+`CONTAINING_REFERENCE_UPDATE` with its own gas/failure/commit boundary.
+Coordination owns the sequential catch-up loop and prevents later live work from
+overtaking a non-null historical cursor. Exact-node `NeedsResources` requests
+name only already-known BlueIds; changing provider availability alone does not
+change the normative closure or invocation identity.
+
+Closure fixture `runtime`, `sharedLimitSource`, `provider`, `locality`, `limit`,
+and oracle-stage routing are closed top-level harness fields. None is a
+production invocation/result API field. Pure references, verified inline
+acyclic values, and verified materialized cyclic members have exact semantic
+parity; mixed `blueId` objects are invalid.
+
+The Contracts 1.0 affected-closure wire profile is Root-scoped: direct
+deliveries, accepted/rejected work, ChannelOccurrence/subscription results,
+checkpoint receipts, and scoped gas contexts use `/` with activation generation
+`0` and the matching Root managed-scope identity. Public projection also proves
+that the emitting work targeted a declared public Root's Root scope. Ordinary
+`PROCESS` retains its existing nested-scope behavior, and the general identity
+constructors remain unchanged for that path and future versioned profiles.
+
+Contracts control Text that participates in portable ordering must already be
+NFC at admission/value construction and is rejected otherwise; implementations
+must not silently normalize it. This applies to managed identities and paths,
+raw runtime keys, logical-delivery keys and policy/limit ordering names. It does
+not normalize arbitrary Blue payload Text or alter RFC 8785/BlueId semantics.
 
 ## Explicit exclusions
 
@@ -115,8 +149,8 @@ PACKAGE_VALID
 
 SEMANTIC_REFERENCE_VALID
     independent cyclic identity, dynamic cycle, finite reaction, gas loop,
-    A5-to-A10 revision evidence, limit, and Coordination integration reference
-    checks pass
+    A5 attachment plus sequential one-revision catch-up, limit, and Coordination
+    integration reference checks pass
 
 IMPLEMENTATION_CONFORMANT
     the exact blue-contracts-core artifact executes every required fixture
@@ -138,7 +172,7 @@ identity.
 
 The final closure corpus is produced by two phases: the seed generator and the
 normative refinement pass. Do not run `generate_closure_fixtures.py` alone as a
-release build; its 30-fixture intermediate output is intentionally incomplete.
+release build; its 35-fixture intermediate output is intentionally incomplete.
 
 Use the staged package command for every regeneration. It requires both the
 exact Language/Contracts source tree whose baseline hashes are bound into the

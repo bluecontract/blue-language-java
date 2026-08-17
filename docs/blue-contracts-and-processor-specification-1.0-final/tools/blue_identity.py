@@ -12,8 +12,10 @@ from copy import deepcopy
 from dataclasses import dataclass
 from decimal import Decimal
 import hashlib
-import json
+import math
 from typing import Any, Callable, Iterable, Mapping, Sequence
+
+from jcs import dumps as jcs_dumps
 
 TEXT_TYPE_BLUE_ID = "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC"
 DOUBLE_TYPE_BLUE_ID = "9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ"
@@ -22,6 +24,25 @@ BOOLEAN_TYPE_BLUE_ID = "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2"
 ZERO_BLUEID = "0" * 44
 BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 LITERAL_FIELDS = frozenset(("name", "description", "value"))
+SAFE_INTEGER_MIN = -(2**53) + 1
+SAFE_INTEGER_MAX = 2**53 - 1
+SCHEMA_SCALAR_FIELDS = frozenset(
+    (
+        "required",
+        "minLength",
+        "maxLength",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "multipleOf",
+        "minItems",
+        "maxItems",
+        "uniqueItems",
+        "minFields",
+        "maxFields",
+    )
+)
 
 
 def _base58(data: bytes) -> str:
@@ -40,16 +61,7 @@ def _base58(data: bytes) -> str:
 
 
 def _canonical_json(value: Any) -> bytes:
-    # All normative fixtures use integers, booleans, text, arrays, and objects.
-    # separators/sort_keys/ensure_ascii implement the same byte form for this
-    # closed value subset as the released canonical JSON writer.
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    ).encode("utf-8")
+    return jcs_dumps(value)
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -67,23 +79,144 @@ def _scalar_node(value: Any) -> Mapping[str, Any]:
         canonical = value
     elif isinstance(value, int) and not isinstance(value, bool):
         type_id = INTEGER_TYPE_BLUE_ID
-        canonical = value
+        canonical = (
+            value
+            if SAFE_INTEGER_MIN <= value <= SAFE_INTEGER_MAX
+            else str(value)
+        )
     elif isinstance(value, Decimal):
         type_id = DOUBLE_TYPE_BLUE_ID
-        canonical = format(value.normalize(), "f")
-        if "." not in canonical:
-            canonical += ".0"
+        canonical = _finite_double(value)
     elif isinstance(value, float):
         type_id = DOUBLE_TYPE_BLUE_ID
-        canonical = format(Decimal(str(value)).normalize(), "f")
-        if "." not in canonical:
-            canonical += ".0"
+        canonical = _finite_double(value)
     elif isinstance(value, str):
         type_id = TEXT_TYPE_BLUE_ID
         canonical = value
     else:
         raise TypeError(f"Unsupported Blue scalar: {type(value)!r}")
     return {"type": {"blueId": type_id}, "value": canonical}
+
+
+def _finite_double(value: Decimal | float | int) -> float:
+    canonical = float(value)
+    if not math.isfinite(canonical):
+        raise ValueError(f"Non-finite Double is not valid BlueId input: {value!r}")
+    return canonical
+
+
+def _canonical_scalar_payload(value: Any, type_blue_id: str | None = None) -> Any:
+    if isinstance(value, bool) or isinstance(value, str):
+        return value
+    if isinstance(value, int):
+        if type_blue_id == DOUBLE_TYPE_BLUE_ID:
+            return _finite_double(value)
+        return (
+            value
+            if SAFE_INTEGER_MIN <= value <= SAFE_INTEGER_MAX
+            else str(value)
+        )
+    if isinstance(value, (Decimal, float)):
+        return _finite_double(value)
+    raise TypeError(f"Unsupported Blue scalar payload: {type(value)!r}")
+
+
+def _pure_reference_blue_id(value: Any) -> str | None:
+    if not isinstance(value, dict) or set(value) != {"blueId"}:
+        return None
+    blue_id = value["blueId"]
+    if not isinstance(blue_id, str):
+        raise TypeError("blueId must be text")
+    return blue_id
+
+
+def _normalized_schema_input(value: Any) -> Any:
+    if not isinstance(value, dict):
+        raise TypeError("schema must be an object")
+    cleaned = {key: child for key, child in value.items() if child is not None}
+    if _pure_reference_blue_id(cleaned) is not None:
+        return deepcopy(cleaned)
+    normalized: dict[str, Any] = {}
+    for key, child in cleaned.items():
+        if key in SCHEMA_SCALAR_FIELDS:
+            normalized[key] = (
+                _canonical_scalar_payload(child)
+                if not isinstance(child, (dict, list))
+                else _normalized_preliminary_input(child)
+            )
+        elif key == "enum":
+            if not isinstance(child, list):
+                raise TypeError("schema enum must be a list")
+            normalized[key] = [
+                _canonical_scalar_payload(item)
+                if not isinstance(item, (dict, list))
+                else _normalized_preliminary_input(item)
+                for item in child
+            ]
+        else:
+            normalized[key] = _normalized_preliminary_input(child)
+    return normalized
+
+
+def _normalized_preliminary_input(value: Any) -> Any:
+    """Project one fixture-subset Blue value to normalized BlueId Input."""
+    if isinstance(value, (str, int, float, Decimal, bool)):
+        return dict(_scalar_node(value))
+    if isinstance(value, list):
+        normalized_items: list[Any] = []
+        for item in value:
+            if item is None:
+                raise ValueError('Use {"$empty": true} for null list placeholders')
+            if isinstance(item, dict) and item == {"$empty": True}:
+                normalized_items.append({"$empty": True})
+            else:
+                normalized_items.append(_normalized_preliminary_input(item))
+        return normalized_items
+    if not isinstance(value, dict):
+        raise TypeError(f"Unsupported Blue value: {type(value)!r}")
+
+    cleaned = {key: child for key, child in value.items() if child is not None}
+    if _pure_reference_blue_id(cleaned) is not None:
+        return deepcopy(cleaned)
+    if cleaned == {"$empty": True}:
+        return {"$empty": True}
+    if set(cleaned) == {"value"}:
+        return dict(_scalar_node(cleaned["value"]))
+    if set(cleaned) == {"items"} and isinstance(cleaned["items"], list):
+        return _normalized_preliminary_input(cleaned["items"])
+
+    normalized: dict[str, Any] = {}
+    explicit_type = _pure_reference_blue_id(cleaned.get("type"))
+    for key, child in cleaned.items():
+        if key in ("name", "description", "mergePolicy"):
+            normalized[key] = _canonical_scalar_payload(child)
+        elif key == "value":
+            if explicit_type is None:
+                scalar = _scalar_node(child)
+                normalized.setdefault("type", deepcopy(scalar["type"]))
+                normalized[key] = scalar["value"]
+            else:
+                normalized[key] = _canonical_scalar_payload(
+                    child, explicit_type
+                )
+        elif key == "schema":
+            normalized[key] = _normalized_schema_input(child)
+        elif key == "items":
+            normalized[key] = _normalized_preliminary_input(child)
+        else:
+            normalized[key] = _normalized_preliminary_input(child)
+    return normalized
+
+
+def normalized_preliminary_input_bytes(value: Any) -> bytes:
+    """Return RFC 8785 bytes for complete normalized preliminary BlueId Input.
+
+    ``value`` is the preliminary fixture-subset value after each direct
+    internal cyclic reference has been replaced by ``ZERO_BLUEID``. Source
+    scalar/list sugar, null object fields, and map insertion order therefore
+    cannot leak into the cyclic tie-break or its semantic gas accounting.
+    """
+    return _canonical_json(_normalized_preliminary_input(value))
 
 
 def _list_seed() -> str:
@@ -135,10 +268,15 @@ def _object_blue_id(value: Mapping[str, Any], allow_cyclic_placeholders: bool) -
             raise ValueError("Cyclic placeholders require cyclic API")
         return blue_id
     contributions: dict[str, Any] = {}
+    explicit_type = _pure_reference_blue_id(cleaned.get("type"))
     for key in sorted(cleaned):
         child = cleaned[key]
         if key in LITERAL_FIELDS:
-            contributions[key] = child
+            contributions[key] = (
+                _canonical_scalar_payload(child, explicit_type)
+                if key == "value"
+                else child
+            )
         else:
             contributions[key] = {
                 "blueId": direct_blue_id(
@@ -240,10 +378,15 @@ def direct_identity_facts(value: Any, *, allow_cyclic_placeholders: bool = False
         )
     contributions: dict[str, Any] = {}
     children: list[Any] = []
+    explicit_type = _pure_reference_blue_id(cleaned.get("type"))
     for key in sorted(cleaned):
         child = cleaned[key]
         if key in LITERAL_FIELDS:
-            contributions[key] = child
+            contributions[key] = (
+                _canonical_scalar_payload(child, explicit_type)
+                if key == "value"
+                else child
+            )
         else:
             contributions[key] = {
                 "blueId": direct_blue_id(child, allow_cyclic_placeholders=allow_cyclic_placeholders)
@@ -260,6 +403,18 @@ def direct_identity_facts(value: Any, *, allow_cyclic_placeholders: bool = False
     )
 
 
+def _order_preliminary_members(
+    preliminary: Sequence[tuple[int, str, Any, bytes]],
+) -> list[tuple[int, str, Any, bytes]]:
+    ordered = sorted(preliminary, key=lambda member: (member[1], member[3]))
+    for previous, current in zip(ordered, ordered[1:]):
+        if previous[1] == current[1] and previous[3] == current[3]:
+            raise ValueError(
+                "Duplicate preliminary cyclic BlueId and normalized input bytes"
+            )
+    return ordered
+
+
 def cyclic_set_oracle(documents: Sequence[Any]) -> CyclicSetOracle:
     if not documents:
         raise ValueError("Cyclic set must not be empty")
@@ -271,7 +426,7 @@ def cyclic_set_oracle(documents: Sequence[Any]) -> CyclicSetOracle:
     if any(index < 0 or index >= len(documents) for index in refs):
         raise ValueError("Cyclic reference points outside set")
 
-    preliminary: list[tuple[int, str, Any]] = []
+    preliminary: list[tuple[int, str, Any, bytes]] = []
     for source_index, doc in enumerate(documents):
         zeroed = _rewrite_refs(deepcopy(doc), lambda _target: ZERO_BLUEID)
         preliminary.append(
@@ -279,16 +434,17 @@ def cyclic_set_oracle(documents: Sequence[Any]) -> CyclicSetOracle:
                 source_index,
                 direct_blue_id(zeroed, allow_cyclic_placeholders=True),
                 zeroed,
+                normalized_preliminary_input_bytes(zeroed),
             )
         )
-    ids = [p[1] for p in preliminary]
-    if len(set(ids)) != len(ids):
-        raise ValueError("Duplicate preliminary cyclic BlueId input")
-    ordered = sorted(preliminary, key=lambda p: (p[1], p[0]))
-    sorted_index_by_source = {source: i for i, (source, _pid, _zeroed) in enumerate(ordered)}
+    ordered = _order_preliminary_members(preliminary)
+    sorted_index_by_source = {
+        source: index
+        for index, (source, _pid, _zeroed, _bytes) in enumerate(ordered)
+    }
 
     sorted_docs: list[Any] = []
-    for source_index, _pid, _zeroed in ordered:
+    for source_index, _pid, _zeroed, _bytes in ordered:
         rewritten = _rewrite_refs(
             deepcopy(documents[source_index]),
             lambda target: f"this#{sorted_index_by_source[target]}",
@@ -297,8 +453,13 @@ def cyclic_set_oracle(documents: Sequence[Any]) -> CyclicSetOracle:
     master = direct_blue_id(sorted_docs, allow_cyclic_placeholders=True)
 
     members: list[CyclicMemberOracle] = []
-    sorted_doc_by_source = {source: sorted_docs[i] for i, (source, _, _) in enumerate(ordered)}
-    prelim_by_source = {source: pid for source, pid, _ in preliminary}
+    sorted_doc_by_source = {
+        source: sorted_docs[index]
+        for index, (source, _pid, _zeroed, _bytes) in enumerate(ordered)
+    }
+    prelim_by_source = {
+        source: pid for source, pid, _zeroed, _bytes in preliminary
+    }
     for source_index, doc in enumerate(documents):
         sorted_index = sorted_index_by_source[source_index]
         members.append(
@@ -311,7 +472,11 @@ def cyclic_set_oracle(documents: Sequence[Any]) -> CyclicSetOracle:
                 sorted_document=deepcopy(sorted_doc_by_source[source_index]),
             )
         )
-    return CyclicSetOracle(master, tuple(members), tuple(source for source, _, _ in ordered))
+    return CyclicSetOracle(
+        master,
+        tuple(members),
+        tuple(source for source, _pid, _zeroed, _bytes in ordered),
+    )
 
 
 def materialize_cyclic_members(documents: Sequence[Any], oracle: CyclicSetOracle) -> list[Any]:

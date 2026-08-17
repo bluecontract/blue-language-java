@@ -36,7 +36,9 @@ public final class CheckpointDomain {
                 deterministicDependencyNodeBlueIds,
                 "deterministicDependencyNodeBlueIds");
         this.runtimeDiscriminator = runtimeDiscriminator == null
-                || runtimeDiscriminator.isEmpty() ? null : runtimeDiscriminator;
+                || runtimeDiscriminator.isEmpty() ? null
+                : CanonicalOrders.requireNfc(
+                        runtimeDiscriminator, "runtimeDiscriminator");
     }
 
     public CheckpointDomain(

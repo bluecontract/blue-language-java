@@ -6,7 +6,12 @@ category: limits
 operation: limit-micro
 description: The cyclicCanonicalBytesPerComponent guard independently measures 16777216 against the frozen bound 16777216 and returns ACCEPT; this microfixture does not claim that a later gas-expensive invocation phase completes.
 releaseManifest: ../../release-manifest.yaml
-input:
+input: {}
+expected:
+  limitDecision: ACCEPT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+limit:
   limit: cyclicCanonicalBytesPerComponent
   configured: 16777216
   observed: 16777216
@@ -14,7 +19,3 @@ input:
     kind: cyclic-canonical-bytes
     parameters:
       count: 16777216
-expected:
-  limitDecision: ACCEPT
-  rejectedStepAdmitted: false
-  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE

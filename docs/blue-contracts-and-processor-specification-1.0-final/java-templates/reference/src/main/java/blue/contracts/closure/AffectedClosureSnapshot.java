@@ -10,7 +10,7 @@ import java.util.TreeMap;
 
 /**
  * Complete immutable authoritative closure state. Invocation-only cause,
- * delivery, historical-resource, candidate, gas-policy and environment
+ * delivery, candidate, gas-policy and environment
  * evidence lives in {@link ClosureInvocationInput}.
  */
 public final class AffectedClosureSnapshot {
@@ -115,11 +115,13 @@ public final class AffectedClosureSnapshot {
             ManagedOccurrenceBinding current = Objects.requireNonNull(
                     value, "occurrences item");
             if (previous != null) {
-                int occurrenceOrder = previous.occurrenceIdentity().compareTo(
+                int occurrenceOrder = CanonicalOrders.compareUnicodeScalars(
+                        previous.occurrenceIdentity(),
                         current.occurrenceIdentity());
                 if (occurrenceOrder > 0
                         || (occurrenceOrder == 0
-                        && previous.bindingIdentity().compareTo(
+                        && CanonicalOrders.compareUnicodeScalars(
+                                previous.bindingIdentity(),
                                 current.bindingIdentity()) >= 0)) {
                     throw new IllegalArgumentException(
                             "occurrences not in canonical order");
@@ -238,7 +240,9 @@ public final class AffectedClosureSnapshot {
                 throw new IllegalArgumentException("limits");
             }
             for (int index = 1; index < copy.size(); index++) {
-                if (copy.get(index - 1).name().compareTo(copy.get(index).name()) >= 0) {
+                if (CanonicalOrders.compareUnicodeScalars(
+                        copy.get(index - 1).name(),
+                        copy.get(index).name()) >= 0) {
                     throw new IllegalArgumentException("limits not in canonical order");
                 }
             }

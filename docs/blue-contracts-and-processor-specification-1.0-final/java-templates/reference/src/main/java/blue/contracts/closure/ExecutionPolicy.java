@@ -31,7 +31,10 @@ public final class ExecutionPolicy {
                             "localLimit")));
         }
         this.localLimits = Collections.unmodifiableSortedMap(copy);
-        this.label = Objects.requireNonNull(label, "label");
+        this.label = CanonicalOrders.requireNfc(label, "label");
+        if (this.label.isEmpty()) {
+            throw new IllegalArgumentException("label");
+        }
     }
 
     public String identity() { return identity; }

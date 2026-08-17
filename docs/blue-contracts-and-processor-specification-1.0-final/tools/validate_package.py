@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from typing import Any, Iterable
 
 import jsonschema
@@ -35,6 +36,7 @@ RELEASE = ROOT / "conformance/contracts/release-manifest.yaml"
 PACKAGE_MANIFEST = ROOT / "package-manifest.yaml"
 
 sys.path.insert(0, str(ROOT / "tools"))
+from jcs import dumps as jcs_dumps  # noqa: E402
 from blue_identity import (  # noqa: E402
     BASE58_ALPHABET,
     cyclic_canonical_limit_bytes,
@@ -42,8 +44,8 @@ from blue_identity import (  # noqa: E402
     cyclic_set_oracle,
     direct_blue_id,
 )
-
 PROCESS_EMBEDDED = "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"
+SAFE_INTEGER_MAX = 2**53 - 1
 SCRIPTED_EXTERNAL = "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt"
 SCRIPTED_HANDLER = "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw"
 TRIGGERED_EVENT_CHANNEL = "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf"
@@ -141,11 +143,281 @@ def require(condition: bool, message: str) -> None:
         raise ValidationFailure(message)
 
 
+NFC_ORDER_TOKEN_FIELDS = {
+    "channelKey",
+    "checkpointDomain",
+    "contractKey",
+    "counter",
+    "eventKey",
+    "handlerKey",
+    "limitName",
+    "logicalDeliveryKey",
+    "managedScopePath",
+    "namespace",
+    "policyName",
+    "rawChannelKey",
+    "rawContractKey",
+    "runtimeDiscriminator",
+    "scopePath",
+    "sourcePath",
+    "subscriptionKey",
+    "targetPath",
+}
+NFC_ORDER_TOKEN_LIST_FIELDS = {
+    "collectionPaths",
+    "orderedMemberDocumentIds",
+    "paths",
+    "publicRootDocumentIds",
+}
+NFC_ORDER_TOKEN_MAP_FIELDS = {
+    "documents",
+    "handlers",
+    "initializationHandlers",
+    "localLimits",
+}
+NFC_POLICY_LABEL_PARENTS = {
+    "cause",
+    "exactNodeProviderDomain",
+    "externalOrderPolicy",
+    "gasPolicy",
+    "managedBindingPolicy",
+    "managedDocumentIdentityPolicy",
+    "portableLimitPolicy",
+}
+
+
+def require_nfc_order_token(value: str, context: str) -> str:
+    require(
+        unicodedata.normalize("NFC", value) == value,
+        f"Contracts portable-order token is not NFC: {context}",
+    )
+    require(
+        not any(0xD800 <= ord(character) <= 0xDFFF for character in value),
+        f"Contracts portable-order token contains an unpaired surrogate: {context}",
+    )
+    return value
+
+
+def portable_text_order_key(value: str, context: str) -> tuple[int, ...]:
+    return tuple(ord(character) for character in require_nfc_order_token(value, context))
+
+
+def validate_nfc_order_tokens(path: Path, payload: Any) -> None:
+    """Reject non-NFC Contracts control/order text without touching Blue payload text."""
+
+    opaque_blue_fields = {
+        "afterDomainValue",
+        "beforeDomainValue",
+        "domain",
+        "event",
+        "events",
+        "observations",
+        "provider",
+        "subject",
+        "val",
+    }
+    contract_text_fields = {
+        "channel",
+        "checkpointDomain",
+        "eventKey",
+        "logicalDeliveryKey",
+        "runtimeDiscriminator",
+        "sourcePath",
+        "subscriptionKey",
+    }
+
+    def check_text_tree(value: Any, context: str) -> None:
+        if isinstance(value, str):
+            require_nfc_order_token(value, context)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                check_text_tree(child, f"{context}[{index}]")
+        elif isinstance(value, dict):
+            for key, child in value.items():
+                if isinstance(key, str):
+                    require_nfc_order_token(key, f"{context}.<key>")
+                check_text_tree(child, f"{context}.{key}")
+
+    def check_document_contracts(document: Any, context: str) -> None:
+        if not isinstance(document, dict):
+            return
+        contracts = document.get("contracts")
+        if not isinstance(contracts, dict):
+            return
+        for raw_key, contract in contracts.items():
+            if isinstance(raw_key, str):
+                require_nfc_order_token(raw_key, f"{context}.contracts.<key>")
+            if not isinstance(contract, dict):
+                continue
+            for field in contract_text_fields:
+                token = contract.get(field)
+                if isinstance(token, str):
+                    require_nfc_order_token(
+                        token, f"{context}.contracts.{raw_key}.{field}"
+                    )
+            for field in ("paths", "collectionPaths"):
+                tokens = contract.get(field)
+                if isinstance(tokens, list):
+                    for index, token in enumerate(tokens):
+                        if isinstance(token, str):
+                            require_nfc_order_token(
+                                token,
+                                f"{context}.contracts.{raw_key}."
+                                f"{field}[{index}]",
+                            )
+            entries = contract.get("entries")
+            if isinstance(entries, dict):
+                for entry_key in entries:
+                    if isinstance(entry_key, str):
+                        require_nfc_order_token(
+                            entry_key,
+                            f"{context}.contracts.{raw_key}.entries.<key>",
+                        )
+
+    def visit(value: Any, parent: str, trail: str) -> None:
+        if isinstance(value, dict):
+            if parent in NFC_ORDER_TOKEN_MAP_FIELDS:
+                for key in value:
+                    if isinstance(key, str):
+                        require_nfc_order_token(key, f"{path.name}:{trail}.<key>")
+            for key, child in value.items():
+                child_trail = f"{trail}.{key}" if trail else str(key)
+                if key in {"document", "afterDocument"}:
+                    check_document_contracts(
+                        child, f"{path.name}:{child_trail}"
+                    )
+                    continue
+                if key in opaque_blue_fields:
+                    continue
+                if isinstance(child, str) and (
+                    key in NFC_ORDER_TOKEN_FIELDS
+                    or key == "documentId"
+                    or key.endswith("DocumentId")
+                    or (key == "label" and parent in NFC_POLICY_LABEL_PARENTS)
+                ):
+                    require_nfc_order_token(child, f"{path.name}:{child_trail}")
+                elif key in NFC_ORDER_TOKEN_LIST_FIELDS and isinstance(child, list):
+                    for index, token in enumerate(child):
+                        if isinstance(token, str):
+                            require_nfc_order_token(
+                                token, f"{path.name}:{child_trail}[{index}]"
+                            )
+                elif key == "sourceOrder":
+                    check_text_tree(child, f"{path.name}:{child_trail}")
+                elif (
+                    key == "path"
+                    and isinstance(child, str)
+                    and isinstance(value.get("op"), str)
+                ):
+                    require_nfc_order_token(child, f"{path.name}:{child_trail}")
+                visit(child, str(key), child_trail)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, parent, f"{trail}[{index}]")
+
+    visit(payload, "", "")
+
+
+def validate_nfc_order_token_self_check() -> None:
+    try:
+        require_nfc_order_token("A\u030a", "synthetic decomposed token")
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure("non-NFC Contracts ordering token was accepted")
+    require(
+        portable_text_order_key("B", "synthetic B")
+        < portable_text_order_key("\u00c5", "synthetic precomposed A-ring"),
+        "NFC Unicode scalar-order self-check failed",
+    )
+    require(
+        portable_text_order_key("\ue000", "synthetic BMP scalar")
+        < portable_text_order_key("\U0001f600", "synthetic supplementary scalar"),
+        "Unicode scalar order was replaced by UTF-16 code-unit order",
+    )
+    ordinary_payload = {
+        "input": {
+            "documents": {
+                "root": {
+                    "document": {
+                        "business": {"sourcePath": "A\u030a"},
+                        "contracts": {"handler": {"channel": "source"}},
+                    }
+                }
+            }
+        }
+    }
+    validate_nfc_order_tokens(
+        Path("synthetic-opaque-blue-text.yaml"), ordinary_payload
+    )
+    bad_control = {
+        "input": {
+            "directDeliveries": [
+                {
+                    "channelKey": "A\u030a",
+                    "logicalDeliveryKey": "delivery",
+                    "scopePath": "/",
+                }
+            ]
+        }
+    }
+    try:
+        validate_nfc_order_tokens(
+            Path("synthetic-non-nfc-control.yaml"), bad_control
+        )
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure("non-NFC direct Channel key was accepted")
+
+
 def load_yaml(path: Path) -> Any:
     try:
         return yaml.safe_load(path.read_text())
     except Exception as exc:
         raise ValidationFailure(f"YAML parse failed: {path.relative_to(ROOT)}: {exc}") from exc
+
+
+def load_yaml_unique(path: Path) -> Any:
+    """Load YAML while rejecting duplicate mapping keys.
+
+    PyYAML's default loader silently keeps the last duplicate key.  That is
+    unsuitable for a normative counter registry because two textual counter
+    declarations could otherwise collapse to one in-memory entry.
+    """
+
+    class UniqueKeyLoader(yaml.SafeLoader):
+        pass
+
+    def construct_unique_mapping(
+        loader: yaml.SafeLoader,
+        node: yaml.nodes.MappingNode,
+        deep: bool = False,
+    ) -> dict[Any, Any]:
+        loader.flatten_mapping(node)
+        result: dict[Any, Any] = {}
+        for key_node, value_node in node.value:
+            key = loader.construct_object(key_node, deep=deep)
+            if key in result:
+                raise ValidationFailure(
+                    f"duplicate YAML mapping key in {path.relative_to(ROOT)} "
+                    f"at line {key_node.start_mark.line + 1}: {key!r}"
+                )
+            result[key] = loader.construct_object(value_node, deep=deep)
+        return result
+
+    UniqueKeyLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+        construct_unique_mapping,
+    )
+    try:
+        return yaml.load(path.read_text(), Loader=UniqueKeyLoader)
+    except ValidationFailure:
+        raise
+    except Exception as exc:
+        raise ValidationFailure(
+            f"YAML parse failed: {path.relative_to(ROOT)}: {exc}"
+        ) from exc
 
 
 def registry_blue_id(key: str) -> str:
@@ -182,7 +454,7 @@ def sha256_file(path: Path) -> str:
 
 
 def canonical_json(value: Any) -> bytes:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return jcs_dumps(value)
 
 
 def canonical_identity(value: dict[str, Any], field: str) -> str:
@@ -193,6 +465,74 @@ def canonical_identity(value: dict[str, Any], field: str) -> str:
 
 def domain_identity(domain: str, value: Any) -> str:
     return "sha256:" + hashlib.sha256(canonical_json({"domain": domain, "value": value})).hexdigest()
+
+
+def closure_root_scope_identity(document_id: str) -> str:
+    """Return the only managed-scope identity admitted by closure profile 1.0."""
+    return domain_identity(
+        "blue-contracts-managed-scope-key/1.0",
+        {
+            "documentId": document_id,
+            "scopePath": "/",
+            "activationGeneration": 0,
+        },
+    )
+
+
+def require_closure_root_address(
+    scope_path: Any,
+    activation_generation: Any,
+    context: str,
+) -> None:
+    require(
+        scope_path == "/" and activation_generation == 0,
+        f"Contracts 1.0 closure profile requires Root scope / generation 0: "
+        f"{context}",
+    )
+
+
+def require_closure_root_identity(
+    document_id: str,
+    scope_identity: Any,
+    context: str,
+) -> None:
+    require(
+        scope_identity == closure_root_scope_identity(document_id),
+        f"Contracts 1.0 closure profile requires the Root managed-scope "
+        f"identity: {context}",
+    )
+
+
+def validate_closure_root_profile_self_check() -> None:
+    """Synthetic negative law: closure admission never widens to nested scope."""
+    require_closure_root_address("/", 0, "synthetic valid Root")
+    for scope_path, generation in (("/nested", 1), ("/", 1)):
+        rejected = False
+        try:
+            require_closure_root_address(
+                scope_path, generation, "synthetic non-Root address"
+            )
+        except ValidationFailure:
+            rejected = True
+        require(rejected, "synthetic non-Root closure address was accepted")
+    nested_identity = domain_identity(
+        "blue-contracts-managed-scope-key/1.0",
+        {
+            "documentId": "synthetic-document",
+            "scopePath": "/nested",
+            "activationGeneration": 1,
+        },
+    )
+    rejected = False
+    try:
+        require_closure_root_identity(
+            "synthetic-document",
+            nested_identity,
+            "synthetic non-Root identity",
+        )
+    except ValidationFailure:
+        rejected = True
+    require(rejected, "synthetic non-Root managed-scope identity was accepted")
 
 
 def generated_document_id(ordinal: int) -> str:
@@ -326,24 +666,18 @@ def measure_limit_generator(kind: str, parameters: dict[str, Any]) -> int:
         )
         work_identities: set[str] = set()
         for ordinal in range(count):
-            transition_identity = domain_identity(
-                "blue-contracts-historical-transition/1.0",
-                {
-                    "documentId": generated_document_id(0),
-                    "fromEpoch": ordinal,
-                    "toEpoch": ordinal + 1,
-                    "beforeBlueId": direct_blue_id({"revision": ordinal}),
-                    "afterBlueId": direct_blue_id({"revision": ordinal + 1}),
-                },
+            cause_identity = domain_identity(
+                "blue-contracts-limit-generator-cause/1.0",
+                {"kind": kind, "ordinal": ordinal},
             )
             work_identities.add(domain_identity(
                 "blue-contracts-work-occurrence/1.0",
                 {
                     "invocationIdentity": invocation_identity,
                     "workOrdinal": ordinal,
-                    "workKind": "HISTORICAL_TRANSITION",
+                    "workKind": "CONTAINING_REFERENCE_UPDATE",
                     "targetManagedScopeIdentity": target_scope_identity,
-                    "sourceOccurrenceIdentity": transition_identity,
+                    "sourceOccurrenceIdentity": cause_identity,
                 },
             ))
         return len(work_identities)
@@ -545,7 +879,7 @@ def validate_direct_marker_transition(
                 f"protected initialized marker changed in {path.name}: {document_id}",
             )
         elif after["initialized"] is not None:
-            frozen_blue_id = direct_blue_id(before_documents[document_id]["document"])
+            frozen_blue_id = before_documents[document_id]["blueId"]
             require(
                 after["initialized"]["document"] == {"blueId": frozen_blue_id},
                 f"initialized marker does not reference the exact frozen input document "
@@ -577,11 +911,234 @@ def active_declared_path(document: dict[str, Any], source_path: str) -> bool:
         if source_path in paths:
             return True
         for collection_path in value.get("collectionPaths", []) if isinstance(value, dict) else []:
-            prefix = collection_path.rstrip("/") + "/"
-            remainder = source_path[len(prefix):] if source_path.startswith(prefix) else None
-            if remainder is not None and remainder and "/" not in remainder:
+            if not isinstance(collection_path, str):
+                continue
+            try:
+                collection = pointer_get(document, collection_path)
+            except (KeyError, ValidationFailure):
+                continue
+            if not isinstance(collection, dict) or pure_blue_reference(collection) is not None:
+                continue
+            collection_segments = (
+                [] if collection_path == "/" else collection_path.split("/")[1:]
+            )
+            source_segments = source_path.split("/")[1:]
+            if (
+                len(source_segments) == len(collection_segments) + 1
+                and source_segments[: len(collection_segments)]
+                == collection_segments
+            ):
+                # The direct key may be absent for an explicit inactive
+                # prospective/retirement-successor row. Active rows are still
+                # required below to resolve to an exact present object value.
                 return True
     return False
+
+
+def validate_process_embedded_declaration_coverage(
+    path: Path,
+    documents: dict[str, Any],
+    occurrences: list[dict[str, Any]],
+) -> None:
+    """Prove that declarations and managed occurrence rows cover each other.
+
+    A fixed declaration owns one row whether its exact path is present or
+    prospectively absent. A collection declaration owns one row for every
+    direct object member and cannot be used as an implicit list/wildcard scan.
+    The later occurrence-value checks remain representation-neutral and prove
+    each row's exact target identity.
+    """
+    rows_by_path: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for occurrence in occurrences:
+        source_document_id = occurrence.get("sourceDocumentId")
+        source_path = occurrence.get("sourcePath")
+        if isinstance(source_document_id, str) and isinstance(source_path, str):
+            rows_by_path[(source_document_id, source_path)].append(occurrence)
+    for (source_document_id, source_path), rows in rows_by_path.items():
+        require(
+            len(rows) == 1,
+            f"occurrence set has multiple rows for one source path in "
+            f"{path.name}: {source_document_id}{source_path}",
+        )
+
+    runtime_pointer = re.compile(r"^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$")
+
+    def pointer_segments(source_path: str) -> tuple[str, ...]:
+        if source_path == "/":
+            return ()
+        return tuple(
+            raw.replace("~1", "/").replace("~0", "~")
+            for raw in source_path.split("/")[1:]
+        )
+
+    def strict_prefix(left: tuple[str, ...], right: tuple[str, ...]) -> bool:
+        return len(left) < len(right) and right[: len(left)] == left
+
+    for document_id, record in documents.items():
+        document = record["document"]
+        contracts = document.get("contracts", {}) if isinstance(document, dict) else {}
+        if not isinstance(contracts, dict):
+            continue
+        concrete_owners: dict[str, str] = {}
+        declaration_roots: dict[str, str] = {}
+
+        def reject_contract_traversal(source_path: str, owner: str) -> None:
+            segments = pointer_segments(source_path)
+            require(
+                not segments or segments[0] != "contracts",
+                f"Process Embedded declaration traverses reserved /contracts in "
+                f"{path.name}: {document_id}{source_path} ({owner})",
+            )
+            require(
+                "*" not in segments,
+                f"Process Embedded declaration uses unsupported wildcard syntax "
+                f"in {path.name}: {document_id}{source_path} ({owner})",
+            )
+
+        def register_declaration_root(source_path: str, owner: str) -> None:
+            reject_contract_traversal(source_path, owner)
+            segments = pointer_segments(source_path)
+            for previous_path, previous_owner in declaration_roots.items():
+                previous_segments = pointer_segments(previous_path)
+                require(
+                    source_path != previous_path
+                    and not strict_prefix(segments, previous_segments)
+                    and not strict_prefix(previous_segments, segments),
+                    f"Process Embedded declarations overlap in {path.name}: "
+                    f"{document_id}{previous_path} ({previous_owner}) and "
+                    f"{document_id}{source_path} ({owner})",
+                )
+            declaration_roots[source_path] = owner
+
+        def register(source_path: str, owner: str) -> None:
+            reject_contract_traversal(source_path, owner)
+            previous = concrete_owners.get(source_path)
+            require(
+                previous is None,
+                f"Process Embedded declarations generate the same source path in "
+                f"{path.name}: {document_id}{source_path} ({previous}, {owner})",
+            )
+            segments = pointer_segments(source_path)
+            for previous_path, previous_owner in concrete_owners.items():
+                previous_segments = pointer_segments(previous_path)
+                require(
+                    not strict_prefix(segments, previous_segments)
+                    and not strict_prefix(previous_segments, segments),
+                    f"Process Embedded concrete paths overlap in {path.name}: "
+                    f"{document_id}{previous_path} ({previous_owner}) and "
+                    f"{document_id}{source_path} ({owner})",
+                )
+            concrete_owners[source_path] = owner
+
+        def validate_row_state(
+            source_path: str,
+            *,
+            present: bool,
+            owner: str,
+        ) -> None:
+            rows = rows_by_path.get((document_id, source_path), [])
+            require(
+                len(rows) == 1,
+                f"Process Embedded declaration lacks exactly one occurrence row in "
+                f"{path.name}: {document_id}{source_path} ({owner}, rows={len(rows)})",
+            )
+            row = rows[0]
+            if not present:
+                require(
+                    row.get("active") is False,
+                    f"absent Process Embedded path has an active occurrence in "
+                    f"{path.name}: {document_id}{source_path}",
+                )
+                return
+            pending_history = row.get("pendingHistoricalEpoch") is not None
+            require(
+                row.get("active") is (not pending_history),
+                f"present Process Embedded path has the wrong active/pending state in "
+                f"{path.name}: {document_id}{source_path}",
+            )
+
+        for contract_key, value in contracts.items():
+            if type_blue_id(value) != PROCESS_EMBEDDED:
+                continue
+            fixed_paths = value.get("paths", [])
+            collection_paths = value.get("collectionPaths", [])
+            require(
+                isinstance(fixed_paths, list)
+                and all(
+                    isinstance(source_path, str)
+                    and runtime_pointer.fullmatch(source_path) is not None
+                    for source_path in fixed_paths
+                ),
+                f"invalid Process Embedded paths declaration in {path.name}: "
+                f"{document_id}/{contract_key}",
+            )
+            require(
+                isinstance(collection_paths, list)
+                and all(
+                    isinstance(collection_path, str)
+                    and runtime_pointer.fullmatch(collection_path) is not None
+                    for collection_path in collection_paths
+                ),
+                f"invalid Process Embedded collectionPaths declaration in "
+                f"{path.name}: {document_id}/{contract_key}",
+            )
+
+            for source_path in fixed_paths:
+                register_declaration_root(source_path, f"{contract_key}.paths")
+            for collection_path in collection_paths:
+                register_declaration_root(
+                    collection_path, f"{contract_key}.collectionPaths"
+                )
+
+            for source_path in fixed_paths:
+                owner = f"{contract_key}.paths"
+                register(source_path, owner)
+                try:
+                    value_at_path = pointer_get(document, source_path)
+                except KeyError:
+                    validate_row_state(source_path, present=False, owner=owner)
+                    continue
+                require(
+                    isinstance(value_at_path, dict),
+                    f"present Process Embedded fixed path is not an object in "
+                    f"{path.name}: {document_id}{source_path}",
+                )
+                validate_row_state(source_path, present=True, owner=owner)
+
+            for collection_path in collection_paths:
+                owner = f"{contract_key}.collectionPaths"
+                try:
+                    collection = pointer_get(document, collection_path)
+                except KeyError as exc:
+                    raise ValidationFailure(
+                        f"Process Embedded collection is absent in {path.name}: "
+                        f"{document_id}{collection_path}"
+                    ) from exc
+                require(
+                    isinstance(collection, dict)
+                    and pure_blue_reference(collection) is None,
+                    f"Process Embedded collection is not an established object in "
+                    f"{path.name}: {document_id}{collection_path}",
+                )
+                for member_key, member_value in collection.items():
+                    require(
+                        isinstance(member_key, str),
+                        f"Process Embedded collection has a non-text member key in "
+                        f"{path.name}: {document_id}{collection_path}",
+                    )
+                    escaped_key = member_key.replace("~", "~0").replace("/", "~1")
+                    source_path = (
+                        f"/{escaped_key}"
+                        if collection_path == "/"
+                        else f"{collection_path}/{escaped_key}"
+                    )
+                    register(source_path, owner)
+                    require(
+                        isinstance(member_value, dict),
+                        f"Process Embedded collection member is not an object in "
+                        f"{path.name}: {document_id}{source_path}",
+                    )
+                    validate_row_state(source_path, present=True, owner=owner)
 
 
 def scc_partition(document_ids: set[str], occurrences: list[dict[str, Any]]) -> list[frozenset[str]]:
@@ -628,6 +1185,123 @@ def scc_partition(document_ids: set[str], occurrences: list[dict[str, Any]]) -> 
     return sorted(result, key=lambda s: tuple(sorted(s)))
 
 
+def canonical_scc_order(
+    document_ids: set[str],
+    occurrences: list[dict[str, Any]],
+    components: list[dict[str, Any]],
+) -> list[frozenset[str]]:
+    """Return the unique target-before-source condensation order from §4.7."""
+    partition = scc_partition(document_ids, occurrences)
+    declared_by_members = {
+        frozenset(component["orderedMemberDocumentIds"]): component
+        for component in components
+    }
+    require(
+        set(partition) == set(declared_by_members),
+        "cannot order a declared component list that is not the exact SCC partition",
+    )
+    owner = {
+        document_id: members
+        for members in partition
+        for document_id in members
+    }
+    outgoing: dict[frozenset[str], set[frozenset[str]]] = {
+        members: set() for members in partition
+    }
+    active_occurrence_ids: dict[frozenset[str], list[str]] = {
+        members: [] for members in partition
+    }
+    for occurrence in occurrences:
+        if not occurrence.get("active"):
+            continue
+        source_component = owner[occurrence["sourceDocumentId"]]
+        target_component = owner[occurrence["targetDocumentId"]]
+        active_occurrence_ids[source_component].append(
+            occurrence["occurrenceIdentity"]
+        )
+        if source_component != target_component:
+            outgoing[source_component].add(target_component)
+
+    def tie_key(members: frozenset[str]) -> tuple[Any, ...]:
+        occurrence_ids = active_occurrence_ids[members]
+        return (
+            min(members),
+            min(occurrence_ids) if occurrence_ids else "",
+            declared_by_members[members]["componentGeneration"],
+        )
+
+    remaining = set(partition)
+    ordered: list[frozenset[str]] = []
+    while remaining:
+        eligible = [
+            members
+            for members in remaining
+            if not (outgoing[members] & remaining)
+        ]
+        require(eligible, "SCC condensation graph unexpectedly contains a cycle")
+        selected = min(eligible, key=tie_key)
+        ordered.append(selected)
+        remaining.remove(selected)
+    return ordered
+
+
+def validate_component_order_self_check() -> None:
+    """Prove that target z precedes embedding source a despite text order."""
+    occurrences = [
+        {
+            "sourceDocumentId": "a",
+            "targetDocumentId": "z",
+            "occurrenceIdentity": "occurrence-a-z",
+            "active": True,
+        }
+    ]
+    components = [
+        {"orderedMemberDocumentIds": ["a"], "componentGeneration": 1},
+        {"orderedMemberDocumentIds": ["z"], "componentGeneration": 1},
+    ]
+    require(
+        canonical_scc_order({"a", "z"}, occurrences, components)
+        == [frozenset({"z"}), frozenset({"a"})],
+        "reverse-topological component-order self-check failed",
+    )
+
+
+def validate_affected_closure_connectivity(
+    path: Path,
+    documents: dict[str, Any],
+    occurrences: list[dict[str, Any]],
+    phase: str,
+) -> None:
+    """Require one weakly connected managed-document closure."""
+    document_ids = set(documents)
+    require(document_ids, f"{phase} affected closure is empty in {path.name}")
+    neighbors: dict[str, set[str]] = {
+        document_id: set() for document_id in document_ids
+    }
+    for occurrence in occurrences:
+        if not occurrence.get("active"):
+            continue
+        source_id = occurrence["sourceDocumentId"]
+        target_id = occurrence["targetDocumentId"]
+        if source_id in neighbors and target_id in neighbors:
+            neighbors[source_id].add(target_id)
+            neighbors[target_id].add(source_id)
+
+    pending = [min(document_ids)]
+    reached: set[str] = set()
+    while pending:
+        document_id = pending.pop()
+        if document_id in reached:
+            continue
+        reached.add(document_id)
+        pending.extend(sorted(neighbors[document_id] - reached, reverse=True))
+    require(
+        reached == document_ids,
+        f"{phase} affected closure is not weakly connected in {path.name}: "
+        f"unreachable={sorted(document_ids - reached)}",
+    )
+
+
 def component_sets(components: list[dict[str, Any]]) -> list[frozenset[str]]:
     return sorted((frozenset(c["orderedMemberDocumentIds"]) for c in components), key=lambda s: tuple(sorted(s)))
 
@@ -645,6 +1319,10 @@ def verify_manifest(path: Path, identity_field: str, additionally_null: tuple[st
 
 
 def verify_listed_files(base: Path, entries: list[dict[str, Any]]) -> None:
+    require(isinstance(entries, list), f"manifest files are not an array: {base.relative_to(ROOT)}")
+    paths = [entry.get("path") for entry in entries if isinstance(entry, dict)]
+    require(len(paths) == len(entries) and all(isinstance(path, str) for path in paths), f"invalid manifest file entry: {base.relative_to(ROOT)}")
+    require(len(paths) == len(set(paths)), f"duplicate manifest file path: {base.relative_to(ROOT)}")
     for entry in entries:
         path = base / entry["path"]
         require(path.is_file(), f"manifest file missing: {path.relative_to(ROOT)}")
@@ -670,16 +1348,157 @@ def fixture_files() -> tuple[list[Path], list[Path]]:
 
 
 def validate_schemas(ordinary: list[Path], closure: list[Path]) -> None:
+    validate_closure_root_profile_self_check()
+    validate_nfc_order_token_self_check()
+    validate_public_handler_order_self_check()
+    validate_generation_transition_self_check()
+    validate_managed_occurrence_patch_boundary_self_check()
+    validate_undeclared_prospective_activation_self_check()
+    validate_patch_shape_self_check()
     ordinary_schema = load_yaml(FIX / "fixture-schema.yaml")
     closure_schema = load_yaml(FIX / "closure-fixture-schema.yaml")
     ov = jsonschema.Draft202012Validator(ordinary_schema)
     cv = jsonschema.Draft202012Validator(closure_schema)
     for path in ordinary:
-        errors = sorted(ov.iter_errors(load_yaml(path)), key=lambda e: list(e.path))
+        payload = load_yaml(path)
+        errors = sorted(ov.iter_errors(payload), key=lambda e: list(e.path))
         require(not errors, f"ordinary schema failure {path.relative_to(ROOT)}: {errors[0].message if errors else ''}")
+    closure_payloads: list[tuple[Path, dict[str, Any]]] = []
     for path in closure:
-        errors = sorted(cv.iter_errors(load_yaml(path)), key=lambda e: list(e.path))
+        payload = load_yaml(path)
+        errors = sorted(cv.iter_errors(payload), key=lambda e: list(e.path))
         require(not errors, f"closure schema failure {path.relative_to(ROOT)}: {errors[0].message if errors else ''}")
+        validate_nfc_order_tokens(path, payload)
+        closure_payloads.append((path, payload))
+
+    # Keep the non-completed attempt branch independently executable.  In
+    # particular, Root-profile validation must accept its intentionally absent
+    # gas trace, while the schema must reject completed-result evidence being
+    # attached to that branch.
+    needs_path, needs_payload = next(
+        (path, payload)
+        for path, payload in closure_payloads
+        if payload.get("expected", {}).get("attemptOutcome") == "NeedsResources"
+    )
+    needs_expected = needs_payload["expected"]
+    require(
+        set(needs_expected) == {"attemptOutcome", "requiredBlueIds"},
+        "NeedsResources fixture carries completed-result evidence",
+    )
+    validate_closure_root_profile(needs_path, needs_payload)
+    illegal_needs_result = json.loads(json.dumps(needs_payload))
+    illegal_needs_result["expected"].update(
+        {
+            "workTrace": [],
+            "gasTrace": [],
+            "subscriptionDeltas": [],
+            "checkpointWrites": [],
+            "publicEvents": [],
+        }
+    )
+    require(
+        bool(list(cv.iter_errors(illegal_needs_result))),
+        "closure schema accepts completed-result evidence on NeedsResources",
+    )
+
+    # Synthetic profile probes are deliberately independent of the released
+    # fixture inventory.  They prove that widening either closure input or
+    # result subscription scope fails schema admission without adding a vector.
+    direct_probe: dict[str, Any] | None = None
+    channel_probe: dict[str, Any] | None = None
+    for _path, payload in closure_payloads:
+        deliveries = payload.get("input", {}).get("directDeliveries", [])
+        if direct_probe is None and deliveries:
+            direct_probe = json.loads(json.dumps(payload))
+            direct_probe["input"]["directDeliveries"][0]["scopePath"] = "/nested"
+            direct_probe["input"]["directDeliveries"][0]["activationGeneration"] = 1
+        if channel_probe is None:
+            for delta in payload.get("expected", {}).get("subscriptionDeltas", []):
+                for side in ("beforeSubscription", "afterSubscription"):
+                    if isinstance(delta.get(side), dict):
+                        channel_probe = json.loads(json.dumps(payload))
+                        mutated = next(
+                            item
+                            for item in channel_probe["expected"]["subscriptionDeltas"]
+                            if isinstance(item.get(side), dict)
+                        )[side]["channelOccurrence"]
+                        mutated["scopePath"] = "/nested"
+                        mutated["scopeActivationGeneration"] = 1
+                        break
+                if channel_probe is not None:
+                    break
+        if direct_probe is not None and channel_probe is not None:
+            break
+    require(direct_probe is not None, "closure schema Root-scope direct probe unavailable")
+    require(
+        bool(list(cv.iter_errors(direct_probe))),
+        "closure schema accepts a synthetic non-Root direct delivery",
+    )
+    require(channel_probe is not None, "closure schema Root-scope result probe unavailable")
+    require(
+        bool(list(cv.iter_errors(channel_probe))),
+        "closure schema accepts a synthetic non-Root ChannelOccurrence",
+    )
+
+    success_payload = next(
+        payload
+        for _path, payload in closure_payloads
+        if payload.get("expected", {}).get("status") == "success"
+    )
+    illegal_success_rollback = json.loads(json.dumps(success_payload))
+    illegal_success_rollback["expected"]["rollbackToInput"] = True
+    require(
+        bool(list(cv.iter_errors(illegal_success_rollback))),
+        "closure schema accepts rollbackToInput=true on success",
+    )
+    failure_payload = next(
+        payload
+        for _path, payload in closure_payloads
+        if payload.get("expected", {}).get("attemptOutcome") == "Complete"
+        and payload["expected"].get("status") != "success"
+    )
+    illegal_failure_commit = json.loads(json.dumps(failure_payload))
+    illegal_failure_commit["expected"]["rollbackToInput"] = False
+    require(
+        bool(list(cv.iter_errors(illegal_failure_commit))),
+        "closure schema accepts rollbackToInput=false on non-success",
+    )
+
+    patch_payload = next(
+        payload
+        for _path, payload in closure_payloads
+        if any(
+            result.get("patches")
+            for bucket in ("handlers", "initializationHandlers")
+            for result in payload.get("runtime", {}).get(bucket, {}).values()
+        )
+    )
+    illegal_root_patch = json.loads(json.dumps(patch_payload))
+    patch = next(
+        result["patches"][0]
+        for bucket in ("handlers", "initializationHandlers")
+        for result in illegal_root_patch["runtime"].get(bucket, {}).values()
+        if result.get("patches")
+    )
+    patch["path"] = "/"
+    require(
+        bool(list(cv.iter_errors(illegal_root_patch))),
+        "closure schema accepts a Root-targeted runtime patch",
+    )
+    illegal_remove_value = json.loads(json.dumps(patch_payload))
+    patch = next(
+        result["patches"][0]
+        for bucket in ("handlers", "initializationHandlers")
+        for result in illegal_remove_value["runtime"].get(bucket, {}).values()
+        if result.get("patches")
+    )
+    patch["op"] = "remove"
+    patch.setdefault("val", {})
+    require(
+        bool(list(cv.iter_errors(illegal_remove_value))),
+        "closure schema accepts val on a remove patch",
+    )
+
 
 
 def validate_vector_coverage(ordinary: list[Path], closure: list[Path]) -> dict[str, list[str]]:
@@ -699,6 +1518,250 @@ def validate_vector_coverage(ordinary: list[Path], closure: list[Path]) -> dict[
         "closure vectors must be C-CLO-01..33",
     )
     return actual
+
+
+def validate_gas_manifest_and_microfixtures(ordinary: list[Path]) -> int:
+    """Bind each frozen gas counter to exactly one canonical microfixture."""
+    gas = load_yaml_unique(GAS)
+    ordinary_set = set(ordinary)
+    gas_micro_files = set((FIX / "gas-micro").glob("*.yaml"))
+    require(
+        gas_micro_files <= ordinary_set,
+        "gas-micro directory contains non-fixture YAML: "
+        f"{sorted(path.name for path in gas_micro_files - ordinary_set)}",
+    )
+    namespaces = gas.get("namespaces")
+    require(isinstance(namespaces, dict) and namespaces, "gas namespaces are missing")
+    portable_limits = gas.get("portableLimits")
+    require(
+        isinstance(portable_limits, dict) and portable_limits,
+        "portable gas limits are missing",
+    )
+    for limit_name in portable_limits:
+        require_nfc_order_token(limit_name, f"gas manifest limit {limit_name!r}")
+
+    expected_weights: dict[tuple[str, str], int] = {}
+    for namespace, namespace_entry in namespaces.items():
+        require(
+            isinstance(namespace, str) and isinstance(namespace_entry, dict),
+            f"invalid gas namespace declaration: {namespace!r}",
+        )
+        require_nfc_order_token(namespace, f"gas namespace {namespace!r}")
+        counters = namespace_entry.get("counters")
+        require(
+            isinstance(counters, dict),
+            f"gas counters are missing for namespace {namespace}",
+        )
+        counter_count = namespace_entry.get("counterCount")
+        require(
+            isinstance(counter_count, int)
+            and not isinstance(counter_count, bool)
+            and counter_count == len(counters),
+            f"gas counterCount mismatch for namespace {namespace}",
+        )
+        for counter, weight in counters.items():
+            require(
+                isinstance(counter, str) and counter,
+                f"invalid gas counter name in namespace {namespace}: {counter!r}",
+            )
+            require_nfc_order_token(
+                counter, f"gas counter {namespace}.{counter}"
+            )
+            require(
+                isinstance(weight, int)
+                and not isinstance(weight, bool)
+                and 0 < weight <= 9_007_199_254_740_991,
+                f"invalid gas weight for {namespace}.{counter}: {weight!r}",
+            )
+            expected_weights[(namespace, counter)] = weight
+
+    actual: dict[tuple[str, str], Path] = {}
+    trace_fields = {
+        "sequence", "namespace", "counter", "quantity", "weight", "subtotal",
+    }
+    for path in ordinary:
+        fixture = load_yaml(path)
+        if fixture.get("operation") != "gas-micro":
+            continue
+        fixture_input = fixture.get("input")
+        if not isinstance(fixture_input, dict):
+            continue
+        has_namespace = "namespace" in fixture_input
+        has_counter = "counter" in fixture_input
+        if not has_namespace and not has_counter:
+            continue
+        require(
+            has_namespace and has_counter,
+            f"named gas microfixture must declare both namespace and counter: {path.name}",
+        )
+        require(
+            set(fixture_input) == {"namespace", "counter", "quantity", "weightManifest"},
+            f"named gas microfixture input fields are not exact in {path.name}",
+        )
+        namespace = fixture_input["namespace"]
+        counter = fixture_input["counter"]
+        key = (namespace, counter)
+        require(key in expected_weights, f"unknown gas counter microfixture in {path.name}: {namespace}.{counter}")
+        previous = actual.get(key)
+        require(
+            previous is None,
+            f"duplicate gas counter microfixture for {namespace}.{counter}: "
+            f"{previous.name if previous is not None else path.name}, {path.name}",
+        )
+        actual[key] = path
+
+        expected_rel = f"gas-micro/{namespace}-{counter}.yaml"
+        require(
+            path.relative_to(FIX).as_posix() == expected_rel,
+            f"gas microfixture path mismatch for {namespace}.{counter}: {path.relative_to(FIX)}",
+        )
+        require(
+            fixture.get("id") == f"gas-{namespace}-{counter}",
+            f"gas microfixture id mismatch in {path.name}",
+        )
+        require(
+            fixture.get("vectors") == ["C-GAS-01"]
+            and fixture.get("category") == "gas",
+            f"gas counter microfixture classification mismatch in {path.name}",
+        )
+        require(
+            fixture_input["weightManifest"] == gas.get("schedule"),
+            f"gas schedule binding mismatch in {path.name}",
+        )
+        quantity = fixture_input["quantity"]
+        require(
+            isinstance(quantity, int) and not isinstance(quantity, bool) and quantity == 3,
+            f"gas counter microfixture quantity must be exactly 3 in {path.name}",
+        )
+        expected = fixture.get("expected")
+        require(
+            isinstance(expected, dict) and set(expected) == {"trace", "totalGas"},
+            f"gas counter microfixture expected fields are not exact in {path.name}",
+        )
+        trace = expected["trace"]
+        require(
+            isinstance(trace, list) and len(trace) == 1 and isinstance(trace[0], dict),
+            f"gas counter microfixture must have exactly one trace entry in {path.name}",
+        )
+        entry = trace[0]
+        weight = expected_weights[key]
+        subtotal = quantity * weight
+        require(
+            subtotal <= 9_007_199_254_740_991,
+            f"gas counter microfixture subtotal exceeds the safe integer domain "
+            f"in {path.name}",
+        )
+        require(
+            set(entry) == trace_fields,
+            f"gas counter microfixture trace fields are not exact in {path.name}",
+        )
+        require(
+            entry == {
+                "sequence": 0,
+                "namespace": namespace,
+                "counter": counter,
+                "quantity": quantity,
+                "weight": weight,
+                "subtotal": subtotal,
+            },
+            f"gas counter microfixture trace does not match the manifest in {path.name}",
+        )
+        require(
+            expected["totalGas"] == subtotal,
+            f"gas counter microfixture totalGas mismatch in {path.name}",
+        )
+
+    expected_keys = set(expected_weights)
+    actual_keys = set(actual)
+    require(
+        actual_keys == expected_keys,
+        "gas manifest/microfixture inventory mismatch: "
+        f"missing={sorted(expected_keys - actual_keys)} "
+        f"extra={sorted(actual_keys - expected_keys)}",
+    )
+    return len(actual)
+
+
+def validate_fixture_manifest_inventory(
+    manifest: dict[str, Any],
+    ordinary: list[Path],
+    closure: list[Path],
+    vectors: dict[str, list[str]],
+) -> None:
+    """Bind the fixture manifest to the exact discovered package inventory."""
+    entries = manifest.get("files")
+    require(isinstance(entries, list), "fixture manifest files must be an array")
+    require(
+        all(isinstance(entry, dict) and isinstance(entry.get("path"), str) for entry in entries),
+        "fixture manifest contains an invalid file entry",
+    )
+    declared_paths = [entry["path"] for entry in entries]
+    require(declared_paths == sorted(declared_paths), "fixture manifest file entries are not sorted")
+    require(
+        len(declared_paths) == len(set(declared_paths)),
+        "fixture manifest contains duplicate file paths",
+    )
+    discovered_paths = {
+        path.relative_to(FIX).as_posix()
+        for path in FIX.rglob("*")
+        if path.is_file()
+        and path != FIX / "manifest.yaml"
+        and "__pycache__" not in path.parts
+    }
+    declared_set = set(declared_paths)
+    require(
+        declared_set == discovered_paths,
+        "fixture manifest inventory mismatch: "
+        f"missing={sorted(discovered_paths - declared_set)} "
+        f"extra={sorted(declared_set - discovered_paths)}",
+    )
+
+    ordinary_by_path = {path.relative_to(FIX).as_posix(): path for path in ordinary}
+    closure_by_path = {path.relative_to(FIX).as_posix(): path for path in closure}
+    for entry in entries:
+        rel = entry["path"]
+        if rel in ordinary_by_path:
+            fixture = load_yaml(ordinary_by_path[rel])
+            role = "gas-fixture" if fixture.get("category") == "gas" else "behavior-fixture"
+            require(
+                set(entry) == {"path", "role", "sha256", "bytes", "vectors"}
+                and entry["role"] == role
+                and entry["vectors"] == fixture["vectors"],
+                f"ordinary fixture manifest entry mismatch: {rel}",
+            )
+        elif rel in closure_by_path:
+            fixture = load_yaml(closure_by_path[rel])
+            require(
+                set(entry) == {"path", "role", "sha256", "bytes", "vectors"}
+                and entry["role"] == "closure-fixture"
+                and entry["vectors"] == fixture["vectors"],
+                f"closure fixture manifest entry mismatch: {rel}",
+            )
+        else:
+            require(
+                set(entry) == {"path", "role", "sha256", "bytes"}
+                and entry["role"] == "support",
+                f"support fixture manifest entry mismatch: {rel}",
+            )
+
+    ordinary_gas = sum(
+        1 for path in ordinary if load_yaml(path).get("category") == "gas"
+    )
+    expected_counts = {
+        "vectorCount": len(vectors),
+        "ordinaryVectorCount": len([v for v in vectors if not v.startswith("C-CLO-")]),
+        "closureVectorCount": len([v for v in vectors if v.startswith("C-CLO-")]),
+        "ordinaryFixtureCount": len(ordinary),
+        "ordinaryBehaviorFixtureCount": len(ordinary) - ordinary_gas,
+        "ordinaryGasFixtureCount": ordinary_gas,
+        "closureFixtureCount": len(closure),
+        "totalExecutableFixtureCount": len(ordinary) + len(closure),
+    }
+    for field, expected in expected_counts.items():
+        require(
+            manifest.get(field) == expected,
+            f"fixture manifest {field} mismatch: expected {expected}, got {manifest.get(field)!r}",
+        )
 
 
 def validate_blue_ids(closure: list[Path]) -> int:
@@ -785,7 +1848,590 @@ def validate_occurrence_identity(path: Path, occurrence: dict[str, Any]) -> str:
     return identity
 
 
-def validate_occurrence_set(path: Path, documents: dict[str, Any], occurrences: list[dict[str, Any]], *, allow_invalid: bool) -> int:
+def validate_occurrence_successor_generation(
+    path: Path,
+    before: dict[str, Any] | None,
+    after: dict[str, Any],
+    *,
+    preserves_lineage: bool,
+    transition: str,
+) -> None:
+    """Validate the generation law when exact predecessor evidence is known."""
+    if before is None:
+        require(
+            after["activationGeneration"] == 1,
+            f"first embedded occurrence generation is not 1 in {path.name}: "
+            f"{after['sourceDocumentId']}{after['sourcePath']}",
+        )
+        return
+
+    require(
+        before["sourceDocumentId"] == after["sourceDocumentId"]
+        and before["sourcePath"] == after["sourcePath"],
+        f"occurrence predecessor path mismatch in {path.name}: {transition}",
+    )
+    if preserves_lineage:
+        require(
+            after["activationGeneration"] == before["activationGeneration"]
+            and after["occurrenceIdentity"] == before["occurrenceIdentity"],
+            f"same-lineage occurrence transition changed generation or lineage "
+            f"identity in {path.name}: {after['sourceDocumentId']}"
+            f"{after['sourcePath']} ({transition})",
+        )
+        return
+
+    require(
+        before["activationGeneration"] < SAFE_INTEGER_MAX
+        and after["activationGeneration"]
+        == before["activationGeneration"] + 1
+        and after["occurrenceIdentity"] != before["occurrenceIdentity"]
+        and after["bindingIdentity"] != before["bindingIdentity"],
+        f"new occurrence lineage is not predecessor generation plus one with "
+        f"fresh occurrence and binding identities in {path.name}: "
+        f"{after['sourceDocumentId']}"
+        f"{after['sourcePath']} ({transition})",
+    )
+
+
+def validate_occurrence_transition_law(
+    path: Path,
+    before_occurrences: list[dict[str, Any]],
+    after_occurrences: list[dict[str, Any]],
+) -> None:
+    """Validate every generation transition provable from two closed snapshots.
+
+    Initial activation of an inactive reservation, later-invocation re-add of
+    an already committed inactive successor, and same-lineage exact-state
+    rebinds preserve the generation and occurrence identity. Active removal
+    replaces the row with the sole processor-derived inactive successor at the
+    next generation and with fresh occurrence and binding identities. That
+    successor cannot activate in the invocation that creates it. A changed
+    replacement with another target lineage and same-invocation
+    remove-then-re-add are unsupported in Contracts 1.0. A first feeder
+    reservation starts at generation 1, while a completed result cannot
+    introduce a row without an exact input predecessor.
+    """
+    before_by_path = {
+        (row["sourceDocumentId"], row["sourcePath"]): row
+        for row in before_occurrences
+    }
+    after_by_path = {
+        (row["sourceDocumentId"], row["sourcePath"]): row
+        for row in after_occurrences
+    }
+    require(
+        len(before_by_path) == len(before_occurrences)
+        and len(after_by_path) == len(after_occurrences),
+        f"occurrence transition snapshots repeat a source path in {path.name}",
+    )
+    require(
+        set(before_by_path) <= set(after_by_path),
+        f"completed result deleted occurrence rows instead of retaining exact "
+        f"inactive successor/prospective state in {path.name}: "
+        f"{sorted(set(before_by_path) - set(after_by_path))}",
+    )
+
+    for key, after in after_by_path.items():
+        before = before_by_path.get(key)
+        if before is None:
+            require(
+                False,
+                f"completed result introduced an occurrence row that was not "
+                f"reserved in the input or derived from an active predecessor "
+                f"in {path.name}: {after['sourceDocumentId']}"
+                f"{after['sourcePath']}",
+            )
+        same_lineage = (
+            before["targetDocumentId"] == after["targetDocumentId"]
+            and before["bindingPolicyIdentity"]
+            == after["bindingPolicyIdentity"]
+        )
+        require(
+            same_lineage,
+            f"same-invocation active-path retarget is unsupported in "
+            f"{path.name}: {after['sourceDocumentId']}{after['sourcePath']}",
+        )
+        retirement = same_lineage and before["active"] and not after["active"]
+        preserves_lineage = same_lineage and not retirement
+        if same_lineage:
+            if retirement:
+                transition = "retirement-successor"
+            elif not before["active"] and after["active"]:
+                transition = "reserved-activation"
+            elif before["bindingIdentity"] != after["bindingIdentity"]:
+                transition = "same-lineage-rebind"
+            else:
+                transition = "same-lineage-continuity"
+        validate_occurrence_successor_generation(
+            path,
+            before,
+            after,
+            preserves_lineage=preserves_lineage,
+            transition=transition,
+        )
+
+
+def validate_occurrence_transition_law_self_check() -> None:
+    """Exercise every branch without adding a release fixture or hidden input."""
+    path = Path("occurrence-transition-law-self-check.yaml")
+
+    def row(
+        generation: int,
+        target: str,
+        active: bool,
+        occurrence_identity: str,
+        *,
+        binding_identity: str = "binding-0",
+        policy: str = "policy-0",
+    ) -> dict[str, Any]:
+        return {
+            "sourceDocumentId": "source",
+            "sourcePath": "/child",
+            "activationGeneration": generation,
+            "targetDocumentId": target,
+            "bindingPolicyIdentity": policy,
+            "occurrenceIdentity": occurrence_identity,
+            "bindingIdentity": binding_identity,
+            "expectedTargetBlueId": binding_identity,
+            "active": active,
+        }
+
+    reserved = row(1, "target-a", False, "occurrence-1")
+    active = row(1, "target-a", True, "occurrence-1")
+    retired = row(
+        2,
+        "target-a",
+        False,
+        "occurrence-2",
+        binding_identity="binding-2",
+    )
+    readded = row(
+        2,
+        "target-a",
+        True,
+        "occurrence-2",
+        binding_identity="binding-2",
+    )
+    rebound = row(
+        1,
+        "target-a",
+        True,
+        "occurrence-1",
+        binding_identity="binding-1",
+    )
+    illegal_same_invocation_retarget = row(
+        2,
+        "target-b",
+        True,
+        "occurrence-3",
+        binding_identity="binding-3",
+    )
+
+    validate_occurrence_successor_generation(
+        path,
+        None,
+        reserved,
+        preserves_lineage=False,
+        transition="first-reservation",
+    )
+    validate_occurrence_transition_law(path, [reserved], [active])
+    validate_occurrence_transition_law(path, [active], [retired])
+    validate_occurrence_transition_law(path, [retired], [readded])
+    validate_occurrence_transition_law(path, [active], [rebound])
+    try:
+        validate_occurrence_transition_law(
+            path, [active], [illegal_same_invocation_retarget]
+        )
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "occurrence transition self-check accepted same-invocation retarget"
+        )
+    illegal_same_invocation_remove_readd = row(
+        2,
+        "target-a",
+        True,
+        "occurrence-2",
+        binding_identity="binding-2",
+    )
+    try:
+        validate_occurrence_transition_law(
+            path, [active], [illegal_same_invocation_remove_readd]
+        )
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "occurrence transition self-check accepted same-invocation "
+            "remove-then-re-add"
+        )
+    illegal_reserved_retarget = row(
+        2,
+        "target-b",
+        False,
+        "occurrence-3",
+        binding_identity="binding-3",
+    )
+    try:
+        validate_occurrence_transition_law(
+            path, [retired], [illegal_reserved_retarget]
+        )
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "occurrence transition self-check accepted reserved-path retarget"
+        )
+    try:
+        validate_occurrence_transition_law(path, [active], [])
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "occurrence transition self-check accepted a deleted active row"
+        )
+
+
+def validate_undeclared_prospective_activation_self_check() -> None:
+    input_document = {"contracts": {}}
+    output_document = {
+        "child": {"blueId": "target-blue-id"},
+        "contracts": {
+            "embedded": {
+                "type": {"blueId": PROCESS_EMBEDDED},
+                "paths": ["/child"],
+            }
+        },
+    }
+    require(
+        not active_declared_path(input_document, "/child")
+        and active_declared_path(output_document, "/child"),
+        "undeclared prospective activation declaration self-check failed",
+    )
+    inactive = {
+        "sourceDocumentId": "source",
+        "sourcePath": "/child",
+        "activationGeneration": 1,
+        "targetDocumentId": "target",
+        "bindingPolicyIdentity": "policy",
+        "occurrenceIdentity": "occurrence",
+        "bindingIdentity": "binding",
+        "expectedTargetBlueId": "target-blue-id",
+        "active": False,
+    }
+    active = dict(inactive, active=True)
+    validate_occurrence_transition_law(
+        Path("undeclared-prospective-activation-self-check.yaml"),
+        [inactive],
+        [active],
+    )
+
+
+def validate_generation_transition_law(
+    path: Path,
+    input_graph_generation: int,
+    input_components: list[dict[str, Any]],
+    input_occurrences: list[dict[str, Any]],
+    output_graph_generation: int,
+    output_components: list[dict[str, Any]],
+    output_occurrences: list[dict[str, Any]],
+    status: str,
+) -> None:
+    """Enforce the exact graph/component successor laws from Contracts §5.7."""
+
+    def active_identities(rows: list[dict[str, Any]]) -> set[str]:
+        return {
+            row["occurrenceIdentity"] for row in rows if row.get("active")
+        }
+
+    active_changed = active_identities(input_occurrences) != active_identities(
+        output_occurrences
+    )
+    if status == "success":
+        require(
+            not active_changed or input_graph_generation < SAFE_INTEGER_MAX,
+            f"graph generation overflow in {path.name}",
+        )
+        expected_graph_generation = input_graph_generation + int(active_changed)
+    else:
+        expected_graph_generation = input_graph_generation
+    require(
+        output_graph_generation == expected_graph_generation,
+        f"graph generation does not follow the exact active-occurrence-set "
+        f"transition law in {path.name}: expected "
+        f"{expected_graph_generation}, got {output_graph_generation}",
+    )
+
+    def member_set(component: dict[str, Any]) -> frozenset[str]:
+        return frozenset(component["orderedMemberDocumentIds"])
+
+    def internal_edges(
+        component: dict[str, Any], rows: list[dict[str, Any]]
+    ) -> frozenset[tuple[str, str, str]]:
+        members = member_set(component)
+        return frozenset(
+            (
+                row["occurrenceIdentity"],
+                row["sourceDocumentId"],
+                row["targetDocumentId"],
+            )
+            for row in rows
+            if row.get("active")
+            and row["sourceDocumentId"] in members
+            and row["targetDocumentId"] in members
+        )
+
+    input_shapes = [
+        (component, member_set(component), internal_edges(component, input_occurrences))
+        for component in input_components
+    ]
+    for output_component in output_components:
+        members = member_set(output_component)
+        edges = internal_edges(output_component, output_occurrences)
+        exact_predecessors = [
+            component
+            for component, before_members, before_edges in input_shapes
+            if before_members == members and before_edges == edges
+        ]
+        require(
+            len(exact_predecessors) <= 1,
+            f"ambiguous exact component predecessor in {path.name}: "
+            f"{sorted(members)}",
+        )
+        if exact_predecessors:
+            expected_component_generation = exact_predecessors[0][
+                "componentGeneration"
+            ]
+        else:
+            contributing_generations = [
+                component["componentGeneration"]
+                for component, before_members, _before_edges in input_shapes
+                if before_members & members
+            ]
+            maximum = max(contributing_generations, default=0)
+            require(
+                maximum < SAFE_INTEGER_MAX,
+                f"component generation overflow in {path.name}: "
+                f"{sorted(members)}",
+            )
+            expected_component_generation = maximum + 1
+        require(
+            output_component["componentGeneration"]
+            == expected_component_generation,
+            f"component generation does not follow the exact member/internal-"
+            f"edge successor law in {path.name}: {sorted(members)} expected "
+            f"{expected_component_generation}, got "
+            f"{output_component['componentGeneration']}",
+        )
+
+
+def validate_generation_transition_self_check() -> None:
+    path = Path("generation-transition-self-check.yaml")
+    component_a = {
+        "orderedMemberDocumentIds": ["a"],
+        "componentGeneration": 4,
+    }
+    component_b = {
+        "orderedMemberDocumentIds": ["b"],
+        "componentGeneration": 7,
+    }
+    merged = {
+        "orderedMemberDocumentIds": ["a", "b"],
+        "componentGeneration": 8,
+    }
+    edge = {
+        "occurrenceIdentity": "edge-a-b",
+        "sourceDocumentId": "a",
+        "targetDocumentId": "b",
+        "active": True,
+    }
+    validate_generation_transition_law(
+        path, 10, [component_a], [], 10, [component_a], [], "success"
+    )
+    validate_generation_transition_law(
+        path,
+        10,
+        [component_a, component_b],
+        [],
+        11,
+        [merged],
+        [edge],
+        "success",
+    )
+    try:
+        validate_generation_transition_law(
+            path,
+            10,
+            [component_a, component_b],
+            [],
+            10,
+            [merged],
+            [edge],
+            "success",
+        )
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure("changed active graph kept its generation")
+    bad_merged = dict(merged, componentGeneration=7)
+    try:
+        validate_generation_transition_law(
+            path,
+            10,
+            [component_a, component_b],
+            [],
+            11,
+            [bad_merged],
+            [edge],
+            "success",
+        )
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure("changed component kept an arbitrary generation")
+
+
+def reject_mixed_blue_id_wrappers(path: Path, value: Any, context: str) -> None:
+    if isinstance(value, list):
+        for index, child in enumerate(value):
+            reject_mixed_blue_id_wrappers(path, child, f"{context}/{index}")
+        return
+    if not isinstance(value, dict):
+        return
+    require(
+        "blueId" not in value or set(value) == {"blueId"},
+        f"mixed blueId reference wrapper in {path.name}: {context}",
+    )
+    for key, child in value.items():
+        reject_mixed_blue_id_wrappers(path, child, f"{context}/{key}")
+
+
+def establish_occurrence_value_blue_id(
+    path: Path,
+    value: Any,
+    target_document_id: str,
+    documents: dict[str, Any],
+    components: list[dict[str, Any]],
+    occurrences: list[dict[str, Any]],
+    *,
+    context: str,
+) -> str:
+    """Establish one occurrence value's representation-neutral exact identity.
+
+    Cyclic members deliberately have no standalone direct-identity branch.  An
+    inline cyclic member is accepted only when replacing that member in the
+    complete declared component reproduces the exact proof and member mapping.
+    """
+    require(
+        target_document_id in documents,
+        f"occurrence target document missing in {path.name}: {target_document_id}",
+    )
+    require(
+        isinstance(value, dict),
+        f"Process Embedded value is not an object in {path.name}: {context}",
+    )
+    reject_mixed_blue_id_wrappers(path, value, context)
+    reference = pure_blue_reference(value)
+    if reference is not None:
+        return reference
+
+    matching_components = [
+        component
+        for component in components
+        if target_document_id in component.get("orderedMemberDocumentIds", [])
+    ]
+    require(
+        len(matching_components) == 1,
+        f"occurrence target does not select one component in {path.name}: "
+        f"{target_document_id}",
+    )
+    component = matching_components[0]
+    target_record = documents[target_document_id]
+    if component.get("kind") != "CYCLIC":
+        try:
+            established = direct_blue_id(value)
+        except (TypeError, ValueError) as exc:
+            raise ValidationFailure(
+                f"acyclic inline occurrence value has no exact identity in "
+                f"{path.name}: {context}: {exc}"
+            ) from exc
+        if value == target_record["document"]:
+            require(
+                established == target_record["blueId"],
+                f"complete inline occurrence value does not establish its target "
+                f"record in {path.name}: {context}",
+            )
+            return target_record["blueId"]
+        return established
+
+    member_document_ids = component["orderedMemberDocumentIds"]
+    member_blue_ids = component["orderedMemberBlueIds"]
+    require(
+        len(member_document_ids) == len(member_blue_ids),
+        f"cyclic component member mapping is incomplete in {path.name}: {context}",
+    )
+    proof = component.get("completeCyclicProof")
+    require(
+        isinstance(proof, dict)
+        and proof.get("masterBlueId") == component.get("masterBlueId"),
+        f"cyclic inline occurrence lacks complete target proof in {path.name}: "
+        f"{context}",
+    )
+    proof_states = proof.get("memberStates")
+    require(
+        isinstance(proof_states, list)
+        and proof_states
+        == [
+            {"documentId": document_id, "blueId": blue_id}
+            for document_id, blue_id in zip(
+                member_document_ids, member_blue_ids, strict=True
+            )
+        ],
+        f"cyclic inline occurrence proof/member mapping mismatch in {path.name}: "
+        f"{context}",
+    )
+    source_documents = cyclic_component_source_documents(
+        path,
+        component,
+        documents,
+        occurrences,
+        candidate_document_id=target_document_id,
+        candidate_value=value,
+    )
+    try:
+        oracle = cyclic_set_oracle(source_documents)
+    except (TypeError, ValueError) as exc:
+        raise ValidationFailure(
+            f"cyclic inline occurrence does not reconstruct through its complete "
+            f"component in {path.name}: {context}: {exc}"
+        ) from exc
+    require(
+        oracle.master_blue_id == component["masterBlueId"]
+        and list(oracle.member_ids_in_source_order()) == member_blue_ids
+        and cyclic_canonical_limit_form(oracle) == proof.get("declaredPlaceholderSet"),
+        f"cyclic inline occurrence does not match the complete target proof/member "
+        f"mapping in {path.name}: {context}",
+    )
+    target_index = member_document_ids.index(target_document_id)
+    established = member_blue_ids[target_index]
+    require(
+        established == target_record["blueId"],
+        f"cyclic inline occurrence target record/member mapping mismatch in "
+        f"{path.name}: {context}",
+    )
+    return established
+
+
+def validate_occurrence_set(
+    path: Path,
+    documents: dict[str, Any],
+    occurrences: list[dict[str, Any]],
+    components: list[dict[str, Any]],
+    *,
+    allow_invalid: bool,
+) -> int:
+    validate_process_embedded_declaration_coverage(path, documents, occurrences)
     checked = 0
     seen: set[str] = set()
     for occurrence in occurrences:
@@ -795,24 +2441,62 @@ def validate_occurrence_set(path: Path, documents: dict[str, Any], occurrences: 
         source_id = occurrence["sourceDocumentId"]
         target_id = occurrence["targetDocumentId"]
         require(source_id in documents and target_id in documents, f"occurrence document missing in {path.name}")
+        source_document = documents[source_id]["document"]
         if not occurrence.get("active"):
+            absent = object()
+            try:
+                prospective_node = pointer_get(
+                    source_document, occurrence["sourcePath"]
+                )
+            except KeyError:
+                prospective_node = absent
+            if prospective_node is not absent:
+                established = establish_occurrence_value_blue_id(
+                    path,
+                    prospective_node,
+                    target_id,
+                    documents,
+                    components,
+                    occurrences,
+                    context=(
+                        f"prospective/{source_id}{occurrence['sourcePath']}"
+                    ),
+                )
+                require(
+                    established == occurrence["expectedTargetBlueId"],
+                    f"inactive prospective occurrence value mismatch in "
+                    f"{path.name}: {source_id}{occurrence['sourcePath']}",
+                )
             if occurrence["pendingHistoricalEpoch"] is None:
                 require(
-                    documents[target_id]["blueId"] == occurrence["expectedTargetBlueId"],
-                    f"prospective binding target document mismatch in {path.name}: {target_id}",
+                    documents[target_id]["blueId"]
+                    == occurrence["expectedTargetBlueId"],
+                    f"prospective binding target document mismatch in "
+                    f"{path.name}: {target_id}",
                 )
             checked += 1
             continue
-        source_document = documents[source_id]["document"]
+        require(
+            active_declared_path(source_document, occurrence["sourcePath"]),
+            f"active occurrence path is not declared Process Embedded in "
+            f"{path.name}: {source_id}{occurrence['sourcePath']}",
+        )
         try:
             node = pointer_get(source_document, occurrence["sourcePath"])
         except KeyError:
             if allow_invalid:
                 continue
             raise ValidationFailure(f"active occurrence path absent in {path.name}: {source_id}{occurrence['sourcePath']}")
-        require(active_declared_path(source_document, occurrence["sourcePath"]), f"active occurrence path is not declared Process Embedded in {path.name}: {source_id}{occurrence['sourcePath']}")
-        require(isinstance(node, dict) and set(node) == {"blueId"}, f"active occurrence target is not an exact pure reference in {path.name}: {source_id}{occurrence['sourcePath']}")
-        require(node["blueId"] == occurrence["expectedTargetBlueId"], f"occurrence target BlueId mismatch in {path.name}: {source_id}{occurrence['sourcePath']}")
+        established = establish_occurrence_value_blue_id(
+            path,
+            node,
+            target_id,
+            documents,
+            components,
+            occurrences,
+            context=f"{source_id}{occurrence['sourcePath']}",
+        )
+        require(established == occurrence["expectedTargetBlueId"], f"occurrence target BlueId mismatch in {path.name}: {source_id}{occurrence['sourcePath']}")
         if occurrence["pendingHistoricalEpoch"] is None:
             require(documents[target_id]["blueId"] == occurrence["expectedTargetBlueId"], f"occurrence binding target document mismatch in {path.name}: {target_id}")
         checked += 1
@@ -892,6 +2576,106 @@ def restore_component_placeholders(value: Any, source_index_by_blue_id: dict[str
     return value
 
 
+def replace_existing_pointer_value(
+    path: Path, value: Any, pointer: str, replacement: Any, context: str
+) -> Any:
+    segments = decoded_pointer_segments(path, pointer, context)
+    if not segments:
+        return replacement
+    result = json.loads(json.dumps(value))
+    current = result
+    for segment in segments[:-1]:
+        if isinstance(current, dict) and segment in current:
+            current = current[segment]
+        elif (
+            isinstance(current, list)
+            and segment.isdigit()
+            and int(segment) < len(current)
+        ):
+            current = current[int(segment)]
+        else:
+            raise ValidationFailure(
+                f"active occurrence path absent while normalizing {path.name}: "
+                f"{context}"
+            )
+    final = segments[-1]
+    if isinstance(current, dict) and final in current:
+        current[final] = replacement
+    elif (
+        isinstance(current, list)
+        and final.isdigit()
+        and int(final) < len(current)
+    ):
+        current[int(final)] = replacement
+    else:
+        raise ValidationFailure(
+            f"active occurrence path absent while normalizing {path.name}: {context}"
+        )
+    return result
+
+
+def cyclic_component_source_documents(
+    path: Path,
+    component: dict[str, Any],
+    documents: dict[str, Any],
+    occurrences: list[dict[str, Any]],
+    *,
+    candidate_document_id: str | None = None,
+    candidate_value: Any = None,
+) -> list[Any]:
+    """Build proof input while collapsing complete inline internal members."""
+    member_document_ids = component["orderedMemberDocumentIds"]
+    member_set = set(member_document_ids)
+    member_blue_ids = component["orderedMemberBlueIds"]
+    source_index_by_blue_id = {
+        blue_id: index for index, blue_id in enumerate(member_blue_ids)
+    }
+    source_documents: list[Any] = []
+    for source_document_id in member_document_ids:
+        source_document = (
+            candidate_value
+            if source_document_id == candidate_document_id
+            else documents[source_document_id]["document"]
+        )
+        for occurrence in occurrences:
+            if (
+                not occurrence.get("active")
+                or occurrence["sourceDocumentId"] != source_document_id
+                or occurrence["targetDocumentId"] not in member_set
+            ):
+                continue
+            try:
+                occurrence_value = pointer_get(
+                    source_document, occurrence["sourcePath"]
+                )
+            except KeyError:
+                continue
+            context = f"{source_document_id}{occurrence['sourcePath']}"
+            require(
+                isinstance(occurrence_value, dict),
+                f"cyclic internal occurrence is not an object in {path.name}: "
+                f"{context}",
+            )
+            reject_mixed_blue_id_wrappers(path, occurrence_value, context)
+            if pure_blue_reference(occurrence_value) is not None:
+                continue
+            target_document_id = occurrence["targetDocumentId"]
+            if occurrence_value == documents[target_document_id]["document"]:
+                source_document = replace_existing_pointer_value(
+                    path,
+                    source_document,
+                    occurrence["sourcePath"],
+                    {"blueId": documents[target_document_id]["blueId"]},
+                    context,
+                )
+        source_documents.append(
+            restore_component_placeholders(
+                source_document, source_index_by_blue_id
+            )
+        )
+    return source_documents
+
+
 def validate_components(
     path: Path,
     documents: dict[str, Any],
@@ -904,6 +2688,18 @@ def validate_components(
     require(
         len(declared) == len(set(declared)),
         f"duplicate component membership in {path.name}",
+    )
+    declared_order = [
+        frozenset(component["orderedMemberDocumentIds"])
+        for component in components
+    ]
+    canonical_order = canonical_scc_order(
+        set(documents), occurrences, components
+    )
+    require(
+        declared_order == canonical_order,
+        f"component sequence is not canonical target-before-source order in "
+        f"{path.name}: declared={declared_order}, expected={canonical_order}",
     )
     active_pairs = {
         (occurrence["sourceDocumentId"], occurrence["targetDocumentId"])
@@ -981,16 +2777,9 @@ def validate_components(
                 sorted(member_indices) == list(range(len(ordered_members))),
                 f"cyclic member suffix set is not complete in {path.name}: {member_indices}",
             )
-            source_index_by_blue_id = {
-                state["blueId"]: index
-                for index, state in enumerate(member_states)
-            }
-            source_documents = [
-                restore_component_placeholders(
-                    documents[document_id]["document"], source_index_by_blue_id
-                )
-                for document_id in ordered_members
-            ]
+            source_documents = cyclic_component_source_documents(
+                path, component, documents, occurrences
+            )
             try:
                 oracle = cyclic_set_oracle(source_documents)
             except (TypeError, ValueError) as exc:
@@ -1032,7 +2821,6 @@ def validate_components(
                 "masterBlueId",
                 "completeCyclicProof",
                 "cyclicProofIdentity",
-                "oracleStage",
             ):
                 require(
                     field not in component,
@@ -1096,6 +2884,158 @@ def oracle_stage_candidates(value: Any) -> list[dict[str, Any]]:
     return candidates
 
 
+def fixture_oracle_stages(
+    path: Path, fixture: dict[str, Any]
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    route = fixture.get("oracle")
+    if route is None:
+        return None, []
+    require(
+        isinstance(route, dict),
+        f"oracle harness is not an object in {path.name}",
+    )
+    oracle_reference = route.get("path")
+    require(
+        isinstance(oracle_reference, str),
+        f"oracle harness lacks a path in {path.name}",
+    )
+    oracle_path = (path.parent / oracle_reference).resolve()
+    try:
+        oracle_path.relative_to(ORACLES.resolve())
+    except ValueError as exc:
+        raise ValidationFailure(
+            f"cyclic oracle escapes the oracle package in {path.name}: "
+            f"{oracle_reference}"
+        ) from exc
+    require(
+        oracle_path.is_file(),
+        f"cyclic oracle does not exist in {path.name}: {oracle_reference}",
+    )
+    stages = oracle_stage_candidates(load_yaml(oracle_path))
+    stage_keys = [
+        (
+            stage["name"],
+            tuple(
+                sorted(
+                    document["documentId"]
+                    for document in stage["sourceDocumentsWithThisReferences"]
+                )
+            ),
+        )
+        for stage in stages
+    ]
+    require(
+        len(stage_keys) == len(set(stage_keys)),
+        f"cyclic oracle repeats a stage/member route in {path.name}",
+    )
+    return route, stages
+
+
+def select_oracle_stage(
+    path: Path,
+    stages: list[dict[str, Any]],
+    stage_name: str,
+    member_document_ids: Iterable[str],
+) -> dict[str, Any]:
+    member_set = set(member_document_ids)
+    matches = [
+        stage
+        for stage in stages
+        if stage["name"] == stage_name
+        and {
+            document["documentId"]
+            for document in stage["sourceDocumentsWithThisReferences"]
+        }
+        == member_set
+    ]
+    require(
+        len(matches) == 1,
+        f"cannot select exact cyclic oracle stage in {path.name}: {stage_name}",
+    )
+    return matches[0]
+
+
+def validate_component_oracle_routes(
+    path: Path,
+    fixture: dict[str, Any],
+    input_components: list[dict[str, Any]],
+    result_components: list[dict[str, Any]] | None,
+) -> None:
+    route, stages = fixture_oracle_stages(path, fixture)
+    cyclic_by_key = {
+        (location, component["componentStateIdentity"]): component
+        for location, components in (
+            ("INPUT", input_components),
+            ("RESULT", result_components or []),
+        )
+        for component in components
+        if component["kind"] == "CYCLIC"
+    }
+    component_routes = [] if route is None else route["componentStages"]
+    routed_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in component_routes:
+        key = (item["location"], item["componentStateIdentity"])
+        require(
+            key not in routed_by_key,
+            f"duplicate component oracle route in {path.name}: {key}",
+        )
+        routed_by_key[key] = item
+    require(
+        set(routed_by_key) == set(cyclic_by_key),
+        f"component oracle routes do not exactly cover cyclic input/result "
+        f"components in {path.name}",
+    )
+    for key, item in routed_by_key.items():
+        component = cyclic_by_key[key]
+        stage = select_oracle_stage(
+            path,
+            stages,
+            item["stage"],
+            component["orderedMemberDocumentIds"],
+        )
+        source_documents = stage["sourceDocumentsWithThisReferences"]
+        document_ids = [document["documentId"] for document in source_documents]
+        require(
+            set(document_ids) == set(component["orderedMemberDocumentIds"])
+            and len(document_ids) == len(set(document_ids)),
+            f"component oracle stage has the wrong member inventory in "
+            f"{path.name}: {item['stage']}",
+        )
+        oracle = cyclic_set_oracle(source_documents)
+        member_blue_ids = dict(
+            zip(document_ids, oracle.member_ids_in_source_order(), strict=True)
+        )
+        require(
+            oracle.master_blue_id == component["masterBlueId"]
+            and [
+                member_blue_ids[document_id]
+                for document_id in component["orderedMemberDocumentIds"]
+            ]
+            == component["orderedMemberBlueIds"],
+            f"component oracle stage does not establish the declared cyclic "
+            f"state in {path.name}: {item['stage']}",
+        )
+
+
+def finalization_stage_name(
+    path: Path, fixture: dict[str, Any], ordinal: int
+) -> str:
+    route, _stages = fixture_oracle_stages(path, fixture)
+    require(
+        route is not None,
+        f"tentative finalization lacks an oracle harness in {path.name}",
+    )
+    matches = [
+        item for item in route["finalizationStages"] if item["ordinal"] == ordinal
+    ]
+    require(
+        len(matches) == 1,
+        f"tentative finalization does not select one oracle stage in "
+        f"{path.name}: {ordinal}",
+    )
+    return matches[0]["stage"]
+
+
 def validate_tentative_finalizations(
     path: Path, fixture: dict[str, Any], expected: dict[str, Any]
 ) -> None:
@@ -1105,38 +3045,20 @@ def validate_tentative_finalizations(
         == list(range(len(finalizations))),
         f"tentative-finalization ordinals are not contiguous in {path.name}",
     )
-    if not finalizations:
-        return
-    oracle_reference = fixture.get("oracle")
+    route, stages = fixture_oracle_stages(path, fixture)
+    routed_finalizations = [] if route is None else route["finalizationStages"]
+    routed_ordinals = [item["ordinal"] for item in routed_finalizations]
     require(
-        isinstance(oracle_reference, str),
-        f"tentative finalization lacks an oracle in {path.name}",
+        len(routed_ordinals) == len(set(routed_ordinals))
+        and set(routed_ordinals) == set(range(len(finalizations))),
+        f"finalization oracle routes do not exactly cover result finalizations "
+        f"in {path.name}",
     )
-    oracle_path = (path.parent / oracle_reference).resolve()
-    try:
-        oracle_path.relative_to(ORACLES.resolve())
-    except ValueError as exc:
-        raise ValidationFailure(
-            f"cyclic oracle escapes the oracle package in {path.name}: {oracle_reference}"
-        ) from exc
-    stages = oracle_stage_candidates(load_yaml(oracle_path))
     for finalization in finalizations:
-        matches = [
-            stage
-            for stage in stages
-            if stage["name"] == finalization["oracleStage"]
-            and {
-                document["documentId"]
-                for document in stage["sourceDocumentsWithThisReferences"]
-            }
-            == set(finalization["memberBlueIds"])
-        ]
-        require(
-            len(matches) == 1,
-            f"cannot select exact tentative-finalization oracle in {path.name}: "
-            f"{finalization['oracleStage']}",
+        stage_name = finalization_stage_name(path, fixture, finalization["ordinal"])
+        stage = select_oracle_stage(
+            path, stages, stage_name, finalization["memberBlueIds"]
         )
-        stage = matches[0]
         oracle = cyclic_set_oracle(stage["sourceDocumentsWithThisReferences"])
         document_ids = [
             document["documentId"]
@@ -1151,7 +3073,7 @@ def validate_tentative_finalizations(
             and finalization["canonicalBytes"]
             == cyclic_canonical_limit_bytes(oracle),
             f"tentative-finalization oracle mismatch in {path.name}: "
-            f"{finalization['oracleStage']}",
+            f"{stage_name}",
         )
 
 
@@ -1187,12 +3109,13 @@ def derive_graph_changes(
             kind = "ADD"
         elif new is None:
             kind = "REMOVE"
-        elif (
-            old["targetDocumentId"] != new["targetDocumentId"]
-            or old["occurrenceIdentity"] != new["occurrenceIdentity"]
-        ):
-            kind = "RETARGET"
         else:
+            require(
+                old["targetDocumentId"] == new["targetDocumentId"]
+                and old["occurrenceIdentity"] == new["occurrenceIdentity"],
+                "different-lineage occurrence retarget is unsupported in "
+                "Contracts 1.0",
+            )
             kind = "REBIND"
         changes.append(
             {
@@ -1323,17 +3246,286 @@ def derive_subscription_deltas(
     return deltas
 
 
+def fixture_runtime(path: Path, data: dict[str, Any]) -> dict[str, Any]:
+    """Return the closed, fixture-only top-level runtime harness."""
+    runtime = data.get("runtime")
+    require(
+        isinstance(runtime, dict),
+        f"top-level runtime harness is not an object in {path.name}",
+    )
+    return runtime
+
+
+def decoded_pointer_segments(path: Path, pointer: str, context: str) -> list[str]:
+    require(
+        isinstance(pointer, str) and (pointer == "" or pointer.startswith("/")),
+        f"invalid Runtime Pointer in {path.name}: {context}",
+    )
+    if pointer == "":
+        return []
+    segments: list[str] = []
+    for raw in pointer[1:].split("/"):
+        require(
+            re.search(r"~(?:[^01]|$)", raw) is None,
+            f"invalid Runtime Pointer escape in {path.name}: {context}",
+        )
+        segments.append(raw.replace("~1", "/").replace("~0", "~"))
+    return segments
+
+
+def validate_runtime_patch_shape(
+    path: Path, patch: dict[str, Any], context: str
+) -> list[str]:
+    operation = patch.get("op")
+    require(
+        operation in {"add", "replace", "remove"},
+        f"unsupported runtime patch operation in {path.name}: {context}",
+    )
+    pointer = patch.get("path")
+    require(
+        isinstance(pointer, str)
+        and pointer not in {"", "/"}
+        and not pointer.endswith("/"),
+        f"runtime patch target is Root, empty, or has a trailing empty segment "
+        f"in {path.name}: {context}",
+    )
+    segments = decoded_pointer_segments(path, pointer, context)
+    require(
+        (operation in {"add", "replace"}) == ("val" in patch),
+        f"runtime patch val presence disagrees with op in {path.name}: {context}",
+    )
+    return segments
+
+
+def validate_list_patch_terminal(
+    path: Path,
+    segment: str,
+    operation: str,
+    list_size: int,
+    context: str,
+) -> None:
+    if segment == "-":
+        require(
+            operation == "add",
+            f"'-' list pointer is valid only for add in {path.name}: {context}",
+        )
+        return
+    require(
+        re.fullmatch(r"0|[1-9][0-9]*", segment) is not None,
+        f"noncanonical list index in {path.name}: {context}",
+    )
+    index = int(segment)
+    require(
+        index <= list_size if operation == "add" else index < list_size,
+        f"list patch index is out of range in {path.name}: {context}",
+    )
+
+
+def validate_patch_shape_self_check() -> None:
+    path = Path("runtime-patch-shape-self-check.yaml")
+    for patch in (
+        {"op": "add", "path": "/" , "val": 1},
+        {"op": "replace", "path": "/a/", "val": 1},
+        {"op": "remove", "path": "/a", "val": 1},
+        {"op": "add", "path": "/a"},
+        {"op": "add", "path": "/bad~2", "val": 1},
+    ):
+        try:
+            validate_runtime_patch_shape(path, patch, "synthetic invalid patch")
+        except ValidationFailure:
+            pass
+        else:
+            raise ValidationFailure(f"invalid runtime patch shape accepted: {patch}")
+    validate_runtime_patch_shape(
+        path, {"op": "replace", "path": "/a//b", "val": 1},
+        "synthetic valid empty interior segment",
+    )
+    for segment, operation, size in (("01", "replace", 2), ("2", "replace", 2), ("-", "remove", 2)):
+        try:
+            validate_list_patch_terminal(
+                path, segment, operation, size, "synthetic invalid list patch"
+            )
+        except ValidationFailure:
+            pass
+        else:
+            raise ValidationFailure(
+                f"invalid list patch terminal accepted: {operation} {segment}"
+            )
+    validate_list_patch_terminal(
+        path, "-", "add", 2, "synthetic append list patch"
+    )
+
+
+def projected_occurrence_value_from_patch(
+    path: Path,
+    patch: dict[str, Any],
+    occurrence_path: str,
+    context: str,
+) -> tuple[bool, Any]:
+    """Project an add/replace patch onto one reserved occurrence path."""
+    if patch.get("op") not in {"add", "replace"}:
+        return False, None
+    require("val" in patch, f"add/replace patch lacks val in {path.name}: {context}")
+    patch_segments = decoded_pointer_segments(path, patch.get("path"), context)
+    occurrence_segments = decoded_pointer_segments(
+        path, occurrence_path, f"{context}/reserved-occurrence"
+    )
+    if occurrence_segments[: len(patch_segments)] != patch_segments:
+        return False, None
+    current = patch["val"]
+    for segment in occurrence_segments[len(patch_segments) :]:
+        if isinstance(current, dict) and segment in current:
+            current = current[segment]
+        elif (
+            isinstance(current, list)
+            and segment.isdigit()
+            and int(segment) < len(current)
+        ):
+            current = current[int(segment)]
+        else:
+            # Replacing an ancestor without this descendant removes or leaves
+            # the reserved path absent; it does not activate the row.
+            return False, None
+    return True, current
+
+
+def require_not_strict_occurrence_descendant_patch(
+    path: Path,
+    patch_path: str,
+    occurrence_path: str,
+    context: str,
+) -> None:
+    patch_segments = decoded_pointer_segments(path, patch_path, context)
+    occurrence_segments = decoded_pointer_segments(
+        path, occurrence_path, f"{context}/managed-occurrence"
+    )
+    require(
+        not (
+            len(patch_segments) > len(occurrence_segments)
+            and patch_segments[: len(occurrence_segments)]
+            == occurrence_segments
+        ),
+        f"Handler patch targets a strict descendant of a separately managed "
+        f"occurrence in {path.name}: {patch_path} below {occurrence_path}",
+    )
+
+
+def validate_managed_occurrence_patch_boundary_self_check() -> None:
+    path = Path("managed-occurrence-patch-boundary-self-check.yaml")
+    try:
+        require_not_strict_occurrence_descendant_patch(
+            path, "/child/private", "/child", "synthetic strict descendant"
+        )
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "strict-descendant managed-occurrence patch was accepted"
+        )
+    require_not_strict_occurrence_descendant_patch(
+        path, "/child", "/child", "synthetic exact occurrence replacement"
+    )
+    require_not_strict_occurrence_descendant_patch(
+        path, "/", "/child", "synthetic containing ancestor replacement"
+    )
+
+
+def validate_runtime_reserved_occurrence_patches(
+    path: Path, data: dict[str, Any]
+) -> int:
+    """Verify exact target identity before a runtime patch can activate a row."""
+    fixture_input = data["input"]
+    occurrences_by_document: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    inactive_by_document: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for occurrence in fixture_input.get("occurrences", []):
+        occurrences_by_document[occurrence["sourceDocumentId"]].append(occurrence)
+        if not occurrence.get("active"):
+            inactive_by_document[occurrence["sourceDocumentId"]].append(occurrence)
+
+    checked = 0
+    runtime = fixture_runtime(path, data)
+    for bucket_name in ("handlers", "initializationHandlers"):
+        bucket = runtime.get(bucket_name, {})
+        require(
+            isinstance(bucket, dict),
+            f"runtime {bucket_name} is not an object in {path.name}",
+        )
+        for qualified_handler, result in bucket.items():
+            require(
+                isinstance(qualified_handler, str)
+                and "/" in qualified_handler
+                and isinstance(result, dict),
+                f"invalid runtime Handler result in {path.name}: {qualified_handler!r}",
+            )
+            source_document_id, _handler_key = qualified_handler.split("/", 1)
+            for patch_ordinal, patch in enumerate(result.get("patches", [])):
+                require(
+                    isinstance(patch, dict),
+                    f"runtime Handler patch is not an object in {path.name}: "
+                    f"{qualified_handler}/{patch_ordinal}",
+                )
+                patch_context = (
+                    f"{bucket_name}/{qualified_handler}/patch/{patch_ordinal}"
+                )
+                validate_runtime_patch_shape(path, patch, patch_context)
+                for occurrence in occurrences_by_document.get(
+                    source_document_id, []
+                ):
+                    require_not_strict_occurrence_descendant_patch(
+                        path,
+                        patch["path"],
+                        occurrence["sourcePath"],
+                        patch_context,
+                    )
+                for occurrence in inactive_by_document.get(source_document_id, []):
+                    creates_or_replaces, candidate_value = (
+                        projected_occurrence_value_from_patch(
+                            path,
+                            patch,
+                            occurrence["sourcePath"],
+                            patch_context,
+                        )
+                    )
+                    if not creates_or_replaces:
+                        continue
+                    established = establish_occurrence_value_blue_id(
+                        path,
+                        candidate_value,
+                        occurrence["targetDocumentId"],
+                        fixture_input["documents"],
+                        fixture_input["components"],
+                        fixture_input.get("occurrences", []),
+                        context=(
+                            f"{patch_context}->{source_document_id}"
+                            f"{occurrence['sourcePath']}"
+                        ),
+                    )
+                    require(
+                        established == occurrence["expectedTargetBlueId"],
+                        f"runtime Handler patch would activate a reserved occurrence "
+                        f"with the wrong exact target in {path.name}: {patch_context}",
+                    )
+                    checked += 1
+    return checked
+
+
 def validate_channels_and_handlers(path: Path, data: dict[str, Any]) -> tuple[int, int]:
     documents = data["input"]["documents"]
+    runtime = fixture_runtime(path, data)
     channels = 0
     handlers = 0
     for delivery in data["input"].get("directDeliveries", []):
+        require_closure_root_address(
+            delivery["scopePath"],
+            delivery["activationGeneration"],
+            f"direct delivery in {path.name}",
+        )
         contracts = contracts_at_scope(documents[delivery["targetDocumentId"]]["document"], delivery["scopePath"])
         contract = contracts.get(delivery["channelKey"])
         require(type_blue_id(contract) == SCRIPTED_EXTERNAL, f"direct delivery does not target ScriptedExternalChannel in {path.name}: {delivery}")
         channels += 1
     for bucket in ("handlers", "initializationHandlers"):
-        for qualified in data["input"].get("runtime", {}).get(bucket, {}):
+        for qualified in runtime.get(bucket, {}):
             require("/" in qualified, f"runtime handler key must be document/key in {path.name}: {qualified}")
             document_id, key = qualified.split("/", 1)
             require(document_id in documents, f"runtime handler document missing in {path.name}: {qualified}")
@@ -1344,6 +3536,226 @@ def validate_channels_and_handlers(path: Path, data: dict[str, Any]) -> tuple[in
             require(isinstance(channel_key, str) and channel_key in contracts, f"runtime Handler channel missing in {path.name}: {qualified}")
             handlers += 1
     return channels, handlers
+
+
+def validate_closure_root_profile(path: Path, fixture: dict[str, Any]) -> None:
+    """Fail closed on every non-Root address in the 1.0 closure wire profile."""
+    fixture_input = fixture["input"]
+    expected = fixture["expected"]
+    document_ids = set(fixture_input["documents"])
+
+    for ordinal, delivery in enumerate(fixture_input.get("directDeliveries", [])):
+        require_closure_root_address(
+            delivery["scopePath"],
+            delivery["activationGeneration"],
+            f"direct delivery {ordinal} in {path.name}",
+        )
+
+    # NeedsResources is an attempt outcome, not a completed result.  Its
+    # invocation input still belongs to the Root-only closure profile, but it
+    # deliberately carries no work, gas, subscriptions, checkpoints, or
+    # public-result evidence to inspect below.
+    if expected.get("attemptOutcome") == "NeedsResources":
+        return
+
+    work_items = list(expected.get("workTrace", []))
+    rejected_work = expected.get("rejectedWorkOccurrence")
+    if rejected_work is not None:
+        work_items.append(rejected_work)
+    for work_item in work_items:
+        document_id = work_item["targetDocumentId"]
+        require(
+            document_id in document_ids,
+            f"closure work targets an unknown document in {path.name}: "
+            f"{document_id}",
+        )
+        require_closure_root_identity(
+            document_id,
+            work_item["targetManagedScopeIdentity"],
+            f"work {work_item['ordinal']} in {path.name}",
+        )
+
+    for delta in expected.get("subscriptionDeltas", []):
+        delta_documents: set[str] = set()
+        for side in ("beforeSubscription", "afterSubscription"):
+            state = delta.get(side)
+            if state is None:
+                continue
+            occurrence = state["channelOccurrence"]
+            document_id = occurrence["managedDocumentId"]
+            require(
+                document_id in document_ids,
+                f"subscription {side} names an unknown document in "
+                f"{path.name}: {document_id}",
+            )
+            require_closure_root_address(
+                occurrence["scopePath"],
+                occurrence["scopeActivationGeneration"],
+                f"subscription {delta['subscriptionDeltaOrdinal']} {side} "
+                f"in {path.name}",
+            )
+            delta_documents.add(document_id)
+        require(
+            len(delta_documents) == 1,
+            f"subscription delta crosses managed documents in {path.name}: "
+            f"{delta['subscriptionDeltaOrdinal']}",
+        )
+        require_closure_root_identity(
+            next(iter(delta_documents)),
+            delta["targetManagedScopeIdentity"],
+            f"subscription delta {delta['subscriptionDeltaOrdinal']} in "
+            f"{path.name}",
+        )
+
+    root_scope_documents = {
+        closure_root_scope_identity(document_id): document_id
+        for document_id in document_ids
+    }
+    for write in expected.get("checkpointWrites", []):
+        require(
+            write["targetManagedScopeIdentity"] in root_scope_documents,
+            f"checkpoint write is not Root-scoped in {path.name}: "
+            f"{write['checkpointWriteOrdinal']}",
+        )
+
+    for entry in expected_gas_trace(path, expected):
+        has_scope_path = entry.get("scopePath") is not None
+        has_generation = entry.get("activationGeneration") is not None
+        require(
+            has_scope_path == has_generation,
+            f"closure gas scope context is incomplete in {path.name}: "
+            f"sequence {entry['sequence']}",
+        )
+        if has_scope_path:
+            require_closure_root_address(
+                entry["scopePath"],
+                entry["activationGeneration"],
+                f"gas sequence {entry['sequence']} in {path.name}",
+            )
+
+
+def handler_results_for_work(
+    path: Path, fixture: dict[str, Any], work_item: dict[str, Any]
+) -> list[dict[str, Any]]:
+    document_id = work_item["targetDocumentId"]
+    document = fixture["input"]["documents"][document_id]["document"]
+    contracts = document.get("contracts", {}) if isinstance(document, dict) else {}
+    runtime = fixture_runtime(path, fixture)
+    candidates: list[tuple[int, tuple[int, ...], tuple[int, ...], dict[str, Any]]] = []
+    for bucket_name in ("handlers", "initializationHandlers"):
+        for qualified, result in runtime.get(bucket_name, {}).items():
+            prefix = document_id + "/"
+            if not qualified.startswith(prefix):
+                continue
+            handler_key = qualified[len(prefix) :]
+            contract = contracts.get(handler_key, {})
+            if (
+                isinstance(contract, dict)
+                and contract.get("channel") == work_item["channelKey"]
+            ):
+                handler_order = contract.get("order", 0)
+                runtime_type = type_blue_id(contract)
+                require(
+                    isinstance(handler_order, int)
+                    and not isinstance(handler_order, bool)
+                    and isinstance(runtime_type, str),
+                    f"public Handler lacks exact order/type evidence in "
+                    f"{path.name}: {qualified}",
+                )
+                candidates.append(
+                    (
+                        handler_order,
+                        portable_text_order_key(
+                            handler_key,
+                            f"{path.name}:public Handler key {qualified}",
+                        ),
+                        portable_text_order_key(
+                            runtime_type,
+                            f"{path.name}:public Handler runtime type {qualified}",
+                        ),
+                        result,
+                    )
+                )
+    candidates.sort(key=lambda item: item[:3])
+    return [result for _order, _key, _type, result in candidates]
+
+
+def public_root_emissions(
+    path: Path, fixture: dict[str, Any], work_trace: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    emissions: list[dict[str, Any]] = []
+    event_occurrence_ordinal = 0
+    for work_item in work_trace:
+        for handler_result in handler_results_for_work(path, fixture, work_item):
+            for event in handler_result.get("events", []):
+                document_id = work_item["targetDocumentId"]
+                if fixture["input"]["documents"][document_id]["publicRoot"]:
+                    require_closure_root_identity(
+                        document_id,
+                        work_item["targetManagedScopeIdentity"],
+                        f"public emission from work {work_item['ordinal']} in "
+                        f"{path.name}",
+                    )
+                    emissions.append(
+                        {
+                            "publicRootDocumentId": document_id,
+                            "eventOccurrenceOrdinal": event_occurrence_ordinal,
+                            "event": event,
+                        }
+                    )
+                event_occurrence_ordinal += 1
+    return emissions
+
+
+def validate_public_handler_order_self_check() -> None:
+    document_id = "synthetic-public-root"
+    fixture = {
+        "runtime": {
+            "handlers": {
+                document_id + "/later": {"events": [{"id": "later"}]},
+                document_id + "/earlier": {"events": [{"id": "earlier"}]},
+            },
+            "initializationHandlers": {},
+        },
+        "input": {
+            "documents": {
+                document_id: {
+                    "publicRoot": True,
+                    "document": {
+                        "contracts": {
+                            "source": {},
+                            "later": {
+                                "type": {"blueId": "handler-type-b"},
+                                "channel": "source",
+                                "order": 1,
+                            },
+                            "earlier": {
+                                "type": {"blueId": "handler-type-a"},
+                                "channel": "source",
+                                "order": 0,
+                            },
+                        }
+                    },
+                }
+            }
+        },
+    }
+    work = {
+        "ordinal": 0,
+        "targetDocumentId": document_id,
+        "channelKey": "source",
+        "targetManagedScopeIdentity": closure_root_scope_identity(document_id),
+    }
+    emissions = public_root_emissions(
+        Path("synthetic-multiple-public-handlers.yaml"), fixture, [work]
+    )
+    require(
+        [emission["event"]["id"] for emission in emissions]
+        == ["earlier", "later"]
+        and [emission["eventOccurrenceOrdinal"] for emission in emissions]
+        == [0, 1],
+        "multiple public Handler emissions are not complete and canonical",
+    )
 
 
 def validate_fixture_environment(path: Path, fixture_input: dict[str, Any]) -> dict[str, Any]:
@@ -1427,7 +3839,8 @@ def validate_cause(path: Path, cause: dict[str, Any], environment: dict[str, Any
             direct_blue_id(cause["event"]) == cause["eventBlueId"],
             f"external event BlueId mismatch in {path.name}",
         )
-    else:
+    elif cause["kind"] == "admission":
+        require_nfc_order_token(cause["label"], f"{path.name}:admission label")
         expected_policy = domain_identity(
             "blue-contracts-admission-policy/1.0", {"label": cause["label"]}
         )
@@ -1445,9 +3858,101 @@ def validate_cause(path: Path, cause: dict[str, Any], environment: dict[str, Any
                 "policyIdentity": cause["policyIdentity"],
             },
         )
+    elif cause["kind"] == "managed-revision":
+        require(
+            cause["toEpoch"] == cause["fromEpoch"] + 1,
+            f"managed revision is not one consecutive epoch step in {path.name}",
+        )
+        require(
+            direct_blue_id(cause["afterDocument"]) == cause["afterBlueId"],
+            f"managed-revision after-document BlueId mismatch in {path.name}",
+        )
+        receipt_value = {
+            "childDocumentId": cause["childDocumentId"],
+            "fromEpoch": cause["fromEpoch"],
+            "toEpoch": cause["toEpoch"],
+            "beforeBlueId": cause["beforeBlueId"],
+            "afterBlueId": cause["afterBlueId"],
+            "originalSourceCauseIdentity": cause["originalSourceCauseIdentity"],
+        }
+        require(
+            cause["sourceRevisionReceiptIdentity"]
+            == domain_identity(
+                "blue-contracts-source-revision-receipt/1.0", receipt_value
+            ),
+            f"managed source-revision receipt identity mismatch in {path.name}",
+        )
+        expected_cause = domain_identity(
+            "blue-contracts-managed-revision-cause/1.0",
+            {
+                "targetOccurrenceIdentity": cause["targetOccurrenceIdentity"],
+                **receipt_value,
+                "sourceRevisionReceiptIdentity": cause[
+                    "sourceRevisionReceiptIdentity"
+                ],
+            },
+        )
+    else:
+        raise ValidationFailure(
+            f"unknown cause kind in {path.name}: {cause['kind']}"
+        )
     require(
         cause["causeIdentity"] == expected_cause,
         f"cause identity mismatch in {path.name}",
+    )
+
+
+def validate_managed_revision_binding(
+    path: Path, fixture_input: dict[str, Any]
+) -> None:
+    cause = fixture_input["cause"]
+    if cause["kind"] != "managed-revision":
+        return
+    matches = [
+        occurrence
+        for occurrence in fixture_input.get("occurrences", [])
+        if occurrence["occurrenceIdentity"] == cause["targetOccurrenceIdentity"]
+    ]
+    require(
+        len(matches) == 1,
+        f"managed revision does not select one occurrence in {path.name}",
+    )
+    occurrence = matches[0]
+    require(
+        occurrence["targetDocumentId"] == cause["childDocumentId"]
+        and occurrence["active"] is False
+        and occurrence["pendingHistoricalEpoch"] == cause["fromEpoch"]
+        and occurrence["expectedTargetBlueId"] == cause["beforeBlueId"],
+        f"managed revision does not match its inactive occurrence cursor in "
+        f"{path.name}",
+    )
+    source_document = fixture_input["documents"][occurrence["sourceDocumentId"]][
+        "document"
+    ]
+    try:
+        source_value = pointer_get(source_document, occurrence["sourcePath"])
+    except KeyError as exc:
+        raise ValidationFailure(
+            f"managed revision source path is absent in {path.name}: "
+            f"{occurrence['sourceDocumentId']}{occurrence['sourcePath']}"
+        ) from exc
+    established = establish_occurrence_value_blue_id(
+        path,
+        source_value,
+        occurrence["targetDocumentId"],
+        fixture_input["documents"],
+        fixture_input["components"],
+        fixture_input.get("occurrences", []),
+        context=(
+            f"managed-revision/{occurrence['sourceDocumentId']}"
+            f"{occurrence['sourcePath']}"
+        ),
+    )
+    require(
+        established == cause["beforeBlueId"],
+        f"managed revision source value does not establish beforeBlueId in "
+        f"{path.name}: {occurrence['sourceDocumentId']}"
+        f"{occurrence['sourcePath']}",
     )
 
 
@@ -1482,8 +3987,118 @@ def validate_gas_policy(path: Path, fixture_input: dict[str, Any]) -> dict[str, 
     return gas_policy
 
 
+def validate_fixture_harness(
+    path: Path,
+    fixture: dict[str, Any],
+    gas_policy: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    # Accessing the runtime also validates the authoritative top-level shape
+    # used by the Handler checks below.
+    fixture_runtime(path, fixture)
+    gas_manifest = load_yaml(GAS)
+
+    limit_source = fixture["sharedLimitSource"]
+    if limit_source["kind"] == "RELEASE_DEFAULT":
+        require(
+            gas_policy["sharedLimit"] == gas_manifest["maxProcessGas"],
+            f"release-default shared limit does not match the gas manifest in "
+            f"{path.name}",
+        )
+    elif limit_source["kind"] == "FIXTURE_OVERRIDE":
+        require(
+            limit_source["sharedLimit"] == gas_policy["sharedLimit"],
+            f"fixture shared-limit override does not match the normative gas "
+            f"policy in {path.name}",
+        )
+    else:
+        raise ValidationFailure(
+            f"unknown shared-limit source in {path.name}: {limit_source['kind']}"
+        )
+
+    provider = fixture["provider"]
+    nodes = provider["nodes"]
+    require(
+        list(nodes) == sorted(nodes),
+        f"provider node keys are not canonically ordered in {path.name}",
+    )
+    for blue_id, node in nodes.items():
+        require(
+            direct_blue_id(node) == blue_id,
+            f"provider node does not establish its key in {path.name}: {blue_id}",
+        )
+    for field in ("expectedRequiredBlueIds", "expectedLoads"):
+        values = provider[field]
+        require(
+            values == sorted(set(values)),
+            f"provider {field} is not sorted and unique in {path.name}",
+        )
+    required = (
+        expected["requiredBlueIds"]
+        if expected["attemptOutcome"] == "NeedsResources"
+        else []
+    )
+    require(
+        provider["expectedRequiredBlueIds"] == required,
+        f"provider required-BlueId observation does not match the result in "
+        f"{path.name}",
+    )
+    require(
+        set(required) <= set(provider["expectedLoads"]),
+        f"provider does not record a load for every required BlueId in {path.name}",
+    )
+
+    locality = fixture["locality"]
+    require(
+        locality["expectedUnrelatedDocumentsOpened"]
+        <= locality["unrelatedDocumentCount"],
+        f"locality observation exceeds its fixture setup in {path.name}",
+    )
+
+    probe = fixture["limit"]["probe"]
+    if probe is None:
+        return
+    limit_name = probe["limit"]
+    require(
+        limit_name in gas_manifest["portableLimits"],
+        f"invocation limit probe names an unknown portable limit in {path.name}: "
+        f"{limit_name}",
+    )
+    configured = gas_manifest["portableLimits"][limit_name]
+    environment_limits = {
+        item["name"]: item["value"]
+        for item in fixture["input"]["environment"]["portableLimitPolicy"][
+            "limits"
+        ]
+    }
+    require(
+        environment_limits.get(limit_name) == configured,
+        f"invocation limit probe is not bound to the normative portable policy "
+        f"in {path.name}: {limit_name}",
+    )
+    diagnostic = LIMIT_DIAGNOSTICS[limit_name]
+    if probe["value"] > configured:
+        require(
+            expected["attemptOutcome"] == "Complete"
+            and expected["status"] == "portable-limit-exceeded"
+            and expected.get("diagnostic") == diagnostic,
+            f"above-bound invocation limit probe does not select its exact "
+            f"failure in {path.name}",
+        )
+    else:
+        require(
+            expected["attemptOutcome"] != "Complete"
+            or expected.get("status") != "portable-limit-exceeded",
+            f"at-or-below-bound invocation limit probe is rejected in {path.name}",
+        )
+
+
 def occurrence_binding_matches_documents(
-    documents: dict[str, Any], occurrence: dict[str, Any]
+    path: Path,
+    documents: dict[str, Any],
+    components: list[dict[str, Any]],
+    occurrences: list[dict[str, Any]],
+    occurrence: dict[str, Any],
 ) -> bool:
     if not occurrence.get("active"):
         return True
@@ -1494,14 +4109,24 @@ def occurrence_binding_matches_documents(
     source_document = documents[source_id]["document"]
     try:
         node = pointer_get(source_document, occurrence["sourcePath"])
-    except (KeyError, ValidationFailure):
+        established = establish_occurrence_value_blue_id(
+            path,
+            node,
+            target_id,
+            documents,
+            components,
+            occurrences,
+            context=f"candidate/{source_id}{occurrence['sourcePath']}",
+        )
+    except (KeyError, TypeError, ValueError, ValidationFailure):
         return False
     return (
         active_declared_path(source_document, occurrence["sourcePath"])
-        and isinstance(node, dict)
-        and set(node) == {"blueId"}
-        and node["blueId"] == occurrence["expectedTargetBlueId"]
-        and documents[target_id]["blueId"] == occurrence["expectedTargetBlueId"]
+        and established == occurrence["expectedTargetBlueId"]
+        and (
+            occurrence.get("pendingHistoricalEpoch") is not None
+            or documents[target_id]["blueId"] == occurrence["expectedTargetBlueId"]
+        )
     )
 
 
@@ -1590,7 +4215,11 @@ def validate_admission_candidate(
         require(
             any(
                 not occurrence_binding_matches_documents(
-                    fixture_input["documents"], occurrence
+                    path,
+                    fixture_input["documents"],
+                    fixture_input["components"],
+                    occurrences,
+                    occurrence,
                 )
                 for occurrence in occurrences
             ),
@@ -1599,6 +4228,67 @@ def validate_admission_candidate(
     else:
         raise ValidationFailure(f"unknown admission-candidate kind in {path.name}: {kind}")
     return candidate_identity
+
+
+def canonical_direct_seed_identities(
+    path: Path,
+    fixture_input: dict[str, Any],
+    ordered_direct: list[tuple[dict[str, Any], str]],
+) -> list[str]:
+    """Derive Phase-D order independently of raw snapshot serialization."""
+    component_rank: dict[str, int] = {}
+    for rank, component in enumerate(fixture_input["components"]):
+        for document_id in component["orderedMemberDocumentIds"]:
+            require(
+                document_id not in component_rank,
+                f"document repeats across input components in {path.name}: "
+                f"{document_id}",
+            )
+            component_rank[document_id] = rank
+
+    def seed_key(item: tuple[dict[str, Any], str]) -> tuple[Any, ...]:
+        delivery, _identity = item
+        document_id = delivery["targetDocumentId"]
+        require(
+            document_id in component_rank,
+            f"direct seed targets a document outside the input component "
+            f"sequence in {path.name}: {document_id}",
+        )
+        channel = fixture_input["documents"][document_id]["document"].get(
+            "contracts", {}
+        ).get(delivery["channelKey"])
+        require(
+            isinstance(channel, dict),
+            f"direct seed lacks an exact Channel in {path.name}: "
+            f"{document_id}/{delivery['channelKey']}",
+        )
+        channel_order = channel.get("order", 0)
+        require(
+            isinstance(channel_order, int) and not isinstance(channel_order, bool),
+            f"direct seed Channel order is not an Integer in {path.name}: "
+            f"{document_id}/{delivery['channelKey']}",
+        )
+        return (
+            component_rank[document_id],
+            portable_text_order_key(
+                document_id, f"{path.name}:direct target DocumentId"
+            ),
+            portable_text_order_key(
+                delivery["scopePath"], f"{path.name}:direct scope path"
+            ),
+            delivery["activationGeneration"],
+            channel_order,
+            portable_text_order_key(
+                delivery["channelKey"], f"{path.name}:direct Channel key"
+            ),
+            portable_text_order_key(
+                delivery["logicalDeliveryKey"],
+                f"{path.name}:direct logical-delivery key",
+            ),
+            delivery["rawOccurrenceOrder"],
+        )
+
+    return [identity for _delivery, identity in sorted(ordered_direct, key=seed_key)]
 
 
 def validate_work_trace(
@@ -1622,7 +4312,9 @@ def validate_work_trace(
     all_work = list(work_trace)
     if rejected_work is not None:
         all_work.append(rejected_work)
-    historical = fixture_input.get("historicalTransitions", [])
+    canonical_direct = canonical_direct_seed_identities(
+        path, fixture_input, ordered_direct
+    )
     valid_work_ids: set[str] = set()
     for work_item in all_work:
         scope_identity = domain_identity(
@@ -1662,19 +4354,6 @@ def validate_work_trace(
                     "eventBlueId": work_item["eventBlueId"],
                 },
             )
-        elif work_item["kind"] == "HISTORICAL_TRANSITION":
-            transition_matches = [
-                transition
-                for transition in historical
-                if transition["transitionIdentity"]
-                == work_item["sourceOccurrenceIdentity"]
-            ]
-            require(
-                len(transition_matches) == 1,
-                f"historical work does not select one exact transition in {path.name}: "
-                f"work {work_item['ordinal']}",
-            )
-            source_identity = transition_matches[0]["transitionIdentity"]
         else:
             source_identity = fixture_input["cause"]["causeIdentity"]
         require(
@@ -1700,6 +4379,21 @@ def validate_work_trace(
             f"duplicate work occurrence identity in {path.name}: {work_identity}",
         )
         valid_work_ids.add(work_identity)
+    actual_direct = [
+        work_item["sourceOccurrenceIdentity"]
+        for work_item in all_work
+        if work_item["kind"] == "EXTERNAL_DELIVERY"
+    ]
+    require(
+        actual_direct == canonical_direct[: len(actual_direct)],
+        f"external work is not the canonical Phase-D direct-seed prefix in "
+        f"{path.name}",
+    )
+    if expected["status"] == "success":
+        require(
+            actual_direct == canonical_direct,
+            f"successful result omits a canonical direct seed in {path.name}",
+        )
     return valid_work_ids
 
 
@@ -1730,7 +4424,9 @@ def checkpoint_domain_value(contract: dict[str, Any]) -> dict[str, Any]:
             "checkpoint runtime discriminator must be Text",
         )
         if discriminator:
-            value["runtimeDiscriminator"] = discriminator
+            value["runtimeDiscriminator"] = require_nfc_order_token(
+                discriminator, "checkpoint runtimeDiscriminator"
+            )
     return value
 
 
@@ -1898,6 +4594,7 @@ def derive_checkpoint_writes(
 
 def validate_gas_result(
     path: Path,
+    fixture: dict[str, Any],
     fixture_input: dict[str, Any],
     expected: dict[str, Any],
     gas_policy: dict[str, Any],
@@ -1977,10 +4674,11 @@ def validate_gas_result(
                 and dequeue["sequence"] < delivery_enqueues[0]["sequence"],
                 f"event delivery work is created before its invocation-owned "
                 f"dequeue in {path.name}: work {item['ordinal']}",
-            )
+    )
     for work_item in expected["workTrace"]:
         work_finalization_prefixes = [
-            f"work.{work_item['ordinal']}.{finalization['oracleStage']}."
+            f"work.{work_item['ordinal']}."
+            f"{finalization_stage_name(path, fixture, finalization['ordinal'])}."
             for finalization in expected["tentativeFinalizations"]
             if finalization["boundary"]
             == {"kind": "WORK", "afterWorkOrdinal": work_item["ordinal"]}
@@ -2168,7 +4866,10 @@ def validate_gas_result(
             raise ValidationFailure(
                 f"unknown finalization boundary in {path.name}: {kind}"
             )
-        reason = f"{prefix}.{finalization['oracleStage']}.finalization-boundary"
+        stage_name = finalization_stage_name(
+            path, fixture, finalization["ordinal"]
+        )
+        reason = f"{prefix}.{stage_name}.finalization-boundary"
         matches = [
             entry
             for entry in trace
@@ -2255,7 +4956,7 @@ def validate_gas_result(
                 ],
             ),
             "AMBIGUOUS_PRELIMINARY_MEMBERS": (
-                191,
+                181,
                 [
                     ("semantic", "validationMemberExamined", 1),
                     ("semantic", "validationMemberExamined", 1),
@@ -2266,7 +4967,7 @@ def validate_gas_result(
                     ("semantic", "scalarComparison", 1),
                     ("semantic", "textBlockExamined", 2),
                     ("semantic", "scalarComparison", 1),
-                    ("semantic", "textBlockExamined", 4),
+                    ("semantic", "textBlockExamined", 6),
                 ],
             ),
             "INVALID_OCCURRENCE_BINDING": (
@@ -2542,7 +5243,11 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
     data = load_yaml(path)
     if data["operation"] == "limit-micro":
         gas_manifest = load_yaml(GAS)
-        fixture_input = data["input"]
+        require(
+            data["input"] == {},
+            f"limit microfixture carries normative invocation input in {path.name}",
+        )
+        fixture_input = data["limit"]
         limit_name = fixture_input["limit"]
         configured = gas_manifest["portableLimits"][limit_name]
         require(
@@ -2586,12 +5291,16 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         return {"occurrences": 0, "channels": 0, "handlers": 0}
 
     fixture_input = data["input"]
+    expected = data["expected"]
+    validate_closure_root_profile(path, data)
     input_markers = direct_processor_markers(
         path, fixture_input["documents"], "input"
     )
     environment = validate_fixture_environment(path, fixture_input)
     validate_cause(path, fixture_input["cause"], environment)
+    validate_managed_revision_binding(path, fixture_input)
     gas_policy = validate_gas_policy(path, fixture_input)
+    validate_fixture_harness(path, data, gas_policy, expected)
     admission_candidate_identity = validate_admission_candidate(path, fixture_input)
     require(
         data["operation"] == "admit-closure"
@@ -2605,30 +5314,15 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
             occurrence["bindingPolicyIdentity"] == binding_policy_identity,
             f"occurrence uses the wrong binding policy in {path.name}",
         )
-    for transition in fixture_input.get("historicalTransitions", []):
-        transition_identity = domain_identity(
-            "blue-contracts-historical-transition/1.0",
-            {
-                "documentId": transition["documentId"],
-                "fromEpoch": transition["fromEpoch"],
-                "toEpoch": transition["toEpoch"],
-                "beforeBlueId": transition["beforeBlueId"],
-                "afterBlueId": transition["afterBlueId"],
-            },
-        )
-        require(
-            transition["transitionIdentity"] == transition_identity,
-            f"historical transition identity mismatch in {path.name}",
-        )
-        require(
-            direct_blue_id(transition["afterDocument"]) == transition["afterBlueId"],
-            f"historical transition after-document BlueId mismatch in {path.name}",
-        )
-
     direct_with_id = [
         (delivery, domain_identity("blue-contracts-direct-delivery/1.0", delivery))
         for delivery in fixture_input.get("directDeliveries", [])
     ]
+    require(
+        len({identity for _delivery, identity in direct_with_id})
+        == len(direct_with_id),
+        f"direct delivery snapshot repeats a complete delivery key in {path.name}",
+    )
     ordered_direct = sorted(
         direct_with_id,
         key=lambda item: (
@@ -2640,6 +5334,11 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
             item[0]["logicalDeliveryKey"],
         ),
     )
+    require(
+        fixture_input.get("directDeliveries", [])
+        == [delivery for delivery, _identity in ordered_direct],
+        f"direct deliveries are not in frozen canonical order in {path.name}",
+    )
     direct_snapshot_identity = domain_identity(
         "blue-contracts-direct-delivery-snapshot/1.0",
         [identity for _delivery, identity in ordered_direct],
@@ -2649,18 +5348,26 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         f"direct-delivery snapshot identity mismatch in {path.name}",
     )
 
-    occurrence_count = validate_occurrence_set(
-        path,
-        fixture_input["documents"],
-        fixture_input.get("occurrences", []),
-        allow_invalid=False,
-    )
     validate_components(
         path,
         fixture_input["documents"],
         fixture_input.get("occurrences", []),
         fixture_input["components"],
     )
+    occurrence_count = validate_occurrence_set(
+        path,
+        fixture_input["documents"],
+        fixture_input.get("occurrences", []),
+        fixture_input["components"],
+        allow_invalid=False,
+    )
+    validate_affected_closure_connectivity(
+        path,
+        fixture_input["documents"],
+        fixture_input.get("occurrences", []),
+        "input",
+    )
+    validate_runtime_reserved_occurrence_patches(path, data)
     input_closure_identity, input_binding_set_identity, public_roots = (
         affected_closure_identity(
             fixture_input["graphGeneration"],
@@ -2723,9 +5430,11 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         f"invocation identity mismatch in {path.name}",
     )
 
-    expected = data["expected"]
     channel_count, handler_count = validate_channels_and_handlers(path, data)
     if expected["attemptOutcome"] == "NeedsResources":
+        validate_component_oracle_routes(
+            path, data, fixture_input["components"], None
+        )
         require(
             expected["requiredBlueIds"] == sorted(set(expected["requiredBlueIds"])),
             f"NeedsResources BlueIds are not sorted and unique in {path.name}",
@@ -2795,14 +5504,39 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         )
 
     output_occurrences = expected["occurrenceBindings"]
-    final_occurrence_count = validate_occurrence_set(
-        path, output_documents, output_occurrences, allow_invalid=False
-    )
     validate_components(
         path,
         output_documents,
         output_occurrences,
         expected["resultingComponents"],
+    )
+    validate_component_oracle_routes(
+        path,
+        data,
+        fixture_input["components"],
+        expected["resultingComponents"],
+    )
+    final_occurrence_count = validate_occurrence_set(
+        path,
+        output_documents,
+        output_occurrences,
+        expected["resultingComponents"],
+        allow_invalid=False,
+    )
+    validate_occurrence_transition_law(
+        path,
+        fixture_input.get("occurrences", []),
+        output_occurrences,
+    )
+    validate_generation_transition_law(
+        path,
+        fixture_input["graphGeneration"],
+        fixture_input["components"],
+        fixture_input.get("occurrences", []),
+        expected["graphGeneration"],
+        expected["resultingComponents"],
+        output_occurrences,
+        expected["status"],
     )
     validate_tentative_finalizations(path, data, expected)
     component_by_document: dict[str, dict[str, Any]] = {}
@@ -2911,7 +5645,36 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         == domain_identity("blue-contracts-checkpoint-writes/1.0", checkpoint_writes),
         f"checkpoint-write identity mismatch in {path.name}",
     )
+    derived_public_events = public_root_emissions(
+        path, data, expected["workTrace"]
+    )
+    if expected["status"] == "success":
+        require(
+            len(expected["publicEvents"]) == len(derived_public_events),
+            f"successful result does not contain every accepted public-Root "
+            f"emission in {path.name}",
+        )
+        for ordinal, (event, derived) in enumerate(
+            zip(expected["publicEvents"], derived_public_events, strict=True)
+        ):
+            require(
+                event["publicEventOrdinal"] == ordinal
+                and event["publicRootDocumentId"]
+                == derived["publicRootDocumentId"]
+                and event["eventOccurrenceOrdinal"]
+                == derived["eventOccurrenceOrdinal"]
+                and event["event"] == derived["event"],
+                f"public event does not match its accepted explicit emission in "
+                f"{path.name}: {ordinal}",
+            )
+    else:
+        require(
+            expected["publicEvents"] == [],
+            f"noncommitting result publishes staged public events in {path.name}",
+        )
+
     public_event_basis: list[dict[str, Any]] = []
+    event_occurrence_ordinals: set[int] = set()
     for ordinal, event in enumerate(expected["publicEvents"]):
         require(
             event["publicEventOrdinal"] == ordinal,
@@ -2926,12 +5689,18 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
             f"public event BlueId mismatch in {path.name}: {ordinal}",
         )
         require(
+            event["eventOccurrenceOrdinal"] not in event_occurrence_ordinals,
+            f"public event repeats an invocation-global occurrence ordinal in "
+            f"{path.name}: {event['eventOccurrenceOrdinal']}",
+        )
+        event_occurrence_ordinals.add(event["eventOccurrenceOrdinal"])
+        require(
             event["eventOccurrenceIdentity"]
             == domain_identity(
                 "blue-contracts-event-occurrence/1.0",
                 {
                     "invocationIdentity": invocation_identity,
-                    "eventOccurrenceOrdinal": ordinal,
+                    "eventOccurrenceOrdinal": event["eventOccurrenceOrdinal"],
                     "eventBlueId": event["eventBlueId"],
                 },
             ),
@@ -2942,6 +5711,7 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
                 key: event[key]
                 for key in (
                     "publicEventOrdinal",
+                    "eventOccurrenceOrdinal",
                     "publicRootDocumentId",
                     "eventOccurrenceIdentity",
                     "eventBlueId",
@@ -2959,6 +5729,7 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
     )
     validate_gas_result(
         path,
+        data,
         fixture_input,
         expected,
         gas_policy,
@@ -2966,7 +5737,13 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         expected["resultingComponents"],
     )
 
-    if expected["rollbackToInput"]:
+    successful = expected["status"] == "success"
+    require(
+        expected["rollbackToInput"] is (not successful),
+        f"completed result rollback flag disagrees with status in {path.name}",
+    )
+
+    if not successful:
         require(
             output_documents == fixture_input["documents"],
             f"rollback documents differ from the literal input snapshot in {path.name}",
@@ -2975,12 +5752,8 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
             expected["graphGeneration"] == fixture_input["graphGeneration"],
             f"rollback graph generation differs from input in {path.name}",
         )
-        rollback_input_components = [
-            {key: value for key, value in component.items() if key != "oracleStage"}
-            for component in fixture_input["components"]
-        ]
         require(
-            expected["resultingComponents"] == rollback_input_components,
+            expected["resultingComponents"] == fixture_input["components"],
             f"rollback components differ from input in {path.name}",
         )
         require(
@@ -2999,11 +5772,7 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
             f"rollback result contains committed side effects in {path.name}",
         )
 
-    if expected["status"] == "success":
-        require(
-            expected["rollbackToInput"] is False,
-            f"successful fixture is marked rollback in {path.name}",
-        )
+    if successful:
         validate_commit_companion(path, fixture_input, expected, environment)
     else:
         require(
@@ -3018,6 +5787,173 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
     }
 
 
+def semantic_input_parity_projection(fixture: dict[str, Any]) -> dict[str, Any]:
+    fixture_input = fixture["input"]
+    projection = json.loads(json.dumps(fixture_input))
+    projection["documents"] = document_identity_items(fixture_input["documents"])
+    return projection
+
+
+def semantic_result_parity_projection(
+    path: Path, fixture: dict[str, Any]
+) -> dict[str, Any]:
+    expected = fixture["expected"]
+    projection = json.loads(json.dumps(expected))
+    projection.pop("gasTraceFile", None)
+    projection["gasTrace"] = expected_gas_trace(path, expected)
+    if "resultingDocuments" in projection:
+        projection["resultingDocuments"] = [
+            {key: value for key, value in item.items() if key != "document"}
+            for item in projection["resultingDocuments"]
+        ]
+    if "publicEvents" in projection:
+        projection["publicEvents"] = [
+            {key: value for key, value in item.items() if key != "event"}
+            for item in projection["publicEvents"]
+        ]
+    return projection
+
+
+def selected_fields(value: dict[str, Any], fields: Iterable[str]) -> dict[str, Any]:
+    return {field: value.get(field) for field in fields}
+
+
+def validate_representation_parity_fixtures() -> int:
+    pairs = [
+        (
+            "cyclic",
+            CLOSURE / "c-clo-01-cyclic-pure-reference-parity.yaml",
+            CLOSURE / "c-clo-01-cyclic-materialized-parity.yaml",
+            [("simple-a", "/b", "simple-b")],
+        ),
+        (
+            "acyclic",
+            CLOSURE / "c-clo-02-acyclic-pure-reference-parity.yaml",
+            CLOSURE / "c-clo-02-acyclic-materialized-parity.yaml",
+            [("b", "/a", "a")],
+        ),
+    ]
+    required_paths = [
+        path
+        for _label, reference_path, materialized_path, _expansions in pairs
+        for path in (reference_path, materialized_path)
+    ]
+    require(
+        all(path.is_file() for path in required_paths),
+        "representation-parity fixture set is incomplete: "
+        f"missing={[path.name for path in required_paths if not path.is_file()]}",
+    )
+    output_identity_fields = (
+        "invocationIdentity",
+        "inputClosureIdentity",
+        "outputClosureIdentity",
+        "occurrenceBindingSetIdentity",
+        "graphChangesIdentity",
+        "checkpointWritesIdentity",
+        "subscriptionDeltasIdentity",
+        "publicEventsIdentity",
+        "gasTraceIdentity",
+    )
+    work_fields = ("workTrace", "rejectedWorkOccurrence", "tentativeFinalizations")
+    gas_fields = ("gasTrace", "gasTraceIdentity", "totalGas", "rejectedCharge")
+    graph_fields = (
+        "graphGeneration",
+        "occurrenceBindings",
+        "resultingComponents",
+        "graphChanges",
+        "graphChangesIdentity",
+    )
+    for label, reference_path, materialized_path, expansions in pairs:
+        reference = load_yaml(reference_path)
+        materialized = load_yaml(materialized_path)
+        for source_document_id, source_path, target_document_id in expansions:
+            pure_value = pointer_get(
+                reference["input"]["documents"][source_document_id]["document"],
+                source_path,
+            )
+            materialized_value = pointer_get(
+                materialized["input"]["documents"][source_document_id]["document"],
+                source_path,
+            )
+            expected_target = reference["input"]["documents"][target_document_id][
+                "blueId"
+            ]
+            require(
+                pure_blue_reference(pure_value) == expected_target,
+                f"{label} pure-reference parity half is not a pure reference at "
+                f"{source_document_id}{source_path}",
+            )
+            require(
+                pure_blue_reference(materialized_value) is None,
+                f"{label} materialized parity half remains a pure reference at "
+                f"{source_document_id}{source_path}",
+            )
+            established = establish_occurrence_value_blue_id(
+                materialized_path,
+                materialized_value,
+                target_document_id,
+                materialized["input"]["documents"],
+                materialized["input"]["components"],
+                materialized["input"].get("occurrences", []),
+                context=f"parity/{source_document_id}{source_path}",
+            )
+            require(
+                established == expected_target,
+                f"{label} materialized parity half does not establish the exact "
+                f"target at {source_document_id}{source_path}",
+            )
+        require(
+            semantic_input_parity_projection(reference)
+            == semantic_input_parity_projection(materialized),
+            f"{label} representation parity changes semantic input evidence",
+        )
+        harness_fields = (
+            "runtime",
+            "sharedLimitSource",
+            "provider",
+            "locality",
+            "limit",
+            "oracle",
+        )
+        require(
+            selected_fields(reference, harness_fields)
+            == selected_fields(materialized, harness_fields),
+            f"{label} representation parity changes harness behavior or oracle "
+            f"routing evidence",
+        )
+        reference_result = semantic_result_parity_projection(
+            reference_path, reference
+        )
+        materialized_result = semantic_result_parity_projection(
+            materialized_path, materialized
+        )
+        require(
+            selected_fields(reference_result, output_identity_fields)
+            == selected_fields(materialized_result, output_identity_fields),
+            f"{label} representation parity changes semantic output identities",
+        )
+        require(
+            selected_fields(reference_result, work_fields)
+            == selected_fields(materialized_result, work_fields),
+            f"{label} representation parity changes work evidence",
+        )
+        require(
+            selected_fields(reference_result, gas_fields)
+            == selected_fields(materialized_result, gas_fields),
+            f"{label} representation parity changes gas evidence",
+        )
+        require(
+            selected_fields(reference_result, graph_fields)
+            == selected_fields(materialized_result, graph_fields),
+            f"{label} representation parity changes graph evidence",
+        )
+        require(
+            reference_result == materialized_result,
+            f"{label} representation parity changes result evidence",
+        )
+    return len(pairs)
+
+
 def validate_limits() -> None:
     at = load_yaml(CLOSURE / "c-clo-16-limit-at-bound.yaml")
     above = load_yaml(CLOSURE / "c-clo-17-limit-above-bound.yaml")
@@ -3029,12 +5965,173 @@ def validate_limits() -> None:
     by_limit: dict[str, set[str]] = defaultdict(set)
     for fixture in micros:
         if fixture.get("operation") == "limit-micro":
-            by_limit[fixture["input"]["limit"]].add(fixture["expected"]["limitDecision"])
+            by_limit[fixture["limit"]["limit"]].add(
+                fixture["expected"]["limitDecision"]
+            )
     require(set(by_limit) == set(LIMIT_DIAGNOSTICS), f"closure limit boundary coverage mismatch: {sorted(by_limit)}")
     require(all(decisions == {"ACCEPT", "REJECT"} for decisions in by_limit.values()), "each closure limit requires ACCEPT and REJECT microfixtures")
 
 
+def validate_managed_revision_fixture_sequence() -> int:
+    missing_path = CLOSURE / "c-clo-22-a10-attach-a5-needs-resources.yaml"
+    retry_path = CLOSURE / "c-clo-23-00-attach-a5-retry.yaml"
+    revision_paths = [
+        CLOSURE / f"c-clo-23-{index:02d}-a{epoch}-to-a{epoch + 1}.yaml"
+        for index, epoch in enumerate(range(5, 10), start=1)
+    ]
+    paths = [missing_path, retry_path, *revision_paths]
+    require(
+        all(path.is_file() for path in paths),
+        "managed-revision fixture sequence is incomplete: "
+        f"missing={[path.name for path in paths if not path.is_file()]}",
+    )
+    missing = load_yaml(missing_path)
+    retry = load_yaml(retry_path)
+    require(
+        missing["operation"] == retry["operation"] == "process-closure"
+        and missing["input"] == retry["input"],
+        "C-CLO-22 missing-resource attempt and C-CLO-23 retry do not have "
+        "byte-equivalent normative invocation input",
+    )
+    require(
+        missing["input"]["invocationIdentity"]
+        == retry["input"]["invocationIdentity"],
+        "C-CLO-22 retry changes invocation identity",
+    )
+    for field in ("runtime", "sharedLimitSource", "locality", "limit"):
+        require(
+            missing[field] == retry[field],
+            f"C-CLO-22 retry changes {field} harness evidence",
+        )
+    require(
+        missing["expected"]["attemptOutcome"] == "NeedsResources"
+        and retry["expected"]["attemptOutcome"] == "Complete",
+        "C-CLO-22/C-CLO-23-00 do not form a NeedsResources/retry pair",
+    )
+    required = missing["expected"]["requiredBlueIds"]
+    require(
+        missing["provider"]["expectedRequiredBlueIds"] == required
+        and retry["provider"]["expectedRequiredBlueIds"] == []
+        and missing["provider"]["expectedLoads"]
+        == retry["provider"]["expectedLoads"]
+        and set(required).isdisjoint(missing["provider"]["nodes"])
+        and set(required) <= set(retry["provider"]["nodes"]),
+        "C-CLO-22 retry differs by more than exact provider availability and "
+        "the resulting resource demand",
+    )
+
+    previous_expected = retry["expected"]
+    previous_after_blue_id: str | None = None
+    final_master: str | None = None
+    for offset, revision_path in enumerate(revision_paths):
+        fixture = load_yaml(revision_path)
+        fixture_input = fixture["input"]
+        expected = fixture["expected"]
+        cause = fixture_input["cause"]
+        from_epoch = 5 + offset
+        to_epoch = from_epoch + 1
+        require(
+            fixture["operation"] == "process-closure"
+            and cause["kind"] == "managed-revision"
+            and (cause["fromEpoch"], cause["toEpoch"])
+            == (from_epoch, to_epoch),
+            f"managed-revision fixture has the wrong epoch step: "
+            f"{revision_path.name}",
+        )
+        if previous_after_blue_id is not None:
+            require(
+                cause["beforeBlueId"] == previous_after_blue_id,
+                f"managed-revision BlueId chain is discontinuous in "
+                f"{revision_path.name}",
+            )
+        previous_after_blue_id = cause["afterBlueId"]
+        require(
+            result_documents(previous_expected) == fixture_input["documents"]
+            and previous_expected["occurrenceBindings"]
+            == fixture_input["occurrences"]
+            and previous_expected["resultingComponents"]
+            == fixture_input["components"]
+            and previous_expected["graphGeneration"]
+            == fixture_input["graphGeneration"],
+            f"managed-revision state is not commit-to-next-input continuous in "
+            f"{revision_path.name}",
+        )
+        require(
+            expected["attemptOutcome"] == "Complete"
+            and expected["status"] == "success"
+            and len(expected["workTrace"]) == 1,
+            f"managed-revision step is not one successful invocation in "
+            f"{revision_path.name}",
+        )
+        work_item = expected["workTrace"][0]
+        require(
+            work_item["ordinal"] == 0
+            and work_item["kind"] == "CONTAINING_REFERENCE_UPDATE"
+            and work_item["sourceOccurrenceIdentity"] == cause["causeIdentity"],
+            f"managed-revision step does not own one containing-reference work "
+            f"occurrence in {revision_path.name}",
+        )
+        target_rows = [
+            occurrence
+            for occurrence in expected["occurrenceBindings"]
+            if occurrence["occurrenceIdentity"]
+            == cause["targetOccurrenceIdentity"]
+        ]
+        require(
+            len(target_rows) == 1,
+            f"managed-revision result does not preserve one target binding in "
+            f"{revision_path.name}",
+        )
+        row = target_rows[0]
+        if to_epoch < 10:
+            require(
+                row["expectedTargetBlueId"] == cause["afterBlueId"]
+                and row["active"] is False
+                and row["pendingHistoricalEpoch"] == to_epoch
+                and expected["graphGeneration"] == 1
+                and all(
+                    component["kind"] == "ACYCLIC"
+                    for component in expected["resultingComponents"]
+                )
+                and expected["tentativeFinalizations"] == [],
+                f"intermediate managed revision publishes premature live/cyclic "
+                f"state in {revision_path.name}",
+            )
+        else:
+            resulting_child = next(
+                document
+                for document in expected["resultingDocuments"]
+                if document["documentId"] == cause["childDocumentId"]
+            )
+            cyclic_components = [
+                component
+                for component in expected["resultingComponents"]
+                if component["kind"] == "CYCLIC"
+            ]
+            require(
+                row["expectedTargetBlueId"] == resulting_child["afterBlueId"]
+                and row["expectedTargetBlueId"] != cause["afterBlueId"]
+                and row["active"] is True
+                and row["pendingHistoricalEpoch"] is None
+                and expected["graphGeneration"] == 2
+                and len(cyclic_components) == 1
+                and len(expected["tentativeFinalizations"]) == 1
+                and expected["tentativeFinalizations"][0]["ordinal"] == 0
+                and finalization_stage_name(
+                    revision_path, fixture, 0
+                ).endswith("managed-revision-9-10"),
+                f"final managed revision does not atomically activate and form "
+                f"the exact cycle in {revision_path.name}",
+            )
+            final_master = cyclic_components[0]["masterBlueId"]
+        previous_expected = expected
+    require(final_master is not None, "managed-revision sequence has no final cycle")
+    return len(revision_paths)
+
+
 def validate_static_package_laws() -> None:
+    validate_occurrence_transition_law_self_check()
+    validate_component_order_self_check()
     spec = SPEC.read_text()
     normative_text = spec + "\n" + GAS.read_text() + "\n" + IDENTITY_CONSTRUCTORS.read_text() + "\n" + RELEASE.read_text()
     for path in REGISTRY.glob("*.blue"):
@@ -3051,6 +6148,15 @@ def validate_static_package_laws() -> None:
         if path.is_file() and path.suffix in {".yaml", ".blue"}
     )
     require("componentPatches:" not in fixture_registry_text, "hidden componentPatches fixture field remains")
+    require(
+        "historicalTransitions:" not in fixture_registry_text
+        and "HISTORICAL_TRANSITION" not in fixture_registry_text,
+        "obsolete aggregate historical-transition evidence remains in fixtures/registry",
+    )
+    require(
+        "oracleStage:" not in fixture_registry_text,
+        "fixture-only oracle stage label remains in a normative fixture record",
+    )
     require(re.search(r"Blue Contracts(?: and Processor)? Specification 1\.1|specificationVersion:\s*['\"]?1\.1", normative_text) is None, "1.1 release label remains")
     require("verified bounded cyclic components pass" in spec, "supported-cycle final soundness rule missing")
     require("numeric weights and portable limits are provisional" not in spec.lower(), "provisional gas/limits wording remains")
@@ -3105,6 +6211,8 @@ def validate_manifests() -> dict[str, Any]:
     require(release["gasManifest"]["packageIdentity"] == gas["packageIdentity"], "gas binding mismatch")
     require(release["identityConstructors"]["sha256"] == sha256_file(IDENTITY_CONSTRUCTORS), "identity-constructor binding mismatch")
     require(release["fixturePackage"]["packageIdentity"] == fixtures["packageIdentity"], "fixture binding mismatch")
+    require(release["fixturePackage"]["vectorCount"] == fixtures["vectorCount"], "fixture vector-count binding mismatch")
+    require(release["fixturePackage"]["fixtureCount"] == fixtures["totalExecutableFixtureCount"], "fixture count binding mismatch")
     require(release["oraclePackage"]["packageIdentity"] == oracles["packageIdentity"], "oracle binding mismatch")
     package = verify_manifest(PACKAGE_MANIFEST, "packageIdentity")
     verify_listed_files(ROOT, package["files"])
@@ -3157,11 +6265,11 @@ def validate_java_templates() -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="blue-contracts-java-") as temp:
         output = Path(temp) / "classes"
         output.mkdir()
-        run_command(["javac", "--release", "17", "-Xlint:all", "-Werror", "-d", str(output), *map(str, sources)])
+        run_command(["javac", "--release", "8", "-Xlint:all,-options", "-Werror", "-d", str(output), *map(str, sources)])
         contracts_output = run_command(["java", "-cp", str(output), "blue.contracts.closure.ReferenceCycleMain"])
         coordination_output = run_command(["java", "-cp", str(output), "blue.coordination.closure.ReferenceCoordinationIntegrationMain"])
-    require("BLUE_CONTRACTS_CLOSURE_REFERENCE_OK" in contracts_output, "Contracts Java reference main did not pass")
-    require("BLUE_COORDINATION_CLOSURE_REFERENCE_OK" in coordination_output, "Coordination Java reference main did not pass")
+    require("BLUE_CONTRACTS_CLOSURE_TEMPLATE_SHAPE_SMOKE_OK" in contracts_output, "Contracts Java reference main did not pass")
+    require("BLUE_COORDINATION_CLOSURE_TEMPLATE_SHAPE_SMOKE_OK" in coordination_output, "Coordination Java reference main did not pass")
     return {"sourceFiles": len(sources), "contractsMain": contracts_output, "coordinationMain": coordination_output}
 
 
@@ -3194,11 +6302,17 @@ def main() -> None:
     ordinary, closure = fixture_files()
     progress("schemas")
     validate_schemas(ordinary, closure)
+    progress("gas manifest and microfixtures")
+    validate_gas_manifest_and_microfixtures(ordinary)
     progress("vector coverage")
     vectors = validate_vector_coverage(ordinary, closure)
+    progress("fixture manifest inventory")
+    validate_fixture_manifest_inventory(manifests["fixtures"], ordinary, closure, vectors)
     progress("BlueIds and DocumentIds")
     blue_ids = validate_blue_ids(closure)
     document_ids = validate_document_ids(closure)
+    progress("JCS vectors")
+    run_command([sys.executable, str(ROOT / "tools/test_jcs.py")])
     counts = {"occurrences": 0, "channels": 0, "handlers": 0}
     for index, path in enumerate(closure):
         if args.verbose and index % 10 == 0:
@@ -3206,6 +6320,10 @@ def main() -> None:
         current = validate_closure_fixture(path)
         for key, value in current.items():
             counts[key] += value
+    progress("managed-revision sequence")
+    validate_managed_revision_fixture_sequence()
+    progress("representation parity")
+    validate_representation_parity_fixtures()
     validate_limits()
 
     progress("identity oracle")

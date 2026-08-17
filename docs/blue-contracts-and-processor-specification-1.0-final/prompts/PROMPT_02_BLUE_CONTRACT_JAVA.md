@@ -39,6 +39,17 @@ one exact Timeline Entry is appended once
 
 `Process Embedded.paths` and `collectionPaths` remain the only authored dependency graph. Do not add AutonomousLink, observer/coherent modes, a second graph or caller-supplied target list.
 
+The Contracts 1.0 affected-closure API consumed here is Root-scoped. Freeze
+only direct deliveries at `scopePath = /`, activation generation `0`; target
+every closure WorkOccurrence at the corresponding Root managed-scope identity;
+and accept only Root ChannelOccurrence, subscription-delta, checkpoint-receipt,
+and scoped gas evidence. Public projection additionally proves that the
+emitting work targeted a declared public Root's Root scope. Fail closed before
+semantic work on any non-Root closure address. This does not change ordinary
+`PROCESS` nested-scope behavior, and Coordination MUST NOT infer a wider
+closure profile from the general identity-constructor shapes or from an
+embedded pure reference.
+
 ## Explicitly out of scope
 
 ```text
@@ -78,9 +89,13 @@ Before code changes:
 Do not proceed from a red baseline unrelated to this feature.
 
 Characterize `blue.coordination.api.DocumentId` before reusing it. It must
-normalize to NFC, reject empty text and NUL, accept nonempty whitespace, enforce
-the 512-byte UTF-8 ceiling, remain case-sensitive, and compare by Unicode scalar
-sequence—or use an exact lossless adapter to the Contracts-owned value.
+require input already in NFC and reject rather than silently normalize non-NFC
+text, reject empty text and NUL, accept nonempty whitespace, enforce the 512-byte
+UTF-8 ceiling, remain case-sensitive, and compare by Unicode scalar sequence—or
+use an exact lossless adapter to the Contracts-owned value. Apply the same
+reject-before-construction rule to every Contracts portable-order token listed
+in §4.7; arbitrary Blue payload Text and RFC 8785/BlueId serialization remain
+unchanged.
 
 The current checkout is exactly at its production-line and public-API ceilings
 and already uses 109 of the permitted 115 production classes. The suggested
@@ -162,14 +177,33 @@ Rules:
 - inactive prospective rows remain in the authoritative binding set but are
   not graph/SCC edges;
 - when exact authored content activates a prospective row, update that same
-  identity-bound row in place instead of consulting a hidden staging map;
+  identity-bound input row in place instead of consulting a hidden staging map;
+- every prospective row is supplied in the invocation input except the exact
+  inactive successor derived when an active row retires; that successor keeps
+  source path, target lineage, and policy, advances generation exactly once,
+  and receives fresh occurrence/binding identities without target acquisition;
+  it is output-only until committed and supplied as a later invocation input;
+- a pending-null prospective path may be absent; a row with a present historical
+  cursor value remains inactive until final managed-revision reconciliation;
+- exact pure references, verified inline acyclic values, and verified
+  materialized cyclic members have parity; mixed `blueId` objects are invalid;
 - same source/path/target with cyclic BlueId churn retains the same activation generation;
 - changing only `MASTER#index` due to component re-finalization does not retire/re-add the occurrence;
-- path removal retires it;
-- remove and later re-add creates a fresh activation generation;
-- retargeting to another DocumentId creates a new occurrence;
+- path removal retires it and immediately allocates its inactive successor at
+  the previous activation generation plus one with fresh identities;
+- later-invocation re-add preserves that committed successor's generation and
+  occurrence identity; same-invocation remove-then-re-add is unsupported;
+- retargeting an active or reserved path to another DocumentId is unsupported
+  in Contracts 1.0 and fails before mutation;
 - two DocumentIds may point to identical Blue content without merging lineages;
 - one DocumentId may have multiple path occurrences.
+
+Root managed-scope generation is `0`, first embedded reservation/activation is
+`1`, and active removal allocates its successor at exactly the previous
+generation plus one. The successor may activate only from a later invocation
+input. Same-invocation remove-then-re-add and different-lineage retarget are
+unsupported. Later re-add of the same lineage and same-lineage BlueId churn
+retain the allocated generation.
 
 Never infer logical identity from BlueId alone.
 
@@ -201,9 +235,6 @@ including nullable historical catch-up cursors
 every row's `active` and nullable `pendingHistoricalEpoch` fields
 state-only `closureIdentity` recomputed over graph generation, exact document
 records, occurrence-binding-set identity, component states and public Root set
-for every non-null `pendingHistoricalEpoch`, the exact contiguous historical
-transition evidence already supplied or the exact deterministic provider-resource
-boundary by which Contracts returns `NeedsResources` before first target work
 execution policy identity
 Contracts/Language/repository/runtime identities
 ```
@@ -241,13 +272,11 @@ Do not turn `NeedsResources` into a completed status, blocked entry, empty
 result, retryable exception, or partial commit. Discard the attempt, obtain and
 verify the exact requested BlueIds, and invoke Contracts again from the exact
 input closure and cause. Never resume a suffix, continuation, queue, or
-tentative state from the resource-missing attempt.
-Additional historical evidence preserves the logical `invocationIdentity` only
-when the state-only input closure, operation, cause, admission candidate,
-direct-delivery snapshot, execution policy, and
-environment identities remain exact and unchanged. Any change creates a new
-invocation. Consumed transitions are bound by transition/work, gas-trace,
-result, and commit evidence rather than by durable `closureIdentity`.
+tentative state from the resource-missing attempt. Provider availability is
+host/harness evidence, not normative input: changing only availability of an
+already requested exact node preserves both `inputClosureIdentity` and
+`invocationIdentity`. Any normative input change creates a new invocation.
+`NeedsResources` never requests a historical range or performs discovery.
 
 Document/session histories may remain useful storage/index/audit structures, but no normal application read may observe:
 
@@ -421,7 +450,11 @@ new occurrence after addition:
     uses new edge
 
 remove/re-add:
-    fresh activation generation and fresh cursor/lineage
+    removal allocates the fresh inactive generation/cursor/lineage
+    the successor is output-only until committed and supplied as a later input
+    that later re-add preserves generation/occurrence identity; ordinary
+    exact-state churn may still rebind bindingIdentity
+    same-invocation remove-then-re-add is unsupported
 ```
 
 Do not use current graph lookup at delivery time to add or remove an
@@ -431,7 +464,9 @@ while rejecting a retarget to a different `DocumentId` lineage.
 
 ## Phase 11 — A is at epoch 10; B attaches A at epoch 5
 
-Coordination owns the historical/revision evidence selection. Contracts verifies/applies the exact transition sequence.
+Coordination owns source-revision selection and the sequential no-overtake
+barrier. Contracts accepts exactly one contiguous `ManagedRevisionCause` per
+`PROCESS_CLOSURE`; it never accepts a revision array.
 
 Scenario:
 
@@ -448,12 +483,27 @@ Rules:
 
 - never downgrade authoritative A to A5;
 - never silently fork a second A with the same DocumentId;
-- never mark B ready while it contains stale A5;
-- without exact A5->A10 revision evidence, closure attempt returns NeedsResources and commits nothing;
-- with exact contiguous transition evidence, Contracts applies A6..A10 in source/application order;
-- if B<->A becomes cyclic, Contracts re-finalizes after every identity-affecting revision before later work observes it;
-- final B/containing states reference the current exact member identity;
-- original historical causes/orders remain auditable.
+- construct C22 with the exact inactive `B:/a -> A5` row in normative input
+  and the Handler patch in the separate fixture runtime harness;
+- if the exact A5 provider node is unavailable, require precisely
+  `NeedsResources([A5])` and no state/gas commit;
+- retry with only provider availability changed using identical normative
+  `inputClosureIdentity` and `invocationIdentity`;
+- commit that external attachment as B -> A5 with `active=false` and
+  `pendingHistoricalEpoch=5`, then raise the Coordination no-overtake barrier;
+- dispatch five separate `ManagedRevisionCause` invocations A5->A6 through
+  A9->A10, waiting for each terminal commit before constructing/dispatching the
+  next; each cause binds `originalSourceCauseIdentity` and a closed
+  `sourceRevisionReceiptIdentity`;
+- require each invocation to seed one `CONTAINING_REFERENCE_UPDATE` and own its
+  gas, failure, CAS and commit independently;
+- in the final invocation, after the historical A10 continuation settles,
+  explicitly reconcile B's path to the latest authoritative same-lineage A
+  BlueId (which may have churned from reciprocal containing updates), clear the
+  cursor, activate the edge, repartition and finalize;
+- never mark B ready or allow later live/public work to overtake while the
+  cursor is non-null;
+- retain auditable original source causes/receipts without inventing timestamps.
 
 Implement tests directly from `c-clo-22` and `c-clo-23`.
 
@@ -502,6 +552,10 @@ it from the complete authoritative active+inactive rows, including every row's
 `active` and nullable `pendingHistoricalEpoch` fields, and reject the transaction
 when the recomputed identity differs from the claimed value.
 
+Every staged public event must carry both the contiguous public projection
+ordinal and its required invocation-global `eventOccurrenceOrdinal`; recompute
+`publicEventsIdentity` over both.
+
 One commit must atomically publish:
 
 ```text
@@ -536,16 +590,20 @@ Retry after a proven committed transaction must reconcile without rerunning Cont
 
 Same-entry cyclic closure work must complete in the one closure invocation.
 
-Historical attachment/catch-up remains feeder/orchestration work over several original entries. Keep:
+Historical attachment/catch-up remains feeder/orchestration work over several
+independently committed one-revision invocations. Keep:
 
 ```text
 source order distinct from document application order
-exact historical transition evidence
+one authenticated source revision receipt per ManagedRevisionCause
 attachment/admission cause
 READY only when all required original entries and nested admissions through frontier are complete
 ```
 
-A member at epoch 5 attached to an authoritative epoch-10 lineage is not ordinary "event replay" inside Contracts; Coordination supplies exact managed revision evidence to the closure attempt as described above.
+A member at epoch 5 attached to an authoritative epoch-10 lineage is not
+ordinary "event replay" and not a hidden Contracts loop. Coordination supplies
+one exact cause only after the preceding commit, and keeps later live work
+behind the barrier until the final cursor-clearing activation commits.
 
 Do not invent timestamps for initialization, embedded reactions or historical application.
 
@@ -578,7 +636,7 @@ ExternalEntryClosureExecutor
 AdmissionClosureExecutor
 ClosureCommitCoordinator
 ClosureCommitReconciler
-HistoricalRevisionEvidenceResolver
+ManagedRevisionCatchUpBarrier
 BlockedEntryRegistry
 CoordinationExecutionPolicyResolver
 ```
@@ -590,10 +648,17 @@ java-templates/coordination/src/main/java/
 ```
 
 Do not copy Contracts orchestration into Coordination. Coordination plans evidence and publishes; Contracts owns semantic execution.
+The template mains are dependency-free shape smokes only. Preserve their
+`*_TEMPLATE_SHAPE_SMOKE_OK` labels and never treat a successful template main
+as fixture execution or implementation conformance.
 
 ## Phase 16 — conformance and regression campaign
 
 Create an adapter that runs every closure fixture through the real Coordination environment where applicable.
+
+Consume fixture-only `runtime`, `sharedLimitSource`, `provider`, `locality`,
+`limit`, and oracle-stage routing exclusively from the closed top-level harness
+fields. Do not add any of them to Contracts production input/result APIs.
 
 Mandatory exact tests:
 
@@ -612,8 +677,9 @@ invalid proof/ambiguity
 128/129 member limits
 1000 unrelated locality
 Root-only public event boundary
+Root-only affected-closure direct/work/subscription/checkpoint/gas rejection
 late outer failure rollback
-A10/A5 missing and complete evidence
+A10/A5 exact-node retry and five one-step managed-revision causes
 occurrence continuity under suffix remap
 local member cap
 multiple SCCs in one closure
@@ -621,6 +687,9 @@ mixed result shape
 active edge path validation
 invocation- and finalization-owned gas rejection
 checkpoint source replacement followed by orphan cleanup (C-CLO-33)
+real two-invocation removal/re-add integration: commit the inactive successor,
+then supply it as the next invocation input and activate it without changing
+its generation or occurrence identity; reject same-invocation remove-then-re-add
 ```
 
 Preserve existing tests:

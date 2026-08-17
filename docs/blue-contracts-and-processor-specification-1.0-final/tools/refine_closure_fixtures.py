@@ -6,6 +6,7 @@ from pathlib import Path
 import hashlib
 import math
 import sys
+import unicodedata
 from typing import Any
 import yaml
 
@@ -18,6 +19,7 @@ from blue_identity import (  # noqa: E402
     direct_blue_id,
     direct_identity_facts,
     materialize_cyclic_members,
+    normalized_preliminary_input_bytes,
 )
 import generate_closure_fixtures as g  # noqa: E402
 from gas_reference import (  # noqa: E402
@@ -135,14 +137,25 @@ def finalization_oracle_stage(
     return matches[0]
 
 
-def handler_result_for_work(
+def portable_text_order_key(value: str, context: str) -> tuple[int, ...]:
+    if not isinstance(value, str) or unicodedata.normalize("NFC", value) != value:
+        raise AssertionError(f"non-NFC portable-order token: {context}")
+    if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+        raise AssertionError(f"surrogate portable-order token: {context}")
+    return tuple(ord(character) for character in value)
+
+
+def handler_results_for_work(
     fixture: dict[str, Any], work_item: dict[str, Any]
-) -> tuple[str | None, dict[str, Any] | None]:
+) -> list[tuple[str, dict[str, Any]]]:
+    """Return every selected Handler result in the normative Handler order."""
     document_id = work_item["targetDocumentId"]
     document = fixture["input"]["documents"][document_id]["document"]
     contracts = document.get("contracts", {}) if isinstance(document, dict) else {}
     buckets = fixture["input"].get("runtime", {})
-    candidates: list[tuple[str, dict[str, Any]]] = []
+    candidates: list[
+        tuple[int, tuple[int, ...], tuple[int, ...], str, dict[str, Any]]
+    ] = []
     for bucket_name in ("handlers", "initializationHandlers"):
         for qualified, result in buckets.get(bucket_name, {}).items():
             if not qualified.startswith(document_id + "/"):
@@ -150,11 +163,169 @@ def handler_result_for_work(
             handler_key = qualified[len(document_id) + 1:]
             contract = contracts.get(handler_key, {})
             if isinstance(contract, dict) and contract.get("channel") == work_item["channelKey"]:
-                candidates.append((handler_key, result))
-    if not candidates:
-        return None, None
-    candidates.sort(key=lambda item: item[0])
-    return candidates[0]
+                handler_order = contract.get("order", 0)
+                runtime_type_value = contract.get("type")
+                runtime_type = (
+                    runtime_type_value.get("blueId")
+                    if isinstance(runtime_type_value, dict)
+                    and set(runtime_type_value) == {"blueId"}
+                    and isinstance(runtime_type_value.get("blueId"), str)
+                    else None
+                )
+                if (
+                    not isinstance(handler_order, int)
+                    or isinstance(handler_order, bool)
+                    or runtime_type is None
+                ):
+                    raise AssertionError(
+                        f"Handler lacks exact order/type evidence: {qualified}"
+                    )
+                candidates.append(
+                    (
+                        handler_order,
+                        portable_text_order_key(
+                            handler_key, f"Handler key {qualified}"
+                        ),
+                        portable_text_order_key(
+                            runtime_type, f"Handler runtime type {qualified}"
+                        ),
+                        handler_key,
+                        result,
+                    )
+                )
+    candidates.sort(key=lambda item: item[:3])
+    return [
+        (handler_key, result)
+        for _order, _key, _type, handler_key, result in candidates
+    ]
+
+
+def closure_root_scope_identity(document_id: str) -> str:
+    return g.sha_id(
+        "blue-contracts-managed-scope-key/1.0",
+        {
+            "documentId": document_id,
+            "scopePath": "/",
+            "activationGeneration": 0,
+        },
+    )
+
+
+def require_pre_materialized_root_work_identity(
+    fixture_path: Path, work_item: dict[str, Any]
+) -> str:
+    """Derive Root ownership before work identity materialization.
+
+    Draft work rows need not carry ``targetManagedScopeIdentity`` yet. If a
+    producer supplied it early, it must already equal the one Root identity.
+    """
+    document_id = work_item["targetDocumentId"]
+    expected = closure_root_scope_identity(document_id)
+    supplied = work_item.get("targetManagedScopeIdentity")
+    if supplied is not None and supplied != expected:
+        raise AssertionError(
+            "public closure emission is not owned by Root work: "
+            f"{fixture_path.name}/work/{work_item.get('ordinal', '?')}"
+        )
+    return expected
+
+
+def validate_multi_handler_refiner_self_check() -> None:
+    """Synthetic law: pre-materialized Root work retains all Handler effects."""
+    document_id = "synthetic-public-root"
+    fixture = {
+        "input": {
+            "documents": {
+                document_id: {
+                    "document": {
+                        "contracts": {
+                            "source": {},
+                            "later": {
+                                "type": g.ref(g.SH),
+                                "channel": "source",
+                                "order": 1,
+                            },
+                            "earlier-b": {
+                                "type": g.ref(g.SH),
+                                "channel": "source",
+                                "order": 0,
+                            },
+                            "earlier-a": {
+                                "type": g.ref(g.SH),
+                                "channel": "source",
+                                "order": 0,
+                            },
+                        }
+                    }
+                }
+            },
+            "runtime": {
+                "handlers": {
+                    document_id + "/later": {
+                        "patches": [{"op": "add", "path": "/later", "val": 1}],
+                        "events": [{"id": "later"}],
+                    },
+                    document_id + "/earlier-b": {
+                        "patches": [{"op": "add", "path": "/b", "val": 1}],
+                        "events": [{"id": "earlier-b"}],
+                    },
+                    document_id + "/earlier-a": {
+                        "patches": [{"op": "add", "path": "/a", "val": 1}],
+                        "events": [{"id": "earlier-a"}],
+                    },
+                },
+                "initializationHandlers": {},
+            },
+        }
+    }
+    work = {
+        "ordinal": 0,
+        "targetDocumentId": document_id,
+        "channelKey": "source",
+    }
+    selected = handler_results_for_work(fixture, work)
+    if [key for key, _result in selected] != [
+        "earlier-a", "earlier-b", "later"
+    ]:
+        raise AssertionError("multi-Handler selection is incomplete or noncanonical")
+    causal_effects: list[tuple[str, str, str]] = []
+    for handler_key, result in selected:
+        causal_effects.extend(
+            (handler_key, "patch", patch["path"])
+            for patch in result.get("patches", [])
+        )
+        causal_effects.extend(
+            (handler_key, "event", event["id"])
+            for event in result.get("events", [])
+        )
+    if causal_effects != [
+        ("earlier-a", "patch", "/a"),
+        ("earlier-a", "event", "earlier-a"),
+        ("earlier-b", "patch", "/b"),
+        ("earlier-b", "event", "earlier-b"),
+        ("later", "patch", "/later"),
+        ("later", "event", "later"),
+    ]:
+        raise AssertionError(
+            "multi-Handler patch/event frames were dropped, batched, or reordered"
+        )
+    expected_scope = closure_root_scope_identity(document_id)
+    if (
+        require_pre_materialized_root_work_identity(
+            Path("synthetic-multiple-handlers.yaml"), work
+        )
+        != expected_scope
+    ):
+        raise AssertionError("pre-materialized Root scope derivation failed")
+    bad_work = {**work, "targetManagedScopeIdentity": "sha256:" + "0" * 64}
+    try:
+        require_pre_materialized_root_work_identity(
+            Path("synthetic-multiple-handlers.yaml"), bad_work
+        )
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("contradictory pre-materialized Root identity accepted")
 
 
 def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], int, str]:
@@ -252,6 +423,17 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
         ]
         for edge in internal_edges:
             charge("componentEdgePartitioned", 1, "admission.component-edge", document_id=edge["sourceDocumentId"])
+
+    if fixture_input.get("cause", {}).get("kind") == "managed-revision":
+        revision_cause = fixture_input["cause"]
+        establish_exact_value(
+            revision_cause["afterDocument"],
+            trace,
+            established,
+            existing,
+            reason_prefix="admission.managed-revision.after-document",
+            context={"documentId": revision_cause["childDocumentId"]},
+        )
 
     if admission_candidate is not None:
         def semantic_charge(
@@ -365,8 +547,10 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
                 ).blue_id,
                 "candidate.ambiguous.preliminary-identity",
             )
-            first_canonical = canonical_json_bytes(zeroed).decode("utf-8")
-            second_canonical = canonical_json_bytes(
+            first_canonical = normalized_preliminary_input_bytes(zeroed).decode(
+                "utf-8"
+            )
+            second_canonical = normalized_preliminary_input_bytes(
                 replace_this(members[1]["document"])
             ).decode("utf-8")
             compare_identity_token(
@@ -496,6 +680,7 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
         )
 
     initialization_seeded = False
+    managed_revision_seeded = False
     has_external_work = any(
         item["kind"] == "EXTERNAL_DELIVERY" for item in work_trace
     )
@@ -505,7 +690,16 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
             and item["kind"] == "INITIALIZATION"
             and not initialization_seeded
         )
-        if item["kind"] == "EXTERNAL_DELIVERY" or is_initialization_seed:
+        is_managed_revision_seed = (
+            fixture_input.get("cause", {}).get("kind") == "managed-revision"
+            and item["kind"] == "CONTAINING_REFERENCE_UPDATE"
+            and not managed_revision_seeded
+        )
+        if (
+            item["kind"] == "EXTERNAL_DELIVERY"
+            or is_initialization_seed
+            or is_managed_revision_seed
+        ):
             charge(
                 "closureWorkOccurrenceEnqueued",
                 1,
@@ -515,6 +709,8 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
             enqueued_work.add(item["ordinal"])
             if is_initialization_seed:
                 initialization_seeded = True
+            if is_managed_revision_seed:
+                managed_revision_seeded = True
 
     last_initialization_ordinal = max(
         (
@@ -529,6 +725,8 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
     )
     last_work_for_document: dict[str, int] = {}
     directly_mutated_documents: set[str] = set()
+    managed_revision_finalized_documents: set[str] = set()
+    eagerly_finalized_work_ordinals: set[int] = set()
     for work_item in work_trace:
         last_work_for_document[work_item["targetDocumentId"]] = work_item["ordinal"]
 
@@ -589,102 +787,388 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
         }.get(work_item["kind"])
         if delivery_counter is not None:
             charge(delivery_counter, 1, f"work.{ordinal}.delivery", work_item, contract_key=work_item["channelKey"])
+        if fixture_input.get("cause", {}).get("kind") == "managed-revision":
+            revision_cause = fixture_input["cause"]
+            target_occurrence = next(
+                occurrence
+                for occurrence in fixture_input.get("occurrences", [])
+                if occurrence["occurrenceIdentity"]
+                == revision_cause["targetOccurrenceIdentity"]
+            )
+            source_document_id = target_occurrence["sourceDocumentId"]
+            if source_document_id != work_item["targetDocumentId"]:
+                raise AssertionError(
+                    f"managed revision work targets {work_item['targetDocumentId']!r}, "
+                    f"not occurrence source {source_document_id!r}"
+                )
+            directly_mutated_documents.add(source_document_id)
+            charge(
+                "managedOccurrenceBindingVerified", 1,
+                f"work.{ordinal}.managed-revision.binding", work_item,
+            )
+
+            # The receipt first rewrites the selected pending occurrence to
+            # its exact afterBlueId.  This creates a real acyclic B state, and
+            # every active containing ancestor is then rebuilt child-to-root.
+            # Meter each identity boundary here, before a possible final
+            # same-lineage reconciliation activates the cycle.
+            intermediate_documents = {
+                document_id: deepcopy(record["document"])
+                for document_id, record in fixture_input["documents"].items()
+            }
+            _write_pointer(
+                intermediate_documents[source_document_id],
+                target_occurrence["sourcePath"],
+                g.ref(revision_cause["afterBlueId"]),
+            )
+            intermediate_blue_ids = {
+                source_document_id: direct_blue_id(
+                    intermediate_documents[source_document_id]
+                )
+            }
+
+            def finalize_intermediate_document(
+                document_id: str, reason_suffix: str
+            ) -> None:
+                generation = fixture_input["documents"][document_id].get(
+                    "componentGeneration", 0
+                )
+                charge(
+                    "tentativeComponentFinalization",
+                    1,
+                    f"work.{ordinal}.managed-revision.{reason_suffix}.finalize",
+                    work_item,
+                    document_id=document_id,
+                    component_generation=generation,
+                )
+                establish_exact_value(
+                    intermediate_documents[document_id],
+                    trace,
+                    established,
+                    existing,
+                    reason_prefix=(
+                        f"work.{ordinal}.managed-revision.{reason_suffix}.identity"
+                    ),
+                    context={
+                        "documentId": document_id,
+                        "componentGeneration": generation,
+                        "workOccurrenceId": work_item["workIdentity"],
+                    },
+                )
+                managed_revision_finalized_documents.add(document_id)
+                directly_mutated_documents.add(document_id)
+
+            finalize_intermediate_document(source_document_id, "source")
+
+            active_occurrences = [
+                occurrence
+                for occurrence in fixture_input.get("occurrences", [])
+                if occurrence.get("active")
+            ]
+            affected_documents = {source_document_id}
+            while True:
+                parents = {
+                    occurrence["sourceDocumentId"]
+                    for occurrence in active_occurrences
+                    if occurrence["targetDocumentId"] in affected_documents
+                } - affected_documents
+                if not parents:
+                    break
+                affected_documents.update(parents)
+
+            pending_ancestors = affected_documents - {source_document_id}
+            while pending_ancestors:
+                ready = [
+                    document_id
+                    for document_id in sorted(pending_ancestors)
+                    if all(
+                        occurrence["targetDocumentId"] in intermediate_blue_ids
+                        for occurrence in active_occurrences
+                        if occurrence["sourceDocumentId"] == document_id
+                        and occurrence["targetDocumentId"] in affected_documents
+                    )
+                ]
+                if not ready:
+                    raise AssertionError(
+                        f"managed revision containing spine is cyclic in {fixture_path.name}"
+                    )
+                for document_id in ready:
+                    rewritten = sorted(
+                        (
+                            occurrence
+                            for occurrence in active_occurrences
+                            if occurrence["sourceDocumentId"] == document_id
+                            and occurrence["targetDocumentId"] in intermediate_blue_ids
+                        ),
+                        key=lambda occurrence: (
+                            occurrence["sourcePath"],
+                            occurrence["occurrenceIdentity"],
+                        ),
+                    )
+                    for occurrence_index, occurrence in enumerate(rewritten):
+                        _write_pointer(
+                            intermediate_documents[document_id],
+                            occurrence["sourcePath"],
+                            g.ref(
+                                intermediate_blue_ids[
+                                    occurrence["targetDocumentId"]
+                                ]
+                            ),
+                        )
+                        charge(
+                            "containingReferenceUpdated",
+                            1,
+                            (
+                                f"work.{ordinal}.managed-revision.ancestor."
+                                f"{document_id}.{occurrence_index}.rewrite"
+                            ),
+                            work_item,
+                            document_id=document_id,
+                            component_generation=fixture_input["documents"][
+                                document_id
+                            ].get("componentGeneration", 0),
+                        )
+                    intermediate_blue_ids[document_id] = direct_blue_id(
+                        intermediate_documents[document_id]
+                    )
+                    finalize_intermediate_document(
+                        document_id, f"ancestor.{document_id}"
+                    )
+                    pending_ancestors.remove(document_id)
+
+            final_row = next(
+                occurrence
+                for occurrence in expected.get("finalOccurrences", [])
+                if occurrence["occurrenceIdentity"]
+                == fixture_input["cause"]["targetOccurrenceIdentity"]
+            )
+            if final_row.get("active"):
+                # Reaching the authoritative epoch owns a second exact
+                # same-lineage reference rewrite before graph activation.
+                charge(
+                    "containingReferenceUpdated", 1,
+                    f"work.{ordinal}.managed-revision.reconcile", work_item,
+                )
+                charge(
+                    "processEmbeddedEdgeExamined", 1,
+                    f"work.{ordinal}.managed-revision.edge", work_item,
+                )
+                charge(
+                    "componentPartitionChanged", 1,
+                    f"work.{ordinal}.managed-revision.partition-change", work_item,
+                )
+                charge(
+                    "componentMemberPartitioned",
+                    len(fixture_input["documents"]),
+                    f"work.{ordinal}.managed-revision.partition-members",
+                    work_item,
+                )
+                final_active_edges = sum(
+                    bool(occurrence.get("active"))
+                    for occurrence in expected.get("finalOccurrences", [])
+                )
+                if final_active_edges:
+                    charge(
+                        "componentEdgePartitioned", final_active_edges,
+                        f"work.{ordinal}.managed-revision.partition-edges",
+                        work_item,
+                    )
+                owned_finalizations = work_finalizations.get(ordinal, [])
+                if len(owned_finalizations) != 1:
+                    raise AssertionError(
+                        f"active managed revision in {fixture_path.name} owns "
+                        f"{len(owned_finalizations)} cyclic finalizations"
+                    )
+                apply_cyclic_finalization(
+                    owned_finalizations[0],
+                    work_item,
+                    f"work.{ordinal}",
+                )
+                eagerly_finalized_work_ordinals.add(ordinal)
+            else:
+                for document_id, blue_id in intermediate_blue_ids.items():
+                    final_record = pre_checkpoint_documents[document_id]
+                    if (
+                        final_record["blueId"] != blue_id
+                        or final_record["document"]
+                        != intermediate_documents[document_id]
+                    ):
+                        raise AssertionError(
+                            f"managed revision intermediate state for {document_id!r} "
+                            f"does not match {fixture_path.name} result"
+                        )
         charge("scopeOpened", 1, f"work.{ordinal}.scope", work_item)
         charge("contractHeaderRecognized", 1, f"work.{ordinal}.contracts", work_item)
 
-        handler_key, handler_result = handler_result_for_work(fixture, work_item)
-        if handler_result is not None:
+        handler_results = handler_results_for_work(fixture, work_item)
+        pending_work_finalizations = (
+            []
+            if ordinal in eagerly_finalized_work_ordinals
+            else list(work_finalizations.get(ordinal, []))
+        )
+        patching_handler_indexes = [
+            index
+            for index, (_handler_key, handler_result) in enumerate(
+                handler_results
+            )
+            if handler_result.get("patches")
+        ]
+        if pending_work_finalizations and len(patching_handler_indexes) > 1:
+            raise AssertionError(
+                "cyclic finalizations from several selected Handlers require "
+                f"an unambiguous per-Handler boundary in {fixture_path.name}/"
+                f"work/{ordinal}"
+            )
+        finalization_handler_index = (
+            patching_handler_indexes[0]
+            if patching_handler_indexes
+            else (0 if handler_results else None)
+        )
+        if handler_results:
             charge("channelCandidateTested", 1, f"work.{ordinal}.channel-test", work_item, contract_key=work_item["channelKey"])
             charge("channelAccepted", 1, f"work.{ordinal}.channel-accepted", work_item, contract_key=work_item["channelKey"])
-            charge("handlerCandidateTested", 1, f"work.{ordinal}.handler-test", work_item, contract_key=handler_key)
-            charge("handlerCall", 1, f"work.{ordinal}.handler-call", work_item, contract_key=handler_key)
-            for patch_index, patch in enumerate(handler_result.get("patches", [])):
-                directly_mutated_documents.add(work_item["targetDocumentId"])
-                charge("patchBoundaryChecked", 1, f"work.{ordinal}.patch.{patch_index}.boundary", work_item)
-                segments = len(patch["path"].split("/")[1:])
-                if segments:
-                    charge("pointerSegmentTraversed", segments, f"work.{ordinal}.patch.{patch_index}.pointer", work_item)
-                charge(
-                    "patchRemove" if patch["op"] == "remove" else "patchAddOrReplace",
-                    1, f"work.{ordinal}.patch.{patch_index}.{patch['op']}", work_item,
+            for handler_index, (handler_key, handler_result) in enumerate(
+                handler_results
+            ):
+                handler_prefix = (
+                    f"work.{ordinal}.handler.{handler_index}.{handler_key}"
                 )
-                if "val" in patch:
+                charge(
+                    "handlerCandidateTested", 1,
+                    f"{handler_prefix}.candidate", work_item,
+                    contract_key=handler_key,
+                )
+                charge(
+                    "handlerCall", 1, f"{handler_prefix}.call", work_item,
+                    contract_key=handler_key,
+                )
+                for patch_index, patch in enumerate(
+                    handler_result.get("patches", [])
+                ):
+                    patch_prefix = f"{handler_prefix}.patch.{patch_index}"
+                    directly_mutated_documents.add(work_item["targetDocumentId"])
+                    charge(
+                        "patchBoundaryChecked", 1, f"{patch_prefix}.boundary",
+                        work_item,
+                    )
+                    segments = len(patch["path"].split("/")[1:])
+                    if segments:
+                        charge(
+                            "pointerSegmentTraversed", segments,
+                            f"{patch_prefix}.pointer", work_item,
+                        )
+                    charge(
+                        "patchRemove" if patch["op"] == "remove" else "patchAddOrReplace",
+                        1, f"{patch_prefix}.{patch['op']}", work_item,
+                    )
+                    if "val" in patch:
+                        establish_exact_value(
+                            patch["val"], trace, established, existing,
+                            reason_prefix=f"{patch_prefix}.value",
+                            context={
+                                "documentId": work_item["targetDocumentId"],
+                                "workOccurrenceId": work_item["workIdentity"],
+                            },
+                        )
+                    if (work_item["targetDocumentId"], patch["path"]) in managed_paths:
+                        if patch["op"] != "remove":
+                            charge(
+                                "managedOccurrenceBindingVerified",
+                                1,
+                                f"{patch_prefix}.binding",
+                                work_item,
+                            )
+                        charge(
+                            "processEmbeddedEdgeExamined",
+                            1,
+                            f"{patch_prefix}.edge",
+                            work_item,
+                        )
+                        charge(
+                            "componentPartitionChanged",
+                            1,
+                            f"{patch_prefix}.partition-change",
+                            work_item,
+                        )
+                        charge(
+                            "componentMemberPartitioned",
+                            len(fixture_input["documents"]),
+                            f"{patch_prefix}.partition-members",
+                            work_item,
+                        )
+                        if final_active_edge_count:
+                            charge(
+                                "componentEdgePartitioned",
+                                final_active_edge_count,
+                                f"{patch_prefix}.partition-edges",
+                                work_item,
+                            )
+                # One Handler result is one causal frame: all of its patches,
+                # continuations, and exact finalization finish before any of
+                # its events are recorded and before the next Handler begins.
+                # The finalization boundary itself is owned by the work
+                # occurrence, so its canonical gas reason does not add a
+                # Handler-local segment.
+                if handler_index == finalization_handler_index:
+                    for finalization in pending_work_finalizations:
+                        apply_cyclic_finalization(
+                            finalization,
+                            work_item,
+                            f"work.{ordinal}",
+                        )
+                    pending_work_finalizations = []
+
+                for event_index, event_value in enumerate(
+                    handler_result.get("events", [])
+                ):
+                    event_prefix = (
+                        f"work.{ordinal}.handler.{handler_index}.{handler_key}."
+                        f"event.{event_index}"
+                    )
                     establish_exact_value(
-                        patch["val"], trace, established, existing,
-                        reason_prefix=f"work.{ordinal}.patch.{patch_index}.value",
+                        event_value,
+                        trace,
+                        established,
+                        existing - {direct_blue_id(event_value)},
+                        reason_prefix=event_prefix,
                         context={
                             "documentId": work_item["targetDocumentId"],
                             "workOccurrenceId": work_item["workIdentity"],
                         },
                     )
-                if (work_item["targetDocumentId"], patch["path"]) in managed_paths:
-                    if patch["op"] != "remove":
+                    if fixture_input["documents"][work_item["targetDocumentId"]].get(
+                        "publicRoot"
+                    ):
                         charge(
-                            "managedOccurrenceBindingVerified",
+                            "rootEventRecorded", 1,
+                            f"{event_prefix}.public-record",
+                            work_item,
+                        )
+                    charge(
+                        "internalEventEnqueued", 1, f"{event_prefix}.enqueue",
+                        work_item,
+                    )
+                    emitted_events.append(
+                        (
+                            (direct_blue_id(event_value), event_occurrence_ordinal),
+                            work_item,
+                        )
+                    )
+                    event_key = (
+                        direct_blue_id(event_value), event_occurrence_ordinal
+                    )
+                    if event_key not in event_groups:
+                        charge(
+                            "internalEventDequeued",
                             1,
-                            f"work.{ordinal}.patch.{patch_index}.binding",
-                            work_item,
+                            f"event.{event_occurrence_ordinal}.dequeue-zero-target",
                         )
-                    charge(
-                        "processEmbeddedEdgeExamined",
-                        1,
-                        f"work.{ordinal}.patch.{patch_index}.edge",
-                        work_item,
-                    )
-                    charge(
-                        "componentPartitionChanged",
-                        1,
-                        f"work.{ordinal}.patch.{patch_index}.partition-change",
-                        work_item,
-                    )
-                    charge(
-                        "componentMemberPartitioned",
-                        len(fixture_input["documents"]),
-                        f"work.{ordinal}.patch.{patch_index}.partition-members",
-                        work_item,
-                    )
-                    if final_active_edge_count:
-                        charge(
-                            "componentEdgePartitioned",
-                            final_active_edge_count,
-                            f"work.{ordinal}.patch.{patch_index}.partition-edges",
-                            work_item,
-                        )
-        # Every patch/update continuation and its exact affected-component
-        # finalization completes before the Handler result's emitted events
-        # are recorded and exposed to the FIFO drain.
-        for finalization in work_finalizations.get(ordinal, []):
-            apply_cyclic_finalization(finalization, work_item, f"work.{ordinal}")
+                        dequeued_events.add(event_key)
+                    event_occurrence_ordinal += 1
 
-        if handler_result is not None:
-            for event_index, event_value in enumerate(handler_result.get("events", [])):
-                establish_exact_value(
-                    event_value,
-                    trace,
-                    established,
-                    existing - {direct_blue_id(event_value)},
-                    reason_prefix=f"work.{ordinal}.event.{event_index}",
-                    context={
-                        "documentId": work_item["targetDocumentId"],
-                        "workOccurrenceId": work_item["workIdentity"],
-                    },
-                )
-                charge("internalEventEnqueued", 1, f"work.{ordinal}.event.{event_index}.enqueue", work_item)
-                emitted_events.append(
-                    (
-                        (direct_blue_id(event_value), event_occurrence_ordinal),
-                        work_item,
-                    )
-                )
-                event_key = (direct_blue_id(event_value), event_occurrence_ordinal)
-                if event_key not in event_groups:
-                    charge(
-                        "internalEventDequeued",
-                        1,
-                        f"event.{event_occurrence_ordinal}.dequeue-zero-target",
-                    )
-                    dequeued_events.add(event_key)
-                event_occurrence_ordinal += 1
+        # Processor-caused work with no Handler can still own a finalization.
+        for finalization in pending_work_finalizations:
+            apply_cyclic_finalization(finalization, work_item, f"work.{ordinal}")
 
         if last_initialization_ordinal == ordinal:
             enqueue_lazy_kind("LIFECYCLE", work_item)
@@ -707,7 +1191,10 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
                 )
 
         document_id = work_item["targetDocumentId"]
-        if last_work_for_document.get(document_id) == ordinal:
+        if (
+            last_work_for_document.get(document_id) == ordinal
+            and document_id not in managed_revision_finalized_documents
+        ):
             final_record = pre_checkpoint_documents.get(document_id)
             final_component = next(
                 (
@@ -729,6 +1216,8 @@ def generic_complete_trace(fixture_path: Path, fixture: dict[str, Any]) -> tuple
         if last_work_ordinal == ordinal:
             for remaining_id, final_record in sorted(pre_checkpoint_documents.items()):
                 if remaining_id in last_work_for_document:
+                    continue
+                if remaining_id in managed_revision_finalized_documents:
                     continue
                 before = fixture_input["documents"].get(remaining_id)
                 if before is None or before["blueId"] == final_record["blueId"]:
@@ -1095,7 +1584,7 @@ def loop_trace(
         return {
             "documentId": work_item["targetDocumentId"],
             "scopePath": "/",
-            "activationGeneration": 0 if work_item["ordinal"] == 0 else 1,
+            "activationGeneration": 0,
             "componentGeneration": 1,
             "logicalPath": f"work/{work_item['ordinal']}",
             "workOccurrenceId": work_item["workIdentity"],
@@ -1192,6 +1681,12 @@ def loop_trace(
             context=context_for(current),
         )
         if trace.rejected is not None:
+            rejected_owner_work = current
+            break
+        if current["targetDocumentId"] == "loop-a" and not charge(
+            "rootEventRecorded", 1,
+            f"work.{current['ordinal']}.event-public-record", current,
+        ):
             rejected_owner_work = current
             break
         if not charge(
@@ -1316,6 +1811,7 @@ def finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], int, st
         reason_prefix="work.0.event-x",
         context={"documentId": "a", "workOccurrenceId": work[0]["workIdentity"]},
     )
+    processor("rootEventRecorded", 1, "work.0.event-x.public-record", 0, "a")
     processor("internalEventEnqueued", 1, "work.0.event-x.enqueue", 0, "a")
     processor("closureWorkOccurrenceEnqueued", 2, "work.0.caused-work.enqueue", 0, "a")
 
@@ -1476,7 +1972,10 @@ def rewrite_frozen_edge_removal() -> None:
             g.component("ACYCLIC", 2, ["a"]),
             g.component("ACYCLIC", 2, ["b"]),
         ],
-        "finalOccurrences": [g.occurrence("b", "/a", 1, "a", a_final_id)],
+        "finalOccurrences": [
+            g.occurrence("a", "/b", 2, "b", b_final_id, active=False),
+            g.occurrence("b", "/a", 1, "a", a_final_id),
+        ],
         "publicEvents": [],
         "checkpointsCommitted": True,
         "rollbackToInput": False,
@@ -1490,15 +1989,28 @@ def rewrite_frozen_edge_removal() -> None:
 
 
 def rewrite_frozen_edge_addition() -> None:
-    # Use IDs that force the source direct seed before the owner direct seed.
+    # The two direct targets are incomparable source components over one shared
+    # target.  Canonical component tie order therefore runs a-source before
+    # z-owner even though the raw external snapshot order is deliberately the
+    # opposite.  This freezes the distinction between snapshot and seed order.
     evt = g.event("FROZEN-ADD")
     x = g.event("X-BEFORE-ADD")
     x_id = direct_blue_id(x)
 
+    shared = {
+        "documentId": "shared-target",
+        "memberIdentity": "shared-target",
+    }
+    shared_id = direct_blue_id(shared)
+
     owner = {
-        "documentId": "z-owner", "memberIdentity": "z-owner", "receivedOldX": False,
+        "documentId": "z-owner", "memberIdentity": "z-owner",
+        "shared": g.ref(shared_id), "receivedOldX": False,
         "contracts": {
-            "embedded": {"type": g.ref(g.PE), "paths": ["/source"]},
+            "embedded": {
+                "type": g.ref(g.PE),
+                "paths": ["/shared", "/source"],
+            },
             "sourceChannel": {"type": g.ref(g.SEC), "subscriptionKey": "fixture", "eventKey": "fixture", "accept": True, "checkpointDomain": "domain", "logicalDeliveryKey": "owner"},
             "attach": {"type": g.ref(g.SH), "channel": "sourceChannel", "order": 0},
             "fromSource": {"type": g.ref(g.ENC), "sourcePath": "/source", "event": g.ref(x_id), "order": 0},
@@ -1507,38 +2019,42 @@ def rewrite_frozen_edge_addition() -> None:
     }
     owner_id = direct_blue_id(owner)
     source = {
-        "documentId": "a-source", "memberIdentity": "a-source", "owner": g.ref(owner_id),
+        "documentId": "a-source", "memberIdentity": "a-source",
+        "shared": g.ref(shared_id),
         "contracts": {
-            "embedded": {"type": g.ref(g.PE), "paths": ["/owner"]},
+            "embedded": {"type": g.ref(g.PE), "paths": ["/shared"]},
             "sourceChannel": {"type": g.ref(g.SEC), "subscriptionKey": "fixture", "eventKey": "fixture", "accept": True, "checkpointDomain": "domain", "logicalDeliveryKey": "source"},
             "emit": {"type": g.ref(g.SH), "channel": "sourceChannel", "order": 0},
         },
     }
     source_id = direct_blue_id(source)
-    final_source_src = deepcopy(source); final_source_src["owner"] = g.ref("this#1")
-    final_owner_src = deepcopy(owner); final_owner_src["source"] = g.ref("this#0")
-    oracle = cyclic_set_oracle([final_source_src, final_owner_src])
-    mats = materialize_cyclic_members([final_source_src, final_owner_src], oracle)
-    g.dump(ORC / "frozen-edge-addition.yaml", g.oracle_payload("frozen-edge-addition", [("final", [final_source_src, final_owner_src], oracle)]))
-    ids = oracle.member_ids_in_source_order()
+    final_owner = deepcopy(owner)
+    final_owner["source"] = g.ref(source_id)
+    final_owner_id = direct_blue_id(final_owner)
 
     input_value = {
         "graphGeneration": 1,
         "cause": g.external_cause(evt, [251, "timeline-frozen-add", 1]),
         "documents": {
             "a-source": g.document_record("a-source", source_id, source, epoch=0, component_generation=1),
+            "shared-target": g.document_record("shared-target", shared_id, shared, epoch=0, component_generation=1),
             "z-owner": g.document_record("z-owner", owner_id, owner, public_root=True, epoch=0, component_generation=1),
         },
         "occurrences": [
-            g.occurrence("a-source", "/owner", 1, "z-owner", owner_id),
+            g.occurrence("a-source", "/shared", 1, "shared-target", shared_id),
+            g.occurrence("z-owner", "/shared", 1, "shared-target", shared_id),
             g.occurrence(
                 "z-owner", "/source", 1, "a-source", source_id, active=False
             ),
         ],
-        "components": [g.component("ACYCLIC", 1, ["z-owner"]), g.component("ACYCLIC", 1, ["a-source"])],
+        "components": [
+            g.component("ACYCLIC", 1, ["shared-target"]),
+            g.component("ACYCLIC", 1, ["a-source"]),
+            g.component("ACYCLIC", 1, ["z-owner"]),
+        ],
         "directDeliveries": [
-            g.direct_delivery("a-source", channel="sourceChannel", key="source", order=0),
-            g.direct_delivery("z-owner", channel="sourceChannel", key="owner", order=1),
+            g.direct_delivery("z-owner", channel="sourceChannel", key="owner", order=0),
+            g.direct_delivery("a-source", channel="sourceChannel", key="source", order=1),
         ],
         "gasPolicy": g.policy(),
         "runtime": {"handlers": {
@@ -1551,18 +2067,24 @@ def rewrite_frozen_edge_addition() -> None:
     expected.update({
         "finalGraphGeneration": 2,
         "workTrace": [
-            g.work(0, "EXTERNAL_DELIVERY", "a-source", "sourceChannel", event_id=direct_blue_id(evt), occurrence_ordinal=0, invocation="frozen-add"),
-            g.work(1, "EXTERNAL_DELIVERY", "z-owner", "sourceChannel", event_id=direct_blue_id(evt), occurrence_ordinal=1, invocation="frozen-add"),
+            g.work(0, "EXTERNAL_DELIVERY", "a-source", "sourceChannel", event_id=direct_blue_id(evt), occurrence_ordinal=1, invocation="frozen-add"),
+            g.work(1, "EXTERNAL_DELIVERY", "z-owner", "sourceChannel", event_id=direct_blue_id(evt), occurrence_ordinal=0, invocation="frozen-add"),
         ],
-        "tentativeFinalizations": [g.finalize(0, "final", oracle, ["a-source", "z-owner"])],
+        "tentativeFinalizations": [],
         "finalDocuments": {
-            "a-source": g.document_record("a-source", ids[0], mats[0], epoch=1, component_generation=2),
-            "z-owner": g.document_record("z-owner", ids[1], mats[1], public_root=True, epoch=1, component_generation=2),
+            "a-source": g.document_record("a-source", source_id, source, epoch=0, component_generation=1),
+            "shared-target": g.document_record("shared-target", shared_id, shared, epoch=0, component_generation=1),
+            "z-owner": g.document_record("z-owner", final_owner_id, final_owner, public_root=True, epoch=1, component_generation=1),
         },
-        "finalComponents": [g.component("CYCLIC", 2, ["a-source", "z-owner"], master=oracle.master_blue_id, stage="final")],
+        "finalComponents": [
+            g.component("ACYCLIC", 1, ["shared-target"]),
+            g.component("ACYCLIC", 1, ["a-source"]),
+            g.component("ACYCLIC", 1, ["z-owner"]),
+        ],
         "finalOccurrences": [
-            g.occurrence("a-source", "/owner", 1, "z-owner", ids[1]),
-            g.occurrence("z-owner", "/source", 1, "a-source", ids[0]),
+            g.occurrence("a-source", "/shared", 1, "shared-target", shared_id),
+            g.occurrence("z-owner", "/shared", 1, "shared-target", shared_id),
+            g.occurrence("z-owner", "/source", 1, "a-source", source_id),
         ],
         "publicEvents": [],
         "observations": [{"workOrdinal": 0, "targetDocumentId": "z-owner", "pointer": "/receivedOldX", "observedValue": False}],
@@ -1571,8 +2093,8 @@ def rewrite_frozen_edge_addition() -> None:
     })
     f = g.base_fixture(
         "c-clo-13-frozen-edge-addition", ["C-CLO-13"], "ordering", "process-closure",
-        "The a-source seed emits X before z-owner adds /source. X's frozen targets do not retroactively include the new z-owner->a-source edge; the owner remains receivedOldX=false. Later occurrences use the new cycle.",
-        "frozen-edge-addition.yaml", input_value, expected,
+        "Two incomparable source components share one target, so canonical component tie order runs a-source before z-owner even though raw snapshot order is the opposite. The a-source seed emits X before z-owner adds /source; the new containing edge does not retroactively target X and z-owner remains receivedOldX=false.",
+        None, input_value, expected,
     )
     dump_fixture("c-clo-13-frozen-edge-addition.yaml", f)
 
@@ -1594,11 +2116,14 @@ def fix_invalid_and_ambiguous() -> None:
         {"documentId": "amb-b", "document": {"same": True, "other": g.ref("this#0")}},
     ]
     ambiguous["input"]["candidateCyclicMembers"] = candidate
-    singleton_components = [
-        g.component("ACYCLIC", 0, ["amb-a"]),
-        g.component("ACYCLIC", 0, ["amb-b"]),
-    ]
+    ambiguous["input"]["documents"] = {
+        "amb-a": ambiguous["input"]["documents"]["amb-a"]
+    }
+    singleton_components = [g.component("ACYCLIC", 0, ["amb-a"])]
     ambiguous["input"]["components"] = singleton_components
+    ambiguous["expected"]["finalDocuments"] = deepcopy(
+        ambiguous["input"]["documents"]
+    )
     ambiguous["expected"]["finalComponents"] = deepcopy(singleton_components)
     dump_fixture("c-clo-15-ambiguous-preliminary-members.yaml", ambiguous)
 
@@ -1846,6 +2371,7 @@ def add_containing_spine_identity_fixture() -> None:
             g.component("ACYCLIC", 1, ["container-root"]),
         ],
         "finalOccurrences": [
+            g.occurrence("a", "/b", 2, "b", b_final_id, active=False),
             g.occurrence("b", "/a", 1, "a", a_final_id),
             g.occurrence("container-inner", "/child", 1, "a", a_final_id),
             g.occurrence("container-root", "/child", 1, "container-inner", inner_final_id),
@@ -1997,13 +2523,29 @@ def rewrite_outer_public_and_failure() -> None:
     comps = [g.component("CYCLIC", 1, ["a", "b"], master=stage["masterBlueId"], stage="cycle-formed"), g.component("ACYCLIC", 1, ["outer"])]
     evt = g.event("OUTER-BOUNDARY")
     x = g.event("X"); xid = direct_blue_id(x)
+    public_event = g.event("P"); public_event_id = direct_blue_id(public_event)
+    outer["contracts"]["localP"] = {
+        "type": g.ref(g.TEC), "event": g.ref(public_event_id), "order": 0,
+    }
+    outer["contracts"]["onP"] = {
+        "type": g.ref(g.SH), "channel": "localP", "order": 0,
+    }
+    outer_id = direct_blue_id(outer)
+    docs["outer"] = g.document_record(
+        "outer", outer_id, outer, initialized=True, public_root=True,
+        epoch=0, component_generation=1,
+    )
     base_input = {
         "graphGeneration": 1, "cause": g.external_cause(evt, [260, "timeline-outer", 1]),
         "documents": docs, "occurrences": occ, "components": comps,
         "directDeliveries": [g.direct_delivery("a")], "gasPolicy": g.policy(),
         "runtime": {"handlers": {
             "a/start": {"events": [x]}, "a/onLocalX": {}, "b/onX": {},
-            "outer/observeInner": {"patches": [{"op": "replace", "path": "/observed", "val": 1}]},
+            "outer/observeInner": {
+                "patches": [{"op": "replace", "path": "/observed", "val": 1}],
+                "events": [public_event],
+            },
+            "outer/onP": {},
         }},
     }
     outer_after = deepcopy(outer); outer_after["observed"] = 1
@@ -2016,6 +2558,7 @@ def rewrite_outer_public_and_failure() -> None:
             g.work(1, "TRIGGERED_EVENT", "a", "localX", event_id=xid, occurrence_ordinal=0, invocation="outer"),
             g.work(2, "EMBEDDED_EVENT", "b", "fromA", event_id=xid, occurrence_ordinal=0, invocation="outer"),
             g.work(3, "EMBEDDED_EVENT", "outer", "fromInner", event_id=xid, occurrence_ordinal=0, invocation="outer"),
+            g.work(4, "TRIGGERED_EVENT", "outer", "localP", event_id=public_event_id, occurrence_ordinal=1, invocation="outer"),
         ],
         "finalDocuments": {
             "a": docs["a"], "b": docs["b"],
@@ -2023,16 +2566,23 @@ def rewrite_outer_public_and_failure() -> None:
         },
         "finalComponents": comps,
         "finalOccurrences": [occ[0], occ[1], g.occurrence("outer", "/inner", 1, "a", ids[0])],
-        "publicEvents": [], "checkpointsCommitted": True, "rollbackToInput": False,
+        "publicEvents": [{
+            "publicRootDocumentId": "outer",
+            "eventOccurrenceOrdinal": 1,
+            "event": public_event,
+        }],
+        "checkpointsCommitted": True, "rollbackToInput": False,
     })
     dump_fixture("c-clo-19-public-event-boundary.yaml", g.base_fixture(
         "c-clo-19-public-event-boundary", ["C-CLO-19"], "public-events", "process-closure",
-        "A and B react to X and the outer public Root observes it, but no internal member event appears in publicEvents because outer emits nothing explicitly.",
+        "A and B react to private X. The outer public Root observes X and explicitly emits P; only P is published, with its invocation-global event occurrence ordinal preserved.",
         "finite-dynamic-a-b.yaml", base_input, expected,
     ))
 
     fail_input = deepcopy(base_input)
-    fail_input["runtime"]["handlers"]["outer/observeInner"] = {"fail": "outer-failure-after-inner-work"}
+    fail_input["runtime"]["handlers"]["outer/onP"] = {
+        "fail": "outer-failure-after-public-event-staging"
+    }
     fail_expected = g.empty_expected("runtime-fatal")
     fail_expected.update({
         "diagnostic": "RuntimeExecutionFailure", "finalGraphGeneration": 1,
@@ -2042,9 +2592,217 @@ def rewrite_outer_public_and_failure() -> None:
     })
     dump_fixture("c-clo-20-late-outer-failure.yaml", g.base_fixture(
         "c-clo-20-late-outer-failure", ["C-CLO-20"], "atomicity", "process-closure",
-        "The outer public Root fails only after A local work and B embedded delivery were reached. The complete closure rolls back, including the inner component and all checkpoints.",
+        "The outer public Root emits and stages P, then P's own delivery fails before publication. The complete closure rolls back the event, every document, graph evidence, and checkpoint.",
         "finite-dynamic-a-b.yaml", fail_input, fail_expected,
     ))
+
+
+def add_multiple_public_roots_fixture() -> None:
+    """Prove positive publication and canonical multi-Root ordering."""
+    single_trigger = g.event("SINGLE-PUBLIC-ROOT")
+    single_event = g.event("PUBLIC-SINGLE")
+    single_document = {
+        "documentId": "public-single",
+        "memberIdentity": "public-single",
+        "contracts": {
+            "source": {
+                "type": g.ref(g.SEC),
+                "subscriptionKey": "fixture",
+                "eventKey": "fixture",
+                "accept": True,
+                "checkpointDomain": "domain",
+                "logicalDeliveryKey": "public-single",
+            },
+            "start": {
+                "type": g.ref(g.SH), "channel": "source", "order": 0,
+            },
+        },
+    }
+    single_blue_id = direct_blue_id(single_document)
+    single_documents = {
+        "public-single": g.document_record(
+            "public-single", single_blue_id, single_document,
+            initialized=True, public_root=True, epoch=0,
+            component_generation=1,
+        )
+    }
+    single_components = [g.component("ACYCLIC", 1, ["public-single"])]
+    single_input = {
+        "graphGeneration": 1,
+        "cause": g.external_cause(
+            single_trigger, [264, "timeline-public-root", 1]
+        ),
+        "documents": single_documents,
+        "occurrences": [],
+        "components": single_components,
+        "directDeliveries": [g.direct_delivery("public-single")],
+        "gasPolicy": g.policy(),
+        "runtime": {
+            "handlers": {"public-single/start": {"events": [single_event]}}
+        },
+    }
+    single_expected = g.empty_expected()
+    single_expected.update({
+        "finalGraphGeneration": 1,
+        "finalDocuments": deepcopy(single_documents),
+        "finalComponents": deepcopy(single_components),
+        "finalOccurrences": [],
+        "workTrace": [
+            g.work(
+                0, "EXTERNAL_DELIVERY", "public-single", "source",
+                event_id=direct_blue_id(single_trigger),
+                occurrence_ordinal=0,
+                invocation="single-public",
+            )
+        ],
+        "publicEvents": [{
+            "publicRootDocumentId": "public-single",
+            "eventOccurrenceOrdinal": 0,
+            "event": single_event,
+        }],
+        "checkpointsCommitted": True,
+        "rollbackToInput": False,
+    })
+    dump_fixture(
+        "c-clo-19-single-public-root.yaml",
+        g.base_fixture(
+            "c-clo-19-single-public-root",
+            ["C-CLO-19"],
+            "public-events",
+            "process-closure",
+            "One declared public Root emits one exact event; the result and commit companion bind both the invocation-global occurrence ordinal and public ordinal.",
+            None,
+            single_input,
+            single_expected,
+        ),
+    )
+
+    trigger = g.event("MULTI-PUBLIC-ROOT")
+    events = {
+        "public-a": g.event("PUBLIC-A"),
+        "public-b": g.event("PUBLIC-B"),
+    }
+    shared_document = {
+        "documentId": "public-shared",
+        "memberIdentity": "public-shared",
+    }
+    shared_blue_id = direct_blue_id(shared_document)
+    documents: dict[str, Any] = {
+        "public-shared": g.document_record(
+            "public-shared",
+            shared_blue_id,
+            shared_document,
+            initialized=True,
+            epoch=0,
+            component_generation=1,
+        )
+    }
+    components: list[dict[str, Any]] = [
+        g.component("ACYCLIC", 1, ["public-shared"])
+    ]
+    occurrences: list[dict[str, Any]] = []
+    runtime_handlers: dict[str, Any] = {}
+    for document_id in ("public-a", "public-b"):
+        document = {
+            "documentId": document_id,
+            "memberIdentity": document_id,
+            "shared": g.ref(shared_blue_id),
+            "contracts": {
+                "embedded": {
+                    "type": g.ref(g.PE),
+                    "paths": ["/shared"],
+                },
+                "source": {
+                    "type": g.ref(g.SEC),
+                    "subscriptionKey": "fixture",
+                    "eventKey": "fixture",
+                    "accept": True,
+                    "checkpointDomain": "domain",
+                    "logicalDeliveryKey": document_id,
+                },
+                "start": {
+                    "type": g.ref(g.SH), "channel": "source", "order": 0,
+                },
+            },
+        }
+        blue_id = direct_blue_id(document)
+        documents[document_id] = g.document_record(
+            document_id, blue_id, document, initialized=True,
+            public_root=True, epoch=0, component_generation=1,
+        )
+        components.append(g.component("ACYCLIC", 1, [document_id]))
+        occurrences.append(
+            g.occurrence(
+                document_id,
+                "/shared",
+                1,
+                "public-shared",
+                shared_blue_id,
+            )
+        )
+        runtime_handlers[f"{document_id}/start"] = {
+            "events": [events[document_id]],
+        }
+
+    fixture_input = {
+        "graphGeneration": 1,
+        "cause": g.external_cause(trigger, [265, "timeline-public-roots", 1]),
+        "documents": documents,
+        "occurrences": occurrences,
+        "components": components,
+        "directDeliveries": [
+            g.direct_delivery("public-a", order=0),
+            g.direct_delivery("public-b", order=0),
+        ],
+        "gasPolicy": g.policy(),
+        "runtime": {"handlers": runtime_handlers},
+    }
+    expected = g.empty_expected()
+    expected.update({
+        "finalGraphGeneration": 1,
+        "finalDocuments": deepcopy(documents),
+        "finalComponents": deepcopy(components),
+        "finalOccurrences": deepcopy(occurrences),
+        "workTrace": [
+            g.work(
+                0, "EXTERNAL_DELIVERY", "public-a", "source",
+                event_id=direct_blue_id(trigger), occurrence_ordinal=0,
+                invocation="multi-public",
+            ),
+            g.work(
+                1, "EXTERNAL_DELIVERY", "public-b", "source",
+                event_id=direct_blue_id(trigger), occurrence_ordinal=1,
+                invocation="multi-public",
+            ),
+        ],
+        "publicEvents": [
+            {
+                "publicRootDocumentId": "public-a",
+                "eventOccurrenceOrdinal": 0,
+                "event": events["public-a"],
+            },
+            {
+                "publicRootDocumentId": "public-b",
+                "eventOccurrenceOrdinal": 1,
+                "event": events["public-b"],
+            },
+        ],
+        "checkpointsCommitted": True,
+        "rollbackToInput": False,
+    })
+    dump_fixture(
+        "c-clo-19-multiple-public-roots-canonical.yaml",
+        g.base_fixture(
+            "c-clo-19-multiple-public-roots-canonical",
+            ["C-CLO-19"],
+            "public-events",
+            "process-closure",
+            "Two public Roots emit distinct events. The frozen canonical delivery sequence fixes both invocation-global occurrence ordinals and tagged public-event order.",
+            None,
+            fixture_input,
+            expected,
+        ),
+    )
 
 
 
@@ -2179,13 +2937,39 @@ def ensure_direct_delivery_work() -> None:
         ]
         if not missing:
             continue
-        missing.sort(
-            key=lambda item: (
-                item["rawOccurrenceOrder"],
-                item["targetDocumentId"],
-                item["scopePath"],
-                item["channelKey"],
+
+        component_rank = {
+            document_id: rank
+            for rank, component in enumerate(fixture["input"]["components"])
+            for document_id in component["orderedMemberDocumentIds"]
+        }
+
+        def direct_seed_key(delivery: dict[str, Any]) -> tuple[Any, ...]:
+            document_id = delivery["targetDocumentId"]
+            channel = fixture["input"]["documents"][document_id]["document"][
+                "contracts"
+            ][delivery["channelKey"]]
+            channel_order = channel.get("order", 0)
+            if not isinstance(channel_order, int) or isinstance(
+                channel_order, bool
+            ):
+                raise AssertionError(
+                    f"non-integer direct Channel order in {fixture_path.name}: "
+                    f"{document_id}/{delivery['channelKey']}"
+                )
+            return (
+                component_rank[document_id],
+                document_id,
+                delivery["scopePath"],
+                delivery["activationGeneration"],
+                channel_order,
+                delivery["channelKey"],
+                delivery["logicalDeliveryKey"],
+                delivery["rawOccurrenceOrder"],
             )
+
+        missing.sort(
+            key=direct_seed_key
         )
         shift = len(missing)
         for item in work_trace:
@@ -2264,25 +3048,63 @@ def normalize_event_occurrence_ordinals() -> None:
         emission_ordinal = 0
         used: set[tuple[str, int]] = set()
         for work_item in work_trace:
-            _handler_key, handler_result = handler_result_for_work(fixture, work_item)
-            if handler_result is None:
-                continue
-            for event_value in handler_result.get("events", []):
-                event_blue_id = direct_blue_id(event_value)
-                candidates = [
-                    key for key in available.get(event_blue_id, []) if key not in used
-                ]
-                if candidates:
-                    key = candidates[0]
-                    used.add(key)
-                    for delivery in groups[key]:
-                        delivery["occurrenceOrdinal"] = emission_ordinal
-                emission_ordinal += 1
+            for _handler_key, handler_result in handler_results_for_work(
+                fixture, work_item
+            ):
+                for event_value in handler_result.get("events", []):
+                    event_blue_id = direct_blue_id(event_value)
+                    candidates = [
+                        key
+                        for key in available.get(event_blue_id, [])
+                        if key not in used
+                    ]
+                    if candidates:
+                        key = candidates[0]
+                        used.add(key)
+                        for delivery in groups[key]:
+                            delivery["occurrenceOrdinal"] = emission_ordinal
+                    emission_ordinal += 1
         if set(groups) != used:
             missing = sorted(set(groups) - used, key=lambda key: first_ordinal[key])
             raise AssertionError(
                 f"event deliveries have no emitted occurrence in {fixture_path.name}: {missing}"
             )
+        dump_fixture(fixture_path.name, fixture)
+
+
+def normalize_public_event_evidence() -> None:
+    """Derive public results from accepted explicit public-Root emissions."""
+    for fixture_path in sorted(FIX.glob("*.yaml")):
+        fixture = yaml.safe_load(fixture_path.read_text())
+        if fixture["operation"] == "limit-micro":
+            continue
+        expected = fixture["expected"]
+        if expected.get("attemptOutcome") != "Complete":
+            continue
+        public_events: list[dict[str, Any]] = []
+        event_occurrence_ordinal = 0
+        for work_item in expected.get("workTrace", []):
+            for _handler_key, handler_result in handler_results_for_work(
+                fixture, work_item
+            ):
+                for event_value in handler_result.get("events", []):
+                    document_id = work_item["targetDocumentId"]
+                    if fixture["input"]["documents"][document_id].get(
+                        "publicRoot"
+                    ):
+                        require_pre_materialized_root_work_identity(
+                            fixture_path, work_item
+                        )
+                        public_events.append({
+                            "publicRootDocumentId": document_id,
+                            "eventOccurrenceOrdinal": event_occurrence_ordinal,
+                            "event": deepcopy(event_value),
+                        })
+                    event_occurrence_ordinal += 1
+        # Noncommitting results prove that staged public events are discarded.
+        expected["publicEvents"] = (
+            public_events if expected.get("status") == "success" else []
+        )
         dump_fixture(fixture_path.name, fixture)
 
 
@@ -2470,17 +3292,26 @@ def _recompute_snapshot(
     for index in range(len(components)):
         rebuild(index)
     for binding in occurrences:
-        _refresh_occurrence_binding(
-            binding, documents[binding["targetDocumentId"]]["blueId"]
-        )
+        # A pending historical reservation names the exact admitted historical
+        # state at its cursor, not the target lineage's later authoritative
+        # head. Its binding changes only when one selected managed revision is
+        # committed. Ordinary active/prospective rows track the current head.
+        if binding.get("pendingHistoricalEpoch") is None:
+            _refresh_occurrence_binding(
+                binding, documents[binding["targetDocumentId"]]["blueId"]
+            )
     return stages
 
 
-def _add_initialized_marker(document: Any, pre_initialization_document: Any) -> Any:
+def _add_initialized_marker(document: Any, pre_initialization_blue_id: str) -> Any:
     value = deepcopy(document)
     contracts = value.setdefault("contracts", {})
     contracts.setdefault(
-        "initialized", g.initialized_marker(pre_initialization_document)
+        "initialized",
+        {
+            "type": g.ref(g.INITIALIZED_MARKER),
+            "document": g.ref(pre_initialization_blue_id),
+        },
     )
     return value
 
@@ -2587,77 +3418,6 @@ def _select_stage(
     return matches[0]
 
 
-def _transform_transition_evidence(
-    fixture: dict[str, Any],
-    old_to_new_input_ids: dict[str, str],
-) -> None:
-    transitions = fixture["input"].get("historicalTransitions", [])
-    if not transitions:
-        return
-    marker_by_document = {
-        document_id: record["document"].get("contracts", {}).get("initialized")
-        for document_id, record in fixture["input"]["documents"].items()
-    }
-    previous_after: dict[str, str] = {}
-    first_before: dict[str, str] = {}
-    reference = fixture.get("oracle")
-    oracle_value = (
-        yaml.safe_load((FIX / reference).resolve().read_text())
-        if isinstance(reference, str)
-        else {}
-    )
-    for epoch_value in oracle_value.get("aEpochs", {}).values():
-        old_id = epoch_value.get("blueId")
-        document = epoch_value.get("document")
-        if not isinstance(old_id, str) or not isinstance(document, dict):
-            continue
-        document_id = document.get("documentId")
-        marker = marker_by_document.get(document_id)
-        transformed = _replace_exact_references(document, old_to_new_input_ids)
-        if marker is not None:
-            transformed = deepcopy(transformed)
-            transformed.setdefault("contracts", {})["initialized"] = deepcopy(marker)
-        first_before[old_id] = direct_blue_id(transformed)
-    for transition in transitions:
-        document_id = transition["documentId"]
-        after_document = _replace_exact_references(
-            transition["afterDocument"], old_to_new_input_ids
-        )
-        marker = marker_by_document.get(document_id)
-        if marker is not None:
-            after_document.setdefault("contracts", {})["initialized"] = deepcopy(marker)
-        before_blue_id = previous_after.get(
-            document_id, first_before.get(transition["beforeBlueId"])
-        )
-        if before_blue_id is None:
-            raise AssertionError("historical transition lacks its exact first predecessor")
-        after_blue_id = direct_blue_id(after_document)
-        transition["beforeBlueId"] = before_blue_id
-        transition["afterBlueId"] = after_blue_id
-        transition["afterDocument"] = after_document
-        transition["transitionIdentity"] = g.sha_id(
-            "blue-contracts-historical-transition/1.0",
-            {
-                "documentId": document_id,
-                "fromEpoch": transition["fromEpoch"],
-                "toEpoch": transition["toEpoch"],
-                "beforeBlueId": before_blue_id,
-                "afterBlueId": after_blue_id,
-            },
-        )
-        previous_after[document_id] = after_blue_id
-    first_transition = transitions[0]
-    for binding in fixture["input"].get("occurrences", []):
-        if binding.get("pendingHistoricalEpoch") is None:
-            continue
-        target_blue_id = (
-            first_transition["beforeBlueId"]
-            if binding.get("pendingHistoricalEpoch") == first_transition["fromEpoch"]
-            else fixture["input"]["documents"][binding["targetDocumentId"]]["blueId"]
-        )
-        _refresh_occurrence_binding(binding, target_blue_id)
-
-
 def materialize_processor_state() -> None:
     """Make marker and checkpoint state part of every exact closure document.
 
@@ -2688,7 +3448,7 @@ def materialize_processor_state() -> None:
         for document_id, record in fixture_input["documents"].items():
             if record.get("initialized"):
                 record["document"] = _add_initialized_marker(
-                    record["document"], old_input_documents[document_id]["document"]
+                    record["document"], old_input_ids[document_id]
                 )
             if record.get("terminated"):
                 record["document"].setdefault("contracts", {})["terminated"] = {
@@ -2709,7 +3469,6 @@ def materialize_processor_state() -> None:
             old_input_ids[document_id]: fixture_input["documents"][document_id]["blueId"]
             for document_id in old_input_ids
         }
-        _transform_transition_evidence(fixture, old_to_new_input_ids)
         if "requestedProviderNodes" in fixture_input:
             fixture_input["requestedProviderNodes"] = [
                 old_to_new_input_ids.get(value, value)
@@ -2752,7 +3511,10 @@ def materialize_processor_state() -> None:
                 marker = (
                     deepcopy(input_marker)
                     if input_marker is not None
-                    else g.initialized_marker(old_input_documents[document_id]["document"])
+                    else {
+                        "type": g.ref(g.INITIALIZED_MARKER),
+                        "document": g.ref(old_input_ids[document_id]),
+                    }
                 )
                 marker_by_document[document_id] = marker
                 if input_marker is None:
@@ -2997,6 +3759,196 @@ def materialize_processor_state() -> None:
         dump_fixture(fixture_path.name, fixture)
 
 
+def add_representation_parity_fixtures() -> None:
+    """Release exact pure/materialized variants of the same managed edges.
+
+    These clones are created after processor markers have been materialized so
+    the expanded child is the exact admitted target document, not a draft
+    pre-initialization value. Document/component identities deliberately stay
+    unchanged: expansion is representation, never a semantic mutation.
+    """
+    cases = [
+        (
+            "c-clo-02-dynamic-finite-cycle.yaml",
+            "c-clo-02-acyclic-pure-reference-parity",
+            "c-clo-02-acyclic-materialized-parity",
+            [("b", "/a", "a")],
+            ["C-CLO-02", "C-CLO-30"],
+        ),
+        (
+            "c-clo-01-static-cycle-admission.yaml",
+            "c-clo-01-cyclic-pure-reference-parity",
+            "c-clo-01-cyclic-materialized-parity",
+            [("simple-a", "/b", "simple-b")],
+            ["C-CLO-01", "C-CLO-30"],
+        ),
+    ]
+    for source_name, pure_id, materialized_id, expansions, vectors in cases:
+        source = load(source_name)
+        pure = deepcopy(source)
+        pure["id"] = pure_id
+        pure["vectors"] = vectors
+        pure["description"] = (
+            "Pure-reference representation half of an exact parity pair; all "
+            "semantic identities, work, gas, and results equal the verified "
+            "materialized form."
+        )
+        dump_fixture(f"{pure_id}.yaml", pure)
+
+        expanded = deepcopy(source)
+        expanded["id"] = materialized_id
+        expanded["vectors"] = vectors
+        expanded["description"] = (
+            "A verified complete materialization replaces the pair's selected "
+            "managed pure reference without changing any semantic identity, "
+            "work, gas, graph, proof, or result evidence."
+        )
+        originals = {
+            document_id: deepcopy(record["document"])
+            for document_id, record in expanded["input"]["documents"].items()
+        }
+        for source_document_id, source_path, target_document_id in expansions:
+            _write_pointer(
+                expanded["input"]["documents"][source_document_id]["document"],
+                source_path,
+                originals[target_document_id],
+            )
+        dump_fixture(f"{materialized_id}.yaml", expanded)
+
+
+def remove_transient_history_oracle_seed() -> None:
+    """Remove generator-only history metadata and its final-revision seed.
+
+    ``materialize_processor_state`` consumes this stage to emit the dedicated
+    C-CLO-23-05 cyclic oracle.  The acyclic retry/revision fixtures already
+    carry their complete provider, cause, and result evidence and therefore do
+    not claim an empty cyclic-oracle route.  Keeping the shared draft file
+    would mislabel history metadata as a cyclic identity oracle.
+    """
+    path = ORC / "history-a10-b-attaches-a5.yaml"
+    route = "../../oracles/history-a10-b-attaches-a5.yaml"
+    for fixture_path in sorted(FIX.glob("*.yaml")):
+        fixture = yaml.safe_load(fixture_path.read_text())
+        if fixture.get("oracle") == route:
+            fixture.pop("oracle")
+            dump_fixture(fixture_path.name, fixture)
+    path.unlink()
+
+
+def align_prospective_activation_patches() -> None:
+    """Bind every activation patch to its one admitted inactive row.
+
+    Marker/materialization passes may legitimately churn a target BlueId. The
+    runtime patch is rewritten only after that churn, so the exact value it
+    inserts, the reserved binding, and (for history) the pending cursor remain
+    one byte-identical fact at the activation boundary.
+    """
+    for fixture_path in sorted(FIX.glob("*.yaml")):
+        fixture = yaml.safe_load(fixture_path.read_text())
+        if fixture["operation"] == "limit-micro":
+            continue
+        reservations: dict[tuple[str, str], dict[str, Any]] = {}
+        for binding in fixture["input"].get("occurrences", []):
+            if binding.get("active"):
+                continue
+            key = (binding["sourceDocumentId"], binding["sourcePath"])
+            if key in reservations:
+                raise AssertionError(
+                    f"multiple inactive reservations for {key!r} in {fixture_path.name}"
+                )
+            reservations[key] = binding
+        runtime = fixture["input"].get("runtime", {})
+        for bucket_name in ("handlers", "initializationHandlers"):
+            for qualified, result in runtime.get(bucket_name, {}).items():
+                source_document_id, separator, _handler_key = qualified.partition("/")
+                if not separator or not isinstance(result, dict):
+                    continue
+                for patch in result.get("patches", []):
+                    reservation = reservations.get(
+                        (source_document_id, patch.get("path"))
+                    )
+                    if reservation is None or patch.get("op") == "remove":
+                        continue
+                    patch["val"] = g.ref(reservation["expectedTargetBlueId"])
+        dump_fixture(fixture_path.name, fixture)
+
+
+def normalize_fixture_harness_boundary() -> None:
+    """Move all runner controls out of the closed production invocation.
+
+    The generator/refiner may use compact draft fields internally. Released
+    fixtures expose one exact normative ``input`` plus orthogonal top-level
+    harness evidence; changing provider availability on retry therefore cannot
+    change closureIdentity or invocationIdentity.
+    """
+    for fixture_path in sorted(FIX.glob("*.yaml")):
+        fixture = yaml.safe_load(fixture_path.read_text())
+        fixture_input = fixture["input"]
+        if fixture["operation"] == "limit-micro":
+            fixture["limit"] = deepcopy(fixture_input)
+            fixture["input"] = {}
+            dump_fixture(fixture_path.name, fixture)
+            continue
+
+        runtime = fixture_input.pop("runtime", {})
+        fixture["runtime"] = {
+            "handlers": deepcopy(runtime.get("handlers", {})),
+            "initializationHandlers": deepcopy(
+                runtime.get("initializationHandlers", {})
+            ),
+        }
+
+        uses_release_default = bool(
+            fixture_input["gasPolicy"].pop("usesReleaseDefault", False)
+        )
+        fixture["sharedLimitSource"] = (
+            {"kind": "RELEASE_DEFAULT"}
+            if uses_release_default
+            else {
+                "kind": "FIXTURE_OVERRIDE",
+                "sharedLimit": fixture_input["gasPolicy"]["sharedLimit"],
+            }
+        )
+
+        available = fixture_input.pop("availableDocuments", {})
+        nodes: dict[str, Any] = {}
+        for blue_id, value in available.items():
+            node = value.get("document") if isinstance(value, dict) and (
+                "document" in value and "blueId" in value
+            ) else value
+            if direct_blue_id(node) != blue_id:
+                raise AssertionError(
+                    f"provider node does not establish {blue_id} in {fixture_path.name}"
+                )
+            nodes[blue_id] = deepcopy(node)
+        requested_loads = fixture_input.pop("requestedProviderNodes", [])
+        old_expected = fixture["expected"]
+        required = (
+            old_expected.get("requiredBlueIds", [])
+            if old_expected.get("attemptOutcome") == "NeedsResources"
+            else []
+        )
+        expected_loads = old_expected.pop(
+            "providerLoads", requested_loads or sorted(nodes) or required
+        )
+        fixture["provider"] = {
+            "nodes": {key: nodes[key] for key in sorted(nodes)},
+            "expectedRequiredBlueIds": sorted(set(required)),
+            "expectedLoads": sorted(set(expected_loads)),
+        }
+
+        unrelated_count = fixture_input.pop("unrelatedDocumentCount", 0)
+        unrelated_opened = old_expected.pop("unrelatedDocumentsOpened", 0)
+        fixture["locality"] = {
+            "unrelatedDocumentCount": unrelated_count,
+            "expectedUnrelatedDocumentsOpened": unrelated_opened,
+        }
+        fixture["limit"] = {
+            "probe": fixture_input.pop("limitProbe", None),
+        }
+        dump_fixture(fixture_path.name, fixture)
+
+
 def content_sha256_identity(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -3172,12 +4124,15 @@ def derive_graph_changes(
             kind = "ADD"
         elif new is None:
             kind = "REMOVE"
-        elif (
-            old["targetDocumentId"] != new["targetDocumentId"]
-            or old["occurrenceIdentity"] != new["occurrenceIdentity"]
-        ):
-            kind = "RETARGET"
         else:
+            if (
+                old["targetDocumentId"] != new["targetDocumentId"]
+                or old["occurrenceIdentity"] != new["occurrenceIdentity"]
+            ):
+                raise AssertionError(
+                    "different-lineage occurrence retarget is unsupported in "
+                    "Contracts 1.0"
+                )
             kind = "REBIND"
         changes.append({
             "graphChangeOrdinal": len(changes),
@@ -3453,9 +4408,38 @@ def bind_exact_fixture_identities() -> None:
             continue
         fixture_input = fixture["input"]
         old_expected = fixture["expected"]
+        oracle_path = fixture.get("oracle")
+        if oracle_path is not None and not isinstance(oracle_path, str):
+            raise AssertionError(f"draft oracle route is not a path in {path.name}")
+        oracle_component_stages: list[dict[str, Any]] = []
+        oracle_finalization_stages: list[dict[str, Any]] = []
+
+        def capture_component_stage(
+            component: dict[str, Any], location: str
+        ) -> None:
+            stage = component.pop("oracleStage", None)
+            if stage is not None:
+                oracle_component_stages.append({
+                    "location": location,
+                    "componentStateIdentity": component[
+                        "componentStateIdentity"
+                    ],
+                    "stage": stage,
+                })
+
+        def publish_oracle_harness() -> None:
+            if isinstance(oracle_path, str):
+                fixture["oracle"] = {
+                    "path": oracle_path,
+                    "componentStages": oracle_component_stages,
+                    "finalizationStages": oracle_finalization_stages,
+                }
+            else:
+                fixture.pop("oracle", None)
 
         for component in fixture_input["components"]:
             decorate_component(path, fixture, component, fixture_input["documents"])
+            capture_component_stage(component, "INPUT")
         if isinstance(fixture_input.get("candidateCyclicProof"), dict) and (
             "wrongMasterBlueId" in fixture_input["candidateCyclicProof"]
         ):
@@ -3530,6 +4514,9 @@ def bind_exact_fixture_identities() -> None:
                 item[0]["logicalDeliveryKey"],
             ),
         )
+        fixture_input["directDeliveries"] = [
+            delivery for delivery, _identity in ordered_direct
+        ]
         direct_snapshot_identity = g.sha_id(
             "blue-contracts-direct-delivery-snapshot/1.0",
             [identity for _delivery, identity in ordered_direct],
@@ -3590,13 +4577,19 @@ def bind_exact_fixture_identities() -> None:
         fixture_input["invocationIdentity"] = invocation_identity
         fixture_input["environment"] = deepcopy(environment)
 
+        if old_expected.get("attemptOutcome") == "NeedsResources":
+            fixture["expected"] = {
+                "attemptOutcome": "NeedsResources",
+                "requiredBlueIds": sorted(old_expected["requiredBlueIds"]),
+            }
+            publish_oracle_harness()
+            dump_fixture(path.name, fixture)
+            continue
+
         old_to_new: dict[str, str] = {}
         work_items = list(old_expected.get("workTrace", []))
         if old_expected.get("rejectedWork"):
             work_items.append(old_expected["rejectedWork"])
-        historical = fixture_input.get("historicalTransitions", [])
-        historical_work_index = 0
-
         for work_item in work_items:
             scope_identity = g.sha_id(
                 "blue-contracts-managed-scope-key/1.0",
@@ -3627,9 +4620,6 @@ def bind_exact_fixture_identities() -> None:
                         "eventBlueId": work_item["eventBlueId"],
                     },
                 )
-            elif work_item["kind"] == "HISTORICAL_TRANSITION" and historical_work_index < len(historical):
-                source_identity = historical[historical_work_index]["transitionIdentity"]
-                historical_work_index += 1
             else:
                 source_identity = fixture_input["cause"]["causeIdentity"]
 
@@ -3647,24 +4637,41 @@ def bind_exact_fixture_identities() -> None:
             work_item["workIdentity"] = new_identity
             old_to_new[old_identity] = new_identity
 
-        for entry in old_expected.get("gasTrace", []):
+        bound_trace = trace_entries(old_expected)
+        for entry in bound_trace:
             old_identity = entry.get("workOccurrenceId")
             if old_identity in old_to_new:
                 entry["workOccurrenceId"] = old_to_new[old_identity]
-
-        if old_expected.get("attemptOutcome") == "NeedsResources":
-            fixture["expected"] = {
-                "attemptOutcome": "NeedsResources",
-                "requiredBlueIds": sorted(old_expected["requiredBlueIds"]),
-            }
-            dump_fixture(path.name, fixture)
-            continue
+        if "gasTraceFile" in old_expected:
+            trace_path = FIX / old_expected["gasTraceFile"]
+            g.dump(
+                trace_path,
+                {
+                    "schema": "blue-contracts-gas-trace/1.0",
+                    "fixture": fixture["id"],
+                    "entries": bound_trace,
+                },
+            )
+        else:
+            old_expected["gasTrace"] = bound_trace
 
         final_documents = old_expected["finalDocuments"]
         final_components = old_expected["finalComponents"]
         final_occurrences = old_expected["finalOccurrences"]
         for component in final_components:
             decorate_component(path, fixture, component, final_documents)
+            capture_component_stage(component, "RESULT")
+
+        normalized_finalizations: list[dict[str, Any]] = []
+        for finalization in old_expected.get("tentativeFinalizations", []):
+            normalized = deepcopy(finalization)
+            stage = normalized.pop("oracleStage", None)
+            if stage is not None:
+                oracle_finalization_stages.append({
+                    "ordinal": normalized["ordinal"],
+                    "stage": stage,
+                })
+            normalized_finalizations.append(normalized)
 
         output_closure_identity, output_binding_set_identity, _output_public_roots = (
             closure_identity(
@@ -3842,16 +4849,34 @@ def bind_exact_fixture_identities() -> None:
         )
 
         public_events: list[dict[str, Any]] = []
-        for ordinal, event_value in enumerate(old_expected.get("publicEvents", [])):
+        for ordinal, event_evidence in enumerate(old_expected.get("publicEvents", [])):
+            if (
+                isinstance(event_evidence, dict)
+                and set(event_evidence) == {
+                    "publicRootDocumentId", "eventOccurrenceOrdinal", "event"
+                }
+            ):
+                public_root_document_id = event_evidence["publicRootDocumentId"]
+                event_occurrence_ordinal = event_evidence["eventOccurrenceOrdinal"]
+                event_value = event_evidence["event"]
+            else:
+                if len(public_roots) != 1:
+                    raise AssertionError(
+                        "legacy public-event seed requires exactly one public Root"
+                    )
+                public_root_document_id = public_roots[0]
+                event_occurrence_ordinal = ordinal
+                event_value = event_evidence
             event_blue_id = direct_blue_id(event_value)
             public_events.append({
                 "publicEventOrdinal": ordinal,
-                "publicRootDocumentId": public_roots[0],
+                "eventOccurrenceOrdinal": event_occurrence_ordinal,
+                "publicRootDocumentId": public_root_document_id,
                 "eventOccurrenceIdentity": g.sha_id(
                     "blue-contracts-event-occurrence/1.0",
                     {
                         "invocationIdentity": invocation_identity,
-                        "eventOccurrenceOrdinal": ordinal,
+                        "eventOccurrenceOrdinal": event_occurrence_ordinal,
                         "eventBlueId": event_blue_id,
                     },
                 ),
@@ -3865,6 +4890,7 @@ def bind_exact_fixture_identities() -> None:
                     key: event[key]
                     for key in (
                         "publicEventOrdinal",
+                        "eventOccurrenceOrdinal",
                         "publicRootDocumentId",
                         "eventOccurrenceIdentity",
                         "eventBlueId",
@@ -3887,9 +4913,7 @@ def bind_exact_fixture_identities() -> None:
             "outputClosureIdentity": output_closure_identity,
             "atomic": True,
             "workTrace": old_expected.get("workTrace", []),
-            "tentativeFinalizations": old_expected.get(
-                "tentativeFinalizations", []
-            ),
+            "tentativeFinalizations": normalized_finalizations,
             "graphGeneration": old_expected["finalGraphGeneration"],
             "resultingDocuments": resulting_documents,
             "resultingComponents": resulting_components,
@@ -4047,6 +5071,7 @@ def bind_exact_fixture_identities() -> None:
             }
 
         fixture["expected"] = complete_result
+        publish_oracle_harness()
         dump_fixture(path.name, fixture)
 
 
@@ -4067,6 +5092,7 @@ def externalize_large_gas_trace() -> None:
     dump_fixture(name, fixture)
 
 def refine() -> None:
+    validate_multi_handler_refiner_self_check()
     add_exact_identity_visibility_fixture()
     rewrite_loop_gas_traces()
     rewrite_frozen_edge_removal()
@@ -4077,19 +5103,25 @@ def refine() -> None:
     add_containing_spine_identity_fixture()
     write_limit_boundary_microfixtures()
     rewrite_outer_public_and_failure()
+    add_multiple_public_roots_fixture()
     rewrite_initialization_cycle()
     ensure_direct_delivery_work()
     order_initialization_batch_work()
     normalize_event_occurrence_ordinals()
+    normalize_public_event_evidence()
     normalize_finalization_boundaries()
     add_checkpoint_retirement_coverage_fixture()
     materialize_processor_state()
+    remove_transient_history_oracle_seed()
+    align_prospective_activation_patches()
+    add_representation_parity_fixtures()
     normalize_admission_candidates()
     normalize_literal_rollback_results()
     ensure_complete_gas_traces()
     add_rejected_owner_coverage_fixtures()
-    bind_exact_fixture_identities()
     externalize_large_gas_trace()
+    normalize_fixture_harness_boundary()
+    bind_exact_fixture_identities()
     print("REFINED_CLOSURE_FIXTURES_OK")
 
 

@@ -3,7 +3,7 @@ id: c-snd-04
 vectors:
 - C-SND-04
 category: snd
-description: Cyclic-set member mutation is rejected before provider traversal or mutation.
+description: An ordinary isolated PROCESS may preserve or replace an opaque MASTER#index edge, but a patch that traverses inside that edge is rejected before cyclic-provider traversal or mutation.
 operation: process
 input:
   root:

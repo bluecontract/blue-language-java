@@ -3,7 +3,7 @@ $id: blue-contracts-closure-fixture/1.0
 title: Blue Contracts 1.0 affected-closure conformance fixture
 type: object
 additionalProperties: false
-required: [schema, id, vectors, category, operation, description, releaseManifest, input, expected]
+required: [schema, id, vectors, category, operation, description, releaseManifest, input, expected, limit]
 properties:
   schema: {const: blue-contracts-closure-fixture/1.0}
   id: {type: string, pattern: '^[a-z0-9][a-z0-9-]*$'}
@@ -17,7 +17,12 @@ properties:
   operation: {enum: [process-closure, admit-closure, limit-micro]}
   description: {type: string, minLength: 1}
   releaseManifest: {type: string, const: ../../release-manifest.yaml}
-  oracle: {type: string}
+  oracle: {$ref: '#/$defs/oracleHarness'}
+  runtime: {$ref: '#/$defs/runtimeHarness'}
+  sharedLimitSource: {$ref: '#/$defs/sharedLimitSourceHarness'}
+  provider: {$ref: '#/$defs/providerHarness'}
+  locality: {$ref: '#/$defs/localityHarness'}
+  limit: {}
   input: {}
   expected: {}
 allOf:
@@ -26,12 +31,15 @@ allOf:
       operation: {const: limit-micro}
   then:
     properties:
-      input: {$ref: '#/$defs/limitInput'}
+      input: {$ref: '#/$defs/emptyHarnessInput'}
       expected: {$ref: '#/$defs/limitExpected'}
+      limit: {$ref: '#/$defs/limitInput'}
   else:
+    required: [runtime, sharedLimitSource, provider, locality]
     properties:
       input: {$ref: '#/$defs/input'}
       expected: {$ref: '#/$defs/expected'}
+      limit: {$ref: '#/$defs/invocationLimitHarness'}
 - if:
     properties:
       operation: {const: process-closure}
@@ -42,7 +50,7 @@ allOf:
         properties:
           cause:
             properties:
-              kind: {const: external}
+              kind: {enum: [external, managed-revision]}
           admissionCandidate: {type: 'null'}
           admissionCandidateIdentity: {type: 'null'}
 - if:
@@ -56,6 +64,22 @@ allOf:
           cause:
             properties:
               kind: {const: admission}
+          directDeliveries: {maxItems: 0}
+- if:
+    properties:
+      operation: {const: process-closure}
+      input:
+        properties:
+          cause:
+            properties:
+              kind: {const: managed-revision}
+            required: [kind]
+        required: [cause]
+    required: [operation, input]
+  then:
+    properties:
+      input:
+        properties:
           directDeliveries: {maxItems: 0}
 $defs:
   blueValue: {}
@@ -80,6 +104,111 @@ $defs:
     oneOf:
     - {$ref: '#/$defs/nonNegativeSafeInteger'}
     - {type: 'null'}
+  nullablePositiveSafeInteger:
+    oneOf:
+    - {$ref: '#/$defs/positiveSafeInteger'}
+    - {type: 'null'}
+  managedScopePath:
+    description: Normalized absolute Runtime/JSON Pointer; '/' is the managed Root scope.
+    type: string
+    pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'
+  emptyHarnessInput:
+    description: limit-micro has no normative closure invocation input; its generated probe is the top-level limit harness field.
+    type: object
+    additionalProperties: false
+  runtimeHarness:
+    description: Harness-only scripted runtime behavior; never part of AffectedClosureSnapshot or invocation identity.
+    type: object
+    additionalProperties: false
+    required: [handlers, initializationHandlers]
+    properties:
+      handlers:
+        type: object
+        additionalProperties: {$ref: '#/$defs/handlerResult'}
+      initializationHandlers:
+        type: object
+        additionalProperties: {$ref: '#/$defs/handlerResult'}
+  sharedLimitSourceHarness:
+    description: Harness-only provenance for the exact gasPolicy.sharedLimit already present in normative input.
+    oneOf:
+    - type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind: {const: RELEASE_DEFAULT}
+    - type: object
+      additionalProperties: false
+      required: [kind, sharedLimit]
+      properties:
+        kind: {const: FIXTURE_OVERRIDE}
+        sharedLimit: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  providerHarness:
+    description: Harness-only exact-node availability and expected provider interaction. Availability changes do not change normative closure or invocation identity.
+    type: object
+    additionalProperties: false
+    required: [nodes, expectedRequiredBlueIds, expectedLoads]
+    properties:
+      nodes:
+        type: object
+        propertyNames: {pattern: '^[1-9A-HJ-NP-Za-km-z]+(?:#(?:0|[1-9][0-9]*))?$'}
+        additionalProperties: {$ref: '#/$defs/blueValue'}
+      expectedRequiredBlueIds:
+        type: array
+        uniqueItems: true
+        items: {$ref: '#/$defs/blueId'}
+      expectedLoads:
+        type: array
+        uniqueItems: true
+        items: {$ref: '#/$defs/blueId'}
+  localityHarness:
+    description: Harness-only locality setup and observation; neither field is production result API.
+    type: object
+    additionalProperties: false
+    required: [unrelatedDocumentCount, expectedUnrelatedDocumentsOpened]
+    properties:
+      unrelatedDocumentCount: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      expectedUnrelatedDocumentsOpened: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  invocationLimitHarness:
+    description: Harness-only invocation-limit probe. The normative portable limit policy remains in input.environment.
+    type: object
+    additionalProperties: false
+    required: [probe]
+    properties:
+      probe:
+        oneOf:
+        - {type: 'null'}
+        - type: object
+          additionalProperties: false
+          required: [limit, value]
+          properties:
+            limit: {type: string, minLength: 1}
+            value: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  oracleHarness:
+    description: Harness-only route from exact component/finalization evidence to Language oracle stages; labels never enter production API shapes or identities.
+    type: object
+    additionalProperties: false
+    required: [path, componentStages, finalizationStages]
+    properties:
+      path: {type: string, minLength: 1}
+      componentStages:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [location, componentStateIdentity, stage]
+          properties:
+            location: {enum: [INPUT, RESULT]}
+            componentStateIdentity: {$ref: '#/$defs/sha256Identity'}
+            stage: {type: string, minLength: 1}
+      finalizationStages:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [ordinal, stage]
+          properties:
+            ordinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+            stage: {type: string, minLength: 1}
   document:
     type: object
     additionalProperties: false
@@ -103,11 +232,23 @@ $defs:
       bindingPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
       sourceDocumentId: {$ref: '#/$defs/documentId'}
       sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
-      activationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      activationGeneration:
+        description: Positive generation for embedded occurrences; first reservation/activation is 1, active removal allocates its same-lineage inactive successor at exactly previous plus 1, that successor is output-only until committed and supplied as a later invocation input, and later re-add preserves its generation and occurrence identity (ordinary later exact-state rebind may change bindingIdentity). Same-invocation remove-then-re-add and different-lineage retarget are unsupported in Contracts 1.0. Root scope generation 0 is not an occurrence row.
+        $ref: '#/$defs/positiveSafeInteger'
       targetDocumentId: {$ref: '#/$defs/documentId'}
-      expectedTargetBlueId: {$ref: '#/$defs/blueId'}
+      expectedTargetBlueId:
+        description: Exact identity established equally by a pure reference, verified inline acyclic node, or verified materialized cyclic member with its complete owning proof; mixed blueId objects are invalid.
+        $ref: '#/$defs/blueId'
       active: {type: boolean}
       pendingHistoricalEpoch: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+    allOf:
+    - if:
+        properties:
+          active: {const: true}
+        required: [active]
+      then:
+        properties:
+          pendingHistoricalEpoch: {type: 'null'}
   component:
     type: object
     additionalProperties: false
@@ -130,7 +271,6 @@ $defs:
       masterBlueId: {$ref: '#/$defs/blueId'}
       completeCyclicProof: {$ref: '#/$defs/blueValue'}
       cyclicProofIdentity: {$ref: '#/$defs/sha256Identity'}
-      oracleStage: {type: string}
     allOf:
     - if:
         properties:
@@ -145,19 +285,20 @@ $defs:
           - required: [completeCyclicProof]
           - required: [cyclicProofIdentity]
   resultComponent:
-    description: Closed public component result; oracle stage labels are harness-only finalization evidence.
-    allOf:
-    - {$ref: '#/$defs/component'}
-    - not:
-        required: [oracleStage]
+    description: Closed public component result; oracle stage labels exist only in the top-level oracle harness.
+    $ref: '#/$defs/component'
   directDelivery:
     type: object
     additionalProperties: false
     required: [targetDocumentId, scopePath, activationGeneration, channelKey, logicalDeliveryKey, rawOccurrenceOrder]
     properties:
       targetDocumentId: {$ref: '#/$defs/documentId'}
-      scopePath: {type: string}
-      activationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      scopePath:
+        description: Contracts 1.0 closure profile admits direct work only at a managed document Root scope.
+        const: /
+      activationGeneration:
+        description: Root managed-scope activation generation is exactly zero.
+        const: 0
       channelKey: {type: string}
       logicalDeliveryKey: {type: string}
       rawOccurrenceOrder: {$ref: '#/$defs/nonNegativeSafeInteger'}
@@ -187,6 +328,23 @@ $defs:
         triggeringEventBlueId: {$ref: '#/$defs/nullableBlueId'}
         parentTransitionIdentity: {$ref: '#/$defs/nullableSha256Identity'}
         policyIdentity: {$ref: '#/$defs/sha256Identity'}
+    - type: object
+      additionalProperties: false
+      required: [kind, causeIdentity, targetOccurrenceIdentity, childDocumentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId, afterDocument, originalSourceCauseIdentity, sourceRevisionReceiptIdentity]
+      properties:
+        kind: {const: managed-revision}
+        causeIdentity: {$ref: '#/$defs/sha256Identity'}
+        targetOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+        childDocumentId: {$ref: '#/$defs/documentId'}
+        fromEpoch: {$ref: '#/$defs/nonNegativeSafeInteger'}
+        toEpoch:
+          description: Exactly fromEpoch plus 1; enforced by the semantic fixture validator because JSON Schema cannot express cross-field arithmetic.
+          $ref: '#/$defs/positiveSafeInteger'
+        beforeBlueId: {$ref: '#/$defs/blueId'}
+        afterBlueId: {$ref: '#/$defs/blueId'}
+        afterDocument: {$ref: '#/$defs/blueValue'}
+        originalSourceCauseIdentity: {$ref: '#/$defs/sha256Identity'}
+        sourceRevisionReceiptIdentity: {$ref: '#/$defs/sha256Identity'}
   candidateCyclicMember:
     type: object
     additionalProperties: false
@@ -205,7 +363,7 @@ $defs:
       bindingPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
       sourceDocumentId: {$ref: '#/$defs/documentId'}
       sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
-      activationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      activationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
       targetDocumentId: {$ref: '#/$defs/documentId'}
       expectedTargetBlueId: {$ref: '#/$defs/blueId'}
       active: {type: boolean}
@@ -260,8 +418,20 @@ $defs:
     required: [op, path]
     properties:
       op: {enum: [add, replace, remove]}
-      path: {type: string}
+      path:
+        description: Normalized non-Root Runtime/JSON Pointer; empty segments and malformed escapes are invalid.
+        type: string
+        pattern: '^/(?:[^~/]|~0|~1|/)*(?:[^~/]|~0|~1)$'
       val: {$ref: '#/$defs/blueValue'}
+    allOf:
+    - if:
+        properties:
+          op: {enum: [add, replace]}
+        required: [op]
+      then:
+        required: [val]
+      else:
+        not: {required: [val]}
   handlerResult:
     type: object
     additionalProperties: false
@@ -269,19 +439,6 @@ $defs:
       patches: {type: array, items: {$ref: '#/$defs/patch'}}
       events: {type: array, items: {$ref: '#/$defs/blueValue'}}
       fail: {type: string}
-  transition:
-    type: object
-    additionalProperties: false
-    required: [documentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId, afterDocument, transitionIdentity]
-    properties:
-      documentId: {$ref: '#/$defs/documentId'}
-      fromEpoch: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      toEpoch: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      beforeBlueId: {$ref: '#/$defs/blueId'}
-      afterBlueId: {$ref: '#/$defs/blueId'}
-      afterDocument: {$ref: '#/$defs/blueValue'}
-      transitionIdentity: {$ref: '#/$defs/sha256Identity'}
-      sourceOrder: {type: array, minItems: 3, items: {}}
   gasPolicy:
     type: object
     additionalProperties: false
@@ -290,7 +447,6 @@ $defs:
       policyIdentity: {$ref: '#/$defs/sha256Identity'}
       sharedLimit: {$ref: '#/$defs/nonNegativeSafeInteger'}
       label: {type: string, minLength: 1}
-      usesReleaseDefault: {type: boolean}
       localLimits:
         type: object
         additionalProperties: {$ref: '#/$defs/nonNegativeSafeInteger'}
@@ -338,7 +494,7 @@ $defs:
   input:
     type: object
     additionalProperties: false
-    required: [graphGeneration, cause, admissionCandidate, admissionCandidateIdentity, documents, occurrences, components, directDeliveries, publicRootDocumentIds, directDeliverySnapshotIdentity, occurrenceBindingSetIdentity, closureIdentity, invocationIdentity, gasPolicy, environment, runtime]
+    required: [graphGeneration, cause, admissionCandidate, admissionCandidateIdentity, documents, occurrences, components, directDeliveries, publicRootDocumentIds, directDeliverySnapshotIdentity, occurrenceBindingSetIdentity, closureIdentity, invocationIdentity, gasPolicy, environment]
     properties:
       graphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
       cause: {$ref: '#/$defs/cause'}
@@ -361,29 +517,6 @@ $defs:
       invocationIdentity: {$ref: '#/$defs/sha256Identity'}
       gasPolicy: {$ref: '#/$defs/gasPolicy'}
       environment: {$ref: '#/$defs/environment'}
-      availableDocuments:
-        type: object
-        additionalProperties: {$ref: '#/$defs/document'}
-      runtime:
-        type: object
-        additionalProperties: false
-        required: [handlers]
-        properties:
-          handlers:
-            type: object
-            additionalProperties: {$ref: '#/$defs/handlerResult'}
-          initializationHandlers:
-            type: object
-            additionalProperties: {$ref: '#/$defs/handlerResult'}
-      historicalTransitions: {type: array, items: {$ref: '#/$defs/transition'}}
-      requestedProviderNodes: {type: array, items: {$ref: '#/$defs/blueId'}}
-      unrelatedDocumentCount: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      limitProbe:
-        type: object
-        additionalProperties: false
-        properties:
-          limit: {type: string}
-          value: {$ref: '#/$defs/nonNegativeSafeInteger'}
     allOf:
     - if:
         properties:
@@ -428,10 +561,10 @@ $defs:
   finalization:
     type: object
     additionalProperties: false
-    required: [ordinal, oracleStage, boundary, masterBlueId, memberBlueIds, canonicalBytes]
+    description: Production finalization evidence only; stage routing is top-level oracle harness data.
+    required: [ordinal, boundary, masterBlueId, memberBlueIds, canonicalBytes]
     properties:
       ordinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      oracleStage: {type: string}
       boundary: {$ref: '#/$defs/finalizationBoundary'}
       masterBlueId: {$ref: '#/$defs/blueId'}
       canonicalBytes: {$ref: '#/$defs/positiveSafeInteger'}
@@ -444,12 +577,14 @@ $defs:
     required: [ordinal, kind, targetDocumentId, channelKey, targetManagedScopeIdentity, sourceOccurrenceIdentity, workIdentity]
     properties:
       ordinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      kind: {enum: [EXTERNAL_DELIVERY, INITIALIZATION, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE, LIFECYCLE, HISTORICAL_TRANSITION, CONTAINING_REFERENCE_UPDATE]}
+      kind: {enum: [EXTERNAL_DELIVERY, INITIALIZATION, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE, LIFECYCLE, CONTAINING_REFERENCE_UPDATE]}
       targetDocumentId: {$ref: '#/$defs/documentId'}
       channelKey: {type: string}
       eventBlueId: {$ref: '#/$defs/blueId'}
       occurrenceOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      targetManagedScopeIdentity: {$ref: '#/$defs/sha256Identity'}
+      targetManagedScopeIdentity:
+        description: Root managed-scope identity of targetDocumentId under the Contracts 1.0 closure profile; recomputed semantically.
+        $ref: '#/$defs/sha256Identity'
       sourceOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
       workIdentity: {$ref: '#/$defs/sha256Identity'}
   observation:
@@ -472,8 +607,12 @@ $defs:
     properties:
       channelOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
       managedDocumentId: {$ref: '#/$defs/documentId'}
-      scopePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
-      scopeActivationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      scopePath:
+        description: Contracts 1.0 closure subscription results are Root-scoped.
+        const: /
+      scopeActivationGeneration:
+        description: Root managed-scope activation generation is exactly zero.
+        const: 0
       rawChannelKey: {type: string, minLength: 1}
       effectiveRuntimeContributionBlueId: {$ref: '#/$defs/blueId'}
       subscriptionHeaderBlueId: {$ref: '#/$defs/blueId'}
@@ -497,15 +636,15 @@ $defs:
     required: [graphChangeOrdinal, changeKind, sourceDocumentId, sourcePath, beforeActivationGeneration, beforeOccurrenceIdentity, beforeBindingIdentity, beforeTargetDocumentId, beforeTargetBlueId, afterActivationGeneration, afterOccurrenceIdentity, afterBindingIdentity, afterTargetDocumentId, afterTargetBlueId]
     properties:
       graphChangeOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      changeKind: {enum: [ADD, REMOVE, RETARGET, REBIND]}
+      changeKind: {enum: [ADD, REMOVE, REBIND]}
       sourceDocumentId: {$ref: '#/$defs/documentId'}
       sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
-      beforeActivationGeneration: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+      beforeActivationGeneration: {$ref: '#/$defs/nullablePositiveSafeInteger'}
       beforeOccurrenceIdentity: {$ref: '#/$defs/nullableSha256Identity'}
       beforeBindingIdentity: {$ref: '#/$defs/nullableSha256Identity'}
       beforeTargetDocumentId: {$ref: '#/$defs/nullableDocumentId'}
       beforeTargetBlueId: {$ref: '#/$defs/nullableBlueId'}
-      afterActivationGeneration: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+      afterActivationGeneration: {$ref: '#/$defs/nullablePositiveSafeInteger'}
       afterOccurrenceIdentity: {$ref: '#/$defs/nullableSha256Identity'}
       afterBindingIdentity: {$ref: '#/$defs/nullableSha256Identity'}
       afterTargetDocumentId: {$ref: '#/$defs/nullableDocumentId'}
@@ -522,7 +661,7 @@ $defs:
           beforeBindingIdentity: {type: 'null'}
           beforeTargetDocumentId: {type: 'null'}
           beforeTargetBlueId: {type: 'null'}
-          afterActivationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          afterActivationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
           afterOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
           afterBindingIdentity: {$ref: '#/$defs/sha256Identity'}
           afterTargetDocumentId: {$ref: '#/$defs/documentId'}
@@ -533,7 +672,7 @@ $defs:
         required: [changeKind]
       then:
         properties:
-          beforeActivationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          beforeActivationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
           beforeOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
           beforeBindingIdentity: {$ref: '#/$defs/sha256Identity'}
           beforeTargetDocumentId: {$ref: '#/$defs/documentId'}
@@ -545,16 +684,16 @@ $defs:
           afterTargetBlueId: {type: 'null'}
     - if:
         properties:
-          changeKind: {enum: [RETARGET, REBIND]}
+          changeKind: {const: REBIND}
         required: [changeKind]
       then:
         properties:
-          beforeActivationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          beforeActivationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
           beforeOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
           beforeBindingIdentity: {$ref: '#/$defs/sha256Identity'}
           beforeTargetDocumentId: {$ref: '#/$defs/documentId'}
           beforeTargetBlueId: {$ref: '#/$defs/blueId'}
-          afterActivationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          afterActivationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
           afterOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
           afterBindingIdentity: {$ref: '#/$defs/sha256Identity'}
           afterTargetDocumentId: {$ref: '#/$defs/documentId'}
@@ -584,7 +723,9 @@ $defs:
     required: [checkpointWriteOrdinal, targetManagedScopeIdentity, rawChannelKey, beforePresent, beforeDomainBlueId, beforeDomainValue, beforeSubjectBlueId, afterPresent, afterDomainBlueId, afterDomainValue, afterSubjectBlueId]
     properties:
       checkpointWriteOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      targetManagedScopeIdentity: {$ref: '#/$defs/sha256Identity'}
+      targetManagedScopeIdentity:
+        description: Root managed-scope identity of the receipt's managed document; recomputed semantically.
+        $ref: '#/$defs/sha256Identity'
       rawChannelKey: {type: string, minLength: 1}
       beforePresent: {type: boolean}
       beforeDomainBlueId: {$ref: '#/$defs/nullableBlueId'}
@@ -635,7 +776,9 @@ $defs:
     properties:
       subscriptionDeltaOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
       operation: {enum: [ADD, REMOVE, REPLACE]}
-      targetManagedScopeIdentity: {$ref: '#/$defs/sha256Identity'}
+      targetManagedScopeIdentity:
+        description: Root managed-scope identity of the nested ChannelOccurrence managedDocumentId; recomputed semantically.
+        $ref: '#/$defs/sha256Identity'
       channelOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
       beforeSubscriptionIdentity: {$ref: '#/$defs/nullableSha256Identity'}
       afterSubscriptionIdentity: {$ref: '#/$defs/nullableSha256Identity'}
@@ -699,9 +842,12 @@ $defs:
   publicEvent:
     type: object
     additionalProperties: false
-    required: [publicEventOrdinal, publicRootDocumentId, eventOccurrenceIdentity, eventBlueId, event]
+    required: [publicEventOrdinal, eventOccurrenceOrdinal, publicRootDocumentId, eventOccurrenceIdentity, eventBlueId, event]
     properties:
       publicEventOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      eventOccurrenceOrdinal:
+        description: Invocation-global emission ordinal bound by eventOccurrenceIdentity; may have gaps in the public projection.
+        $ref: '#/$defs/nonNegativeSafeInteger'
       publicRootDocumentId: {$ref: '#/$defs/documentId'}
       eventOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
       eventBlueId: {$ref: '#/$defs/blueId'}
@@ -718,13 +864,20 @@ $defs:
       weight: {$ref: '#/$defs/nonNegativeSafeInteger'}
       subtotal: {$ref: '#/$defs/nonNegativeSafeInteger'}
       documentId: {$ref: '#/$defs/documentId'}
-      scopePath: {type: string}
-      activationGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      scopePath:
+        description: When present, closure gas scope context is the managed Root.
+        const: /
+      activationGeneration:
+        description: When present, closure gas scope context uses Root generation zero.
+        const: 0
       componentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
       contractKey: {type: string}
       logicalPath: {type: string}
       workOccurrenceId: {$ref: '#/$defs/sha256Identity'}
       reason: {type: string}
+    dependentRequired:
+      scopePath: [activationGeneration]
+      activationGeneration: [scopePath]
   applicableCap:
     oneOf:
     - type: object
@@ -934,8 +1087,6 @@ $defs:
       gasTraceIdentity: {$ref: '#/$defs/sha256Identity'}
       platformCommitCompanion: {$ref: '#/$defs/platformCommitCompanion'}
       observations: {type: array, items: {$ref: '#/$defs/observation'}}
-      providerLoads: {type: array, items: {$ref: '#/$defs/blueId'}}
-      unrelatedDocumentsOpened: {$ref: '#/$defs/nonNegativeSafeInteger'}
     allOf:
     - oneOf:
       - required: [gasTrace]
@@ -948,8 +1099,13 @@ $defs:
         required: [status]
       then:
         required: [platformCommitCompanion]
+        properties:
+          rollbackToInput: {const: false}
       else:
-        not: {required: [platformCommitCompanion]}
+        allOf:
+        - properties:
+            rollbackToInput: {const: true}
+        - not: {required: [platformCommitCompanion]}
     - if:
         properties:
           status: {const: gas-limit-exceeded}

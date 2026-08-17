@@ -4,6 +4,7 @@ import blue.contracts.closure.ComponentKind;
 import blue.contracts.closure.ClosureProcessResult;
 import blue.contracts.closure.DocumentId;
 import blue.contracts.closure.ManagedOccurrenceBinding;
+import blue.contracts.closure.ManagedRevisionCause;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -11,13 +12,17 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
-/** Dependency-free smoke proof for required-closure selection and one policy. */
+/** Dependency-free template shape smoke; this is not implementation conformance. */
 public final class ReferenceCoordinationIntegrationMain {
     public static void main(String[] args) {
         DocumentId a = new DocumentId("a");
         DocumentId b = new DocumentId("b");
         DocumentId outer = new DocumentId("outer");
         DocumentId unrelated = new DocumentId("unrelated");
+
+        require(new ComponentId("\uE000").compareTo(
+                new ComponentId("\uD83D\uDE00")) < 0,
+                "component identity Unicode scalar order");
 
         ComponentId cycle = new ComponentId("cycle");
         ComponentId outerComponent = new ComponentId("outer");
@@ -79,12 +84,53 @@ public final class ReferenceCoordinationIntegrationMain {
         require(suspended instanceof ClosureProcessResult.NeedsResources,
                 "NeedsResources remains a separate attempt branch");
 
+        ManagedRevisionCause a5a6 = revision(a, "b-a", 5, "A5", "A6");
+        ManagedRevisionCause a6a7 = revision(a, "b-a", 6, "A6", "A7");
+        ManagedRevisionCatchUpBarrier barrier = new ManagedRevisionCatchUpBarrier(
+                "b-a",
+                a,
+                Arrays.asList(a5a6, a6a7),
+                "catch-up-barrier");
+        require(barrier.nextAfterCommit(5, "A5") == a5a6,
+                "coordination dispatches one committed-cursor step");
+        require(barrier.blocksLiveWork(Long.valueOf(5))
+                        && !barrier.blocksLiveWork(null),
+                "coordination no-overtake barrier follows pending cursor");
+
         new CoordinationExecutionPolicy(
                 "release-default",
                 100_000L,
                 Collections.<DocumentId, Long>emptyMap(),
                 "Contracts 1.0 release default");
-        System.out.println("BLUE_COORDINATION_CLOSURE_REFERENCE_OK");
+        System.out.println("BLUE_COORDINATION_CLOSURE_TEMPLATE_SHAPE_SMOKE_OK");
+    }
+
+    private static ManagedRevisionCause revision(
+            DocumentId child,
+            String occurrenceIdentity,
+            long fromEpoch,
+            String beforeBlueId,
+            String afterBlueId) {
+        long toEpoch = fromEpoch + 1L;
+        Object afterDocument = new Object();
+        String receipt = "receipt-" + toEpoch;
+        String cause = "cause-" + toEpoch;
+        return new ManagedRevisionCause(
+                cause,
+                occurrenceIdentity,
+                child,
+                fromEpoch,
+                toEpoch,
+                beforeBlueId,
+                afterBlueId,
+                afterDocument,
+                "source-cause-" + toEpoch,
+                receipt,
+                exactNode -> exactNode == afterDocument
+                        ? afterBlueId : "unexpected",
+                (id, from, to, before, after, sourceCause) -> receipt,
+                (occurrence, id, from, to, before, after, sourceCause,
+                        receiptIdentity) -> cause);
     }
 
     private static void require(boolean condition, String message) {

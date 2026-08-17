@@ -85,11 +85,12 @@ public final class AdmissionCandidate {
             for (int index = 1; index < copy.size(); index++) {
                 CandidateOccurrenceBinding before = copy.get(index - 1);
                 CandidateOccurrenceBinding after = copy.get(index);
-                int occurrenceOrder = before.occurrenceIdentity().compareTo(
-                        after.occurrenceIdentity());
+                int occurrenceOrder = CanonicalOrders.compareUnicodeScalars(
+                        before.occurrenceIdentity(), after.occurrenceIdentity());
                 if (occurrenceOrder > 0
                         || (occurrenceOrder == 0
-                        && before.bindingIdentity().compareTo(
+                        && CanonicalOrders.compareUnicodeScalars(
+                                before.bindingIdentity(),
                                 after.bindingIdentity()) >= 0)) {
                     throw new IllegalArgumentException(
                             "candidateOccurrenceBindings not in canonical order");
@@ -135,9 +136,14 @@ public final class AdmissionCandidate {
                     bindingPolicyIdentity, "bindingPolicyIdentity");
             this.sourceDocumentId = Objects.requireNonNull(
                     sourceDocumentId, "sourceDocumentId");
-            this.sourcePath = Objects.requireNonNull(sourcePath, "sourcePath");
+            this.sourcePath = CanonicalOrders.requireRuntimePointer(
+                    sourcePath, "sourcePath");
             this.activationGeneration = CanonicalOrders.requireSafeInteger(
                     activationGeneration, "activationGeneration");
+            if (this.activationGeneration == 0L) {
+                throw new IllegalArgumentException(
+                        "candidate activationGeneration starts at 1");
+            }
             this.targetDocumentId = Objects.requireNonNull(
                     targetDocumentId, "targetDocumentId");
             this.expectedTargetBlueId = Objects.requireNonNull(

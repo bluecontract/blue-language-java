@@ -10,6 +10,8 @@ from typing import Any
 
 import yaml
 
+from jcs import dumps as jcs_dumps
+
 ROOT = Path(__file__).resolve().parents[1]
 FIX = ROOT / "conformance/contracts/fixtures"
 ORC = ROOT / "conformance/contracts/oracles"
@@ -35,7 +37,7 @@ def sha256_file(path: Path) -> str:
 
 
 def canonical_json(value: Any) -> bytes:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return jcs_dumps(value)
 
 
 def package_identity(value: dict[str, Any], field: str) -> str:
@@ -170,7 +172,7 @@ def build_fixture_manifest(ordinary: list[Path], closure: list[Path], vector_cov
         "files": files,
         "packageIdentityAlgorithm": {
             "digest": "sha256",
-            "encoding": "UTF-8 canonical JSON with sorted keys",
+            "encoding": "RFC 8785 canonical JSON encoded as UTF-8",
             "normalization": "packageIdentity is null before hashing",
         },
         "packageIdentity": None,
@@ -190,7 +192,7 @@ def build_oracle_manifest() -> dict[str, Any]:
         "files": entries,
         "packageIdentityAlgorithm": {
             "digest": "sha256",
-            "encoding": "UTF-8 canonical JSON with sorted keys",
+            "encoding": "RFC 8785 canonical JSON encoded as UTF-8",
             "normalization": "packageIdentity is null before hashing",
         },
         "packageIdentity": None,
@@ -205,6 +207,7 @@ def baseline_source_hashes(language_root: Path | None) -> list[dict[str, str]]:
         return []
     relative = [
         "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
+        "blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java",
         "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
         "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
         "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
@@ -318,7 +321,7 @@ def build_release_manifest(fixture_manifest: dict[str, Any], oracle_manifest: di
         },
         "releaseIdentityAlgorithm": {
             "digest": "sha256",
-            "encoding": "UTF-8 canonical JSON with sorted keys",
+            "encoding": "RFC 8785 canonical JSON encoded as UTF-8",
             "normalization": "releaseIdentity is null before hashing",
         },
         "releaseIdentity": None,
@@ -354,7 +357,7 @@ def build_package_manifest(release: dict[str, Any]) -> dict[str, Any]:
         "files": files,
         "packageIdentityAlgorithm": {
             "digest": "sha256",
-            "encoding": "UTF-8 canonical JSON with sorted keys",
+            "encoding": "RFC 8785 canonical JSON encoded as UTF-8",
             "normalization": "packageIdentity is null and package-manifest.yaml is excluded before hashing",
         },
         "packageIdentity": None,

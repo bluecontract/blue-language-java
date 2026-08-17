@@ -10,11 +10,11 @@ sibling directories.
 
 ```text
 process-closure
-    Process one original exact external event against one frozen affected
-    closure. The closure may begin acyclic and may form, merge or split cyclic
-    components during the invocation. This operation exposes the closed
-    Complete-or-NeedsResources attempt result; NeedsResources commits neither
-    semantic state nor gas.
+    Process either one original exact external event or one exact contiguous
+    ManagedRevisionCause against one frozen affected closure. The closure may
+    begin acyclic and may form, merge or split cyclic components during the
+    invocation. This operation exposes the closed Complete-or-NeedsResources
+    attempt result; NeedsResources commits neither semantic state nor gas.
 
 admit-closure
     Initialize/admit one frozen affected closure without fabricating a Timeline
@@ -74,10 +74,14 @@ c-clo-04-default-policy-loop.yaml
     stops the same-event A/B loop.
 
 c-clo-22-a10-attach-a5-needs-resources.yaml
-c-clo-23-a10-attach-a5-catch-up.yaml
+c-clo-23-00-attach-a5-retry.yaml
+c-clo-23-01-a5-to-a6.yaml through c-clo-23-05-a9-to-a10.yaml
     A is authoritative at epoch 10 while B supplies A epoch 5. The first case
-    lacks exact revision evidence and commits nothing; the second applies the
-    exact contiguous A5->A10 chain without downgrading or forking A.
+    requests only the missing exact A5 node. The provider-only retry commits an
+    inactive cursor-5 attachment, followed by five separately committed
+    `ManagedRevisionCause` fixtures. The final fixture reconciles historical
+    A10 to the latest authoritative same-lineage A identity before activation,
+    without downgrading or forking A.
 
 c-clo-33-checkpoint-domain-retirement.yaml
     A retired source checkpoint domain is treated as virtual empty, replaced

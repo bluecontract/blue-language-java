@@ -23,18 +23,22 @@ public final class WorkOccurrence implements Comparable<WorkOccurrence> {
             Long occurrenceOrdinal,
             String targetManagedScopeIdentity,
             String sourceOccurrenceIdentity,
-            String workIdentity) {
+            String workIdentity,
+            ManagedScopeKey.IdentityFactory managedScopeIdentityFactory) {
         this.ordinal = CanonicalOrders.requireSafeInteger(ordinal, "ordinal");
         this.kind = Objects.requireNonNull(kind, "kind");
         this.targetDocumentId = Objects.requireNonNull(
                 targetDocumentId, "targetDocumentId");
-        this.channelKey = Objects.requireNonNull(channelKey, "channelKey");
+        this.channelKey = CanonicalOrders.requireNfc(channelKey, "channelKey");
         this.eventBlueId = eventBlueId;
         this.occurrenceOrdinal = occurrenceOrdinal == null
                 ? null : Long.valueOf(CanonicalOrders.requireSafeInteger(
                         occurrenceOrdinal.longValue(), "occurrenceOrdinal"));
-        this.targetManagedScopeIdentity = Objects.requireNonNull(
-                targetManagedScopeIdentity, "targetManagedScopeIdentity");
+        this.targetManagedScopeIdentity =
+                ManagedScopeKey.requireClosureRootIdentity(
+                        this.targetDocumentId,
+                        targetManagedScopeIdentity,
+                        managedScopeIdentityFactory);
         this.sourceOccurrenceIdentity = Objects.requireNonNull(
                 sourceOccurrenceIdentity, "sourceOccurrenceIdentity");
         this.workIdentity = Objects.requireNonNull(workIdentity, "workIdentity");

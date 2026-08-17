@@ -10,6 +10,8 @@ from typing import Any
 
 import yaml
 
+from jcs import dumps as jcs_dumps
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from blue_identity import (  # noqa: E402
@@ -37,7 +39,7 @@ ORACLE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def canonical_bytes(value: Any) -> bytes:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return jcs_dumps(value)
 
 
 def sha_id(domain: str, value: Any) -> str:
@@ -186,6 +188,42 @@ def admission_cause(kind: str, label: str) -> dict[str, Any]:
         "triggeringEventBlueId": None,
         "parentTransitionIdentity": None,
         "policyIdentity": policy,
+    }
+
+
+def managed_revision_cause(
+    target_occurrence_identity: str,
+    child_document_id: str,
+    from_epoch: int,
+    before_blue_id: str,
+    after_blue_id: str,
+    after_document: Any,
+    original_source_cause_identity: str,
+) -> dict[str, Any]:
+    to_epoch = from_epoch + 1
+    receipt_value = {
+        "childDocumentId": child_document_id,
+        "fromEpoch": from_epoch,
+        "toEpoch": to_epoch,
+        "beforeBlueId": before_blue_id,
+        "afterBlueId": after_blue_id,
+        "originalSourceCauseIdentity": original_source_cause_identity,
+    }
+    receipt_identity = sha_id(
+        "blue-contracts-source-revision-receipt/1.0", receipt_value
+    )
+    cause_value = {
+        "targetOccurrenceIdentity": target_occurrence_identity,
+        **receipt_value,
+        "sourceRevisionReceiptIdentity": receipt_identity,
+    }
+    return {
+        "kind": "managed-revision",
+        "causeIdentity": sha_id(
+            "blue-contracts-managed-revision-cause/1.0", cause_value
+        ),
+        **cause_value,
+        "afterDocument": deepcopy(after_document),
     }
 
 
@@ -467,6 +505,8 @@ def build_scenarios() -> dict[str, Any]:
     }}
     cd_d = {"documentId": "md", "memberIdentity": "md", "c": ref("this#0"), "contracts": {"embedded": {"type": ref(PE), "paths": ["/c"]}}}
     cd_oracle = cyclic_set_oracle([cd_c, cd_d]); cd_ids = cd_oracle.member_ids_in_source_order()
+    split_cd_c = deepcopy(cd_c); split_cd_c.pop("a")
+    split_cd_oracle = cyclic_set_oracle([split_cd_c, cd_d])
     merged = [
         {**ab_a, "b": ref("this#1"), "c": ref("this#2")},
         {**ab_b, "a": ref("this#0")},
@@ -479,49 +519,44 @@ def build_scenarios() -> dict[str, Any]:
         "schema": "blue-language-cyclic-oracle/1.0", "id": "merge-split-four",
         "initialComponents": [oracle_payload("ab", [("initial-ab", [ab_a, ab_b], ab_oracle)]), oracle_payload("cd", [("initial-cd", [cd_c, cd_d], cd_oracle)])],
         "merged": oracle_payload("merged", [("merged", merged, merged_oracle)]),
-        "split": {"abMaster": ab_oracle.master_blue_id, "cdMaster": cd_oracle.master_blue_id},
+        "splitComponent": oracle_payload("split-cd", [("split-cd", [split_cd_c, cd_d], split_cd_oracle)]),
+        "split": {"abMaster": ab_oracle.master_blue_id, "cdMaster": split_cd_oracle.master_blue_id},
     })
 
-    # A10 / B attaches A5 while A already embeds B.
-    hist_b0 = {"documentId": "history-b", "memberIdentity": "history-b", "observedA": 0, "contracts": {
+    # A10 / B attaches exact historical A5 while A already embeds B. Processor
+    # markers are part of the source history from the outset: A is initialized
+    # at epoch 5 and carries that one immutable marker through A6..A10.
+    hist_b_pre = {"documentId": "history-b", "memberIdentity": "history-b", "observedA": 0, "contracts": {
         "embedded": {"type": ref(PE), "paths": ["/a"]},
         "source": {"type": ref(SEC), "subscriptionKey": "fixture", "eventKey": "fixture", "accept": True, "checkpointDomain": "domain", "logicalDeliveryKey": "attach-history"},
         "start": {"type": ref(SH), "channel": "source", "order": 0},
     }}
+    hist_b0 = deepcopy(hist_b_pre)
+    hist_b0.setdefault("contracts", {})["initialized"] = initialized_marker(hist_b_pre)
     hist_b0_id = direct_blue_id(hist_b0)
+    hist_a5_pre = {"documentId": "history-a", "memberIdentity": "history-a", "counter": 5, "b": ref(hist_b0_id), "contracts": {"embedded": {"type": ref(PE), "paths": ["/b"]}}}
+    hist_a_marker = initialized_marker(hist_a5_pre)
     a_epochs: dict[int, tuple[Any, str]] = {}
     for epoch in range(5, 11):
-        doc = {"documentId": "history-a", "memberIdentity": "history-a", "counter": epoch, "b": ref(hist_b0_id), "contracts": {"embedded": {"type": ref(PE), "paths": ["/b"]}}}
+        doc = {"documentId": "history-a", "memberIdentity": "history-a", "counter": epoch, "b": ref(hist_b0_id), "contracts": {"embedded": {"type": ref(PE), "paths": ["/b"],}, "initialized": deepcopy(hist_a_marker)}}
         a_epochs[epoch] = (doc, direct_blue_id(doc))
-    hist_transition_stages = []
-    for epoch in range(5, 11):
-        stage_a = {**a_epochs[epoch][0], "b": ref("this#1")}
-        stage_b = {**hist_b0, "a": ref("this#0"), "observedA": epoch}
-        stage_oracle = cyclic_set_oracle([stage_a, stage_b])
-        hist_transition_stages.append(
-            (f"epoch-{epoch}", [stage_a, stage_b], stage_oracle)
-        )
-    hist_final_a, hist_final_b = hist_transition_stages[-1][1]
-    hist_oracle = hist_transition_stages[-1][2]
-    transitions = []
+    revisions = []
     for epoch in range(5, 10):
         before = a_epochs[epoch][1]; after_doc, after = a_epochs[epoch + 1]
-        transitions.append({
+        original_cause = external_cause(
+            event(f"HISTORY-A-{epoch + 1}"),
+            [epoch + 1, "timeline-history-a", epoch + 1],
+        )
+        revisions.append({
             "documentId": "history-a", "fromEpoch": epoch, "toEpoch": epoch + 1,
             "beforeBlueId": before, "afterBlueId": after, "afterDocument": after_doc,
-            "transitionIdentity": sha_id("blue-contracts-historical-transition/1.0", {
-                "documentId": "history-a", "fromEpoch": epoch, "toEpoch": epoch + 1,
-                "beforeBlueId": before, "afterBlueId": after,
-            }),
-            "sourceOrder": [epoch, "history-a", epoch],
+            "originalSourceCauseIdentity": original_cause["causeIdentity"],
         })
     dump(ORACLE_DIR / "history-a10-b-attaches-a5.yaml", {
         "schema": "blue-language-cyclic-oracle/1.0", "id": "history-a10-b-attaches-a5",
         "aEpochs": {str(k): {"blueId": v[1], "document": v[0]} for k, v in a_epochs.items()},
         "bInitial": {"blueId": hist_b0_id, "document": hist_b0},
-        "transitions": transitions,
-        "catchUp": oracle_payload("history-catch-up", hist_transition_stages),
-        "final": oracle_payload("history-final", [("final", [hist_final_a, hist_final_b], hist_oracle)]),
+        "revisions": revisions,
     })
 
     return locals()
@@ -561,8 +596,8 @@ def generate() -> None:
     finite_sources=s["finite_sources"]
     loop_oracle=s["loop_oracle"]; loop_mats=s["loop_mats"]; loop_a_source=s["loop_a_source"]; loop_b_source=s["loop_b_source"]
     simple_oracle=s["simple_oracle"]; self_oracle=s["self_oracle"]
-    ab_oracle=s["ab_oracle"]; cd_oracle=s["cd_oracle"]; merged_oracle=s["merged_oracle"]
-    a_epochs=s["a_epochs"]; hist_b0=s["hist_b0"]; hist_b0_id=s["hist_b0_id"]; hist_oracle=s["hist_oracle"]; hist_transition_stages=s["hist_transition_stages"]; transitions=s["transitions"]
+    ab_oracle=s["ab_oracle"]; cd_oracle=s["cd_oracle"]; merged_oracle=s["merged_oracle"]; split_cd_oracle=s["split_cd_oracle"]
+    a_epochs=s["a_epochs"]; hist_b0=s["hist_b0"]; hist_b0_id=s["hist_b0_id"]; revisions=s["revisions"]
 
     default_policy = policy()
     finite_initial_occ = occurrence("b", "/a", 1, "a", a0_id)
@@ -670,7 +705,7 @@ def generate() -> None:
 
     # Merge/split structure fixtures use exact independent oracles.
     ab_ids=ab_oracle.member_ids_in_source_order();cd_ids=cd_oracle.member_ids_in_source_order();merged_ids=merged_oracle.member_ids_in_source_order()
-    ab_mats=materialize_cyclic_members([s["ab_a"],s["ab_b"]],ab_oracle);cd_mats=materialize_cyclic_members([s["cd_c"],s["cd_d"]],cd_oracle);merged_mats=materialize_cyclic_members(s["merged"],merged_oracle)
+    ab_mats=materialize_cyclic_members([s["ab_a"],s["ab_b"]],ab_oracle);cd_mats=materialize_cyclic_members([s["cd_c"],s["cd_d"]],cd_oracle);merged_mats=materialize_cyclic_members(s["merged"],merged_oracle);split_cd_mats=materialize_cyclic_members([s["split_cd_c"],s["cd_d"]],split_cd_oracle)
     merge_docs={"ma":document_record("ma",ab_ids[0],ab_mats[0],initialized=True,public_root=True,component_generation=1),"mb":document_record("mb",ab_ids[1],ab_mats[1],initialized=True,component_generation=1),"mc":document_record("mc",cd_ids[0],cd_mats[0],initialized=True,component_generation=1),"md":document_record("md",cd_ids[1],cd_mats[1],initialized=True,component_generation=1)}
     merge_occ=[occurrence("ma","/b",1,"mb",ab_ids[1]),occurrence("mb","/a",1,"ma",ab_ids[0]),occurrence("mc","/d",1,"md",cd_ids[1]),occurrence("md","/c",1,"mc",cd_ids[0]),occurrence("mc","/a",1,"ma",ab_ids[0])]
     merge_components=[component("CYCLIC",1,["ma","mb"],master=ab_oracle.master_blue_id,stage="initial-ab"),component("CYCLIC",1,["mc","md"],master=cd_oracle.master_blue_id,stage="initial-cd")]
@@ -680,13 +715,17 @@ def generate() -> None:
 
     split_input=deepcopy(merge_expected); # construct actual input from merged state
     split_input={"graphGeneration":2,"cause":external_cause(events["SPLIT"],[240,"timeline-split",1]),"documents":merge_expected["finalDocuments"],"occurrences":merge_expected["finalOccurrences"],"components":merge_expected["finalComponents"],"directDeliveries":[direct_delivery("ma",order=0),direct_delivery("mc",order=1)],"gasPolicy":default_policy,"runtime":{"handlers":{"ma/start":{"patches":[{"op":"remove","path":"/c"}]},"mc/start":{"patches":[{"op":"remove","path":"/a"}]}}}}
-    split_expected=empty_expected();split_expected.update({"finalGraphGeneration":3,"finalDocuments":merge_docs,"finalComponents":merge_components,"finalOccurrences":merge_occ[:-1],"workTrace":[work(0,"EXTERNAL_DELIVERY","ma","source",event_id=event_ids["SPLIT"],invocation="split"),work(1,"EXTERNAL_DELIVERY","mc","source",event_id=event_ids["SPLIT"],invocation="split")],"tentativeFinalizations":[finalize(0,"initial-ab",ab_oracle,["ma","mb"]),finalize(1,"initial-cd",cd_oracle,["mc","md"])]})
+    split_cd_ids=split_cd_oracle.member_ids_in_source_order()
+    split_docs={"ma":document_record("ma",ab_ids[0],ab_mats[0],initialized=True,public_root=True,epoch=2,component_generation=3),"mb":document_record("mb",ab_ids[1],ab_mats[1],initialized=True,epoch=2,component_generation=3),"mc":document_record("mc",split_cd_ids[0],split_cd_mats[0],initialized=True,epoch=2,component_generation=3),"md":document_record("md",split_cd_ids[1],split_cd_mats[1],initialized=True,epoch=2,component_generation=3)}
+    split_components=[component("CYCLIC",3,["ma","mb"],master=ab_oracle.master_blue_id,stage="initial-ab"),component("CYCLIC",3,["mc","md"],master=split_cd_oracle.master_blue_id,stage="split-cd")]
+    split_occ=[occurrence("ma","/b",1,"mb",ab_ids[1]),occurrence("mb","/a",1,"ma",ab_ids[0]),occurrence("mc","/d",1,"md",split_cd_ids[1]),occurrence("md","/c",1,"mc",split_cd_ids[0]),occurrence("ma","/c",2,"mc",split_cd_ids[0],active=False),occurrence("mc","/a",2,"ma",ab_ids[0],active=False)]
+    split_expected=empty_expected();split_expected.update({"finalGraphGeneration":3,"finalDocuments":split_docs,"finalComponents":split_components,"finalOccurrences":split_occ,"workTrace":[work(0,"EXTERNAL_DELIVERY","ma","source",event_id=event_ids["SPLIT"],invocation="split"),work(1,"EXTERNAL_DELIVERY","mc","source",event_id=event_ids["SPLIT"],invocation="split")],"tentativeFinalizations":[finalize(0,"initial-ab",ab_oracle,["ma","mb"]),finalize(1,"split-cd",split_cd_oracle,["mc","md"])]})
     dump(FIXTURE_DIR/"c-clo-11-split-into-two-cycles.yaml",base_fixture("c-clo-11-split-into-two-cycles",["C-CLO-11","C-CLO-28","C-CLO-30"],"dynamic-graph","process-closure","Two ordinary edge removals split one four-member component into two exact cyclic components; the result contains both final components.","merge-split-four.yaml",split_input,split_expected))
 
     # Split simple AB to acyclic singletons.
     split2_input=deepcopy(admit_input);split2_input["cause"]=external_cause(events["SPLIT"],[241,"timeline-split",1]);split2_input["documents"]={k:{**v,"initialized":True} for k,v in simple_docs.items()};split2_input["directDeliveries"]=[direct_delivery("simple-a",order=0),direct_delivery("simple-b",order=1)];split2_input["runtime"]={"handlers":{"simple-a/start":{"patches":[{"op":"remove","path":"/b"}]},"simple-b/start":{"patches":[{"op":"remove","path":"/a"}]}}}
     a_single={k:v for k,v in simple_mats[0].items() if k!='b'};b_single={k:v for k,v in simple_mats[1].items() if k!='a'};a_sid=direct_blue_id(a_single);b_sid=direct_blue_id(b_single)
-    split2_expected=empty_expected();split2_expected.update({"finalGraphGeneration":2,"finalDocuments":{"simple-a":document_record("simple-a",a_sid,a_single,initialized=True,public_root=True,epoch=1,component_generation=2),"simple-b":document_record("simple-b",b_sid,b_single,initialized=True,epoch=1,component_generation=2)},"finalComponents":[component("ACYCLIC",2,["simple-a"]),component("ACYCLIC",2,["simple-b"])],"finalOccurrences":[],"workTrace":[work(0,"EXTERNAL_DELIVERY","simple-a","source",event_id=event_ids["SPLIT"],invocation="split-single"),work(1,"EXTERNAL_DELIVERY","simple-b","source",event_id=event_ids["SPLIT"],invocation="split-single")]})
+    split2_expected=empty_expected();split2_expected.update({"finalGraphGeneration":2,"finalDocuments":{"simple-a":document_record("simple-a",a_sid,a_single,initialized=True,public_root=True,epoch=1,component_generation=2),"simple-b":document_record("simple-b",b_sid,b_single,initialized=True,epoch=1,component_generation=2)},"finalComponents":[component("ACYCLIC",2,["simple-a"]),component("ACYCLIC",2,["simple-b"])],"finalOccurrences":[occurrence("simple-a","/b",2,"simple-b",b_sid,active=False),occurrence("simple-b","/a",2,"simple-a",a_sid,active=False)],"workTrace":[work(0,"EXTERNAL_DELIVERY","simple-a","source",event_id=event_ids["SPLIT"],invocation="split-single"),work(1,"EXTERNAL_DELIVERY","simple-b","source",event_id=event_ids["SPLIT"],invocation="split-single")]})
     dump(FIXTURE_DIR/"c-clo-10-split-to-singletons.yaml",base_fixture("c-clo-10-split-to-singletons",["C-CLO-10","C-CLO-28"],"dynamic-graph","process-closure","Removing both reciprocal edges dissolves the cyclic component and returns two ordinary acyclic document identities with no residual MASTER.","static-and-self-cycle.yaml",split2_input,split2_expected))
 
     # Frozen edge behavior pair.
@@ -708,8 +747,8 @@ def generate() -> None:
     except ValueError:
         ambiguous=True
     dump(ORACLE_DIR/"ambiguous-preliminary-members.yaml",{"schema":"blue-language-cyclic-oracle/1.0","id":"ambiguous-preliminary-members","sourceDocumentsWithThisReferences":amb_calc,"expectedDiagnostic":"CyclicPreliminaryMemberAmbiguous","independentlyDetected":ambiguous})
-    amb_id=direct_blue_id({"same":True});amb_docs={"amb-a":document_record("amb-a",amb_id,{"same":True},initialized=False,public_root=True),"amb-b":document_record("amb-b",amb_id,{"same":True},initialized=False)}
-    amb_input={"graphGeneration":1,"cause":admission_cause("TOP_LEVEL_ADMISSION","ambiguous"),"documents":amb_docs,"occurrences":[],"components":[component("CYCLIC",1,["amb-a","amb-b"],master="11111111111111111111111111111112")],"directDeliveries":[],"gasPolicy":default_policy,"runtime":{"handlers":{}}}
+    amb_id=direct_blue_id({"same":True});amb_docs={"amb-a":document_record("amb-a",amb_id,{"same":True},initialized=False,public_root=True)}
+    amb_input={"graphGeneration":1,"cause":admission_cause("TOP_LEVEL_ADMISSION","ambiguous"),"documents":amb_docs,"occurrences":[],"components":[component("ACYCLIC",0,["amb-a"])],"directDeliveries":[],"gasPolicy":default_policy,"runtime":{"handlers":{}}}
     amb_expected=empty_expected("invalid-processing-document");amb_expected.update({"diagnostic":"CyclicPreliminaryMemberAmbiguous","finalGraphGeneration":1,"finalDocuments":amb_docs,"finalComponents":amb_input["components"],"finalOccurrences":[],"rollbackToInput":True})
     dump(FIXTURE_DIR/"c-clo-15-ambiguous-preliminary-members.yaml",base_fixture("c-clo-15-ambiguous-preliminary-members",["C-CLO-15"],"identity","admit-closure","The runner derives duplicate preliminary cyclic identities from exact member bodies; the input does not prelabel the proof as invalid.","ambiguous-preliminary-members.yaml",amb_input,amb_expected))
 
@@ -739,17 +778,121 @@ def generate() -> None:
     no_delivery=deepcopy(admit_input);no_delivery["cause"]=admission_cause("EMBEDDED_ACTIVATION","zero-direct");
     dump(FIXTURE_DIR/"c-clo-21-admission-zero-direct.yaml",base_fixture("c-clo-21-admission-zero-direct",["C-CLO-21"],"admission","admit-closure","Admission and initialization are first-class processing causes and permit zero direct external deliveries without a synthetic event.","static-and-self-cycle.yaml",no_delivery,admit_expected))
 
-    # Historical A10 / A5 pair.
+    # Historical A10 / A5 feeder sequence. The missing-resource attempt and its
+    # retry have byte-identical normative inputs; only provider availability in
+    # harness evidence differs. Every later A(n)->A(n+1) step is its own cause,
+    # gas ledger, rollback boundary and commit.
     hist_a10_doc,hist_a10_id=a_epochs[10];hist_a5_doc,hist_a5_id=a_epochs[5]
     hist_occ_a_b=occurrence("history-a","/b",1,"history-b",hist_b0_id)
+    hist_occ_b_a=occurrence("history-b","/a",1,"history-a",hist_a5_id,active=False,pending_epoch=5)
     hist_initial_docs={"history-a":document_record("history-a",hist_a10_id,hist_a10_doc,initialized=True,public_root=True,epoch=10,component_generation=1),"history-b":document_record("history-b",hist_b0_id,hist_b0,initialized=True,epoch=0,component_generation=1)}
-    hist_base={"graphGeneration":1,"cause":external_cause(events["ATTACH-HISTORICAL"],[270,"timeline-history",1]),"documents":hist_initial_docs,"occurrences":[hist_occ_a_b, occurrence("history-b","/a",1,"history-a",hist_a5_id,active=False,pending_epoch=5)],"components":[component("ACYCLIC",1,["history-b"]),component("ACYCLIC",1,["history-a"])],"directDeliveries":[direct_delivery("history-b")],"gasPolicy":default_policy,"runtime":{"handlers":{"history-b/start":{"patches":[{"op":"add","path":"/a","val":ref(hist_a5_id)}]}}}}
-    needs=deepcopy(hist_base);needs_expected=empty_expected("success");needs_expected.pop("status", None);needs_expected.update({"attemptOutcome":"NeedsResources","requiredBlueIds":[t["afterBlueId"] for t in transitions],"finalGraphGeneration":1,"finalDocuments":hist_initial_docs,"finalComponents":hist_base["components"],"finalOccurrences":[hist_occ_a_b],"rollbackToInput":True})
-    dump(FIXTURE_DIR/"c-clo-22-a10-attach-a5-needs-resources.yaml",base_fixture("c-clo-22-a10-attach-a5-needs-resources",["C-CLO-22"],"history","process-closure","B attempts to attach historical A epoch 5 while the authoritative managed A is epoch 10. Without exact transition evidence the processor requests resources and does not downgrade or fork A.","history-a10-b-attaches-a5.yaml",needs,needs_expected))
-    hist_with=deepcopy(hist_base);hist_with["historicalTransitions"]=transitions
-    hids=hist_oracle.member_ids_in_source_order();hmats=materialize_cyclic_members([s["hist_final_a"],s["hist_final_b"]],hist_oracle)
-    hist_expected=empty_expected();hist_expected.update({"finalGraphGeneration":2,"finalDocuments":{"history-a":document_record("history-a",hids[0],hmats[0],initialized=True,public_root=True,epoch=10,component_generation=2),"history-b":document_record("history-b",hids[1],hmats[1],initialized=True,epoch=1,component_generation=2)},"finalComponents":[component("CYCLIC",2,["history-a","history-b"],master=hist_oracle.master_blue_id,stage="epoch-10")],"finalOccurrences":[occurrence("history-a","/b",1,"history-b",hids[1]),occurrence("history-b","/a",1,"history-a",hids[0])],"workTrace":[work(0,"EXTERNAL_DELIVERY","history-b","source",event_id=event_ids["ATTACH-HISTORICAL"],occurrence_ordinal=0,invocation="a5-a10")]+[work(i+1,"HISTORICAL_TRANSITION","history-b","embedded-history",invocation="a5-a10") for i in range(5)],"tentativeFinalizations":[finalize(i,name,oracle,["history-a","history-b"],boundary={"kind":"WORK","afterWorkOrdinal":i}) for i,(name,_documents,oracle) in enumerate(hist_transition_stages)]})
-    dump(FIXTURE_DIR/"c-clo-23-a10-attach-a5-catch-up.yaml",base_fixture("c-clo-23-a10-attach-a5-catch-up",["C-CLO-23","C-CLO-30"],"history","process-closure","With exact A5→A10 transition evidence, B applies every missing transition in order, the reciprocal edge becomes current only at A10, and the final A/B component is exact and atomic.","history-a10-b-attaches-a5.yaml",hist_with,hist_expected))
+    hist_base={"graphGeneration":1,"cause":external_cause(events["ATTACH-HISTORICAL"],[270,"timeline-history",1]),"documents":hist_initial_docs,"occurrences":[hist_occ_a_b,hist_occ_b_a],"components":[component("ACYCLIC",1,["history-b"]),component("ACYCLIC",1,["history-a"])],"directDeliveries":[direct_delivery("history-b")],"gasPolicy":default_policy,"runtime":{"handlers":{"history-b/start":{"patches":[{"op":"add","path":"/a","val":ref(hist_a5_id)}]}}}}
+    needs=deepcopy(hist_base);needs_expected=empty_expected("success");needs_expected.pop("status", None);needs_expected.update({"attemptOutcome":"NeedsResources","requiredBlueIds":[hist_a5_id],"finalGraphGeneration":1,"finalDocuments":hist_initial_docs,"finalComponents":hist_base["components"],"finalOccurrences":[hist_occ_a_b,hist_occ_b_a],"rollbackToInput":True})
+    dump(FIXTURE_DIR/"c-clo-22-a10-attach-a5-needs-resources.yaml",base_fixture("c-clo-22-a10-attach-a5-needs-resources",["C-CLO-22"],"history","process-closure","B attempts to attach exact historical A5 while authoritative managed A is at epoch 10. The exact A5 node is unavailable, so the processor requests only A5 and returns the unchanged invocation state.","history-a10-b-attaches-a5.yaml",needs,needs_expected))
+
+    attach_input=deepcopy(hist_base)
+    attach_input["availableDocuments"]={hist_a5_id:deepcopy(hist_a5_doc)}
+    attached_b=deepcopy(hist_b0);attached_b["a"]=ref(hist_a5_id)
+    source_channel=attached_b["contracts"]["source"]
+    attached_b.setdefault("contracts", {})["checkpoint"]={
+        "type":ref(CHECKPOINT_MARKER),
+        "entries":{"source":{
+            "domain":ref(checkpoint_domain_blue_id(source_channel)),
+            "subject":ref(event_ids["ATTACH-HISTORICAL"]),
+        }},
+    }
+    attached_b_id=direct_blue_id(attached_b)
+    attached_a=deepcopy(hist_a10_doc);attached_a["b"]=ref(attached_b_id)
+    attached_a_id=direct_blue_id(attached_a)
+    attached_occurrences=[
+        occurrence("history-a","/b",1,"history-b",attached_b_id),
+        deepcopy(hist_occ_b_a),
+    ]
+    attached_documents={
+        "history-a":document_record("history-a",attached_a_id,attached_a,initialized=True,public_root=True,epoch=10,component_generation=1),
+        "history-b":document_record("history-b",attached_b_id,attached_b,initialized=True,epoch=1,component_generation=1),
+    }
+    attached_components=[component("ACYCLIC",1,["history-b"]),component("ACYCLIC",1,["history-a"])]
+    attach_expected=empty_expected();attach_expected.update({
+        "finalGraphGeneration":1,
+        "finalDocuments":attached_documents,
+        "finalComponents":attached_components,
+        "finalOccurrences":attached_occurrences,
+        "workTrace":[work(0,"EXTERNAL_DELIVERY","history-b","source",event_id=event_ids["ATTACH-HISTORICAL"],occurrence_ordinal=0,invocation="attach-a5")],
+    })
+    dump(FIXTURE_DIR/"c-clo-23-00-attach-a5-retry.yaml",base_fixture("c-clo-23-00-attach-a5-retry",["C-CLO-23"],"history","process-closure","Retrying the identical C-CLO-22 invocation with exact A5 provider content commits B's inactive historical reference at cursor 5. It does not replay or discover later revisions.","history-a10-b-attaches-a5.yaml",attach_input,attach_expected))
+
+    current_documents=deepcopy(attached_documents)
+    current_occurrences=deepcopy(attached_occurrences)
+    current_components=deepcopy(attached_components)
+    current_graph_generation=1
+    for revision_index, revision in enumerate(revisions, start=1):
+        before_epoch=revision["fromEpoch"];after_epoch=revision["toEpoch"]
+        pending=next(item for item in current_occurrences if item["sourceDocumentId"]=="history-b" and item["sourcePath"]=="/a")
+        revision_input={
+            "graphGeneration":current_graph_generation,
+            "cause":managed_revision_cause(
+                pending["occurrenceIdentity"],
+                "history-a",
+                before_epoch,
+                revision["beforeBlueId"],
+                revision["afterBlueId"],
+                revision["afterDocument"],
+                revision["originalSourceCauseIdentity"],
+            ),
+            "documents":deepcopy(current_documents),
+            "occurrences":deepcopy(current_occurrences),
+            "components":deepcopy(current_components),
+            "directDeliveries":[],
+            "gasPolicy":default_policy,
+            "runtime":{"handlers":{}},
+        }
+        next_b=deepcopy(current_documents["history-b"]["document"])
+        next_b["a"]=ref(revision["afterBlueId"])
+        work_item=work(0,"CONTAINING_REFERENCE_UPDATE","history-b","managed-revision",invocation=f"history-{before_epoch}-{after_epoch}")
+        revision_expected=empty_expected()
+        if after_epoch < 10:
+            next_b_id=direct_blue_id(next_b)
+            next_a=deepcopy(current_documents["history-a"]["document"])
+            next_a["b"]=ref(next_b_id)
+            next_a_id=direct_blue_id(next_a)
+            next_occurrences=[
+                occurrence("history-a","/b",1,"history-b",next_b_id),
+                occurrence("history-b","/a",1,"history-a",revision["afterBlueId"],active=False,pending_epoch=after_epoch),
+            ]
+            next_documents={
+                "history-a":document_record("history-a",next_a_id,next_a,initialized=True,public_root=True,epoch=10,component_generation=1),
+                "history-b":document_record("history-b",next_b_id,next_b,initialized=True,epoch=revision_index+1,component_generation=1),
+            }
+            next_components=[component("ACYCLIC",1,["history-b"]),component("ACYCLIC",1,["history-a"])]
+            revision_expected.update({"finalGraphGeneration":current_graph_generation,"finalDocuments":next_documents,"finalComponents":next_components,"finalOccurrences":next_occurrences,"workTrace":[work_item]})
+        else:
+            # The historical A10 body still points at the old B state. Reaching
+            # epoch 10 authorizes one processor-owned same-lineage rewrite to
+            # the latest authoritative A head before edge activation.
+            source_a=deepcopy(current_documents["history-a"]["document"]);source_a["b"]=ref("this#1")
+            source_b=deepcopy(next_b);source_b["a"]=ref("this#0")
+            final_oracle=cyclic_set_oracle([source_a,source_b])
+            final_ids=final_oracle.member_ids_in_source_order()
+            final_materialized=materialize_cyclic_members([source_a,source_b],final_oracle)
+            history_oracle_path = ORACLE_DIR / "history-a10-b-attaches-a5.yaml"
+            history_oracle_value = yaml.safe_load(history_oracle_path.read_text())
+            history_oracle_value["managedRevisionFinal"] = oracle_payload(
+                "managed-revision-final",
+                [("managed-revision-9-10", [source_a, source_b], final_oracle)],
+            )
+            dump(history_oracle_path, history_oracle_value)
+            next_documents={
+                "history-a":document_record("history-a",final_ids[0],final_materialized[0],initialized=True,public_root=True,epoch=10,component_generation=2),
+                "history-b":document_record("history-b",final_ids[1],final_materialized[1],initialized=True,epoch=revision_index+1,component_generation=2),
+            }
+            next_components=[component("CYCLIC",2,["history-a","history-b"],master=final_oracle.master_blue_id,stage="managed-revision-9-10")]
+            next_occurrences=[occurrence("history-a","/b",1,"history-b",final_ids[1]),occurrence("history-b","/a",1,"history-a",final_ids[0])]
+            current_graph_generation+=1
+            revision_expected.update({"finalGraphGeneration":current_graph_generation,"finalDocuments":next_documents,"finalComponents":next_components,"finalOccurrences":next_occurrences,"workTrace":[work_item],"tentativeFinalizations":[finalize(0,"managed-revision-9-10",final_oracle,["history-a","history-b"],boundary={"kind":"WORK","afterWorkOrdinal":0})]})
+        fixture_name=f"c-clo-23-{revision_index:02d}-a{before_epoch}-to-a{after_epoch}"
+        dump(FIXTURE_DIR/f"{fixture_name}.yaml",base_fixture(fixture_name,["C-CLO-23","C-CLO-30"] if after_epoch==10 else ["C-CLO-23"],"history","process-closure",f"Coordination selects only authenticated A{before_epoch}→A{after_epoch}. This invocation advances one pending historical cursor and commits independently; later live work remains behind the feeder barrier.","history-a10-b-attaches-a5.yaml",revision_input,revision_expected))
+        current_documents=deepcopy(next_documents);current_occurrences=deepcopy(next_occurrences);current_components=deepcopy(next_components)
 
     # Occurrence continuity under master churn.
     continuity_input=deepcopy(finite_input);continuity_expected=deepcopy(finite_expected)
@@ -765,7 +908,7 @@ def generate() -> None:
 
     # Multiple SCCs one closure and mixed result are represented by split/merge fixtures; add dedicated wrapper.
     multi_input=deepcopy(merge_input);multi_input["runtime"]={"handlers":{}}
-    multi_expected=empty_expected();multi_expected.update({"finalGraphGeneration":1,"finalDocuments":merge_docs,"finalComponents":merge_components,"finalOccurrences":merge_occ})
+    multi_expected=empty_expected();multi_expected.update({"finalGraphGeneration":1,"finalDocuments":merge_docs,"finalComponents":merge_components,"finalOccurrences":merge_occ+[occurrence("ma","/c",1,"mc",cd_ids[0],active=False)]})
     dump(FIXTURE_DIR/"c-clo-27-multiple-scc-one-closure.yaml",base_fixture("c-clo-27-multiple-scc-one-closure",["C-CLO-27"],"atomicity","process-closure","One connected condensation closure containing two SCCs and acyclic edges uses one shared gas ledger and one atomic result without intermediate component publication.","merge-split-four.yaml",multi_input,multi_expected))
     dump(FIXTURE_DIR/"c-clo-28-mixed-result-shape.yaml",base_fixture("c-clo-28-mixed-result-shape",["C-CLO-28"],"dynamic-graph","process-closure","The closure result explicitly represents every final cyclic and acyclic component and every changed containing document after repartition.","merge-split-four.yaml",split_input,split_expected))
 

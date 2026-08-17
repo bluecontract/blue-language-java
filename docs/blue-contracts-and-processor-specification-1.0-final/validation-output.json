@@ -1,23 +1,23 @@
 {
-  "blueIdsChecked": 11649,
-  "closureFixtures": 53,
+  "blueIdsChecked": 12470,
+  "closureFixtures": 64,
   "closureVectors": 33,
-  "contractsReleaseIdentity": "sha256:9e557a0a3f7f61de2be0b88601ae8e263a7b89812a6097f5e614b4372baada65",
-  "directChannelsChecked": 28,
-  "documentIdsChecked": 334,
+  "contractsReleaseIdentity": "sha256:f59708b6c6a7cd6aec01fc023cafb218b1bf0c1de6f405ba26c14af3e68cd93d",
+  "directChannelsChecked": 33,
+  "documentIdsChecked": 356,
   "implementationConformanceClaimed": false,
   "javaTemplates": {
-    "contractsMain": "BLUE_CONTRACTS_CLOSURE_REFERENCE_OK",
-    "coordinationMain": "BLUE_COORDINATION_CLOSURE_REFERENCE_OK",
-    "sourceFiles": 51
+    "contractsMain": "BLUE_CONTRACTS_CLOSURE_TEMPLATE_SHAPE_SMOKE_OK",
+    "coordinationMain": "BLUE_COORDINATION_CLOSURE_TEMPLATE_SHAPE_SMOKE_OK",
+    "sourceFiles": 50
   },
-  "occurrencesChecked": 669,
-  "oracleFiles": 41,
-  "oracleStages": 118,
-  "ordinaryFixtures": 154,
-  "packageIdentity": "sha256:47326f3cc241ea1903fd3e08e33d64a0be8c0df23dd908f9216f8acbc337e850",
+  "occurrencesChecked": 720,
+  "oracleFiles": 38,
+  "oracleStages": 108,
+  "ordinaryFixtures": 167,
+  "packageIdentity": "sha256:a616dc396833ee138c7b5a80d6a4d24c5848eaf2a75473cb7f47820ffe90a949",
   "referenceStatus": "SEMANTIC_REFERENCE_VALID",
-  "runtimeHandlersChecked": 60,
+  "runtimeHandlersChecked": 73,
   "sourceArchive": {
     "provided": true,
     "sha256": "8e50f397c842f2adbd2ffd0d28b78da3489a2efe33cd6e8775fa28954f863831",
@@ -25,6 +25,6 @@
   },
   "specificationVersion": "1.0",
   "status": "PACKAGE_VALID",
-  "totalFixtures": 207,
+  "totalFixtures": 231,
   "vectors": 133
 }

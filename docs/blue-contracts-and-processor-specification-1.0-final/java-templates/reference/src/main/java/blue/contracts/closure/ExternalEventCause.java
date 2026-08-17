@@ -3,6 +3,7 @@ package blue.contracts.closure;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** Immutable exact external cause and the policy that made its source order canonical. */
@@ -27,6 +28,7 @@ public final class ExternalEventCause extends ProcessingCause {
         if (sourceOrderCopy.size() < 3) {
             throw new IllegalArgumentException("sourceOrder");
         }
+        requireNfcTextTokens(sourceOrderCopy, "sourceOrder");
         this.sourceOrder = Collections.unmodifiableList(sourceOrderCopy);
         this.externalOrderPolicyIdentity = Objects.requireNonNull(
                 externalOrderPolicyIdentity, "externalOrderPolicyIdentity");
@@ -56,5 +58,25 @@ public final class ExternalEventCause extends ProcessingCause {
 
     public String externalOrderPolicyIdentity() {
         return externalOrderPolicyIdentity;
+    }
+
+    private static void requireNfcTextTokens(Object value, String field) {
+        if (value instanceof String) {
+            CanonicalOrders.requireNfc((String) value, field);
+        } else if (value instanceof Iterable<?>) {
+            int index = 0;
+            for (Object item : (Iterable<?>) value) {
+                requireNfcTextTokens(item, field + "[" + index + "]");
+                index++;
+            }
+        } else if (value instanceof Map<?, ?>) {
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                if (entry.getKey() instanceof String) {
+                    CanonicalOrders.requireNfc(
+                            (String) entry.getKey(), field + " map key");
+                }
+                requireNfcTextTokens(entry.getValue(), field + " value");
+            }
+        }
     }
 }

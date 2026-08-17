@@ -6,7 +6,12 @@ category: limits
 operation: limit-micro
 description: The closureTentativeFinalizationsPerInvocation guard independently measures 8192 against the frozen bound 8192 and returns ACCEPT; this microfixture does not claim that a later gas-expensive invocation phase completes.
 releaseManifest: ../../release-manifest.yaml
-input:
+input: {}
+expected:
+  limitDecision: ACCEPT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+limit:
   limit: closureTentativeFinalizationsPerInvocation
   configured: 8192
   observed: 8192
@@ -14,7 +19,3 @@ input:
     kind: tentative-finalizations
     parameters:
       count: 8192
-expected:
-  limitDecision: ACCEPT
-  rejectedStepAdmitted: false
-  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE

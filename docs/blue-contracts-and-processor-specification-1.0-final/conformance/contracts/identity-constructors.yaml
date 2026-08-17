@@ -39,6 +39,8 @@ constructors:
       - activationGeneration
       - targetDocumentId
       - bindingPolicyIdentity
+      fieldRules:
+        activationGeneration: Positive safe integer. First embedded reservation/activation is 1; active removal allocates its same-lineage inactive successor at exactly the preceding generation plus 1; that successor is output-only until committed and supplied as a later invocation input, whose re-add preserves its generation and occurrence identity, while ordinary later exact-state rebind may change bindingIdentity. Same-invocation remove-then-re-add and different-lineage retarget are unsupported in Contracts 1.0. Root managed-scope generation 0 belongs to managedScopeKeyIdentity, not to an occurrence row.
   managedOccurrenceBindingIdentity:
     domain: blue-contracts-managed-occurrence/1.0
     stability: Changes whenever the exact expected target state changes.
@@ -51,14 +53,19 @@ constructors:
       - targetDocumentId
       - expectedTargetBlueId
       - bindingPolicyIdentity
+      fieldRules:
+        activationGeneration: Positive safe integer governed by the matching managedOccurrenceIdentity.
   managedScopeKeyIdentity:
     domain: blue-contracts-managed-scope-key/1.0
+    profileRule: The constructor remains general. Contracts 1.0 affected-closure invocation, work, subscription and checkpoint projections admit only Root keys with scopePath '/' and activationGeneration 0; ordinary PROCESS retains non-Root scope semantics.
     value:
       type: object
       fields:
       - documentId
       - scopePath
       - activationGeneration
+      fieldRules:
+        activationGeneration: Root managed scope path '/' uses 0 and only that Root scope may use 0. A first embedded managed occurrence reservation/activation uses 1; active removal allocates its same-lineage inactive successor at exactly the preceding generation plus 1; that successor is output-only until committed and supplied as a later invocation input, whose re-add preserves its generation and occurrence identity, while ordinary later exact-state rebind may change bindingIdentity. Same-invocation remove-then-re-add and different-lineage retarget are unsupported in Contracts 1.0.
   componentIdentity:
     domain: blue-contracts-component/1.0
     stability: Stable for one component kind, generation and ordered membership. Exact member state is bound separately by componentStateIdentity.
@@ -127,6 +134,26 @@ constructors:
         admissionKind: One of TOP_LEVEL_ADMISSION, EMBEDDED_ACTIVATION or IMPORTED_STATE_ADMISSION.
         triggeringEventBlueId: Exact triggering event BlueId when present; otherwise JSON null.
         parentTransitionIdentity: Exact parent transition identity when present; otherwise JSON null.
+  sourceRevisionReceiptIdentity:
+    domain: blue-contracts-source-revision-receipt/1.0
+    value:
+      type: object
+      fields: [childDocumentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId, originalSourceCauseIdentity]
+      fieldRules:
+        fromEpoch: Exact pending historical cursor before this source revision.
+        toEpoch: Exactly fromEpoch plus 1 within the safe-integer range.
+        beforeBlueId: Exact authenticated child state at fromEpoch.
+        afterBlueId: Exact authenticated child state at toEpoch; the ManagedRevisionCause afterDocument independently establishes this identity.
+        originalSourceCauseIdentity: Exact externalCauseIdentity or admissionCauseIdentity recorded by the authoritative source revision; never the local catch-up invocation identity.
+  managedRevisionCauseIdentity:
+    domain: blue-contracts-managed-revision-cause/1.0
+    value:
+      type: object
+      fields: [targetOccurrenceIdentity, childDocumentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId, originalSourceCauseIdentity, sourceRevisionReceiptIdentity]
+      fieldRules:
+        targetOccurrenceIdentity: Exact inactive prospective occurrence whose targetDocumentId is childDocumentId and whose pendingHistoricalEpoch is fromEpoch.
+        toEpoch: Exactly fromEpoch plus 1 within the safe-integer range.
+        sourceRevisionReceiptIdentity: Recomputed sourceRevisionReceiptIdentity whose repeated child, epoch, state and original-source-cause fields exactly equal this cause.
   admissionCandidateIdentity:
     domain: blue-contracts-admission-candidate/1.0
     value:
@@ -154,6 +181,7 @@ constructors:
         localLimits: Array of objects with fields documentId and limit, sorted by documentId; never a dynamic JSON object.
   directDeliveryIdentity:
     domain: blue-contracts-direct-delivery/1.0
+    profileRule: In the Contracts 1.0 affected-closure profile, scopePath is exactly '/' and activationGeneration is exactly 0. The constructor shape is not narrowed so ordinary PROCESS and a future versioned closure profile can retain non-Root addresses.
     value:
       type: object
       fields: [targetDocumentId, scopePath, activationGeneration, channelKey, logicalDeliveryKey, rawOccurrenceOrder]
@@ -233,6 +261,7 @@ constructors:
         eventOccurrenceOrdinal: Zero-based invocation-global ordinal allocated in canonical Handler-result emission order; all deliveries of one emitted event reuse it.
   workOccurrenceIdentity:
     domain: blue-contracts-work-occurrence/1.0
+    profileRule: Every Contracts 1.0 affected-closure work occurrence uses the Root managedScopeKeyIdentity of targetDocumentId.
     value:
       type: object
       fields:
@@ -241,13 +270,9 @@ constructors:
       - workKind
       - targetManagedScopeIdentity
       - sourceOccurrenceIdentity
-  historicalTransitionIdentity:
-    domain: blue-contracts-historical-transition/1.0
-    value:
-      type: object
-      fields: [documentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId]
   channelOccurrenceIdentity:
     domain: blue-contracts-channel-occurrence/1.0
+    profileRule: A Contracts 1.0 affected-closure subscription projection uses scopePath '/' and scopeActivationGeneration 0. Ordinary PROCESS subscription indexing remains scope-aware.
     value:
       type: object
       fields: [managedDocumentId, scopePath, scopeActivationGeneration, rawChannelKey, effectiveRuntimeContributionBlueId, subscriptionHeaderBlueId]
@@ -281,7 +306,7 @@ constructors:
       items:
         fields: [graphChangeOrdinal, changeKind, sourceDocumentId, sourcePath, beforeActivationGeneration, beforeOccurrenceIdentity, beforeBindingIdentity, beforeTargetDocumentId, beforeTargetBlueId, afterActivationGeneration, afterOccurrenceIdentity, afterBindingIdentity, afterTargetDocumentId, afterTargetBlueId]
         fieldRules:
-          changeKind: One of ADD, REMOVE, RETARGET or REBIND.
+          changeKind: One of ADD, REMOVE or REBIND. Different-lineage retarget is unsupported in Contracts 1.0.
           beforeActivationGeneration: Exact value before the change; JSON null when the before side is absent.
           beforeOccurrenceIdentity: Exact value before the change; JSON null when the before side is absent.
           beforeBindingIdentity: Exact value before the change; JSON null when the before side is absent.
@@ -294,6 +319,7 @@ constructors:
           afterTargetBlueId: Exact value after the change; JSON null when the after side is absent.
   checkpointWritesIdentity:
     domain: blue-contracts-checkpoint-writes/1.0
+    profileRule: Every targetManagedScopeIdentity in a Contracts 1.0 affected-closure checkpoint receipt is the Root managedScopeKeyIdentity of one resulting document.
     value:
       type: array
       order: checkpointWriteOrdinal ascending without gaps
@@ -308,6 +334,7 @@ constructors:
           afterSubjectBlueId: Exact value when afterPresent is true; otherwise JSON null.
   subscriptionDeltasIdentity:
     domain: blue-contracts-subscription-deltas/1.0
+    profileRule: Every targetManagedScopeIdentity and nested channelOccurrence in a Contracts 1.0 affected-closure subscription delta names a Root scope; ordinary PROCESS remains scope-aware.
     value:
       type: array
       order: subscriptionDeltaOrdinal ascending without gaps
@@ -328,7 +355,10 @@ constructors:
       type: array
       order: publicEventOrdinal ascending without gaps
       items:
-        fields: [publicEventOrdinal, publicRootDocumentId, eventOccurrenceIdentity, eventBlueId]
+        fields: [publicEventOrdinal, eventOccurrenceOrdinal, publicRootDocumentId, eventOccurrenceIdentity, eventBlueId]
+        fieldRules:
+          publicEventOrdinal: Zero-based contiguous ordinal in the public projection.
+          eventOccurrenceOrdinal: Invocation-global emission ordinal used by eventOccurrenceIdentity; it may have gaps in the public projection and must recompute with that identity.
   rejectedChargeIdentity:
     domain: blue-contracts-rejected-charge/1.0
     value:

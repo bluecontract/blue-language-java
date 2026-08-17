@@ -4,18 +4,20 @@ specificationVersion: '1.0'
 status: final-normative-implementation-target
 specificationDocument:
   path: ../../specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: cde697e8632174111a3571fa898e7ef8bc93420d092a967256df6fe0b7d6236d
+  sha256: 66b7645e92c2e9941a63fe217e1447996dcb3c9ed1fcf0f5f1b88899d2db9e3c
 languageDependency:
   specification: Blue Language Specification 1.0
   referencePath: ../../reference/blue-language-specification-1.0.md
-  specificationSha256: a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869
+  specificationSha256: 01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
   cyclicSetSemanticAlgorithm: Blue Language 1.0 section 15
   cyclicMemberIdentityFormat: MASTER#index
-  cyclicSetFinalizerBaselineIdentity: sha256:83f84e8eab0b62d3a5bcd362b339dd27786e39d5d6a2d2367dfa84f0508820df
-  cyclicSetProofVerifierBaselineIdentity: sha256:b949a4f7629554393b210f867405597372cc3259ed8c7e765a37fa33182921a5
+  cyclicSetFinalizerBaselineIdentity: sha256:acce2d00473b652d0239f5d4483786726c54772528870b1a222ca757c72b66b5
+  cyclicSetProofVerifierBaselineIdentity: sha256:c86366b1a1c826982f0fd78d7c4abfc73d7e96f07681bce79a1fdfb4ed309599
   inputImplementationBaseline:
   - path: blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java
-    sha256: 1450b87280b3563e7a905af941bf68ead1a0cd556725f3ff647025aea37bca4b
+    sha256: 42b3fdd2d4b05e18a9657edc13c767f800f8a66d80f90d25a071888a00db598e
+  - path: blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java
+    sha256: f420a865452ef875ca55b4a3b383db5f44ca0fa05713bb49b084a7a00cfe91a5
   - path: blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java
     sha256: 3ce68fa55e89299e4c2e57ccba6db264cc9c3416706b1d29a79b7ab47eb071f1
   - path: blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java
@@ -42,22 +44,22 @@ contractsRegistry:
   unchangedCoreTypeNodes: true
 gasManifest:
   path: gas-manifest.yaml
-  packageIdentity: sha256:f2ed1907972bb08fda7343c99822bdb8c60681fb89d33828b463ac9997e2b908
+  packageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
   maxProcessGas: 100000
   numericWeightsStatus: frozen for Blue Contracts and Processor Specification 1.0
 identityConstructors:
   path: identity-constructors.yaml
-  sha256: 18010be31cf0e1fb28d9281ebf971b6df25bcbffed72b8d1971f42d7ef1b6052
+  sha256: 154b166439af86c2d35c006ae2a003ecd063b30fc085fb74ef7a599ac31bfacf
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:1ef4ec6db947cd831b5e49e7089c0c7635ae46c1a23e0ab8e39a34f0c7741c2d
+  packageIdentity: sha256:436c0b0284cef065fa728ef58352f2e66ba0c3dd2e8a5e6e7a86fb1805f1a907
   vectorCount: 133
-  fixtureCount: 207
+  fixtureCount: 231
 oraclePackage:
   path: oracles/manifest.yaml
-  packageIdentity: sha256:719024d580ceb6e29adcfd634064e0efe18953ccdca3332b51339a1f3f974d06
-  oracleCount: 41
+  packageIdentity: sha256:7bb78595a58772d6df315c852c8c11dcad9cbd3e3478a300530feba059b2face
+  oracleCount: 38
 normativeExclusions:
 - delegated-authority eligibility and authority-evidence resolution
 - Timeline provider completeness and Coordination scheduling policy
@@ -81,6 +83,6 @@ sourceArchiveBaseline:
   filenameIsNonNormative: true
 releaseIdentityAlgorithm:
   digest: sha256
-  encoding: UTF-8 canonical JSON with sorted keys
+  encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:9e557a0a3f7f61de2be0b88601ae8e263a7b89812a6097f5e614b4372baada65
+releaseIdentity: sha256:f59708b6c6a7cd6aec01fc023cafb218b1bf0c1de6f405ba26c14af3e68cd93d

@@ -60,6 +60,11 @@ all closure fixtures declared by the generated manifest green
 all exact cyclic oracles independently verified
 all gas traces exact
 cold/warm/inline/reference parity
+pure/materialized exact occurrence parity and mixed-reference rejection
+closed top-level runtime/sharedLimitSource/provider/locality/limit/oracle harness separation
+required eventOccurrenceOrdinal on every public event
+Root-only affected-closure direct/work/subscription/checkpoint/gas profile,
+with ordinary PROCESS nested scopes unchanged
 no Mandate-specific code in Language/Contracts
 ```
 
@@ -71,7 +76,10 @@ Require:
 finite dynamic A/B passes
 exact M1/M2/M3/M4 visibility passes
 default-policy loop produces exact deterministic rollback
-A10/A5 missing-evidence and complete-chain cases pass
+A10/A5 exact-A5 NeedsResources retry preserves invocation identity
+external A5 attachment plus five separately committed ManagedRevisionCause
+steps pass, including final latest-authoritative-A reconciliation
+Coordination no-overtake barrier remains active until cursor-clearing activation
 merge/split/frozen-edge cases pass
 1000-unrelated locality passes
 same-entry closure publication is atomic

@@ -6,7 +6,12 @@ category: limits
 operation: limit-micro
 description: The processEmbeddedEdgesPerClosure guard independently measures 16384 against the frozen bound 16384 and returns ACCEPT; this microfixture does not claim that a later gas-expensive invocation phase completes.
 releaseManifest: ../../release-manifest.yaml
-input:
+input: {}
+expected:
+  limitDecision: ACCEPT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+limit:
   limit: processEmbeddedEdgesPerClosure
   configured: 16384
   observed: 16384
@@ -14,7 +19,3 @@ input:
     kind: embedded-edges
     parameters:
       count: 16384
-expected:
-  limitDecision: ACCEPT
-  rejectedStepAdmitted: false
-  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE

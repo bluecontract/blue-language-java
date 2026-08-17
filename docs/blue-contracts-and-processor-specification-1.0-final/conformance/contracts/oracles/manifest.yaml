@@ -1,6 +1,6 @@
 oraclePackage: blue-contracts-cyclic-identity-oracles
 specificationVersion: '1.0'
-oracleCount: 41
+oracleCount: 38
 files:
 - path: ambiguous-preliminary-members.yaml
   role: cyclic-identity-oracle
@@ -8,8 +8,8 @@ files:
   bytes: 272
 - path: c-clo-01-static-cycle-admission.yaml
   role: cyclic-identity-oracle
-  sha256: 91f3a9cdbe46753cbdefe4dee80bc1644b0b2c357c7fb03f592a9a74cc0db535
-  bytes: 11144
+  sha256: 2f779ed2e69dbbd7e1f6d990920091746cc82808877f4d2c819ebe618fe00212
+  bytes: 11155
 - path: c-clo-02-dynamic-finite-cycle.yaml
   role: cyclic-identity-oracle
   sha256: 1bbee4bdb24d7794927e245800ece00790f47de96cf4f76ee1d0b8e6697dea9d
@@ -20,104 +20,100 @@ files:
   bytes: 34727
 - path: c-clo-04-default-policy-loop.yaml
   role: cyclic-identity-oracle
-  sha256: e881c7437ecd8b321e71264109d4d5385ce2df0a4dda685c69ec8c98f772efb5
-  bytes: 5580
+  sha256: 5fd6dd50554308c77d68cb508d5bdc24bdf922baeec06b8034629877bdf9bab9
+  bytes: 5588
 - path: c-clo-04-same-event-gas-loop.yaml
   role: cyclic-identity-oracle
-  sha256: 29777fdf2d08baf5ec0a7833e7c37045eab1839646a6e1af4e2c0d75146ec78e
-  bytes: 5580
+  sha256: fed886e7622f42d00d54621c95e989fac502c7f362bc7d562d1be62a26e9fc7f
+  bytes: 5588
 - path: c-clo-05-direct-both-members.yaml
   role: cyclic-identity-oracle
-  sha256: cd63d0efafd41254c6ff2b0914c5f240e834ed9d819c2164b717f9451571d043
-  bytes: 17811
+  sha256: 5db0ecb6666bfafae5387796da4d97457ad1fb509ec432fc9d717013c057d1f4
+  bytes: 17835
 - path: c-clo-06-duplicate-event-occurrences.yaml
   role: cyclic-identity-oracle
-  sha256: c91121520c1d241f884084c560c6a5155e5cb15a7eb40ec05d8d672e4a600e60
-  bytes: 17211
+  sha256: 86701c1f56c41c37277022e120f6029ff4ae3130a931e14f5e8e88fbc80452d9
+  bytes: 17235
 - path: c-clo-07-self-cycle.yaml
   role: cyclic-identity-oracle
-  sha256: 83f3b66c9c030b7db577144bb893980220057f00afc0fd284a180b0201cfbb1d
-  bytes: 3011
+  sha256: 70bf24935d451f0be97bd3987a4f53a04b80d40d1fd48e4b5aa66c0cd2ec5ae8
+  bytes: 3019
 - path: c-clo-08-cycle-during-initialization.yaml
   role: cyclic-identity-oracle
   sha256: 513f4b409b9b785c6ce5a530574509ef247b376642aa208ca08cebacf8d8f0c6
   bytes: 19481
 - path: c-clo-09-merge-two-cycles.yaml
   role: cyclic-identity-oracle
-  sha256: 2b65da289aa7f963527923b5ff0fd1646d9852630cc06a00de729d62395f9f0b
-  bytes: 27843
+  sha256: 85c162cd0b137d4a21be7e976ad5253042dcd78d9617caee2803fafb484e7819
+  bytes: 27928
 - path: c-clo-10-split-to-singletons.yaml
   role: cyclic-identity-oracle
-  sha256: 2c31aa8ce7e35007029902096eff7e810cd1698a01ba21d605f2892df8881504
-  bytes: 4233
+  sha256: f8343d62fa680dd8fced0b46bf5dcce8e44ed6feed9a2d76c7595f384f9faea4
+  bytes: 4244
 - path: c-clo-11-split-into-two-cycles.yaml
   role: cyclic-identity-oracle
-  sha256: 145935e54809cb1b318919ecca6c9b22ce245c277f21411614e6508b9d62e55b
-  bytes: 28973
+  sha256: 9674754f4a75883f089b75b39c2a76ba846f349b8207ec6b7c55db0974b8b8ec
+  bytes: 28422
 - path: c-clo-12-frozen-edge-removal.yaml
   role: cyclic-identity-oracle
-  sha256: c986c05266ab4ee9114145ebf577ec51c5115bc81bef9f41660dc908f39d2993
-  bytes: 5740
-- path: c-clo-13-frozen-edge-addition.yaml
-  role: cyclic-identity-oracle
-  sha256: 51cde5d2b85a4d1ff9e1575bc5fba1fe624fd751e729d9c0a95a9c65cf1dee7b
-  bytes: 16581
+  sha256: c1db5335a159af78521157c9b72f9adc80c8d6aa0dd0f92a4e8088a95fbcbbc0
+  bytes: 5749
 - path: c-clo-14-invalid-cyclic-proof.yaml
   role: cyclic-identity-oracle
   sha256: 5e305678c2ae410d8f05ab210c2215bad7c2ee4726f10d080782b5c22e2c4cd2
   bytes: 3529
 - path: c-clo-16-limit-at-bound.yaml
   role: cyclic-identity-oracle
-  sha256: 2b6c80b798aa83368d26a986c401777ccdecba9134708a6aa33c0c07b986d032
-  bytes: 313599
+  sha256: d5209ab2053a547e5d939794f64023043625bad1aa0085be27aeb850a094977e
+  bytes: 315227
 - path: c-clo-17-limit-above-bound.yaml
   role: cyclic-identity-oracle
-  sha256: 4bd014dc961bbf3dde50cbb5fe958d0fdfdb792812076df8acbbf2eeac37ef85
-  bytes: 158055
+  sha256: b23552c9c7c7f483ac2edb147865232382b1a7c749b637cd58486a184adea90a
+  bytes: 158894
 - path: c-clo-18-locality-1000-unrelated.yaml
   role: cyclic-identity-oracle
-  sha256: bb24e1e632d3792383f7ec7b847c33599263b1a605f31120d618995669dda585
-  bytes: 11145
+  sha256: 30a5974842abd0221d3f7c6abd2064500af6af262d9f833962abaec31c30f31b
+  bytes: 11156
 - path: c-clo-19-public-event-boundary.yaml
   role: cyclic-identity-oracle
-  sha256: e63349390e257268a541bb7db68680df60b4dd733480fb79171ffcb14ca50b88
-  bytes: 17686
+  sha256: 74ede98bea3a27afe1dc8dc1cd4a4c418ec47d5947417995f0619dce79ce328e
+  bytes: 17712
 - path: c-clo-20-late-outer-failure.yaml
   role: cyclic-identity-oracle
-  sha256: c9ce75f10fe02a639e199535d4da75934bfd89bd3fd046644b5af965d2732572
-  bytes: 5739
+  sha256: ba9fee2229a0593f0dd4c80388eadf3353ebd2bc226314e8a4897e2fc5f28707
+  bytes: 5748
 - path: c-clo-21-admission-zero-direct.yaml
   role: cyclic-identity-oracle
-  sha256: e990c97ab8ac8321b2f759327cd252cce082c814918469bf6f21b2e4b069a803
-  bytes: 11143
-- path: c-clo-23-a10-attach-a5-catch-up.yaml
+  sha256: 0cb1a1e612e6f8f5ebcd916f34d09e8ba5d6b89cfa0e6300a2630d3289823eb5
+  bytes: 11154
+- path: c-clo-23-05-a9-to-a10.yaml
   role: cyclic-identity-oracle
-  sha256: 222613025048a0c212a72818dd1787532b5d1b0abf40d8eb27b5d460e14922e0
-  bytes: 29922
+  sha256: b38d6cb8cf492d566f2ce1766be534d8f2af630ffe3b5a658aaea60e7ed17fe2
+  bytes: 8606
 - path: c-clo-24-occurrence-continuity.yaml
   role: cyclic-identity-oracle
   sha256: d38d89acfd13d0fcfa52f5d495b2a0cc708f80265ecaa96f1917d04cd6bb2ea7
   bytes: 34713
 - path: c-clo-25-policy-identity-binding.yaml
   role: cyclic-identity-oracle
-  sha256: 528fb430d76773dee39c725c90ca1bf5860939b6a3e5829003699129d71c9df6
-  bytes: 5584
+  sha256: 8e5feb190100440437c3a892ef401bbb2bfb2157742cbe21591a0536f7c51f09
+  bytes: 5592
 - path: c-clo-26-embedded-local-cap.yaml
   role: cyclic-identity-oracle
-  sha256: 205295646a53b1326a915a14b45521dd93a6cf1d880d65ec0c892cff22b2c4db
-  bytes: 5579
+  sha256: 00716e7d5a48c86d68295e509ee901649cdd29b5aa099a069f1f30a65fbfebe0
+  bytes: 5587
 - path: c-clo-27-multiple-scc-one-closure.yaml
   role: cyclic-identity-oracle
-  sha256: f5498d491a377b24924a1d6cf3dac4c1da12636193de4bdc0f8a01aee7923003
-  bytes: 21604
+  sha256: c9077f4def974e308d0eeba525add3b442b63635b21f5600b6652314020e9041
+  bytes: 21651
 - path: c-clo-28-containing-spine-identity-gas.yaml
   role: cyclic-identity-oracle
-  sha256: 3bcee48b90259551cbc24739bb71f60dcbe85af20d3db65cd5eae00bfdacdc2a
-  bytes: 5750
+  sha256: a1a44e8fe4d95de393cad74fc01b5c1cf37e9483ff43fb04d732e0a7c1375f53
+  bytes: 5759
 - path: c-clo-28-mixed-result-shape.yaml
   role: cyclic-identity-oracle
-  sha256: 76a257609dec4beba923b58d196b7c0f418fa582ed66680710ab78f45ae225da
-  bytes: 28970
+  sha256: bb185dd08e52f2efd9da83eff018079ff005b57ca8ea1ff322d5ec7e96398dda
+  bytes: 28419
 - path: c-clo-29-active-edge-path-validation.yaml
   role: cyclic-identity-oracle
   sha256: e5fd17b106c555f0868117b3c5b5a82c3b781ffa8f38e3c7f298dc1480b898eb
@@ -128,20 +124,12 @@ files:
   bytes: 34715
 - path: c-clo-33-checkpoint-domain-retirement.yaml
   role: cyclic-identity-oracle
-  sha256: 5d8e86597501b99776ef2fd1c3e0c347c1a6ddbab73125633277f0d704ab2ae7
+  sha256: bd3956559386e4aa44edb51b916d23743c15523b6a9e53c72f44330b2701fd83
   bytes: 44030
 - path: finite-dynamic-a-b.yaml
   role: cyclic-identity-oracle
   sha256: 55705ef3b69c27c37a047bac72fb448d33777e17a8973c1f3e21453f7c1f4b46
   bytes: 19886
-- path: frozen-edge-addition.yaml
-  role: cyclic-identity-oracle
-  sha256: 713c0249f79880dc3ac36b1ab220462133a622d50b96f41882edbe4ad6b969d3
-  bytes: 4438
-- path: history-a10-b-attaches-a5.yaml
-  role: cyclic-identity-oracle
-  sha256: a780a8faf620ce80f0b28ffc297d5b8a6a303e61bd84c6967979aa8564ddc659
-  bytes: 28148
 - path: infinite-loop-a-b.yaml
   role: cyclic-identity-oracle
   sha256: e588eb19d865c156115dfaff1cc7eaf27600c6a08838c37adb2c774d832fbdd1
@@ -160,14 +148,14 @@ files:
   bytes: 112407
 - path: merge-split-four.yaml
   role: cyclic-identity-oracle
-  sha256: d17ffa56d991e7f581b976f15dd6607bf49eedcff41784a90003b8eb943c95c4
-  bytes: 12067
+  sha256: f0b35852586db73f37f7a4bceb99c82fe084e9b8ff5d1b63b25c72756e7da824
+  bytes: 15018
 - path: static-and-self-cycle.yaml
   role: cyclic-identity-oracle
   sha256: 5ea3cedc3c828c0b4b2efaac47382129a5d9c9d8a847d0a11ab0f95aa2b56149
   bytes: 5088
 packageIdentityAlgorithm:
   digest: sha256
-  encoding: UTF-8 canonical JSON with sorted keys
+  encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: packageIdentity is null before hashing
-packageIdentity: sha256:719024d580ceb6e29adcfd634064e0efe18953ccdca3332b51339a1f3f974d06
+packageIdentity: sha256:7bb78595a58772d6df315c852c8c11dcad9cbd3e3478a300530feba059b2face

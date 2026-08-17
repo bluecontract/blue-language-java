@@ -112,6 +112,16 @@ public final class ClosureProcessResult {
         if ((status == ClosureProcessStatus.SUCCESS) != (platformCommitCompanion != null)) {
             throw new IllegalArgumentException("platformCommitCompanion");
         }
+        if (status != ClosureProcessStatus.SUCCESS
+                && (!inputClosureIdentity.equals(outputClosureIdentity)
+                || !graphChanges.isEmpty()
+                || !subscriptionDeltas.isEmpty()
+                || !checkpointWrites.isEmpty()
+                || !publicEvents.isEmpty())) {
+            throw new IllegalArgumentException(
+                    "non-success result must expose the unchanged input closure "
+                    + "and no committed effects");
+        }
         if ((status == ClosureProcessStatus.GAS_LIMIT_EXCEEDED) != (rejectedCharge != null)) {
             throw new IllegalArgumentException("rejectedCharge");
         }
@@ -160,11 +170,12 @@ public final class ClosureProcessResult {
         for (int index = 1; index < values.size(); index++) {
             ManagedOccurrenceBinding before = values.get(index - 1);
             ManagedOccurrenceBinding after = values.get(index);
-            int occurrenceOrder = before.occurrenceIdentity().compareTo(
-                    after.occurrenceIdentity());
+            int occurrenceOrder = CanonicalOrders.compareUnicodeScalars(
+                    before.occurrenceIdentity(), after.occurrenceIdentity());
             if (occurrenceOrder > 0
                     || (occurrenceOrder == 0
-                    && before.bindingIdentity().compareTo(
+                    && CanonicalOrders.compareUnicodeScalars(
+                            before.bindingIdentity(),
                             after.bindingIdentity()) >= 0)) {
                 throw new IllegalArgumentException(
                         "occurrenceBindings not in canonical order");
@@ -366,10 +377,11 @@ public final class ClosureProcessResult {
             this.graphChangeOrdinal = CanonicalOrders.requireSafeInteger(
                     graphChangeOrdinal, "graphChangeOrdinal");
             this.changeKind = requireOneOf(
-                    changeKind, "changeKind", "ADD", "REMOVE", "RETARGET", "REBIND");
+                    changeKind, "changeKind", "ADD", "REMOVE", "REBIND");
             this.sourceDocumentId = Objects.requireNonNull(
                     sourceDocumentId, "sourceDocumentId");
-            this.sourcePath = Objects.requireNonNull(sourcePath, "sourcePath");
+            this.sourcePath = CanonicalOrders.requireRuntimePointer(
+                    sourcePath, "sourcePath");
             this.beforeActivationGeneration = safeNullable(
                     beforeActivationGeneration, "beforeActivationGeneration");
             this.beforeOccurrenceIdentity = beforeOccurrenceIdentity;
@@ -409,8 +421,7 @@ public final class ClosureProcessResult {
                     && !(beforeAbsent && afterComplete))
                     || ("REMOVE".equals(this.changeKind)
                     && !(beforeComplete && afterAbsent))
-                    || (("RETARGET".equals(this.changeKind)
-                    || "REBIND".equals(this.changeKind))
+                    || ("REBIND".equals(this.changeKind)
                     && !(beforeComplete && afterComplete))) {
                 throw new IllegalArgumentException("graph change kind/side mismatch");
             }
@@ -424,11 +435,6 @@ public final class ClosureProcessResult {
                     && beforeBindingIdentity.equals(afterBindingIdentity)
                     && beforeTargetBlueId.equals(afterTargetBlueId)) {
                 throw new IllegalArgumentException("REBIND cannot be a no-op");
-            }
-            if ("RETARGET".equals(this.changeKind)
-                    && beforeOccurrenceIdentity.equals(afterOccurrenceIdentity)
-                    && beforeTargetDocumentId.equals(afterTargetDocumentId)) {
-                throw new IllegalArgumentException("RETARGET must change lineage");
             }
         }
 
@@ -464,6 +470,8 @@ public final class ClosureProcessResult {
         public CheckpointWrite(
                 long checkpointWriteOrdinal,
                 String targetManagedScopeIdentity,
+                ManagedScopeKey targetManagedScopeKey,
+                ManagedScopeKey.IdentityFactory managedScopeIdentityFactory,
                 String rawChannelKey,
                 boolean beforePresent,
                 String beforeDomainBlueId,
@@ -476,9 +484,19 @@ public final class ClosureProcessResult {
                 CheckpointDomain.DirectBlueIdCalculator directBlueIdCalculator) {
             this.checkpointWriteOrdinal = CanonicalOrders.requireSafeInteger(
                     checkpointWriteOrdinal, "checkpointWriteOrdinal");
-            this.targetManagedScopeIdentity = Objects.requireNonNull(
-                    targetManagedScopeIdentity, "targetManagedScopeIdentity");
-            this.rawChannelKey = Objects.requireNonNull(rawChannelKey, "rawChannelKey");
+            ManagedScopeKey targetScope = Objects.requireNonNull(
+                    targetManagedScopeKey, "targetManagedScopeKey");
+            if (!targetScope.isClosureRoot()) {
+                throw new IllegalArgumentException(
+                        "Contracts 1.0 closure checkpoint must target Root");
+            }
+            this.targetManagedScopeIdentity =
+                    ManagedScopeKey.requireClosureRootIdentity(
+                            targetScope.documentId(),
+                            targetManagedScopeIdentity,
+                            managedScopeIdentityFactory);
+            this.rawChannelKey = CanonicalOrders.requireNfc(
+                    rawChannelKey, "rawChannelKey");
             this.beforePresent = beforePresent;
             this.beforeDomainBlueId = beforeDomainBlueId;
             this.beforeDomainValue = beforeDomainValue;
@@ -556,10 +574,17 @@ public final class ClosureProcessResult {
                     channelOccurrenceIdentity, "channelOccurrenceIdentity");
             this.managedDocumentId = Objects.requireNonNull(
                     managedDocumentId, "managedDocumentId");
-            this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
+            this.scopePath = CanonicalOrders.requireRuntimePointer(
+                    scopePath, "scopePath");
             this.scopeActivationGeneration = CanonicalOrders.requireSafeInteger(
                     scopeActivationGeneration, "scopeActivationGeneration");
-            this.rawChannelKey = Objects.requireNonNull(rawChannelKey, "rawChannelKey");
+            if (!"/".equals(this.scopePath)
+                    || this.scopeActivationGeneration != 0L) {
+                throw new IllegalArgumentException(
+                        "Contracts 1.0 closure ChannelOccurrence must target Root");
+            }
+            this.rawChannelKey = CanonicalOrders.requireNfc(
+                    rawChannelKey, "rawChannelKey");
             this.effectiveRuntimeContributionBlueId = Objects.requireNonNull(
                     effectiveRuntimeContributionBlueId,
                     "effectiveRuntimeContributionBlueId");
@@ -624,13 +649,12 @@ public final class ClosureProcessResult {
                 String targetManagedScopeIdentity,
                 String channelOccurrenceIdentity,
                 SubscriptionState beforeSubscription,
-                SubscriptionState afterSubscription) {
+                SubscriptionState afterSubscription,
+                ManagedScopeKey.IdentityFactory managedScopeIdentityFactory) {
             this.subscriptionDeltaOrdinal = CanonicalOrders.requireSafeInteger(
                     subscriptionDeltaOrdinal, "subscriptionDeltaOrdinal");
             this.operation = requireOneOf(
                     operation, "operation", "ADD", "REMOVE", "REPLACE");
-            this.targetManagedScopeIdentity = Objects.requireNonNull(
-                    targetManagedScopeIdentity, "targetManagedScopeIdentity");
             this.channelOccurrenceIdentity = Objects.requireNonNull(
                     channelOccurrenceIdentity, "channelOccurrenceIdentity");
             this.beforeSubscription = beforeSubscription;
@@ -638,6 +662,21 @@ public final class ClosureProcessResult {
             if (beforeSubscription == null && afterSubscription == null) {
                 throw new IllegalArgumentException("subscription delta sides");
             }
+            ChannelOccurrence targetOccurrence = afterSubscription != null
+                    ? afterSubscription.channelOccurrence()
+                    : beforeSubscription.channelOccurrence();
+            if (beforeSubscription != null && afterSubscription != null
+                    && !beforeSubscription.channelOccurrence().managedDocumentId()
+                            .equals(afterSubscription.channelOccurrence()
+                                    .managedDocumentId())) {
+                throw new IllegalArgumentException(
+                        "subscription delta crosses managed documents");
+            }
+            this.targetManagedScopeIdentity =
+                    ManagedScopeKey.requireClosureRootIdentity(
+                            targetOccurrence.managedDocumentId(),
+                            targetManagedScopeIdentity,
+                            managedScopeIdentityFactory);
             if (("ADD".equals(this.operation)
                     && !(beforeSubscription == null && afterSubscription != null))
                     || ("REMOVE".equals(this.operation)

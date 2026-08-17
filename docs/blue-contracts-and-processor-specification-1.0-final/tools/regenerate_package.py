@@ -21,6 +21,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE_SOURCE_PATHS = [
     "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
+    "blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java",
     "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
     "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
     "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
@@ -86,6 +87,20 @@ def regenerate(candidate: Path, language_source_root: Path, source_zip: Path) ->
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     tools = candidate / "tools"
 
+    manifest_command = [
+        sys.executable,
+        str(tools / "build_release_manifests.py"),
+        "--language-source-root",
+        str(language_source_root),
+    ]
+
+    # Refinement binds fixture identities to implementation-baseline
+    # identities read from release-manifest.yaml.  Refresh that input before
+    # any fixture binding occurs.  This first manifest set is deliberately
+    # transient: it describes the copied fixture inventory and is rebuilt
+    # after generation and refinement below.
+    run(manifest_command, cwd=candidate.parent, environment=environment)
+
     # Seed generation plus refinement owns every closure fixture, trace and
     # cyclic oracle YAML.  Clear those generated surfaces in the disposable
     # copy so a renamed or retired file cannot survive into a rebuilt manifest.
@@ -102,12 +117,7 @@ def regenerate(candidate: Path, language_source_root: Path, source_zip: Path) ->
     commands = [
         [sys.executable, str(tools / "generate_closure_fixtures.py")],
         [sys.executable, str(tools / "refine_closure_fixtures.py")],
-        [
-            sys.executable,
-            str(tools / "build_release_manifests.py"),
-            "--language-source-root",
-            str(language_source_root),
-        ],
+        manifest_command,
         [
             sys.executable,
             str(tools / "validate_package.py"),

@@ -33,10 +33,7 @@ public final class ClosureInvocationInput {
         String identity(AdmissionCandidate candidate);
     }
 
-    /**
-     * Recomputes the closed invocation identity. Historical transition
-     * resources are deliberately not an input to this constructor.
-     */
+    /** Recomputes the closed invocation identity from normative input only. */
     public interface InvocationIdentityFactory {
         String identity(
                 Operation operation,
@@ -56,7 +53,6 @@ public final class ClosureInvocationInput {
     private final String admissionCandidateIdentity;
     private final List<DirectLogicalDelivery> directDeliveries;
     private final String directDeliverySnapshotIdentity;
-    private final List<ManagedRevisionEvidence> historicalTransitions;
     private final ExecutionPolicy gasPolicy;
     private final AffectedClosureSnapshot.EnvironmentEvidence environment;
 
@@ -71,7 +67,6 @@ public final class ClosureInvocationInput {
             String directDeliverySnapshotIdentity,
             DirectLogicalDelivery.SnapshotIdentityFactory
                     directDeliverySnapshotIdentityFactory,
-            List<ManagedRevisionEvidence> historicalTransitions,
             ExecutionPolicy gasPolicy,
             AffectedClosureSnapshot.EnvironmentEvidence environment,
             AdmissionCandidateIdentityFactory candidateIdentityFactory,
@@ -92,8 +87,6 @@ public final class ClosureInvocationInput {
                     "directDeliverySnapshotIdentity mismatch");
         }
         this.directDeliverySnapshotIdentity = recomputedDeliverySnapshotIdentity;
-        this.historicalTransitions = immutableList(
-                historicalTransitions, "historicalTransitions");
         this.gasPolicy = Objects.requireNonNull(gasPolicy, "gasPolicy");
         this.environment = Objects.requireNonNull(environment, "environment");
         if ((admissionCandidate == null) != (admissionCandidateIdentity == null)) {
@@ -141,7 +134,6 @@ public final class ClosureInvocationInput {
             String directDeliverySnapshotIdentity,
             DirectLogicalDelivery.SnapshotIdentityFactory
                     directDeliverySnapshotIdentityFactory,
-            List<ManagedRevisionEvidence> historicalTransitions,
             ExecutionPolicy gasPolicy,
             AffectedClosureSnapshot.EnvironmentEvidence environment,
             InvocationIdentityFactory invocationIdentityFactory) {
@@ -161,7 +153,36 @@ public final class ClosureInvocationInput {
                 directDeliveries,
                 directDeliverySnapshotIdentity,
                 directDeliverySnapshotIdentityFactory,
-                historicalTransitions,
+                gasPolicy,
+                environment,
+                null,
+                invocationIdentityFactory);
+    }
+
+    /**
+     * Builds one independently metered/committed managed-revision invocation.
+     * It has no external direct deliveries and carries no transition list.
+     */
+    public static ClosureInvocationInput processManagedRevision(
+            String invocationIdentity,
+            AffectedClosureSnapshot state,
+            ManagedRevisionCause cause,
+            String emptyDirectDeliverySnapshotIdentity,
+            DirectLogicalDelivery.SnapshotIdentityFactory
+                    directDeliverySnapshotIdentityFactory,
+            ExecutionPolicy gasPolicy,
+            AffectedClosureSnapshot.EnvironmentEvidence environment,
+            InvocationIdentityFactory invocationIdentityFactory) {
+        return new ClosureInvocationInput(
+                Operation.PROCESS_CLOSURE,
+                invocationIdentity,
+                state,
+                Objects.requireNonNull(cause, "cause"),
+                null,
+                null,
+                Collections.<DirectLogicalDelivery>emptyList(),
+                emptyDirectDeliverySnapshotIdentity,
+                directDeliverySnapshotIdentityFactory,
                 gasPolicy,
                 environment,
                 null,
@@ -174,19 +195,13 @@ public final class ClosureInvocationInput {
             AdmissionCause cause,
             AdmissionCandidate admissionCandidate,
             String admissionCandidateIdentity,
-            List<DirectLogicalDelivery> directDeliveries,
-            String directDeliverySnapshotIdentity,
+            String emptyDirectDeliverySnapshotIdentity,
             DirectLogicalDelivery.SnapshotIdentityFactory
                     directDeliverySnapshotIdentityFactory,
-            List<ManagedRevisionEvidence> historicalTransitions,
             ExecutionPolicy gasPolicy,
             AffectedClosureSnapshot.EnvironmentEvidence environment,
             AdmissionCandidateIdentityFactory candidateIdentityFactory,
             InvocationIdentityFactory invocationIdentityFactory) {
-        if (!Objects.requireNonNull(directDeliveries, "directDeliveries").isEmpty()) {
-            throw new IllegalArgumentException(
-                    "ADMIT_CLOSURE directDeliveries must be empty");
-        }
         return new ClosureInvocationInput(
                 Operation.ADMIT_CLOSURE,
                 invocationIdentity,
@@ -194,10 +209,9 @@ public final class ClosureInvocationInput {
                 Objects.requireNonNull(cause, "cause"),
                 admissionCandidate,
                 admissionCandidateIdentity,
-                directDeliveries,
-                directDeliverySnapshotIdentity,
+                Collections.<DirectLogicalDelivery>emptyList(),
+                emptyDirectDeliverySnapshotIdentity,
                 directDeliverySnapshotIdentityFactory,
-                historicalTransitions,
                 gasPolicy,
                 environment,
                 candidateIdentityFactory,
@@ -214,9 +228,6 @@ public final class ClosureInvocationInput {
     public String directDeliverySnapshotIdentity() {
         return directDeliverySnapshotIdentity;
     }
-    public List<ManagedRevisionEvidence> historicalTransitions() {
-        return historicalTransitions;
-    }
     public ExecutionPolicy gasPolicy() { return gasPolicy; }
     public AffectedClosureSnapshot.EnvironmentEvidence environment() {
         return environment;
@@ -232,10 +243,6 @@ public final class ClosureInvocationInput {
             }
         }
         return Collections.unmodifiableList(copy);
-    }
-
-    private static <T> List<T> immutableList(List<T> values, String field) {
-        return Collections.unmodifiableList(copy(values, field));
     }
 
     private static <T> ArrayList<T> copy(List<T> values, String field) {

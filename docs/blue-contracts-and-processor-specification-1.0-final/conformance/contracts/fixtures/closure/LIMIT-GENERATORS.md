@@ -71,8 +71,8 @@ unchanged Blue Language 1.0 algorithms.
 
 `work-occurrences`
 
-: Create `parameters.count` distinct no-op historical-transition delivery
-  occurrences with consecutive ordinals and distinct transition identities.
+: Create `parameters.count` distinct no-op `CONTAINING_REFERENCE_UPDATE` work
+  occurrences with consecutive ordinals and distinct managed cause identities.
   Each admitted exact work occurrence counts once regardless of equal payload
   values. The rejected next occurrence is neither enqueued nor charged.
 

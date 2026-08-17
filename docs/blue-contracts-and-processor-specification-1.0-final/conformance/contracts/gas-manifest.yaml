@@ -219,8 +219,8 @@ cyclicCanonicalBytesDefinition:
   - materialized MASTER#index member suffixes
   - proof serialization
   - containing-document reconstruction
-identityAlgorithm: sha256 of UTF-8 canonical JSON with packageIdentity set to null
-packageIdentity: sha256:f2ed1907972bb08fda7343c99822bdb8c60681fb89d33828b463ac9997e2b908
+identityAlgorithm: sha256 of RFC 8785 canonical JSON encoded as UTF-8 with packageIdentity set to null
+packageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
 numericWeightsStatus: frozen for Blue Contracts and Processor Specification 1.0
 defaultExecutionPolicy:
   defaultGasLimit: 100000

@@ -416,6 +416,109 @@ merged:
             blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
           paths:
           - /c
+splitComponent:
+  schema: blue-language-cyclic-oracle/1.0
+  id: split-cd
+  stages:
+  - name: split-cd
+    sourceDocumentsWithThisReferences:
+    - documentId: mc
+      memberIdentity: mc
+      d:
+        blueId: this#1
+      contracts:
+        embedded:
+          type:
+            blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          paths:
+          - /d
+          - /a
+        source:
+          type:
+            blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          subscriptionKey: fixture
+          eventKey: fixture
+          accept: true
+          checkpointDomain: domain
+          logicalDeliveryKey: mc
+        start:
+          type:
+            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          channel: source
+          order: 0
+    - documentId: md
+      memberIdentity: md
+      c:
+        blueId: this#0
+      contracts:
+        embedded:
+          type:
+            blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          paths:
+          - /c
+    preliminaryBlueIds:
+      '0': CpGYViqaCA2saHy3dpsoykuvWwy7nB7aDvxxBLWeggKK
+      '1': F9wyEnprQ4uwycGuftLuTNjzCghsS2pkepgkToEosVJT
+    sortedSourceIndices:
+    - 0
+    - 1
+    canonicalLimitForm:
+    - documentId:
+        blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+      memberIdentity:
+        blueId: 9LSD88JcjqPsj4EGL2SqL9B2GVNkQz3xLwmsifRHA4GG
+      d:
+        blueId: this#1
+      contracts:
+        blueId: 6xwrn6BhUNQ8v41FhxamQksER5aKKdeVBfi9zZ9bjsLJ
+    - documentId:
+        blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+      memberIdentity:
+        blueId: 8NT8MiJ5jL6zEYiF2Q78FZYkYcLEBtbiA9JtxhSfFkjG
+      c:
+        blueId: this#0
+      contracts:
+        blueId: 8fSY7cw6AYrGi5adUqLGsrCVBcuuyKks9vjLq85AUnNd
+    canonicalMasterInputUtf8Bytes: 485
+    masterBlueId: DZYJ9C2YEPxJRLYqpsSqn97DBAAzY1BV87vT2uF2CJiJ
+    memberBlueIdsInSourceOrder:
+    - DZYJ9C2YEPxJRLYqpsSqn97DBAAzY1BV87vT2uF2CJiJ#0
+    - DZYJ9C2YEPxJRLYqpsSqn97DBAAzY1BV87vT2uF2CJiJ#1
+    materializedDocuments:
+    - documentId: mc
+      memberIdentity: mc
+      d:
+        blueId: DZYJ9C2YEPxJRLYqpsSqn97DBAAzY1BV87vT2uF2CJiJ#1
+      contracts:
+        embedded:
+          type:
+            blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          paths:
+          - /d
+          - /a
+        source:
+          type:
+            blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          subscriptionKey: fixture
+          eventKey: fixture
+          accept: true
+          checkpointDomain: domain
+          logicalDeliveryKey: mc
+        start:
+          type:
+            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          channel: source
+          order: 0
+    - documentId: md
+      memberIdentity: md
+      c:
+        blueId: DZYJ9C2YEPxJRLYqpsSqn97DBAAzY1BV87vT2uF2CJiJ#0
+      contracts:
+        embedded:
+          type:
+            blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          paths:
+          - /c
 split:
   abMaster: 4JAMBxTCCPp9ivfYuM7nUBbHD1h29nTTnw8sPBVWsF2Q
-  cdMaster: 4uUcUzvgvNKH53HDmMFBQ1UpDoZa29Nc7CfnNytuAESS
+  cdMaster: DZYJ9C2YEPxJRLYqpsSqn97DBAAzY1BV87vT2uF2CJiJ

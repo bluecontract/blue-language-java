@@ -6,7 +6,16 @@ category: admission
 operation: admit-closure
 description: Initialization work and marker writes fit, but the first whole-component tentative finalization charge is rejected. Ownership names the exact finalization ordinal and component; the closure rolls back atomically.
 releaseManifest: ../../release-manifest.yaml
-oracle: ../../oracles/c-clo-01-static-cycle-admission.yaml
+oracle:
+  path: ../../oracles/c-clo-01-static-cycle-admission.yaml
+  componentStages:
+  - location: INPUT
+    componentStateIdentity: sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18
+    stage: input-0
+  - location: RESULT
+    componentStateIdentity: sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18
+    stage: input-0
+  finalizationStages: []
 input:
   graphGeneration: 1
   cause:
@@ -111,7 +120,6 @@ input:
     - simple-a
     - simple-b
     masterBlueId: AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR
-    oracleStage: input-0
     orderedMemberBlueIds:
     - AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#0
     - AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#1
@@ -146,12 +154,8 @@ input:
   gasPolicy:
     policyIdentity: sha256:edb6d88d019af24ab9fe3fe33bc22dd8390933d87d468fbf88d2bce168225552
     sharedLimit: 1231
-    usesReleaseDefault: false
     localLimits: {}
     label: finalization-owner-boundary
-  runtime:
-    handlers: {}
-    initializationHandlers: {}
   admissionCandidate: null
   admissionCandidateIdentity: null
   publicRootDocumentIds:
@@ -159,12 +163,12 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:fd4f71dc78c5300c88b3ad097b48742cefa46ad902984a4d4bed480f4eb06708
   closureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
-  invocationIdentity: sha256:fc8b4ea0fc00d685fbd80e0cdcba7050d25d6cc6ab40831c28441b427cd529bf
+  invocationIdentity: sha256:73c49968496f8674d598e4241592b361f591854b4c43600a405845681a77e9b6
   environment:
-    blueLanguageSpecificationIdentity: sha256:a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869
-    contractsSpecificationIdentity: sha256:cde697e8632174111a3571fa898e7ef8bc93420d092a967256df6fe0b7d6236d
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:66b7645e92c2e9941a63fe217e1447996dcb3c9ed1fcf0f5f1b88899d2db9e3c
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
-    gasManifestIdentity: sha256:5f8e6a724e1323c0abf57ea26668a6fe2bf0d708a9ade67020ed4dc0f0db12be
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
       identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
       label: nfc-document-lineage-v1
@@ -247,12 +251,12 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:83f84e8eab0b62d3a5bcd362b339dd27786e39d5d6a2d2367dfa84f0508820df
-    cyclicProofVerifierIdentity: sha256:b949a4f7629554393b210f867405597372cc3259ed8c7e765a37fa33182921a5
+    cyclicFinalizerIdentity: sha256:acce2d00473b652d0239f5d4483786726c54772528870b1a222ca757c72b66b5
+    cyclicProofVerifierIdentity: sha256:c86366b1a1c826982f0fd78d7c4abfc73d7e96f07681bce79a1fdfb4ed309599
 expected:
   attemptOutcome: Complete
   status: gas-limit-exceeded
-  invocationIdentity: sha256:fc8b4ea0fc00d685fbd80e0cdcba7050d25d6cc6ab40831c28441b427cd529bf
+  invocationIdentity: sha256:73c49968496f8674d598e4241592b361f591854b4c43600a405845681a77e9b6
   inputClosureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
   outputClosureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
   atomic: true
@@ -261,14 +265,14 @@ expected:
     kind: INITIALIZATION
     targetDocumentId: simple-a
     channelKey: lifecycle
-    workIdentity: sha256:ceedfc35b9deb97b2ae8f5b7e6be5d51a482d51ecd9716bd08ddd7709252c197
+    workIdentity: sha256:4b249e57186143ecfd786e5fa93ef296ddb12bbbd144c08a633071eb1cb83b6a
     targetManagedScopeIdentity: sha256:80cee3d76611da7b628c2aa011521a9b13d1d073389b2e9f06a0898bdfec0ff0
     sourceOccurrenceIdentity: sha256:9caec6d9fef14be8030fa3f88cb5a0e5eda76502943b3a8c7347e28872e10f42
   - ordinal: 1
     kind: INITIALIZATION
     targetDocumentId: simple-b
     channelKey: lifecycle
-    workIdentity: sha256:bdc27b9bee07a1504e0504b4ac42109810f4ef9176b1b6141d2cb14c39213aba
+    workIdentity: sha256:797eb8e3412a8ce117b5d8a547d1d6088afbc7045c3edb5c6a0375cc3ee881fe
     targetManagedScopeIdentity: sha256:a29e03302cb494bf23aed3ae4709a66501e6ab3089822518e3e3cb4b732a8ca7
     sourceOccurrenceIdentity: sha256:9caec6d9fef14be8030fa3f88cb5a0e5eda76502943b3a8c7347e28872e10f42
   tentativeFinalizations: []
@@ -414,7 +418,7 @@ expected:
   publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
   rollbackToInput: true
   totalGas: 1212
-  gasTraceIdentity: sha256:b745fdba4568a66b5a5e33805363eef5d4054e0f0665271a8d255cee8535e239
+  gasTraceIdentity: sha256:4bd4cd1a4e82d4f06c057521715bc8c64bb9d3d881b29614912021890b980eaf
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -521,7 +525,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     logicalPath: work/0
-    workOccurrenceId: sha256:ceedfc35b9deb97b2ae8f5b7e6be5d51a482d51ecd9716bd08ddd7709252c197
+    workOccurrenceId: sha256:4b249e57186143ecfd786e5fa93ef296ddb12bbbd144c08a633071eb1cb83b6a
     reason: work.0.seed-enqueue
   - sequence: 13
     namespace: processor
@@ -534,7 +538,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     logicalPath: work/0
-    workOccurrenceId: sha256:ceedfc35b9deb97b2ae8f5b7e6be5d51a482d51ecd9716bd08ddd7709252c197
+    workOccurrenceId: sha256:4b249e57186143ecfd786e5fa93ef296ddb12bbbd144c08a633071eb1cb83b6a
     reason: work.0.dequeue
   - sequence: 14
     namespace: processor
@@ -547,7 +551,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     logicalPath: work/0
-    workOccurrenceId: sha256:ceedfc35b9deb97b2ae8f5b7e6be5d51a482d51ecd9716bd08ddd7709252c197
+    workOccurrenceId: sha256:4b249e57186143ecfd786e5fa93ef296ddb12bbbd144c08a633071eb1cb83b6a
     contractKey: lifecycle
     reason: work.0.delivery
   - sequence: 15
@@ -561,7 +565,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     logicalPath: work/0
-    workOccurrenceId: sha256:ceedfc35b9deb97b2ae8f5b7e6be5d51a482d51ecd9716bd08ddd7709252c197
+    workOccurrenceId: sha256:4b249e57186143ecfd786e5fa93ef296ddb12bbbd144c08a633071eb1cb83b6a
     reason: work.0.scope
   - sequence: 16
     namespace: processor
@@ -574,7 +578,7 @@ expected:
     activationGeneration: 0
     componentGeneration: 1
     logicalPath: work/0
-    workOccurrenceId: sha256:ceedfc35b9deb97b2ae8f5b7e6be5d51a482d51ecd9716bd08ddd7709252c197
+    workOccurrenceId: sha256:4b249e57186143ecfd786e5fa93ef296ddb12bbbd144c08a633071eb1cb83b6a
     reason: work.0.contracts
   diagnostic: GasLimitExceeded
   rejectedCharge:
@@ -592,3 +596,18 @@ expected:
       componentIdentity: sha256:b27694341619d5d0835f99889e08eed563c00a8124aaf5945b115826c8b7e4b9
       componentGeneration: 1
     rejectedChargeIdentity: sha256:e622fa35925267fdc2999d771526288879e0f60a12861d346d28a84e5ca8f629
+runtime:
+  handlers: {}
+  initializationHandlers: {}
+sharedLimitSource:
+  kind: FIXTURE_OVERRIDE
+  sharedLimit: 1231
+provider:
+  nodes: {}
+  expectedRequiredBlueIds: []
+  expectedLoads: []
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

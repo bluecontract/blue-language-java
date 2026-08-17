@@ -17,7 +17,8 @@ Blue Contracts
 
 Coordination
     append one external entry, prove/choose direct targets, supply stable
-    DocumentId and occurrence bindings, select historical revision evidence,
+    DocumentId and occurrence bindings, select one authenticated contiguous
+    managed-revision cause at a time behind a no-overtake barrier,
     construct the exact closure snapshot, invoke Contracts, and atomically
     publish the complete returned closure
 ```
@@ -82,7 +83,7 @@ ExternalEntryClosureExecutor
 AdmissionClosureExecutor
 ClosureCommitCoordinator
 ClosureCommitReconciler
-HistoricalRevisionEvidenceResolver
+ManagedRevisionCatchUpBarrier
 CoordinationExecutionPolicyResolver
 BlockedEntryRegistry
 ```
@@ -90,7 +91,10 @@ BlockedEntryRegistry
 Coordination should use one immutable graph/component index and one
 storage-neutral closure commit transaction. It may retain document epochs and
 indexes as operational/audit evidence, but it must publish same-entry closure
-results atomically.
+results atomically. It never passes a revision list to Contracts: one
+`ManagedRevisionCause` is one separately metered and committed closure
+invocation, and the next cause is dispatched only after the preceding terminal
+commit.
 
 ## Exact implementation order
 

@@ -4,9 +4,8 @@ vectors:
 - C-CLO-22
 category: history
 operation: process-closure
-description: B attempts to attach historical A epoch 5 while the authoritative managed A is epoch 10. Without exact transition evidence the processor requests resources and does not downgrade or fork A.
+description: B attempts to attach exact historical A5 while authoritative managed A is at epoch 10. The exact A5 node is unavailable, so the processor requests only A5 and returns the unchanged invocation state.
 releaseManifest: ../../release-manifest.yaml
-oracle: ../../oracles/history-a10-b-attaches-a5.yaml
 input:
   graphGeneration: 1
   cause:
@@ -26,7 +25,7 @@ input:
   documents:
     history-a:
       documentId: history-a
-      blueId: CfndGVLaADgGoDxt5FxdtpdGyLzb4SAGgsMsF3EhjLc7
+      blueId: 41wa9z5GB4BwKJRfzf5X3xKYgUngTvLkqfaWYjTNZ1RU
       document:
         documentId: history-a
         memberIdentity: history-a
@@ -43,7 +42,7 @@ input:
             type:
               blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
             document:
-              blueId: HeQktJxAZadQe8VLbZmRK2nUQLojWw9pdjmaztJEfyoc
+              blueId: 7qdo1rg85wZ4AgzcE65URTKUMtymmi4PdGMhdgvrNRsk
       initialized: true
       terminated: false
       publicRoot: true
@@ -97,13 +96,13 @@ input:
     active: true
     pendingHistoricalEpoch: null
   - occurrenceIdentity: sha256:e707919f902b2644d1837adc68c8df8adfba39ebc40c207b68f3af4abc06a1cf
-    bindingIdentity: sha256:bcd2c41861fd74adc6b6d9aa44762f7c0564b2a0f94cf8c0108911f4220be8aa
+    bindingIdentity: sha256:ba6da54e149088ef177a5695eb739a51b7d389956c012004ba997426afeec79b
     sourceDocumentId: history-b
     sourcePath: /a
     activationGeneration: 1
     targetDocumentId: history-a
     bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
-    expectedTargetBlueId: CfndGVLaADgGoDxt5FxdtpdGyLzb4SAGgsMsF3EhjLc7
+    expectedTargetBlueId: 78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA
     active: false
     pendingHistoricalEpoch: 5
   components:
@@ -121,8 +120,8 @@ input:
     orderedMemberDocumentIds:
     - history-a
     orderedMemberBlueIds:
-    - CfndGVLaADgGoDxt5FxdtpdGyLzb4SAGgsMsF3EhjLc7
-    componentStateIdentity: sha256:5a166e49ccd32f7401b861ee3be18b4cfee441b89b3474a8327545c3a03deeed
+    - 41wa9z5GB4BwKJRfzf5X3xKYgUngTvLkqfaWYjTNZ1RU
+    componentStateIdentity: sha256:60d939e17c40d3b9c1500ddfa252a1269c8999812597e9537df2bdbf4ff4164c
   directDeliveries:
   - targetDocumentId: history-b
     scopePath: /
@@ -133,30 +132,21 @@ input:
   gasPolicy:
     policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
     sharedLimit: 100000
-    usesReleaseDefault: true
     localLimits: {}
     label: release-default
-  runtime:
-    handlers:
-      history-b/start:
-        patches:
-        - op: add
-          path: /a
-          val:
-            blueId: DyXbyuuU4NjirUao7MMbkiZj4C6FoqAXRqpwX3ygrfj6
   admissionCandidate: null
   admissionCandidateIdentity: null
   publicRootDocumentIds:
   - history-a
   directDeliverySnapshotIdentity: sha256:35e7097eeea280e78fa59f71c861f84718f45176631751fcbc48ad6bd864685c
-  occurrenceBindingSetIdentity: sha256:decbe643f9130c5c6e4fb2cac8fc0809a5dc535e53ec1be9d5baa3f768e06189
-  closureIdentity: sha256:29921ceb7863b87518851be93372fe92a93ceddced0eef0b70bbb61f0ffd0c83
-  invocationIdentity: sha256:6aa52d29f394628265c78c00464804d46eb286a81466c4a49a2a80ae834768b6
+  occurrenceBindingSetIdentity: sha256:ad6b2db23e72cfb53126048c89e45f4890d5b5a2f730192d6b72e226fd0d91f9
+  closureIdentity: sha256:ea72315ac7dc3faab30bbcf99b083319f200cce6f9765acddf0b92912997bbed
+  invocationIdentity: sha256:4c6fbc7db897a5328219e0e226b63bc9781a9c0555cf89ca6e18feb53de5b010
   environment:
-    blueLanguageSpecificationIdentity: sha256:a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869
-    contractsSpecificationIdentity: sha256:cde697e8632174111a3571fa898e7ef8bc93420d092a967256df6fe0b7d6236d
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:66b7645e92c2e9941a63fe217e1447996dcb3c9ed1fcf0f5f1b88899d2db9e3c
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
-    gasManifestIdentity: sha256:5f8e6a724e1323c0abf57ea26668a6fe2bf0d708a9ade67020ed4dc0f0db12be
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
       identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
       label: nfc-document-lineage-v1
@@ -239,13 +229,31 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:83f84e8eab0b62d3a5bcd362b339dd27786e39d5d6a2d2367dfa84f0508820df
-    cyclicProofVerifierIdentity: sha256:b949a4f7629554393b210f867405597372cc3259ed8c7e765a37fa33182921a5
+    cyclicFinalizerIdentity: sha256:acce2d00473b652d0239f5d4483786726c54772528870b1a222ca757c72b66b5
+    cyclicProofVerifierIdentity: sha256:c86366b1a1c826982f0fd78d7c4abfc73d7e96f07681bce79a1fdfb4ed309599
 expected:
   attemptOutcome: NeedsResources
   requiredBlueIds:
-  - 2fyNaqzce7pyG9jDsvQSRWm4Z7XouvXRYtYx1zRPgqFx
-  - 6PcMty6ytucm2dAzF3Z6Jru4n3N4gSc7J13WDfc66R3
-  - B4LuWMVcCndzE799x9vUTcM2Ch86iXPKqaVbx9wyFUog
-  - DvHixMrZUgXjWihrHyckchTpK6UYjFtMQ31pjApfNikT
-  - HeQktJxAZadQe8VLbZmRK2nUQLojWw9pdjmaztJEfyoc
+  - 78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA
+runtime:
+  handlers:
+    history-b/start:
+      patches:
+      - op: add
+        path: /a
+        val:
+          blueId: 78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA
+  initializationHandlers: {}
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds:
+  - 78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA
+  expectedLoads:
+  - 78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null
