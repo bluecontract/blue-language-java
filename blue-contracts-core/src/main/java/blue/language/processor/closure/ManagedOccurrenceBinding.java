@@ -1,0 +1,189 @@
+package blue.language.processor.closure;
+
+import java.util.Objects;
+
+/**
+ * Exact immutable evidence binding one authored embedded occurrence to a
+ * stable managed-document lineage.
+ */
+public final class ManagedOccurrenceBinding
+        implements Comparable<ManagedOccurrenceBinding> {
+
+    private final String occurrenceIdentity;
+    private final String bindingIdentity;
+    private final String bindingPolicyIdentity;
+    private final DocumentId sourceDocumentId;
+    private final ScopeAddress sourceAddress;
+    private final DocumentId targetDocumentId;
+    private final String expectedTargetBlueId;
+    private final boolean active;
+    private final Long pendingHistoricalEpoch;
+
+    /**
+     * Creates one closed occurrence-binding row.
+     *
+     * @param occurrenceIdentity stable occurrence identity
+     * @param bindingIdentity exact state-specific binding identity
+     * @param bindingPolicyIdentity selected binding-policy identity
+     * @param sourceDocumentId containing authored document lineage
+     * @param sourceAddress authored embedded occurrence address
+     * @param targetDocumentId selected managed target lineage
+     * @param expectedTargetBlueId exact authored target state
+     * @param active whether this row contributes a graph edge
+     * @param pendingHistoricalEpoch nullable historical catch-up cursor
+     */
+    public ManagedOccurrenceBinding(
+            String occurrenceIdentity,
+            String bindingIdentity,
+            String bindingPolicyIdentity,
+            DocumentId sourceDocumentId,
+            ScopeAddress sourceAddress,
+            DocumentId targetDocumentId,
+            String expectedTargetBlueId,
+            boolean active,
+            Long pendingHistoricalEpoch) {
+        this.occurrenceIdentity = ClosureValueSupport.requireSha256Identity(
+                occurrenceIdentity, "occurrenceIdentity");
+        this.bindingIdentity = ClosureValueSupport.requireSha256Identity(
+                bindingIdentity, "bindingIdentity");
+        this.bindingPolicyIdentity = ClosureValueSupport.requireSha256Identity(
+                bindingPolicyIdentity, "bindingPolicyIdentity");
+        this.sourceDocumentId = Objects.requireNonNull(
+                sourceDocumentId, "sourceDocumentId");
+        this.sourceAddress = Objects.requireNonNull(
+                sourceAddress, "sourceAddress");
+        if (sourceAddress.isRoot()) {
+            throw new IllegalArgumentException(
+                    "An embedded occurrence must have a non-Root source address");
+        }
+        this.targetDocumentId = Objects.requireNonNull(
+                targetDocumentId, "targetDocumentId");
+        this.expectedTargetBlueId = ClosureValueSupport.requireBlueId(
+                expectedTargetBlueId, "expectedTargetBlueId");
+        this.active = active;
+        this.pendingHistoricalEpoch = pendingHistoricalEpoch == null
+                ? null
+                : Long.valueOf(ClosureValueSupport.requireSafeInteger(
+                        pendingHistoricalEpoch.longValue(),
+                        "pendingHistoricalEpoch"));
+        if (active && this.pendingHistoricalEpoch != null) {
+            throw new IllegalArgumentException(
+                    "An active occurrence cannot retain a historical cursor");
+        }
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return stable occurrence identity
+     */
+    public String occurrenceIdentity() {
+        return occurrenceIdentity;
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return state-specific binding identity
+     */
+    public String bindingIdentity() {
+        return bindingIdentity;
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return selected binding-policy identity
+     */
+    public String bindingPolicyIdentity() {
+        return bindingPolicyIdentity;
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return source document lineage
+     */
+    public DocumentId sourceDocumentId() {
+        return sourceDocumentId;
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return source occurrence address
+     */
+    public ScopeAddress sourceAddress() {
+        return sourceAddress;
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return absolute authored source path
+     */
+    public String sourcePath() {
+        return sourceAddress.path();
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return positive occurrence generation
+     */
+    public long activationGeneration() {
+        return sourceAddress.activationGeneration();
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return target document lineage
+     */
+    public DocumentId targetDocumentId() {
+        return targetDocumentId;
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return exact expected target BlueId
+     */
+    public String expectedTargetBlueId() {
+        return expectedTargetBlueId;
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return whether this row contributes an active graph edge
+     */
+    public boolean active() {
+        return active;
+    }
+
+    /**
+     * Returns the documented value.
+     *
+     * @return nullable historical catch-up cursor
+     */
+    public Long pendingHistoricalEpoch() {
+        return pendingHistoricalEpoch;
+    }
+
+    /**
+     * Compares occurrence identity then binding identity.
+     *
+     * @param other row to compare
+     * @return canonical row order
+     */
+    @Override
+    public int compareTo(ManagedOccurrenceBinding other) {
+        int order = ClosureValueSupport.comparePortableText(
+                occurrenceIdentity, other.occurrenceIdentity);
+        return order != 0
+                ? order
+                : ClosureValueSupport.comparePortableText(
+                        bindingIdentity, other.bindingIdentity);
+    }
+}
