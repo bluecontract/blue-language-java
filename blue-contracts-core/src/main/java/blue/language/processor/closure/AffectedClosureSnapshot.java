@@ -54,7 +54,7 @@ public final class AffectedClosureSnapshot {
                 ClosureValueSupport.requireSha256Identity(
                         occurrenceBindingSetIdentity,
                         "occurrenceBindingSetIdentity");
-        this.components = immutableCanonicalComponents(components);
+        this.components = immutableComponents(components);
         this.publicRootDocumentIds = immutableCanonicalDocumentIds(
                 publicRootDocumentIds, "publicRootDocumentIds");
         validateOccurrenceEndpoints();
@@ -196,6 +196,28 @@ public final class AffectedClosureSnapshot {
             throw new IllegalArgumentException(
                     "Components do not partition all managed documents");
         }
+
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
+                documentsById.keySet(), occurrences);
+        List<List<DocumentId>> expected = new SccPartitioner().partition(graph);
+        if (expected.size() != components.size()) {
+            throw new IllegalArgumentException(
+                    "Components do not match the active managed graph");
+        }
+        for (int index = 0; index < expected.size(); index++) {
+            List<DocumentId> expectedMembers = expected.get(index);
+            ComponentSnapshot actual = components.get(index);
+            if (!expectedMembers.equals(actual.orderedMemberDocumentIds())) {
+                throw new IllegalArgumentException(
+                        "Components are not in canonical target-before-source order");
+            }
+            boolean expectedCyclic = expectedMembers.size() > 1
+                    || graph.hasSelfEdge(expectedMembers.get(0));
+            if (expectedCyclic != (actual.kind() == ComponentKind.CYCLIC)) {
+                throw new IllegalArgumentException(
+                        "Component kind disagrees with the active managed graph");
+            }
+        }
     }
 
     private void validatePublicRoots() {
@@ -251,18 +273,12 @@ public final class AffectedClosureSnapshot {
         return Collections.unmodifiableList(copy);
     }
 
-    private static List<ComponentSnapshot> immutableCanonicalComponents(
+    private static List<ComponentSnapshot> immutableComponents(
             List<ComponentSnapshot> values) {
         ArrayList<ComponentSnapshot> copy = copyNonNull(values, "components");
         if (copy.isEmpty()) {
             throw new IllegalArgumentException(
                     "An affected closure must contain a component");
-        }
-        for (int index = 1; index < copy.size(); index++) {
-            if (copy.get(index - 1).compareTo(copy.get(index)) >= 0) {
-                throw new IllegalArgumentException(
-                        "Components are not in canonical order");
-            }
         }
         return Collections.unmodifiableList(copy);
     }

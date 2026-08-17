@@ -124,6 +124,29 @@ final class ClosureEvidenceApiTest {
     }
 
     @Test
+    void shouldRequireTargetBeforeSourceComponentOrder() {
+        ComponentSnapshot source = components().get(0);
+        ComponentSnapshot target = components().get(1);
+        List<ManagedDocumentSnapshot> documents = Arrays.asList(
+                managed(A, "blue-a", true),
+                managed(B, "blue-b", false));
+        List<ManagedOccurrenceBinding> active = Collections.singletonList(
+                binding(true, null));
+
+        AffectedClosureSnapshot snapshot = new AffectedClosureSnapshot(
+                hash('0'), 1L, documents, active, hash('e'),
+                Arrays.asList(target, source), Collections.singletonList(A));
+        assertEquals(B, snapshot.components().get(0)
+                .orderedMemberDocumentIds().get(0));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new AffectedClosureSnapshot(
+                        hash('0'), 1L, documents, active, hash('e'),
+                        Arrays.asList(source, target),
+                        Collections.singletonList(A)));
+    }
+
+    @Test
     void shouldCloseOperationSpecificInvocationInputs() {
         AffectedClosureSnapshot snapshot = snapshot(false, null);
         DirectLogicalDelivery delivery = new DirectLogicalDelivery(
