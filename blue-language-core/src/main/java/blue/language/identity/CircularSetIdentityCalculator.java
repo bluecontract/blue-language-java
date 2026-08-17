@@ -5,7 +5,7 @@ import blue.language.model.Schema;
 import blue.language.identity.BlueIds;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,9 +18,10 @@ import java.util.regex.Pattern;
  * Calculates stable member BlueIds for a closed set of mutually referencing
  * documents.
  *
- * <p>Members are ordered by their placeholder-based preliminary identity,
- * making the master fold independent of caller order. A member is never
- * hashed independently as final cyclic evidence.</p>
+ * <p>Members are ordered by their placeholder-based preliminary identity and,
+ * when that digest collides, by the unsigned RFC 8785 bytes of the normalized
+ * preliminary input. This makes the master fold independent of caller order.
+ * A member is never hashed independently as final cyclic evidence.</p>
  */
 public final class CircularSetIdentityCalculator {
 
@@ -49,6 +50,7 @@ public final class CircularSetIdentityCalculator {
             "^" + BlueIds.THIS_MEMBER_PREFIX + "(\\d+)$");
 
     private final DirectBlueIdCalculator directCalculator;
+    private final BlueIdInputNormalizer inputNormalizer;
 
     /** Creates a calculator using the normative direct identity path. */
     public CircularSetIdentityCalculator() {
@@ -66,6 +68,7 @@ public final class CircularSetIdentityCalculator {
         this.directCalculator = Objects.requireNonNull(
                 directCalculator,
                 "directCalculator");
+        this.inputNormalizer = new BlueIdInputNormalizer();
     }
 
     /**
@@ -75,7 +78,7 @@ public final class CircularSetIdentityCalculator {
      * @return calculated member BlueIds
      * @throws IllegalArgumentException if the set is empty, has no internal
      *         references, contains invalid references, or has duplicate
-     *         preliminary identity inputs
+     *         indistinguishable preliminary identity inputs
      */
     public List<String> circularBlueIds(List<Node> documents) {
         if (documents == null || documents.isEmpty()) {
@@ -96,18 +99,19 @@ public final class CircularSetIdentityCalculator {
                     preliminary,
                     reference ->
                             BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER);
+            Object normalizedPreliminary = inputNormalizer
+                    .normalizeAllowingCyclicPlaceholders(preliminary);
             indexedNodes.add(new IndexedNode(
                     index,
                     documents.get(index),
                     directCalculator
                             .directBlueIdAllowingCyclicPlaceholders(
-                                    preliminary)));
+                                    preliminary),
+                    CanonicalJsonValueWriter.write(
+                            normalizedPreliminary)));
         }
-        rejectDuplicatePreliminaryInputs(indexedNodes);
-
-        indexedNodes.sort(Comparator
-                .comparing((IndexedNode member) -> member.preliminaryBlueId)
-                .thenComparingInt(member -> member.originalIndex));
+        indexedNodes.sort(this::comparePreliminaryMembers);
+        rejectIndistinguishablePreliminaryInputs(indexedNodes);
 
         Map<Integer, Integer> sortedIndexByOriginalIndex = new HashMap<>();
         for (int sortedIndex = 0;
@@ -142,18 +146,46 @@ public final class CircularSetIdentityCalculator {
         return result;
     }
 
-    private void rejectDuplicatePreliminaryInputs(
+    private int comparePreliminaryMembers(
+            IndexedNode left,
+            IndexedNode right) {
+        int blueIdComparison = left.preliminaryBlueId.compareTo(
+                right.preliminaryBlueId);
+        if (blueIdComparison != 0) {
+            return blueIdComparison;
+        }
+        return compareUnsignedBytes(
+                left.preliminaryInputBytes,
+                right.preliminaryInputBytes);
+    }
+
+    private int compareUnsignedBytes(byte[] left, byte[] right) {
+        int commonLength = Math.min(left.length, right.length);
+        for (int index = 0; index < commonLength; index++) {
+            int compared = Integer.compare(
+                    left[index] & 0xff,
+                    right[index] & 0xff);
+            if (compared != 0) {
+                return compared;
+            }
+        }
+        return Integer.compare(left.length, right.length);
+    }
+
+    private void rejectIndistinguishablePreliminaryInputs(
             List<IndexedNode> indexedNodes) {
-        Map<String, Integer> firstIndexByBlueId = new HashMap<>();
-        for (IndexedNode indexedNode : indexedNodes) {
-            Integer firstIndex = firstIndexByBlueId.putIfAbsent(
-                    indexedNode.preliminaryBlueId,
-                    indexedNode.originalIndex);
-            if (firstIndex != null) {
+        for (int index = 1; index < indexedNodes.size(); index++) {
+            IndexedNode previous = indexedNodes.get(index - 1);
+            IndexedNode current = indexedNodes.get(index);
+            if (previous.preliminaryBlueId.equals(
+                    current.preliminaryBlueId)
+                    && Arrays.equals(
+                    previous.preliminaryInputBytes,
+                    current.preliminaryInputBytes)) {
                 throw new IllegalArgumentException(
-                        "Duplicate preliminary cyclic BlueId input for members "
-                                + firstIndex + " and "
-                                + indexedNode.originalIndex + ".");
+                        "Indistinguishable preliminary cyclic BlueId input for members "
+                                + previous.originalIndex + " and "
+                                + current.originalIndex + ".");
             }
         }
     }
@@ -326,14 +358,17 @@ public final class CircularSetIdentityCalculator {
         private final int originalIndex;
         private final Node node;
         private final String preliminaryBlueId;
+        private final byte[] preliminaryInputBytes;
 
         private IndexedNode(
                 int originalIndex,
                 Node node,
-                String preliminaryBlueId) {
+                String preliminaryBlueId,
+                byte[] preliminaryInputBytes) {
             this.originalIndex = originalIndex;
             this.node = node;
             this.preliminaryBlueId = preliminaryBlueId;
+            this.preliminaryInputBytes = preliminaryInputBytes;
         }
     }
 }
