@@ -233,6 +233,23 @@ class FrozenCanonicalDigesterTest {
     }
 
     @Test
+    void shouldRejectUnpairedSurrogatesInFrozenCanonicalOutput() {
+        // given
+        FrozenNode frozen = FrozenNodeBuilder.builder()
+                .name("\uD800")
+                .deferBlueId()
+                .build();
+
+        // when
+        IllegalArgumentException failure = captureFailure(
+                () -> FrozenCanonicalWriter.officialCanonicalSize(frozen));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
+        assertTrue(failure.getMessage().contains("unpaired UTF-16 surrogate"));
+    }
+
+    @Test
     void shouldMatchGenericOracleForOneHundredThousandStreamingFrozenTreeDigests() {
         // given
         Random random = new Random(0x424c554549444a43L);
@@ -648,7 +665,7 @@ class FrozenCanonicalDigesterTest {
         switch (index % 8) {
             case 0:
                 return "text-" + index + "-\u0000-\b\t\n\f\r-\"\\-zażółć-\uD83D\uDE80-"
-                        + (char) random.nextInt(0x10000);
+                        + randomBmpScalar(random);
             case 1:
                 return BigInteger.valueOf(random.nextLong() & 0x1fffffffffffffL);
             case 2:
@@ -671,7 +688,7 @@ class FrozenCanonicalDigesterTest {
         switch (index % 12) {
             case 0:
                 return new Node().value("s-" + index + "-\u0000-zażółć-\uD83D\uDE80-"
-                        + (char) random.nextInt(0x10000));
+                        + randomBmpScalar(random));
             case 1: {
                 BigInteger integer = new BigInteger(72, random);
                 return new Node().value(index % 4 == 1 ? integer : integer.negate());
@@ -721,6 +738,14 @@ class FrozenCanonicalDigesterTest {
                         "audit-" + index, new Node().value(true)));
             }
         }
+    }
+
+    private static char randomBmpScalar(Random random) {
+        char value;
+        do {
+            value = (char) random.nextInt(0x10000);
+        } while (Character.isSurrogate(value));
+        return value;
     }
 
     private static final class CanonicalBytesObservation {

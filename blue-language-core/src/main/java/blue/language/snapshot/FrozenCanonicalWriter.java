@@ -407,9 +407,8 @@ public final class FrozenCanonicalWriter {
                         int codePoint = Character.toCodePoint(current, value.charAt(++index));
                         writeUtf8CodePoint(codePoint, sink);
                     } else if (Character.isSurrogate(current)) {
-                        // String.getBytes(UTF_8), used by JsonCanonicalizer 1.1,
-                        // replaces an unpaired UTF-16 surrogate with '?'.
-                        sink.writeByte('?');
+                        throw new IllegalArgumentException(
+                                "RFC 8785 strings must not contain unpaired UTF-16 surrogates.");
                     } else {
                         writeUtf8CodePoint(current, sink);
                     }

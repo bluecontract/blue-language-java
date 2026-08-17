@@ -1,11 +1,14 @@
 package blue.language.identity;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.function.Function;
 
 import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
@@ -68,6 +71,7 @@ public class Base58Sha256Provider implements Function<Object, String> {
     private String compatibilityHash(Object object) {
         try {
             byte[] json = JSON_MAPPER.writeValueAsBytes(object);
+            requireWellFormedJsonStrings(json);
             byte[] canonical;
             if (object instanceof String || object instanceof Number || object instanceof Boolean || object == null) {
                 byte[] wrapped = new byte[json.length + 2];
@@ -83,6 +87,48 @@ public class Base58Sha256Provider implements Function<Object, String> {
             return Base58.encode(sha256Bytes(canonical));
         } catch (IOException e) {
             throw new IllegalArgumentException("Problem when generating canonized json.");
+        }
+    }
+
+    static void requireWellFormedJsonStrings(byte[] json) throws IOException {
+        requireWellFormedJsonStrings(JSON_MAPPER.readTree(json));
+    }
+
+    private static void requireWellFormedJsonStrings(JsonNode value) {
+        if (value == null) {
+            return;
+        }
+        if (value.isTextual()) {
+            requireWellFormedUnicode(value.textValue());
+            return;
+        }
+        if (value.isArray()) {
+            for (JsonNode element : value) {
+                requireWellFormedJsonStrings(element);
+            }
+            return;
+        }
+        if (value.isObject()) {
+            Iterator<Map.Entry<String, JsonNode>> fields = value.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                requireWellFormedUnicode(field.getKey());
+                requireWellFormedJsonStrings(field.getValue());
+            }
+        }
+    }
+
+    private static void requireWellFormedUnicode(String value) {
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (Character.isHighSurrogate(current)
+                    && index + 1 < value.length()
+                    && Character.isLowSurrogate(value.charAt(index + 1))) {
+                index++;
+            } else if (Character.isSurrogate(current)) {
+                throw new IllegalArgumentException(
+                        "RFC 8785 strings must not contain unpaired UTF-16 surrogates.");
+            }
         }
     }
 
