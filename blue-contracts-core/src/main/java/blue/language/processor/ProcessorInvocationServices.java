@@ -215,6 +215,11 @@ final class ProcessorInvocationServices implements AutoCloseable {
         return new GasMeter(gasSchedule, gasLimit);
     }
 
+    /** Opens the one semantic gas/admission context for a whole invocation. */
+    ProcessingGasContext newGasContext() {
+        return new ProcessingGasContext(newGasMeter());
+    }
+
     GasSchedule gasSchedule() {
         return gasSchedule;
     }

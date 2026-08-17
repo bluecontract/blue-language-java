@@ -96,6 +96,23 @@ final class ProcessorInvocationState {
             Node document,
             Node processEventSource,
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory) {
+        this(owner,
+                document,
+                processEventSource,
+                processEventSnapshotFactory,
+                owner.newGasContext());
+    }
+
+    /**
+     * Creates one independently isolated document runtime inside a wider
+     * invocation while sharing only its semantic gas/admission context.
+     */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext) {
         this.owner = owner;
         this.inputDocument = document.clone();
         this.inputSnapshot = null;
@@ -104,7 +121,7 @@ final class ProcessorInvocationState {
                 owner.conformancePlannerOverride(),
                 owner.snapshotManager(),
                 owner.observer(),
-                owner.newGasMeter(),
+                sharedGasContext,
                 owner.registry()
                         .executableBodyFieldsByType(),
                 owner.strictPlatformInvocation());
@@ -190,6 +207,20 @@ final class ProcessorInvocationState {
             ResolvedSnapshot snapshot,
             Node processEventSource,
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory) {
+        this(owner,
+                snapshot,
+                processEventSource,
+                processEventSnapshotFactory,
+                owner.newGasContext());
+    }
+
+    /** Snapshot-backed variant sharing one wider invocation gas context. */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            ResolvedSnapshot snapshot,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext) {
         this.owner = owner;
         this.inputDocument = snapshot.canonicalRoot();
         this.inputSnapshot = snapshot;
@@ -198,7 +229,7 @@ final class ProcessorInvocationState {
                 owner.conformancePlannerOverride(),
                 owner.snapshotManager(),
                 owner.observer(),
-                owner.newGasMeter(),
+                sharedGasContext,
                 owner.registry()
                         .executableBodyFieldsByType(),
                 owner.strictPlatformInvocation());
