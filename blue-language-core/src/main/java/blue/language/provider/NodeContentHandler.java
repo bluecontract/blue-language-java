@@ -3,6 +3,7 @@ package blue.language.provider;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.identity.CircularSetIdentityCalculator;
+import blue.language.identity.CyclicSetFinalization;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -16,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -45,11 +45,6 @@ public class NodeContentHandler {
                             + Pattern.quote(
                                     BlueIds.CYCLIC_MEMBER_SEPARATOR)
                             + "\\d+)?$");
-    private static final Pattern THIS_INDEX_REFERENCE_PATTERN =
-            Pattern.compile(
-                    "^" + BlueIds.THIS_MEMBER_PREFIX
-                            + "(\\d+)$");
-
     /**
      * Creates a compatibility facade over the static content helpers.
      */
@@ -203,47 +198,13 @@ public class NodeContentHandler {
             return new ParsedContent(blueId, JSON_MAPPER.valueToTree(nodes), isMultipleDocuments);
         }
 
-        List<String> memberBlueIds = circularSetIdentityCalculator
-                .circularBlueIds(nodes);
-        int[] sortedIndexByOriginalIndex = new int[nodes.size()];
-        for (int originalIndex = 0;
-             originalIndex < memberBlueIds.size();
-             originalIndex++) {
-            sortedIndexByOriginalIndex[originalIndex] = cyclicMemberIndex(
-                    memberBlueIds.get(originalIndex));
-        }
-
-        List<Node> sortedNodes = new ArrayList<>(nodes.size());
-        for (int index = 0; index < nodes.size(); index++) {
-            sortedNodes.add(null);
-        }
-        for (int originalIndex = 0;
-             originalIndex < nodes.size();
-             originalIndex++) {
-            Node rewritten = nodes.get(originalIndex).clone();
-            rewriteThisReferences(rewritten, reference -> {
-                int targetIndex = parseThisIndex(reference);
-                return BlueIds.indexedThisPlaceholder(
-                        sortedIndexByOriginalIndex[targetIndex]);
-            });
-            sortedNodes.set(
-                    sortedIndexByOriginalIndex[originalIndex],
-                    rewritten);
-        }
-
-        String blueId = BlueIds.cyclicSetMasterBlueId(
-                memberBlueIds.get(0));
-        return new ParsedContent(blueId, JSON_MAPPER.valueToTree(sortedNodes), true);
-    }
-
-    private static int cyclicMemberIndex(String memberBlueId) {
-        int separatorIndex = BlueIds.cyclicMemberSeparatorIndex(memberBlueId);
-        if (separatorIndex < 0) {
-            throw new IllegalStateException(
-                    "Circular-set calculator returned a non-member BlueId: "
-                            + memberBlueId);
-        }
-        return Integer.parseInt(memberBlueId.substring(separatorIndex + 1));
+        CyclicSetFinalization finalization =
+                circularSetIdentityCalculator.finalizeCyclicSet(nodes);
+        return new ParsedContent(
+                finalization.masterBlueId(),
+                JSON_MAPPER.valueToTree(
+                        finalization.canonicalMemberBodies()),
+                true);
     }
 
     /**
@@ -327,14 +288,6 @@ public class NodeContentHandler {
                                 + "<id>'");
             }
         }
-    }
-
-    private static int parseThisIndex(String reference) {
-        Matcher matcher = THIS_INDEX_REFERENCE_PATTERN.matcher(reference);
-        if (!matcher.matches()) {
-            throw new IllegalArgumentException("Expected indexed this reference but found: " + reference);
-        }
-        return Integer.parseInt(matcher.group(1));
     }
 
     private static List<ThisReference> findThisReferences(List<Node> nodes) {

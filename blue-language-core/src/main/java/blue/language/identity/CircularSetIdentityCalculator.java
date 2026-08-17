@@ -2,7 +2,6 @@ package blue.language.identity;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.identity.BlueIds;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,6 +38,19 @@ public final class CircularSetIdentityCalculator {
     public static List<String> calculateCircularSetBlueIds(
             List<Node> documents) {
         return SHARED.circularBlueIds(documents);
+    }
+
+    /**
+     * Calculates complete cyclic-set finalization evidence.
+     *
+     * @param documents non-empty closed cyclic document set
+     * @return immutable canonical finalization result
+     * @throws IllegalArgumentException if the set or its internal references
+     *         are not valid cyclic identity input
+     */
+    public static CyclicSetFinalization calculateCircularSetFinalization(
+            List<Node> documents) {
+        return SHARED.finalizeCyclicSet(documents);
     }
 
     private static final Pattern THIS_REFERENCE_PATTERN = Pattern.compile(
@@ -81,6 +93,26 @@ public final class CircularSetIdentityCalculator {
      *         indistinguishable preliminary identity inputs
      */
     public List<String> circularBlueIds(List<Node> documents) {
+        return new ArrayList<>(
+                finalizeCyclicSet(documents)
+                        .memberBlueIdsInInputOrder());
+    }
+
+    /**
+     * Finalizes one closed cyclic set through the normative Language path.
+     *
+     * <p>The returned evidence includes preliminary ordering inputs, canonical
+     * member bodies, the input-to-canonical mapping, and all final member
+     * identities. It is independent of provider proof verification.</p>
+     *
+     * @param documents non-empty cyclic document set
+     * @return immutable complete finalization evidence
+     * @throws IllegalArgumentException if the set is empty, has no internal
+     *         references, contains invalid references, or has duplicate
+     *         indistinguishable preliminary identity inputs
+     */
+    public CyclicSetFinalization finalizeCyclicSet(
+            List<Node> documents) {
         if (documents == null || documents.isEmpty()) {
             throw new IllegalArgumentException(
                     "Circular BlueId calculation requires at least one document.");
@@ -135,15 +167,40 @@ public final class CircularSetIdentityCalculator {
 
         String masterBlueId = directCalculator
                 .directBlueIdAllowingCyclicPlaceholders(sortedNodes);
-        List<String> result = new ArrayList<>(documents.size());
-        for (int originalIndex = 0;
-             originalIndex < documents.size();
-             originalIndex++) {
-            result.add(BlueIds.indexedCyclicMemberBlueId(
-                    masterBlueId,
-                    sortedIndexByOriginalIndex.get(originalIndex)));
+        byte[] canonicalInputBytes = CanonicalJsonValueWriter.write(
+                inputNormalizer
+                        .normalizeElementsAllowingCyclicPlaceholders(
+                                sortedNodes));
+
+        List<CyclicMemberFinalization> inputMembers = new ArrayList<>(
+                documents.size());
+        for (int index = 0; index < documents.size(); index++) {
+            inputMembers.add(null);
         }
-        return result;
+        List<CyclicMemberFinalization> canonicalMembers = new ArrayList<>(
+                documents.size());
+        for (int canonicalIndex = 0;
+             canonicalIndex < indexedNodes.size();
+             canonicalIndex++) {
+            IndexedNode indexedNode = indexedNodes.get(canonicalIndex);
+            CyclicMemberFinalization member =
+                    new CyclicMemberFinalization(
+                            indexedNode.originalIndex,
+                            canonicalIndex,
+                            indexedNode.preliminaryBlueId,
+                            BlueIds.indexedCyclicMemberBlueId(
+                                    masterBlueId,
+                                    canonicalIndex),
+                            indexedNode.preliminaryInputBytes,
+                            sortedNodes.get(canonicalIndex));
+            inputMembers.set(indexedNode.originalIndex, member);
+            canonicalMembers.add(member);
+        }
+        return new CyclicSetFinalization(
+                masterBlueId,
+                inputMembers,
+                canonicalMembers,
+                canonicalInputBytes);
     }
 
     private int comparePreliminaryMembers(

@@ -1,6 +1,7 @@
 package blue.language.provider;
 
 import blue.language.identity.CircularSetIdentityCalculator;
+import blue.language.identity.CyclicSetFinalization;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
@@ -8,8 +9,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 
+import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeContentHandlerTest {
 
@@ -63,6 +66,33 @@ class NodeContentHandlerTest {
         assertEquals(
                 "Indistinguishable preliminary cyclic BlueId input for members 0 and 1.",
                 failure.getMessage());
+    }
+
+    @Test
+    void shouldDelegateCyclicParserCanonicalizationToFinalization() {
+        // given
+        CircularSetIdentityCalculator calculator =
+                new CircularSetIdentityCalculator();
+        List<Node> documents = Arrays.asList(
+                member("B", 1),
+                member("A", 0));
+        CyclicSetFinalization finalization =
+                calculator.finalizeCyclicSet(documents);
+
+        // when
+        NodeContentHandler.ParsedContent parsed =
+                NodeContentHandler.parseAndCalculateBlueId(
+                        documents,
+                        Node::clone,
+                        calculator);
+
+        // then
+        assertEquals(finalization.masterBlueId(), parsed.blueId);
+        assertEquals(
+                JSON_MAPPER.valueToTree(
+                        finalization.canonicalMemberBodies()),
+                parsed.content);
+        assertTrue(parsed.isMultipleDocuments);
     }
 
     private static CircularSetIdentityCalculator collidingCalculator() {
