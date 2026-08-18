@@ -20,9 +20,9 @@ field blue.language.processor.EmbeddedScopePlanView$Origin#EXPLICIT descriptor=L
 field blue.language.processor.ExternalChannelDependencySnapshot$TypeMatchMode#ASSIGNABLE descriptor=Lblue/language/processor/ExternalChannelDependencySnapshot$TypeMatchMode; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ExternalChannelDependencySnapshot$TypeMatchMode#EXACT descriptor=Lblue/language/processor/ExternalChannelDependencySnapshot$TypeMatchMode; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ExternalDeliveryPlanDeriver#UNAVAILABLE descriptor=Lblue/language/processor/ExternalDeliveryPlanDeriver; access=public,static,final signature=- constant=-
-field blue.language.processor.GasSchedule#CONTRACTS_1_0_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5"
+field blue.language.processor.GasSchedule#CONTRACTS_1_0_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a"
 field blue.language.processor.GasSchedule#CONTRACTS_1_0_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue/language/processor/contracts-gas-1.0.yaml"
-field blue.language.processor.GasSchedule#CONTRACTS_1_0_RESOURCE_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f"
+field blue.language.processor.GasSchedule#CONTRACTS_1_0_RESOURCE_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8"
 field blue.language.processor.GasSchedule#CONTRACTS_1_0_SCHEDULE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts/gas/1.0"
 field blue.language.processor.GasScheduleConstants$ChargeReason#ACCEPTANCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="acceptance"
 field blue.language.processor.GasScheduleConstants$ChargeReason#APPLICATION_PATCH descriptor=Ljava/lang/String; access=public,static,final signature=- constant="application-patch"

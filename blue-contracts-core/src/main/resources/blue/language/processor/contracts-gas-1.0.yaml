@@ -2,7 +2,7 @@ manifestType: blue-contracts-gas-manifest
 schedule: blue-contracts/gas/1.0
 specification: Blue Contracts and Processor
 specificationVersion: '1.0'
-status: implementation-baseline-pending-calibration
+status: normative
 unit: gas
 maxProcessGas: 100000
 traceEntryFields:
@@ -12,17 +12,42 @@ traceEntryFields:
 - quantity
 - weight
 - subtotal
+- documentId
 - scopePath
+- activationGeneration
+- componentGeneration
 - contractKey
 - logicalPath
+- workOccurrenceId
 - reason
-admissionRule: Admit quantity * weight before the corresponding logical work. If the next charge exceeds maxProcessGas, omit that charge and stop before the work.
-compositionRule: totalGas is the sum of processor, semantic, and registered runtime counter subtotals; one logical unit is charged in exactly one owning namespace.
+admissionRule: Admit quantity * weight before the corresponding logical work against both the shared closure ceiling and any
+  applicable lower member-local ceiling. If the next charge exceeds either ceiling, omit that charge, report its exact rejected-charge
+  evidence, and stop before the work. When both fail with equal remaining allowance, shared-closure precedence applies.
+compositionRule: totalGas is the sum of processor, semantic, and registered runtime counter subtotals; one logical unit is
+  charged in exactly one owning namespace.
+localCeilingAttribution:
+  appliesWhen: the canonical trace context contains the locally capped member's documentId
+  globalEntries: entries without documentId debit only the shared closure ceiling
+  aggregation: units with different documentId attribution are separate deterministic trace entries and are never aggregated
+    across members
 namespaces:
   processor:
-    counterCount: 26
+    counterCount: 39
     counters:
       processInvocation: 50
+      closureInvocation: 100
+      managedDocumentOpened: 10
+      managedOccurrenceBindingVerified: 5
+      processEmbeddedEdgeExamined: 2
+      componentMemberPartitioned: 2
+      componentEdgePartitioned: 1
+      closureWorkOccurrenceEnqueued: 5
+      closureWorkOccurrenceDequeued: 5
+      closureExpanded: 20
+      componentPartitionChanged: 20
+      tentativeComponentFinalization: 20
+      cyclicMemberFinalized: 10
+      containingReferenceUpdated: 10
       deliverySnapshotEntry: 5
       scopeOpened: 10
       contractHeaderRecognized: 2
@@ -96,6 +121,17 @@ formulas:
     nonListDirectMembers: objectMemberRebuilt += direct helper-map members processed
     directHashBlocks: directIdentityHashBlock += ceil((canonicalDirectIdentityInputUtf8Bytes + 9) / 64)
     transitiveChildren: represented by bounded canonical child BlueId strings before byte counting
+    invocationLedger: establishedNewNodeIds starts empty; add an exact BlueId only after its complete admitted identity charge
+    exactPatchValueReuse: an already-established exact patch value is not charged again while rebuilding a parent
+    acyclicIncrementalOrder: changed/new leaf if not established, then changed direct container, then changed ancestor spine
+      bottom-up
+    unchangedExactChildren: carried by BlueId and never recursively charged
+    eventAdmission: one semantic identity admission per newly constructed exact value before internalEventEnqueued; equal
+      later occurrences reuse the exact established value but retain per-occurrence processor work
+    cyclicTransitionOwnership: one complete tentative cyclic finalization owns all Language identity work for every member
+      in that transition
+    cyclicTracePosition: immediately after the identity-changing work occurrence, before its Document Update continuation
+      or later Handler effect
   listIdentity:
     fullConstruction: one listFoldStepRecomputed per result element
     verifiedAppend: appended result elements only
@@ -135,6 +171,15 @@ portableLimits:
   runtimeChildLedgerCounterKinds: 256
   directObjectKeyCodePoints: 4096
   directInlineIdentityTextCodePoints: 262144
+  managedDocumentsPerClosure: 4096
+  processEmbeddedEdgesPerClosure: 16384
+  cyclicMembersPerComponent: 128
+  cyclicEdgesPerComponent: 1024
+  cyclicCanonicalBytesPerComponent: 16777216
+  closureGraphChangesPerInvocation: 4096
+  closureExpansionsPerInvocation: 4096
+  closureWorkOccurrencesPerInvocation: 8192
+  closureTentativeFinalizationsPerInvocation: 8192
 zeroPortableGas:
 - provider lookup and transfer
 - provider BlueId verification
@@ -152,6 +197,34 @@ fixtureRequirements:
 - composite formula fixtures
 - gas-exhaustion prefix fixture
 - inline/reference trace equivalence
-identityAlgorithm: sha256 of UTF-8 canonical JSON with packageIdentity set to null
-packageIdentity: sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
-numericWeightsStatus: provisional pending calibration; counter names, ownership, formulas, and trace order are frozen for implementation
+- closure orchestration counter microfixtures
+- exact tentative finalization trace fixture
+- default-policy cyclic loop fixture
+- local-cap versus shared-cap precedence fixture
+- changed cyclic-to-acyclic split with exact incremental identity trace and no double charge
+- duplicate exact event occurrences with one semantic establishment and distinct occurrence orchestration
+cyclicCanonicalBytesDefinition:
+  sequence: UTF-8 RFC 8785 canonical encoding of the representation-normalized ordered cyclic limit form
+  memberOrder: ascending preliminary member BlueId
+  internalReferences: canonical this#n after preliminary-order remapping
+  normalization:
+  - retain every internal this#n reference and each object/list container on its path
+  - retain complete direct literal members named name, description, or value
+  - replace every complete non-literal off-path child with its pure exact BlueId reference
+  representationInvariant: semantically equal inline and exact-reference child representations produce the same byte sequence
+  languageIdentityEffect: none; this is a Contracts accounting projection and the actual Language cyclic input remains unchanged
+  counted: once per tentative cyclic component finalization
+  excluded:
+  - preliminary-member canonical inputs
+  - materialized MASTER#index member suffixes
+  - proof serialization
+  - containing-document reconstruction
+identityAlgorithm: sha256 of RFC 8785 canonical JSON encoded as UTF-8 with packageIdentity set to null
+packageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
+numericWeightsStatus: frozen for Blue Contracts and Processor Specification 1.0
+defaultExecutionPolicy:
+  defaultGasLimit: 100000
+  documentOrHostMayLower: true
+  documentOrHostMayRaiseAboveReleaseMaximum: false
+  nestedOrMemberLocalCapUsesSharedMeter: true
+  wallClockTimeoutIsSemantic: false
