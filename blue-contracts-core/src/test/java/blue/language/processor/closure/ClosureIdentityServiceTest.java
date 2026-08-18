@@ -170,7 +170,7 @@ final class ClosureIdentityServiceTest {
                                 false)),
                 occurrences,
                 bindingSet,
-                Arrays.asList(componentB, componentA),
+                Arrays.asList(componentA, componentB),
                 Collections.singletonList(id("a")));
         assertEquals(snapshot.closureIdentity(),
                 IDS.affectedClosureIdentity(snapshot));
