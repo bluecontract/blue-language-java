@@ -18,3 +18,12 @@ dependencies {
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
     implementation 'org.yaml:snakeyaml:2.0'
 }
+
+def closureConformancePackage = rootProject.layout.projectDirectory.dir(
+        'docs/blue-contracts-and-processor-specification-1.0-final/conformance/contracts')
+
+tasks.named('processResources') {
+    from(closureConformancePackage) {
+        into 'blue-contracts-closure-1.0'
+    }
+}
