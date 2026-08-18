@@ -107,7 +107,7 @@ public final class ComponentFinalizationResult {
             Long generation = Objects.requireNonNull(source.get(documentId),
                     "component generation");
             result.put(documentId, Long.valueOf(
-                    ClosureValueSupport.requirePositiveSafeInteger(
+                    ClosureValueSupport.requireSafeInteger(
                             generation.longValue(), "component generation")));
         }
         return Collections.unmodifiableMap(result);

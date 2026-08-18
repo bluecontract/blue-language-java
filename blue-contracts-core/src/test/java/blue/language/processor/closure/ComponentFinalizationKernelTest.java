@@ -109,6 +109,24 @@ final class ComponentFinalizationKernelTest {
     }
 
     @Test
+    void shouldPreserveAnUnchangedAdmittedGenerationZeroComponent() {
+        DocumentId root = new DocumentId("root");
+        Node body = new Node().name("admitted-root");
+
+        ComponentFinalizationResult result = finalize(
+                Collections.singletonMap(root, body),
+                Collections.<ManagedOccurrenceBinding>emptyList(),
+                Collections.<ManagedOccurrenceBinding>emptyList(),
+                Collections.singletonMap(root, Long.valueOf(0L)));
+
+        assertEquals(Long.valueOf(0L),
+                result.componentGenerations().get(root));
+        assertEquals(0L,
+                result.components().get(0).component().componentGeneration());
+        assertEquals(0L, result.document(root).componentGeneration());
+    }
+
+    @Test
     void shouldRetainReleasedClo10DocumentToCanonicalPermutation() {
         DocumentId a = new DocumentId("simple-a");
         DocumentId b = new DocumentId("simple-b");

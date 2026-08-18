@@ -97,7 +97,7 @@ public final class ComponentGenerationTransition {
             Long value = Objects.requireNonNull(
                     entry.getValue(), "input component generation");
             copy.put(documentId, Long.valueOf(
-                    ClosureValueSupport.requirePositiveSafeInteger(
+                    ClosureValueSupport.requireSafeInteger(
                             value.longValue(), "input component generation")));
         }
         return copy;

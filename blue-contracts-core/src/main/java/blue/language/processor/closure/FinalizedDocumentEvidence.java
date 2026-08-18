@@ -84,7 +84,7 @@ public final class FinalizedDocumentEvidence
     /**
      * Returns the generation assigned by the graph transition.
      *
-     * @return positive component generation
+     * @return non-negative component generation
      */
     public long componentGeneration() {
         return componentGeneration;

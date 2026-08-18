@@ -111,7 +111,7 @@ public final class ComponentFinalizationInput {
             Long generation = Objects.requireNonNull(
                     entry.getValue(), "input component generation");
             ordered.put(documentId, Long.valueOf(
-                    ClosureValueSupport.requirePositiveSafeInteger(
+                    ClosureValueSupport.requireSafeInteger(
                             generation.longValue(),
                             "input component generation")));
         }
