@@ -240,6 +240,24 @@ final class ClosureIdentityService {
         return identity(constructor, value);
     }
 
+    /** Constructs the complete named portable-limit-policy identity. */
+    String portableLimitPolicyIdentity(
+            ClosureEnvironment.PortableLimitPolicyEvidence policy) {
+        ClosureEnvironment.PortableLimitPolicyEvidence selected =
+                Objects.requireNonNull(policy, "policy");
+        ArrayList<Object> limits = new ArrayList<Object>();
+        for (Map.Entry<String, Long> entry : selected.limits().entrySet()) {
+            LinkedHashMap<String, Object> limit = objectValue();
+            limit.put("name", entry.getKey());
+            limit.put("value", entry.getValue());
+            limits.add(limit);
+        }
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("label", selected.label());
+        value.put("limits", limits);
+        return identity(Constructor.PORTABLE_LIMIT_POLICY, value);
+    }
+
     /** Constructs stable occurrence-lineage identity from typed evidence. */
     String managedOccurrenceIdentity(
             DocumentId sourceDocumentId,
@@ -424,6 +442,155 @@ final class ClosureIdentityService {
         return identity(Constructor.EXECUTION_POLICY, value);
     }
 
+    /** Constructs the exact closed admission-candidate identity. */
+    String admissionCandidateIdentity(AdmissionCandidate candidate) {
+        AdmissionCandidate selected = Objects.requireNonNull(
+                candidate, "candidate");
+        LinkedHashMap<String, Object> evidence = objectValue();
+        switch (selected.kind()) {
+            case BAD_CYCLIC_PROOF:
+                AdmissionCandidate.CandidateCyclicProof proof =
+                        ((AdmissionCandidate.BadCyclicProof) selected)
+                                .candidateCyclicProof();
+                LinkedHashMap<String, Object> proofValue = objectValue();
+                proofValue.put("componentIdentity", proof.componentIdentity());
+                proofValue.put("masterBlueId", proof.masterBlueId());
+                proofValue.put("memberStates", candidateMemberStates(
+                        proof.memberStates()));
+                proofValue.put("declaredPlaceholderSet", proofWireValues(
+                        proof.declaredPlaceholderSet()));
+                evidence.put("candidateCyclicProof", proofValue);
+                break;
+            case AMBIGUOUS_PRELIMINARY_MEMBERS:
+                ArrayList<Object> members = new ArrayList<Object>();
+                for (AdmissionCandidate.CandidateCyclicMember member
+                        : ((AdmissionCandidate.AmbiguousPreliminaryMembers)
+                        selected).candidateCyclicMembers()) {
+                    LinkedHashMap<String, Object> memberValue = objectValue();
+                    memberValue.put("documentId", member.documentId().value());
+                    memberValue.put("document", NodeWireForm.get(
+                            member.document(), NodeWireForm.Strategy.SIMPLE));
+                    members.add(memberValue);
+                }
+                evidence.put("candidateCyclicMembers", members);
+                break;
+            case INVALID_OCCURRENCE_BINDING:
+                ArrayList<Object> bindings = new ArrayList<Object>();
+                for (AdmissionCandidate.CandidateOccurrenceBinding binding
+                        : ((AdmissionCandidate.InvalidOccurrenceBinding)
+                        selected).candidateOccurrenceBindings()) {
+                    LinkedHashMap<String, Object> bindingValue = objectValue();
+                    bindingValue.put("occurrenceIdentity",
+                            binding.occurrenceIdentity());
+                    bindingValue.put("bindingIdentity",
+                            binding.bindingIdentity());
+                    bindingValue.put("bindingPolicyIdentity",
+                            binding.bindingPolicyIdentity());
+                    bindingValue.put("sourceDocumentId",
+                            binding.sourceDocumentId().value());
+                    bindingValue.put("sourcePath", binding.sourcePath());
+                    bindingValue.put("activationGeneration", Long.valueOf(
+                            binding.activationGeneration()));
+                    bindingValue.put("targetDocumentId",
+                            binding.targetDocumentId().value());
+                    bindingValue.put("expectedTargetBlueId",
+                            binding.expectedTargetBlueId());
+                    bindingValue.put("active",
+                            Boolean.valueOf(binding.active()));
+                    bindings.add(bindingValue);
+                }
+                evidence.put("candidateOccurrenceBindings", bindings);
+                break;
+            default:
+                throw new AssertionError(
+                        "Unhandled admission candidate " + selected.kind());
+        }
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("kind", selected.kind().name());
+        value.put("evidence", evidence);
+        return identity(Constructor.ADMISSION_CANDIDATE, value);
+    }
+
+    /** Reconstructs the sole typed invocation cause identity. */
+    String causeIdentity(ProcessingCause cause) {
+        ProcessingCause selected = Objects.requireNonNull(cause, "cause");
+        switch (selected.kind()) {
+            case EXTERNAL:
+                ExternalEventCause external = (ExternalEventCause) selected;
+                return externalCauseIdentity(
+                        external.eventBlueId(),
+                        external.sourceOrder(),
+                        external.externalOrderPolicyIdentity());
+            case ADMISSION:
+                AdmissionCause admission = (AdmissionCause) selected;
+                return admissionCauseIdentity(
+                        admission.admissionKind(),
+                        admission.label(),
+                        admission.triggeringEventBlueId(),
+                        admission.parentTransitionIdentity(),
+                        admission.policyIdentity());
+            case MANAGED_REVISION:
+                ManagedRevisionCause revision =
+                        (ManagedRevisionCause) selected;
+                return managedRevisionCauseIdentity(
+                        revision.targetOccurrenceIdentity(),
+                        revision.childDocumentId(),
+                        revision.fromEpoch(),
+                        revision.toEpoch(),
+                        revision.beforeBlueId(),
+                        revision.afterBlueId(),
+                        revision.originalSourceCauseIdentity(),
+                        revision.sourceRevisionReceiptIdentity());
+            default:
+                throw new AssertionError("Unhandled cause " + selected.kind());
+        }
+    }
+
+    /** Constructs the complete Contracts 1.0 invocation identity. */
+    String invocationIdentity(ClosureInvocationInput input) {
+        ClosureInvocationInput selected = Objects.requireNonNull(
+                input, "input");
+        AffectedClosureSnapshot snapshot = selected.snapshot();
+        ClosureEnvironment environment = selected.environment();
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("operation", selected.operation().wireValue());
+        value.put("causeIdentity", selected.cause().causeIdentity());
+        value.put("admissionCandidateIdentity",
+                selected.admissionCandidateIdentity());
+        value.put("inputGraphGeneration", Long.valueOf(
+                snapshot.graphGeneration()));
+        value.put("inputClosureIdentity", snapshot.closureIdentity());
+        value.put("documents", documentValues(snapshot.managedDocuments()));
+        value.put("directDeliverySnapshotIdentity",
+                selected.directDeliverySnapshotIdentity());
+        value.put("occurrenceBindingSetIdentity",
+                snapshot.occurrenceBindingSetIdentity());
+        value.put("runtimeRegistryIdentity",
+                environment.runtimeRegistryIdentity());
+        value.put("gasPolicyIdentity", selected.executionPolicy().identity());
+        value.put("cyclicFinalizerIdentity",
+                environment.cyclicFinalizerIdentity());
+        value.put("cyclicProofVerifierIdentity",
+                environment.cyclicProofVerifierIdentity());
+        value.put("blueLanguageSpecificationIdentity",
+                environment.blueLanguageSpecificationIdentity());
+        value.put("contractsSpecificationIdentity",
+                environment.contractsSpecificationIdentity());
+        value.put("managedDocumentIdentityPolicyIdentity",
+                environment.managedDocumentIdentityPolicyIdentity());
+        value.put("managedBindingPolicyIdentity",
+                environment.managedBindingPolicyIdentity());
+        value.put("exactNodeProviderDomainIdentity",
+                environment.exactNodeProviderDomainIdentity());
+        value.put("externalOrderPolicyIdentity",
+                environment.externalOrderPolicyIdentity());
+        value.put("gasManifestIdentity",
+                environment.gasManifestIdentity());
+        value.put("portableLimitPolicyIdentity",
+                environment.portableLimitPolicyIdentity());
+        return identity(Constructor.INVOCATION, value);
+    }
+
     /** Constructs one direct-delivery identity. */
     String directDeliveryIdentity(DirectLogicalDelivery delivery) {
         DirectLogicalDelivery selected = Objects.requireNonNull(
@@ -487,19 +654,8 @@ final class ClosureIdentityService {
     String affectedClosureIdentity(AffectedClosureSnapshot snapshot) {
         AffectedClosureSnapshot selected = Objects.requireNonNull(
                 snapshot, "snapshot");
-        ArrayList<Object> documents = new ArrayList<Object>();
-        for (ManagedDocumentSnapshot document : selected.managedDocuments()) {
-            LinkedHashMap<String, Object> item = objectValue();
-            item.put("documentId", document.documentId().value());
-            item.put("blueId", document.blueId());
-            item.put("initialized", Boolean.valueOf(document.initialized()));
-            item.put("terminated", Boolean.valueOf(document.terminated()));
-            item.put("publicRoot", Boolean.valueOf(document.publicRoot()));
-            item.put("epoch", Long.valueOf(document.epoch()));
-            item.put("componentGeneration",
-                    Long.valueOf(document.componentGeneration()));
-            documents.add(item);
-        }
+        ArrayList<Object> documents = documentValues(
+                selected.managedDocuments());
         String bindingSet = occurrenceBindingSetIdentity(
                 selected.occurrences());
         requireClaim("occurrenceBindingSetIdentity",
@@ -709,6 +865,8 @@ final class ClosureIdentityService {
                 requireArray(value, "gasTrace");
                 return;
             case ADMISSION_CANDIDATE:
+                validateAdmissionCandidate(requireObject(value, "value"));
+                return;
             case PLATFORM_COMMIT_COMPANION:
                 // Their closed top-level field sets are enforced above.  The
                 // semantic verifier validates their closed nested unions and
@@ -820,6 +978,119 @@ final class ClosureIdentityService {
         requireNullableText(value, "triggeringEventBlueId");
         requireSha256(value, "parentTransitionIdentity", true);
         requireSha256(value, "policyIdentity", false);
+    }
+
+    private static void validateAdmissionCandidate(
+            Map<String, Object> value) {
+        String kind = requireNonEmptyText(value, "kind");
+        Map<String, Object> evidence = requireObject(
+                value.get("evidence"), "evidence");
+        if (AdmissionCandidate.Kind.BAD_CYCLIC_PROOF.name().equals(kind)) {
+            requireExactFields(evidence,
+                    Collections.singletonList("candidateCyclicProof"));
+            Map<String, Object> proof = requireObject(
+                    evidence.get("candidateCyclicProof"),
+                    "candidateCyclicProof");
+            requireExactFields(proof, Arrays.asList(
+                    "componentIdentity", "masterBlueId", "memberStates",
+                    "declaredPlaceholderSet"));
+            requireSha256(proof, "componentIdentity", false);
+            requireNonEmptyText(proof, "masterBlueId");
+            validateMemberStates(proof.get("memberStates"), true);
+            if (requireArray(proof.get("declaredPlaceholderSet"),
+                    "declaredPlaceholderSet").isEmpty()) {
+                throw new IllegalArgumentException(
+                        "declaredPlaceholderSet must not be empty");
+            }
+            return;
+        }
+        if (AdmissionCandidate.Kind.AMBIGUOUS_PRELIMINARY_MEMBERS
+                .name().equals(kind)) {
+            requireExactFields(evidence,
+                    Collections.singletonList("candidateCyclicMembers"));
+            List<Object> members = requireArray(
+                    evidence.get("candidateCyclicMembers"),
+                    "candidateCyclicMembers");
+            if (members.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "candidateCyclicMembers must not be empty");
+            }
+            String previous = null;
+            for (Object memberValue : members) {
+                Map<String, Object> member = requireObject(
+                        memberValue, "candidateCyclicMember");
+                requireExactFields(member,
+                        Arrays.asList("documentId", "document"));
+                String documentId = requireNonEmptyText(
+                        member, "documentId");
+                if (member.get("document") == null) {
+                    throw new IllegalArgumentException(
+                            "candidate document must not be null");
+                }
+                if (previous != null && ClosureValueSupport.comparePortableText(
+                        previous, documentId) >= 0) {
+                    throw new IllegalArgumentException(
+                            "candidateCyclicMembers are not canonical");
+                }
+                previous = documentId;
+            }
+            return;
+        }
+        if (AdmissionCandidate.Kind.INVALID_OCCURRENCE_BINDING
+                .name().equals(kind)) {
+            requireExactFields(evidence, Collections.singletonList(
+                    "candidateOccurrenceBindings"));
+            validateCandidateOccurrenceBindings(requireArray(
+                    evidence.get("candidateOccurrenceBindings"),
+                    "candidateOccurrenceBindings"));
+            return;
+        }
+        throw new IllegalArgumentException(
+                "Invalid admission candidate kind");
+    }
+
+    private static void validateCandidateOccurrenceBindings(
+            List<Object> rows) {
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "candidateOccurrenceBindings must not be empty");
+        }
+        String previousOccurrence = null;
+        String previousBinding = null;
+        for (Object rowValue : rows) {
+            Map<String, Object> row = requireObject(
+                    rowValue, "candidateOccurrenceBinding");
+            requireExactFields(row, Arrays.asList(
+                    "occurrenceIdentity", "bindingIdentity",
+                    "bindingPolicyIdentity", "sourceDocumentId",
+                    "sourcePath", "activationGeneration",
+                    "targetDocumentId", "expectedTargetBlueId", "active"));
+            String occurrence = requireSha256(
+                    row, "occurrenceIdentity", false);
+            String binding = requireSha256(row, "bindingIdentity", false);
+            requireSha256(row, "bindingPolicyIdentity", false);
+            requireNonEmptyText(row, "sourceDocumentId");
+            if ("/".equals(requireAbsolutePointer(row, "sourcePath"))
+                    || requireSafeInteger(row, "activationGeneration") == 0L) {
+                throw new IllegalArgumentException(
+                        "Candidate occurrence must be non-Root and positive");
+            }
+            requireNonEmptyText(row, "targetDocumentId");
+            requireNonEmptyText(row, "expectedTargetBlueId");
+            requireBoolean(row, "active");
+            if (previousOccurrence != null) {
+                int order = ClosureValueSupport.comparePortableText(
+                        previousOccurrence, occurrence);
+                if (order > 0 || order == 0
+                        && ClosureValueSupport.comparePortableText(
+                        previousBinding, binding) >= 0) {
+                    throw new IllegalArgumentException(
+                            "candidateOccurrenceBindings are not canonical");
+                }
+            }
+            previousOccurrence = occurrence;
+            previousBinding = binding;
+        }
     }
 
     private static void validateRevision(
@@ -1315,12 +1586,48 @@ final class ClosureIdentityService {
     }
 
     private static List<Object> proofWireValue(CyclicSetProof proof) {
+        return proofWireValues(Objects.requireNonNull(proof, "proof")
+                .declaredPlaceholderSet());
+    }
+
+    private static List<Object> proofWireValues(List<Node> nodes) {
         ArrayList<Object> values = new ArrayList<Object>();
-        for (Node node : Objects.requireNonNull(proof, "proof")
-                .declaredPlaceholderSet()) {
-            values.add(NodeWireForm.get(node));
+        for (Node node : Objects.requireNonNull(nodes, "nodes")) {
+            values.add(NodeWireForm.get(
+                    Objects.requireNonNull(node, "node"),
+                    NodeWireForm.Strategy.SIMPLE));
         }
         return values;
+    }
+
+    private static ArrayList<Object> candidateMemberStates(
+            List<AdmissionCandidate.CandidateMemberState> states) {
+        ArrayList<Object> result = new ArrayList<Object>();
+        for (AdmissionCandidate.CandidateMemberState state : states) {
+            LinkedHashMap<String, Object> value = objectValue();
+            value.put("documentId", state.documentId().value());
+            value.put("blueId", state.blueId());
+            result.add(value);
+        }
+        return result;
+    }
+
+    private static ArrayList<Object> documentValues(
+            List<ManagedDocumentSnapshot> managedDocuments) {
+        ArrayList<Object> documents = new ArrayList<Object>();
+        for (ManagedDocumentSnapshot document : managedDocuments) {
+            LinkedHashMap<String, Object> item = objectValue();
+            item.put("documentId", document.documentId().value());
+            item.put("blueId", document.blueId());
+            item.put("initialized", Boolean.valueOf(document.initialized()));
+            item.put("terminated", Boolean.valueOf(document.terminated()));
+            item.put("publicRoot", Boolean.valueOf(document.publicRoot()));
+            item.put("epoch", Long.valueOf(document.epoch()));
+            item.put("componentGeneration",
+                    Long.valueOf(document.componentGeneration()));
+            documents.add(item);
+        }
+        return documents;
     }
 
     private static LinkedHashMap<String, Object> sourceRevisionValue(

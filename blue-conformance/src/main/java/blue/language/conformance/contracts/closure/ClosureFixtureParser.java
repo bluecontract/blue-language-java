@@ -272,21 +272,46 @@ final class ClosureFixtureParser {
                         environment, "runtimeRegistryIdentity"),
                 ClosureFixtureInventory.requiredText(
                         environment, "gasManifestIdentity"),
-                nestedIdentity(environment, "managedDocumentIdentityPolicy"),
-                nestedIdentity(environment, "managedBindingPolicy"),
-                nestedIdentity(environment, "exactNodeProviderDomain"),
-                nestedIdentity(environment, "externalOrderPolicy"),
-                nestedIdentity(environment, "portableLimitPolicy"),
+                labeledEvidence(environment,
+                        "managedDocumentIdentityPolicy"),
+                labeledEvidence(environment, "managedBindingPolicy"),
+                labeledEvidence(environment, "exactNodeProviderDomain"),
+                labeledEvidence(environment, "externalOrderPolicy"),
+                portableLimitEvidence(environment, "portableLimitPolicy"),
                 ClosureFixtureInventory.requiredText(
                         environment, "cyclicFinalizerIdentity"),
                 ClosureFixtureInventory.requiredText(
                         environment, "cyclicProofVerifierIdentity"));
     }
 
-    private static String nestedIdentity(JsonNode value, String field) {
-        return ClosureFixtureInventory.requiredText(
-                ClosureFixtureInventory.requiredObject(value, field),
-                "identity");
+    private static ClosureEnvironment.LabeledIdentityEvidence labeledEvidence(
+            JsonNode value, String field) {
+        JsonNode evidence = ClosureFixtureInventory.requiredObject(
+                value, field);
+        return new ClosureEnvironment.LabeledIdentityEvidence(
+                ClosureFixtureInventory.requiredText(evidence, "identity"),
+                ClosureFixtureInventory.requiredText(evidence, "label"));
+    }
+
+    private static ClosureEnvironment.PortableLimitPolicyEvidence
+            portableLimitEvidence(JsonNode value, String field) {
+        JsonNode evidence = ClosureFixtureInventory.requiredObject(
+                value, field);
+        LinkedHashMap<String, Long> limits =
+                new LinkedHashMap<String, Long>();
+        for (JsonNode item : ClosureFixtureInventory.requiredArray(
+                evidence, "limits")) {
+            String name = ClosureFixtureInventory.requiredText(item, "name");
+            long limit = ClosureFixtureInventory.requiredLong(item, "value");
+            if (limits.put(name, Long.valueOf(limit)) != null) {
+                throw new IllegalArgumentException(
+                        "Duplicate portable limit name: " + name);
+            }
+        }
+        return new ClosureEnvironment.PortableLimitPolicyEvidence(
+                ClosureFixtureInventory.requiredText(evidence, "identity"),
+                ClosureFixtureInventory.requiredText(evidence, "label"),
+                limits);
     }
 
     private static List<DocumentId> parseDocumentIds(JsonNode values) {

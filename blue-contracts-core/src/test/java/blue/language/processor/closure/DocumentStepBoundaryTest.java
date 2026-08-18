@@ -194,8 +194,25 @@ final class DocumentStepBoundaryTest {
                         new LinkedHashMap<DocumentId, Long>(), "policy"),
                 new ClosureEnvironment(
                         hash('2'), hash('3'), hash('4'), hash('5'),
-                        hash('6'), hash('7'), hash('8'), orderPolicy,
-                        hash('9'), hash('0'), hash('1')));
+                        labeled(hash('6'), "document-policy"),
+                        labeled(hash('7'), "binding-policy"),
+                        labeled(hash('8'), "provider-domain"),
+                        labeled(orderPolicy, "external-order-policy"),
+                        portable(hash('9')),
+                        hash('0'), hash('1')));
+    }
+
+    private static ClosureEnvironment.LabeledIdentityEvidence labeled(
+            String identity, String label) {
+        return new ClosureEnvironment.LabeledIdentityEvidence(identity, label);
+    }
+
+    private static ClosureEnvironment.PortableLimitPolicyEvidence portable(
+            String identity) {
+        return new ClosureEnvironment.PortableLimitPolicyEvidence(
+                identity,
+                "portable-limits",
+                Collections.<String, Long>emptyMap());
     }
 
     private static ClosureWorkOccurrence work(
