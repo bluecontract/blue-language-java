@@ -34,6 +34,14 @@ final class ProcessingGasContext {
         return processMeter;
     }
 
+    Object semanticAdmissionMemoIdentity() {
+        return outputAdmissionMemo;
+    }
+
+    void configureLocalGasLimits(Map<String, Long> limitsByDocumentId) {
+        meter.configureLocalGasLimits(limitsByDocumentId);
+    }
+
     GasMeter.AttributionScope withAttribution(
             GasChargeContext attribution) {
         return meter.withAttribution(attribution);
