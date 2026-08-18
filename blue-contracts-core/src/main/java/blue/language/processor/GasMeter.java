@@ -24,6 +24,7 @@ public final class GasMeter {
     private final SemanticGasMeter semantic;
     private final ProcessorGasCharges processorCharges;
     private long totalGas;
+    private GasChargeContext defaultAttribution = GasChargeContext.empty();
     /*
      * Runtime work sessions stage their ordered child traces until the
      * processor decides whether the execution unit completed, failed
@@ -121,6 +122,14 @@ public final class GasMeter {
      */
     public List<GasTraceEntry> trace() {
         return Collections.unmodifiableList(new ArrayList<>(trace));
+    }
+
+    AttributionScope withAttribution(GasChargeContext attribution) {
+        GasChargeContext previous = defaultAttribution;
+        defaultAttribution = Objects.requireNonNull(
+                attribution, "attribution")
+                .withAttributionDefaults(previous);
+        return new AttributionScope(this, previous);
     }
 
     /**
@@ -419,8 +428,33 @@ public final class GasMeter {
                 quantity,
                 weight,
                 subtotal,
-                context));
+                (context != null ? context : GasChargeContext.empty())
+                        .withAttributionDefaults(defaultAttribution)));
         totalGas += subtotal;
+    }
+
+    /** Lexically scoped default attribution for one closure work frame. */
+    static final class AttributionScope implements AutoCloseable {
+        private final GasMeter meter;
+        private final GasChargeContext previous;
+        private boolean closed;
+
+        private AttributionScope(
+                GasMeter meter,
+                GasChargeContext previous) {
+            this.meter = meter;
+            this.previous = previous;
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                throw new IllegalStateException(
+                        "Gas attribution scope was already closed");
+            }
+            closed = true;
+            meter.defaultAttribution = previous;
+        }
     }
 
     private static long multiplyExact(long left, long right) {

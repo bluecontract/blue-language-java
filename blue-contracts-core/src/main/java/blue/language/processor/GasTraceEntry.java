@@ -90,12 +90,39 @@ public final class GasTraceEntry {
     }
 
     /**
+     * Returns the managed document to which the charge was attributed.
+     *
+     * @return document identity, or {@code null}
+     */
+    public String documentId() {
+        return context.documentId();
+    }
+
+    /**
      * Returns the scope to which the charge was attributed.
      *
      * @return attributed scope, or {@code null}
      */
     public String scopePath() {
         return context.scopePath();
+    }
+
+    /**
+     * Returns the managed-scope activation generation.
+     *
+     * @return activation generation, or {@code null}
+     */
+    public Long activationGeneration() {
+        return context.activationGeneration();
+    }
+
+    /**
+     * Returns the component generation to which the work was attributed.
+     *
+     * @return component generation, or {@code null}
+     */
+    public Long componentGeneration() {
+        return context.componentGeneration();
     }
 
     /**
@@ -114,6 +141,15 @@ public final class GasTraceEntry {
      */
     public String logicalPath() {
         return context.logicalPath();
+    }
+
+    /**
+     * Returns the owning affected-closure work occurrence identity.
+     *
+     * @return work occurrence identity, or {@code null}
+     */
+    public String workOccurrenceId() {
+        return context.workOccurrenceId();
     }
 
     /**

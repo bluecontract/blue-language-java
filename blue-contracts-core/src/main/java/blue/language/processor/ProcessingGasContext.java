@@ -34,6 +34,11 @@ final class ProcessingGasContext {
         return processMeter;
     }
 
+    GasMeter.AttributionScope withAttribution(
+            GasChargeContext attribution) {
+        return meter.withAttribution(attribution);
+    }
+
     GasMeter.ChildGasLedger newChildLedger(
             String namespace,
             Map<String, Long> counterWeights) {
