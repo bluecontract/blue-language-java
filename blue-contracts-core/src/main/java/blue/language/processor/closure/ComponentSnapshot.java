@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /** Stable component lineage plus complete independently verifiable state. */
-public final class ComponentSnapshot implements Comparable<ComponentSnapshot> {
+public final class ComponentSnapshot {
 
     private final String componentIdentity;
     private final String componentStateIdentity;
@@ -177,24 +177,28 @@ public final class ComponentSnapshot implements Comparable<ComponentSnapshot> {
         return cyclicProofIdentity;
     }
 
-    /**
-     * Compares records by stable component identity.
-     *
-     * @param other component to compare
-     * @return canonical component order
-     */
-    @Override
-    public int compareTo(ComponentSnapshot other) {
-        return ClosureValueSupport.comparePortableText(
-                componentIdentity, other.componentIdentity);
-    }
-
     private void requireCyclicSuffixMapping() {
-        for (int index = 0; index < orderedMemberBlueIds.size(); index++) {
-            String expected = masterBlueId + "#" + index;
-            if (!expected.equals(orderedMemberBlueIds.get(index))) {
+        Set<Long> suffixes = new HashSet<Long>();
+        String prefix = masterBlueId + "#";
+        for (String memberBlueId : orderedMemberBlueIds) {
+            if (!memberBlueId.startsWith(prefix)) {
                 throw new IllegalArgumentException(
-                        "Cyclic member BlueId does not match MASTER#index order");
+                        "Cyclic member BlueId does not belong to MASTER");
+            }
+            String suffix = memberBlueId.substring(prefix.length());
+            long memberIndex;
+            try {
+                memberIndex = Long.parseLong(suffix);
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException(
+                        "Cyclic member BlueId has an invalid suffix", exception);
+            }
+            if (!Long.toString(memberIndex).equals(suffix)
+                    || memberIndex < 0L
+                    || memberIndex >= orderedMemberBlueIds.size()
+                    || !suffixes.add(Long.valueOf(memberIndex))) {
+                throw new IllegalArgumentException(
+                        "Cyclic member suffixes must be a complete unique range");
             }
         }
     }

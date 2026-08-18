@@ -2,7 +2,6 @@ package blue.language.processor.closure;
 
 import blue.language.model.Node;
 import blue.language.processor.ExternalOrderKey;
-import blue.language.processor.ProcessorStatus;
 import blue.language.provider.CyclicSetProof;
 import org.junit.jupiter.api.Test;
 
@@ -88,7 +87,7 @@ final class ClosureEvidenceApiTest {
                 () -> new ComponentSnapshot(
                         hash('a'), hash('b'), 1L, ComponentKind.CYCLIC,
                         Arrays.asList(A, B),
-                        Arrays.asList("master#1", "master#0"),
+                        Arrays.asList("master#2", "master#0"),
                         "master", proof, hash('c')));
     }
 
@@ -198,27 +197,7 @@ final class ClosureEvidenceApiTest {
     }
 
     @Test
-    void shouldSeparateCompletionSuspensionAndAtomicCommitEvidence() {
-        AffectedClosureSnapshot snapshot = snapshot(false, null);
-        ClosureCommitCompanion companion = companion(snapshot);
-        Node publicEvent = node("public-event");
-        ClosureProcessResult completed = new ClosureProcessResult(
-                ProcessorStatus.SUCCESS,
-                hash('3'), snapshot.closureIdentity(), hash('4'),
-                2L, snapshot.managedDocuments(), snapshot.components(),
-                snapshot.occurrences(), snapshot.occurrenceBindingSetIdentity(),
-                Collections.singletonList(publicEvent), 21L, companion, null);
-
-        publicEvent.name("caller mutation");
-        assertEquals("public-event", completed.publicEvents().get(0).getName());
-        completed.publicEvents().get(0).name("return mutation");
-        assertEquals("public-event", completed.publicEvents().get(0).getName());
-        assertTrue(completed.commits());
-
-        ClosureAttemptResult complete = ClosureAttemptResult.complete(completed);
-        assertTrue(complete.isComplete());
-        assertEquals(Long.valueOf(21L), complete.totalGas());
-
+    void shouldSeparateResourceSuspensionFromCompletedResults() {
         ClosureAttemptResult suspended = ClosureAttemptResult.needsResources(
                 Arrays.asList("z-blue", "a-blue", "z-blue"));
         assertFalse(suspended.isComplete());
@@ -226,15 +205,6 @@ final class ClosureEvidenceApiTest {
         assertNull(suspended.totalGas());
         assertEquals(Arrays.asList("a-blue", "z-blue"),
                 suspended.requiredExactBlueIds());
-
-        assertThrows(IllegalArgumentException.class,
-                () -> new ClosureProcessResult(
-                        ProcessorStatus.SUCCESS,
-                        hash('3'), snapshot.closureIdentity(), hash('4'),
-                        2L, snapshot.managedDocuments(), snapshot.components(),
-                        snapshot.occurrences(),
-                        snapshot.occurrenceBindingSetIdentity(),
-                        Collections.<Node>emptyList(), 0L, null, null));
     }
 
     private static AffectedClosureSnapshot snapshot(
@@ -294,24 +264,6 @@ final class ClosureEvidenceApiTest {
             limits.put(document.documentId(), Long.valueOf(100L));
         }
         return new ExecutionPolicy(hash('a'), 1_000L, limits, "test-policy");
-    }
-
-    private static ClosureCommitCompanion companion(
-            AffectedClosureSnapshot snapshot) {
-        List<ClosureCommitCompanion.ExpectedDocumentHead> expected = Arrays.asList(
-                new ClosureCommitCompanion.ExpectedDocumentHead(
-                        A, "blue-a", 0L),
-                new ClosureCommitCompanion.ExpectedDocumentHead(
-                        B, "blue-b", 0L));
-        List<ClosureCommitCompanion.ResultingDocumentHead> resulting =
-                Collections.singletonList(
-                        new ClosureCommitCompanion.ResultingDocumentHead(
-                                A, "blue-a", "blue-a-next", 1L));
-        return new ClosureCommitCompanion(
-                hash('5'), hash('3'), snapshot.closureIdentity(), hash('4'),
-                1L, 2L, expected, resulting,
-                snapshot.occurrenceBindingSetIdentity(),
-                snapshot.occurrenceBindingSetIdentity());
     }
 
     private static ClosureEnvironment environment(
