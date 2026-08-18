@@ -78,7 +78,7 @@ final class BufferedContractEffectExecutor {
         ContractEffectBuffer.TerminationRequest termination =
                 effects.terminationRequest();
         if (termination != null) {
-            execution.enterGracefulTermination(scopePath,
+            execution.handleTerminationRequest(scopePath,
                     bundle,
                     termination.cause(),
                     termination.reason());

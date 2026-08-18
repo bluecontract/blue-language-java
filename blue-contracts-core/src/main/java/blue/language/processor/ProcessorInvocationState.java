@@ -37,6 +37,8 @@ final class ProcessorInvocationState {
     private final EvidenceDeliveryOrchestrator evidenceDeliveryOrchestrator;
     private final ProcessingResultCoordinator resultCoordinator;
     private final ExecutionLifecycleCoordinator lifecycleCoordinator;
+    private final ManagedDocumentStepContinuation
+            documentStepContinuationHook;
     private VerifiedExecutionEvidence executionEvidence;
 
     ProcessorInvocationState(DocumentProcessor owner, Node document) {
@@ -113,7 +115,28 @@ final class ProcessorInvocationState {
             Node processEventSource,
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
             ProcessingGasContext sharedGasContext) {
+        this(owner,
+                document,
+                processEventSource,
+                processEventSnapshotFactory,
+                sharedGasContext,
+                null);
+    }
+
+    /**
+     * Creates an isolated managed-document state with a closure-owned
+     * post-effect continuation boundary.
+     */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext,
+            ManagedDocumentStepContinuation documentStepContinuationHook) {
         this.owner = owner;
+        this.documentStepContinuationHook =
+                documentStepContinuationHook;
         this.inputDocument = document.clone();
         this.inputSnapshot = null;
         this.runtime = new DocumentProcessingRuntime(document,
@@ -142,7 +165,12 @@ final class ProcessorInvocationState {
         this.channelRunner = new ChannelRunner(
                 owner, this, runtime, checkpointTransaction);
         this.scopeExecutor = new ScopeExecutor(
-                owner, this, runtime, bundles, channelRunner);
+                owner,
+                this,
+                runtime,
+                bundles,
+                channelRunner,
+                documentStepContinuationHook);
         this.lifecycleCoordinator = new ExecutionLifecycleCoordinator(
                 this,
                 runtime,
@@ -222,6 +250,7 @@ final class ProcessorInvocationState {
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
             ProcessingGasContext sharedGasContext) {
         this.owner = owner;
+        this.documentStepContinuationHook = null;
         this.inputDocument = snapshot.canonicalRoot();
         this.inputSnapshot = snapshot;
         this.runtime = new DocumentProcessingRuntime(snapshot,
@@ -309,6 +338,11 @@ final class ProcessorInvocationState {
 
     void preflightScope(String scopePath) {
         scopeExecutor.preflightEvidenceScope(scopePath);
+    }
+
+    void executeIsolatedManagedRootWork(
+            ManagedDocumentStepRequest request) {
+        scopeExecutor.executeIsolatedManagedRootWork(request);
     }
 
     /** Applies deterministic processor-owned cleanup before final validation. */
@@ -621,6 +655,25 @@ final class ProcessorInvocationState {
                 reason);
     }
 
+    void handleTerminationRequest(
+            String scopePath,
+            ContractBundle bundle,
+            String cause,
+            String reason) {
+        if (documentStepContinuationHook != null) {
+            documentStepContinuationHook.onTerminationRequested(
+                    normalizeScope(scopePath),
+                    cause,
+                    reason);
+            return;
+        }
+        enterGracefulTermination(
+                scopePath,
+                bundle,
+                cause,
+                reason);
+    }
+
     void abortRuntimeFailure(
             String scopePath,
             ContractBundle bundle,
@@ -704,6 +757,14 @@ final class ProcessorInvocationState {
             String contractKey,
             Node event,
             String eventBlueId) {
+        if (documentStepContinuationHook != null) {
+            documentStepContinuationHook.onApplicationEvent(
+                    normalizeScope(scopePath),
+                    contractKey,
+                    event.clone(),
+                    eventBlueId);
+            return;
+        }
         lifecycleCoordinator.enqueueApplicationEvent(
                 scopePath,
                 contractKey,

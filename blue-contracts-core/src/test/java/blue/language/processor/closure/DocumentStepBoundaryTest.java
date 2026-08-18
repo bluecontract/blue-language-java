@@ -153,7 +153,16 @@ final class DocumentStepBoundaryTest {
                 Arrays.asList(
                         managed(A, "master#0", true),
                         managed(B, "master#1", false)),
-                Collections.<ManagedOccurrenceBinding>emptyList(), hash('f'),
+                Arrays.asList(
+                        new ManagedOccurrenceBinding(
+                                hash('1'), hash('2'), hash('3'),
+                                A, ScopeAddress.embedded("/b", 1L),
+                                B, "master#1", true, null),
+                        new ManagedOccurrenceBinding(
+                                hash('4'), hash('5'), hash('6'),
+                                B, ScopeAddress.embedded("/a", 1L),
+                                A, "master#0", true, null)),
+                hash('f'),
                 Collections.singletonList(component),
                 Collections.singletonList(A));
     }

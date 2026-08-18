@@ -2,6 +2,11 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.EmbeddedNodeChannel;
+import blue.language.processor.model.LifecycleChannel;
+import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.model.wire.JsonPointer;
@@ -39,6 +44,15 @@ final class ScopeExecutor {
                   DocumentProcessingRuntime runtime,
                   Map<String, ContractBundle> bundles,
                   ChannelRunner channelRunner) {
+        this(owner, execution, runtime, bundles, channelRunner, null);
+    }
+
+    ScopeExecutor(ProcessorInvocationServices owner,
+                  ProcessorInvocationState execution,
+                  DocumentProcessingRuntime runtime,
+                  Map<String, ContractBundle> bundles,
+                  ChannelRunner channelRunner,
+                  final ManagedDocumentStepContinuation continuationHook) {
         this.owner = Objects.requireNonNull(owner, "owner");
         this.execution = Objects.requireNonNull(execution, "execution");
         this.runtime = Objects.requireNonNull(runtime, "runtime");
@@ -71,16 +85,172 @@ final class ScopeExecutor {
                 frameFactory,
                 propagationChain,
                 channelRunner);
-        this.mutationExecutor = new ScopeMutationExecutor(
-                owner,
-                execution,
-                runtime,
-                new PatchPreflight(owner, runtime),
-                updateRouter);
+        PatchPreflight patchPreflight = new PatchPreflight(owner, runtime);
+        this.mutationExecutor = continuationHook == null
+                ? new ScopeMutationExecutor(
+                        owner,
+                        execution,
+                        runtime,
+                        patchPreflight,
+                        updateRouter)
+                : new ScopeMutationExecutor(
+                        owner,
+                        execution,
+                        runtime,
+                        patchPreflight,
+                        new ScopeMutationExecutor.UpdateContinuation() {
+                            @Override
+                            public void continueAfterPatch(
+                                    String scopePath,
+                                    ContractBundle bundle,
+                                    FrozenJsonPatch patch,
+                                    List<DocumentUpdateData> updates) {
+                                continuationHook.afterPatch(
+                                        scopePath,
+                                        runtime.document(),
+                                        patch,
+                                        updateOccurrences(updates));
+                            }
+                        });
     }
 
     void initializeScope(String scopePath, boolean chargeScopeEntry) {
         initializeScope(scopePath, chargeScopeEntry, true);
+    }
+
+    /**
+     * Opens only the selected managed document's Root scope.
+     *
+     * <p>This deliberately does not walk {@code Process Embedded}. Managed
+     * child documents are separate closure execution units and are opened by
+     * their own invocation state.</p>
+     */
+    ContractBundle preflightIsolatedManagedRoot() {
+        runtime.setScopeEmbeddedDepth(JsonPointer.ROOT, 0);
+        runtime.chargeScopeEntry(JsonPointer.ROOT);
+        preflightSelectedHeaders(JsonPointer.ROOT);
+        return preflightEvidenceScopeAfterSelectedHeaders(
+                JsonPointer.ROOT);
+    }
+
+    /** Executes one already-selected Root work occurrence without a FIFO drain. */
+    void executeIsolatedManagedRootWork(
+            ManagedDocumentStepRequest request) {
+        Objects.requireNonNull(request, "request");
+        ManagedDocumentWorkKind kind = request.workKind();
+        String channelKey = request.channelKey();
+        Node exactPayload = request.exactPayload();
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(exactPayload, "exactPayload");
+        ContractBundle bundle = preflightIsolatedManagedRoot();
+        if (kind == ManagedDocumentWorkKind.INITIALIZATION) {
+            /*
+             * Closure initialization freezes the member and lifecycle
+             * contract here. Lifecycle delivery and the marker batch are
+             * distinct orchestrator-owned boundaries.
+             */
+            runtime.chargeInitialization(JsonPointer.ROOT);
+            return;
+        }
+        if (kind == ManagedDocumentWorkKind.CONTAINING_REFERENCE_UPDATE) {
+            mutationExecutor.execute(
+                    JsonPointer.ROOT,
+                    bundle,
+                    Collections.singletonList(
+                            PatchInput.frozen(request.processorPatch())),
+                    false,
+                    null);
+            return;
+        }
+
+        ContractBundle.ChannelBinding channel = requireStepChannel(
+                bundle, channelKey);
+        requireStepChannelRole(kind, channel);
+        if (kind == ManagedDocumentWorkKind.TRIGGERED_EVENT) {
+            runtime.chargeTriggeredDelivery();
+        } else if (kind == ManagedDocumentWorkKind.EMBEDDED_EVENT) {
+            runtime.chargeBridge(exactPayload);
+        } else if (kind == ManagedDocumentWorkKind.LIFECYCLE) {
+            runtime.chargeLifecycleDelivery();
+        }
+        if (kind == ManagedDocumentWorkKind.EMBEDDED_EVENT) {
+            channelRunner.runHandlers(
+                    JsonPointer.ROOT,
+                    bundle,
+                    channel.key(),
+                    exactPayload,
+                    request.occurrenceEvent());
+        } else {
+            channelRunner.runHandlers(
+                    JsonPointer.ROOT,
+                    bundle,
+                    channel.key(),
+                    exactPayload,
+                    kind == ManagedDocumentWorkKind.LIFECYCLE);
+        }
+    }
+
+    private ContractBundle.ChannelBinding requireStepChannel(
+            ContractBundle bundle,
+            String channelKey) {
+        if (channelKey == null || channelKey.isEmpty()) {
+            throw new InvalidExecutionEvidenceException(
+                    "Managed document-step work requires a Root channel key",
+                    ProcessorErrorCategory.InvalidContractBinding);
+        }
+        ContractBundle.ChannelBinding channel =
+                bundle != null ? bundle.channelBinding(channelKey) : null;
+        if (channel == null) {
+            throw new InvalidExecutionEvidenceException(
+                    "Managed document-step channel is absent at /"
+                            + channelKey,
+                    ProcessorErrorCategory.InvalidContractBinding);
+        }
+        return channel;
+    }
+
+    private void requireStepChannelRole(
+            ManagedDocumentWorkKind kind,
+            ContractBundle.ChannelBinding channel) {
+        ChannelContract contract = channel.contract();
+        boolean valid;
+        switch (kind) {
+            case EXTERNAL_DELIVERY:
+                valid = !ProcessorManagedChannelTypes.contains(contract);
+                break;
+            case DOCUMENT_UPDATE:
+                valid = contract instanceof DocumentUpdateChannel;
+                break;
+            case TRIGGERED_EVENT:
+                valid = contract instanceof TriggeredEventChannel;
+                break;
+            case EMBEDDED_EVENT:
+                valid = contract instanceof EmbeddedNodeChannel;
+                break;
+            case LIFECYCLE:
+                valid = contract instanceof LifecycleChannel;
+                break;
+            default:
+                valid = false;
+                break;
+        }
+        if (!valid) {
+            throw new InvalidExecutionEvidenceException(
+                    "Managed document-step work kind " + kind
+                            + " does not match Root channel "
+                            + channel.key(),
+                    ProcessorErrorCategory.InvalidContractBinding);
+        }
+    }
+
+    private static List<DocumentUpdateOccurrence> updateOccurrences(
+            List<DocumentUpdateData> updates) {
+        List<DocumentUpdateOccurrence> exact =
+                new ArrayList<DocumentUpdateOccurrence>(updates.size());
+        for (DocumentUpdateData update : updates) {
+            exact.add(update.occurrence());
+        }
+        return Collections.unmodifiableList(exact);
     }
 
     private void initializeScope(String scopePath, boolean chargeScopeEntry, boolean finalizeAfterInitialization) {
