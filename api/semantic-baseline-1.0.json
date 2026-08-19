@@ -1,35 +1,37 @@
 {
   "schema" : "blue-language-java-semantic-baseline/1.0",
   "source" : {
-    "commit" : "eecf92ac6169eb32f35f52e1bab9c6c50d96b23c",
-    "sourceInputIdentity" : "sha256:dd0696967aa58c4eb6c4174ec64d649c1968db9e837989607fd94708ed7652ff"
+    "commit" : "8b0b646b9b6dbefd5cda107e477edf993b594279",
+    "sourceInputIdentity" : "sha256:ebb8d3009e7e304d02835426c033af926bf48264579d80d600cef096cd2fe3de"
   },
   "specifications" : {
-    "languageSha256" : "a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869",
-    "contractsSha256" : "6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81"
+    "languageSha256" : "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
+    "contractsSha256" : "dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930"
   },
   "release" : {
-    "packageIdentity" : "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6"
+    "packageIdentity" : "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
+    "contractsReleaseIdentity" : "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50"
   },
   "packages" : {
     "languageRegistry" : "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
     "languageFixtures" : "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55",
     "contractsRegistry" : "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
-    "contractsGas" : "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5",
-    "contractsFixtures" : "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc"
+    "contractsGas" : "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a",
+    "contractsFixtures" : "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
+    "contractsRelease" : "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50"
   },
   "tests" : {
     "all" : {
-      "minimumTests" : 2078,
-      "tests" : 2078,
-      "passed" : 2078,
+      "minimumTests" : 2381,
+      "tests" : 2381,
+      "passed" : 2381,
       "failed" : 0,
       "skipped" : 0
     }
   },
   "gas" : {
-    "fixtureCount" : 58,
-    "oraclePackageIdentity" : "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc",
+    "fixtureCount" : 71,
+    "oraclePackageIdentity" : "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
     "fixtures" : [ {
       "resultKey" : "contracts:gas-composite-gas-exhaustion-prefix",
       "id" : "gas-composite-gas-exhaustion-prefix",
@@ -185,6 +187,158 @@
         "totalGas" : 60
       }
     }, {
+      "resultKey" : "contracts:gas-processor-closureExpanded",
+      "id" : "gas-processor-closureExpanded",
+      "path" : "gas-micro/processor-closureExpanded.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "closureExpanded",
+          "quantity" : 3,
+          "weight" : 20,
+          "subtotal" : 60
+        } ],
+        "totalGas" : 60
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-closureInvocation",
+      "id" : "gas-processor-closureInvocation",
+      "path" : "gas-micro/processor-closureInvocation.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "closureInvocation",
+          "quantity" : 3,
+          "weight" : 100,
+          "subtotal" : 300
+        } ],
+        "totalGas" : 300
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-closureWorkOccurrenceDequeued",
+      "id" : "gas-processor-closureWorkOccurrenceDequeued",
+      "path" : "gas-micro/processor-closureWorkOccurrenceDequeued.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "closureWorkOccurrenceDequeued",
+          "quantity" : 3,
+          "weight" : 5,
+          "subtotal" : 15
+        } ],
+        "totalGas" : 15
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-closureWorkOccurrenceEnqueued",
+      "id" : "gas-processor-closureWorkOccurrenceEnqueued",
+      "path" : "gas-micro/processor-closureWorkOccurrenceEnqueued.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "closureWorkOccurrenceEnqueued",
+          "quantity" : 3,
+          "weight" : 5,
+          "subtotal" : 15
+        } ],
+        "totalGas" : 15
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-componentEdgePartitioned",
+      "id" : "gas-processor-componentEdgePartitioned",
+      "path" : "gas-micro/processor-componentEdgePartitioned.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "componentEdgePartitioned",
+          "quantity" : 3,
+          "weight" : 1,
+          "subtotal" : 3
+        } ],
+        "totalGas" : 3
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-componentMemberPartitioned",
+      "id" : "gas-processor-componentMemberPartitioned",
+      "path" : "gas-micro/processor-componentMemberPartitioned.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "componentMemberPartitioned",
+          "quantity" : 3,
+          "weight" : 2,
+          "subtotal" : 6
+        } ],
+        "totalGas" : 6
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-componentPartitionChanged",
+      "id" : "gas-processor-componentPartitionChanged",
+      "path" : "gas-micro/processor-componentPartitionChanged.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "componentPartitionChanged",
+          "quantity" : 3,
+          "weight" : 20,
+          "subtotal" : 60
+        } ],
+        "totalGas" : 60
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-containingReferenceUpdated",
+      "id" : "gas-processor-containingReferenceUpdated",
+      "path" : "gas-micro/processor-containingReferenceUpdated.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "containingReferenceUpdated",
+          "quantity" : 3,
+          "weight" : 10,
+          "subtotal" : 30
+        } ],
+        "totalGas" : 30
+      }
+    }, {
       "resultKey" : "contracts:gas-processor-contractHeaderRecognized",
       "id" : "gas-processor-contractHeaderRecognized",
       "path" : "gas-micro/processor-contractHeaderRecognized.yaml",
@@ -202,6 +356,25 @@
           "subtotal" : 6
         } ],
         "totalGas" : 6
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-cyclicMemberFinalized",
+      "id" : "gas-processor-cyclicMemberFinalized",
+      "path" : "gas-micro/processor-cyclicMemberFinalized.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "cyclicMemberFinalized",
+          "quantity" : 3,
+          "weight" : 10,
+          "subtotal" : 30
+        } ],
+        "totalGas" : 30
       }
     }, {
       "resultKey" : "contracts:gas-processor-deliverySnapshotEntry",
@@ -394,6 +567,44 @@
         "totalGas" : 90
       }
     }, {
+      "resultKey" : "contracts:gas-processor-managedDocumentOpened",
+      "id" : "gas-processor-managedDocumentOpened",
+      "path" : "gas-micro/processor-managedDocumentOpened.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "managedDocumentOpened",
+          "quantity" : 3,
+          "weight" : 10,
+          "subtotal" : 30
+        } ],
+        "totalGas" : 30
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-managedOccurrenceBindingVerified",
+      "id" : "gas-processor-managedOccurrenceBindingVerified",
+      "path" : "gas-micro/processor-managedOccurrenceBindingVerified.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "managedOccurrenceBindingVerified",
+          "quantity" : 3,
+          "weight" : 5,
+          "subtotal" : 15
+        } ],
+        "totalGas" : 15
+      }
+    }, {
       "resultKey" : "contracts:gas-processor-patchAddOrReplace",
       "id" : "gas-processor-patchAddOrReplace",
       "path" : "gas-micro/processor-patchAddOrReplace.yaml",
@@ -468,6 +679,25 @@
           "subtotal" : 3
         } ],
         "totalGas" : 3
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-processEmbeddedEdgeExamined",
+      "id" : "gas-processor-processEmbeddedEdgeExamined",
+      "path" : "gas-micro/processor-processEmbeddedEdgeExamined.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "processEmbeddedEdgeExamined",
+          "quantity" : 3,
+          "weight" : 2,
+          "subtotal" : 6
+        } ],
+        "totalGas" : 6
       }
     }, {
       "resultKey" : "contracts:gas-processor-processInvocation",
@@ -563,6 +793,25 @@
           "subtotal" : 30
         } ],
         "totalGas" : 30
+      }
+    }, {
+      "resultKey" : "contracts:gas-processor-tentativeComponentFinalization",
+      "id" : "gas-processor-tentativeComponentFinalization",
+      "path" : "gas-micro/processor-tentativeComponentFinalization.yaml",
+      "role" : "gas-fixture",
+      "category" : "gas",
+      "operation" : "gas-micro",
+      "vectors" : [ "C-GAS-01" ],
+      "expected" : {
+        "trace" : [ {
+          "sequence" : 0,
+          "namespace" : "processor",
+          "counter" : "tentativeComponentFinalization",
+          "quantity" : 3,
+          "weight" : 20,
+          "subtotal" : 60
+        } ],
+        "totalGas" : 60
       }
     }, {
       "resultKey" : "contracts:gas-processor-terminationRequested",
@@ -1079,7 +1328,7 @@
   "locality" : {
     "requiredAssertionCount" : 4,
     "sourceFiles" : [ {
-      "identity" : "sha256:bcb2d8749bddf77f5b9e6c1f0bc6451dce8206738d64050dc05acba6d5bcbda8",
+      "identity" : "sha256:32ac415fe1ec37a06acd43fa4da8b67ff95367f3d2a8fd8107cd6c61785920c7",
       "path" : "src/test/java/blue/language/processor/DeepGraphPhysicalLocalityIntegrationTest.java"
     }, {
       "identity" : "sha256:a9f3e4e009ef09c8582fc3706ce126023dd9228dae44a043d2396768b002bf17",
@@ -16555,9 +16804,9 @@
     }
   },
   "artifacts" : {
-    "jar" : "sha256:8bccc0849da5e123fa4096a7bdeee410ad33eb5c73710c7d927779f6c41b0ec6",
-    "sourcesJar" : "sha256:aed14d90be42d93972626aba5c951f62ebfacefe79efd2ea7cff4cb7bb4ffc56",
-    "javadocJar" : "sha256:eeeab44e5226d638f41956296c28484ff2a71fddab72fce968dbe6961bbaf51a",
-    "sourceRelease" : "sha256:84ee0519ebf77cf92e067b90a62249b1c6ba037fcc8d30fb99c969db72da7a53"
+    "jar" : "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0",
+    "sourcesJar" : "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518",
+    "javadocJar" : "sha256:facbd43e944ebc23d4d07c8fedf107e864606f50a300e77e2ddb7291348fa60a",
+    "sourceRelease" : "sha256:5abdc320d6ee4f3a25b9851bd53c608953b99657e16ec67174e586e6b5d71e23"
   }
 }
