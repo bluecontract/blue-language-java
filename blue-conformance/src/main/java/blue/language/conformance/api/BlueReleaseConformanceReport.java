@@ -24,7 +24,7 @@ public final class BlueReleaseConformanceReport {
     /** Exact fixture cardinalities bound by the final release package. */
     public static final int LANGUAGE_FIXTURE_COUNT = 153;
     /** Exact Contracts fixture cardinality. */
-    public static final int CONTRACTS_FIXTURE_COUNT = 154;
+    public static final int CONTRACTS_FIXTURE_COUNT = 234;
     /** Exact combined fixture cardinality. */
     public static final int TOTAL_FIXTURE_COUNT =
             LANGUAGE_FIXTURE_COUNT + CONTRACTS_FIXTURE_COUNT;
@@ -88,6 +88,9 @@ public final class BlueReleaseConformanceReport {
                 contracts.getReleaseName());
         release.put(ConformanceReportConstants.Field.PACKAGE_IDENTITY,
                 contracts.getReleasePackageIdentity());
+        release.put(
+                ConformanceReportConstants.Field.CONTRACTS_RELEASE_IDENTITY,
+                BlueContractsFixturePackage.CONTRACTS_RELEASE_IDENTITY);
 
         Map<String, Object> packages = new LinkedHashMap<>();
         packages.put(ConformanceReportConstants.Field.LANGUAGE_REGISTRY,
@@ -100,6 +103,8 @@ public final class BlueReleaseConformanceReport {
                 contracts.getContractsGasPackageIdentity());
         packages.put(ConformanceReportConstants.Field.CONTRACTS_FIXTURES,
                 contracts.getFixturePackageIdentity());
+        packages.put(ConformanceReportConstants.Field.CONTRACTS_RELEASE,
+                BlueContractsFixturePackage.CONTRACTS_RELEASE_IDENTITY);
 
         Map<String, Object> specifications = new LinkedHashMap<>();
         specifications.put(ConformanceReportConstants.Field.LANGUAGE_SHA256,

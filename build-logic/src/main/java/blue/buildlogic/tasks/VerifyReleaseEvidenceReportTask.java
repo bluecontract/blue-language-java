@@ -183,12 +183,15 @@ public abstract class VerifyReleaseEvidenceReportTask extends DefaultTask {
     private static void verifyPackageIdentities(JsonNode report, List<String> violations) {
         boolean valid = report.path("release").path("packageIdentity")
                 .asText().matches(SHA_256_PATTERN);
+        valid &= report.path("release").path("contractsReleaseIdentity")
+                .asText().matches(SHA_256_PATTERN);
         for (String key : new String[] {
                 "languageRegistry",
                 "languageFixtures",
                 "contractsRegistry",
                 "contractsGas",
-                "contractsFixtures"
+                "contractsFixtures",
+                "contractsRelease"
         }) {
             valid &= report.path("packages").path(key).asText().matches(SHA_256_PATTERN);
         }

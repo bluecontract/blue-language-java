@@ -1,9 +1,18 @@
 package blue.language.conformance.contracts.closure;
 
+import blue.language.conformance.contracts.ClosureFixtureRuntime;
+import blue.language.processor.ProcessorStatus;
+import blue.language.processor.closure.BlueClosureContracts;
+import blue.language.processor.closure.ClosureAttemptResult;
+import blue.language.processor.closure.ClosureExecutionObserver;
+import blue.language.processor.closure.ClosureImplementationEvidence;
+import blue.language.processor.closure.ClosureInvocationInput;
 import blue.language.processor.closure.ComponentSnapshot;
 import blue.language.processor.closure.DocumentId;
+import blue.language.processor.closure.DocumentStepEvidence;
 import blue.language.processor.closure.ManagedDocumentSnapshot;
 import blue.language.processor.closure.SccPartitioner;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -41,9 +50,9 @@ final class ClosureConformanceHarnessTest {
                 Collections.singletonList("C-CLO-34"),
                 separateDocuments.vectors());
         assertEquals(
-                "df52e73e9bc33b6e50df3a58e487970781c911a46a8e0861bd327e652d2b3ea4",
+                "db3d4df9c4d0dc8dacf9e3b33ac1934878361f5daf3e7fb25b56556fb801c682",
                 separateDocuments.sha256());
-        assertEquals(94701L, separateDocuments.bytes());
+        assertEquals(117691L, separateDocuments.bytes());
     }
 
     @Test
@@ -82,6 +91,65 @@ final class ClosureConformanceHarnessTest {
     }
 
     @Test
+    void shouldExecuteCclo34ThroughTheProductionClosureFacade() {
+        ClosureFixtureInventory.Entry entry =
+                ClosureFixtureInventory.requireById(
+                        ClosureFixtureInventory.C_CLO_34);
+        JsonNode fixture = ClosureFixtureInventory.readFixture(entry);
+        Capture capture = new Capture();
+
+        try (ClosureFixtureRuntime runtime =
+                     ClosureFixtureRuntime.fromFixture(fixture);
+             BlueClosureContracts contracts = new BlueClosureContracts(
+                     runtime.processor(), capture)) {
+            ClosureConformanceHarness.Result result =
+                    new ClosureConformanceHarness().runCclo34(
+                            contracts,
+                            new ClosureConformanceHarness.TraceAdapter() {
+                                @Override
+                                public List<DocumentStepEvidence>
+                                        documentSteps(
+                                        ClosureInvocationInput input,
+                                        ClosureAttemptResult attempt) {
+                                    assertNotNull(capture.evidence);
+                                    return capture.evidence
+                                            .documentStepTrace();
+                                }
+                            });
+
+            if (result.failure() != null) {
+                throw new AssertionError(
+                        "C-CLO-34 production execution failed",
+                        result.failure());
+            }
+            assertEquals(
+                    ClosureConformanceHarness.Status.INVARIANT_VERIFIED,
+                    result.status());
+            assertEquals(ProcessorStatus.SUCCESS,
+                    result.attempt().processResult().status());
+            assertEquals(4, result.documentSteps().size());
+            List<DocumentId> expectedTargets = Arrays.asList(
+                    new DocumentId("a"),
+                    new DocumentId("a"),
+                    new DocumentId("b"),
+                    new DocumentId("a"));
+            for (int index = 0;
+                    index < result.documentSteps().size();
+                    index++) {
+                DocumentStepEvidence step = result.documentSteps()
+                        .get(index);
+                assertEquals(expectedTargets.get(index),
+                        step.targetDocumentId());
+                assertEquals(step.targetDocumentId(),
+                        step.executionRootDocumentId());
+                assertEquals(Collections.emptyList(),
+                        step.ambientContainingDocumentIds());
+            }
+            assertFalse(result.implementationConformanceClaimed());
+        }
+    }
+
+    @Test
     void shouldRejectMissingDocumentStepEvidenceInsteadOfUsingExpected() {
         ClosureFixtureInventory.Entry entry =
                 ClosureFixtureInventory.requireById(
@@ -112,5 +180,16 @@ final class ClosureConformanceHarnessTest {
             result.add(component.orderedMemberDocumentIds());
         }
         return result;
+    }
+
+    private static final class Capture
+            implements ClosureExecutionObserver {
+        private ClosureImplementationEvidence evidence;
+
+        @Override
+        public void onExecutionEvidence(
+                ClosureImplementationEvidence value) {
+            this.evidence = value;
+        }
     }
 }

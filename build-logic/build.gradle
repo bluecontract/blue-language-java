@@ -20,6 +20,7 @@ dependencies {
     implementation 'me.champeau.jmh:me.champeau.jmh.gradle.plugin:0.7.3'
     implementation 'org.ow2.asm:asm:9.9'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2'
 
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'

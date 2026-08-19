@@ -31,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BlueContractsConformanceReportTest {
 
     private static final int CONTRACTS_BEHAVIOR_FIXTURE_COUNT = 96;
-    private static final int CONTRACTS_GAS_FIXTURE_COUNT = 58;
+    private static final int CONTRACTS_GAS_FIXTURE_COUNT = 71;
+    private static final int CONTRACTS_CLOSURE_FIXTURE_COUNT = 67;
 
     private static final Pattern SPECIFICATION_REGISTRY_IDENTITY = Pattern.compile(
             "(?s)The canonical core-registry package identity bound by this "
@@ -84,6 +85,8 @@ class BlueContractsConformanceReportTest {
                 CONTRACTS_BEHAVIOR_FIXTURE_COUNT;
         long expectedGasFixtures =
                 CONTRACTS_GAS_FIXTURE_COUNT;
+        long expectedClosureFixtures =
+                CONTRACTS_CLOSURE_FIXTURE_COUNT;
 
         // when
         BlueContractsConformanceReport contracts =
@@ -100,6 +103,10 @@ class BlueContractsConformanceReportTest {
         assertEquals(expectedGasFixtures,
                 contracts.getFixtureResults().stream()
                 .filter(result -> "gas-fixture".equals(result.getRole()))
+                .count());
+        assertEquals(expectedClosureFixtures,
+                contracts.getFixtureResults().stream()
+                .filter(result -> "closure-fixture".equals(result.getRole()))
                 .count());
         assertEquals(contracts.getFixtureIds(),
                 contracts.getPassedFixtureIds(),
@@ -122,9 +129,9 @@ class BlueContractsConformanceReportTest {
         String expectedContractsRegistry =
                 RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
         String expectedContractsGas =
-                "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
+                "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
         String expectedContractsFixtures =
-                "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc";
+                "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa";
 
         // when
         BlueReleaseConformanceReport release = exactReleaseReport();
@@ -136,6 +143,9 @@ class BlueContractsConformanceReportTest {
         assertEquals(BlueContractsConformanceReport
                         .RELEASE_PACKAGE_IDENTITY,
                 nested(encoded, "release", "packageIdentity"));
+        assertEquals(
+                "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50",
+                nested(encoded, "release", "contractsReleaseIdentity"));
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
                 nested(encoded, "packages", "contractsFixtures"));
@@ -154,6 +164,9 @@ class BlueContractsConformanceReportTest {
         assertEquals(
                 expectedContractsFixtures,
                 nested(encoded, "packages", "contractsFixtures"));
+        assertEquals(
+                "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50",
+                nested(encoded, "packages", "contractsRelease"));
         assertEquals(
                 BlueContractsConformanceReport
                         .LANGUAGE_SPECIFICATION_SHA256,
@@ -240,7 +253,7 @@ class BlueContractsConformanceReportTest {
                 "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
                 report.getReleasePackageIdentity());
         assertEquals(
-                "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc",
+                "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
                 report.getFixturePackageIdentity());
         assertEquals(BlueContractsConformanceReport
                         .CONTRACTS_FIXTURE_PACKAGE_IDENTITY,
@@ -264,15 +277,15 @@ class BlueContractsConformanceReportTest {
         assertTrue(BlueContractsConformanceReport
                 .fixturePackageIdentityMatchesFixtureFiles());
         assertEquals(
-                "a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869",
+                "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
                 nested(report.toMachineReadableMap(),
                         "language", "specificationSha256"));
         assertEquals(
-                "6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81",
+                "dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930",
                 nested(report.toMachineReadableMap(),
                         "contracts", "specificationSha256"));
 
-        assertEquals(154, fixtures.size());
+        assertEquals(234, fixtures.size());
         assertTrue(fixtures.stream().allMatch(
                 result -> "FAIL".equals(result.get("status"))
                         && "HarnessDidNotRunFixture".equals(

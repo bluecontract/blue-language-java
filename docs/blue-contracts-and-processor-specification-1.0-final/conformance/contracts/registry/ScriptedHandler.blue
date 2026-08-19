@@ -1,7 +1,0 @@
-name: Scripted Handler
-type:
-  blueId: 2Ag2NfcWpCfPqBAR7bFAEL9L3roX3UWGUkDq7nN3D4gV
-description: Conformance-only Handler whose result is declared directly in fixture content.
-result:
-  type:
-    blueId: 3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv

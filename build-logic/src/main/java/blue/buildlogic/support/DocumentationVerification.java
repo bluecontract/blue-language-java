@@ -409,6 +409,22 @@ public final class DocumentationVerification {
                     "PACKAGE_IDENTITIES_MISSING", "release-conformance.json",
                     "release report contains no package identities"));
         }
+        String contractsReleaseIdentity = report.path("release")
+                .path("contractsReleaseIdentity").asText();
+        String contractsReleasePackage = report.path("packages")
+                .path("contractsRelease").asText();
+        if (!SHA_256.matcher(contractsReleaseIdentity).matches()
+                || !SHA_256.matcher(contractsReleasePackage).matches()
+                || !contractsReleaseIdentity.equals(
+                        contractsReleasePackage)) {
+            packageIdentitiesValid = false;
+            violations.add(new Violation(
+                    "CONTRACTS_RELEASE_IDENTITY_INVALID",
+                    "release-conformance.json",
+                    "release.contractsReleaseIdentity and "
+                            + "packages.contractsRelease must be the same "
+                            + "SHA-256 identity"));
+        }
         return new IdentityStatus(
                 languageFixtures,
                 contractsFixtures,

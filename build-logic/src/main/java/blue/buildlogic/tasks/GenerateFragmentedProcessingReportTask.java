@@ -406,13 +406,17 @@ public abstract class GenerateFragmentedProcessingReportTask extends DefaultTask
     private Map<String, Object> releaseConformance(JsonNode report) {
         requireIdentity(report.path("release").path("packageIdentity").asText(),
                 "release package");
+        requireIdentity(report.path("release")
+                        .path("contractsReleaseIdentity").asText(),
+                "canonical Contracts release");
         JsonNode packages = report.path("packages");
         for (String key : Arrays.asList(
                 "languageRegistry",
                 "languageFixtures",
                 "contractsRegistry",
                 "contractsGas",
-                "contractsFixtures")) {
+                "contractsFixtures",
+                "contractsRelease")) {
             requireIdentity(packages.path(key).asText(), "release package " + key);
         }
         Map<String, int[]> counts = new TreeMap<>();

@@ -7,10 +7,18 @@ import java.util.Locale;
  * envelope.
  */
 public enum BlueContractsFixtureCategory {
+    /** Closure admission behavior. */
+    ADMISSION,
+    /** Closure atomicity behavior. */
+    ATOMICITY,
     /** Checkpoint behavior. */
     CHK,
+    /** Cyclic managed-document behavior. */
+    CYCLE,
     /** Discovery behavior. */
     DISC,
+    /** Dynamic managed-document graph behavior. */
+    DYNAMIC_GRAPH,
     /** End-to-end behavior. */
     E2E,
     /** Embedded-scope behavior. */
@@ -23,14 +31,28 @@ public enum BlueContractsFixtureCategory {
     FEED,
     /** Gas behavior. */
     GAS,
+    /** Historical managed-document behavior. */
+    HISTORY,
+    /** Closure identity behavior. */
+    IDENTITY,
     /** Index behavior. */
     IDX,
     /** Initialization behavior. */
     INIT,
+    /** Closure initialization behavior. */
+    INITIALIZATION,
+    /** Portable-limit behavior. */
+    LIMITS,
     /** Lifecycle behavior. */
     LIFE,
+    /** Closure locality behavior. */
+    LOCALITY,
+    /** Deterministic closure ordering behavior. */
+    ORDERING,
     /** Protected-state behavior. */
     PROT,
+    /** Public Root event behavior. */
+    PUBLIC_EVENTS,
     /** Representation behavior. */
     REP,
     /** Sending behavior. */
@@ -44,7 +66,7 @@ public enum BlueContractsFixtureCategory {
      * @return category label
      */
     public String getLabel() {
-        return name().toLowerCase(Locale.ROOT);
+        return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
     /**

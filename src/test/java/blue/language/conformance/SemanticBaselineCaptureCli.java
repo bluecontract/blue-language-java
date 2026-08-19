@@ -11,10 +11,12 @@ import java.util.List;
  * Captures the exact pre-modernization semantic characterization consumed by
  * {@link SemanticBaselineVerifierCli}.
  *
- * <p>The capture is intentionally explicit: it binds the current API tree,
- * all Contracts gas-fixture expected trees, exported locality payloads, the
- * locality proof source/test inventory, and release artifact/source
- * identities. Re-running capture is therefore a deliberate baseline update,
+ * <p>The capture is intentionally explicit: it preserves the immutable
+ * pre-modernization public-API section already present in the tracked
+ * baseline while refreshing all Contracts gas-fixture expected trees,
+ * exported locality payloads, the locality proof source/test inventory, and
+ * release artifact/source identities. Re-running capture is therefore a
+ * deliberate semantic-baseline update, not an API-baseline replacement and
  * not part of ordinary verification.</p>
  */
 public final class SemanticBaselineCaptureCli {
@@ -26,8 +28,9 @@ public final class SemanticBaselineCaptureCli {
      * Captures one semantic baseline.
      *
      * @param args release-conformance JSON, fragmented-evidence JSON,
-     *             generated API inventory, Contracts fixture root, baseline
-     *             output, and one or more locality JSON files/directories
+     *             generated API inventory (validation only), Contracts
+     *             fixture root, existing baseline/output, and one or more
+     *             locality JSON files/directories
      * @throws Exception when supplied evidence is incomplete or inconsistent
      */
     public static void main(String[] args) throws Exception {
@@ -44,6 +47,8 @@ public final class SemanticBaselineCaptureCli {
         List<Path> localityInputs =
                 SemanticBaselineSupport.localityArguments(args, 5);
 
+        JsonNode existingBaseline =
+                SemanticBaselineSupport.readJson(outputPath);
         JsonNode conformance =
                 SemanticBaselineSupport.readJson(conformancePath);
         JsonNode evidence = SemanticBaselineSupport.readJson(evidencePath);
@@ -89,6 +94,11 @@ public final class SemanticBaselineCaptureCli {
                 SemanticBaselineSupport.text(
                         conformance,
                         "/release/packageIdentity"));
+        release.put(
+                "contractsReleaseIdentity",
+                SemanticBaselineSupport.text(
+                        conformance,
+                        "/release/contractsReleaseIdentity"));
         baseline.set(
                 "packages",
                 SemanticBaselineSupport.required(
@@ -125,16 +135,53 @@ public final class SemanticBaselineCaptureCli {
         locality.set("requiredTests", requiredTests);
         locality.set("payloads", localityPayloads);
 
-        ObjectNode publicApi = baseline.putObject("publicApi");
-        publicApi.put(
-                "inventorySha256",
-                SemanticBaselineSupport.sha256(apiPath));
-        publicApi.set("inventory", api.deepCopy());
+        baseline.set(
+                "publicApi",
+                preservedPublicApi(existingBaseline));
         baseline.set(
                 "artifacts",
                 SemanticBaselineSupport.artifactIdentities(evidence));
 
         SemanticBaselineSupport.writeJson(outputPath, baseline);
+    }
+
+    /**
+     * Returns the immutable public-API characterization from an existing
+     * semantic baseline.
+     *
+     * <p>API evolution is approved separately by the migration ledger. A
+     * semantic refresh must therefore fail closed when the tracked baseline
+     * does not contain a valid API characterization instead of silently
+     * rebasing that characterization to the current distribution.</p>
+     */
+    static JsonNode preservedPublicApi(JsonNode existingBaseline) {
+        SemanticBaselineSupport.requireEquals(
+                "existing semantic baseline schema",
+                SemanticBaselineSupport.BASELINE_SCHEMA,
+                SemanticBaselineSupport.text(existingBaseline, "/schema"));
+        JsonNode publicApi = SemanticBaselineSupport.required(
+                existingBaseline,
+                "/publicApi");
+        SemanticBaselineSupport.requireIdentity(
+                SemanticBaselineSupport.text(
+                        publicApi,
+                        "/inventorySha256"),
+                "existing semantic baseline public API inventory");
+        JsonNode inventory = SemanticBaselineSupport.required(
+                publicApi,
+                "/inventory");
+        SemanticBaselineSupport.requireEquals(
+                "existing semantic baseline public API schema",
+                SemanticBaselineSupport.API_INVENTORY_SCHEMA,
+                SemanticBaselineSupport.text(inventory, "/schema"));
+        JsonNode classes = SemanticBaselineSupport.required(
+                inventory,
+                "/classes");
+        if (!classes.isArray() || classes.size() == 0) {
+            throw new IllegalStateException(
+                    "Existing semantic baseline public API has no classes");
+        }
+        return publicApi.deepCopy();
     }
 
     private static void validateReleaseEvidence(

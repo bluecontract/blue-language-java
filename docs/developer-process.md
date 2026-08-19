@@ -12,6 +12,8 @@ BEX or Coordination behavior.
 - a JVM capable of running Gradle (the build provisions/uses a Java 8 toolchain
   for production bytecode, tests, Javadocs, examples, and smoke consumers);
 - Python 3 for the tracked binary API inventory scripts.
+- a clean `blue-spec` checkout whose `latest/` directory matches
+  `gradle/blue-spec-inputs.lock.json`.
 
 Start with:
 
@@ -20,6 +22,8 @@ java -version
 ./gradlew --version
 git status --short
 ./gradlew help
+./gradlew verifyBlueSpecInputs \
+  -PblueSpecRoot=/absolute/path/to/blue-spec/latest
 ```
 
 All invocations in one checkout share module `build/` directories. Do not run
@@ -49,7 +53,8 @@ the enforced edges.
 | --- | --- |
 | Blue values, Source pipeline, BlueId, providers, snapshots | this repository, Language modules |
 | Runtime-neutral Channel/Handler processing, gas, lifecycle, checkpoints | this repository, Contracts module |
-| Exact Language/Contracts conformance packages | this repository, conformance module |
+| Canonical Language/Contracts specifications and fixtures | `blue-spec/latest` |
+| Java fixture execution and conformance reports | this repository, conformance module |
 | BEX expressions, BEX-specific types or authorization | `blue-bex-java` |
 | Coordination workflows, protocol/application orchestration | Coordination repository |
 | Application storage, catalogs, accounts, APIs, persistence | the consuming application/repository |
@@ -130,14 +135,17 @@ controls, projections, counters, and assertions fail closed; no fixture may be
 skipped.
 
 1. Cite the normative specification rule.
-2. Add the smallest deterministic fixture with a stable ID/category.
+2. Add the smallest deterministic fixture with a stable ID/category under the
+   canonical `blue-spec/latest` tree.
 3. Update its manifest path, byte count, and SHA-256.
 4. If the registry, gas manifest, specification, or fixture package changed,
    regenerate every affected package identity and release binding together.
 5. Run the isolated fixture test and `releaseConformanceTest`.
 6. Inspect the generated per-fixture evidence and exact totals.
 
-Never edit a vendored specification merely to justify current code.
+Never edit an embedded runtime mirror merely to justify current code. Change
+the canonical `blue-spec/latest` input, review its identity consequences, and
+then update the explicit Language input lock.
 
 ## Change identity-bearing registry nodes
 
@@ -427,7 +435,7 @@ commit the exact result. Do not edit a generated reference by hand.
 ```
 
 The Language fixture package contains 153 exact fixtures and the Contracts
-package contains 154. Generated fixture coverage is the source for category
+package contains 234. Generated fixture coverage is the source for category
 subtotals; avoid copying subtotals into authored docs.
 
 `semanticBaselineCapture` is manual and exceptional. Verification never

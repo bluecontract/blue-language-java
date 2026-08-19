@@ -213,6 +213,14 @@ public final class SemanticBaselineVerifierCli {
                 SemanticBaselineSupport.text(
                         conformance,
                         "/release/packageIdentity"));
+        SemanticBaselineSupport.requireEquals(
+                "canonical Contracts release identity",
+                SemanticBaselineSupport.text(
+                        baseline,
+                        "/release/contractsReleaseIdentity"),
+                SemanticBaselineSupport.text(
+                        conformance,
+                        "/release/contractsReleaseIdentity"));
     }
 
     private static void verifyFixtureExecution(

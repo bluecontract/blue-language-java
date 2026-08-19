@@ -14,7 +14,16 @@ Schedule: `blue-contracts/gas/1.0`; maximum process gas: **100000**.
 | `processor` | `channelCandidateTested` | 5 |
 | `processor` | `checkpointCompared` | 5 |
 | `processor` | `checkpointWritten` | 20 |
+| `processor` | `closureExpanded` | 20 |
+| `processor` | `closureInvocation` | 100 |
+| `processor` | `closureWorkOccurrenceDequeued` | 5 |
+| `processor` | `closureWorkOccurrenceEnqueued` | 5 |
+| `processor` | `componentEdgePartitioned` | 1 |
+| `processor` | `componentMemberPartitioned` | 2 |
+| `processor` | `componentPartitionChanged` | 20 |
+| `processor` | `containingReferenceUpdated` | 10 |
 | `processor` | `contractHeaderRecognized` | 2 |
+| `processor` | `cyclicMemberFinalized` | 10 |
 | `processor` | `deliverySnapshotEntry` | 5 |
 | `processor` | `documentUpdateDelivered` | 10 |
 | `processor` | `embeddedEventDelivered` | 10 |
@@ -25,15 +34,19 @@ Schedule: `blue-contracts/gas/1.0`; maximum process gas: **100000**.
 | `processor` | `internalEventDequeued` | 10 |
 | `processor` | `internalEventEnqueued` | 20 |
 | `processor` | `lifecycleDelivered` | 30 |
+| `processor` | `managedDocumentOpened` | 10 |
+| `processor` | `managedOccurrenceBindingVerified` | 5 |
 | `processor` | `patchAddOrReplace` | 20 |
 | `processor` | `patchBoundaryChecked` | 2 |
 | `processor` | `patchRemove` | 10 |
 | `processor` | `pointerSegmentTraversed` | 1 |
+| `processor` | `processEmbeddedEdgeExamined` | 2 |
 | `processor` | `processInvocation` | 50 |
 | `processor` | `processorMarkerWritten` | 20 |
 | `processor` | `rootEventRecorded` | 5 |
 | `processor` | `scopeInitialization` | 1000 |
 | `processor` | `scopeOpened` | 10 |
+| `processor` | `tentativeComponentFinalization` | 20 |
 | `processor` | `terminationRequested` | 10 |
 | `processor` | `triggeredEventDelivered` | 10 |
 | `semantic` | `directIdentityHashBlock` | 1 |
@@ -58,8 +71,15 @@ Schedule: `blue-contracts/gas/1.0`; maximum process gas: **100000**.
 
 | Limit | Value |
 | --- | ---: |
+| `closureExpansionsPerInvocation` | 4096 |
+| `closureGraphChangesPerInvocation` | 4096 |
+| `closureTentativeFinalizationsPerInvocation` | 8192 |
+| `closureWorkOccurrencesPerInvocation` | 8192 |
 | `contractKeyCodePoints` | 256 |
 | `contractKeyUtf8Bytes` | 1024 |
+| `cyclicCanonicalBytesPerComponent` | 16777216 |
+| `cyclicEdgesPerComponent` | 1024 |
+| `cyclicMembersPerComponent` | 128 |
 | `directCanonicalIdentityInputBytes` | 1048576 |
 | `directInlineIdentityTextCodePoints` | 262144 |
 | `directListItemsMaterializedOrRebuilt` | 16384 |
@@ -71,11 +91,13 @@ Schedule: `blue-contracts/gas/1.0`; maximum process gas: **100000**.
 | `externalChannelsPerScope` | 2048 |
 | `handlersBoundToOneDelivery` | 4096 |
 | `internalEventOccurrencesPerInvocation` | 8192 |
+| `managedDocumentsPerClosure` | 4096 |
 | `nestedDocumentUpdateCascadeDepth` | 256 |
 | `normalizedRuntimePointerUtf8Bytes` | 4096 |
 | `participatingScopesPerEvent` | 4096 |
 | `patchesPerContractExecutionResult` | 1024 |
 | `preselectedExternalOccurrencesPerEvent` | 1024 |
+| `processEmbeddedEdgesPerClosure` | 16384 |
 | `processEmbeddedPathsPerScope` | 4096 |
 | `rootEventsReturned` | 4096 |
 | `runtimeChildLedgerCounterKinds` | 256 |

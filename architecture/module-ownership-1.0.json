@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 705,
+    "productionSourceCount": 709,
     "productionResourceCount": 370,
-    "productionSourcePathIdentity": "sha256:bc131c391abe5c7987387d9706162f6799de481e5b9c6b361e7c324277d672f6",
+    "productionSourcePathIdentity": "sha256:633e841ab5239d01eee3be2ca65cd687118157fa1a7a3122ac054b1b27716abe",
     "productionResourcePathIdentity": "sha256:a1ccc0c0105048804474a0ac9ac7a2b095e05d3b094a60a046295e78e5203797"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -259,6 +259,13 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ClosureFixtureRuntime.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ClosureFixtureRuntime.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsAssertionEvaluator.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
@@ -427,6 +434,13 @@
       "targetPackage": "blue.language.conformance.contracts.closure"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureConformance.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureConformance.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureInventory.java",
       "currentPackage": "blue.language.conformance.contracts.closure",
       "targetModule": ":blue-conformance",
@@ -438,6 +452,20 @@
       "currentPackage": "blue.language.conformance.contracts.closure",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureParser.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureLimitMicroEvaluator.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureLimitMicroEvaluator.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/package-info.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/package-info.java",
       "targetPackage": "blue.language.conformance.contracts.closure"
     },
     {

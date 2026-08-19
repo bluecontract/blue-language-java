@@ -19,11 +19,23 @@ dependencies {
     implementation 'org.yaml:snakeyaml:2.0'
 }
 
-def closureConformancePackage = rootProject.layout.projectDirectory.dir(
-        'docs/blue-contracts-and-processor-specification-1.0-final/conformance/contracts')
+def blueSpecRoot = rootProject.ext.blueSpecRootDirectoryProvider
+def closureConformancePackage = blueSpecRoot.map { directory ->
+    directory.dir('conformance/contracts')
+}
 
 tasks.named('processResources') {
+    dependsOn rootProject.tasks.named('verifyBlueSpecInputs')
     from(closureConformancePackage) {
         into 'blue-contracts-closure-1.0'
+    }
+}
+
+tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+    dependsOn rootProject.tasks.named('verifyBlueSpecInputs')
+    inputs.dir(closureConformancePackage)
+            .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+    doFirst {
+        systemProperty 'blue.spec.root', blueSpecRoot.get().asFile.absolutePath
     }
 }

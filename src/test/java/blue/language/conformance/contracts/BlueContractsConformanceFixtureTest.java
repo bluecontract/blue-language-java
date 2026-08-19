@@ -47,7 +47,7 @@ class BlueContractsConformanceFixtureTest {
         int fixtureCount = report.getFixtureIds().size();
 
         // then
-        assertEquals(154, fixtureCount);
+        assertEquals(234, fixtureCount);
         assertEquals(report.getFixtureIds(),
                 report.getPassedFixtureIds(),
                 report.getFailures()::toString);

@@ -4,11 +4,11 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 509,
-    "publicTypeIdentity": "sha256:46a035cbbdd5442cc45152699218f5675e11d0698b4a030057b503eab1050f9d",
+    "publicProductionTypeCount": 511,
+    "publicTypeIdentity": "sha256:fdb00bb89c9f0f3d98ac70c46787d55f4f0e71913acc948468bb4cfb7f623576",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
-      "internal-type-removed-from-public-surface": 254,
+      "internal-type-removed-from-public-surface": 256,
       "new-supported-api-spi": 55
     }
   },
@@ -472,11 +472,33 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.conformance.contracts.ClosureFixtureRuntime",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ClosureFixtureRuntime.java",
+      "currentArtifact": "blue.language:blue-conformance",
+      "targetModule": ":blue-conformance",
+      "targetType": "blue.language.conformance.contracts.ClosureFixtureRuntime",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
       "type": "blue.language.conformance.contracts.ContractsConformanceSuite",
       "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsConformanceSuite.java",
       "currentArtifact": "blue.language:blue-conformance",
       "targetModule": ":blue-conformance",
       "targetType": "blue.language.conformance.contracts.ContractsConformanceSuite",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.conformance.contracts.closure.ClosureFixtureConformance",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureConformance.java",
+      "currentArtifact": "blue.language:blue-conformance",
+      "targetModule": ":blue-conformance",
+      "targetType": "blue.language.conformance.contracts.closure.ClosureFixtureConformance",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",

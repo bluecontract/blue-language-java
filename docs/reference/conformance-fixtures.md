@@ -10,7 +10,7 @@ Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af7504
 
 | Suite | Fixture count |
 | --- | ---: |
-| `contracts` | 154 |
+| `contracts` | 234 |
 | `language` | 153 |
 
 ## Package identities
@@ -20,32 +20,44 @@ Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af7504
 | `languageRegistry` | `sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e` |
 | `languageFixtures` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` |
 | `contractsRegistry` | `sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1` |
-| `contractsGas` | `sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5` |
-| `contractsFixtures` | `sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc` |
+| `contractsGas` | `sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a` |
+| `contractsFixtures` | `sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa` |
+| `contractsRelease` | `sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50` |
 
 ## Specification hashes
 
 | Specification | SHA-256 |
 | --- | --- |
-| `languageSha256` | `a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869` |
-| `contractsSha256` | `6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81` |
+| `languageSha256` | `01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d` |
+| `contractsSha256` | `dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930` |
 
 ## Category coverage
 
 | Suite and category | Fixtures |
 | --- | ---: |
+| `contracts:admission` | 6 |
+| `contracts:atomicity` | 2 |
 | `contracts:chk` | 7 |
+| `contracts:cycle` | 6 |
 | `contracts:disc` | 6 |
+| `contracts:dynamic-graph` | 6 |
 | `contracts:e2e` | 3 |
 | `contracts:emb` | 21 |
 | `contracts:evt` | 5 |
 | `contracts:fail` | 5 |
 | `contracts:feed` | 18 |
-| `contracts:gas` | 58 |
+| `contracts:gas` | 75 |
+| `contracts:history` | 7 |
+| `contracts:identity` | 6 |
 | `contracts:idx` | 2 |
 | `contracts:init` | 6 |
+| `contracts:initialization` | 1 |
 | `contracts:life` | 4 |
+| `contracts:limits` | 20 |
+| `contracts:locality` | 1 |
+| `contracts:ordering` | 5 |
 | `contracts:prot` | 2 |
+| `contracts:public-events` | 3 |
 | `contracts:rep` | 7 |
 | `contracts:snd` | 7 |
 | `contracts:upd` | 3 |

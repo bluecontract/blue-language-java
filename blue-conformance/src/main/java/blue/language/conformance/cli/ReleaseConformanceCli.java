@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Strict release entry point for the exact Language 1.0 and Contracts 1.0
@@ -73,10 +74,17 @@ public final class ReleaseConformanceCli {
         int contractsPassed = contracts.getPassedFixtureIds().size();
 
         StringBuilder text = new StringBuilder();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> releaseBinding =
+                (Map<String, Object>) report.toMachineReadableMap()
+                        .get("release");
         text.append("Blue Language Java release conformance\n");
         text.append("release=").append(contracts.getReleaseName()).append('\n');
         text.append("releasePackage=")
                 .append(contracts.getReleasePackageIdentity()).append('\n');
+        text.append("contractsRelease=")
+                .append(releaseBinding.get("contractsReleaseIdentity"))
+                .append('\n');
         text.append("languageRegistry=")
                 .append(contracts.getLanguageRegistryPackageIdentity())
                 .append('\n');

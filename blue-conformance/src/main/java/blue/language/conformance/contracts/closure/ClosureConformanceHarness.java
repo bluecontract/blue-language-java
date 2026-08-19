@@ -1,6 +1,9 @@
 package blue.language.conformance.contracts.closure;
 
+import blue.language.processor.DocumentProcessor;
+import blue.language.processor.ProcessorDiagnostic;
 import blue.language.processor.ProcessorStatus;
+import blue.language.processor.closure.BlueClosureContracts;
 import blue.language.processor.closure.ClosureAttemptResult;
 import blue.language.processor.closure.ClosureInvocationInput;
 import blue.language.processor.closure.ClosureProcessor;
@@ -17,6 +20,13 @@ import java.util.Objects;
  */
 final class ClosureConformanceHarness {
 
+    enum ExternalStatus {
+        EXECUTED,
+        NEEDS_RESOURCES,
+        FAIL_CLOSED,
+        UNSUPPORTED
+    }
+
     enum Status {
         INVARIANT_VERIFIED,
         IMPLEMENTATION_UNAVAILABLE,
@@ -31,6 +41,127 @@ final class ClosureConformanceHarness {
         List<DocumentStepEvidence> documentSteps(
                 ClosureInvocationInput input,
                 ClosureAttemptResult result);
+    }
+
+    /**
+     * Executes one released external PROCESS_CLOSURE input without consulting
+     * its expected subtree.  A complete non-capability result counts only as
+     * executed evidence; this method deliberately makes no conformance claim.
+     */
+    ExternalResult runExternalFixture(
+            ClosureFixtureInventory.Entry entry,
+            DocumentProcessor processor) {
+        Objects.requireNonNull(entry, "entry");
+        Objects.requireNonNull(processor, "processor");
+        ClosureFixtureParser.ParsedFixture parsed;
+        try {
+            parsed = new ClosureFixtureParser().parse(entry);
+        } catch (UnsupportedOperationException failure) {
+            return ExternalResult.failure(
+                    entry,
+                    ExternalStatus.UNSUPPORTED,
+                    failure.getMessage(),
+                    failure);
+        } catch (RuntimeException failure) {
+            return ExternalResult.failure(
+                    entry,
+                    ExternalStatus.FAIL_CLOSED,
+                    "input-admission: " + stableMessage(failure),
+                    failure);
+        }
+
+        ClosureInvocationInput input;
+        try {
+            input = parsed.admit();
+        } catch (RuntimeException failure) {
+            return ExternalResult.failure(
+                    entry,
+                    ExternalStatus.FAIL_CLOSED,
+                    "typed-admission: " + stableMessage(failure),
+                    failure);
+        }
+
+        try (BlueClosureContracts contracts =
+                     new BlueClosureContracts(processor)) {
+            ClosureAttemptResult attempt;
+            try {
+                attempt = Objects.requireNonNull(
+                        contracts.processClosure(input),
+                        "ClosureProcessor result");
+            } catch (UnsupportedOperationException failure) {
+                return ExternalResult.failure(
+                        entry,
+                        ExternalStatus.UNSUPPORTED,
+                        "execution-model: " + stableMessage(failure),
+                        failure);
+            } catch (RuntimeException failure) {
+                return ExternalResult.failure(
+                        entry,
+                        ExternalStatus.FAIL_CLOSED,
+                        "execution-boundary: " + stableMessage(failure),
+                        failure);
+            }
+            if (!attempt.isComplete()) {
+                return ExternalResult.attempt(
+                        entry,
+                        ExternalStatus.NEEDS_RESOURCES,
+                        attempt,
+                        attempt.requiredExactBlueIds().toString());
+            }
+            if (attempt.processResult().status()
+                    == ProcessorStatus.CAPABILITY_FAILURE) {
+                String capability = attempt.processResult().diagnostic() == null
+                        ? null
+                        : attempt.processResult().diagnostic()
+                                .detail("closureCapability");
+                return ExternalResult.attempt(
+                        entry,
+                        ExternalStatus.UNSUPPORTED,
+                        attempt,
+                        capability == null
+                                ? "CAPABILITY_FAILURE"
+                                : capability);
+            }
+            return ExternalResult.attempt(
+                    entry,
+                    ExternalStatus.EXECUTED,
+                    attempt,
+                    resultSurface(attempt));
+        } catch (UnsupportedOperationException failure) {
+            return ExternalResult.failure(
+                    entry,
+                    ExternalStatus.UNSUPPORTED,
+                    "runtime-model: " + stableMessage(failure),
+                    failure);
+        } catch (RuntimeException failure) {
+            return ExternalResult.failure(
+                    entry,
+                    ExternalStatus.FAIL_CLOSED,
+                    "runtime-construction: " + stableMessage(failure),
+                    failure);
+        }
+    }
+
+    private static String stableMessage(Throwable failure) {
+        String message = failure.getMessage();
+        return message == null || message.isEmpty()
+                ? failure.getClass().getSimpleName()
+                : message;
+    }
+
+    private static String resultSurface(ClosureAttemptResult attempt) {
+        String status = attempt.processResult().status().wireValue();
+        ProcessorDiagnostic diagnostic = attempt.processResult().diagnostic();
+        if (diagnostic == null) {
+            return status;
+        }
+        return status + ": " + diagnostic.category()
+                + (diagnostic.message() == null
+                        ? ""
+                        : ": " + diagnostic.message())
+                + (diagnostic.details().isEmpty()
+                        ? ""
+                        : ": " + diagnostic.details());
     }
 
     Result runCclo34(
@@ -235,6 +366,71 @@ final class ClosureConformanceHarness {
 
         List<DocumentStepEvidence> documentSteps() {
             return documentSteps;
+        }
+
+        Throwable failure() {
+            return failure;
+        }
+
+        boolean implementationConformanceClaimed() {
+            return false;
+        }
+    }
+
+    static final class ExternalResult {
+        private final ClosureFixtureInventory.Entry entry;
+        private final ExternalStatus status;
+        private final ClosureAttemptResult attempt;
+        private final String surface;
+        private final Throwable failure;
+
+        private ExternalResult(
+                ClosureFixtureInventory.Entry entry,
+                ExternalStatus status,
+                ClosureAttemptResult attempt,
+                String surface,
+                Throwable failure) {
+            this.entry = Objects.requireNonNull(entry, "entry");
+            this.status = Objects.requireNonNull(status, "status");
+            this.attempt = attempt;
+            this.surface = surface == null || surface.isEmpty()
+                    ? status.name()
+                    : surface;
+            this.failure = failure;
+        }
+
+        static ExternalResult attempt(
+                ClosureFixtureInventory.Entry entry,
+                ExternalStatus status,
+                ClosureAttemptResult attempt,
+                String surface) {
+            return new ExternalResult(
+                    entry, status, attempt, surface, null);
+        }
+
+        static ExternalResult failure(
+                ClosureFixtureInventory.Entry entry,
+                ExternalStatus status,
+                String surface,
+                Throwable failure) {
+            return new ExternalResult(
+                    entry, status, null, surface, failure);
+        }
+
+        ClosureFixtureInventory.Entry entry() {
+            return entry;
+        }
+
+        ExternalStatus status() {
+            return status;
+        }
+
+        ClosureAttemptResult attempt() {
+            return attempt;
+        }
+
+        String surface() {
+            return surface;
         }
 
         Throwable failure() {

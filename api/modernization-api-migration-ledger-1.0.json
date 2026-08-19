@@ -752,6 +752,8 @@
         "method added: blue.language.provider.ProviderUnavailableException :: <init>(Ljava/lang/String;Ljava/lang/String;)V",
         "method added: blue.language.provider.ProviderUnavailableException :: requiredExactBlueId()Ljava/util/Optional;",
         "method added: blue.language.snapshot.FrozenCanonicalWriter :: directIdentityCanonicalSize(Lblue/language/snapshot/FrozenNode;)J",
+        "public/protected class added: blue.language.conformance.contracts.ClosureFixtureRuntime",
+        "public/protected class added: blue.language.conformance.contracts.closure.ClosureFixtureConformance",
         "public/protected class added: blue.language.identity.CyclicMemberFinalization",
         "public/protected class added: blue.language.identity.CyclicSetFinalization",
         "public/protected class added: blue.language.processor.ClosureRuntimeDescriptor",

@@ -126,6 +126,11 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
         project.getPluginManager().apply(ReleaseEvidencePlugin.class);
         configureRootJava(project);
         configureDependencies(project);
+        BlueSpecInputs.Registration blueSpecInputs =
+                BlueSpecInputs.register(project);
+        project.getTasks().named(LifecycleBasePlugin.CHECK_TASK_NAME)
+                .configure(task -> task.dependsOn(
+                        blueSpecInputs.verification()));
         SourceReleaseTasks sourceRelease = registerSourceReleaseTasks(project);
 
         TaskProvider<Task> moduleCheck = lifecycle(project, "moduleCheck",
@@ -250,7 +255,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                         sourceRelease.primary,
                         sourceRelease.comparison,
                         sourceRelease.verification,
-                        benchmarkClasses);
+                        benchmarkClasses,
+                        blueSpecInputs);
         DocumentationQualityOrchestration.Tasks documentation =
                 DocumentationQualityOrchestration.register(
                         project,

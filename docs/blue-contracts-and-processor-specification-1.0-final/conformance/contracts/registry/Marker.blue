@@ -1,4 +1,0 @@
-name: Marker
-type:
-  blueId: 4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4
-description: Processor-observed state or policy. Marker types do not execute application logic and processor-managed Marker types may appear only at their reserved keys.

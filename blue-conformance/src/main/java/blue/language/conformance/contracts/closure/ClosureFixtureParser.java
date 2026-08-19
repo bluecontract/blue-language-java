@@ -2,8 +2,12 @@ package blue.language.conformance.contracts.closure;
 
 import blue.language.codec.jackson.UncheckedObjectMapper;
 import blue.language.model.Node;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.ExternalOrderKey;
 import blue.language.processor.closure.AffectedClosureSnapshot;
+import blue.language.processor.closure.AdmissionCause;
+import blue.language.processor.closure.AdmissionCandidate;
+import blue.language.processor.closure.AdmissionKind;
 import blue.language.processor.closure.ClosureEnvironment;
 import blue.language.processor.closure.ClosureInvocationInput;
 import blue.language.processor.closure.ComponentKind;
@@ -15,9 +19,12 @@ import blue.language.processor.closure.ExternalEventCause;
 import blue.language.processor.closure.ManagedDocumentGraph;
 import blue.language.processor.closure.ManagedDocumentSnapshot;
 import blue.language.processor.closure.ManagedOccurrenceBinding;
+import blue.language.processor.closure.ManagedRevisionCause;
 import blue.language.processor.closure.ManagedScopeKey;
+import blue.language.processor.closure.ProcessingCause;
 import blue.language.processor.closure.SccPartitioner;
 import blue.language.processor.closure.ScopeAddress;
+import blue.language.provider.CyclicSetProof;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
@@ -30,7 +37,12 @@ import java.util.Map;
 final class ClosureFixtureParser {
 
     ParsedFixture parse(ClosureFixtureInventory.Entry entry) {
-        JsonNode fixture = ClosureFixtureInventory.readFixture(entry);
+        return parse(entry, ClosureFixtureInventory.readFixture(entry));
+    }
+
+    ParsedFixture parse(
+            ClosureFixtureInventory.Entry entry,
+            JsonNode fixture) {
         if (!entry.id().equals(
                     ClosureFixtureInventory.requiredText(fixture, "id"))
                 || !entry.operation().equals(
@@ -39,9 +51,10 @@ final class ClosureFixtureParser {
             throw new IllegalArgumentException(
                     "Fixture envelope disagrees with inventory");
         }
-        if (!"process-closure".equals(entry.operation())) {
+        if (!"process-closure".equals(entry.operation())
+                && !"admit-closure".equals(entry.operation())) {
             throw new UnsupportedOperationException(
-                    "Initial closure harness supports process-closure only");
+                    "Closure harness supports process-closure and admit-closure only");
         }
         JsonNode input = ClosureFixtureInventory.requiredObject(fixture, "input");
         List<ManagedDocumentSnapshot> documents = parseDocuments(
@@ -71,7 +84,7 @@ final class ClosureFixtureParser {
                 occurrences,
                 components,
                 publicRoots,
-                parseExternalCause(
+                parseCause(
                         ClosureFixtureInventory.requiredObject(input, "cause")),
                 parseDirectDeliveries(
                         ClosureFixtureInventory.requiredArray(
@@ -86,7 +99,94 @@ final class ClosureFixtureParser {
                                 input, "environment")),
                 ClosureFixtureInventory.requiredText(
                         input, "invocationIdentity"),
+                parseAdmissionCandidate(input),
+                nullableText(input, "admissionCandidateIdentity"),
                 graph);
+    }
+
+    private static AdmissionCandidate parseAdmissionCandidate(
+            JsonNode input) {
+        JsonNode value = input.get("admissionCandidate");
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        if (!value.isObject()) {
+            throw new IllegalArgumentException(
+                    "admissionCandidate must be null or an object");
+        }
+        String kind = ClosureFixtureInventory.requiredText(value, "kind");
+        JsonNode evidence = ClosureFixtureInventory.requiredObject(
+                value, "evidence");
+        if ("BAD_CYCLIC_PROOF".equals(kind)) {
+            JsonNode proof = ClosureFixtureInventory.requiredObject(
+                    evidence, "candidateCyclicProof");
+            ArrayList<AdmissionCandidate.CandidateMemberState> states =
+                    new ArrayList<AdmissionCandidate.CandidateMemberState>();
+            for (JsonNode state : ClosureFixtureInventory.requiredArray(
+                    proof, "memberStates")) {
+                states.add(new AdmissionCandidate.CandidateMemberState(
+                        new DocumentId(ClosureFixtureInventory.requiredText(
+                                state, "documentId")),
+                        ClosureFixtureInventory.requiredText(
+                                state,
+                                BlueLanguageConstants.OBJECT_BLUE_ID)));
+            }
+            ArrayList<Node> placeholders = new ArrayList<Node>();
+            for (JsonNode placeholder : ClosureFixtureInventory.requiredArray(
+                    proof, "declaredPlaceholderSet")) {
+                placeholders.add(node(placeholder));
+            }
+            return AdmissionCandidate.badCyclicProof(
+                    new AdmissionCandidate.CandidateCyclicProof(
+                            ClosureFixtureInventory.requiredText(
+                                    proof, "componentIdentity"),
+                            ClosureFixtureInventory.requiredText(
+                                    proof, "masterBlueId"),
+                            states,
+                            placeholders));
+        }
+        if ("AMBIGUOUS_PRELIMINARY_MEMBERS".equals(kind)) {
+            ArrayList<AdmissionCandidate.CandidateCyclicMember> members =
+                    new ArrayList<AdmissionCandidate.CandidateCyclicMember>();
+            for (JsonNode member : ClosureFixtureInventory.requiredArray(
+                    evidence, "candidateCyclicMembers")) {
+                members.add(new AdmissionCandidate.CandidateCyclicMember(
+                        new DocumentId(ClosureFixtureInventory.requiredText(
+                                member, "documentId")),
+                        node(ClosureFixtureInventory.requiredObject(
+                                member, "document"))));
+            }
+            return AdmissionCandidate.ambiguousPreliminaryMembers(members);
+        }
+        if ("INVALID_OCCURRENCE_BINDING".equals(kind)) {
+            ArrayList<AdmissionCandidate.CandidateOccurrenceBinding> rows =
+                    new ArrayList<AdmissionCandidate.CandidateOccurrenceBinding>();
+            for (JsonNode row : ClosureFixtureInventory.requiredArray(
+                    evidence, "candidateOccurrenceBindings")) {
+                rows.add(new AdmissionCandidate.CandidateOccurrenceBinding(
+                        ClosureFixtureInventory.requiredText(
+                                row, "occurrenceIdentity"),
+                        ClosureFixtureInventory.requiredText(
+                                row, "bindingIdentity"),
+                        ClosureFixtureInventory.requiredText(
+                                row, "bindingPolicyIdentity"),
+                        new DocumentId(ClosureFixtureInventory.requiredText(
+                                row, "sourceDocumentId")),
+                        ClosureFixtureInventory.requiredText(
+                                row, "sourcePath"),
+                        ClosureFixtureInventory.requiredLong(
+                                row, "activationGeneration"),
+                        new DocumentId(ClosureFixtureInventory.requiredText(
+                                row, "targetDocumentId")),
+                        ClosureFixtureInventory.requiredText(
+                                row, "expectedTargetBlueId"),
+                        ClosureFixtureInventory.requiredBoolean(
+                                row, "active")));
+            }
+            return AdmissionCandidate.invalidOccurrenceBinding(rows);
+        }
+        throw new UnsupportedOperationException(
+                "Unsupported admission candidate kind " + kind);
     }
 
     private static List<ManagedDocumentSnapshot> parseDocuments(
@@ -105,7 +205,8 @@ final class ClosureFixtureParser {
             }
             result.add(new ManagedDocumentSnapshot(
                     new DocumentId(declaredId),
-                    ClosureFixtureInventory.requiredText(record, "blueId"),
+                    ClosureFixtureInventory.requiredText(
+                            record, BlueLanguageConstants.OBJECT_BLUE_ID),
                     node(ClosureFixtureInventory.requiredObject(
                             record, "document")),
                     ClosureFixtureInventory.requiredBoolean(
@@ -163,10 +264,16 @@ final class ClosureFixtureParser {
         for (JsonNode value : values) {
             ComponentKind kind = ComponentKind.valueOf(
                     ClosureFixtureInventory.requiredText(value, "kind"));
-            if (kind == ComponentKind.CYCLIC) {
-                throw new UnsupportedOperationException(
-                        "Cyclic proof admission is not implemented by the initial harness");
-            }
+            List<DocumentId> memberDocumentIds = parseDocumentIds(
+                    ClosureFixtureInventory.requiredArray(
+                            value, "orderedMemberDocumentIds"));
+            List<String> memberBlueIds = parseTextList(
+                    ClosureFixtureInventory.requiredArray(
+                            value, "orderedMemberBlueIds"));
+            ParsedCyclicEvidence cyclicEvidence = kind == ComponentKind.CYCLIC
+                    ? parseCyclicEvidence(
+                            value, memberDocumentIds, memberBlueIds)
+                    : ParsedCyclicEvidence.absent();
             result.add(new ComponentSnapshot(
                     ClosureFixtureInventory.requiredText(
                             value, "componentIdentity"),
@@ -175,24 +282,112 @@ final class ClosureFixtureParser {
                     ClosureFixtureInventory.requiredLong(
                             value, "componentGeneration"),
                     kind,
-                    parseDocumentIds(
-                            ClosureFixtureInventory.requiredArray(
-                                    value, "orderedMemberDocumentIds")),
-                    parseTextList(ClosureFixtureInventory.requiredArray(
-                            value, "orderedMemberBlueIds")),
-                    null,
-                    null,
-                    null));
+                    memberDocumentIds,
+                    memberBlueIds,
+                    cyclicEvidence.masterBlueId,
+                    cyclicEvidence.proof,
+                    cyclicEvidence.proofIdentity));
         }
         return Collections.unmodifiableList(result);
     }
 
-    private static ExternalEventCause parseExternalCause(JsonNode cause) {
-        if (!"external".equals(
-                ClosureFixtureInventory.requiredText(cause, "kind"))) {
-            throw new UnsupportedOperationException(
-                    "Initial closure harness supports external causes only");
+    /** Retains the authored canonical proof representation without reprojecting it. */
+    private static ParsedCyclicEvidence parseCyclicEvidence(
+            JsonNode component,
+            List<DocumentId> memberDocumentIds,
+            List<String> memberBlueIds) {
+        String componentIdentity = ClosureFixtureInventory.requiredText(
+                component, "componentIdentity");
+        String masterBlueId = ClosureFixtureInventory.requiredText(
+                component, "masterBlueId");
+        JsonNode evidence = ClosureFixtureInventory.requiredObject(
+                component, "completeCyclicProof");
+        requireEqual(
+                "completeCyclicProof.componentIdentity",
+                componentIdentity,
+                ClosureFixtureInventory.requiredText(
+                        evidence, "componentIdentity"));
+        requireEqual(
+                "completeCyclicProof.masterBlueId",
+                masterBlueId,
+                ClosureFixtureInventory.requiredText(
+                        evidence, "masterBlueId"));
+
+        JsonNode states = ClosureFixtureInventory.requiredArray(
+                evidence, "memberStates");
+        if (states.size() != memberDocumentIds.size()
+                || memberBlueIds.size() != memberDocumentIds.size()) {
+            throw new IllegalArgumentException(
+                    "Cyclic proof member evidence has different cardinalities");
         }
+        for (int index = 0; index < states.size(); index++) {
+            JsonNode state = states.get(index);
+            requireEqual(
+                    "completeCyclicProof.memberStates[" + index
+                            + "].documentId",
+                    memberDocumentIds.get(index).value(),
+                    ClosureFixtureInventory.requiredText(
+                            state, "documentId"));
+            requireEqual(
+                    "completeCyclicProof.memberStates[" + index
+                            + "].blueId",
+                    memberBlueIds.get(index),
+                    ClosureFixtureInventory.requiredText(
+                            state, BlueLanguageConstants.OBJECT_BLUE_ID));
+        }
+
+        ArrayList<Node> placeholders = new ArrayList<Node>();
+        for (JsonNode placeholder : ClosureFixtureInventory.requiredArray(
+                evidence, "declaredPlaceholderSet")) {
+            placeholders.add(node(placeholder));
+        }
+        if (placeholders.size() != memberDocumentIds.size()) {
+            throw new IllegalArgumentException(
+                    "Cyclic placeholder set must cover every component member");
+        }
+        return new ParsedCyclicEvidence(
+                masterBlueId,
+                CyclicSetProof.fromDeclaredPlaceholderSet(placeholders),
+                ClosureFixtureInventory.requiredText(
+                        component, "cyclicProofIdentity"));
+    }
+
+    private static void requireEqual(
+            String field,
+            String expected,
+            String actual) {
+        if (!expected.equals(actual)) {
+            throw new IllegalArgumentException(
+                    field + " disagrees with component evidence");
+        }
+    }
+
+    private static ProcessingCause parseCause(JsonNode cause) {
+        String kind = ClosureFixtureInventory.requiredText(cause, "kind");
+        if ("external".equals(kind)) {
+            return parseExternalCause(cause);
+        }
+        if ("managed-revision".equals(kind)) {
+            return parseManagedRevisionCause(cause);
+        }
+        if ("admission".equals(kind)) {
+            return new AdmissionCause(
+                    ClosureFixtureInventory.requiredText(
+                            cause, "causeIdentity"),
+                    AdmissionKind.valueOf(
+                            ClosureFixtureInventory.requiredText(
+                                    cause, "admissionKind")),
+                    ClosureFixtureInventory.requiredText(cause, "label"),
+                    nullableText(cause, "triggeringEventBlueId"),
+                    nullableText(cause, "parentTransitionIdentity"),
+                    ClosureFixtureInventory.requiredText(
+                            cause, "policyIdentity"));
+        }
+        throw new UnsupportedOperationException(
+                "Closure harness does not support cause kind " + kind);
+    }
+
+    private static ExternalEventCause parseExternalCause(JsonNode cause) {
         ArrayList<Object> sourceOrder = new ArrayList<Object>();
         for (JsonNode component : ClosureFixtureInventory.requiredArray(
                 cause, "sourceOrder")) {
@@ -212,6 +407,27 @@ final class ClosureFixtureParser {
                 ExternalOrderKey.of(sourceOrder),
                 ClosureFixtureInventory.requiredText(
                         cause, "externalOrderPolicyIdentity"));
+    }
+
+    private static ManagedRevisionCause parseManagedRevisionCause(
+            JsonNode cause) {
+        return new ManagedRevisionCause(
+                ClosureFixtureInventory.requiredText(
+                        cause, "causeIdentity"),
+                ClosureFixtureInventory.requiredText(
+                        cause, "targetOccurrenceIdentity"),
+                new DocumentId(ClosureFixtureInventory.requiredText(
+                        cause, "childDocumentId")),
+                ClosureFixtureInventory.requiredLong(cause, "fromEpoch"),
+                ClosureFixtureInventory.requiredLong(cause, "toEpoch"),
+                ClosureFixtureInventory.requiredText(cause, "beforeBlueId"),
+                ClosureFixtureInventory.requiredText(cause, "afterBlueId"),
+                node(ClosureFixtureInventory.requiredObject(
+                        cause, "afterDocument")),
+                ClosureFixtureInventory.requiredText(
+                        cause, "originalSourceCauseIdentity"),
+                ClosureFixtureInventory.requiredText(
+                        cause, "sourceRevisionReceiptIdentity"));
     }
 
     private static List<DirectLogicalDelivery> parseDirectDeliveries(
@@ -302,7 +518,8 @@ final class ClosureFixtureParser {
         for (JsonNode item : ClosureFixtureInventory.requiredArray(
                 evidence, "limits")) {
             String name = ClosureFixtureInventory.requiredText(item, "name");
-            long limit = ClosureFixtureInventory.requiredLong(item, "value");
+            long limit = ClosureFixtureInventory.requiredLong(
+                    item, BlueLanguageConstants.OBJECT_VALUE);
             if (limits.put(name, Long.valueOf(limit)) != null) {
                 throw new IllegalArgumentException(
                         "Duplicate portable limit name: " + name);
@@ -362,6 +579,37 @@ final class ClosureFixtureParser {
         return UncheckedObjectMapper.JSON_MAPPER.convertValue(value, Node.class);
     }
 
+    private static String nullableText(JsonNode value, String field) {
+        JsonNode child = value.get(field);
+        if (child == null || child.isNull()) {
+            return null;
+        }
+        if (!child.isTextual() || child.asText().isEmpty()) {
+            throw new IllegalArgumentException(
+                    field + " must be null or non-empty Text");
+        }
+        return child.asText();
+    }
+
+    private static final class ParsedCyclicEvidence {
+        private final String masterBlueId;
+        private final CyclicSetProof proof;
+        private final String proofIdentity;
+
+        private ParsedCyclicEvidence(
+                String masterBlueId,
+                CyclicSetProof proof,
+                String proofIdentity) {
+            this.masterBlueId = masterBlueId;
+            this.proof = proof;
+            this.proofIdentity = proofIdentity;
+        }
+
+        private static ParsedCyclicEvidence absent() {
+            return new ParsedCyclicEvidence(null, null, null);
+        }
+    }
+
     static final class ParsedFixture {
         private final ClosureFixtureInventory.Entry entry;
         private final long graphGeneration;
@@ -371,12 +619,14 @@ final class ClosureFixtureParser {
         private final List<ManagedOccurrenceBinding> occurrences;
         private final List<ComponentSnapshot> components;
         private final List<DocumentId> publicRoots;
-        private final ExternalEventCause cause;
+        private final ProcessingCause cause;
         private final List<DirectLogicalDelivery> directDeliveries;
         private final String directDeliverySnapshotIdentity;
         private final ExecutionPolicy executionPolicy;
         private final ClosureEnvironment environment;
         private final String invocationIdentity;
+        private final AdmissionCandidate admissionCandidate;
+        private final String admissionCandidateIdentity;
         private final ManagedDocumentGraph graph;
 
         ParsedFixture(
@@ -388,12 +638,14 @@ final class ClosureFixtureParser {
                 List<ManagedOccurrenceBinding> occurrences,
                 List<ComponentSnapshot> components,
                 List<DocumentId> publicRoots,
-                ExternalEventCause cause,
+                ProcessingCause cause,
                 List<DirectLogicalDelivery> directDeliveries,
                 String directDeliverySnapshotIdentity,
                 ExecutionPolicy executionPolicy,
                 ClosureEnvironment environment,
                 String invocationIdentity,
+                AdmissionCandidate admissionCandidate,
+                String admissionCandidateIdentity,
                 ManagedDocumentGraph graph) {
             this.entry = entry;
             this.graphGeneration = graphGeneration;
@@ -409,6 +661,8 @@ final class ClosureFixtureParser {
             this.executionPolicy = executionPolicy;
             this.environment = environment;
             this.invocationIdentity = invocationIdentity;
+            this.admissionCandidate = admissionCandidate;
+            this.admissionCandidateIdentity = admissionCandidateIdentity;
             this.graph = graph;
         }
 
@@ -421,6 +675,27 @@ final class ClosureFixtureParser {
                     occurrenceBindingSetIdentity,
                     components,
                     publicRoots);
+            if ("admit-closure".equals(entry.operation())) {
+                if (!(cause instanceof AdmissionCause)
+                        || !directDeliveries.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Admission fixture requires an admission cause and zero direct deliveries");
+                }
+                if ((admissionCandidate == null)
+                        != (admissionCandidateIdentity == null)) {
+                    throw new IllegalArgumentException(
+                            "admissionCandidate and identity must be both present or absent");
+                }
+                return ClosureInvocationInput.admitClosure(
+                        invocationIdentity,
+                        snapshot,
+                        (AdmissionCause) cause,
+                        admissionCandidate,
+                        admissionCandidateIdentity,
+                        directDeliverySnapshotIdentity,
+                        executionPolicy,
+                        environment);
+            }
             return ClosureInvocationInput.processClosure(
                     invocationIdentity,
                     snapshot,

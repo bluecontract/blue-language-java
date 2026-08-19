@@ -1,10 +1,12 @@
 package blue.language.conformance.contracts.closure;
 
 import blue.language.codec.jackson.UncheckedObjectMapper;
+import blue.language.model.wire.BlueLanguageConstants;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.yaml.snakeyaml.LoaderOptions;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -19,20 +21,31 @@ import java.util.Set;
 
 final class ClosureFixtureInventory {
 
+    private static final int MAX_VERIFIED_FIXTURE_YAML_CODE_POINTS =
+            16 * 1024 * 1024;
+
     static final String ROOT = "blue-contracts-closure-1.0/";
     static final String FIXTURE_ROOT = ROOT + "fixtures/";
     static final String MANIFEST = FIXTURE_ROOT + "manifest.yaml";
     static final String PACKAGE_IDENTITY =
-            "sha256:62b761046cea1128de2f82b7cb4a29aabd0bfa499bccf2fa0727cb4a3f00332e";
+            "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa";
     static final int CLOSURE_FIXTURE_COUNT = 67;
+    static final int EXTERNAL_PROCESS_FIXTURE_COUNT = 30;
+    static final int MANAGED_REVISION_PROCESS_FIXTURE_COUNT = 5;
     static final String C_CLO_34 = "c-clo-34-separate-document-steps";
 
-    private static final ObjectMapper YAML = new ObjectMapper(
-            YAMLFactory.builder()
-                    .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
-                    .build());
+    private static final ObjectMapper YAML = verifiedYamlMapper();
 
     private ClosureFixtureInventory() {
+    }
+
+    private static ObjectMapper verifiedYamlMapper() {
+        LoaderOptions options = new LoaderOptions();
+        options.setCodePointLimit(MAX_VERIFIED_FIXTURE_YAML_CODE_POINTS);
+        return new ObjectMapper(YAMLFactory.builder()
+                .loaderOptions(options)
+                .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+                .build());
     }
 
     static List<Entry> load() {
@@ -72,7 +85,10 @@ final class ClosureFixtureInventory {
                         "Closure fixture digest mismatch: " + path);
             }
             JsonNode fixture = readYaml(FIXTURE_ROOT + path);
-            requireText(fixture, "schema", "blue-contracts-closure-fixture/1.0");
+            requireText(
+                    fixture,
+                    BlueLanguageConstants.OBJECT_SCHEMA,
+                    "blue-contracts-closure-fixture/1.0");
             String id = requiredText(fixture, "id");
             if (!ids.add(id)) {
                 throw new IllegalStateException(
@@ -107,8 +123,60 @@ final class ClosureFixtureInventory {
         throw new IllegalArgumentException("Unknown closure fixture: " + id);
     }
 
+    /**
+     * Selects the released external PROCESS_CLOSURE inventory from operation
+     * and input cause only; expected result trees are never consulted.
+     */
+    static List<Entry> externalProcessFixtures() {
+        ArrayList<Entry> result = new ArrayList<Entry>();
+        for (Entry entry : load()) {
+            if (!"process-closure".equals(entry.operation())) {
+                continue;
+            }
+            JsonNode fixture = readFixture(entry);
+            JsonNode input = requiredObject(fixture, "input");
+            JsonNode cause = requiredObject(input, "cause");
+            if ("external".equals(requiredText(cause, "kind"))) {
+                result.add(entry);
+            }
+        }
+        if (result.size() != EXTERNAL_PROCESS_FIXTURE_COUNT) {
+            throw new IllegalStateException(
+                    "Unexpected external PROCESS_CLOSURE fixture count: "
+                            + result.size());
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    /** Selects the five released one-receipt managed-revision invocations. */
+    static List<Entry> managedRevisionProcessFixtures() {
+        ArrayList<Entry> result = new ArrayList<Entry>();
+        for (Entry entry : load()) {
+            if (!"process-closure".equals(entry.operation())) {
+                continue;
+            }
+            JsonNode cause = requiredObject(
+                    requiredObject(readFixture(entry), "input"),
+                    "cause");
+            if ("managed-revision".equals(requiredText(cause, "kind"))) {
+                result.add(entry);
+            }
+        }
+        if (result.size() != MANAGED_REVISION_PROCESS_FIXTURE_COUNT) {
+            throw new IllegalStateException(
+                    "Unexpected managed-revision PROCESS_CLOSURE fixture "
+                            + "count: " + result.size());
+        }
+        return Collections.unmodifiableList(result);
+    }
+
     static JsonNode readFixture(Entry entry) {
         return readYaml(FIXTURE_ROOT + entry.path());
+    }
+
+    /** Reads one exact resource from the packaged conformance environment. */
+    static JsonNode readCurrentResource(String resource) {
+        return readYaml(resource);
     }
 
     private static JsonNode readYaml(String resource) {

@@ -51,7 +51,8 @@ final class SemanticEvidenceOrchestration {
             TaskProvider<Zip> sourceReleaseArchive,
             TaskProvider<CompareArchiveReplicasTask> sourceReleaseComparison,
             TaskProvider<VerifySourceReleaseArchiveTask> sourceReleaseVerification,
-            TaskProvider<Task> benchmarkClasses) {
+            TaskProvider<Task> benchmarkClasses,
+            BlueSpecInputs.Registration blueSpecInputs) {
         Provider<RegularFile> aggregateJar = moduleArchive(
                 project, "blue-language-java", JavaPlugin.JAR_TASK_NAME);
         Provider<RegularFile> aggregateSourcesJar = moduleArchive(
@@ -85,9 +86,8 @@ final class SemanticEvidenceOrchestration {
         RegularFile migrationLedger = project.getLayout()
                 .getProjectDirectory().file(
                         "api/modernization-api-migration-ledger-1.0.json");
-        Directory contractsFixtures = project.getLayout()
-                .getProjectDirectory().dir(
-                        "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures");
+        Directory contractsFixtures = blueSpecInputs.root().get()
+                .dir("conformance/contracts/fixtures");
         Directory localityEvidence = project.getLayout()
                 .getBuildDirectory().dir("reports/semantic-baseline/locality").get();
         RegularFile platformInvocationMatrix = localityEvidence.file(
@@ -305,7 +305,7 @@ final class SemanticEvidenceOrchestration {
                         });
 
         TaskProvider<Sync> semanticWorkspace = registerSemanticVerificationWorkspace(
-                project, publishedModules);
+                project, publishedModules, blueSpecInputs);
         SourceSet test = project.getExtensions().getByType(SourceSetContainer.class)
                 .getByName(SourceSet.TEST_SOURCE_SET_NAME);
         TaskProvider<JavaExec> semanticBaselineVerification = project.getTasks().register(
@@ -320,6 +320,7 @@ final class SemanticEvidenceOrchestration {
                             semanticWorkspace,
                             generateApiInventory,
                             verifyApiMigration,
+                            blueSpecInputs.verification(),
                             project.getTasks().named(JavaPlugin.TEST_CLASSES_TASK_NAME));
                     task.setClasspath(test.getRuntimeClasspath());
                     task.getMainClass().set(
@@ -369,6 +370,7 @@ final class SemanticEvidenceOrchestration {
                     task.dependsOn(
                             fragmentedReport,
                             generateApiInventory,
+                            blueSpecInputs.verification(),
                             project.getTasks().named(JavaPlugin.TEST_CLASSES_TASK_NAME));
                     task.setClasspath(test.getRuntimeClasspath());
                     task.getMainClass().set(
@@ -401,7 +403,9 @@ final class SemanticEvidenceOrchestration {
     }
 
     private static TaskProvider<Sync> registerSemanticVerificationWorkspace(
-            Project project, List<String> publishedModules) {
+            Project project,
+            List<String> publishedModules,
+            BlueSpecInputs.Registration blueSpecInputs) {
         return project.getTasks().register(
                 BuildLogicConstants.TASK_PREPARE_SEMANTIC_VERIFICATION_WORKSPACE,
                 Sync.class,
@@ -409,7 +413,9 @@ final class SemanticEvidenceOrchestration {
                     task.setGroup(GROUP);
                     task.setDescription(
                             "Stages module sources at the legacy semantic verifier's logical paths.");
-                    task.dependsOn(project.getTasks().named("fragmentedProcessingTest"));
+                    task.dependsOn(
+                            project.getTasks().named("fragmentedProcessingTest"),
+                            blueSpecInputs.verification());
                     task.into(project.getLayout().getBuildDirectory()
                             .dir("semantic-baseline/verification-workspace"));
                     task.setIncludeEmptyDirs(false);
@@ -418,18 +424,26 @@ final class SemanticEvidenceOrchestration {
                         task.from(project.project(":" + module).file("src/main/java"),
                                 contents -> contents.into("src/main/java"));
                     }
-                    task.from(project.file(
-                                    "blue-language-core/src/main/resources/specifications"),
-                            contents -> contents.into("src/main/resources/specifications"));
-                    task.from(project.file(
-                                    "blue-contracts-core/src/main/resources/specifications"),
-                            contents -> contents.into("src/main/resources/specifications"));
-                    task.from(project.file(
-                                    "blue-conformance/src/main/resources/language/1.0/spec.md"),
-                            contents -> contents.into("src/test/resources/language/1.0"));
-                    task.from(project.file(
-                                    "blue-conformance/src/main/resources/contract/1.0/spec.md"),
-                            contents -> contents.into("src/test/resources/contract/1.0"));
+                    task.from(blueSpecInputs.file(
+                                    "specifications/blue-language-specification-1.0.md"),
+                            contents -> contents.into(
+                                    "src/main/resources/specifications"));
+                    task.from(blueSpecInputs.file(
+                                    "specifications/blue-contracts-and-processor-specification-1.0.md"),
+                            contents -> contents.into(
+                                    "src/main/resources/specifications"));
+                    task.from(blueSpecInputs.file(
+                                    "specifications/blue-language-specification-1.0.md"),
+                            contents -> {
+                                contents.rename(ignored -> "spec.md");
+                                contents.into("src/test/resources/language/1.0");
+                            });
+                    task.from(blueSpecInputs.file(
+                                    "specifications/blue-contracts-and-processor-specification-1.0.md"),
+                            contents -> {
+                                contents.rename(ignored -> "spec.md");
+                                contents.into("src/test/resources/contract/1.0");
+                            });
                     task.from(project.file("docs"), contents -> contents.into("docs"));
                     task.from(project.file("README.md"));
                     task.from(project.getLayout().getBuildDirectory().dir(

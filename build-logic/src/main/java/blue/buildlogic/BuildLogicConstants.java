@@ -11,7 +11,7 @@ public final class BuildLogicConstants {
     public static final int EXPECTED_LANGUAGE_FIXTURE_COUNT = 153;
 
     /** Exact fixture inventory bound by the final Contracts 1.0 package. */
-    public static final int EXPECTED_CONTRACTS_FIXTURE_COUNT = 154;
+    public static final int EXPECTED_CONTRACTS_FIXTURE_COUNT = 234;
 
     /** Combined release-conformance fixture inventory. */
     public static final int EXPECTED_RELEASE_FIXTURE_COUNT =
@@ -69,6 +69,7 @@ public final class BuildLogicConstants {
     public static final String TASK_VERIFY_REPRODUCIBLE_ARCHIVES =
             "verifyReproducibleArchives";
     public static final String TASK_VERIFY_BUILD_SCRIPT_SHAPE = "verifyBuildScriptShape";
+    public static final String TASK_VERIFY_BLUE_SPEC_INPUTS = "verifyBlueSpecInputs";
     public static final String TASK_VERIFY_CLEAN_BUILD_EVIDENCE = "verifyCleanBuildEvidence";
     public static final String TASK_VERIFY_PUBLISHED_REPOSITORY = "verifyPublishedRepository";
     public static final String TASK_VERIFY_SOURCE_RELEASE_ARCHIVE =

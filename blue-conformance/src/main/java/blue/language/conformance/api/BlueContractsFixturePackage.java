@@ -1,5 +1,6 @@
 package blue.language.conformance.api;
 
+import blue.language.processor.ClosureRuntimeDescriptor;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.registry.RegistryManifestConstants;
 import blue.language.codec.jackson.UncheckedObjectMapper;
@@ -33,6 +34,25 @@ import static blue.language.conformance.api.BlueContractsConformanceReport.*;
 
 /** Loads and verifies the exact Contracts fixture and release packages. */
 final class BlueContractsFixturePackage {
+
+    private static final int MAX_VERIFIED_FIXTURE_YAML_CODE_POINTS =
+            16 * 1024 * 1024;
+
+    static final String CONTRACTS_RELEASE_IDENTITY =
+            "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50";
+    private static final String CONTRACTS_RELEASE_MANIFEST_RESOURCE =
+            "blue-contracts-closure-1.0/release-manifest.yaml";
+
+    /*
+     * The aggregate Language release manifest predates the normative closure
+     * amendment. Its own identity remains verified exactly while the current
+     * Contracts report binds the superseding gas and combined-fixture
+     * packages directly.
+     */
+    private static final String LEGACY_RELEASE_CONTRACTS_GAS_IDENTITY =
+            "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
+    private static final String LEGACY_RELEASE_CONTRACTS_FIXTURE_IDENTITY =
+            "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc";
 
     /**
      * Fixture envelopes may use YAML anchors for literal reuse. This parser is
@@ -162,6 +182,12 @@ final class BlueContractsFixturePackage {
                 RegistryManifestConstants.FIELD_PACKAGE_IDENTITY);
     }
 
+    static String computeContractsReleaseIdentity() {
+        return computeYamlPackageIdentity(
+                CONTRACTS_RELEASE_MANIFEST_RESOURCE,
+                "releaseIdentity");
+    }
+
     /**
 
      * Verifies fixture identity and file digests.
@@ -192,11 +218,12 @@ final class BlueContractsFixturePackage {
                 manifest,
                 RegistryManifestConstants.FIELD_SPECIFICATION_VERSION,
                 ConformanceReportConstants.SPECIFICATION_VERSION_1_0);
-        requireText(manifest, "schemaVersion", "blue-contracts-fixture/1.0");
+        requireTextArray(
+                manifest,
+                "schemaVersions",
+                "blue-contracts-fixture/1.0",
+                "blue-contracts-closure-fixture/1.0");
         requireText(manifest, "registryPackageIdentity", CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
-        requireText(manifest, "gasSchedule", "blue-contracts/gas/1.0");
-        requireText(manifest, "gasManifestPackageIdentity", CONTRACTS_GAS_PACKAGE_IDENTITY);
-        requireText(manifest, "gasManifestSha256", CONTRACTS_GAS_MANIFEST_SHA256);
         requireText(
                 manifest,
                 RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
@@ -209,6 +236,7 @@ final class BlueContractsFixturePackage {
         Set<String> paths = new LinkedHashSet<>();
         int behavior = 0;
         int gas = 0;
+        int closure = 0;
         for (JsonNode file : files) {
             String path = requiredText(
                     file, RegistryManifestConstants.FIELD_PATH);
@@ -221,6 +249,8 @@ final class BlueContractsFixturePackage {
                 behavior++;
             } else if ("gas-fixture".equals(role)) {
                 gas++;
+            } else if ("closure-fixture".equals(role)) {
+                closure++;
             } else if (!"support".equals(role)) {
                 throw new IllegalStateException("Unknown Contracts fixture file role: " + role);
             }
@@ -236,15 +266,26 @@ final class BlueContractsFixturePackage {
                 throw new IllegalStateException("Contracts fixture digest mismatch: " + path);
             }
         }
-        requireCount(manifest, "behaviorFixtureCount", behavior);
-        requireCount(manifest, "gasFixtureCount", gas);
-        requireCount(manifest, "vectorCount", 100);
+        requireCount(manifest, "ordinaryBehaviorFixtureCount", behavior);
+        requireCount(manifest, "ordinaryGasFixtureCount", gas);
+        requireCount(manifest, "closureFixtureCount", closure);
+        requireCount(manifest, "ordinaryFixtureCount", behavior + gas);
+        requireCount(manifest, "totalExecutableFixtureCount",
+                behavior + gas + closure);
+        requireCount(manifest, "vectorCount", 135);
         if (behavior
-                != ConformanceReportConstants.FixtureCount.CONTRACTS_BEHAVIOR
+                != ConformanceReportConstants.FixtureCount
+                        .CONTRACTS_ORDINARY_BEHAVIOR
                 || gas
-                != ConformanceReportConstants.FixtureCount.CONTRACTS_GAS) {
+                != ConformanceReportConstants.FixtureCount
+                        .CONTRACTS_ORDINARY_GAS
+                || closure
+                != ConformanceReportConstants.FixtureCount
+                        .CONTRACTS_CLOSURE) {
             throw new IllegalStateException(
-                    "Contracts fixture inventory must contain 96 behavior and 58 gas fixtures");
+                    "Contracts fixture inventory must contain exactly 96 "
+                            + "ordinary behavior, 71 ordinary gas, and 67 "
+                            + "closure fixtures");
         }
         if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
             throw new IllegalStateException("Contracts fixture package identity mismatch");
@@ -278,9 +319,9 @@ final class BlueContractsFixturePackage {
         requireText(components, "contractsRegistryPackageIdentity",
                 CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
         requireText(components, "contractsGasPackageIdentity",
-                CONTRACTS_GAS_PACKAGE_IDENTITY);
+                LEGACY_RELEASE_CONTRACTS_GAS_IDENTITY);
         requireText(components, "contractsFixturePackageIdentity",
-                CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
+                LEGACY_RELEASE_CONTRACTS_FIXTURE_IDENTITY);
         requireText(release, RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
                 RELEASE_PACKAGE_IDENTITY);
         if (!RELEASE_PACKAGE_IDENTITY.equals(computeReleasePackageIdentity())) {
@@ -297,6 +338,47 @@ final class BlueContractsFixturePackage {
                 LANGUAGE_SPECIFICATION_RESOURCE,
                 LANGUAGE_SPECIFICATION_SHA256);
         assertRawResourceDigest(CONTRACTS_SPECIFICATION_RESOURCE, CONTRACTS_SPECIFICATION_SHA256);
+
+        JsonNode contractsRelease = requireYamlResource(
+                CONTRACTS_RELEASE_MANIFEST_RESOURCE);
+        validateContractsReleaseBindings(contractsRelease);
+        if (!CONTRACTS_RELEASE_IDENTITY.equals(
+                computeContractsReleaseIdentity())) {
+            throw new IllegalStateException(
+                    "Canonical Contracts release identity mismatch");
+        }
+    }
+
+    static void validateContractsReleaseBindings(JsonNode contractsRelease) {
+        requireText(contractsRelease, "manifestType",
+                "blue-contracts-release");
+        requireText(contractsRelease,
+                RegistryManifestConstants.FIELD_SPECIFICATION_VERSION,
+                ConformanceReportConstants.SPECIFICATION_VERSION_1_0);
+        requireText(contractsRelease, "releaseIdentity",
+                CONTRACTS_RELEASE_IDENTITY);
+        requireText(requiredObject(contractsRelease, "specificationDocument"),
+                RegistryManifestConstants.FIELD_SHA256,
+                CONTRACTS_SPECIFICATION_SHA256);
+        JsonNode languageDependency = requiredObject(
+                contractsRelease, "languageDependency");
+        requireText(languageDependency, "specificationSha256",
+                LANGUAGE_SPECIFICATION_SHA256);
+        requireText(languageDependency,
+                "cyclicSetFinalizerBaselineIdentity",
+                ClosureRuntimeDescriptor.CYCLIC_FINALIZER_IDENTITY);
+        requireText(languageDependency,
+                "cyclicSetProofVerifierBaselineIdentity",
+                ClosureRuntimeDescriptor.CYCLIC_PROOF_VERIFIER_IDENTITY);
+        requireText(requiredObject(contractsRelease, "contractsRegistry"),
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+                CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
+        requireText(requiredObject(contractsRelease, "gasManifest"),
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+                CONTRACTS_GAS_PACKAGE_IDENTITY);
+        requireText(requiredObject(contractsRelease, "fixturePackage"),
+                RegistryManifestConstants.FIELD_PACKAGE_IDENTITY,
+                CONTRACTS_FIXTURE_PACKAGE_IDENTITY);
     }
 
     static ObjectMapper fixtureYamlMapper() {
@@ -320,6 +402,8 @@ final class BlueContractsFixturePackage {
             }
             LoaderOptions options = new LoaderOptions();
             options.setAllowDuplicateKeys(false);
+            options.setCodePointLimit(
+                    MAX_VERIFIED_FIXTURE_YAML_CODE_POINTS);
             Object envelope =
                     new Yaml(new SafeConstructor(options)).load(input);
             if (envelope == null) {
@@ -370,9 +454,12 @@ final class BlueContractsFixturePackage {
         Set<String> paths = new LinkedHashSet<>();
         int behavior = 0;
         int gas = 0;
+        int closure = 0;
         for (JsonNode file : files) {
             String role = file.path("role").asText();
-            if (!"behavior-fixture".equals(role) && !"gas-fixture".equals(role)) {
+            if (!"behavior-fixture".equals(role)
+                    && !"gas-fixture".equals(role)
+                    && !"closure-fixture".equals(role)) {
                 continue;
             }
             String path = requiredText(
@@ -422,20 +509,29 @@ final class BlueContractsFixturePackage {
                     vectors));
             if ("behavior-fixture".equals(role)) {
                 behavior++;
-            } else {
+            } else if ("gas-fixture".equals(role)) {
                 gas++;
+            } else {
+                closure++;
             }
         }
         if (behavior
-                != ConformanceReportConstants.FixtureCount.CONTRACTS_BEHAVIOR
+                != ConformanceReportConstants.FixtureCount
+                        .CONTRACTS_ORDINARY_BEHAVIOR
                 || gas
-                != ConformanceReportConstants.FixtureCount.CONTRACTS_GAS
+                != ConformanceReportConstants.FixtureCount
+                        .CONTRACTS_ORDINARY_GAS
+                || closure
+                != ConformanceReportConstants.FixtureCount
+                        .CONTRACTS_CLOSURE
                 || entries.size()
                 != BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT) {
             throw new IllegalStateException(
                     "Contracts executable inventory must contain exactly "
-                            + "96 behavior and 58 gas fixtures; found "
-                            + behavior + " behavior and " + gas + " gas");
+                            + "96 ordinary behavior, 71 ordinary gas, and 67 "
+                            + "closure fixtures; found " + behavior
+                            + " ordinary behavior, " + gas
+                            + " ordinary gas, and " + closure + " closure");
         }
         return Collections.unmodifiableList(entries);
     }
@@ -550,12 +646,43 @@ final class BlueContractsFixturePackage {
         }
     }
 
+    static void requireTextArray(
+            JsonNode object,
+            String field,
+            String... expected) {
+        JsonNode actual = object == null ? null : object.get(field);
+        if (actual == null || !actual.isArray()
+                || actual.size() != expected.length) {
+            throw new IllegalStateException(
+                    "Contracts package field " + field
+                            + " must contain exactly " + expected.length
+                            + " values");
+        }
+        for (int index = 0; index < expected.length; index++) {
+            if (!actual.get(index).isTextual()
+                    || !expected[index].equals(actual.get(index).asText())) {
+                throw new IllegalStateException(
+                        "Contracts package field " + field
+                                + " disagrees at index " + index);
+            }
+        }
+    }
+
     static String requiredText(JsonNode object, String field) {
         JsonNode value = object != null ? object.get(field) : null;
         if (value == null || !value.isTextual() || value.asText().isEmpty()) {
             throw new IllegalStateException("Required non-empty text field is missing: " + field);
         }
         return value.asText();
+    }
+
+    static JsonNode requiredObject(JsonNode object, String field) {
+        JsonNode value = object != null ? object.get(field) : null;
+        if (value == null || !value.isObject()) {
+            throw new IllegalStateException(
+                    "Required object field is missing: " + field);
+        }
+        return value;
     }
 
     static void requireCount(JsonNode manifest, String field, int expected) {

@@ -109,6 +109,8 @@ final class FinalQualityEvidenceTest {
         assertTrue(blockers.contains("README_LINE_LIMIT"));
         assertTrue(blockers.contains("ROOT_BUILD_LINE_LIMIT"));
         assertTrue(blockers.contains("TASK_EXCLUSIONS"));
+        assertTrue(blockers.contains(
+                "SPECIFICATION_OR_PACKAGE_IDENTITY_BINDING"));
     }
 
     private String conformance(String languageHash, String contractsHash) {

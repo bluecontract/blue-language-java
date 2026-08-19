@@ -352,8 +352,12 @@ Every program under [`examples/src/main/java`](examples/src/main/java) has a
 ./gradlew finalQualityVerify
 ```
 
-The release package binds **153 Language fixtures** and **154 Contracts
-fixtures**, exact specification/package identities, Java 8 bytecode, API
+Contracts specification and fixture inputs come from the separately versioned
+`../blue-spec/latest` tree. Override that checkout with
+`-PblueSpecRoot=/absolute/path/to/blue-spec/latest` or `BLUE_SPEC_ROOT`; the
+`verifyBlueSpecInputs` task verifies its Git revision and exact locked bytes
+before any consumer runs. The conformance resources then bind **153 Language
+fixtures** and **234 Contracts fixtures**, exact specification/package identities, Java 8 bytecode, API
 baselines, Javadocs, runnable examples, benchmark smoke runs, package/module
 cycles, fragmented/locality assertions, and reproducible binary/source
 artifacts. Generated [fixture coverage](docs/reference/conformance-fixtures.md)
