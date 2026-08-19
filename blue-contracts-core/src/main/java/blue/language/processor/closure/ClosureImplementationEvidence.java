@@ -13,7 +13,9 @@ import java.util.Objects;
  * records how the implementation reached that state: accepted work, one
  * isolated document step per work occurrence, and whole-component tentative
  * finalizations.  It contains no fixture stage labels or expected-output
- * projection.</p>
+ * projection. Timing values are invocation-local diagnostics, saturate at
+ * {@link Long#MAX_VALUE}, and never participate in protocol results,
+ * identities, gas, or result selection.</p>
  */
 public final class ClosureImplementationEvidence {
 
@@ -21,6 +23,10 @@ public final class ClosureImplementationEvidence {
     private final List<ClosureWorkOccurrence> workTrace;
     private final List<DocumentStepEvidence> documentStepTrace;
     private final List<TentativeFinalization> tentativeFinalizations;
+    private final long managedDocumentStepInclusiveNanos;
+    private final long managedDocumentStepNestedFinalizationProofNanos;
+    private final long componentFinalizationProofNanos;
+    private final long successfulResultAssemblyNanos;
     private final String nonConformanceCode;
 
     ClosureImplementationEvidence(
@@ -28,6 +34,10 @@ public final class ClosureImplementationEvidence {
             List<ClosureWorkOccurrence> workTrace,
             List<DocumentStepEvidence> documentStepTrace,
             List<TentativeFinalization> tentativeFinalizations,
+            long managedDocumentStepInclusiveNanos,
+            long managedDocumentStepNestedFinalizationProofNanos,
+            long componentFinalizationProofNanos,
+            long successfulResultAssemblyNanos,
             String nonConformanceCode) {
         this.invocationIdentity = ClosureValueSupport.requireSha256Identity(
                 invocationIdentity, "invocationIdentity");
@@ -36,6 +46,29 @@ public final class ClosureImplementationEvidence {
                 documentStepTrace, "documentStepTrace");
         this.tentativeFinalizations = immutable(
                 tentativeFinalizations, "tentativeFinalizations");
+        this.managedDocumentStepInclusiveNanos = requireNonNegativeNanos(
+                managedDocumentStepInclusiveNanos,
+                "managedDocumentStepInclusiveNanos");
+        this.managedDocumentStepNestedFinalizationProofNanos =
+                requireNonNegativeNanos(
+                        managedDocumentStepNestedFinalizationProofNanos,
+                        "managedDocumentStepNestedFinalizationProofNanos");
+        this.componentFinalizationProofNanos = requireNonNegativeNanos(
+                componentFinalizationProofNanos,
+                "componentFinalizationProofNanos");
+        this.successfulResultAssemblyNanos = requireNonNegativeNanos(
+                successfulResultAssemblyNanos,
+                "successfulResultAssemblyNanos");
+        if (this.managedDocumentStepNestedFinalizationProofNanos
+                > this.managedDocumentStepInclusiveNanos) {
+            throw new IllegalArgumentException(
+                    "Nested finalization time cannot exceed inclusive step time");
+        }
+        if (this.managedDocumentStepNestedFinalizationProofNanos
+                > this.componentFinalizationProofNanos) {
+            throw new IllegalArgumentException(
+                    "Nested finalization time cannot exceed total finalization time");
+        }
         this.nonConformanceCode = nonConformanceCode == null
                 ? null
                 : ClosureValueSupport.requireNonEmptyText(
@@ -77,6 +110,49 @@ public final class ClosureImplementationEvidence {
      */
     public List<TentativeFinalization> tentativeFinalizations() {
         return tentativeFinalizations;
+    }
+
+    /**
+     * Returns cumulative wall-clock time spent inside managed document-step
+     * execution, including any component finalization invoked synchronously
+     * by a step continuation.
+     *
+     * @return inclusive managed document-step time in nanoseconds
+     */
+    public long managedDocumentStepInclusiveNanos() {
+        return managedDocumentStepInclusiveNanos;
+    }
+
+    /**
+     * Returns cumulative managed document-step time after subtracting
+     * component finalization/proof spans nested inside those steps.
+     *
+     * @return non-overlapping managed document-step time in nanoseconds
+     */
+    public long managedDocumentStepExclusiveNanos() {
+        return managedDocumentStepInclusiveNanos
+                - managedDocumentStepNestedFinalizationProofNanos;
+    }
+
+    /**
+     * Returns cumulative wall-clock time spent in exact component identity
+     * finalization and cyclic-proof construction.
+     *
+     * @return component finalization/proof time in nanoseconds
+     */
+    public long componentFinalizationProofNanos() {
+        return componentFinalizationProofNanos;
+    }
+
+    /**
+     * Returns cumulative wall-clock time spent assembling successful protocol
+     * results. Failed or suspended attempts that never assemble a successful
+     * result report zero.
+     *
+     * @return successful result-assembly time in nanoseconds
+     */
+    public long successfulResultAssemblyNanos() {
+        return successfulResultAssemblyNanos;
     }
 
     /**
@@ -142,5 +218,15 @@ public final class ClosureImplementationEvidence {
             Objects.requireNonNull(value, field + " item");
         }
         return Collections.unmodifiableList(copy);
+    }
+
+    private static long requireNonNegativeNanos(
+            long value,
+            String field) {
+        if (value < 0L) {
+            throw new IllegalArgumentException(
+                    field + " must be non-negative");
+        }
+        return value;
     }
 }

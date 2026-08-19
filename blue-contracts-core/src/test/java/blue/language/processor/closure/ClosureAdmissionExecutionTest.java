@@ -90,6 +90,14 @@ final class ClosureAdmissionExecutionTest {
             }
             assertEquals(2,
                     capture.evidence.tentativeFinalizations().size());
+            assertTrue(capture.evidence
+                    .managedDocumentStepInclusiveNanos() > 0L);
+            assertTrue(capture.evidence
+                    .managedDocumentStepExclusiveNanos() >= 0L);
+            assertTrue(capture.evidence
+                    .componentFinalizationProofNanos() > 0L);
+            assertTrue(capture.evidence
+                    .successfulResultAssemblyNanos() > 0L);
             assertEquals(TentativeFinalization.Boundary.Kind.WORK,
                     capture.evidence.tentativeFinalizations().get(0)
                             .boundary().kind());

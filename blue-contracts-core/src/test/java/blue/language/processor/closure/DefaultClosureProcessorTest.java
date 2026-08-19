@@ -263,6 +263,14 @@ final class DefaultClosureProcessorTest {
             }
             assertEquals(5,
                     capture.evidence.tentativeFinalizations().size());
+            assertTrue(capture.evidence
+                    .managedDocumentStepInclusiveNanos() > 0L);
+            assertTrue(capture.evidence
+                    .managedDocumentStepExclusiveNanos() >= 0L);
+            assertTrue(capture.evidence
+                    .componentFinalizationProofNanos() > 0L);
+            assertTrue(capture.evidence
+                    .successfulResultAssemblyNanos() > 0L);
             assertEquals(1,
                     attempt.processResult().resultingComponents().size());
             assertEquals(ComponentKind.CYCLIC,
@@ -411,6 +419,14 @@ final class DefaultClosureProcessorTest {
             assertEquals(1, capture.evidence.workTrace().size());
             assertEquals(1,
                     capture.evidence.documentStepTrace().size());
+            assertTrue(capture.evidence
+                    .managedDocumentStepInclusiveNanos() >= 0L);
+            assertTrue(capture.evidence
+                    .managedDocumentStepExclusiveNanos() >= 0L);
+            assertTrue(capture.evidence
+                    .componentFinalizationProofNanos() >= 0L);
+            assertEquals(0L, capture.evidence
+                    .successfulResultAssemblyNanos());
         }
     }
 

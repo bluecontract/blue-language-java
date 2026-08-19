@@ -83,9 +83,18 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             session = new ClosureExecutionSession(
                     owner, admitted, recorder);
             ClosureExecutionState state = session.execute();
-            ClosureProcessResult result =
-                    ClosureSuccessResultAssembler.assemble(
-                            admitted, state);
+            ClosureProcessResult result;
+            long assemblyStarted =
+                    recorder.beginSuccessfulResultAssembly();
+            boolean assembled = false;
+            try {
+                result = ClosureSuccessResultAssembler.assemble(
+                        admitted, state);
+                assembled = true;
+            } finally {
+                recorder.endSuccessfulResultAssembly(
+                        assemblyStarted, assembled);
+            }
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ExecutionEvidenceUnavailableException unavailable) {
@@ -208,9 +217,18 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             session = new ClosureAdmissionExecutionSession(
                     owner, admitted, recorder);
             ClosureExecutionState state = session.execute();
-            ClosureProcessResult result =
-                    ClosureSuccessResultAssembler.assemble(
-                            admitted, state);
+            ClosureProcessResult result;
+            long assemblyStarted =
+                    recorder.beginSuccessfulResultAssembly();
+            boolean assembled = false;
+            try {
+                result = ClosureSuccessResultAssembler.assemble(
+                        admitted, state);
+                assembled = true;
+            } finally {
+                recorder.endSuccessfulResultAssembly(
+                        assemblyStarted, assembled);
+            }
             observer.onExecutionEvidence(recorder.snapshot(null));
             return ClosureAttemptResult.complete(result);
         } catch (ExecutionEvidenceUnavailableException unavailable) {

@@ -209,12 +209,19 @@ final class ClosureAdmissionExecutionSession
     }
 
     private ComponentFinalizationResult verifyCurrentFinalization() {
-        ComponentFinalizationResult verified = finalizer.finalizeComponents(
-                new ComponentFinalizationInput(
-                        inputGraph,
-                        inputGenerations,
-                        latestBodies,
-                        currentBindings));
+        ComponentFinalizationResult verified;
+        long finalizationStarted =
+                recorder.beginComponentFinalizationProof();
+        try {
+            verified = finalizer.finalizeComponents(
+                    new ComponentFinalizationInput(
+                            inputGraph,
+                            inputGenerations,
+                            latestBodies,
+                            currentBindings));
+        } finally {
+            recorder.endComponentFinalizationProof(finalizationStarted);
+        }
         Map<DocumentId, Node> normalizedInput =
                 cloneBodies(latestBodies);
         for (ManagedOccurrenceBinding binding : currentBindings) {
@@ -323,11 +330,16 @@ final class ClosureAdmissionExecutionSession
         activeFinalizationOwner = planned.finalizationOwner;
         finalizationsInActiveStep = 0L;
         LocalDocumentStepResult result;
+        long stepStarted = recorder.beginManagedDocumentStep();
         try {
             result = stepProcessor.process(step);
         } finally {
-            activeWork = null;
-            activeFinalizationOwner = null;
+            try {
+                activeWork = null;
+                activeFinalizationOwner = null;
+            } finally {
+                recorder.endManagedDocumentStep(stepStarted);
+            }
         }
         Node expected = latestBodies.get(work.targetDocumentId());
         if (!sameNode(expected, result.resultingBody())) {
@@ -484,12 +496,19 @@ final class ClosureAdmissionExecutionSession
                 ComponentGenerationTransition.assign(
                         inputGraph, inputGenerations, after);
         Map<DocumentId, Node> sourceBodies = cloneBodies(latestBodies);
-        ComponentFinalizationResult finalized = finalizer
-                .finalizeComponents(new ComponentFinalizationInput(
-                        inputGraph,
-                        inputGenerations,
-                        latestBodies,
-                        reclassified));
+        ComponentFinalizationResult finalized;
+        long finalizationStarted =
+                recorder.beginComponentFinalizationProof();
+        try {
+            finalized = finalizer.finalizeComponents(
+                    new ComponentFinalizationInput(
+                            inputGraph,
+                            inputGenerations,
+                            latestBodies,
+                            reclassified));
+        } finally {
+            recorder.endComponentFinalizationProof(finalizationStarted);
+        }
         finalized = rebindInactiveProspectiveRows(finalized);
         final ClosureFinalizationGasCharger.CyclicFinalizationPlan
                 cyclicPlan = ClosureFinalizationGasCharger.plan(

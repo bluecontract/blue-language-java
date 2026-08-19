@@ -604,13 +604,18 @@ final class ClosureExecutionSession
                 target.componentGeneration());
         activeFrames.addLast(frame);
         LocalDocumentStepResult result;
+        long stepStarted = recorder.beginManagedDocumentStep();
         try {
             result = stepProcessor.process(step);
         } finally {
-            ActiveFrame removed = activeFrames.removeLast();
-            if (removed != frame) {
-                throw new IllegalStateException(
-                        "Document-step continuation frame order changed");
+            try {
+                ActiveFrame removed = activeFrames.removeLast();
+                if (removed != frame) {
+                    throw new IllegalStateException(
+                            "Document-step continuation frame order changed");
+                }
+            } finally {
+                recorder.endManagedDocumentStep(stepStarted);
             }
         }
         requireExactManagedReferences(frame);
@@ -1050,12 +1055,19 @@ final class ClosureExecutionSession
                         inputComponentGenerations,
                         after);
         Map<DocumentId, Node> sourceBodies = cloneBodies(latestBodies);
-        ComponentFinalizationResult finalized = finalizer
-                .finalizeComponents(new ComponentFinalizationInput(
-                        inputGraph,
-                        inputComponentGenerations,
-                        latestBodies,
-                        reclassified));
+        ComponentFinalizationResult finalized;
+        long finalizationStarted =
+                recorder.beginComponentFinalizationProof();
+        try {
+            finalized = finalizer.finalizeComponents(
+                    new ComponentFinalizationInput(
+                            inputGraph,
+                            inputComponentGenerations,
+                            latestBodies,
+                            reclassified));
+        } finally {
+            recorder.endComponentFinalizationProof(finalizationStarted);
+        }
         finalized = rebindInactiveProspectiveRows(finalized);
         final ClosureFinalizationGasCharger.CyclicFinalizationPlan
                 cyclicPlan = ClosureFinalizationGasCharger.plan(
