@@ -9,13 +9,13 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
 | `blue-conformance` | 21 | 168 | 68 | 257 |
-| `blue-contracts-core` | 281 | 1827 | 662 | 2770 |
+| `blue-contracts-core` | 281 | 1831 | 662 | 2774 |
 | `blue-language-core` | 162 | 840 | 96 | 1098 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 95 | 1 | 121 |
 | `blue-language-model` | 23 | 210 | 80 | 313 |
-| **Distribution** | **518** | **3188** | **907** | **4613** |
+| **Distribution** | **518** | **3192** | **907** | **4617** |
 
 ## blue-conformance
 
@@ -2235,9 +2235,13 @@ method blue.language.processor.closure.ClosureEvidenceFactory#managedRevisionCau
 method blue.language.processor.closure.ClosureEvidenceFactory#processClosure descriptor=(Lblue/language/processor/closure/AffectedClosureSnapshot;Lblue/language/processor/closure/ProcessingCause;Ljava/util/List;Lblue/language/processor/closure/ExecutionPolicy;Lblue/language/processor/closure/ClosureEnvironment;)Lblue/language/processor/closure/ClosureInvocationInput; access=public,static signature=(Lblue/language/processor/closure/AffectedClosureSnapshot;Lblue/language/processor/closure/ProcessingCause;Ljava/util/List<Lblue/language/processor/closure/DirectLogicalDelivery;>;Lblue/language/processor/closure/ExecutionPolicy;Lblue/language/processor/closure/ClosureEnvironment;)Lblue/language/processor/closure/ClosureInvocationInput; throws=-
 method blue.language.processor.closure.ClosureExecutionObserver#onExecutionEvidence descriptor=(Lblue/language/processor/closure/ClosureImplementationEvidence;)V access=public,abstract signature=- throws=-
 method blue.language.processor.closure.ClosureImplementationEvidence#complete descriptor=()Z access=public signature=- throws=-
+method blue.language.processor.closure.ClosureImplementationEvidence#componentFinalizationProofNanos descriptor=()J access=public signature=- throws=-
 method blue.language.processor.closure.ClosureImplementationEvidence#documentStepTrace descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Lblue/language/processor/closure/DocumentStepEvidence;>; throws=-
 method blue.language.processor.closure.ClosureImplementationEvidence#invocationIdentity descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ClosureImplementationEvidence#managedDocumentStepExclusiveNanos descriptor=()J access=public signature=- throws=-
+method blue.language.processor.closure.ClosureImplementationEvidence#managedDocumentStepInclusiveNanos descriptor=()J access=public signature=- throws=-
 method blue.language.processor.closure.ClosureImplementationEvidence#nonConformanceCode descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.closure.ClosureImplementationEvidence#successfulResultAssemblyNanos descriptor=()J access=public signature=- throws=-
 method blue.language.processor.closure.ClosureImplementationEvidence#tentativeFinalizations descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Lblue/language/processor/closure/TentativeFinalization;>; throws=-
 method blue.language.processor.closure.ClosureImplementationEvidence#workTrace descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Lblue/language/processor/closure/ClosureWorkOccurrence;>; throws=-
 method blue.language.processor.closure.ClosureInvocationInput#admissionCandidate descriptor=()Lblue/language/processor/closure/AdmissionCandidate; access=public signature=- throws=-
