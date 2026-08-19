@@ -19,9 +19,9 @@ final class CheckpointManagerTest {
 
     private static final long EXPECTED_MARKER_WRITES = 1L;
     private static final long EXPECTED_CHECKPOINT_WRITES = 1L;
-    private static final long EXPECTED_IDENTITY_NODES = 8L;
-    private static final long EXPECTED_REBUILT_MEMBERS = 8L;
-    private static final long EXPECTED_DIRECT_HASH_BLOCKS = 15L;
+    private static final long EXPECTED_IDENTITY_NODES = 10L;
+    private static final long EXPECTED_REBUILT_MEMBERS = 12L;
+    private static final long EXPECTED_DIRECT_HASH_BLOCKS = 21L;
 
     @Test
     void shouldCreateCheckpointMarkerWhenAbsent() {
@@ -85,7 +85,6 @@ final class CheckpointManagerTest {
                         GasScheduleConstants.Namespace.SEMANTIC,
                         GasScheduleConstants.SemanticCounter
                                 .DIRECT_IDENTITY_HASH_BLOCK);
-
         // then
         assertNotNull(stored);
         assertEquals(domainBlueId,
@@ -130,7 +129,7 @@ final class CheckpointManagerTest {
                         GasScheduleConstants.SemanticCounter
                                 .DIRECT_IDENTITY_HASH_BLOCK));
         assertEquals(expectedGas, runtime.totalGas(),
-                "checkpoint gas is 40 processor gas plus 31 identity gas");
+                "checkpoint gas is 40 processor gas plus 43 identity gas");
         assertEquals(subjectBlueId, record.lastEventSignature);
     }
 

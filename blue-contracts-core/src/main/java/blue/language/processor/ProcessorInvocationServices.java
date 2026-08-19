@@ -228,6 +228,16 @@ final class ProcessorInvocationServices implements AutoCloseable {
         return runtimeRegistryIdentity;
     }
 
+    /** Returns the exact released gas-manifest byte identity, or fails closed. */
+    String gasManifestIdentity() {
+        if (gasSchedule != GasSchedule.contracts10()) {
+            throw new IllegalStateException(
+                    "Custom gas schedules require an explicitly configured "
+                            + "exact manifest-byte identity");
+        }
+        return "sha256:" + GasSchedule.CONTRACTS_1_0_RESOURCE_SHA256;
+    }
+
     ExternalDeliveryEvidenceVerifier deliveryEvidenceVerifier() {
         return deliveryEvidenceVerifier;
     }

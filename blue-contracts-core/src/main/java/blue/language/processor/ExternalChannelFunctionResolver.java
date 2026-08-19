@@ -162,7 +162,8 @@ final class ExternalChannelFunctionResolver {
                     node,
                     channelKeys,
                     domain,
-                    dependencies);
+                    dependencies,
+                    discriminator);
             headers.put(key, created);
             return created;
         } finally {
@@ -329,6 +330,7 @@ final class ExternalChannelFunctionResolver {
                     logicalDeliveryKey,
                     handlerChannel,
                     header.dependencies,
+                    header.runtimeDiscriminator,
                     contextFactory.channelLookupResults());
         } finally {
             cycleGuard.leaveEvent();
@@ -379,18 +381,21 @@ final class ExternalChannelFunctionResolver {
         private final List<String> channelKeys;
         private final String checkpointDomainBlueId;
         private final ExternalChannelDependencySnapshot dependencies;
+        private final String runtimeDiscriminator;
 
         private Header(
                 EffectiveContractSnapshot snapshot,
                 FrozenNode contractNode,
                 List<String> channelKeys,
                 String checkpointDomainBlueId,
-                ExternalChannelDependencySnapshot dependencies) {
+                ExternalChannelDependencySnapshot dependencies,
+                String runtimeDiscriminator) {
             this.snapshot = snapshot;
             this.contractNode = contractNode;
             this.channelKeys = channelKeys;
             this.checkpointDomainBlueId = checkpointDomainBlueId;
             this.dependencies = dependencies;
+            this.runtimeDiscriminator = runtimeDiscriminator;
         }
 
         List<String> channelKeys() {
@@ -405,12 +410,19 @@ final class ExternalChannelFunctionResolver {
             return dependencies;
         }
 
+        String runtimeDiscriminator() {
+            return runtimeDiscriminator;
+        }
+
         boolean sameResult(Header other) {
             return other != null
                     && channelKeys.equals(other.channelKeys)
                     && checkpointDomainBlueId.equals(
                     other.checkpointDomainBlueId)
-                    && dependencies.equals(other.dependencies);
+                    && dependencies.equals(other.dependencies)
+                    && Objects.equals(
+                    runtimeDiscriminator,
+                    other.runtimeDiscriminator);
         }
 
         EffectiveContractSnapshot snapshotInternal() {
@@ -437,6 +449,7 @@ final class ExternalChannelFunctionResolver {
         private final String logicalDeliveryKey;
         private final ChannelMemberSnapshot handlerChannel;
         private final ExternalChannelDependencySnapshot dependencies;
+        private final String runtimeDiscriminator;
         private final List<String> channelLookupResults;
 
         private Evaluation(
@@ -453,6 +466,7 @@ final class ExternalChannelFunctionResolver {
                 String logicalDeliveryKey,
                 ChannelMemberSnapshot handlerChannel,
                 ExternalChannelDependencySnapshot dependencies,
+                String runtimeDiscriminator,
                 List<String> channelLookupResults) {
             this.channelKeys = channelKeys;
             this.eventKeys = eventKeys;
@@ -467,6 +481,7 @@ final class ExternalChannelFunctionResolver {
             this.logicalDeliveryKey = logicalDeliveryKey;
             this.handlerChannel = handlerChannel;
             this.dependencies = dependencies;
+            this.runtimeDiscriminator = runtimeDiscriminator;
             this.channelLookupResults = Collections.unmodifiableList(
                     new ArrayList<>(channelLookupResults));
         }
@@ -521,6 +536,10 @@ final class ExternalChannelFunctionResolver {
 
         ExternalChannelDependencySnapshot dependencies() {
             return dependencies;
+        }
+
+        String runtimeDiscriminator() {
+            return runtimeDiscriminator;
         }
 
         List<String> channelLookupResults() {

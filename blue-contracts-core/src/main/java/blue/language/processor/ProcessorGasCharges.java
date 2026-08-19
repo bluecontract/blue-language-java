@@ -194,15 +194,23 @@ final class ProcessorGasCharges {
     }
 
     void checkpointCompared() {
+        checkpointCompared(GasChargeContext.reason(
+                GasScheduleConstants.ChargeReason.CHECKPOINT_COMPARE));
+    }
+
+    void checkpointCompared(GasChargeContext context) {
         charge(GasScheduleConstants.ProcessorCounter.CHECKPOINT_COMPARED, 1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.CHECKPOINT_COMPARE));
+                Objects.requireNonNull(context, "context"));
     }
 
     void checkpointUpdate() {
+        checkpointUpdate(GasChargeContext.reason(
+                GasScheduleConstants.ChargeReason.CHECKPOINT_WRITE));
+    }
+
+    void checkpointUpdate(GasChargeContext context) {
         charge(GasScheduleConstants.ProcessorCounter.CHECKPOINT_WRITTEN, 1L,
-                GasChargeContext.reason(
-                        GasScheduleConstants.ChargeReason.CHECKPOINT_WRITE));
+                Objects.requireNonNull(context, "context"));
     }
 
     void processorMarkerWritten(String reason) {

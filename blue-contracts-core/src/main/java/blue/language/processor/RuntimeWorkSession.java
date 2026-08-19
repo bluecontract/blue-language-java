@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
@@ -403,6 +404,26 @@ public final class RuntimeWorkSession {
                 .carryExactInput(input, blueId);
     }
 
+    synchronized void carryExactInput(
+            blue.language.snapshot.FrozenNode input,
+            String blueId) {
+        ensureOpen();
+        semanticOutputBoundary()
+                .carryExactInput(input, blueId);
+    }
+
+    synchronized List<ExactBlueValue> exactValuesSnapshot() {
+        return semanticOutputBoundary != null
+                ? semanticOutputBoundary.exactValuesSnapshot()
+                : Collections.<ExactBlueValue>emptyList();
+    }
+
+    synchronized void carryExactInputs(
+            Collection<ExactBlueValue> inputs) {
+        ensureOpen();
+        semanticOutputBoundary().carryExactInputs(inputs);
+    }
+
     synchronized void attachSemanticOutputBoundary(
             SemanticOutputBoundary boundary) {
         ensureOpen();
@@ -551,7 +572,8 @@ public final class RuntimeWorkSession {
                     counter,
                     quantity,
                     weight,
-                    subtotal);
+                    subtotal,
+                    context);
         }
     }
 

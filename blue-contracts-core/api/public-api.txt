@@ -417,6 +417,13 @@ field blue.language.processor.ProcessorDiagnosticConstants#FIELD_WEIGHT descript
 field blue.language.processor.ProcessorErrorCategory#ActiveScopeCutOff descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#CheckpointDomainError descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#CheckpointPolicyError descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#ClosureExpansionLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#ClosureGraphChangeLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#ClosureTentativeFinalizationLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#ClosureWorkOccurrenceLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#CyclicComponentCanonicalBytesExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#CyclicComponentEdgeLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#CyclicComponentMemberLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#CyclicMemberProcessingEventUnsupported descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#CyclicMemberProcessingRootUnsupported descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#CyclicSetEmbeddedBoundaryUnsupported descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
@@ -442,11 +449,13 @@ field blue.language.processor.ProcessorErrorCategory#InvalidProcessingDocument d
 field blue.language.processor.ProcessorErrorCategory#InvalidProcessingEvent descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#InvalidReservedRuntimeState descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#InvalidRuntimePointer descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#ManagedDocumentsPerClosureExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#MatchingDeliveryLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#OverlappingEmbeddedDeclaration descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#ParticipatingScopeLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#PatchBoundaryViolation descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#PatchLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.ProcessorErrorCategory#ProcessEmbeddedEdgesPerClosureExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#ProtectedProcessorStateMutation descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#RuntimeExecutionFailure descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ProcessorErrorCategory#RuntimeLedgerLimitExceeded descriptor=Lblue/language/processor/ProcessorErrorCategory; access=public,static,final,enum signature=- constant=-

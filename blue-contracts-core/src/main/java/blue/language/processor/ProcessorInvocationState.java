@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Invocation-owned mutable state behind the deterministic processing phases.
@@ -134,6 +135,24 @@ final class ProcessorInvocationState {
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
             ProcessingGasContext sharedGasContext,
             ManagedDocumentStepContinuation documentStepContinuationHook) {
+        this(owner,
+                document,
+                processEventSource,
+                processEventSnapshotFactory,
+                sharedGasContext,
+                documentStepContinuationHook,
+                owner.snapshotManager());
+    }
+
+    /** Creates an isolated managed state with an invocation-local provider. */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext,
+            ManagedDocumentStepContinuation documentStepContinuationHook,
+            ProcessingSnapshotManager snapshotManager) {
         this.owner = owner;
         this.documentStepContinuationHook =
                 documentStepContinuationHook;
@@ -142,7 +161,7 @@ final class ProcessorInvocationState {
         this.runtime = new DocumentProcessingRuntime(document,
                 owner.conformanceEngine(),
                 owner.conformancePlannerOverride(),
-                owner.snapshotManager(),
+                snapshotManager,
                 owner.observer(),
                 sharedGasContext,
                 owner.registry()
@@ -471,7 +490,10 @@ final class ProcessorInvocationState {
                                             ContractBundle bundle,
                                             Node event,
                                             boolean allowReservedMutation) {
-        return createContext(scopePath, bundle, event, null, null, allowReservedMutation);
+        return createContext(
+                scopePath, bundle, event, event, null,
+                java.util.Collections.<ExactBlueValue>emptyList(),
+                null, null, allowReservedMutation);
     }
 
     ProcessorExecutionContext createContext(String scopePath,
@@ -485,6 +507,8 @@ final class ProcessorInvocationState {
                 bundle,
                 event,
                 event,
+                null,
+                java.util.Collections.<ExactBlueValue>emptyList(),
                 contractKey,
                 contractNode,
                 allowReservedMutation);
@@ -494,6 +518,8 @@ final class ProcessorInvocationState {
                                             ContractBundle bundle,
                                             Node event,
                                             Node occurrenceEvent,
+                                            FrozenNode exactEvent,
+                                            List<ExactBlueValue> carriedExactValues,
                                             String contractKey,
                                             FrozenNode contractNode,
                                             boolean allowReservedMutation) {
@@ -501,6 +527,8 @@ final class ProcessorInvocationState {
                 contractKey, contractNode,
                 cloneEvent(event),
                 cloneEvent(occurrenceEvent),
+                exactEvent,
+                carriedExactValues,
                 allowReservedMutation);
     }
 

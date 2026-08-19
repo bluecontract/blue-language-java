@@ -2,15 +2,24 @@ package blue.language.processor.closure;
 
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.processor.ClosureRuntimeDescriptor;
 import blue.language.processor.ExternalOrderKey;
 import blue.language.provider.CyclicSetProof;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.erdtman.jcs.JsonCanonicalizer;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -27,6 +36,38 @@ final class ClosureInvocationVerifierTest {
             "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8";
     private static final String BLUE_B =
             "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ";
+    private static final String C_CLO_34_INVOCATION_IDENTITY =
+            "sha256:e912586ad514329cac9fd200af39d6ff67f9c1333d38536e2b24008c90092ff8";
+    private static final String C_CLO_34_CANONICAL_INVOCATION_ENVELOPE =
+            "{\"domain\":\"blue-contracts-invocation/1.0\",\"value\":{\"admissionCandidateIdenti"
+                    + "ty\":null,\"blueLanguageSpecificationIdentity\":\"sha256:01b038b64e3f0a9a11f3f70"
+                    + "d544a63ff78a01d5169f1a03f8b8629cf73645a7d\",\"causeIdentity\":\"sha256:08502d369"
+                    + "b6bfee172fd72c48637ce4a241fa88348024904e6113f333d3cd57b\",\"contractsSpecifica"
+                    + "tionIdentity\":\"sha256:dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caa"
+                    + "ecd930\",\"cyclicFinalizerIdentity\":\"sha256:0b4bd3bbe4380faa52d14bc6baf8bb"
+                    + "0a6dbc01acc576985676155ea0115969b4\",\"cyclicProofVerifierIdentity\":\"sha256:eb"
+                    + "0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5\",\"directDeliv"
+                    + "erySnapshotIdentity\":\"sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60b"
+                    + "f562f6d79c8eee439\",\"documents\":[{\"blueId\":\"8XQVkfrtGJ5kK3UBM7yR33SBME13vkumT"
+                    + "vXo7kRJe3p8\",\"componentGeneration\":1,\"documentId\":\"a\",\"epoch\":0,\"initialized"
+                    + "\":true,\"publicRoot\":true,\"terminated\":false},{\"blueId\":\"6ZEqCbcDrgozabAdvxqb"
+                    + "UVsG8z8NGxFv86ot2Go55xRZ\",\"componentGeneration\":1,\"documentId\":\"b\",\"epoch\":0"
+                    + ",\"initialized\":true,\"publicRoot\":false,\"terminated\":false}],\"exactNodeProvid"
+                    + "erDomainIdentity\":\"sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd"
+                    + "3247b3d3c0d3ec\",\"externalOrderPolicyIdentity\":\"sha256:2d8d984a7c93db9aa076db"
+                    + "fdeb6617161b91c224db6a1366d3636462b762a0f9\",\"gasManifestIdentity\":\"sha256:54"
+                    + "310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8\",\"gasPolicyId"
+                    + "entity\":\"sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c"
+                    + "1685\",\"inputClosureIdentity\":\"sha256:ed4ac428e31d3960b96bb4d26d816e77247942b"
+                    + "7438404a79fb27cba3d67726d\",\"inputGraphGeneration\":1,\"managedBindingPolicyIde"
+                    + "ntity\":\"sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03"
+                    + "d35\",\"managedDocumentIdentityPolicyIdentity\":\"sha256:44ed2def49e63a24f3b818c"
+                    + "f3d2854a3ceb8b40f679bf5b77a0be52b538258ac\",\"occurrenceBindingSetIdentity\":\"s"
+                    + "ha256:bf684fafcc3901aedb2c6f7154b15a1cfa36958dbc8d479113317fd5cd0588ee\",\"ope"
+                    + "ration\":\"process-closure\",\"portableLimitPolicyIdentity\":\"sha256:fcd17a9a3270"
+                    + "82d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5\",\"runtimeRegistryIdenti"
+                    + "ty\":\"sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1"
+                    + "\"}}";
 
     @Test
     void shouldMatchReleasedCclo14Cclo15AndCclo29CandidateIdentities() {
@@ -97,12 +138,26 @@ final class ClosureInvocationVerifierTest {
     @Test
     void shouldMatchReleasedCclo34FullInvocationIdentity() {
         ClosureInvocationInput input = cclo34Input();
+        Map<String, Object> frozenEnvelope = frozenCclo34Envelope();
+        Map<String, Object> actualEnvelope = new LinkedHashMap<String, Object>();
+        actualEnvelope.put("domain", "blue-contracts-invocation/1.0");
+        actualEnvelope.put("value",
+                IDENTITIES.invocationIdentityConstructorValue(input));
+        byte[] frozenBytes = C_CLO_34_CANONICAL_INVOCATION_ENVELOPE
+                .getBytes(StandardCharsets.UTF_8);
 
         assertEquals(
                 "4za3n8bAtn5YGRqAEeW6iRswtRnLgGkyZg9EN64gwLy2",
                 ((ExternalEventCause) input.cause()).eventBlueId());
-        assertEquals(
-                "sha256:6d08aa24f386414deb0dadffdfc94f355036b217a1542c062eb3c8ee7e71e432",
+        assertEquals(2131, frozenBytes.length);
+        assertEquals(frozenEnvelope, actualEnvelope);
+        assertArrayEquals(frozenBytes,
+                independentlyCanonicalize(actualEnvelope));
+        assertEquals(C_CLO_34_INVOCATION_IDENTITY,
+                independentSha256Identity(frozenBytes));
+        assertEquals(C_CLO_34_INVOCATION_IDENTITY,
+                input.invocationIdentity());
+        assertEquals(C_CLO_34_INVOCATION_IDENTITY,
                 IDENTITIES.invocationIdentity(input));
     }
 
@@ -242,14 +297,64 @@ final class ClosureInvocationVerifierTest {
                 100000L,
                 Collections.<DocumentId, Long>emptyMap(),
                 "release-default");
+        ClosureEnvironment environment = releasedEnvironment();
+        ClosureInvocationInput provisional =
+                ClosureInvocationInput.processClosure(
+                        hash('0'),
+                        snapshot,
+                        cause,
+                        Collections.singletonList(delivery),
+                        "sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60bf562f6d79c8eee439",
+                        policy,
+                        environment);
         return ClosureInvocationInput.processClosure(
-                "sha256:6d08aa24f386414deb0dadffdfc94f355036b217a1542c062eb3c8ee7e71e432",
+                IDENTITIES.invocationIdentity(provisional),
                 snapshot,
                 cause,
                 Collections.singletonList(delivery),
                 "sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60bf562f6d79c8eee439",
                 policy,
-                releasedEnvironment());
+                environment);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> frozenCclo34Envelope() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
+            return mapper.readValue(C_CLO_34_CANONICAL_INVOCATION_ENVELOPE,
+                    LinkedHashMap.class);
+        } catch (Exception exception) {
+            throw new AssertionError(
+                    "Unable to parse frozen C-CLO-34 invocation envelope",
+                    exception);
+        }
+    }
+
+    private static byte[] independentlyCanonicalize(Object value) {
+        try {
+            return new JsonCanonicalizer(
+                    new ObjectMapper().writeValueAsString(value))
+                    .getEncodedUTF8();
+        } catch (Exception exception) {
+            throw new AssertionError(
+                    "Unable to independently canonicalize C-CLO-34", exception);
+        }
+    }
+
+    private static String independentSha256Identity(byte[] bytes) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte item : digest) {
+                int unsigned = item & 0xff;
+                hex.append(Character.forDigit(unsigned >>> 4, 16));
+                hex.append(Character.forDigit(unsigned & 0x0f, 16));
+            }
+            return "sha256:" + hex;
+        } catch (NoSuchAlgorithmException exception) {
+            throw new AssertionError("SHA-256 is unavailable", exception);
+        }
     }
 
     private static ClosureInvocationInput exactSimpleProcessInput(
@@ -394,7 +499,7 @@ final class ClosureInvocationVerifierTest {
     private static ClosureEnvironment releasedEnvironment() {
         return new ClosureEnvironment(
                 "sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
-                "sha256:0638eccadd2e8f5c21a59ab8af0dfe2df26fe2cbea17c39316a5821617773bed",
+                "sha256:dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930",
                 "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
                 "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
                 labeled(
@@ -410,8 +515,8 @@ final class ClosureInvocationVerifierTest {
                         "sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5",
                         "blue-contracts-1.0-portable-limits",
                         Collections.<String, Long>emptyMap()),
-                "sha256:4bb2ee6b92c20d1d5d668b4301c62bc18adf9c65d43f5b41cc52ad7648d1a921",
-                "sha256:c86366b1a1c826982f0fd78d7c4abfc73d7e96f07681bce79a1fdfb4ed309599");
+                ClosureRuntimeDescriptor.CYCLIC_FINALIZER_IDENTITY,
+                ClosureRuntimeDescriptor.CYCLIC_PROOF_VERIFIER_IDENTITY);
     }
 
     private static ClosureEnvironment environment(String bindingPolicy) {

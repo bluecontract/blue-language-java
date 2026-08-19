@@ -1,6 +1,7 @@
 package blue.language.processor.closure;
 
 import blue.language.model.Node;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.Objects;
 
@@ -32,7 +33,8 @@ public final class FinalizedDocumentEvidence
             Integer cyclicMemberIndex,
             String preliminaryBlueId) {
         this.documentId = Objects.requireNonNull(documentId, "documentId");
-        this.blueId = ClosureValueSupport.requireBlueId(blueId, "blueId");
+        this.blueId = ClosureValueSupport.requireBlueId(
+                blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         this.document = Objects.requireNonNull(document, "document").clone();
         ComponentSnapshot selected = Objects.requireNonNull(
                 component, "component");

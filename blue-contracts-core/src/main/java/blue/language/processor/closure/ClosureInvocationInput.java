@@ -308,15 +308,25 @@ public final class ClosureInvocationInput {
         }
         if (target == null
                 || !target.targetDocumentId().equals(
-                        revision.childDocumentId())) {
+                    revision.childDocumentId())) {
             throw new IllegalArgumentException(
                     "Managed-revision cause does not name its target occurrence");
         }
-        if (target.pendingHistoricalEpoch() != null
-                && target.pendingHistoricalEpoch().longValue()
-                != revision.fromEpoch()) {
+        if (target.active()
+                || target.pendingHistoricalEpoch() == null
+                || target.pendingHistoricalEpoch().longValue()
+                != revision.fromEpoch()
+                || !target.expectedTargetBlueId().equals(
+                        revision.beforeBlueId())) {
             throw new IllegalArgumentException(
-                    "Managed-revision cause skips the occurrence history cursor");
+                    "Managed-revision cause does not match the inactive "
+                            + "occurrence history cursor");
+        }
+        ManagedDocumentSnapshot child = snapshot.managedDocument(
+                revision.childDocumentId());
+        if (revision.toEpoch() > child.epoch()) {
+            throw new IllegalArgumentException(
+                    "Managed-revision cause is ahead of the child durable epoch");
         }
     }
 

@@ -40,17 +40,26 @@ final class ProcessingCheckpointTransaction {
                 bundle, rawChannelKey, checkpointDomainBlueId);
     }
 
+    CheckpointManager.CheckpointRecord findForComparison(
+            String scopePath,
+            ContractBundle bundle,
+            String rawChannelKey,
+            String checkpointDomainBlueId,
+            String subjectBlueId,
+            GasChargeContext comparisonContext) {
+        return state.findForComparison(
+                scopePath,
+                bundle,
+                rawChannelKey,
+                checkpointDomainBlueId,
+                subjectBlueId,
+                comparisonContext);
+    }
+
     boolean isDuplicate(
             CheckpointManager.CheckpointRecord record,
             String subjectBlueId) {
         return state.isDuplicate(record, subjectBlueId);
-    }
-
-    void recordComparison(
-            String scopePath,
-            CheckpointManager.CheckpointRecord record,
-            String subjectBlueId) {
-        state.recordComparison(scopePath, record, subjectBlueId);
     }
 
     void persist(
@@ -67,11 +76,41 @@ final class ProcessingCheckpointTransaction {
                 exactSubject);
     }
 
+    void persistSettlement(
+            String scopePath,
+            ContractBundle bundle,
+            CheckpointManager.CheckpointRecord record,
+            String subjectBlueId,
+            Node exactSubject,
+            GasChargeContext writeContext) {
+        state.persistSettlement(
+                scopePath,
+                bundle,
+                record,
+                subjectBlueId,
+                exactSubject,
+                writeContext);
+    }
+
     void cleanupInactiveEntries(
             String scopePath,
             ContractBundle bundle,
             Map<String, String> activeDomains) {
         state.cleanupInactiveEntries(scopePath, bundle, activeDomains);
+    }
+
+    void removeSettlementEntry(
+            String scopePath,
+            ContractBundle bundle,
+            String rawChannelKey,
+            String expectedDomainBlueId,
+            GasChargeContext cleanupContext) {
+        state.removeSettlementEntry(
+                scopePath,
+                bundle,
+                rawChannelKey,
+                expectedDomainBlueId,
+                cleanupContext);
     }
 
     String eventIdentity(Node event) {

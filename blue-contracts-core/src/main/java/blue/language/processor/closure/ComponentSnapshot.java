@@ -1,5 +1,6 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.BlueIds;
 import blue.language.provider.CyclicSetProof;
 
 import java.util.ArrayList;
@@ -179,13 +180,18 @@ public final class ComponentSnapshot {
 
     private void requireCyclicSuffixMapping() {
         Set<Long> suffixes = new HashSet<Long>();
-        String prefix = masterBlueId + "#";
         for (String memberBlueId : orderedMemberBlueIds) {
-            if (!memberBlueId.startsWith(prefix)) {
+            int separator = BlueIds.cyclicMemberSeparatorIndex(
+                    memberBlueId);
+            if (separator != masterBlueId.length()
+                    || !masterBlueId.equals(
+                    BlueIds.cyclicSetMasterBlueId(memberBlueId))) {
                 throw new IllegalArgumentException(
                         "Cyclic member BlueId does not belong to MASTER");
             }
-            String suffix = memberBlueId.substring(prefix.length());
+            String suffix = memberBlueId.substring(
+                    separator
+                            + BlueIds.CYCLIC_MEMBER_SEPARATOR.length());
             long memberIndex;
             try {
                 memberIndex = Long.parseLong(suffix);

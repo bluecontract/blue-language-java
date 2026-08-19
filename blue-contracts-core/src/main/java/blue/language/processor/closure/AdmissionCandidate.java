@@ -2,6 +2,7 @@ package blue.language.processor.closure;
 
 import blue.language.model.Node;
 import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -275,7 +276,7 @@ public abstract class AdmissionCandidate {
             this.documentId = Objects.requireNonNull(
                     documentId, "documentId");
             this.blueId = ClosureValueSupport.requireBlueId(
-                    blueId, "blueId");
+                    blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         }
 
         /**

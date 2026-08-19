@@ -125,12 +125,28 @@ final class ScopeExecutor {
      * child documents are separate closure execution units and are opened by
      * their own invocation state.</p>
      */
-    ContractBundle preflightIsolatedManagedRoot() {
+    ContractBundle preflightIsolatedManagedRoot(
+            ManagedDocumentStepRequest request) {
         runtime.setScopeEmbeddedDepth(JsonPointer.ROOT, 0);
         runtime.chargeScopeEntry(JsonPointer.ROOT);
         preflightSelectedHeaders(JsonPointer.ROOT);
-        return preflightEvidenceScopeAfterSelectedHeaders(
-                JsonPointer.ROOT);
+        String normalizedScope = JsonPointer.ROOT;
+        FrozenNode selected = runtime.selectedFrozenAt(normalizedScope);
+        FrozenNode resolved = runtime.resolvedFrozenAt(normalizedScope);
+        if (!frameFactory.isParticipatingScope(normalizedScope, selected)
+                || !frameFactory.isParticipatingScope(
+                        normalizedScope, resolved)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Participating managed Root is absent or not an object");
+        }
+        if (runtime.hasTerminationMarker(normalizedScope)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Participating managed Root is directly terminated");
+        }
+        return frameFactory.refreshManagedRoot(
+                normalizedScope,
+                request.resolutionOverlay()
+                        .expectedManagedBlueIdsByPath());
     }
 
     /** Executes one already-selected Root work occurrence without a FIFO drain. */
@@ -142,7 +158,7 @@ final class ScopeExecutor {
         Node exactPayload = request.exactPayload();
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(exactPayload, "exactPayload");
-        ContractBundle bundle = preflightIsolatedManagedRoot();
+        ContractBundle bundle = preflightIsolatedManagedRoot(request);
         if (kind == ManagedDocumentWorkKind.INITIALIZATION) {
             /*
              * Closure initialization freezes the member and lifecycle
@@ -554,20 +570,23 @@ final class ScopeExecutor {
     }
 
     ContractBundle preflightEvidenceScope(String scopePath) {
-        return preflightEvidenceScope(scopePath, true);
+        return preflightEvidenceScope(scopePath, true, true);
     }
 
     ContractBundle preflightEvidenceScopeAfterSelectedHeaders(
             String scopePath) {
-        return preflightEvidenceScope(scopePath, false);
+        return preflightEvidenceScope(scopePath, false, true);
     }
 
     private ContractBundle preflightEvidenceScope(
             String scopePath,
-            boolean preflightSelectedHeaders) {
+            boolean preflightSelectedHeaders,
+            boolean validateEmbeddedTraversal) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        runtime.validateProcessEmbeddedTraversalWithoutResolution(
-                normalizedScope);
+        if (validateEmbeddedTraversal) {
+            runtime.validateProcessEmbeddedTraversalWithoutResolution(
+                    normalizedScope);
+        }
         FrozenNode selected = runtime.selectedFrozenAt(normalizedScope);
         try {
             /*
@@ -594,7 +613,10 @@ final class ScopeExecutor {
                         "Participating scope is directly terminated: "
                                 + normalizedScope);
             }
-            return frameFactory.refresh(normalizedScope, false);
+            return frameFactory.refresh(
+                    normalizedScope,
+                    false,
+                    validateEmbeddedTraversal);
         } catch (InvalidExecutionEvidenceException exception) {
             throw exception;
         } catch (MustUnderstandFailureException exception) {

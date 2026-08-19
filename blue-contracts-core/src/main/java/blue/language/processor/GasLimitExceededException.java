@@ -35,6 +35,8 @@ public final class GasLimitExceededException extends RuntimeException {
     private final String localDocumentId;
     /** Exact allowance remaining immediately before the rejected charge. */
     private final long remainingBeforeCharge;
+    /** Resolved deterministic attribution of the rejected charge. */
+    private final GasChargeContext chargeContext;
 
     GasLimitExceededException(String namespace,
                               String counter,
@@ -50,7 +52,27 @@ public final class GasLimitExceededException extends RuntimeException {
                 gasLimit,
                 ApplicableCapKind.SHARED,
                 null,
-                gasLimit - admittedGas);
+                gasLimit - admittedGas,
+                GasChargeContext.empty());
+    }
+
+    GasLimitExceededException(String namespace,
+                              String counter,
+                              long quantity,
+                              long weight,
+                              long admittedGas,
+                              long gasLimit,
+                              GasChargeContext chargeContext) {
+        this(namespace,
+                counter,
+                quantity,
+                weight,
+                admittedGas,
+                gasLimit,
+                ApplicableCapKind.SHARED,
+                null,
+                gasLimit - admittedGas,
+                chargeContext);
     }
 
     GasLimitExceededException(String namespace,
@@ -62,6 +84,28 @@ public final class GasLimitExceededException extends RuntimeException {
                               ApplicableCapKind applicableCapKind,
                               String localDocumentId,
                               long remainingBeforeCharge) {
+        this(namespace,
+                counter,
+                quantity,
+                weight,
+                admittedGas,
+                gasLimit,
+                applicableCapKind,
+                localDocumentId,
+                remainingBeforeCharge,
+                GasChargeContext.empty());
+    }
+
+    GasLimitExceededException(String namespace,
+                              String counter,
+                              long quantity,
+                              long weight,
+                              long admittedGas,
+                              long gasLimit,
+                              ApplicableCapKind applicableCapKind,
+                              String localDocumentId,
+                              long remainingBeforeCharge,
+                              GasChargeContext chargeContext) {
         super("Gas limit exceeded before " + namespace + "." + counter);
         this.namespace = namespace;
         this.counter = counter;
@@ -91,6 +135,8 @@ public final class GasLimitExceededException extends RuntimeException {
         }
         this.localDocumentId = localDocumentId;
         this.remainingBeforeCharge = remainingBeforeCharge;
+        this.chargeContext = java.util.Objects.requireNonNull(
+                chargeContext, "chargeContext");
     }
 
     /**
@@ -183,6 +229,20 @@ public final class GasLimitExceededException extends RuntimeException {
      */
     public long remainingBeforeCharge() {
         return remainingBeforeCharge;
+    }
+
+    /**
+     * Returns the resolved deterministic attribution of the charge that could
+     * not be admitted.
+     *
+     * <p>This context is not an admitted trace entry. A closure processor uses
+     * its work or finalization ownership fields to build exact rejected-charge
+     * evidence.</p>
+     *
+     * @return immutable rejected-charge attribution
+     */
+    public GasChargeContext chargeContext() {
+        return chargeContext;
     }
 
     /**

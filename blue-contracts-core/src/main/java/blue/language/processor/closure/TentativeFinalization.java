@@ -1,5 +1,7 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.BlueIds;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -99,12 +101,17 @@ public final class TentativeFinalization {
     private void validateMemberBlueIds() {
         Set<Long> suffixes = new HashSet<Long>();
         for (String memberBlueId : memberBlueIds.values()) {
-            String prefix = masterBlueId + "#";
-            if (!memberBlueId.startsWith(prefix)) {
+            int separator = BlueIds.cyclicMemberSeparatorIndex(
+                    memberBlueId);
+            if (separator != masterBlueId.length()
+                    || !masterBlueId.equals(
+                    BlueIds.cyclicSetMasterBlueId(memberBlueId))) {
                 throw new IllegalArgumentException(
                         "memberBlueId does not belong to masterBlueId");
             }
-            String suffix = memberBlueId.substring(prefix.length());
+            String suffix = memberBlueId.substring(
+                    separator
+                            + BlueIds.CYCLIC_MEMBER_SEPARATOR.length());
             long index;
             try {
                 index = Long.parseLong(suffix);

@@ -65,7 +65,8 @@ public final class RuntimeWorkBudget {
             String counter,
             long quantity,
             long weight,
-            long subtotal) {
+            long subtotal,
+            GasChargeContext context) {
         if (subtotal > maximumGas - admittedGas) {
             throw new GasLimitExceededException(
                     namespace,
@@ -73,7 +74,8 @@ public final class RuntimeWorkBudget {
                     quantity,
                     weight,
                     admittedGas,
-                    maximumGas);
+                    maximumGas,
+                    context);
         }
     }
 

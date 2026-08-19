@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class EmbeddedScopePlannerTest {
 
@@ -480,6 +481,55 @@ final class EmbeddedScopePlannerTest {
                         .CyclicSetEmbeddedBoundaryUnsupported,
                 failure.diagnostic().category());
         assertEquals(0, materializations.get());
+    }
+
+    @Test
+    void shouldValidateMaterializedAcyclicOpaqueManagedTargetByExactIdentity() {
+        Node child = new Node().properties(
+                "value", new Node().value(1));
+        String childBlueId = DirectBlueIdCalculator.calculateBlueId(child);
+        Node scope = new Node().properties("child", child);
+        Map<String, String> expected = new LinkedHashMap<String, String>();
+        expected.put("/root/child", childBlueId);
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner()
+                .planForOpaqueManagedRoot(
+                        FrozenNode.fromNode(scope),
+                        ROOT_SCOPE_PATH,
+                        Collections.singletonList("/child"),
+                        Collections.<String>emptyList(),
+                        expected,
+                        GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/child"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldRejectMaterializedCyclicOpaqueTargetWithoutOwningProof() {
+        Node scope = new Node().properties(
+                "child",
+                new Node().properties("value", new Node().value(1)));
+        Map<String, String> expected = new LinkedHashMap<String, String>();
+        expected.put("/root/child", CYCLIC_MEMBER_BLUE_ID);
+
+        InvalidExecutionEvidenceException failure = assertThrows(
+                InvalidExecutionEvidenceException.class,
+                () -> new EmbeddedScopePlanner()
+                        .planForOpaqueManagedRoot(
+                                FrozenNode.fromNode(scope),
+                                ROOT_SCOPE_PATH,
+                                Collections.singletonList("/child"),
+                                Collections.<String>emptyList(),
+                                expected,
+                                GasSchedule.contracts10()));
+
+        assertEquals(
+                ProcessorErrorCategory.InvalidProcessingDocument,
+                failure.errorCategory());
+        assertTrue(failure.getMessage().contains(
+                "owning cyclic-set proof"));
     }
 
     @Test

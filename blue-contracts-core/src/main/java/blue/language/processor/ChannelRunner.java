@@ -5,6 +5,7 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -417,6 +418,7 @@ final class ChannelRunner {
         private final String logicalDeliveryKey;
         private final ChannelMemberSnapshot handlerChannel;
         private final FrozenNode payload;
+        private final List<ExactBlueValue> carriedExactValues;
         private final CheckpointManager.CheckpointRecord checkpoint;
         private final String eventSignature;
         private final Node checkpointSubject;
@@ -429,6 +431,7 @@ final class ChannelRunner {
                 String logicalDeliveryKey,
                 ChannelMemberSnapshot handlerChannel,
                 FrozenNode payload,
+                List<ExactBlueValue> carriedExactValues,
                 CheckpointManager.CheckpointRecord checkpoint,
                 String eventSignature,
                 Node checkpointSubject) {
@@ -441,6 +444,10 @@ final class ChannelRunner {
             this.logicalDeliveryKey = logicalDeliveryKey;
             this.handlerChannel = handlerChannel;
             this.payload = payload;
+            this.carriedExactValues = carriedExactValues == null
+                    ? Collections.<ExactBlueValue>emptyList()
+                    : Collections.unmodifiableList(
+                            new ArrayList<>(carriedExactValues));
             this.checkpoint = checkpoint;
             this.eventSignature = eventSignature;
             this.checkpointSubject =
@@ -481,6 +488,7 @@ final class ChannelRunner {
                     null,
                     null,
                     null,
+                    null,
                     null);
         }
 
@@ -491,6 +499,7 @@ final class ChannelRunner {
                 String logicalDeliveryKey,
                 ChannelMemberSnapshot handlerChannel,
                 FrozenNode payload,
+                List<ExactBlueValue> carriedExactValues,
                 CheckpointManager.CheckpointRecord checkpoint,
                 String eventSignature,
                 Node checkpointSubject) {
@@ -506,6 +515,7 @@ final class ChannelRunner {
                             "logicalDeliveryKey"),
                     handlerChannel,
                     payload,
+                    carriedExactValues,
                     checkpoint,
                     eventSignature,
                     checkpointSubject);
@@ -545,6 +555,14 @@ final class ChannelRunner {
 
         Node payloadNode() {
             return payload != null ? payload.toNode() : null;
+        }
+
+        FrozenNode payload() {
+            return payload;
+        }
+
+        List<ExactBlueValue> carriedExactValues() {
+            return carriedExactValues;
         }
 
         CheckpointManager.CheckpointRecord checkpoint() {

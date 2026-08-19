@@ -71,6 +71,12 @@ public enum ProcessorErrorCategory {
     CyclicMemberProcessingEventUnsupported,
     /** An embedded boundary crosses into a cyclic set. */
     CyclicSetEmbeddedBoundaryUnsupported,
+    /** A submitted complete cyclic-set proof does not match exact evidence. */
+    CyclicSetProofInvalid,
+    /** Two candidate cyclic members have indistinguishable preliminary input. */
+    CyclicPreliminaryMemberAmbiguous,
+    /** A claimed managed occurrence does not exist at its exact source path. */
+    ManagedOccurrenceBindingMissing,
     /** Duplicate delivery evidence disagrees for one logical delivery. */
     InconsistentLogicalDelivery,
     /** The portable direct-node limit was exceeded. */
@@ -90,5 +96,23 @@ public enum ProcessorErrorCategory {
     /** A registered runtime implementation failed deterministically. */
     RuntimeExecutionFailure,
     /** The admitted gas budget was exhausted. */
-    GasLimitExceeded
+    GasLimitExceeded,
+    /** The portable managed-document count for one closure was exceeded. */
+    ManagedDocumentsPerClosureExceeded,
+    /** The portable Process Embedded edge count for one closure was exceeded. */
+    ProcessEmbeddedEdgesPerClosureExceeded,
+    /** The portable member count for one cyclic component was exceeded. */
+    CyclicComponentMemberLimitExceeded,
+    /** The portable edge count for one cyclic component was exceeded. */
+    CyclicComponentEdgeLimitExceeded,
+    /** The portable canonical-byte count for one cyclic component was exceeded. */
+    CyclicComponentCanonicalBytesExceeded,
+    /** The portable graph-change count for one closure invocation was exceeded. */
+    ClosureGraphChangeLimitExceeded,
+    /** The portable dynamic-expansion count for one closure invocation was exceeded. */
+    ClosureExpansionLimitExceeded,
+    /** The portable work-occurrence count for one closure invocation was exceeded. */
+    ClosureWorkOccurrenceLimitExceeded,
+    /** The portable tentative-finalization count for one closure invocation was exceeded. */
+    ClosureTentativeFinalizationLimitExceeded
 }

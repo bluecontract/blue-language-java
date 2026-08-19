@@ -4,6 +4,8 @@ import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
+import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -129,7 +131,12 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 processEvent,
                 FrozenNode::fromResolvedNode,
                 sharedGasContext,
-                stepContinuation);
+                stepContinuation,
+                owner.snapshotManager() != null
+                        ? new ManagedDocumentOverlaySnapshotManager(
+                                owner.snapshotManager(),
+                                admitted.resolutionOverlay())
+                        : null);
         try (GasMeter.AttributionScope ignored =
                      sharedGasContext.withAttribution(
                              admitted.attribution())) {
@@ -168,6 +175,50 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
     }
 
     /**
+     * Applies one processor-owned state write to a detached exact Root while
+     * retaining this session's shared gas meter and exact closure attribution.
+     *
+     * <p>This is the narrow mutation boundary used by closure-owned logical
+     * marker batches. It performs the ordinary processor direct-write
+     * preflight, semantic identity charging, and atomic detached publication.
+     * It performs no closure planning, work admission, provider resolution, or
+     * authoritative document publication.</p>
+     *
+     * @param exactRoot exact independently managed Root before the write
+     * @param path absolute processor-owned state path
+     * @param exactValue exact value to add or replace, or {@code null} to remove
+     * @param attribution exact owning document/batch gas attribution
+     * @return detached exact Root after the successful write
+     */
+    public Node writeDetachedProcessorState(
+            Node exactRoot,
+            String path,
+            Node exactValue,
+            GasChargeContext attribution) {
+        ensureOpen();
+        Node document = Objects.requireNonNull(
+                exactRoot, "exactRoot").clone();
+        DocumentProcessingRuntime detached = new DocumentProcessingRuntime(
+                document,
+                owner.conformanceEngine(),
+                owner.conformancePlannerOverride(),
+                null,
+                owner.observer(),
+                sharedGasContext,
+                owner.registry().executableBodyFieldsByType(),
+                owner.strictPlatformInvocation());
+        try (GasMeter.AttributionScope ignored =
+                     sharedGasContext.withAttribution(
+                             Objects.requireNonNull(
+                                     attribution, "attribution"))) {
+            detached.directWrite(
+                    Objects.requireNonNull(path, "path"),
+                    exactValue != null ? exactValue.clone() : null);
+        }
+        return detached.document().clone();
+    }
+
+    /**
      * Selects matching Root Triggered Event channels without executing,
      * enqueueing, draining, or charging them.
      *
@@ -198,6 +249,95 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             }
         }
         return Collections.unmodifiableList(routes);
+    }
+
+    /**
+     * Freezes the Root lifecycle-channel routes for one initialization event.
+     * This is a read-only Phase-B operation: it neither charges nor executes
+     * application code.
+     *
+     * @param exactDocument exact independently managed Root
+     * @param exactEvent exact Document Processing Initiated value
+     * @return immutable routes in canonical contract-key order
+     */
+    public List<ManagedDocumentStepRoute> classifyLifecycleRoutes(
+            Node exactDocument,
+            Node exactEvent) {
+        ensureOpen();
+        Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
+        ContractBundle bundle = classifyRootBundle(exactDocument);
+        List<ManagedDocumentStepRoute> routes =
+                new ArrayList<ManagedDocumentStepRoute>();
+        for (ContractBundle.ChannelBinding binding
+                : bundle.channelsOfType(LifecycleChannel.class)) {
+            routes.add(new ManagedDocumentStepRoute(
+                    ManagedDocumentWorkKind.LIFECYCLE,
+                    binding.key(),
+                    event,
+                    null));
+        }
+        return Collections.unmodifiableList(routes);
+    }
+
+    /**
+     * Validates one exact Root's complete declaration-covered managed path
+     * surface without executing, enqueueing, or charging closure gas.
+     *
+     * @param exactDocument exact independently managed Root
+     * @param expectedBlueIdsByPath complete current path-to-target evidence
+     */
+    public void validateManagedEmbeddedPaths(
+            Node exactDocument,
+            Map<String, String> expectedBlueIdsByPath) {
+        ensureOpen();
+        long gasBefore = sharedGasContext.meter().totalGas();
+        Node document = Objects.requireNonNull(
+                exactDocument, "exactDocument").clone();
+        ProcessorMarkerStore.collapseInitializationDocuments(document);
+        DocumentProcessingRuntime view = new DocumentProcessingRuntime(
+                document,
+                owner.conformanceEngine(),
+                owner.conformancePlannerOverride(),
+                owner.snapshotManager(),
+                owner.observer(),
+                sharedGasContext,
+                owner.registry().executableBodyFieldsByType(),
+                owner.strictPlatformInvocation());
+        FrozenNode selected = view.selectedFrozenAt(JsonPointer.ROOT);
+        owner.contractLoader().preflightSelectedContractHeaders(selected);
+        FrozenNode resolved = view.resolvedFrozenAt(JsonPointer.ROOT);
+        FrozenNode recognition = view.contractRecognitionScope(
+                selected, resolved);
+        ContractBundle bundle = owner.contractLoader().load(
+                selected,
+                recognition,
+                JsonPointer.ROOT,
+                owner.observer(),
+                null,
+                null);
+        Map<String, String> expected = Objects.requireNonNull(
+                expectedBlueIdsByPath, "expectedBlueIdsByPath");
+        if (!bundle.hasProcessEmbedded()) {
+            if (!expected.isEmpty()) {
+                throw new InvalidExecutionEvidenceException(
+                        "Managed occurrences are not covered by Process Embedded",
+                        ProcessorErrorCategory.SubscriptionSurfaceInvalid);
+            }
+        } else {
+            EmbeddedScopeDeclaration declaration =
+                    bundle.embeddedScopeDeclaration();
+            new EmbeddedScopePlanner().planForOpaqueManagedRoot(
+                    resolved,
+                    JsonPointer.ROOT,
+                    declaration.explicitPaths(),
+                    declaration.collectionPaths(),
+                    expected,
+                    owner.gasSchedule());
+        }
+        if (sharedGasContext.meter().totalGas() != gasBefore) {
+            throw new IllegalStateException(
+                    "Managed declaration validation must not charge shared gas");
+        }
     }
 
     /**
@@ -313,8 +453,195 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         return Collections.unmodifiableList(routes);
     }
 
+    /**
+     * Constructs and classifies one processor-managed reference-rewrite update
+     * after exact tentative finalization.
+     *
+     * @param exactDocument exact finalized receiving Root
+     * @param absolutePath exact changed occurrence path
+     * @param before exact pre-finalization value
+     * @param after exact finalized value
+     * @return immutable matching Root Document Update routes
+     */
+    public List<ManagedDocumentStepRoute>
+    classifyFinalizationDocumentUpdateRoutes(
+            Node exactDocument,
+            String absolutePath,
+            Node before,
+            Node after) {
+        DocumentUpdateOccurrence occurrence =
+                new DocumentUpdateOccurrence(
+                        Objects.requireNonNull(
+                                absolutePath, "absolutePath"),
+                        before,
+                        after,
+                        before == null
+                                ? JsonPatch.Op.ADD
+                                : after == null
+                                        ? JsonPatch.Op.REMOVE
+                                        : JsonPatch.Op.REPLACE,
+                        JsonPointer.ROOT,
+                        Collections.singletonList(JsonPointer.ROOT));
+        return classifyDocumentUpdateRoutes(
+                exactDocument, occurrence);
+    }
+
+    /**
+     * Projects every effective Channel of one independently managed Root
+     * without executing a Handler, admitting an event, or charging gas.
+     *
+     * @param exactRoot exact independently managed Root
+     * @return immutable canonical Channel occurrence surface
+     */
+    public List<ManagedRootChannelOccurrence> projectRootChannelSurface(
+            Node exactRoot) {
+        ensureOpen();
+        return settlementService().projectRootChannelSurface(exactRoot);
+    }
+
+    /**
+     * Projects the complete non-recursive Root Channel and external-route
+     * surface without executing a Handler or admitting an event.
+     *
+     * @param exactRoot exact independently managed Root
+     * @return immutable Root-only subscription surface
+     */
+    public ManagedRootSubscriptionSurface projectRootSubscriptionSurface(
+            Node exactRoot) {
+        ensureOpen();
+        return settlementService().projectRootSubscriptionSurface(exactRoot);
+    }
+
+    /**
+     * Performs read-only Phase-B acceptance and checkpoint comparison for one
+     * exact raw Root source occurrence on this session's shared meter.
+     *
+     * @param exactRoot exact independently managed Root before local work
+     * @param rawChannelKey exact raw External Channel key
+     * @param exactEvent exact externally admitted event
+     * @param attribution exact owning document/work gas attribution
+     * @return immutable classification and optional frozen candidate
+     */
+    public ManagedExternalDeliveryClassification classifyExternalDelivery(
+            Node exactRoot,
+            String rawChannelKey,
+            Node exactEvent,
+            GasChargeContext attribution) {
+        ensureOpen();
+        try (GasMeter.AttributionScope ignored =
+                     sharedGasContext.withAttribution(
+                             Objects.requireNonNull(
+                                     attribution, "attribution"))) {
+            return settlementService().classifyExternalDelivery(
+                    exactRoot,
+                    rawChannelKey,
+                    exactEvent,
+                    attribution);
+        }
+    }
+
+    /**
+     * Applies one post-quiescence Root-local checkpoint batch atomically on a
+     * detached exact Root using this session's shared meter.
+     *
+     * @param exactRoot exact final Root before checkpoint settlement
+     * @param completedEntries accepted-new sources paired with their frozen
+     *        raw-source ordinals and exact write attribution
+     * @param cleanupContextFactory exact attribution factory invoked for each
+     *        actual lexical inactive-entry removal
+     * @param batchAttribution exact target document/barrier attribution for
+     *        deterministic settlement revalidation work
+     * @return exact resulting Root and actual add/replace/remove evidence
+     */
+    public ManagedCheckpointSettlement settleCheckpoints(
+            Node exactRoot,
+            List<ManagedCheckpointSettlementEntry> completedEntries,
+            ManagedCheckpointCleanupContextFactory cleanupContextFactory,
+            GasChargeContext batchAttribution) {
+        ensureOpen();
+        try (GasMeter.AttributionScope ignored =
+                     sharedGasContext.withAttribution(
+                             Objects.requireNonNull(
+                                     batchAttribution,
+                                     "batchAttribution"))) {
+            return settlementService().settleCheckpoints(
+                    exactRoot,
+                    completedEntries,
+                    Objects.requireNonNull(
+                            cleanupContextFactory,
+                            "cleanupContextFactory"));
+        }
+    }
+
+    /**
+     * Applies one closure-wide post-quiescence checkpoint batch across all
+     * participating managed Roots on this session's shared meter.
+     *
+     * <p>Every target is fully planned and the complete batch is preflighted
+     * before the first direct marker mutation. Actual accepted-source writes
+     * are applied in frozen raw-occurrence order across targets, followed by
+     * cleanup removals in lexical target-identity/raw-key order.</p>
+     *
+     * @param requests exact per-Root settlement requests
+     * @param cleanupContextFactory exact attribution factory for actual global
+     *        cleanup removals
+     * @return exact resulting Roots and globally ordered mutation evidence
+     */
+    public ManagedCheckpointSettlementBatch settleCheckpointBatch(
+            List<ManagedCheckpointSettlementRequest> requests,
+            ManagedCheckpointBatchCleanupContextFactory
+                    cleanupContextFactory) {
+        ensureOpen();
+        return settlementService().settleCheckpointBatch(
+                requests,
+                Objects.requireNonNull(
+                        cleanupContextFactory, "cleanupContextFactory"));
+    }
+
+    /**
+     * Returns the exact identity of the captured immutable runtime registry.
+     *
+     * @return captured runtime-registry identity
+     */
+    public String runtimeRegistryIdentity() {
+        ensureOpen();
+        return owner.runtimeRegistryIdentity();
+    }
+
+    /**
+     * Returns the exact digest identity of the released gas-manifest bytes.
+     *
+     * @return {@code sha256:}-prefixed exact manifest-byte digest
+     * @throws IllegalStateException for a custom schedule without a separately
+     *         configured byte identity
+     */
+    public String gasManifestIdentity() {
+        ensureOpen();
+        return owner.gasManifestIdentity();
+    }
+
+    /**
+     * Returns a narrow finalization bridge bound to this session's exact
+     * semantic memo, shared meter, manifest formulas, and supplied attribution.
+     *
+     * @param attribution exact document/component/finalization charge owner
+     * @return immutable attribution-bound semantic charging bridge
+     */
+    public ManagedSemanticGasBridge semanticGas(
+            GasChargeContext attribution) {
+        ensureOpen();
+        return new ManagedSemanticGasBridge(
+                sharedGasContext.meter().semantic(),
+                owner.gasSchedule(),
+                Objects.requireNonNull(attribution, "attribution"));
+    }
+
     ProcessingGasContext sharedGasContext() {
         return sharedGasContext;
+    }
+
+    private ManagedRootSettlementService settlementService() {
+        return new ManagedRootSettlementService(owner, sharedGasContext);
     }
 
     /**

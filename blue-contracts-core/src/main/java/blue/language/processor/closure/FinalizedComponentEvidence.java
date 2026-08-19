@@ -15,7 +15,8 @@ import java.util.Objects;
  *
  * <p>Cyclic evidence retains the unchanged Language finalizer result,
  * including preliminary order inputs, the input-to-canonical mapping, and the
- * canonical placeholder bodies used as the complete proof.</p>
+ * canonical member bodies used for Language identity.  The component proof is
+ * their representation-neutral Contracts cyclic-limit projection.</p>
  */
 public final class FinalizedComponentEvidence {
 
@@ -124,17 +125,23 @@ public final class FinalizedComponentEvidence {
         }
         List<blue.language.model.Node> proofBodies = component
                 .completeCyclicProof().declaredPlaceholderSet();
-        List<blue.language.model.Node> canonicalBodies =
-                cyclicFinalization.canonicalMemberBodies();
-        if (proofBodies.size() != canonicalBodies.size()) {
+        List<blue.language.model.Node> expectedProofBodies =
+                new CyclicCanonicalLimitProjection()
+                        .project(cyclicFinalization)
+                        .proofMembers();
+        if (proofBodies.size() != expectedProofBodies.size()) {
             throw new IllegalArgumentException(
                     "Cyclic proof does not cover the finalization set");
         }
         for (int index = 0; index < proofBodies.size(); index++) {
-            if (!NodeWireForm.get(proofBodies.get(index)).equals(
-                    NodeWireForm.get(canonicalBodies.get(index)))) {
+            if (!NodeWireForm.get(
+                            proofBodies.get(index),
+                            NodeWireForm.Strategy.SIMPLE)
+                    .equals(NodeWireForm.get(
+                            expectedProofBodies.get(index),
+                            NodeWireForm.Strategy.SIMPLE))) {
                 throw new IllegalArgumentException(
-                        "Cyclic proof body differs from Language finalization");
+                        "Cyclic proof body differs from Contracts projection");
             }
         }
     }

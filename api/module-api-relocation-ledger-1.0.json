@@ -4,13 +4,12 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 388,
-    "publicTypeIdentity": "sha256:ea7d1416282051fd3db00c0705f61b21a593b2c26ec28fb87ea8eac8536bceec",
+    "publicProductionTypeCount": 509,
+    "publicTypeIdentity": "sha256:46a035cbbdd5442cc45152699218f5675e11d0698b4a030057b503eab1050f9d",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
-      "intentional-next-major-break": 17,
-      "internal-type-removed-from-public-surface": 105,
-      "new-supported-api-spi": 66
+      "internal-type-removed-from-public-surface": 254,
+      "new-supported-api-spi": 55
     }
   },
   "allowedClassifications": [
@@ -39,8 +38,8 @@
       "targetType": "blue.language.BlueRuntime",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The modernization phase introduced the supported aggregate composition root for Language, Contracts, and mapping services."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.BlueRuntime$Builder",
@@ -50,8 +49,8 @@
       "targetType": "blue.language.BlueRuntime$Builder",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The aggregate composition root exposes its supported immutable-generation builder."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.api.BlueCachePolicy",
@@ -244,15 +243,9 @@
       "previousTypes": [
         "blue.language.utils.UncheckedObjectMapper"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.UncheckedObjectMapper",
-          "to": "blue.language.codec.jackson.UncheckedObjectMapper",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "The Jackson adapter moved out of the removed catch-all utility package into the codec-owned Jackson boundary."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.codec.jackson.UncheckedObjectMapper$JsonException",
@@ -263,15 +256,9 @@
       "previousTypes": [
         "blue.language.utils.UncheckedObjectMapper$JsonException"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.UncheckedObjectMapper$JsonException",
-          "to": "blue.language.codec.jackson.UncheckedObjectMapper$JsonException",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "The codec exception follows its Jackson adapter into the codec-owned package."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.codec.jackson.UncheckedObjectMapper$NestedJsonException",
@@ -282,15 +269,9 @@
       "previousTypes": [
         "blue.language.utils.UncheckedObjectMapper$NestedJsonException"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.UncheckedObjectMapper$NestedJsonException",
-          "to": "blue.language.codec.jackson.UncheckedObjectMapper$NestedJsonException",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "The nested codec exception follows its Jackson adapter into the codec-owned package."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.conformance.CanonicalGeneralizationPatch",
@@ -674,15 +655,9 @@
       "previousTypes": [
         "blue.language.utils.BlueIdReferenceValidator"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.BlueIdReferenceValidator",
-          "to": "blue.language.identity.BlueIdReferenceValidator",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "BlueId reference validation moved from the removed utility package to the identity-owned API."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.identity.BlueIdentity",
@@ -704,15 +679,9 @@
       "previousTypes": [
         "blue.language.utils.BlueIds"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.BlueIds",
-          "to": "blue.language.identity.BlueIds",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "BlueId protocol tokens moved from the removed utility package to the identity-owned API."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.identity.CanonicalIdentityConstants",
@@ -723,15 +692,9 @@
       "previousTypes": [
         "blue.language.utils.CanonicalIdentityConstants"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.CanonicalIdentityConstants",
-          "to": "blue.language.identity.CanonicalIdentityConstants",
-          "commit": "ea19cbd4d79ced8b1e1dd4f57f8cb33238f84d3f"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Canonical list identity wire tokens moved into the identity-owned protocol package."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.identity.CanonicalIdentityInputBuilder",
@@ -742,15 +705,9 @@
       "previousTypes": [
         "blue.language.utils.CanonicalIdentityInputBuilder"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.CanonicalIdentityInputBuilder",
-          "to": "blue.language.identity.CanonicalIdentityInputBuilder",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Canonical identity input construction moved from the removed utility package to its identity owner."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.identity.CanonicalJsonHasher",
@@ -808,6 +765,28 @@
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
+      "type": "blue.language.identity.CyclicMemberFinalization",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.CyclicMemberFinalization",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.identity.CyclicSetFinalization",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.CyclicSetFinalization",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
       "type": "blue.language.identity.DirectBlueIdCalculator",
       "sourcePath": "blue-language-core/src/main/java/blue/language/identity/DirectBlueIdCalculator.java",
       "currentArtifact": "blue.language:blue-language-core",
@@ -838,15 +817,9 @@
       "previousTypes": [
         "blue.language.utils.NodeToBlueIdInput"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.NodeToBlueIdInput",
-          "to": "blue.language.identity.NodeToBlueIdInput",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Node identity-input projection moved from the removed utility package to the identity-owned API."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.identity.ObjectBlueIdHasher",
@@ -879,15 +852,9 @@
       "previousTypes": [
         "blue.language.utils.ScalarNodeIdentity"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.ScalarNodeIdentity",
-          "to": "blue.language.identity.ScalarNodeIdentity",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Scalar identity normalization moved from the removed utility package to the identity-owned API."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.identity.SchemaEnumCanonicalizer",
@@ -898,15 +865,9 @@
       "previousTypes": [
         "blue.language.utils.SchemaEnumCanonicalizer"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.SchemaEnumCanonicalizer",
-          "to": "blue.language.identity.SchemaEnumCanonicalizer",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Schema enum canonicalization moved from the removed utility package to the identity-owned API."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.identity.SourceDocumentBlueIdCalculator",
@@ -1621,23 +1582,11 @@
       "targetModule": ":blue-language-model",
       "targetType": "blue.language.model.NodePathEditor",
       "previousTypes": [
-        "blue.language.utils.NodePathEditor",
-        "blue.language.utils.NodePathSelector"
+        "blue.language.utils.NodePathEditor"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.NodePathEditor",
-          "to": "blue.language.model.NodePathEditor",
-          "commit": "b833169"
-        },
-        {
-          "from": "blue.language.utils.NodePathSelector",
-          "to": "blue.language.model.NodePathEditor",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Public node-path editing and selection moved into the model owner; the selector implementation is now package-private."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.model.NodeSerializer",
@@ -1681,15 +1630,9 @@
       "previousTypes": [
         "blue.language.utils.Nodes"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.Nodes",
-          "to": "blue.language.model.Nodes",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Node construction helpers moved from the removed utility package into the model owner."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.model.Nodes$NodeField",
@@ -1700,15 +1643,9 @@
       "previousTypes": [
         "blue.language.utils.Nodes$NodeField"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.Nodes$NodeField",
-          "to": "blue.language.model.Nodes$NodeField",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "The node-field vocabulary follows its model-owned helper."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.model.Schema",
@@ -1800,15 +1737,9 @@
       "previousTypes": [
         "blue.language.utils.ParsedJsonPointer"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.ParsedJsonPointer",
-          "to": "blue.language.model.wire.ParsedJsonPointer",
-          "commit": "1c1cc2886181cc0ac45bff762edece4ae6094cb4"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "The immutable parsed wire pointer moved from the utility package into the model wire owner."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.model.wire.SchemaPropertyConstants",
@@ -2083,8 +2014,8 @@
       "targetType": "blue.language.processor.BlueContracts",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The modernization phase introduced the focused generic Contracts processing composition root."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.BlueContracts$Builder",
@@ -2094,8 +2025,8 @@
       "targetType": "blue.language.processor.BlueContracts$Builder",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The focused Contracts composition root exposes its supported immutable-generation builder."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.ChannelCheckpointContext",
@@ -2184,6 +2115,17 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.processor.ClosureRuntimeDescriptor",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ClosureRuntimeDescriptor.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ClosureRuntimeDescriptor",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.CompositeProcessingObserver",
@@ -2358,8 +2300,41 @@
       "targetType": "blue.language.processor.DocumentProcessorAdministration",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The focused administration service exposes stable cache, registry, marker, and fragmentation inspection without widening the processing facade."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.DocumentStepRuntimeGapException",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentStepRuntimeGapException.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.DocumentStepRuntimeGapException",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.DocumentStepRuntimeGapException$Reason",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentStepRuntimeGapException.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.DocumentStepRuntimeGapException$Reason",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.DocumentUpdateOccurrence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentUpdateOccurrence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.DocumentUpdateOccurrence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.EffectiveContractSnapshot",
@@ -2435,8 +2410,8 @@
       "targetType": "blue.language.processor.EmbeddedScopePlanView",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The final collectionPaths amendment exposes one immutable structured embedded-scope plan for read-only fragmentation inspection."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.EmbeddedScopePlanView$Origin",
@@ -2446,8 +2421,8 @@
       "targetType": "blue.language.processor.EmbeddedScopePlanView$Origin",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The plan view exposes exact-versus-collection provenance as a closed supported value."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.ExactBlueValue",
@@ -2716,6 +2691,17 @@
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
     },
     {
+      "type": "blue.language.processor.GasLimitExceededException$ApplicableCapKind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/GasLimitExceededException.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.GasLimitExceededException$ApplicableCapKind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.GasMeter",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/GasMeter.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -2936,6 +2922,281 @@
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
+      "type": "blue.language.processor.ManagedCheckpointBatchCleanupContextFactory",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointBatchCleanupContextFactory.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointBatchCleanupContextFactory",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointCandidate",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointCandidate",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointCleanupContextFactory",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointCleanupContextFactory.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointCleanupContextFactory",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointDomain",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointDomain.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointDomain",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointMutation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointMutation.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointMutation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointMutation$Operation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointMutation.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointMutation$Operation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointSettlement",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlement.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointSettlement",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointSettlementBatch",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementBatch.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointSettlementBatch",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointSettlementBatch$Mutation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementBatch.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointSettlementBatch$Mutation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointSettlementBatch$TargetResult",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementBatch.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointSettlementBatch$TargetResult",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointSettlementEntry",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementEntry.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointSettlementEntry",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointSettlementRequest",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementRequest.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointSettlementRequest",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedCheckpointState",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointState.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedCheckpointState",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedDocumentResolutionOverlay",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentResolutionOverlay.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedDocumentResolutionOverlay",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedDocumentStepContinuation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepContinuation.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedDocumentStepContinuation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedDocumentStepOutcome",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepOutcome.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedDocumentStepOutcome",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedDocumentStepRequest",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedDocumentStepRequest",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedDocumentStepRoute",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRoute.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedDocumentStepRoute",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedDocumentStepRuntime",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedDocumentStepRuntime",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedDocumentWorkKind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentWorkKind.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedDocumentWorkKind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedExternalDeliveryClassification",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedExternalDeliveryClassification.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedExternalDeliveryClassification",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedExternalDeliveryClassification$State",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedExternalDeliveryClassification.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedExternalDeliveryClassification$State",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedRootChannelOccurrence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootChannelOccurrence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedRootChannelOccurrence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedRootSubscriptionSurface",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootSubscriptionSurface.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedRootSubscriptionSurface",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.ManagedSemanticGasBridge",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedSemanticGasBridge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ManagedSemanticGasBridge",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
       "type": "blue.language.processor.NoOpProcessingObserver",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/NoOpProcessingObserver.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -2987,8 +3248,8 @@
       "targetType": "blue.language.processor.PlatformProcessInvocation",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The platform PROCESS lane exposes one immutable plan and invocation-provider environment without adding a semantic input."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.PlatformProcessInvocation$Builder",
@@ -2998,8 +3259,8 @@
       "targetType": "blue.language.processor.PlatformProcessInvocation$Builder",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The immutable platform invocation value exposes its supported construction boundary."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.PlatformProcessingResult",
@@ -3561,6 +3822,989 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate$AmbiguousPreliminaryMembers",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate$AmbiguousPreliminaryMembers",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate$BadCyclicProof",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate$BadCyclicProof",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate$CandidateCyclicMember",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate$CandidateCyclicMember",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate$CandidateCyclicProof",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate$CandidateCyclicProof",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate$CandidateMemberState",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate$CandidateMemberState",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate$CandidateOccurrenceBinding",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate$CandidateOccurrenceBinding",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate$InvalidOccurrenceBinding",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate$InvalidOccurrenceBinding",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCandidate$Kind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCandidate$Kind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionCause",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCause.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionCause",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AdmissionKind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionKind.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AdmissionKind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.AffectedClosureSnapshot",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AffectedClosureSnapshot.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.AffectedClosureSnapshot",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.BlueClosureContracts",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/BlueClosureContracts.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.BlueClosureContracts",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ChannelOccurrence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ChannelOccurrence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ChannelOccurrence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.CheckpointDomainValue",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CheckpointDomainValue.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.CheckpointDomainValue",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.CheckpointWrite",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CheckpointWrite.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.CheckpointWrite",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.CheckpointWrite$State",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CheckpointWrite.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.CheckpointWrite$State",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureAttemptResult",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAttemptResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureAttemptResult",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureAttemptResult$Kind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAttemptResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureAttemptResult$Kind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureCommitCompanion",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCommitCompanion.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureCommitCompanion",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureCommitCompanion$DocumentDelta",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCommitCompanion.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureCommitCompanion$DocumentDelta",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureCommitCompanion$InputComponent",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCommitCompanion.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureCommitCompanion$InputComponent",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureCommitCompanion$InputDocument",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCommitCompanion.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureCommitCompanion$InputDocument",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureCommitCompanion$ResultComponent",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCommitCompanion.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureCommitCompanion$ResultComponent",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureEnvironment",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEnvironment.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureEnvironment",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureEnvironment$LabeledIdentityEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEnvironment.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureEnvironment$LabeledIdentityEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureEnvironment$PortableLimitPolicyEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEnvironment.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureEnvironment$PortableLimitPolicyEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureEvidenceFactory",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceFactory.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureEvidenceFactory",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureExecutionObserver",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionObserver.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureExecutionObserver",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureImplementationEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureImplementationEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureImplementationEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureInvocationInput",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationInput.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureInvocationInput",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureInvocationInput$Operation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationInput.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureInvocationInput$Operation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureProcessResult",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureProcessResult",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureProcessor",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessor.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureProcessor",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureWorkOccurrence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureWorkOccurrence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureWorkOccurrence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ClosureWorkQueue",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureWorkQueue.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureWorkQueue",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ComponentFinalizationInput",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationInput.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ComponentFinalizationInput",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ComponentFinalizationKernel",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationKernel.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ComponentFinalizationKernel",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ComponentFinalizationResult",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ComponentFinalizationResult",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ComponentGenerationTransition",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentGenerationTransition.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ComponentGenerationTransition",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ComponentKind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentKind.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ComponentKind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ComponentSnapshot",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentSnapshot.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ComponentSnapshot",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DirectLogicalDelivery",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DirectLogicalDelivery.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DirectLogicalDelivery",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentId",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentId.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentId",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentStepEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentStepEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentStepInput",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentStepInput",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentStepProcessor",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepProcessor.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentStepProcessor",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ExecutionPolicy",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExecutionPolicy.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ExecutionPolicy",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ExternalEventCause",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExternalEventCause.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ExternalEventCause",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.FinalizedComponentEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedComponentEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FinalizedComponentEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.FinalizedDocumentEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedDocumentEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.FinalizedDocumentEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.GasTraceEntry",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GasTraceEntry.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.GasTraceEntry",
+      "previousTypes": [
+        "blue.language.processor.GasTraceEntry"
+      ],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.GasTraceEntry$Namespace",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GasTraceEntry.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.GasTraceEntry$Namespace",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.GraphChange",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GraphChange.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.GraphChange",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.GraphChange$Kind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GraphChange.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.GraphChange$Kind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.GraphChange$Side",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GraphChange.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.GraphChange$Side",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.LocalDocumentStepResult",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/LocalDocumentStepResult.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.LocalDocumentStepResult",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedDocumentGraph",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentGraph.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedDocumentGraph",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedDocumentSnapshot",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentSnapshot.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedDocumentSnapshot",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedOccurrenceBinding",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceBinding.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedOccurrenceBinding",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedRevisionCause",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRevisionCause.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedRevisionCause",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedScopeKey",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedScopeKey.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedScopeKey",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ProcessingCause",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessingCause.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ProcessingCause",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ProcessingCause$Kind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessingCause.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ProcessingCause$Kind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.PublicEventOccurrence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/PublicEventOccurrence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.PublicEventOccurrence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$ApplicableCap",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$ApplicableCap",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$ApplicableCap$Kind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$ApplicableCap$Kind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$FinalizationOwner",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$FinalizationOwner",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$InvocationOwner",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$InvocationOwner",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$LocalCap",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$LocalCap",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$Owner",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$Owner",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$Owner$Kind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$Owner$Kind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$SharedCap",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$SharedCap",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.RejectedCharge$WorkOwner",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.RejectedCharge$WorkOwner",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ResultingDocument",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ResultingDocument.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ResultingDocument",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.SccPartitioner",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SccPartitioner",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ScopeAddress",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ScopeAddress.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ScopeAddress",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.SubscriptionDelta",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionDelta.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SubscriptionDelta",
+      "previousTypes": [
+        "blue.language.processor.SubscriptionDelta"
+      ],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.SubscriptionDelta$Operation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionDelta.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SubscriptionDelta$Operation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.SubscriptionState",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionState.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.SubscriptionState",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.TentativeFinalization",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.TentativeFinalization",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.TentativeFinalization$Boundary",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.TentativeFinalization$Boundary",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.TentativeFinalization$Boundary$Kind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.TentativeFinalization$Boundary$Kind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.TentativeFinalization$CheckpointSettlementBoundary",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.TentativeFinalization$CheckpointSettlementBoundary",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.TentativeFinalization$InitializationBatchBoundary",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.TentativeFinalization$InitializationBatchBoundary",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.TentativeFinalization$WorkBoundary",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.TentativeFinalization$WorkBoundary",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.TentativeResolutionContext",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeResolutionContext.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.TentativeResolutionContext",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.WorkKind",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/WorkKind.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.WorkKind",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.model.ChannelContract",
@@ -4217,15 +5461,9 @@
       "previousTypes": [
         "blue.language.utils.MinimizedOverlayBuilder"
       ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.MinimizedOverlayBuilder",
-          "to": "blue.language.resolve.MinimizedOverlayBuilder",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Minimized overlay construction moved from the removed utility package to the resolution owner."
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.resolve.ReferenceCacheAdmissionPolicy",
@@ -4244,54 +5482,10 @@
       "currentArtifact": "blue.language:blue-language-core",
       "targetModule": ":blue-language-core",
       "targetType": "blue.language.resolve.ResolutionLimits",
-      "previousTypes": [
-        "blue.language.utils.limits.CompositeLimits",
-        "blue.language.utils.limits.DeferredReferencePathLimits",
-        "blue.language.utils.limits.ExcludedPathLimits",
-        "blue.language.utils.limits.Limits",
-        "blue.language.utils.limits.NodeToPathLimitsConverter",
-        "blue.language.utils.limits.PathLimits",
-        "blue.language.utils.limits.TypeSpecificPropertyFilter"
-      ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.limits.CompositeLimits",
-          "to": "blue.language.resolve.ResolutionLimits",
-          "commit": "b833169"
-        },
-        {
-          "from": "blue.language.utils.limits.DeferredReferencePathLimits",
-          "to": "blue.language.resolve.ResolutionLimits",
-          "commit": "b833169"
-        },
-        {
-          "from": "blue.language.utils.limits.ExcludedPathLimits",
-          "to": "blue.language.resolve.ResolutionLimits",
-          "commit": "b833169"
-        },
-        {
-          "from": "blue.language.utils.limits.Limits",
-          "to": "blue.language.resolve.ResolutionLimits",
-          "commit": "b833169"
-        },
-        {
-          "from": "blue.language.utils.limits.NodeToPathLimitsConverter",
-          "to": "blue.language.resolve.ResolutionLimits",
-          "commit": "b833169"
-        },
-        {
-          "from": "blue.language.utils.limits.PathLimits",
-          "to": "blue.language.resolve.ResolutionLimits",
-          "commit": "b833169"
-        },
-        {
-          "from": "blue.language.utils.limits.TypeSpecificPropertyFilter",
-          "to": "blue.language.resolve.ResolutionLimits",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "The limits family became one resolution-owned interface with factories while concrete stateful implementations became package-private."
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.resolve.ResolutionLimits$Builder",
@@ -4299,18 +5493,10 @@
       "currentArtifact": "blue.language:blue-language-core",
       "targetModule": ":blue-language-core",
       "targetType": "blue.language.resolve.ResolutionLimits$Builder",
-      "previousTypes": [
-        "blue.language.utils.limits.PathLimits$Builder"
-      ],
-      "relocationHistory": [
-        {
-          "from": "blue.language.utils.limits.PathLimits$Builder",
-          "to": "blue.language.resolve.ResolutionLimits$Builder",
-          "commit": "b833169"
-        }
-      ],
-      "classification": "intentional-next-major-break",
-      "reason": "Path-limit construction moved behind the resolution-owned supported builder."
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.runtime.BlueLanguage",
@@ -4364,8 +5550,8 @@
       "targetType": "blue.language.runtime.LanguageProcessing",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The modernization phase introduced the Language-owned bridge for deterministic downstream processing scopes."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.runtime.LanguageProcessing$Observer",
@@ -4375,8 +5561,8 @@
       "targetType": "blue.language.runtime.LanguageProcessing$Observer",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The processing bridge exposes a Language-neutral operational observation SPI."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.runtime.LanguageProcessing$Scope",
@@ -4386,8 +5572,8 @@
       "targetType": "blue.language.runtime.LanguageProcessing$Scope",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "The processing bridge exposes an explicitly owned closeable runtime scope."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.runtime.LanguageRuntimeAccess",

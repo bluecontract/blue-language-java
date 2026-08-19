@@ -174,6 +174,7 @@ public final class SubscriptionSurfaceProjection {
                                 .activeSubscriptionIntervals(
                                         retainedIntervals)
                                 .retainedIntervalInputSurface()
+                                .legacyRecursiveExactReferenceTraversal()
                                 .committingInterval(
                                         Objects.requireNonNull(
                                                 transitionOrderKey,

@@ -7,6 +7,7 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -60,6 +61,7 @@ final class ExternalSourceEvaluator {
         String logicalDeliveryKey;
         ChannelMemberSnapshot handlerChannel;
         ChannelProcessor<ChannelContract> channelProcessor;
+        List<ExactBlueValue> carriedExactValues;
         try {
             ExternalDeliverySnapshot evidence = execution.deliveryEvidence(
                     scopePath, channel.key());
@@ -101,6 +103,7 @@ final class ExternalSourceEvaluator {
                                     .channelCatalogContractKeys()
                                     : null,
                             functionWork);
+            carriedExactValues = functionWork.exactValuesSnapshot();
             matches = evaluation.accepts();
             frozenPayload = evaluation.payload();
             frozenCheckpointSubject = evaluation.checkpointSubject();
@@ -189,6 +192,7 @@ final class ExternalSourceEvaluator {
                 logicalDeliveryKey,
                 handlerChannel,
                 frozenPayload,
+                carriedExactValues,
                 checkpoint.record,
                 checkpoint.eventSignature,
                 checkpointSubject);
@@ -208,15 +212,8 @@ final class ExternalSourceEvaluator {
         CheckpointManager.CheckpointRecord checkpoint;
         String eventSignature;
         try {
-            long findStart = System.nanoTime();
             String checkpointDomain = execution.checkpointDomain(
                     channel, scopePath);
-            checkpoint = checkpointTransaction.find(
-                    bundle, channel.key(), checkpointDomain);
-            ProcessingObservations.record(
-                    metrics,
-                    ProcessingMetricId.CHECKPOINT_FIND_NANOS,
-                    System.nanoTime() - findStart);
             long identityStart = System.nanoTime();
             eventSignature = recomputedCheckpointSubject != null
                     ? recomputedCheckpointSubject
@@ -226,6 +223,23 @@ final class ExternalSourceEvaluator {
                     metrics,
                     ProcessingMetricId.CHECKPOINT_CURRENT_IDENTITY_NANOS,
                     System.nanoTime() - identityStart);
+            long findStart = System.nanoTime();
+            checkpoint = checkpointTransaction.findForComparison(
+                    scopePath,
+                    bundle,
+                    channel.key(),
+                    checkpointDomain,
+                    eventSignature,
+                    GasChargeContext.of(
+                            scopePath,
+                            channel.key(),
+                            null,
+                            GasScheduleConstants.ChargeReason
+                                    .CHECKPOINT_COMPARE));
+            ProcessingObservations.record(
+                    metrics,
+                    ProcessingMetricId.CHECKPOINT_FIND_NANOS,
+                    System.nanoTime() - findStart);
         } catch (RuntimeException exception) {
             ProcessingObservations.record(
                     metrics,
@@ -249,8 +263,6 @@ final class ExternalSourceEvaluator {
         boolean newer;
         long isNewerStart = System.nanoTime();
         try {
-            checkpointTransaction.recordComparison(
-                    scopePath, checkpoint, eventSignature);
             Node previousSubject = checkpoint != null
                     ? checkpoint.lastEventNode : null;
             String previousSubjectBlueId = checkpoint != null

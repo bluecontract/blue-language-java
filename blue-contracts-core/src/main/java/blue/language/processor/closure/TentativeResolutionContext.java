@@ -1,7 +1,13 @@
 package blue.language.processor.closure;
 
+import blue.language.model.Node;
+import blue.language.model.NodePathEditor;
+
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -26,6 +32,8 @@ public final class TentativeResolutionContext {
     private final String componentStateIdentity;
     private final String cyclicProofIdentity;
     private final Map<DocumentId, String> currentBlueIds;
+    private final Map<DocumentId, Node> currentDocuments;
+    private final Map<String, String> targetManagedBlueIdsByPath;
     private final String exactNodeProviderDomainIdentity;
     private final String occurrenceBindingSetIdentity;
 
@@ -39,6 +47,8 @@ public final class TentativeResolutionContext {
             String componentStateIdentity,
             String cyclicProofIdentity,
             Map<DocumentId, String> currentBlueIds,
+            Map<DocumentId, Node> currentDocuments,
+            Map<String, String> targetManagedBlueIdsByPath,
             String exactNodeProviderDomainIdentity,
             String occurrenceBindingSetIdentity) {
         this.closureIdentity = ClosureValueSupport.requireSha256Identity(
@@ -61,6 +71,10 @@ public final class TentativeResolutionContext {
                 : ClosureValueSupport.requireSha256Identity(
                         cyclicProofIdentity, "cyclicProofIdentity");
         this.currentBlueIds = immutableCurrentBlueIds(currentBlueIds);
+        this.currentDocuments = immutableCurrentDocuments(
+                currentDocuments, this.currentBlueIds);
+        this.targetManagedBlueIdsByPath = immutableManagedPaths(
+                targetManagedBlueIdsByPath);
         if (!this.targetBeforeBlueId.equals(
                 this.currentBlueIds.get(this.targetDocumentId))) {
             throw new IllegalArgumentException(
@@ -117,9 +131,45 @@ public final class TentativeResolutionContext {
 
         LinkedHashMap<DocumentId, String> current =
                 new LinkedHashMap<DocumentId, String>();
+        LinkedHashMap<DocumentId, Node> documents =
+                new LinkedHashMap<DocumentId, Node>();
         for (ManagedDocumentSnapshot document
                 : tentativeState.managedDocuments()) {
             current.put(document.documentId(), document.blueId());
+            documents.put(document.documentId(), document.document());
+        }
+        ArrayList<ManagedOccurrenceBinding> forwardBindings =
+                new ArrayList<ManagedOccurrenceBinding>();
+        Node targetBody = documents.get(targetDocumentId);
+        for (ManagedOccurrenceBinding binding
+                : tentativeState.occurrences()) {
+            if (binding.sourceDocumentId().equals(targetDocumentId)
+                    && (binding.active()
+                            || binding.pendingHistoricalEpoch() != null)
+                    && NodePathEditor.getOrNull(
+                            targetBody, binding.sourcePath()) != null) {
+                forwardBindings.add(binding);
+            }
+        }
+        Collections.sort(forwardBindings,
+                new Comparator<ManagedOccurrenceBinding>() {
+                    @Override
+                    public int compare(
+                            ManagedOccurrenceBinding left,
+                            ManagedOccurrenceBinding right) {
+                        return ClosureValueSupport.comparePortableText(
+                                left.sourcePath(), right.sourcePath());
+                    }
+                });
+        LinkedHashMap<String, String> canonicalForwardPaths =
+                new LinkedHashMap<String, String>();
+        for (ManagedOccurrenceBinding binding : forwardBindings) {
+            if (canonicalForwardPaths.put(
+                    binding.sourcePath(),
+                    binding.expectedTargetBlueId()) != null) {
+                throw new IllegalArgumentException(
+                        "Managed Root has duplicate current occurrence paths");
+            }
         }
         return new TentativeResolutionContext(
                 tentativeState.closureIdentity(),
@@ -131,6 +181,8 @@ public final class TentativeResolutionContext {
                 owner.componentStateIdentity(),
                 owner.cyclicProofIdentity(),
                 current,
+                documents,
+                canonicalForwardPaths,
                 invocation.environment().exactNodeProviderDomainIdentity(),
                 tentativeState.occurrenceBindingSetIdentity());
     }
@@ -181,6 +233,42 @@ public final class TentativeResolutionContext {
      */
     public Map<DocumentId, String> currentBlueIds() { return currentBlueIds; }
 
+    /**
+     * Returns defensive exact current closure documents for processor-only
+     * provider overlay construction. Application runtime code must never
+     * receive this map.
+     *
+     * @return immutable map in canonical DocumentId order
+     */
+    public Map<DocumentId, Node> currentDocuments() {
+        LinkedHashMap<DocumentId, Node> copy =
+                new LinkedHashMap<DocumentId, Node>();
+        for (Map.Entry<DocumentId, Node> entry
+                : currentDocuments.entrySet()) {
+            copy.put(entry.getKey(), entry.getValue().clone());
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    /**
+     * Returns concrete forward managed paths present in the selected Root.
+     *
+     * @return immutable canonical absolute paths
+     */
+    public List<String> targetManagedPaths() {
+        return Collections.unmodifiableList(new ArrayList<String>(
+                targetManagedBlueIdsByPath.keySet()));
+    }
+
+    /**
+     * Returns each forward managed path's admitted exact target BlueId.
+     *
+     * @return immutable canonical path-to-BlueId map
+     */
+    public Map<String, String> targetManagedBlueIdsByPath() {
+        return targetManagedBlueIdsByPath;
+    }
+
     /** Returns the selected provider-domain identity.
      * @return identity */
     public String exactNodeProviderDomainIdentity() {
@@ -215,6 +303,47 @@ public final class TentativeResolutionContext {
         if (copy.isEmpty()) {
             throw new IllegalArgumentException(
                     "A resolution context requires closure membership");
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private static Map<DocumentId, Node> immutableCurrentDocuments(
+            Map<DocumentId, Node> values,
+            Map<DocumentId, String> identities) {
+        LinkedHashMap<DocumentId, Node> copy =
+                new LinkedHashMap<DocumentId, Node>();
+        for (DocumentId documentId : identities.keySet()) {
+            Node document = Objects.requireNonNull(
+                    Objects.requireNonNull(values, "currentDocuments")
+                            .get(documentId),
+                    "current document");
+            copy.put(documentId, document.clone());
+        }
+        if (copy.size() != values.size()) {
+            throw new IllegalArgumentException(
+                    "Current documents must match current BlueIds");
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private static Map<String, String> immutableManagedPaths(
+            Map<String, String> values) {
+        LinkedHashMap<String, String> copy =
+                new LinkedHashMap<String, String>();
+        String previous = null;
+        for (Map.Entry<String, String> entry : Objects.requireNonNull(
+                values, "targetManagedBlueIdsByPath").entrySet()) {
+            String value = Objects.requireNonNull(
+                    entry.getKey(), "target managed path");
+            if (previous != null
+                    && ClosureValueSupport.comparePortableText(
+                            previous, value) >= 0) {
+                throw new IllegalArgumentException(
+                        "Target managed paths are not canonical");
+            }
+            copy.put(value, ClosureValueSupport.requireBlueId(
+                    entry.getValue(), "target managed BlueId"));
+            previous = value;
         }
         return Collections.unmodifiableMap(copy);
     }

@@ -64,7 +64,7 @@ public final class GasTraceEntry {
      * @param contractKey optional exact contract key
      * @param logicalPath optional exact logical path
      * @param workOccurrenceId optional work occurrence identity
-     * @param reason optional deterministic reason
+     * @param reason optional observable diagnostic reason; not identity-bearing
      */
     public GasTraceEntry(
             long sequence,
@@ -246,9 +246,13 @@ public final class GasTraceEntry {
     }
 
     /**
-     * Returns optional deterministic reason.
+     * Returns optional diagnostic reason.
      *
-     * @return optional deterministic reason
+     * <p>The reason remains observable in the complete trace but is excluded
+     * from {@code gasTraceIdentity}; diagnostic wording cannot alter commit
+     * evidence.</p>
+     *
+     * @return optional diagnostic reason
      */
     public String reason() {
         return reason;
@@ -271,7 +275,6 @@ public final class GasTraceEntry {
         putOptional(value, "contractKey", contractKey);
         putOptional(value, "logicalPath", logicalPath);
         putOptional(value, "workOccurrenceId", workOccurrenceId);
-        putOptional(value, "reason", reason);
         return value;
     }
 

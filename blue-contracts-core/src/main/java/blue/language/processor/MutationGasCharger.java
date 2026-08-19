@@ -4,13 +4,18 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.FrozenCanonicalWriter;
 import blue.language.model.wire.JsonPointer;
 
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
-/** Charges all semantic identity work before mutation planning performs it. */
+/**
+ * Charges semantic identity work from an immutable projected result before
+ * authoritative mutation publication.
+ */
 final class MutationGasCharger {
 
     private static final String IDENTITY_REBUILD_REASON = "identity-rebuild";
@@ -25,9 +30,24 @@ final class MutationGasCharger {
         this.canonicalRoot = canonicalRoot;
     }
 
-    void charge(List<PatchInput> patches) {
+    void charge(
+            List<PatchInput> patches,
+            List<FrozenNode> resultingCanonicalRoots) {
+        Objects.requireNonNull(
+                resultingCanonicalRoots,
+                "resultingCanonicalRoots");
+        if (resultingCanonicalRoots.size() != patches.size()) {
+            throw new IllegalArgumentException(
+                    "Patch/result projection size changed");
+        }
+        FrozenNode priorCanonicalRoot = canonicalRoot.get();
+        int index = 0;
         for (PatchInput patch : patches) {
+            FrozenNode resultingCanonicalRoot =
+                    resultingCanonicalRoots.get(index);
             if (patch == null) {
+                priorCanonicalRoot = resultingCanonicalRoot;
+                index++;
                 continue;
             }
             charge(
@@ -35,7 +55,11 @@ final class MutationGasCharger {
                     patch.op(),
                     patch.mutableValue(),
                     patch.frozenValue(),
-                    patch.exactValue() != null);
+                    patch.exactValue() != null,
+                    priorCanonicalRoot,
+                    resultingCanonicalRoot);
+            priorCanonicalRoot = resultingCanonicalRoot;
+            index++;
         }
     }
 
@@ -44,7 +68,26 @@ final class MutationGasCharger {
             JsonPatch.Op operation,
             Node mutableValue,
             FrozenNode frozenValue,
-            boolean valueAlreadyAdmitted) {
+            boolean valueAlreadyAdmitted,
+            FrozenNode resultingCanonicalRoot) {
+        charge(
+                path,
+                operation,
+                mutableValue,
+                frozenValue,
+                valueAlreadyAdmitted,
+                canonicalRoot.get(),
+                resultingCanonicalRoot);
+    }
+
+    void charge(
+            String path,
+            JsonPatch.Op operation,
+            Node mutableValue,
+            FrozenNode frozenValue,
+            boolean valueAlreadyAdmitted,
+            FrozenNode priorCanonicalRoot,
+            FrozenNode resultingCanonicalRoot) {
         SemanticGasMeter semantic = meter.semantic();
         GasChargeContext context = GasChargeContext.of(
                 null, null, path, IDENTITY_REBUILD_REASON);
@@ -62,7 +105,9 @@ final class MutationGasCharger {
                     new IdentityHashMap<FrozenNode, Boolean>());
         }
 
-        FrozenNode root = canonicalRoot.get();
+        FrozenNode root = Objects.requireNonNull(
+                priorCanonicalRoot,
+                "priorCanonicalRoot");
         List<String> segments = JsonPointer.split(path);
         if (!segments.isEmpty()) {
             String parentPointer = JsonPointer.toPointer(
@@ -74,24 +119,32 @@ final class MutationGasCharger {
                     context);
         }
 
+        /*
+         * List fold work is defined relative to the verified prior list, but
+         * every rebuilt object identity is defined by the immutable result.
+         * In particular, a removal must not price a removed pre-state member
+         * as though it survived in the rebuilt parent.
+         */
+        FrozenNode rebuiltRoot = Objects.requireNonNull(
+                resultingCanonicalRoot,
+                "resultingCanonicalRoot");
         for (int count = Math.max(0, segments.size() - 1);
              count >= 0;
              count--) {
             String ancestorPath = JsonPointer.toPointer(
                     segments.subList(0, count));
-            FrozenNode ancestor = root.at(ancestorPath);
+            FrozenNode ancestor = rebuiltRoot.at(ancestorPath);
             if (ancestor == null) {
                 continue;
             }
-            enforceRebuiltContainerLimit(
-                    ancestor, ancestorPath, path, operation);
+            enforceRebuiltContainerLimit(ancestor);
             semantic.nodeIdentitiesEstablished(1L, context);
             if (!ancestor.hasItems()) {
                 semantic.objectMembersRebuilt(
                         directMemberCount(ancestor), context);
                 semantic.directIdentityInput(
-                        NodeCanonicalizer.directIdentityCanonicalSize(
-                                ancestor.toNode()),
+                        FrozenCanonicalWriter.directIdentityCanonicalSize(
+                                ancestor),
                         context);
             }
         }
@@ -202,8 +255,8 @@ final class MutationGasCharger {
             semantic.objectMembersRebuilt(
                     directMemberCount(node), context);
             semantic.directIdentityInput(
-                    NodeCanonicalizer.directIdentityCanonicalSize(
-                            node.toNode()),
+                    FrozenCanonicalWriter.directIdentityCanonicalSize(
+                            node),
                     context);
         }
         chargeFrozenIdentitySubtree(node.getType(), semantic, context, visited);
@@ -220,11 +273,7 @@ final class MutationGasCharger {
         }
     }
 
-    private void enforceRebuiltContainerLimit(
-            FrozenNode container,
-            String containerPath,
-            String patchPath,
-            JsonPatch.Op operation) {
+    private void enforceRebuiltContainerLimit(FrozenNode container) {
         long observed;
         String limitName;
         if (container.hasItems()) {
@@ -233,19 +282,6 @@ final class MutationGasCharger {
         } else {
             observed = directMemberCount(container);
             limitName = GasScheduleConstants.PortableLimit.DIRECT_OBJECT_ENTRIES;
-        }
-        String parent = parentPointer(patchPath);
-        if (containerPath.equals(parent)) {
-            FrozenNode existing = container.at(
-                    JsonPointer.ROOT
-                            + JsonPointer.escape(lastSegment(patchPath)));
-            if (operation == JsonPatch.Op.REMOVE && existing != null) {
-                observed--;
-            } else if ((operation == JsonPatch.Op.ADD
-                    || operation == JsonPatch.Op.REPLACE)
-                    && existing == null) {
-                observed++;
-            }
         }
         enforcePortableLimit(
                 ProcessorErrorCategory.DirectNodeLimitExceeded,
@@ -273,21 +309,6 @@ final class MutationGasCharger {
                 node.hasItems()
                         ? node.getItems().size()
                         : directMemberCount(node));
-    }
-
-    private static String parentPointer(String pointer) {
-        List<String> segments = JsonPointer.split(pointer);
-        return segments.isEmpty()
-                ? JsonPointer.ROOT
-                : JsonPointer.toPointer(
-                        segments.subList(0, segments.size() - 1));
-    }
-
-    private static String lastSegment(String pointer) {
-        List<String> segments = JsonPointer.split(pointer);
-        return segments.isEmpty()
-                ? ""
-                : segments.get(segments.size() - 1);
     }
 
     private static long directMemberCount(Node node) {

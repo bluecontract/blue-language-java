@@ -35,6 +35,7 @@ public final class SubscriptionSurfaceValidationContext {
     private final List<SubscriptionDelta.Entry> activeSubscriptionIntervals;
     private final boolean activeSubscriptionIntervalsSupplied;
     private final boolean retainedIntervalInputSurface;
+    private final boolean legacyRecursiveExactReferenceTraversal;
     private final GasSchedule gasSchedule;
     private final ExternalOrderKey currentEventOrderKey;
     private final Long committingRootRevision;
@@ -62,6 +63,8 @@ public final class SubscriptionSurfaceValidationContext {
                 builder.activeSubscriptionIntervalsSupplied;
         this.retainedIntervalInputSurface =
                 builder.retainedIntervalInputSurface;
+        this.legacyRecursiveExactReferenceTraversal =
+                builder.legacyRecursiveExactReferenceTraversal;
         this.gasSchedule = Objects.requireNonNull(
                 builder.gasSchedule, "gasSchedule");
         this.currentEventOrderKey = builder.currentEventOrderKey;
@@ -161,6 +164,11 @@ public final class SubscriptionSurfaceValidationContext {
      */
     public boolean usesRetainedIntervalInputSurface() {
         return retainedIntervalInputSurface;
+    }
+
+    /** Allows only the legacy recursive host to open an authored exact child. */
+    boolean allowsLegacyRecursiveExactReferenceTraversal() {
+        return legacyRecursiveExactReferenceTraversal;
     }
 
     /** Reports whether current-event membership was frozen for one scope. */
@@ -278,6 +286,7 @@ public final class SubscriptionSurfaceValidationContext {
                 activeSubscriptionIntervals = new ArrayList<>();
         private boolean activeSubscriptionIntervalsSupplied;
         private boolean retainedIntervalInputSurface;
+        private boolean legacyRecursiveExactReferenceTraversal;
         private ResolvedSnapshot inputSnapshot;
         private ResolvedSnapshot tentativeSnapshot;
         private ExternalOrderKey currentEventOrderKey;
@@ -381,6 +390,12 @@ public final class SubscriptionSurfaceValidationContext {
         /** Marks retained intervals as the authoritative prior surface. */
         Builder retainedIntervalInputSurface() {
             this.retainedIntervalInputSurface = true;
+            return this;
+        }
+
+        /** Enables verified ordinary-reference traversal for the legacy host. */
+        Builder legacyRecursiveExactReferenceTraversal() {
+            this.legacyRecursiveExactReferenceTraversal = true;
             return this;
         }
 

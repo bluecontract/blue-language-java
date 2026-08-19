@@ -1,5 +1,7 @@
 package blue.language.processor.closure;
 
+import blue.language.model.wire.BlueLanguageConstants;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -49,7 +51,7 @@ public final class ClosureCommitCompanion {
      * @param expectedInputComponents canonical input component expectations
      * @param inputOccurrenceBindingSetIdentity input row-set expectation
      * @param outputGraphGeneration staged output graph generation
-     * @param resultingDocuments canonical changed document identities
+     * @param resultingDocuments complete canonical resulting document identities
      * @param resultingComponents complete staged component identities
      * @param occurrenceBindingSetIdentity staged complete row-set identity
      * @param graphChangesIdentity exact graph-change sequence identity
@@ -124,6 +126,101 @@ public final class ClosureCommitCompanion {
                     "companionIdentity does not identify this companion");
         }
         this.companionIdentity = asserted;
+    }
+
+    /** Constructs one companion while deriving its exact closed identity. */
+    static ClosureCommitCompanion identified(
+            String invocationIdentity,
+            String inputClosureIdentity,
+            String outputClosureIdentity,
+            long expectedInputGraphGeneration,
+            List<InputDocument> expectedInputDocuments,
+            List<InputComponent> expectedInputComponents,
+            String inputOccurrenceBindingSetIdentity,
+            long outputGraphGeneration,
+            List<DocumentDelta> resultingDocuments,
+            List<ResultComponent> resultingComponents,
+            String occurrenceBindingSetIdentity,
+            String graphChangesIdentity,
+            String checkpointWritesIdentity,
+            String subscriptionDeltasIdentity,
+            String publicEventsIdentity,
+            String gasTraceIdentity,
+            ClosureEnvironment environment) {
+        ClosureEnvironment exactEnvironment = Objects.requireNonNull(
+                environment, "environment");
+        LinkedHashMap<String, Object> value =
+                new LinkedHashMap<String, Object>();
+        value.put("invocationIdentity", invocationIdentity);
+        value.put("inputClosureIdentity", inputClosureIdentity);
+        value.put("outputClosureIdentity", outputClosureIdentity);
+        value.put("expectedInputGraphGeneration",
+                Long.valueOf(expectedInputGraphGeneration));
+        value.put("expectedInputDocuments",
+                inputDocumentValues(expectedInputDocuments));
+        value.put("expectedInputComponents",
+                inputComponentValues(expectedInputComponents));
+        value.put("inputOccurrenceBindingSetIdentity",
+                inputOccurrenceBindingSetIdentity);
+        value.put("outputGraphGeneration",
+                Long.valueOf(outputGraphGeneration));
+        value.put("resultingDocuments",
+                documentDeltaValues(resultingDocuments));
+        value.put("resultingComponents",
+                resultComponentValues(resultingComponents));
+        value.put("occurrenceBindingSetIdentity",
+                occurrenceBindingSetIdentity);
+        value.put("graphChangesIdentity", graphChangesIdentity);
+        value.put("checkpointWritesIdentity", checkpointWritesIdentity);
+        value.put("subscriptionDeltasIdentity",
+                subscriptionDeltasIdentity);
+        value.put("publicEventsIdentity", publicEventsIdentity);
+        value.put("gasTraceIdentity", gasTraceIdentity);
+        value.put("blueLanguageSpecificationIdentity",
+                exactEnvironment.blueLanguageSpecificationIdentity());
+        value.put("contractsSpecificationIdentity",
+                exactEnvironment.contractsSpecificationIdentity());
+        value.put("managedDocumentIdentityPolicyIdentity",
+                exactEnvironment.managedDocumentIdentityPolicyIdentity());
+        value.put("managedBindingPolicyIdentity",
+                exactEnvironment.managedBindingPolicyIdentity());
+        value.put("exactNodeProviderDomainIdentity",
+                exactEnvironment.exactNodeProviderDomainIdentity());
+        value.put("externalOrderPolicyIdentity",
+                exactEnvironment.externalOrderPolicyIdentity());
+        value.put("runtimeRegistryIdentity",
+                exactEnvironment.runtimeRegistryIdentity());
+        value.put("gasManifestIdentity",
+                exactEnvironment.gasManifestIdentity());
+        value.put("portableLimitPolicyIdentity",
+                exactEnvironment.portableLimitPolicyIdentity());
+        value.put("cyclicFinalizerIdentity",
+                exactEnvironment.cyclicFinalizerIdentity());
+        value.put("cyclicProofVerifierIdentity",
+                exactEnvironment.cyclicProofVerifierIdentity());
+        String identity = ClosureIdentityService.INSTANCE.identity(
+                ClosureIdentityService.Constructor
+                        .PLATFORM_COMMIT_COMPANION,
+                value);
+        return new ClosureCommitCompanion(
+                identity,
+                invocationIdentity,
+                inputClosureIdentity,
+                outputClosureIdentity,
+                expectedInputGraphGeneration,
+                expectedInputDocuments,
+                expectedInputComponents,
+                inputOccurrenceBindingSetIdentity,
+                outputGraphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindingSetIdentity,
+                graphChangesIdentity,
+                checkpointWritesIdentity,
+                subscriptionDeltasIdentity,
+                publicEventsIdentity,
+                gasTraceIdentity,
+                exactEnvironment);
     }
 
     /**
@@ -208,9 +305,9 @@ public final class ClosureCommitCompanion {
     }
 
     /**
-     * Returns immutable canonical changed document identities.
+     * Returns immutable complete canonical resulting document identities.
      *
-     * @return immutable canonical changed document identities
+     * @return immutable complete canonical resulting document identities
      */
     public List<DocumentDelta> resultingDocuments() {
         return resultingDocuments;
@@ -566,7 +663,8 @@ public final class ClosureCommitCompanion {
          */
         public InputDocument(DocumentId documentId, String blueId) {
             this.documentId = Objects.requireNonNull(documentId, "documentId");
-            this.blueId = ClosureValueSupport.requireBlueId(blueId, "blueId");
+            this.blueId = ClosureValueSupport.requireBlueId(
+                    blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         }
 
         /**
@@ -591,7 +689,7 @@ public final class ClosureCommitCompanion {
             LinkedHashMap<String, Object> value =
                     new LinkedHashMap<String, Object>();
             value.put("documentId", documentId.value());
-            value.put("blueId", blueId);
+            value.put(BlueLanguageConstants.OBJECT_BLUE_ID, blueId);
             return value;
         }
     }
@@ -677,14 +775,17 @@ public final class ClosureCommitCompanion {
         }
     }
 
-    /** Exact changed document identity triple. */
+    /** Exact resulting document identity triple. */
     public static final class DocumentDelta {
         private final DocumentId documentId;
         private final String beforeBlueId;
         private final String afterBlueId;
 
         /**
-         * Creates one changed document identity triple.
+         * Creates one resulting document identity triple.
+         *
+         * <p>A participating result may retain the same exact identity.  Such
+         * a row remains part of the complete canonical commit surface.</p>
          *
          * @param documentId stable managed lineage
          * @param beforeBlueId exact predecessor identity
@@ -699,10 +800,6 @@ public final class ClosureCommitCompanion {
                     beforeBlueId, "beforeBlueId");
             this.afterBlueId = ClosureValueSupport.requireBlueId(
                     afterBlueId, "afterBlueId");
-            if (this.beforeBlueId.equals(this.afterBlueId)) {
-                throw new IllegalArgumentException(
-                        "A commit document delta cannot be a no-op");
-            }
         }
 
         /**

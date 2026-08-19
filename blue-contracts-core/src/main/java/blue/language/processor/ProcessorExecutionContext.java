@@ -32,6 +32,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
     private final FrozenNode contractNode;
     private final Node event;
     private final Node occurrenceEvent;
+    private final FrozenNode exactEvent;
     private final boolean allowReservedMutation;
     private final ContractEffectBuffer effects = new ContractEffectBuffer();
     private final RuntimeWorkSession runtimeWorkSession;
@@ -50,6 +51,8 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                               FrozenNode contractNode,
                               Node event,
                               Node occurrenceEvent,
+                              FrozenNode exactEvent,
+                              List<ExactBlueValue> carriedExactValues,
                               boolean allowReservedMutation) {
         this.execution = Objects.requireNonNull(execution, "execution");
         this.bundle = Objects.requireNonNull(bundle, "bundle");
@@ -60,10 +63,22 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         this.occurrenceEvent = Objects.requireNonNull(
                 occurrenceEvent,
                 "occurrenceEvent");
+        this.exactEvent = exactEvent;
         this.allowReservedMutation = allowReservedMutation;
         this.runtimeWorkSession =
                 execution.runtime().newRuntimeWorkSession(
                         execution.blue());
+        if (exactEvent != null
+                && runtimeWorkSession.hasSemanticOutputBoundary()) {
+            runtimeWorkSession.carryExactInput(
+                    exactEvent,
+                    exactEvent.blueId());
+        }
+        if (runtimeWorkSession.hasSemanticOutputBoundary()
+                && carriedExactValues != null
+                && !carriedExactValues.isEmpty()) {
+            runtimeWorkSession.carryExactInputs(carriedExactValues);
+        }
     }
 
     /**
@@ -125,6 +140,16 @@ public final class ProcessorExecutionContext implements AutoCloseable {
      */
     public Node occurrenceEvent() {
         return occurrenceEvent;
+    }
+
+    /**
+     * Returns the immutable exact handler event when the delivery boundary
+     * retained it without mutable materialization.
+     *
+     * @return exact handler event, or {@code null} for legacy/internal paths
+     */
+    public FrozenNode frozenEvent() {
+        return exactEvent;
     }
 
     /**

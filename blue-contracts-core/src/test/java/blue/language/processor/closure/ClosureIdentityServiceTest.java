@@ -16,6 +16,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Released C-CLO-01/02 vectors for platform evidence construction. */
 final class ClosureIdentityServiceTest {
@@ -100,6 +101,20 @@ final class ClosureIdentityServiceTest {
                 "sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60bf562f6d79c8eee439",
                 IDS.directDeliverySnapshotIdentity(
                         Collections.singletonList(delivery)));
+
+        DirectLogicalDelivery first = new DirectLogicalDelivery(
+                ManagedScopeKey.root(id("loop-a")), "source", "a", 0L);
+        DirectLogicalDelivery second = new DirectLogicalDelivery(
+                ManagedScopeKey.root(id("loop-b")), "source", "b", 1L);
+        assertTrue(
+                IDS.directDeliveryIdentity(first).compareTo(
+                        IDS.directDeliveryIdentity(second)) > 0,
+                "released canonical delivery order deliberately conflicts "
+                        + "with digest lexical order");
+        assertEquals(
+                "sha256:db046e7ea7e09370e11334a236a1cef57983b48f2c7b76efb3e6952a7a849751",
+                IDS.directDeliverySnapshotIdentity(
+                        Arrays.asList(first, second)));
 
         String rootScope = IDS.managedScopeKeyIdentity(
                 ManagedScopeKey.root(id("a")));

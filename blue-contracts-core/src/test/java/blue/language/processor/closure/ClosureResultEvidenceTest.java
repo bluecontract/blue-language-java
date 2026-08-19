@@ -45,6 +45,11 @@ final class ClosureResultEvidenceTest {
         assertEquals(28, companionSerializedShape(companion).size());
         assertEquals(fixture.snapshot.closureIdentity(),
                 companion.outputClosureIdentity());
+        assertEquals(1, companion.resultingDocuments().size());
+        assertEquals(fixture.blueId,
+                companion.resultingDocuments().get(0).beforeBlueId());
+        assertEquals(fixture.blueId,
+                companion.resultingDocuments().get(0).afterBlueId());
 
         ClosureAttemptResult attempt = ClosureAttemptResult.complete(result);
         assertTrue(attempt.isComplete());
@@ -440,6 +445,28 @@ final class ClosureResultEvidenceTest {
                         Collections.<PublicEventOccurrence>emptyList(),
                         null));
 
+        ManagedDocumentSnapshot unchangedHeadWithAdvancedEpoch =
+                new ManagedDocumentSnapshot(
+                        ROOT,
+                        fixture.blueId,
+                        fixture.document,
+                        false,
+                        false,
+                        true,
+                        1L,
+                        1L);
+        AffectedClosureSnapshot wrongEpoch = snapshot(
+                0L,
+                Collections.singletonList(
+                        unchangedHeadWithAdvancedEpoch),
+                Collections.<ManagedOccurrenceBinding>emptyList(),
+                Collections.singletonList(fixture.component));
+        assertThrows(IllegalArgumentException.class,
+                () -> verifyTransition(fixture, wrongEpoch,
+                        Collections.<CheckpointWrite>emptyList(),
+                        Collections.<PublicEventOccurrence>emptyList(),
+                        null));
+
         DocumentId outsider = new DocumentId("outside");
         CheckpointDomainValue domain = new CheckpointDomainValue(
                 fixture.blueId,
@@ -785,10 +812,15 @@ final class ClosureResultEvidenceTest {
                                 fixture.component.componentIdentity(),
                                 fixture.component.componentStateIdentity(),
                                 null));
+        List<ClosureCommitCompanion.DocumentDelta> resultDocuments =
+                Collections.singletonList(
+                        new ClosureCommitCompanion.DocumentDelta(
+                                ROOT, fixture.blueId, fixture.blueId));
         Map<String, Object> value = companionIdentityValue(
                 fixture,
                 inputDocuments,
                 inputComponents,
+                resultDocuments,
                 resultComponents,
                 environment);
         String companionIdentity = IDENTITIES.identity(
@@ -804,7 +836,7 @@ final class ClosureResultEvidenceTest {
                 inputComponents,
                 fixture.bindingSetIdentity,
                 fixture.snapshot.graphGeneration(),
-                Collections.<ClosureCommitCompanion.DocumentDelta>emptyList(),
+                resultDocuments,
                 resultComponents,
                 fixture.bindingSetIdentity,
                 emptyIdentity(ClosureIdentityService.Constructor.GRAPH_CHANGES),
@@ -821,6 +853,7 @@ final class ClosureResultEvidenceTest {
             Fixture fixture,
             List<ClosureCommitCompanion.InputDocument> inputDocuments,
             List<ClosureCommitCompanion.InputComponent> inputComponents,
+            List<ClosureCommitCompanion.DocumentDelta> resultDocuments,
             List<ClosureCommitCompanion.ResultComponent> resultComponents,
             ClosureEnvironment environment) {
         LinkedHashMap<String, Object> value =
@@ -844,7 +877,14 @@ final class ClosureResultEvidenceTest {
         value.put("inputOccurrenceBindingSetIdentity",
                 fixture.bindingSetIdentity);
         value.put("outputGraphGeneration", Long.valueOf(0L));
-        value.put("resultingDocuments", Collections.emptyList());
+        value.put("resultingDocuments", Collections.<Object>singletonList(
+                object(
+                        "documentId",
+                        resultDocuments.get(0).documentId().value(),
+                        "beforeBlueId",
+                        resultDocuments.get(0).beforeBlueId(),
+                        "afterBlueId",
+                        resultDocuments.get(0).afterBlueId())));
         value.put("resultingComponents", Collections.<Object>singletonList(
                 object(
                         "componentIdentity",

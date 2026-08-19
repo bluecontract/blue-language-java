@@ -33,7 +33,21 @@ final class ScopeHandlerDispatcher {
             String channelKey,
             Node event) {
         return dispatch(
-                scopePath, bundle, channelKey, event, event, false);
+                scopePath, bundle, channelKey, event, event, null,
+                java.util.Collections.<ExactBlueValue>emptyList(), false);
+    }
+
+    boolean dispatch(
+            String scopePath,
+            ContractBundle bundle,
+            String channelKey,
+            FrozenNode exactEvent,
+            List<ExactBlueValue> carriedExactValues) {
+        FrozenNode carried = Objects.requireNonNull(exactEvent, "exactEvent");
+        Node event = carried.toNode();
+        return dispatch(
+                scopePath, bundle, channelKey, event, event, carried,
+                carriedExactValues, false);
     }
 
     boolean dispatch(
@@ -48,6 +62,8 @@ final class ScopeHandlerDispatcher {
                 channelKey,
                 event,
                 event,
+                null,
+                java.util.Collections.<ExactBlueValue>emptyList(),
                 allowTerminatingScope);
     }
 
@@ -63,6 +79,8 @@ final class ScopeHandlerDispatcher {
                 channelKey,
                 event,
                 occurrenceEvent,
+                null,
+                java.util.Collections.<ExactBlueValue>emptyList(),
                 false);
     }
 
@@ -72,6 +90,8 @@ final class ScopeHandlerDispatcher {
             String channelKey,
             Node event,
             Node occurrenceEvent,
+            FrozenNode exactEvent,
+            List<ExactBlueValue> carriedExactValues,
             boolean allowTerminatingScope) {
         ProcessingObserver metrics = owner.observer();
         long discoveryStart = System.nanoTime();
@@ -108,6 +128,8 @@ final class ScopeHandlerDispatcher {
                     channelKey,
                     event,
                     occurrenceEvent,
+                    exactEvent,
+                    carriedExactValues,
                     bundle,
                     handler,
                     executableHandler,
@@ -205,6 +227,8 @@ final class ScopeHandlerDispatcher {
             String channelKey,
             Node event,
             Node occurrenceEvent,
+            FrozenNode exactEvent,
+            List<ExactBlueValue> carriedExactValues,
             ContractBundle bundle,
             ContractBundle.HandlerBinding selectedHandler,
             ContractBundle.HandlerBinding executableHandler,
@@ -216,6 +240,8 @@ final class ScopeHandlerDispatcher {
                 bundle,
                 event,
                 occurrenceEvent,
+                exactEvent,
+                carriedExactValues,
                 executableHandler.key(),
                 executableHandler.node(),
                 false);

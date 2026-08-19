@@ -26,9 +26,10 @@ public final class ManagedDocumentStepRoute {
         this.workKind = Objects.requireNonNull(workKind, "workKind");
         if (workKind != ManagedDocumentWorkKind.TRIGGERED_EVENT
                 && workKind != ManagedDocumentWorkKind.EMBEDDED_EVENT
-                && workKind != ManagedDocumentWorkKind.DOCUMENT_UPDATE) {
+                && workKind != ManagedDocumentWorkKind.DOCUMENT_UPDATE
+                && workKind != ManagedDocumentWorkKind.LIFECYCLE) {
             throw new IllegalArgumentException(
-                    "Only routed event/update work has a classified route");
+                    "Only routed event/update/lifecycle work has a classified route");
         }
         this.channelKey = Objects.requireNonNull(channelKey, "channelKey");
         this.exactPayload = Objects.requireNonNull(
@@ -46,7 +47,7 @@ public final class ManagedDocumentStepRoute {
     /**
      * Returns the selected processor-managed work role.
      *
-     * @return triggered, embedded, or document-update work kind
+     * @return triggered, embedded, document-update, or lifecycle work kind
      */
     public ManagedDocumentWorkKind workKind() {
         return workKind;

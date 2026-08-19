@@ -24,6 +24,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_INITIALIZED;
+import static blue.language.processor.util.ProcessorContractConstants.KEY_TERMINATED;
+
 /**
  * Authoritative constructor for Contracts 1.0 platform-evidence identities.
  *
@@ -214,11 +219,11 @@ final class ClosureIdentityService {
     String identity(Constructor constructor, Object value) {
         Constructor selected = Objects.requireNonNull(
                 constructor, "constructor");
-        Object admitted = copyPortableValue(value, "value");
+        Object admitted = copyPortableValue(value, OBJECT_VALUE);
         validateConstructor(selected, admitted);
         LinkedHashMap<String, Object> envelope = objectValue();
         envelope.put("domain", selected.domain);
-        envelope.put("value", admitted);
+        envelope.put(OBJECT_VALUE, admitted);
         return "sha256:" + hex(sha256(canonicalBytes(envelope)));
     }
 
@@ -249,7 +254,7 @@ final class ClosureIdentityService {
         for (Map.Entry<String, Long> entry : selected.limits().entrySet()) {
             LinkedHashMap<String, Object> limit = objectValue();
             limit.put("name", entry.getKey());
-            limit.put("value", entry.getValue());
+            limit.put(OBJECT_VALUE, entry.getValue());
             limits.add(limit);
         }
         LinkedHashMap<String, Object> value = objectValue();
@@ -548,6 +553,13 @@ final class ClosureIdentityService {
 
     /** Constructs the complete Contracts 1.0 invocation identity. */
     String invocationIdentity(ClosureInvocationInput input) {
+        return identity(Constructor.INVOCATION,
+                invocationIdentityConstructorValue(input));
+    }
+
+    /** Returns the exact closed constructor value used by invocation identity. */
+    Map<String, Object> invocationIdentityConstructorValue(
+            ClosureInvocationInput input) {
         ClosureInvocationInput selected = Objects.requireNonNull(
                 input, "input");
         AffectedClosureSnapshot snapshot = selected.snapshot();
@@ -588,7 +600,7 @@ final class ClosureIdentityService {
                 environment.gasManifestIdentity());
         value.put("portableLimitPolicyIdentity",
                 environment.portableLimitPolicyIdentity());
-        return identity(Constructor.INVOCATION, value);
+        return value;
     }
 
     /** Constructs one direct-delivery identity. */
@@ -762,7 +774,7 @@ final class ClosureIdentityService {
     private static void validateConstructor(
             Constructor constructor, Object value) {
         if (!constructor.fields.isEmpty()) {
-            requireExactFields(requireObject(value, "value"),
+            requireExactFields(requireObject(value, OBJECT_VALUE),
                     constructor.fields);
         } else if (!(value instanceof List)) {
             throw new IllegalArgumentException(
@@ -774,73 +786,83 @@ final class ClosureIdentityService {
             case ADMISSION_POLICY:
             case EXACT_NODE_PROVIDER_DOMAIN:
             case EXTERNAL_ORDER_POLICY:
-                requireNonEmptyText(requireObject(value, "value"), "label");
+                requireNonEmptyText(
+                        requireObject(value, OBJECT_VALUE), "label");
                 return;
             case MANAGED_OCCURRENCE:
             case MANAGED_OCCURRENCE_BINDING:
-                validateOccurrenceValue(requireObject(value, "value"),
+                validateOccurrenceValue(requireObject(value, OBJECT_VALUE),
                         constructor == Constructor.MANAGED_OCCURRENCE_BINDING);
                 return;
             case MANAGED_SCOPE_KEY:
-                validateScopeValue(requireObject(value, "value"));
+                validateScopeValue(requireObject(value, OBJECT_VALUE));
                 return;
             case COMPONENT:
-                validateComponentValue(requireObject(value, "value"));
+                validateComponentValue(requireObject(value, OBJECT_VALUE));
                 return;
             case CYCLIC_PROOF:
-                validateCyclicProofValue(requireObject(value, "value"));
+                validateCyclicProofValue(
+                        requireObject(value, OBJECT_VALUE));
                 return;
             case COMPONENT_STATE:
-                validateComponentStateValue(requireObject(value, "value"));
+                validateComponentStateValue(
+                        requireObject(value, OBJECT_VALUE));
                 return;
             case PORTABLE_LIMIT_POLICY:
-                validateNamedLimits(requireObject(value, "value"),
-                        "limits", "name", "value");
+                validateNamedLimits(requireObject(value, OBJECT_VALUE),
+                        "limits", "name", OBJECT_VALUE);
                 return;
             case ADMISSION_CAUSE:
-                validateAdmissionCause(requireObject(value, "value"));
+                validateAdmissionCause(requireObject(value, OBJECT_VALUE));
                 return;
             case SOURCE_REVISION_RECEIPT:
-                validateRevision(requireObject(value, "value"), false);
+                validateRevision(
+                        requireObject(value, OBJECT_VALUE), false);
                 return;
             case MANAGED_REVISION_CAUSE:
-                validateRevision(requireObject(value, "value"), true);
+                validateRevision(requireObject(value, OBJECT_VALUE), true);
                 return;
             case EXTERNAL_CAUSE:
-                validateExternalCause(requireObject(value, "value"));
+                validateExternalCause(requireObject(value, OBJECT_VALUE));
                 return;
             case EXECUTION_POLICY:
-                validateExecutionPolicy(requireObject(value, "value"));
+                validateExecutionPolicy(
+                        requireObject(value, OBJECT_VALUE));
                 return;
             case DIRECT_DELIVERY:
-                validateDirectDelivery(requireObject(value, "value"));
+                validateDirectDelivery(requireObject(value, OBJECT_VALUE));
                 return;
             case DIRECT_DELIVERY_SNAPSHOT:
-                validateIdentityArray(value, "directDeliveryIdentities", true);
+                // These identities preserve the already-frozen direct
+                // delivery order.  Digest lexical order is unrelated to the
+                // normative raw-occurrence/target/scope/channel key order.
+                validateIdentityArray(value, "directDeliveryIdentities", false);
                 return;
             case OCCURRENCE_BINDING_SET:
                 validateBindingSet(value);
                 return;
             case AFFECTED_CLOSURE:
-                validateClosure(requireObject(value, "value"));
+                validateClosure(requireObject(value, OBJECT_VALUE));
                 return;
             case INVOCATION:
-                validateInvocation(requireObject(value, "value"));
+                validateInvocation(requireObject(value, OBJECT_VALUE));
                 return;
             case TRANSITION_OCCURRENCE:
-                validateTransition(requireObject(value, "value"));
+                validateTransition(requireObject(value, OBJECT_VALUE));
                 return;
             case EVENT_OCCURRENCE:
-                validateEventOccurrence(requireObject(value, "value"));
+                validateEventOccurrence(
+                        requireObject(value, OBJECT_VALUE));
                 return;
             case WORK_OCCURRENCE:
-                validateWorkOccurrence(requireObject(value, "value"));
+                validateWorkOccurrence(requireObject(value, OBJECT_VALUE));
                 return;
             case CHANNEL_OCCURRENCE:
-                validateChannelOccurrence(requireObject(value, "value"));
+                validateChannelOccurrence(
+                        requireObject(value, OBJECT_VALUE));
                 return;
             case SUBSCRIPTION:
-                validateSubscription(requireObject(value, "value"));
+                validateSubscription(requireObject(value, OBJECT_VALUE));
                 return;
             case GRAPH_CHANGES:
                 validateOrdinalArray(value, "graphChangeOrdinal",
@@ -859,13 +881,14 @@ final class ClosureIdentityService {
                         "public events");
                 return;
             case REJECTED_CHARGE:
-                validateRejectedCharge(requireObject(value, "value"));
+                validateRejectedCharge(requireObject(value, OBJECT_VALUE));
                 return;
             case GAS_TRACE:
                 requireArray(value, "gasTrace");
                 return;
             case ADMISSION_CANDIDATE:
-                validateAdmissionCandidate(requireObject(value, "value"));
+                validateAdmissionCandidate(
+                        requireObject(value, OBJECT_VALUE));
                 return;
             case PLATFORM_COMMIT_COMPANION:
                 // Their closed top-level field sets are enforced above.  The
@@ -1279,12 +1302,13 @@ final class ClosureIdentityService {
         for (Object itemValue : documents) {
             Map<String, Object> item = requireObject(itemValue, "document");
             requireExactFields(item, Arrays.asList(
-                    "documentId", "blueId", "initialized", "terminated",
+                    "documentId", OBJECT_BLUE_ID,
+                    KEY_INITIALIZED, KEY_TERMINATED,
                     "publicRoot", "epoch", "componentGeneration"));
             String documentId = requireNonEmptyText(item, "documentId");
-            requireNonEmptyText(item, "blueId");
-            requireBoolean(item, "initialized");
-            requireBoolean(item, "terminated");
+            requireNonEmptyText(item, OBJECT_BLUE_ID);
+            requireBoolean(item, KEY_INITIALIZED);
+            requireBoolean(item, KEY_TERMINATED);
             requireBoolean(item, "publicRoot");
             requireSafeInteger(item, "epoch");
             requireSafeInteger(item, "componentGeneration");
@@ -1307,9 +1331,10 @@ final class ClosureIdentityService {
         for (Object stateValue : states) {
             Map<String, Object> state = requireObject(
                     stateValue, "memberState");
-            requireExactFields(state, Arrays.asList("documentId", "blueId"));
+            requireExactFields(
+                    state, Arrays.asList("documentId", OBJECT_BLUE_ID));
             String documentId = requireNonEmptyText(state, "documentId");
-            requireNonEmptyText(state, "blueId");
+            requireNonEmptyText(state, OBJECT_BLUE_ID);
             if (requireDocumentOrder && previous != null
                     && ClosureValueSupport.comparePortableText(
                     previous, documentId) >= 0) {
@@ -1579,7 +1604,9 @@ final class ClosureIdentityService {
             LinkedHashMap<String, Object> state = objectValue();
             state.put("documentId", component.orderedMemberDocumentIds()
                     .get(index).value());
-            state.put("blueId", component.orderedMemberBlueIds().get(index));
+            state.put(
+                    OBJECT_BLUE_ID,
+                    component.orderedMemberBlueIds().get(index));
             result.add(state);
         }
         return result;
@@ -1606,7 +1633,7 @@ final class ClosureIdentityService {
         for (AdmissionCandidate.CandidateMemberState state : states) {
             LinkedHashMap<String, Object> value = objectValue();
             value.put("documentId", state.documentId().value());
-            value.put("blueId", state.blueId());
+            value.put(OBJECT_BLUE_ID, state.blueId());
             result.add(value);
         }
         return result;
@@ -1618,9 +1645,13 @@ final class ClosureIdentityService {
         for (ManagedDocumentSnapshot document : managedDocuments) {
             LinkedHashMap<String, Object> item = objectValue();
             item.put("documentId", document.documentId().value());
-            item.put("blueId", document.blueId());
-            item.put("initialized", Boolean.valueOf(document.initialized()));
-            item.put("terminated", Boolean.valueOf(document.terminated()));
+            item.put(OBJECT_BLUE_ID, document.blueId());
+            item.put(
+                    KEY_INITIALIZED,
+                    Boolean.valueOf(document.initialized()));
+            item.put(
+                    KEY_TERMINATED,
+                    Boolean.valueOf(document.terminated()));
             item.put("publicRoot", Boolean.valueOf(document.publicRoot()));
             item.put("epoch", Long.valueOf(document.epoch()));
             item.put("componentGeneration",

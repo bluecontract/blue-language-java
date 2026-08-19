@@ -303,22 +303,12 @@ final class ClosureInvocationVerifier {
             }
             Node value = NodePathEditor.getOrNull(
                     source.document(), binding.sourcePath());
-            if (value == null || !sameExactTarget(value, target)) {
+            if (!ManagedOccurrenceTargetVerifier.establishesExactTarget(
+                    value, target)) {
                 return false;
             }
         }
         return true;
-    }
-
-    private static boolean sameExactTarget(
-            Node occurrenceValue, ManagedDocumentSnapshot target) {
-        if (occurrenceValue.isReferenceOnly()) {
-            return target.blueId().equals(occurrenceValue.getBlueId());
-        }
-        return NodeWireForm.get(
-                occurrenceValue, NodeWireForm.Strategy.SIMPLE)
-                .equals(NodeWireForm.get(
-                        target.document(), NodeWireForm.Strategy.SIMPLE));
     }
 
     private static void requireClaim(

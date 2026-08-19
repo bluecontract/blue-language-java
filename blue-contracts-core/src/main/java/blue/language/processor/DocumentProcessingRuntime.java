@@ -517,8 +517,12 @@ final class DocumentProcessingRuntime {
         gasContext.processMeter().drainEvent(); }
     public void chargeCheckpointUpdate() {
         gasContext.processMeter().checkpointUpdate(); }
+    public void chargeCheckpointUpdate(GasChargeContext context) {
+        gasContext.processMeter().checkpointUpdate(context); }
     public void chargeCheckpointCompared() {
         gasContext.processMeter().checkpointCompared(); }
+    public void chargeCheckpointCompared(GasChargeContext context) {
+        gasContext.processMeter().checkpointCompared(context); }
     public void chargeProcessorMarkerWritten(String reason) {
         gasContext.processMeter().processorMarker(reason); }
     public void chargeTerminationRequest() {

@@ -178,9 +178,9 @@ final class ClosureEvidenceApiTest {
                         Collections.<DirectLogicalDelivery>emptyList(),
                         hash('4'), policy, environment(hash('2'))));
 
-        AffectedClosureSnapshot historical = snapshot(false, 3L);
+        AffectedClosureSnapshot historical = snapshot(false, 0L);
         ManagedRevisionCause revision = new ManagedRevisionCause(
-                hash('5'), hash('d'), B, 3L, 4L,
+                hash('5'), hash('d'), B, 0L, 1L,
                 "blue-b-old", "blue-b", node("b-after"),
                 hash('6'), hash('7'));
         ClosureInvocationInput managed = ClosureInvocationInput.processClosure(
@@ -229,7 +229,7 @@ final class ClosureEvidenceApiTest {
             boolean publicRoot) {
         return new ManagedDocumentSnapshot(
                 documentId, blueId, node(documentId.value()),
-                true, false, publicRoot, 0L, 1L);
+                true, false, publicRoot, 1L, 1L);
     }
 
     private static ManagedOccurrenceBinding binding(

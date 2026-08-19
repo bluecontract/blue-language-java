@@ -3,6 +3,8 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -56,9 +58,39 @@ public final class CheckpointDomain {
             List<String> sourceContributionNodeBlueIds,
             ExternalChannelDependencySnapshot dependencies,
             String runtimeDiscriminator) {
+        return DirectBlueIdCalculator.calculateBlueId(value(
+                effectiveTypeBlueId,
+                sourceContributionNodeBlueIds,
+                dependencies,
+                runtimeDiscriminator));
+    }
+
+    /**
+     * Constructs the complete exact default-domain value before it is reduced
+     * to a BlueId reference in processor-owned checkpoint state.
+     *
+     * <p>This is the authoritative inverse surface used by atomic hosts that
+     * must publish complete before/after checkpoint evidence. It shares the
+     * same constructor as {@link #derive(String, List,
+     * ExternalChannelDependencySnapshot, String)}.</p>
+     *
+     * @param effectiveTypeBlueId exact effective channel type identity
+     * @param sourceContributionNodeBlueIds ordered source identities
+     * @param dependencies exact deterministic dependencies, or {@code null}
+     * @param runtimeDiscriminator optional non-empty runtime discriminator
+     * @return detached complete exact domain value
+     */
+    public static Node value(
+            String effectiveTypeBlueId,
+            List<String> sourceContributionNodeBlueIds,
+            ExternalChannelDependencySnapshot dependencies,
+            String runtimeDiscriminator) {
         if (effectiveTypeBlueId == null || effectiveTypeBlueId.isEmpty()) {
             throw new IllegalArgumentException("effectiveTypeBlueId must not be empty");
         }
+        List<String> contributions = sourceContributionNodeBlueIds != null
+                ? sourceContributionNodeBlueIds
+                : Collections.<String>emptyList();
         Node domain = new Node()
                 .properties(
                         ProcessorIdentityConstants.Field.CONTRACTS_VERSION,
@@ -67,11 +99,13 @@ public final class CheckpointDomain {
                 .properties(
                         ProcessorIdentityConstants.Field.EFFECTIVE_TYPE_BLUE_ID,
                         new Node().value(effectiveTypeBlueId));
-        java.util.List<Node> contributionItems = new java.util.ArrayList<>();
-        if (sourceContributionNodeBlueIds != null) {
-            for (String blueId : sourceContributionNodeBlueIds) {
-                contributionItems.add(new Node().value(blueId));
+        List<Node> contributionItems = new ArrayList<Node>();
+        for (String blueId : contributions) {
+            if (blueId == null || blueId.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "source contribution BlueIds must be non-empty");
             }
+            contributionItems.add(new Node().value(blueId));
         }
         domain.properties(
                 ProcessorIdentityConstants.Field
@@ -84,8 +118,7 @@ public final class CheckpointDomain {
         if (!exactDependencies
                 .deterministicDependencyNodeBlueIds()
                 .isEmpty()) {
-            java.util.List<Node> dependencyItems =
-                    new java.util.ArrayList<>();
+            List<Node> dependencyItems = new ArrayList<Node>();
             for (String blueId : exactDependencies
                     .deterministicDependencyNodeBlueIds()) {
                 dependencyItems.add(
@@ -101,6 +134,6 @@ public final class CheckpointDomain {
                     ProcessorIdentityConstants.Field.RUNTIME_DISCRIMINATOR,
                     new Node().value(runtimeDiscriminator));
         }
-        return DirectBlueIdCalculator.calculateBlueId(domain);
+        return domain;
     }
 }

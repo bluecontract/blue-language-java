@@ -480,8 +480,16 @@ public final class GasMeter {
         processorCharges.checkpointCompared();
     }
 
+    void chargeCheckpointCompared(GasChargeContext context) {
+        processorCharges.checkpointCompared(context);
+    }
+
     void chargeCheckpointUpdate() {
         processorCharges.checkpointUpdate();
+    }
+
+    void chargeCheckpointUpdate(GasChargeContext context) {
+        processorCharges.checkpointUpdate(context);
     }
 
     void chargeProcessorMarkerWritten(String reason) {
@@ -565,7 +573,8 @@ public final class GasMeter {
                     local.limit,
                     GasLimitExceededException.ApplicableCapKind.LOCAL,
                     local.documentId,
-                    localRemaining);
+                    localRemaining,
+                    context);
         }
         long sharedAdmitted = totalGas + reservedRuntimeGas;
         throw new GasLimitExceededException(
@@ -577,7 +586,8 @@ public final class GasMeter {
                 gasLimit,
                 GasLimitExceededException.ApplicableCapKind.SHARED,
                 null,
-                sharedRemaining);
+                sharedRemaining,
+                context);
     }
 
     private LocalAllowance localAllowance(GasChargeContext context) {
@@ -864,7 +874,13 @@ public final class GasMeter {
             if (subtotal > gasLimit - totalGas) {
                 GasLimitExceededException rejection =
                         new GasLimitExceededException(
-                        namespace, counter, quantity, weight, totalGas, gasLimit);
+                        namespace,
+                        counter,
+                        quantity,
+                        weight,
+                        totalGas,
+                        gasLimit,
+                        exactContext);
                 if (admissionController != null) {
                     admissionController.rejected(
                             this, rejection);

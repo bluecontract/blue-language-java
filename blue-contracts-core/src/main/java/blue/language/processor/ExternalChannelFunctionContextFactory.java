@@ -284,8 +284,18 @@ final class ExternalChannelFunctionContextFactory {
                                 owner,
                                 eventEvaluation,
                                 "exact event fragment materialization");
-                        return eventMatcher.materializeExactReference(
-                                reference);
+                        FrozenNode exact = eventMatcher
+                                .materializeExactReference(reference);
+                        if (runtimeWorkSession != null
+                                && runtimeWorkSession
+                                .hasSemanticOutputBoundary()) {
+                            String blueId = reference.isReferenceOnly()
+                                    ? reference.getReferenceBlueId()
+                                    : reference.blueId();
+                            runtimeWorkSession.carryExactInput(
+                                    exact, blueId);
+                        }
+                        return exact;
                     }
                 },
                 runtimeWorkSession);

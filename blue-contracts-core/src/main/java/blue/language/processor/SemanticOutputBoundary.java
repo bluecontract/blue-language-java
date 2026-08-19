@@ -10,6 +10,8 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.identity.BlueIds;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -214,6 +216,67 @@ public final class SemanticOutputBoundary {
         }
         admittedByIdentity.put(exact.blueId(), exact);
         return exact;
+    }
+
+    /**
+     * Carries an exact runtime cursor by an identity already admitted for this
+     * invocation.
+     *
+     * <p>This is the return lane for hosted runtimes that preserve an exact
+     * input identity while exposing a run-local resolved cursor for reads. If
+     * the identity is already present, the invocation-owned capability is
+     * returned directly and the cursor is never normalized or re-hashed. A
+     * previously unseen identity follows the ordinary admission path and must
+     * reproduce the asserted identity.</p>
+     *
+     * @param blueId exact identity retained by the hosted runtime
+     * @param cursor canonical value, pure reference, or resolved read cursor
+     * @return invocation-owned exact capability
+     */
+    public synchronized ExactBlueValue carryExactValue(
+            String blueId,
+            FrozenNode cursor) {
+        ensureOpen();
+        String asserted = BlueIds.requireBlueIdOrCyclicMember(
+                Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID),
+                "hosted exact value blueId");
+        ExactBlueValue existing = admittedByIdentity.get(asserted);
+        if (existing != null) {
+            return existing;
+        }
+        ExactBlueValue admitted = admit(
+                Objects.requireNonNull(cursor, "cursor"));
+        if (!asserted.equals(admitted.blueId())) {
+            throw new InvalidExecutionEvidenceException(
+                    "Hosted runtime exact cursor changed identity: expected "
+                            + asserted + " but calculated "
+                            + admitted.blueId() + " (strict="
+                            + cursor.isStrictCanonical() + ", reference="
+                            + cursor.isReferenceOnly() + ")");
+        }
+        return admitted;
+    }
+
+    /**
+     * Carries an exact capability only within the invocation that issued it.
+     *
+     * <p>This is the hosted-runtime return lane. Unlike
+     * {@link #admit(ExactBlueValue)}, it never turns a capability from another
+     * invocation into newly admitted output.</p>
+     *
+     * @param exact invocation-issued exact capability
+     * @return the same invocation-owned exact value
+     * @throws InvalidExecutionEvidenceException when ownership changed
+     */
+    public synchronized ExactBlueValue carryExactCapability(
+            ExactBlueValue exact) {
+        ensureOpen();
+        ExactBlueValue supplied = Objects.requireNonNull(exact, "exact");
+        if (!supplied.belongsTo(admissionMemo)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Hosted exact capability belongs to another invocation");
+        }
+        return admit(supplied);
     }
 
     private ExactBlueValue admitReference(FrozenNode reference) {
@@ -577,14 +640,69 @@ public final class SemanticOutputBoundary {
     synchronized void carryExactInput(
             Node input,
             String blueId) {
-        admit(new ExactBlueValue(
+        carryExactInput(
                 FrozenNode.fromResolvedNode(
-                        Objects.requireNonNull(
-                                input, "input")
-                                .clone()),
-                Objects.requireNonNull(
-                        blueId, BlueLanguageConstants.OBJECT_BLUE_ID),
-                admissionMemo));
+                        Objects.requireNonNull(input, "input").clone()),
+                blueId);
+    }
+
+    synchronized void carryExactInput(
+            FrozenNode input,
+            String blueId) {
+        FrozenNode frozen = Objects.requireNonNull(input, "input");
+        String asserted = BlueIds.requireBlueIdOrCyclicMember(
+                Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID),
+                "exact input blueId");
+        admit(new ExactBlueValue(frozen, asserted, admissionMemo));
+        for (Map.Entry<String, FrozenNode> entry : frozen.pathIndex().entrySet()) {
+            if (entry.getKey().isEmpty()) {
+                continue;
+            }
+            FrozenNode descendant = entry.getValue();
+            if (descendant == null) {
+                continue;
+            }
+            if (descendant.isReferenceOnly()) {
+                /*
+                 * The authenticated exact input proves this literal reference
+                 * edge and its asserted identity, but not target content.
+                 * Retain only the opaque reference capability. A hosted read
+                 * may later materialize a schema-shaped cursor, while output
+                 * must still carry this exact edge rather than re-hash that
+                 * cursor as different content.
+                 */
+                admit(new ExactBlueValue(
+                        descendant,
+                        descendant.getReferenceBlueId(),
+                        admissionMemo));
+                continue;
+            }
+            if (!descendant.isStrictCanonical()) {
+                continue;
+            }
+            admit(new ExactBlueValue(
+                    descendant,
+                    descendant.blueId(),
+                    admissionMemo));
+        }
+    }
+
+    synchronized List<ExactBlueValue> exactValuesSnapshot() {
+        return java.util.Collections.unmodifiableList(
+                new ArrayList<>(new java.util.LinkedHashSet<>(
+                        admittedByIdentity.values())));
+    }
+
+    synchronized void carryExactInputs(
+            Collection<ExactBlueValue> inputs) {
+        for (ExactBlueValue input : Objects.requireNonNull(inputs, "inputs")) {
+            ExactBlueValue source = Objects.requireNonNull(input, "input");
+            ExactBlueValue carried = new ExactBlueValue(
+                    source.frozenValue(),
+                    source.blueId(),
+                    admissionMemo);
+            admit(carried);
+        }
     }
 
     private static SemanticGasMeter sessionSemanticMeter(

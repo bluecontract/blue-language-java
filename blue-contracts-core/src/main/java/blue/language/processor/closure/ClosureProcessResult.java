@@ -123,7 +123,7 @@ public final class ClosureProcessResult {
                 rejectedWorkOccurrence,
                 platformCommitCompanion,
                 diagnostic,
-                null);
+                (ComponentFinalizationResult) null);
     }
 
     /**
@@ -156,6 +156,122 @@ public final class ClosureProcessResult {
             ClosureCommitCompanion platformCommitCompanion,
             ProcessorDiagnostic diagnostic,
             ComponentFinalizationResult reusableFinalization) {
+        this(
+                inputSnapshot,
+                status,
+                invocationIdentity,
+                outputClosureIdentity,
+                graphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindings,
+                occurrenceBindingSetIdentity,
+                graphChanges,
+                graphChangesIdentity,
+                subscriptionDeltas,
+                subscriptionDeltasIdentity,
+                checkpointWrites,
+                checkpointWritesIdentity,
+                publicEvents,
+                publicEventsIdentity,
+                totalGas,
+                gasTrace,
+                gasTraceIdentity,
+                rejectedCharge,
+                rejectedWorkOccurrence,
+                platformCommitCompanion,
+                diagnostic,
+                reusableFinalization,
+                Collections.<DocumentId>emptySet());
+    }
+
+    /**
+     * Admission-rejection construction hook which derives the only
+     * out-of-closure gas-attribution lineages from exact candidate members.
+     * Public and committing constructors retain the strict empty allowance.
+     */
+    ClosureProcessResult(
+            AffectedClosureSnapshot inputSnapshot,
+            ProcessorStatus status,
+            String invocationIdentity,
+            String outputClosureIdentity,
+            long graphGeneration,
+            List<ResultingDocument> resultingDocuments,
+            List<ComponentSnapshot> resultingComponents,
+            List<ManagedOccurrenceBinding> occurrenceBindings,
+            String occurrenceBindingSetIdentity,
+            List<GraphChange> graphChanges,
+            String graphChangesIdentity,
+            List<SubscriptionDelta> subscriptionDeltas,
+            String subscriptionDeltasIdentity,
+            List<CheckpointWrite> checkpointWrites,
+            String checkpointWritesIdentity,
+            List<PublicEventOccurrence> publicEvents,
+            String publicEventsIdentity,
+            long totalGas,
+            List<GasTraceEntry> gasTrace,
+            String gasTraceIdentity,
+            RejectedCharge rejectedCharge,
+            ClosureWorkOccurrence rejectedWorkOccurrence,
+            ClosureCommitCompanion platformCommitCompanion,
+            ProcessorDiagnostic diagnostic,
+            AdmissionCandidate rejectedAdmissionCandidate) {
+        this(
+                inputSnapshot,
+                status,
+                invocationIdentity,
+                outputClosureIdentity,
+                graphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindings,
+                occurrenceBindingSetIdentity,
+                graphChanges,
+                graphChangesIdentity,
+                subscriptionDeltas,
+                subscriptionDeltasIdentity,
+                checkpointWrites,
+                checkpointWritesIdentity,
+                publicEvents,
+                publicEventsIdentity,
+                totalGas,
+                gasTrace,
+                gasTraceIdentity,
+                rejectedCharge,
+                rejectedWorkOccurrence,
+                platformCommitCompanion,
+                diagnostic,
+                null,
+                candidateGasDocumentIds(rejectedAdmissionCandidate));
+    }
+
+    private ClosureProcessResult(
+            AffectedClosureSnapshot inputSnapshot,
+            ProcessorStatus status,
+            String invocationIdentity,
+            String outputClosureIdentity,
+            long graphGeneration,
+            List<ResultingDocument> resultingDocuments,
+            List<ComponentSnapshot> resultingComponents,
+            List<ManagedOccurrenceBinding> occurrenceBindings,
+            String occurrenceBindingSetIdentity,
+            List<GraphChange> graphChanges,
+            String graphChangesIdentity,
+            List<SubscriptionDelta> subscriptionDeltas,
+            String subscriptionDeltasIdentity,
+            List<CheckpointWrite> checkpointWrites,
+            String checkpointWritesIdentity,
+            List<PublicEventOccurrence> publicEvents,
+            String publicEventsIdentity,
+            long totalGas,
+            List<GasTraceEntry> gasTrace,
+            String gasTraceIdentity,
+            RejectedCharge rejectedCharge,
+            ClosureWorkOccurrence rejectedWorkOccurrence,
+            ClosureCommitCompanion platformCommitCompanion,
+            ProcessorDiagnostic diagnostic,
+            ComponentFinalizationResult reusableFinalization,
+            Set<DocumentId> supplementalGasDocumentIds) {
         AffectedClosureSnapshot input = Objects.requireNonNull(
                 inputSnapshot, "inputSnapshot");
         this.status = Objects.requireNonNull(status, "status");
@@ -201,6 +317,13 @@ public final class ClosureProcessResult {
             throw new IllegalArgumentException(
                     "Reusable finalization is valid only for a committing result");
         }
+        Set<DocumentId> supplementalGasDocuments =
+                immutableDocumentIds(supplementalGasDocumentIds);
+        if (!supplementalGasDocuments.isEmpty()
+                && status != ProcessorStatus.INVALID_PROCESSING_DOCUMENT) {
+            throw new IllegalArgumentException(
+                    "Supplemental gas documents apply only to rejected admission candidates");
+        }
         validateInputIdentity(input);
         ClosureEvidenceVerifier.verifySnapshot(input);
         validateCanonicalEvidence();
@@ -216,10 +339,39 @@ public final class ClosureProcessResult {
                 this.checkpointWrites,
                 this.publicEvents,
                 this.gasTrace,
-                reusableFinalization);
+                reusableFinalization,
+                supplementalGasDocuments);
         if (platformCommitCompanion != null) {
             validateCompanion(input, platformCommitCompanion);
         }
+    }
+
+    private static Set<DocumentId> candidateGasDocumentIds(
+            AdmissionCandidate candidate) {
+        AdmissionCandidate selected = Objects.requireNonNull(
+                candidate, "rejectedAdmissionCandidate");
+        if (!(selected instanceof
+                AdmissionCandidate.AmbiguousPreliminaryMembers)) {
+            return Collections.emptySet();
+        }
+        HashSet<DocumentId> result = new HashSet<DocumentId>();
+        for (AdmissionCandidate.CandidateCyclicMember member
+                : ((AdmissionCandidate.AmbiguousPreliminaryMembers) selected)
+                        .candidateCyclicMembers()) {
+            result.add(member.documentId());
+        }
+        return result;
+    }
+
+    private static Set<DocumentId> immutableDocumentIds(
+            Set<DocumentId> values) {
+        HashSet<DocumentId> result = new HashSet<DocumentId>();
+        for (DocumentId value : Objects.requireNonNull(
+                values, "supplementalGasDocumentIds")) {
+            result.add(Objects.requireNonNull(
+                    value, "supplemental gas documentId"));
+        }
+        return Collections.unmodifiableSet(result);
     }
 
     /**
@@ -847,12 +999,10 @@ public final class ClosureProcessResult {
         List<ClosureCommitCompanion.DocumentDelta> expected =
                 new ArrayList<ClosureCommitCompanion.DocumentDelta>();
         for (ResultingDocument document : resultingDocuments) {
-            if (!document.beforeBlueId().equals(document.afterBlueId())) {
-                expected.add(new ClosureCommitCompanion.DocumentDelta(
-                        document.documentId(),
-                        document.beforeBlueId(),
-                        document.afterBlueId()));
-            }
+            expected.add(new ClosureCommitCompanion.DocumentDelta(
+                    document.documentId(),
+                    document.beforeBlueId(),
+                    document.afterBlueId()));
         }
         if (expected.size() != companion.resultingDocuments().size()) {
             throw new IllegalArgumentException(

@@ -95,6 +95,7 @@ final class ProcessingResultCoordinator {
                                 runtime.entryEmbeddedScopePlans())
                         .replacedScopePaths(
                                 runtime.replacedEmbeddedScopePaths())
+                        .legacyRecursiveExactReferenceTraversal()
                         .runtimeWorkSessions(() -> runtime
                                 .newRuntimeWorkSession(
                                         owner.languageRuntimeAccess()));

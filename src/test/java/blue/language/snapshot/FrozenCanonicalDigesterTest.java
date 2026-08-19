@@ -112,6 +112,26 @@ class FrozenCanonicalDigesterTest {
     }
 
     @Test
+    void shouldMatchMutableOracleWhenSizingDirectFrozenIdentityInputs() {
+        // given
+        List<Node> sources = representativeNodes();
+        List<Long> mutableSizes = new ArrayList<>();
+        List<Long> frozenSizes = new ArrayList<>();
+
+        // when
+        for (Node source : sources) {
+            FrozenNode frozen = FrozenNode.fromNode(source);
+            mutableSizes.add(
+                    NodeCanonicalizer.directIdentityCanonicalSize(source));
+            frozenSizes.add(
+                    FrozenCanonicalWriter.directIdentityCanonicalSize(frozen));
+        }
+
+        // then
+        assertEquals(mutableSizes, frozenSizes);
+    }
+
+    @Test
     void shouldMatchMutableIdentityForTypedSchemaScalarsAndMergePolicyWithoutFallback() {
         // given
         BigInteger beyondSafeInteger = new BigInteger("900719925474099200000000000000000001");

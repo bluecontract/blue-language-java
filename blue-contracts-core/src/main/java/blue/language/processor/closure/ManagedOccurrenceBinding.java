@@ -9,6 +9,9 @@ import java.util.Objects;
 public final class ManagedOccurrenceBinding
         implements Comparable<ManagedOccurrenceBinding> {
 
+    private static final ClosureIdentityService IDENTITIES =
+            ClosureIdentityService.INSTANCE;
+
     private final String occurrenceIdentity;
     private final String bindingIdentity;
     private final String bindingPolicyIdentity;
@@ -70,6 +73,111 @@ public final class ManagedOccurrenceBinding
             throw new IllegalArgumentException(
                     "An active occurrence cannot retain a historical cursor");
         }
+    }
+
+    /**
+     * Derives both normative identities from complete typed occurrence
+     * evidence and creates the corresponding row.
+     *
+     * <p>This is the authoritative construction boundary for hosts that own
+     * occurrence lifecycle but must not reproduce Contracts canonical JSON or
+     * hashing.</p>
+     *
+     * @param bindingPolicyIdentity selected binding-policy identity
+     * @param sourceDocumentId containing authored document lineage
+     * @param sourceAddress authored embedded occurrence address
+     * @param targetDocumentId selected managed target lineage
+     * @param expectedTargetBlueId exact authored target state
+     * @param active whether this row contributes a graph edge
+     * @param pendingHistoricalEpoch nullable historical catch-up cursor
+     * @return exact Contracts-owned occurrence row
+     */
+    public static ManagedOccurrenceBinding derived(
+            String bindingPolicyIdentity,
+            DocumentId sourceDocumentId,
+            ScopeAddress sourceAddress,
+            DocumentId targetDocumentId,
+            String expectedTargetBlueId,
+            boolean active,
+            Long pendingHistoricalEpoch) {
+        String policy = ClosureValueSupport.requireSha256Identity(
+                bindingPolicyIdentity, "bindingPolicyIdentity");
+        DocumentId source = Objects.requireNonNull(
+                sourceDocumentId, "sourceDocumentId");
+        ScopeAddress address = requireEmbedded(sourceAddress);
+        DocumentId target = Objects.requireNonNull(
+                targetDocumentId, "targetDocumentId");
+        String expected = ClosureValueSupport.requireBlueId(
+                expectedTargetBlueId, "expectedTargetBlueId");
+        return new ManagedOccurrenceBinding(
+                IDENTITIES.managedOccurrenceIdentity(
+                        source, address, target, policy),
+                IDENTITIES.managedOccurrenceBindingIdentity(
+                        source, address, target, expected, policy),
+                policy,
+                source,
+                address,
+                target,
+                expected,
+                active,
+                pendingHistoricalEpoch);
+    }
+
+    /**
+     * Verifies supplied identity assertions against complete typed evidence
+     * before returning the corresponding row.
+     *
+     * @param occurrenceIdentity claimed stable occurrence identity
+     * @param bindingIdentity claimed exact-state binding identity
+     * @param bindingPolicyIdentity selected binding-policy identity
+     * @param sourceDocumentId containing authored document lineage
+     * @param sourceAddress authored embedded occurrence address
+     * @param targetDocumentId selected managed target lineage
+     * @param expectedTargetBlueId exact authored target state
+     * @param active whether this row contributes a graph edge
+     * @param pendingHistoricalEpoch nullable historical catch-up cursor
+     * @return verified Contracts-owned occurrence row
+     */
+    public static ManagedOccurrenceBinding verified(
+            String occurrenceIdentity,
+            String bindingIdentity,
+            String bindingPolicyIdentity,
+            DocumentId sourceDocumentId,
+            ScopeAddress sourceAddress,
+            DocumentId targetDocumentId,
+            String expectedTargetBlueId,
+            boolean active,
+            Long pendingHistoricalEpoch) {
+        ManagedOccurrenceBinding selected = new ManagedOccurrenceBinding(
+                occurrenceIdentity,
+                bindingIdentity,
+                bindingPolicyIdentity,
+                sourceDocumentId,
+                sourceAddress,
+                targetDocumentId,
+                expectedTargetBlueId,
+                active,
+                pendingHistoricalEpoch);
+        String exactOccurrence = IDENTITIES.managedOccurrenceIdentity(
+                selected.sourceDocumentId(),
+                selected.sourceAddress(),
+                selected.targetDocumentId(),
+                selected.bindingPolicyIdentity());
+        if (!selected.occurrenceIdentity().equals(exactOccurrence)) {
+            throw new IllegalArgumentException(
+                    "occurrenceIdentity does not match its closed evidence");
+        }
+        String exactBinding = IDENTITIES.managedOccurrenceBindingIdentity(
+                selected.sourceDocumentId(),
+                selected.sourceAddress(),
+                selected.targetDocumentId(),
+                selected.expectedTargetBlueId(),
+                selected.bindingPolicyIdentity());
+        if (!selected.bindingIdentity().equals(exactBinding)) {
+            throw new IllegalArgumentException(
+                    "bindingIdentity does not match its closed evidence");
+        }
+        return selected;
     }
 
     /**
@@ -185,5 +293,15 @@ public final class ManagedOccurrenceBinding
                 ? order
                 : ClosureValueSupport.comparePortableText(
                         bindingIdentity, other.bindingIdentity);
+    }
+
+    private static ScopeAddress requireEmbedded(ScopeAddress sourceAddress) {
+        ScopeAddress checked = Objects.requireNonNull(
+                sourceAddress, "sourceAddress");
+        if (checked.isRoot()) {
+            throw new IllegalArgumentException(
+                    "An embedded occurrence must have a non-Root source address");
+        }
+        return checked;
     }
 }

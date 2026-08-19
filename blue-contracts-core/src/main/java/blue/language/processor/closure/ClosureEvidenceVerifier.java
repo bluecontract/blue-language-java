@@ -56,13 +56,42 @@ final class ClosureEvidenceVerifier {
             List<PublicEventOccurrence> publicEvents,
             List<GasTraceEntry> gasTrace,
             ComponentFinalizationResult reusableFinalization) {
+        verifyTransition(
+                input,
+                output,
+                resultingDocuments,
+                graphChanges,
+                subscriptionDeltas,
+                checkpointWrites,
+                publicEvents,
+                gasTrace,
+                reusableFinalization,
+                Collections.<DocumentId>emptySet());
+    }
+
+    /**
+     * Verifies a transition while admitting only exact candidate-member
+     * lineages as supplemental gas attribution for a rejected admission.
+     */
+    static void verifyTransition(
+            AffectedClosureSnapshot input,
+            AffectedClosureSnapshot output,
+            List<ResultingDocument> resultingDocuments,
+            List<GraphChange> graphChanges,
+            List<SubscriptionDelta> subscriptionDeltas,
+            List<CheckpointWrite> checkpointWrites,
+            List<PublicEventOccurrence> publicEvents,
+            List<GasTraceEntry> gasTrace,
+            ComponentFinalizationResult reusableFinalization,
+            Set<DocumentId> supplementalGasDocumentIds) {
         requireDocumentContinuity(input, output, resultingDocuments);
         verifyFinalizedState(input, output, reusableFinalization);
         verifyMarkers(output);
         verifyGraphChanges(input, output, graphChanges);
         verifyGraphGeneration(input, output);
         verifyPublicEventOrder(publicEvents);
-        verifyGasDocumentContexts(output, gasTrace);
+        verifyGasDocumentContexts(
+                output, gasTrace, supplementalGasDocumentIds);
         verifyCheckpointTargets(output, checkpointWrites);
         verifySubscriptionDeltas(input, output, subscriptionDeltas);
     }
@@ -327,7 +356,7 @@ final class ClosureEvidenceVerifier {
         if (initializedMarker != null) {
             requireRuntimeType(initializedMarker,
                     RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
-                    "initialized");
+                    ProcessorContractConstants.KEY_INITIALIZED);
             Map<String, Node> markerValues =
                     initializedMarker.getProperties();
             Node exactDocument = markerValues == null ? null
@@ -343,7 +372,7 @@ final class ClosureEvidenceVerifier {
         if (terminatedMarker != null) {
             requireRuntimeType(terminatedMarker,
                     RuntimeBlueIds.PROCESSING_TERMINATED_MARKER,
-                    "terminated");
+                    ProcessorContractConstants.KEY_TERMINATED);
             String cause = stringProperty(terminatedMarker,
                     ProcessorContractConstants.KEY_CAUSE);
             if (cause == null || cause.isEmpty()) {
@@ -395,11 +424,27 @@ final class ClosureEvidenceVerifier {
         for (ResultingDocument result : resultingDocuments) {
             ManagedDocumentSnapshot inputDocument = before.get(
                     result.documentId());
+            ManagedDocumentSnapshot outputDocument = output.managedDocument(
+                    result.documentId());
             if (inputDocument == null
                     || !inputDocument.blueId().equals(
-                            result.beforeBlueId())) {
+                            result.beforeBlueId())
+                    || outputDocument == null
+                    || outputDocument.epoch() != result.epoch()) {
                 throw new IllegalArgumentException(
-                        "Resulting document beforeBlueId disagrees with input");
+                        "Resulting document continuity disagrees with closure state");
+            }
+            long beforeEpoch = inputDocument.epoch();
+            long afterEpoch = outputDocument.epoch();
+            if (afterEpoch < beforeEpoch
+                    || afterEpoch - beforeEpoch > 1L) {
+                throw new IllegalArgumentException(
+                        "Managed document epoch must be preserved or advance once");
+            }
+            if (inputDocument.blueId().equals(outputDocument.blueId())
+                    && afterEpoch != beforeEpoch) {
+                throw new IllegalArgumentException(
+                        "An unchanged managed head cannot advance its epoch");
             }
         }
     }
@@ -679,10 +724,14 @@ final class ClosureEvidenceVerifier {
 
     private static void verifyGasDocumentContexts(
             AffectedClosureSnapshot output,
-            List<GasTraceEntry> gasTrace) {
+            List<GasTraceEntry> gasTrace,
+            Set<DocumentId> supplementalDocumentIds) {
+        Set<DocumentId> supplemental = Objects.requireNonNull(
+                supplementalDocumentIds, "supplementalGasDocumentIds");
         for (GasTraceEntry entry : gasTrace) {
             if (entry.documentId() != null
-                    && !output.contains(entry.documentId())) {
+                    && !output.contains(entry.documentId())
+                    && !supplemental.contains(entry.documentId())) {
                 throw new IllegalArgumentException(
                         "Gas trace names a document outside the closure");
             }

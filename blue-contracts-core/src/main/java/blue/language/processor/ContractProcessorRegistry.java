@@ -574,8 +574,11 @@ public class ContractProcessorRegistry {
      * content. Evidence prepared by one custom generation therefore cannot be
      * replayed against a registry with the same keys but different processing
      * metadata. Java class names and object identities never participate.</p>
+     *
+     * @return lowercase {@code sha256:} identity of the exact registry
+     *         generation
      */
-    synchronized String generationIdentity() {
+    public synchronized String generationIdentity() {
         if (processorsByBlueId.isEmpty()) {
             return RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
         }

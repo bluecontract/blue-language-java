@@ -12,7 +12,7 @@ public final class GasChargeContext {
     private static final GasChargeContext EMPTY =
             new GasChargeContext(
                     null, null, null, null, null, null, null,
-                    "unspecified");
+                    "unspecified", null, null, null);
 
     private final String documentId;
     private final String scopePath;
@@ -22,6 +22,9 @@ public final class GasChargeContext {
     private final String logicalPath;
     private final String workOccurrenceId;
     private final String reason;
+    private final Long finalizationOrdinal;
+    private final String finalizationComponentIdentity;
+    private final Long finalizationComponentGeneration;
 
     private GasChargeContext(String documentId,
                              String scopePath,
@@ -30,7 +33,10 @@ public final class GasChargeContext {
                              String contractKey,
                              String logicalPath,
                              String workOccurrenceId,
-                             String reason) {
+                             String reason,
+                             Long finalizationOrdinal,
+                             String finalizationComponentIdentity,
+                             Long finalizationComponentGeneration) {
         this.documentId = documentId;
         this.scopePath = scopePath;
         this.activationGeneration = activationGeneration;
@@ -39,6 +45,25 @@ public final class GasChargeContext {
         this.logicalPath = logicalPath;
         this.workOccurrenceId = workOccurrenceId;
         this.reason = reason != null ? reason : "unspecified";
+        boolean noFinalizationOwner = finalizationOrdinal == null
+                && finalizationComponentIdentity == null
+                && finalizationComponentGeneration == null;
+        boolean completeFinalizationOwner = finalizationOrdinal != null
+                && finalizationComponentIdentity != null
+                && finalizationComponentGeneration != null;
+        if (!noFinalizationOwner && !completeFinalizationOwner) {
+            throw new IllegalArgumentException(
+                    "Finalization charge ownership must be complete or absent");
+        }
+        requireNonNegative(finalizationOrdinal, "finalizationOrdinal");
+        requireNonNegative(
+                finalizationComponentGeneration,
+                "finalizationComponentGeneration");
+        this.finalizationOrdinal = finalizationOrdinal;
+        this.finalizationComponentIdentity =
+                finalizationComponentIdentity;
+        this.finalizationComponentGeneration =
+                finalizationComponentGeneration;
     }
 
     /**
@@ -71,7 +96,10 @@ public final class GasChargeContext {
                 contractKey,
                 logicalPath,
                 null,
-                reason);
+                reason,
+                null,
+                null,
+                null);
     }
 
     /**
@@ -114,7 +142,49 @@ public final class GasChargeContext {
                 contractKey,
                 logicalPath,
                 workOccurrenceId,
-                reason);
+                reason,
+                null,
+                null,
+                null);
+    }
+
+    /**
+     * Adds the exact tentative-component-finalization owner used only if this
+     * charge is rejected.
+     *
+     * <p>The metadata is deliberately not part of an admitted gas-trace entry;
+     * it selects the closed {@code FINALIZATION} rejected-charge owner branch.
+     * Calling this method does not change ordinary attribution fields.</p>
+     *
+     * @param ordinal invocation-global tentative-finalization ordinal
+     * @param componentIdentity stable component identity
+     * @param componentGeneration exact component generation
+     * @return immutable attribution carrying exact finalization ownership
+     */
+    public GasChargeContext withFinalizationOwner(
+            long ordinal,
+            String componentIdentity,
+            long componentGeneration) {
+        if (componentIdentity == null || componentIdentity.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Finalization component identity must not be empty");
+        }
+        requireNonNegative(Long.valueOf(ordinal), "finalizationOrdinal");
+        requireNonNegative(
+                Long.valueOf(componentGeneration),
+                "finalizationComponentGeneration");
+        return new GasChargeContext(
+                documentId,
+                scopePath,
+                activationGeneration,
+                this.componentGeneration,
+                contractKey,
+                logicalPath,
+                workOccurrenceId,
+                reason,
+                Long.valueOf(ordinal),
+                componentIdentity,
+                Long.valueOf(componentGeneration));
     }
 
     /**
@@ -199,6 +269,34 @@ public final class GasChargeContext {
         return reason;
     }
 
+    /**
+     * Returns the invocation-global tentative-finalization ordinal when this
+     * charge has a {@code FINALIZATION} rejection owner.
+     *
+     * @return finalization ordinal, or {@code null}
+     */
+    public Long finalizationOrdinal() {
+        return finalizationOrdinal;
+    }
+
+    /**
+     * Returns the stable component identity for a finalization-owned charge.
+     *
+     * @return component identity, or {@code null}
+     */
+    public String finalizationComponentIdentity() {
+        return finalizationComponentIdentity;
+    }
+
+    /**
+     * Returns the component generation for a finalization-owned charge.
+     *
+     * @return component generation, or {@code null}
+     */
+    public Long finalizationComponentGeneration() {
+        return finalizationComponentGeneration;
+    }
+
     GasChargeContext withAttributionDefaults(GasChargeContext defaults) {
         if (defaults == null || defaults == EMPTY) {
             return this;
@@ -217,7 +315,16 @@ public final class GasChargeContext {
                 workOccurrenceId != null
                         ? workOccurrenceId
                         : defaults.workOccurrenceId,
-                reason);
+                reason,
+                finalizationOrdinal != null
+                        ? finalizationOrdinal
+                        : defaults.finalizationOrdinal,
+                finalizationComponentIdentity != null
+                        ? finalizationComponentIdentity
+                        : defaults.finalizationComponentIdentity,
+                finalizationComponentGeneration != null
+                        ? finalizationComponentGeneration
+                        : defaults.finalizationComponentGeneration);
     }
 
     private static void requireNonNegative(Long value, String field) {

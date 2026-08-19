@@ -11,6 +11,7 @@ import blue.language.mapping.TypeClassResolver;
 import blue.language.runtime.LanguageRuntimeAccess;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
  * Lifecycle and configuration facade over the Contracts processor kernel.
@@ -450,6 +451,32 @@ public class DocumentProcessor implements AutoCloseable {
      * @return {@code true} once terminal shutdown has begun
      */
     public boolean isClosed() { return administration.isClosed(); }
+
+    /**
+     * Executes one composed operation against a single captured processor
+     * configuration and runtime generation.
+     *
+     * <p>This is the package-neutral composition boundary used by higher-level
+     * runtimes whose model types cannot be imported into the ordinary
+     * processor package without creating a package cycle. The supplied
+     * operation must not attempt to mutate this processor's configuration.
+     * The captured read scope is released in a {@code finally} equivalent,
+     * including when the operation throws.</p>
+     *
+     * @param operation operation to run while the captured revision is live
+     * @param <T> operation result type
+     * @return the operation result
+     * @throws NullPointerException if {@code operation} is {@code null}
+     * @throws IllegalStateException if this processor is closed
+     *         or the operation attempts a configuration write upgrade
+     */
+    public <T> T withCapturedConfiguration(Supplier<T> operation) {
+        Objects.requireNonNull(operation, "operation");
+        try (DocumentProcessorLifecycle.ReadScope ignored =
+                     lifecycle.openRead(registry())) {
+            return operation.get();
+        }
+    }
 
     /** Rejects new work and releases reloadable collaborators when safe. */
     @Override

@@ -1,12 +1,15 @@
 package blue.language.processor.closure;
 
+import blue.language.model.value.BlueNumbers;
+
 import java.text.Normalizer;
 import java.util.Objects;
 
 /** Shared admission rules for the immutable closure evidence values. */
 final class ClosureValueSupport {
 
-    static final long MAX_SAFE_INTEGER = 9_007_199_254_740_991L;
+    static final long MAX_SAFE_INTEGER =
+            BlueNumbers.MAX_INTEROPERABLE_INTEGER.longValueExact();
 
     private ClosureValueSupport() {
     }

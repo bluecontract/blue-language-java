@@ -41,6 +41,7 @@ public final class ComponentFinalizationKernel {
     private final DirectBlueIdCalculator directCalculator;
     private final CircularSetIdentityCalculator circularCalculator;
     private final ClosureIdentityService identityService;
+    private final CyclicCanonicalLimitProjection cyclicLimitProjection;
 
     /** Creates a kernel using the normative Language identity services. */
     public ComponentFinalizationKernel() {
@@ -59,6 +60,8 @@ public final class ComponentFinalizationKernel {
                 circularCalculator, "circularCalculator");
         this.identityService = Objects.requireNonNull(
                 identityService, "identityService");
+        this.cyclicLimitProjection = new CyclicCanonicalLimitProjection(
+                this.directCalculator);
     }
 
     /**
@@ -349,8 +352,10 @@ public final class ComponentFinalizationKernel {
 
         CyclicSetFinalization selected = Objects.requireNonNull(
                 finalization, "cyclicFinalization");
+        CyclicCanonicalLimitProjection.Projection projection =
+                cyclicLimitProjection.project(selected);
         CyclicSetProof proof = CyclicSetProof.fromDeclaredPlaceholderSet(
-                selected.canonicalMemberBodies());
+                projection.proofMembers());
         ComponentSnapshot withoutProofIdentity = new ComponentSnapshot(
                 componentIdentity,
                 PROVISIONAL_IDENTITY,
@@ -556,13 +561,17 @@ public final class ComponentFinalizationKernel {
     private static String replacementFor(
             String placeholder,
             List<String> replacements) {
-        if (placeholder == null
-                || !placeholder.startsWith(BlueIds.THIS_MEMBER_PREFIX)) {
+        int separator = BlueIds.cyclicMemberSeparatorIndex(
+                placeholder);
+        if (separator != BlueIds.THIS_PLACEHOLDER.length()
+                || !BlueIds.THIS_PLACEHOLDER.equals(
+                BlueIds.cyclicSetMasterBlueId(placeholder))) {
             throw new IllegalArgumentException(
                     "Expected canonical indexed this reference");
         }
         String indexText = placeholder.substring(
-                BlueIds.THIS_MEMBER_PREFIX.length());
+                separator
+                        + BlueIds.CYCLIC_MEMBER_SEPARATOR.length());
         int index;
         try {
             index = Integer.parseInt(indexText);

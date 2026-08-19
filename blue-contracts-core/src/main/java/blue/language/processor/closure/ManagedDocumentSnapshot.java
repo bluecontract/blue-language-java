@@ -1,6 +1,7 @@
 package blue.language.processor.closure;
 
 import blue.language.model.Node;
+import blue.language.model.wire.BlueLanguageConstants;
 
 import java.util.Objects;
 
@@ -39,7 +40,8 @@ public final class ManagedDocumentSnapshot
             long epoch,
             long componentGeneration) {
         this.documentId = Objects.requireNonNull(documentId, "documentId");
-        this.blueId = ClosureValueSupport.requireBlueId(blueId, "blueId");
+        this.blueId = ClosureValueSupport.requireBlueId(
+                blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         this.document = Objects.requireNonNull(document, "document").clone();
         this.initialized = initialized;
         this.terminated = terminated;

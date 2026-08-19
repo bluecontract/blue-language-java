@@ -16,6 +16,7 @@ public final class ManagedDocumentStepRequest {
     private final Node occurrenceEvent;
     private final FrozenJsonPatch processorPatch;
     private final GasChargeContext attribution;
+    private final ManagedDocumentResolutionOverlay resolutionOverlay;
 
     /**
      * Creates one exact Root-scoped request.
@@ -42,7 +43,8 @@ public final class ManagedDocumentStepRequest {
                 exactPayload,
                 null,
                 null,
-                GasChargeContext.empty());
+                GasChargeContext.empty(),
+                ManagedDocumentResolutionOverlay.empty());
     }
 
     /**
@@ -72,7 +74,8 @@ public final class ManagedDocumentStepRequest {
                 exactPayload,
                 null,
                 null,
-                attribution);
+                attribution,
+                ManagedDocumentResolutionOverlay.empty());
     }
 
     /**
@@ -105,6 +108,46 @@ public final class ManagedDocumentStepRequest {
             Node occurrenceEvent,
             FrozenJsonPatch processorPatch,
             GasChargeContext attribution) {
+        this(exactDocument,
+                initialized,
+                terminated,
+                workKind,
+                channelKey,
+                exactPayload,
+                occurrenceEvent,
+                processorPatch,
+                attribution,
+                ManagedDocumentResolutionOverlay.empty());
+    }
+
+    /**
+     * Creates one exact request with invocation-local managed resolution
+     * evidence.
+     *
+     * @param exactDocument latest exact target body
+     * @param initialized asserted exact initialization state
+     * @param terminated asserted exact termination state
+     * @param workKind closed work role
+     * @param channelKey exact Root channel key, possibly empty
+     * @param exactPayload exact work payload
+     * @param occurrenceEvent exact originating event for embedded delivery,
+     *        otherwise {@code null}
+     * @param processorPatch exact containing-reference patch, otherwise
+     *        {@code null}
+     * @param attribution owning document/work gas context
+     * @param resolutionOverlay exact forward-only managed resolution evidence
+     */
+    public ManagedDocumentStepRequest(
+            Node exactDocument,
+            boolean initialized,
+            boolean terminated,
+            ManagedDocumentWorkKind workKind,
+            String channelKey,
+            Node exactPayload,
+            Node occurrenceEvent,
+            FrozenJsonPatch processorPatch,
+            GasChargeContext attribution,
+            ManagedDocumentResolutionOverlay resolutionOverlay) {
         this.exactDocument = Objects.requireNonNull(
                 exactDocument, "exactDocument").clone();
         this.initialized = initialized;
@@ -119,6 +162,8 @@ public final class ManagedDocumentStepRequest {
         this.processorPatch = processorPatch;
         this.attribution = Objects.requireNonNull(
                 attribution, "attribution");
+        this.resolutionOverlay = Objects.requireNonNull(
+                resolutionOverlay, "resolutionOverlay");
         validateManagedEvidenceShape();
     }
 
@@ -186,6 +231,15 @@ public final class ManagedDocumentStepRequest {
      * @return immutable owning document/work gas context
      */
     public GasChargeContext attribution() { return attribution; }
+
+    /**
+     * Returns the processor-only forward managed resolution overlay.
+     *
+     * @return immutable overlay
+     */
+    public ManagedDocumentResolutionOverlay resolutionOverlay() {
+        return resolutionOverlay;
+    }
 
     private void validateManagedEvidenceShape() {
         boolean embedded = workKind == ManagedDocumentWorkKind.EMBEDDED_EVENT;
