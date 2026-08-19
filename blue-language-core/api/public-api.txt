@@ -835,6 +835,7 @@ method blue.language.snapshot.CanonicalPatchResult#op descriptor=()Lblue/languag
 method blue.language.snapshot.CanonicalPatchResult#path descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.snapshot.CanonicalPatchResult#root descriptor=()Lblue/language/snapshot/FrozenNode; access=public signature=- throws=-
 method blue.language.snapshot.FrozenCanonicalWriter#canonicalValueBytes descriptor=(Ljava/lang/Object;)[B access=public,static signature=- throws=-
+method blue.language.snapshot.FrozenCanonicalWriter#directIdentityCanonicalSize descriptor=(Lblue/language/snapshot/FrozenNode;)J access=public,static signature=- throws=-
 method blue.language.snapshot.FrozenCanonicalWriter#officialCanonicalSize descriptor=(Lblue/language/snapshot/FrozenNode;)J access=public,static signature=- throws=-
 method blue.language.snapshot.FrozenCanonicalWriter#supportsCanonicalValue descriptor=(Ljava/lang/Object;)Z access=public,static signature=- throws=-
 method blue.language.snapshot.FrozenNode#approximateRetainedWeightBytes descriptor=()J access=public signature=- throws=-

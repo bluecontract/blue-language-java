@@ -624,6 +624,7 @@ final class RuntimeLanguageProcessing extends NodeProviderWrapper
             if (result.outcome()
                     == BlueOperationOutcome.INCOMPLETE) {
                 throw new ProviderUnavailableException(
+                        reference.getReferenceBlueId(),
                         result.reason().orElse(
                                 "Matching type evidence is unavailable"));
             }
