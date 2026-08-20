@@ -66,6 +66,10 @@ final class DefaultClosureProcessorTest {
             new Node().name("Concrete Closure Test Handler");
     private static final String HANDLER_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(HANDLER_TYPE);
+    private static final Node DRAFT_HANDLER_TYPE =
+            new Node().name("Managed Draft Test Handler");
+    private static final String DRAFT_HANDLER_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(DRAFT_HANDLER_TYPE);
 
     @Test
     void executesAndCommitsARealDirectSeedAsOneIsolatedDocumentStep() {
@@ -136,6 +140,174 @@ final class DefaultClosureProcessorTest {
                     step.ambientContainingDocumentIds());
             assertTrue(capture.evidence.complete());
             assertTrue(attempt.totalGas().longValue() > 0L);
+        }
+    }
+
+    @Test
+    void activatesOneDraftOnceAndRoutesItsEventThroughEveryOccurrence() {
+        Node parent = managedDraftParentDocument();
+        Node draft = managedDraftDocument(
+                DirectBlueIdCalculator.calculateBlueId(parent));
+        try (DocumentProcessor owner = managedDraftOwner(
+                draft, true, false, false)) {
+            Capture capture = new Capture();
+            ClosureInvocationInput input = managedDraftInvocation(
+                    owner, draft);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.processClosure(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.SUCCESS,
+                    attempt.processResult().status(), diagnostic(attempt));
+            assertTrue(attempt.processResult().commits());
+            assertEquals(Arrays.asList(
+                            WorkKind.EXTERNAL_DELIVERY,
+                            WorkKind.INITIALIZATION,
+                            WorkKind.LIFECYCLE,
+                            WorkKind.EMBEDDED_EVENT,
+                            WorkKind.EMBEDDED_EVENT),
+                    workKinds(capture.evidence.workTrace()));
+            assertEquals(Arrays.asList(ROOT, B, B, ROOT, ROOT),
+                    stepTargets(capture.evidence.documentStepTrace()));
+            assertEquals(1L, capture.evidence.workTrace().stream()
+                    .filter(work -> work.kind()
+                            == WorkKind.INITIALIZATION)
+                    .count());
+            ResultingDocument child = resultingDocument(attempt, B);
+            assertTrue(child.initialized());
+            assertEquals(0L, child.epoch());
+            Node marker = property(
+                    child.document().getContracts(), "initialized");
+            assertEquals(capture.evidence.tentativeFinalizations().get(0)
+                            .memberBlueIds().get(B),
+                    property(marker, "document").getBlueId());
+            assertEquals(3, attempt.processResult()
+                    .occurrenceBindings().size());
+            int childOccurrences = 0;
+            for (ManagedOccurrenceBinding binding
+                    : attempt.processResult().occurrenceBindings()) {
+                assertTrue(binding.active());
+                if (binding.targetDocumentId().equals(B)) {
+                    childOccurrences++;
+                    assertEquals(child.afterBlueId(),
+                            binding.expectedTargetBlueId());
+                }
+            }
+            assertEquals(2, childOccurrences);
+            assertEquals(Arrays.asList(
+                            TentativeFinalization.Boundary.Kind.WORK,
+                            TentativeFinalization.Boundary.Kind
+                                    .INITIALIZATION_BATCH,
+                            TentativeFinalization.Boundary.Kind
+                                    .CHECKPOINT_SETTLEMENT),
+                    finalizationKinds(capture.evidence
+                            .tentativeFinalizations()));
+            assertEquals(Long.valueOf(4L),
+                    capture.evidence.tentativeFinalizations()
+                            .get(1)
+                            .boundary().afterWorkOrdinal());
+        }
+    }
+
+    @Test
+    void rejectsAProcessThatDoesNotActivateItsProspectiveDraft() {
+        Node parent = managedDraftParentDocument();
+        Node draft = managedDraftDocument(
+                DirectBlueIdCalculator.calculateBlueId(parent));
+        try (DocumentProcessor owner = managedDraftOwner(
+                draft, false, false, false)) {
+            Capture capture = new Capture();
+            ClosureInvocationInput input = managedDraftInvocation(
+                    owner, draft);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.processClosure(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                    attempt.processResult().status(), diagnostic(attempt));
+            assertFalse(attempt.processResult().commits());
+            assertEquals(
+                    ProcessorErrorCategory.ManagedOccurrenceBindingMissing,
+                    attempt.processResult().diagnostic().category());
+            assertEquals(input.snapshot().closureIdentity(),
+                    attempt.processResult().outputClosureIdentity());
+            assertEquals(Collections.singletonList(
+                            WorkKind.EXTERNAL_DELIVERY),
+                    workKinds(capture.evidence.workTrace()));
+        }
+    }
+
+    @Test
+    void rejectsAProspectiveDraftWithTheWrongExactState() {
+        Node parent = managedDraftParentDocument();
+        Node draft = managedDraftDocument(
+                DirectBlueIdCalculator.calculateBlueId(parent));
+        try (DocumentProcessor owner = managedDraftOwner(
+                draft, true, false, true)) {
+            Capture capture = new Capture();
+            ClosureInvocationInput input = managedDraftInvocation(
+                    owner, draft);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.processClosure(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                    attempt.processResult().status(), diagnostic(attempt));
+            assertFalse(attempt.processResult().commits());
+            assertEquals(
+                    ProcessorErrorCategory.ManagedOccurrenceBindingMissing,
+                    attempt.processResult().diagnostic().category());
+            assertTrue(attempt.processResult().diagnostic().message()
+                    .contains("/children/first"));
+            assertEquals(input.snapshot().closureIdentity(),
+                    attempt.processResult().outputClosureIdentity());
+            assertEquals(Collections.singletonList(
+                            WorkKind.EXTERNAL_DELIVERY),
+                    workKinds(capture.evidence.workTrace()));
+        }
+    }
+
+    @Test
+    void rejectsAnActivatedDraftWithAnUntrackedManagedOccurrence() {
+        Node parent = managedDraftParentDocument();
+        Node draft = managedDraftDocument(
+                DirectBlueIdCalculator.calculateBlueId(parent));
+        try (DocumentProcessor owner = managedDraftOwner(
+                draft, true, true, false)) {
+            Capture capture = new Capture();
+            ClosureInvocationInput input = managedDraftInvocation(
+                    owner, draft);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.processClosure(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                    attempt.processResult().status());
+            assertFalse(attempt.processResult().commits());
+            assertEquals(
+                    ProcessorErrorCategory.SubscriptionSurfaceInvalid,
+                    attempt.processResult().diagnostic().category());
+            assertEquals(input.snapshot().closureIdentity(),
+                    attempt.processResult().outputClosureIdentity());
+            assertEquals(Collections.singletonList(
+                            WorkKind.EXTERNAL_DELIVERY),
+                    workKinds(capture.evidence.workTrace()));
         }
     }
 
@@ -676,6 +848,200 @@ final class DefaultClosureProcessorTest {
                 + attempt.processResult().diagnostic().message()
                 + " "
                 + attempt.processResult().diagnostic().details();
+    }
+
+    private static DocumentProcessor managedDraftOwner(
+            Node draft,
+            boolean activate,
+            boolean addUnexpectedOccurrence,
+            boolean installWrongExactState) {
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                CHANNEL_BLUE_ID,
+                                CHANNEL_TYPE,
+                                new TestChannelProcessor())
+                        .register(
+                                DRAFT_HANDLER_BLUE_ID,
+                                DRAFT_HANDLER_TYPE,
+                                new ManagedDraftHandlerProcessor(
+                                        draft,
+                                        activate,
+                                        addUnexpectedOccurrence,
+                                        installWrongExactState))
+                        .build();
+        return DocumentProcessor.builder()
+                .runtimeRegistry(registry)
+                .build();
+    }
+
+    private static ClosureInvocationInput managedDraftInvocation(
+            DocumentProcessor owner,
+            Node draft) {
+        ClosureInvocationInput base = invocation(owner);
+        Node parent = managedDraftParentDocument();
+        String draftBlueId =
+                DirectBlueIdCalculator.calculateBlueId(draft);
+        String bindingPolicyIdentity = base.environment()
+                .managedBindingPolicyIdentity();
+        ArrayList<ManagedOccurrenceBinding> bindings =
+                new ArrayList<ManagedOccurrenceBinding>();
+        bindings.add(ManagedOccurrenceBinding.derived(
+                bindingPolicyIdentity,
+                ROOT,
+                ScopeAddress.embedded("/children/first", 1L),
+                B,
+                draftBlueId,
+                false,
+                null));
+        bindings.add(ManagedOccurrenceBinding.derived(
+                bindingPolicyIdentity,
+                B,
+                ScopeAddress.embedded("/parent", 1L),
+                ROOT,
+                DirectBlueIdCalculator.calculateBlueId(parent),
+                true,
+                null));
+        bindings.add(ManagedOccurrenceBinding.derived(
+                bindingPolicyIdentity,
+                ROOT,
+                ScopeAddress.embedded("/children/second", 1L),
+                B,
+                draftBlueId,
+                false,
+                null));
+        Collections.sort(bindings);
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
+                Arrays.asList(ROOT, B), bindings);
+        LinkedHashMap<DocumentId, Long> generations =
+                new LinkedHashMap<DocumentId, Long>();
+        generations.put(ROOT, Long.valueOf(1L));
+        generations.put(B, Long.valueOf(1L));
+        LinkedHashMap<DocumentId, Node> bodies =
+                new LinkedHashMap<DocumentId, Node>();
+        bodies.put(ROOT, parent);
+        bodies.put(B, draft);
+        ComponentFinalizationResult finalized =
+                new ComponentFinalizationKernel().finalizeComponents(
+                        new ComponentFinalizationInput(
+                                graph, generations, bodies, bindings));
+        ArrayList<ManagedDocumentSnapshot> documents =
+                new ArrayList<ManagedDocumentSnapshot>();
+        for (DocumentId documentId : Arrays.asList(B, ROOT)) {
+            FinalizedDocumentEvidence exact = finalized.document(documentId);
+            documents.add(new ManagedDocumentSnapshot(
+                    documentId,
+                    exact.blueId(),
+                    exact.document(),
+                    documentId.equals(ROOT),
+                    false,
+                    documentId.equals(ROOT),
+                    0L,
+                    exact.componentGeneration()));
+        }
+        ArrayList<ComponentSnapshot> components =
+                new ArrayList<ComponentSnapshot>();
+        for (FinalizedComponentEvidence component
+                : finalized.components()) {
+            components.add(component.component());
+        }
+        List<ManagedOccurrenceBinding> exactBindings =
+                finalized.finalizedGraph().bindings();
+        String bindingSetIdentity = IDENTITIES
+                .occurrenceBindingSetIdentity(exactBindings);
+        AffectedClosureSnapshot provisionalSnapshot =
+                new AffectedClosureSnapshot(
+                        hash('0'),
+                        1L,
+                        documents,
+                        exactBindings,
+                        bindingSetIdentity,
+                        components,
+                        Collections.singletonList(ROOT));
+        AffectedClosureSnapshot snapshot =
+                new AffectedClosureSnapshot(
+                        IDENTITIES.affectedClosureIdentity(
+                                provisionalSnapshot),
+                        provisionalSnapshot.graphGeneration(),
+                        provisionalSnapshot.managedDocuments(),
+                        provisionalSnapshot.occurrences(),
+                        provisionalSnapshot
+                                .occurrenceBindingSetIdentity(),
+                        provisionalSnapshot.components(),
+                        provisionalSnapshot.publicRootDocumentIds());
+        ClosureInvocationInput provisional =
+                ClosureInvocationInput.processClosure(
+                        hash('f'),
+                        snapshot,
+                        base.cause(),
+                        base.directDeliveries(),
+                        base.directDeliverySnapshotIdentity(),
+                        base.executionPolicy(),
+                        base.environment());
+        return ClosureInvocationInput.processClosure(
+                IDENTITIES.invocationIdentity(provisional),
+                snapshot,
+                base.cause(),
+                base.directDeliveries(),
+                base.directDeliverySnapshotIdentity(),
+                base.executionPolicy(),
+                base.environment());
+    }
+
+    private static Node managedDraftParentDocument() {
+        Node document = new Node()
+                .name("Managed Draft Parent")
+                .contracts(new Node()
+                        .properties(
+                                "embedded",
+                                typed(RuntimeBlueIds.PROCESS_EMBEDDED)
+                                        .properties(
+                                                "collectionPaths",
+                                                new Node().items(
+                                                        new Node().value(
+                                                                "/children"))))
+                        .properties(
+                                "source",
+                                typed(CHANNEL_BLUE_ID))
+                        .properties(
+                                "createManagedDraft",
+                                draftHandler("source"))
+                        .properties(
+                                "fromManagedChild",
+                                typed(RuntimeBlueIds
+                                        .EMBEDDED_NODE_CHANNEL))
+                        .properties(
+                                "observeManagedChild",
+                                draftHandler("fromManagedChild")));
+        return markInitialized(document);
+    }
+
+    private static Node managedDraftDocument(String parentBlueId) {
+        return new Node()
+                .name("Managed Draft Child")
+                .properties("documentId", new Node().value("b"))
+                .properties("parent", new Node().blueId(parentBlueId))
+                .contracts(new Node()
+                        .properties(
+                                "embedded",
+                                typed(RuntimeBlueIds.PROCESS_EMBEDDED)
+                                        .properties(
+                                                "paths",
+                                                new Node().items(
+                                                        new Node().value(
+                                                                "/parent"))))
+                        .properties(
+                                "lifecycle",
+                                typed(RuntimeBlueIds
+                                        .LIFECYCLE_EVENT_CHANNEL))
+                        .properties(
+                                "emitDraftLifecycle",
+                                draftHandler("lifecycle")));
+    }
+
+    private static Node draftHandler(String channel) {
+        return typed(DRAFT_HANDLER_BLUE_ID).properties(
+                "channel", new Node().value(channel));
     }
 
     private static DocumentProcessor c34Owner() {
@@ -1260,6 +1626,26 @@ final class DefaultClosureProcessorTest {
         return result;
     }
 
+    private static List<WorkKind> workKinds(
+            List<ClosureWorkOccurrence> workTrace) {
+        ArrayList<WorkKind> result = new ArrayList<WorkKind>();
+        for (ClosureWorkOccurrence work : workTrace) {
+            result.add(work.kind());
+        }
+        return result;
+    }
+
+    private static List<TentativeFinalization.Boundary.Kind>
+            finalizationKinds(
+                    List<TentativeFinalization> finalizations) {
+        ArrayList<TentativeFinalization.Boundary.Kind> result =
+                new ArrayList<TentativeFinalization.Boundary.Kind>();
+        for (TentativeFinalization finalization : finalizations) {
+            result.add(finalization.boundary().kind());
+        }
+        return result;
+    }
+
     private static ResultingDocument resultingDocument(
             ClosureAttemptResult attempt,
             DocumentId documentId) {
@@ -1477,6 +1863,65 @@ final class DefaultClosureProcessorTest {
                     "/tentative", new Node().value("must-roll-back")));
             context.emitEvent(new Node().properties(
                     "kind", new Node().value("tentative-event")));
+        }
+    }
+
+    /** Mutable managed-draft Handler model used only by this test. */
+    public static final class ManagedDraftHandler extends HandlerContract {
+    }
+
+    private static final class ManagedDraftHandlerProcessor
+            implements HandlerProcessor<ManagedDraftHandler> {
+        private final Node draft;
+        private final boolean activate;
+        private final boolean addUnexpectedOccurrence;
+        private final boolean installWrongExactState;
+
+        private ManagedDraftHandlerProcessor(
+                Node draft,
+                boolean activate,
+                boolean addUnexpectedOccurrence,
+                boolean installWrongExactState) {
+            this.draft = draft.clone();
+            this.activate = activate;
+            this.addUnexpectedOccurrence = addUnexpectedOccurrence;
+            this.installWrongExactState = installWrongExactState;
+        }
+
+        @Override
+        public Class<ManagedDraftHandler> contractType() {
+            return ManagedDraftHandler.class;
+        }
+
+        @Override
+        public void execute(
+                ManagedDraftHandler contract,
+                ProcessorExecutionContext context) {
+            if ("createManagedDraft".equals(context.contractKey())) {
+                if (activate) {
+                    Node installed = draft.clone();
+                    if (installWrongExactState) {
+                        installed.properties(
+                                "unexpectedState",
+                                new Node().value(Boolean.TRUE));
+                    }
+                    context.applyPatch(JsonPatch.add(
+                            "/children",
+                            new Node()
+                                    .properties("first", installed.clone())
+                                    .properties("second", installed.clone())));
+                    if (addUnexpectedOccurrence) {
+                        context.applyPatch(JsonPatch.add(
+                                "/children/unexpected",
+                                draft.clone()));
+                    }
+                }
+            } else if ("emitDraftLifecycle".equals(
+                    context.contractKey())) {
+                context.emitEvent(new Node().properties(
+                        "kind",
+                        new Node().value("managed-draft-initialized")));
+            }
         }
     }
 

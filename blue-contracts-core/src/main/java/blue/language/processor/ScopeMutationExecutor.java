@@ -91,6 +91,7 @@ final class ScopeMutationExecutor {
         } catch (GasLimitExceededException
                  | PortableLimitExceededException
                  | SubscriptionSurfaceInvalidException
+                 | InvalidExecutionEvidenceException
                  | DocumentStepRuntimeGapException exception) {
             throw exception;
         } catch (RunTerminationException exception) {

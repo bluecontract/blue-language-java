@@ -8,6 +8,7 @@ import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
 import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.GasChargeContext;
+import blue.language.processor.InvalidExecutionEvidenceException;
 import blue.language.processor.ManagedCheckpointBatchCleanupContextFactory;
 import blue.language.processor.ManagedCheckpointCandidate;
 import blue.language.processor.ManagedCheckpointSettlementBatch;
@@ -17,6 +18,10 @@ import blue.language.processor.ManagedDocumentStepContinuation;
 import blue.language.processor.ManagedDocumentStepRoute;
 import blue.language.processor.ManagedExternalDeliveryClassification;
 import blue.language.processor.ManagedRootChannelOccurrence;
+import blue.language.processor.ProcessorErrorCategory;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 
@@ -66,6 +71,10 @@ final class ClosureExecutionSession
             new LinkedHashSet<String>();
     private final Set<DocumentId> epochAdvanceDocuments =
             new LinkedHashSet<DocumentId>();
+    private final Set<DocumentId> initializedDocuments =
+            new LinkedHashSet<DocumentId>();
+    private final Map<DocumentId, String> pendingInitializationCauses =
+            new LinkedHashMap<DocumentId, String>();
     private final Map<DocumentId, Node> latestBodies =
             new LinkedHashMap<DocumentId, Node>();
     private final ClosureWorkQueue workQueue = new ClosureWorkQueue();
@@ -103,6 +112,8 @@ final class ClosureExecutionSession
     private long nextEventOrdinal;
     private long nextTransitionOrdinal;
     private int eventDeliveryBatchDepth;
+    private boolean initializationBatchRunning;
+    private long initializationBatchLastWorkOrdinal = -1L;
     private boolean activateManagedRevision;
     private boolean managedRevisionActivationCompleted;
     private boolean managedRevisionReceiptReconciled;
@@ -128,6 +139,9 @@ final class ClosureExecutionSession
             inputComponentGenerations.put(
                     document.documentId(),
                     Long.valueOf(document.componentGeneration()));
+            if (document.initialized()) {
+                initializedDocuments.add(document.documentId());
+            }
         }
         this.inputGraph = ManagedDocumentGraph.fromBindings(
                 documentIds, currentBindings);
@@ -139,7 +153,7 @@ final class ClosureExecutionSession
                 this);
     }
 
-    /** Executes one supported already-initialized closure lane. */
+    /** Executes one supported affected-closure lane. */
     ClosureExecutionState execute() {
         ensureSupportedInvocation();
         chargeAdmission();
@@ -155,6 +169,7 @@ final class ClosureExecutionSession
             throw new IllegalStateException(
                     "Closure execution did not reach causal quiescence");
         }
+        requireProspectiveMembersActivated();
         if (input.cause().kind() == ProcessingCause.Kind.EXTERNAL) {
             settleCheckpointBarrier();
         }
@@ -169,6 +184,7 @@ final class ClosureExecutionSession
                         cause.eventBlueId(),
                         currentSnapshot.components(),
                         input.directDeliveries());
+        requireWorkOccurrenceCount(directSeeds.size());
         nextWorkOrdinal = directSeeds.size();
         Map<String, ClosureWorkOccurrence> seedBySource =
                 new HashMap<String, ClosureWorkOccurrence>();
@@ -233,6 +249,7 @@ final class ClosureExecutionSession
 
     private void executeManagedRevisionCause(
             ManagedRevisionCause cause) {
+        requireWorkOccurrenceCount(1L);
         ManagedOccurrenceBinding target = managedRevisionTarget(cause);
         ManagedDocumentSnapshot source = currentSnapshot.managedDocument(
                 target.sourceDocumentId());
@@ -319,15 +336,59 @@ final class ClosureExecutionSession
         }
         for (ManagedDocumentSnapshot document
                 : input.snapshot().managedDocuments()) {
-            if (!document.initialized()) {
-                throw new ClosureCapabilityGapException(
-                        "INITIALIZATION_BATCH_REQUIRED",
-                        "Uninitialized closures require the initialization-batch lane");
-            }
             if (document.terminated()) {
                 throw new ClosureCapabilityGapException(
                         "TERMINATED_MEMBER_POLICY_REQUIRED",
                         "Terminated members require lifecycle delivery policy");
+            }
+            if (!document.initialized()
+                    && !isInactiveProspectiveTarget(
+                            document.documentId())) {
+                throw new ClosureCapabilityGapException(
+                        "INITIALIZATION_BATCH_REQUIRED",
+                        "A PROCESS_CLOSURE input may retain an uninitialized "
+                                + "member only behind explicit inactive "
+                                + "prospective occurrence evidence");
+            }
+        }
+    }
+
+    private boolean isInactiveProspectiveTarget(DocumentId documentId) {
+        boolean prospective = false;
+        for (ManagedOccurrenceBinding binding
+                : input.snapshot().occurrences()) {
+            if (!binding.targetDocumentId().equals(documentId)) {
+                continue;
+            }
+            if (binding.active()
+                    || binding.pendingHistoricalEpoch() != null) {
+                return false;
+            }
+            prospective = true;
+        }
+        if (!prospective) {
+            return false;
+        }
+        for (DirectLogicalDelivery delivery : input.directDeliveries()) {
+            if (delivery.targetDocumentId().equals(documentId)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void requireProspectiveMembersActivated() {
+        for (ManagedDocumentSnapshot document
+                : input.snapshot().managedDocuments()) {
+            if (!document.initialized()
+                    && !initializedDocuments.contains(
+                            document.documentId())) {
+                throw new InvalidExecutionEvidenceException(
+                        "Expected managed occurrence activation did not "
+                                + "initialize prospective document "
+                                + document.documentId(),
+                        ProcessorErrorCategory
+                                .ManagedOccurrenceBindingMissing);
             }
         }
     }
@@ -650,6 +711,9 @@ final class ClosureExecutionSession
                                 + "source patch transition");
             }
         }
+        if (activeFrames.isEmpty() && !initializationBatchRunning) {
+            runPendingInitializationBatch();
+        }
         if (eventDeliveryBatchDepth == 0) {
             drainEventsCapturedBy(frame);
         }
@@ -700,6 +764,8 @@ final class ClosureExecutionSession
                 frame.work,
                 beforeWorkBoundary,
                 prospectiveActivations);
+        retainActivatedInitializationRequests(
+                prospectiveActivations, frame.work);
         if (shouldActivateManagedRevision(frame.work)) {
             ArrayList<FinalizationUpdate> combined =
                     new ArrayList<FinalizationUpdate>(generatedUpdates);
@@ -742,6 +808,305 @@ final class ClosureExecutionSession
                     transitionOrdinal);
             updateOrdinal++;
         }
+    }
+
+    private void retainActivatedInitializationRequests(
+            Set<String> prospectiveActivations,
+            ClosureWorkOccurrence owner) {
+        Set<String> activated = Objects.requireNonNull(
+                prospectiveActivations, "prospectiveActivations");
+        if (activated.isEmpty()) {
+            return;
+        }
+        String causeIdentity = Objects.requireNonNull(
+                owner, "owner").workIdentity();
+        for (ManagedOccurrenceBinding binding : currentBindings) {
+            if (!binding.active()
+                    || !activated.contains(binding.occurrenceIdentity())) {
+                continue;
+            }
+            DocumentId target = binding.targetDocumentId();
+            if (!initializedDocuments.contains(target)) {
+                pendingInitializationCauses.putIfAbsent(
+                        target, causeIdentity);
+            }
+        }
+    }
+
+    private void runPendingInitializationBatch() {
+        if (pendingInitializationCauses.isEmpty()) {
+            return;
+        }
+        if (initializationBatchRunning) {
+            throw new IllegalStateException(
+                    "Initialization batch re-entered its own work boundary");
+        }
+        initializationBatchRunning = true;
+        initializationBatchLastWorkOrdinal = -1L;
+        LinkedHashMap<DocumentId, FrozenInitialization> frozen =
+                new LinkedHashMap<DocumentId, FrozenInitialization>();
+        try {
+            while (true) {
+                List<DocumentId> component =
+                        nextPendingInitializationComponent();
+                if (component.isEmpty()) {
+                    if (eventQueue.isEmpty()) {
+                        break;
+                    }
+                    drainOneEvent();
+                    continue;
+                }
+                for (DocumentId documentId : component) {
+                    if (!initializationRequired(documentId)) {
+                        pendingInitializationCauses.remove(documentId);
+                        continue;
+                    }
+                    ManagedDocumentSnapshot document = currentSnapshot
+                            .managedDocument(documentId);
+                    if (document == null || document.initialized()
+                            || initializedDocuments.contains(documentId)) {
+                        pendingInitializationCauses.remove(documentId);
+                        continue;
+                    }
+                    frozen.putIfAbsent(
+                            documentId,
+                            new FrozenInitialization(
+                                    document.blueId(),
+                                    document.document()));
+                }
+                for (DocumentId documentId : component) {
+                    FrozenInitialization initial = frozen.get(documentId);
+                    String causeIdentity = pendingInitializationCauses
+                            .remove(documentId);
+                    if (initial == null || causeIdentity == null
+                            || !initializationRequired(documentId)) {
+                        continue;
+                    }
+                    executeInitialization(
+                            documentId, initial, causeIdentity);
+                }
+                while (!eventQueue.isEmpty()) {
+                    drainOneEvent();
+                }
+            }
+            installInitializationMarkers(frozen);
+        } finally {
+            initializationBatchRunning = false;
+            initializationBatchLastWorkOrdinal = -1L;
+        }
+    }
+
+    private List<DocumentId> nextPendingInitializationComponent() {
+        pendingInitializationCauses.keySet().removeIf(documentId ->
+                initializedDocuments.contains(documentId)
+                        || !initializationRequired(documentId));
+        if (pendingInitializationCauses.isEmpty()) {
+            return Collections.emptyList();
+        }
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
+                inputGraph.documentIds(), currentBindings);
+        for (List<DocumentId> component
+                : new SccPartitioner().partition(graph)) {
+            ArrayList<DocumentId> selected = new ArrayList<DocumentId>();
+            for (DocumentId documentId : component) {
+                if (pendingInitializationCauses.containsKey(documentId)) {
+                    selected.add(documentId);
+                }
+            }
+            if (!selected.isEmpty()) {
+                return Collections.unmodifiableList(selected);
+            }
+        }
+        throw new IllegalStateException(
+                "Pending initialization target left the affected closure");
+    }
+
+    private boolean initializationRequired(DocumentId documentId) {
+        if (initializedDocuments.contains(documentId)) {
+            return false;
+        }
+        for (ManagedOccurrenceBinding binding : currentBindings) {
+            if (binding.active()
+                    && binding.targetDocumentId().equals(documentId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void executeInitialization(
+            DocumentId documentId,
+            FrozenInitialization initial,
+            String causeIdentity) {
+        Node lifecycleEvent = lifecycleEvent(initial.blueId);
+        List<ManagedDocumentStepRoute> lifecycle = stepProcessor
+                .classifyLifecycleRoutes(
+                        initial.document, lifecycleEvent);
+        String initializationChannel = lifecycle.isEmpty()
+                ? "lifecycle" : "initialization";
+        PendingWork initialization = pendingWork(
+                WorkKind.INITIALIZATION,
+                documentId,
+                initializationChannel,
+                causeIdentity,
+                lifecycleEvent,
+                null,
+                null);
+        executeImmediate(
+                initialization,
+                "work." + initialization.work.ordinal()
+                        + ".initialization-enqueue");
+        for (ManagedDocumentStepRoute route : lifecycle) {
+            PendingWork work = causedWork(
+                    WorkKind.LIFECYCLE,
+                    documentId,
+                    route,
+                    null,
+                    null,
+                    causeIdentity,
+                    null);
+            executeImmediate(
+                    work,
+                    "work." + work.work.ordinal()
+                            + ".lifecycle-enqueue");
+        }
+    }
+
+    private PendingWork pendingWork(
+            WorkKind kind,
+            DocumentId targetDocumentId,
+            String channelKey,
+            String sourceOccurrenceIdentity,
+            Node exactPayload,
+            Node occurrenceEvent,
+            FrozenJsonPatch processorPatch) {
+        long ordinal = nextWorkOrdinal();
+        ManagedScopeKey scope = ManagedScopeKey.root(targetDocumentId);
+        String scopeIdentity = IDENTITIES.managedScopeKeyIdentity(scope);
+        ClosureWorkOccurrence work = new ClosureWorkOccurrence(
+                ordinal,
+                kind,
+                targetDocumentId,
+                channelKey,
+                null,
+                null,
+                scopeIdentity,
+                sourceOccurrenceIdentity,
+                IDENTITIES.workOccurrenceIdentity(
+                        input.invocationIdentity(),
+                        ordinal,
+                        kind,
+                        scopeIdentity,
+                        sourceOccurrenceIdentity));
+        return new PendingWork(
+                work,
+                exactPayload,
+                occurrenceEvent,
+                processorPatch,
+                null,
+                null);
+    }
+
+    private void executeImmediate(PendingWork pending, String reason) {
+        accept(pending, reason);
+        ClosureWorkQueue immediate = new ClosureWorkQueue();
+        immediate.enqueue(pending.work);
+        ClosureWorkOccurrence work = immediate.dequeue();
+        charge("processor", "closureWorkOccurrenceDequeued", 1L,
+                workContext(work,
+                        "work." + work.ordinal() + ".dequeue"));
+        PendingWork exact = pendingByIdentity.remove(work.workIdentity());
+        if (exact == null) {
+            throw new IllegalStateException(
+                    "Accepted initialization work has no exact payload");
+        }
+        executeOne(exact);
+    }
+
+    private void installInitializationMarkers(
+            Map<DocumentId, FrozenInitialization> frozen) {
+        if (frozen.isEmpty()) {
+            return;
+        }
+        ArrayList<DocumentId> documentIds = new ArrayList<DocumentId>(
+                frozen.keySet());
+        Collections.sort(documentIds);
+        LinkedHashMap<DocumentId, PreparedMarker> prepared =
+                new LinkedHashMap<DocumentId, PreparedMarker>();
+        for (DocumentId documentId : documentIds) {
+            if (!initializationRequired(documentId)) {
+                continue;
+            }
+            Node body = latestBodies.get(documentId).clone();
+            Node contracts = body.getContracts();
+            if (contracts == null) {
+                contracts = new Node();
+                body.contracts(contracts);
+            }
+            if (contracts.getProperties() != null
+                    && contracts.getProperties().containsKey(
+                            ProcessorContractConstants.KEY_INITIALIZED)) {
+                throw new IllegalStateException(
+                        "Initialization marker appeared during its own batch");
+            }
+            Node marker = new Node()
+                    .type(new Node().blueId(
+                            RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
+                    .properties(
+                            ProcessorContractConstants.KEY_DOCUMENT,
+                            new Node().blueId(
+                                    frozen.get(documentId).blueId));
+            prepared.put(
+                    documentId,
+                    new PreparedMarker(
+                            body,
+                            marker,
+                            documentContext(
+                                    currentSnapshot.managedDocument(
+                                            documentId),
+                                    null,
+                                    "initialization-batch.marker."
+                                            + documentId.value())));
+        }
+        if (prepared.isEmpty()) {
+            return;
+        }
+        LinkedHashMap<DocumentId, Node> markedBodies =
+                new LinkedHashMap<DocumentId, Node>();
+        for (Map.Entry<DocumentId, PreparedMarker> entry
+                : prepared.entrySet()) {
+            PreparedMarker marker = entry.getValue();
+            charge("processor", "processorMarkerWritten", 1L,
+                    marker.attribution);
+            markedBodies.put(
+                    entry.getKey(),
+                    stepProcessor.writeDetachedProcessorState(
+                            marker.inputBody,
+                            ProcessorPointerConstants.RELATIVE_INITIALIZED,
+                            marker.markerValue,
+                            marker.attribution));
+        }
+        latestBodies.putAll(markedBodies);
+        initializedDocuments.addAll(markedBodies.keySet());
+        if (initializationBatchLastWorkOrdinal < 0L) {
+            throw new IllegalStateException(
+                    "Initialization marker batch has no accepted work owner");
+        }
+        finalizeTentative(
+                TentativeFinalization.Boundary.initializationBatch(
+                        initializationBatchLastWorkOrdinal),
+                null,
+                null,
+                Collections.<String>emptySet());
+    }
+
+    private static Node lifecycleEvent(String preInitializationBlueId) {
+        return new Node()
+                .type(new Node().blueId(
+                        RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED))
+                .properties(
+                        ProcessorContractConstants.KEY_DOCUMENT,
+                        new Node().blueId(preInitializationBlueId));
     }
 
     private void chargeManagedRevisionReceiptPatch(
@@ -961,7 +1326,7 @@ final class ClosureExecutionSession
             Long occurrenceOrdinal,
             String sourceOccurrenceIdentity,
             FrozenJsonPatch processorPatch) {
-        long ordinal = nextWorkOrdinal++;
+        long ordinal = nextWorkOrdinal();
         ManagedScopeKey scope = ManagedScopeKey.root(targetDocumentId);
         String scopeIdentity = IDENTITIES.managedScopeKeyIdentity(scope);
         String workIdentity = IDENTITIES.workOccurrenceIdentity(
@@ -989,6 +1354,23 @@ final class ClosureExecutionSession
                 null);
     }
 
+    private long nextWorkOrdinal() {
+        long observed = Math.addExact(nextWorkOrdinal, 1L);
+        requireWorkOccurrenceCount(observed);
+        return nextWorkOrdinal++;
+    }
+
+    private void requireWorkOccurrenceCount(long observed) {
+        long limit = ClosureAdmissionPortableLimits.limit(
+                input, "closureWorkOccurrencesPerInvocation");
+        if (observed > limit) {
+            throw ClosureAdmissionPortableLimits.exceeded(
+                    "closureWorkOccurrencesPerInvocation",
+                    observed,
+                    limit);
+        }
+    }
+
     private void accept(PendingWork pending, String reason) {
         recorder.accepted(pending.work);
         if (pendingByIdentity.put(
@@ -998,6 +1380,11 @@ final class ClosureExecutionSession
         }
         charge("processor", "closureWorkOccurrenceEnqueued", 1L,
                 workContext(pending.work, reason));
+        if (initializationBatchRunning) {
+            initializationBatchLastWorkOrdinal = Math.max(
+                    initializationBatchLastWorkOrdinal,
+                    pending.work.ordinal());
+        }
     }
 
     private void enqueueAlreadyAccepted(
@@ -1093,10 +1480,19 @@ final class ClosureExecutionSession
                     Objects.requireNonNull(owner, "owner"),
                     recorder.finalizationCount(),
                     cyclicPlan.memberSets());
+        } else if (boundary.kind()
+                == TentativeFinalization.Boundary.Kind
+                        .INITIALIZATION_BATCH) {
+            gasFrame = finalizationGas.beginInitializationBatch(
+                    stepProcessor,
+                    after,
+                    generations,
+                    recorder.finalizationCount(),
+                    cyclicPlan.memberSets());
         } else {
-            throw new ClosureCapabilityGapException(
-                    "INITIALIZATION_FINALIZATION_GAS_REQUIRED",
-                    "Initialization-batch finalization is not in the external lane");
+            throw new IllegalStateException(
+                    "Unknown tentative finalization boundary "
+                            + boundary.kind());
         }
         finalizationGas.finishFinalization(
                 gasFrame,
@@ -1142,7 +1538,12 @@ final class ClosureExecutionSession
                                 beforeBodies,
                                 sourceBodies,
                                 latestBodies)) {
-                    epochAdvanceDocuments.add(entry.getKey());
+                    ManagedDocumentSnapshot inputDocument = input.snapshot()
+                            .managedDocument(entry.getKey());
+                    if (inputDocument != null
+                            && inputDocument.initialized()) {
+                        epochAdvanceDocuments.add(entry.getKey());
+                    }
                 }
             }
         }
@@ -1581,7 +1982,6 @@ final class ClosureExecutionSession
         LinkedHashSet<String> eligible = new LinkedHashSet<String>();
         LinkedHashMap<String, String> expectedByPath =
                 new LinkedHashMap<String, String>();
-        boolean validationRequired = false;
         Node validationDocument = resultingDocument.clone();
         ArrayList<ManagedOccurrenceBinding> sourceBindings =
                 new ArrayList<ManagedOccurrenceBinding>();
@@ -1638,7 +2038,6 @@ final class ClosureExecutionSession
                     frame.requiredExactManagedBlueIds.add(
                             binding.expectedTargetBlueId());
                 }
-                validationRequired = true;
             }
             if (mutationEligible) {
                 ManagedDocumentSnapshot target = currentSnapshot
@@ -1648,11 +2047,12 @@ final class ClosureExecutionSession
                                 target.blueId())
                         || !ManagedOccurrenceTargetVerifier
                                 .establishesExactTarget(value, target)) {
-                    throw new ClosureCapabilityGapException(
-                            "NEW_OCCURRENCE_ADMISSION_REQUIRED",
-                            "A prospective activation must install the exact "
-                                    + "committed successor at "
-                                    + binding.sourcePath());
+                    throw new InvalidExecutionEvidenceException(
+                            "Prospective managed occurrence did not install "
+                                    + "its exact expected target at "
+                                    + binding.sourcePath(),
+                            ProcessorErrorCategory
+                                    .ManagedOccurrenceBindingMissing);
                 }
                 /*
                  * The mutation runtime may hold the already-authenticated
@@ -1667,13 +2067,10 @@ final class ClosureExecutionSession
                         binding.sourcePath(),
                         new Node().blueId(binding.expectedTargetBlueId()));
                 eligible.add(binding.occurrenceIdentity());
-                validationRequired = true;
             }
         }
-        if (validationRequired) {
-            stepProcessor.validateManagedEmbeddedPaths(
-                    validationDocument, expectedByPath);
-        }
+        stepProcessor.validateManagedEmbeddedPaths(
+                validationDocument, expectedByPath);
         return Collections.unmodifiableSet(eligible);
     }
 
@@ -1715,7 +2112,8 @@ final class ClosureExecutionSession
                     original.documentId(),
                     document.blueId(),
                     document.document(),
-                    original.initialized(),
+                    initializedDocuments.contains(
+                            original.documentId()),
                     original.terminated(),
                     original.publicRoot(),
                     original.epoch(),
@@ -1848,6 +2246,16 @@ final class ClosureExecutionSession
                         after.document(),
                         component.component().componentGeneration(),
                         Objects.requireNonNull(owner, "owner"),
+                        establishedBlueIds,
+                        existingBlueIds);
+            } else if (boundary.kind()
+                    == TentativeFinalization.Boundary.Kind
+                            .INITIALIZATION_BATCH) {
+                finalizationGas.chargeInitializationAcyclicChangedBody(
+                        stepProcessor,
+                        documentId,
+                        after.document(),
+                        component.component().componentGeneration(),
                         establishedBlueIds,
                         existingBlueIds);
             } else {
@@ -2064,6 +2472,36 @@ final class ClosureExecutionSession
         if (closed) {
             throw new IllegalStateException(
                     "Closure execution session is closed");
+        }
+    }
+
+    private static final class FrozenInitialization {
+        private final String blueId;
+        private final Node document;
+
+        private FrozenInitialization(String blueId, Node document) {
+            this.blueId = Objects.requireNonNull(
+                    blueId, "blueId");
+            this.document = Objects.requireNonNull(
+                    document, "document").clone();
+        }
+    }
+
+    private static final class PreparedMarker {
+        private final Node inputBody;
+        private final Node markerValue;
+        private final GasChargeContext attribution;
+
+        private PreparedMarker(
+                Node inputBody,
+                Node markerValue,
+                GasChargeContext attribution) {
+            this.inputBody = Objects.requireNonNull(
+                    inputBody, "inputBody").clone();
+            this.markerValue = Objects.requireNonNull(
+                    markerValue, "markerValue").clone();
+            this.attribution = Objects.requireNonNull(
+                    attribution, "attribution");
         }
     }
 
