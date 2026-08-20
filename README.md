@@ -352,17 +352,16 @@ Every program under [`examples/src/main/java`](examples/src/main/java) has a
 ./gradlew finalQualityVerify
 ```
 
-Contracts specification and fixture inputs come from the separately versioned
-`../blue-spec/latest` tree. Override that checkout with
-`-PblueSpecRoot=/absolute/path/to/blue-spec/latest` or `BLUE_SPEC_ROOT`; the
-`verifyBlueSpecInputs` task verifies its Git revision and exact locked bytes
-before any consumer runs. The conformance resources then bind **153 Language
-fixtures** and **234 Contracts fixtures**, exact specification/package identities, Java 8 bytecode, API
-baselines, Javadocs, runnable examples, benchmark smoke runs, package/module
-cycles, fragmented/locality assertions, and reproducible binary/source
-artifacts. Generated [fixture coverage](docs/reference/conformance-fixtures.md)
-contains exact categories and identities; the machine-readable final-quality
-report decides release eligibility.
+The repository contains the exact Language and Contracts specifications and
+the complete frozen conformance corpus required by the build. No sibling
+repository or external specification checkout is required. The conformance
+resources bind **153 Language fixtures** and **234 Contracts fixtures**, exact
+specification/package identities, Java 8 bytecode, API baselines, Javadocs,
+runnable examples, benchmark smoke runs, package/module cycles,
+fragmented/locality assertions, and reproducible binary/source artifacts.
+Generated [fixture coverage](docs/reference/conformance-fixtures.md) contains
+exact categories and identities; the machine-readable final-quality report
+decides release eligibility.
 
 For a candidate, commit first and run the SOURCE_DATE_EPOCH-bound clean build
 and verification as two uncontended Gradle invocations. The exact commands and
