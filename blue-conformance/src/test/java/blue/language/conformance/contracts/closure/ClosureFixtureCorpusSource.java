@@ -32,17 +32,10 @@ final class ClosureFixtureCorpusSource {
             "blue.contracts.closurePackageRoot";
     static final String PACKAGE_ROOT_ENVIRONMENT =
             "BLUE_CONTRACTS_CLOSURE_PACKAGE_ROOT";
-    static final String SPEC_ROOT_PROPERTY = "blue.spec.root";
-    static final String SPEC_ROOT_ENVIRONMENT = "BLUE_SPEC_ROOT";
-
     private static final String CONTRACTS_SPECIFICATION_PATH =
             "../../specifications/blue-contracts-and-processor-specification-1.0.md";
     private static final String LANGUAGE_REFERENCE_PATH =
             "../../reference/blue-language-specification-1.0.md";
-    private static final String LANGUAGE_SPECIFICATION =
-            "specifications/blue-language-specification-1.0.md";
-    private static final String LANGUAGE_REFERENCE =
-            "reference/blue-language-specification-1.0.md";
 
     private static final int MAX_STAGED_YAML_CODE_POINTS = 16 * 1024 * 1024;
     private static final ObjectMapper YAML = stagedYamlMapper();
@@ -77,11 +70,6 @@ final class ClosureFixtureCorpusSource {
         if (packageRoot != null) {
             return openCompletePackage(packageRoot);
         }
-        String specRoot = configured(
-                SPEC_ROOT_PROPERTY, SPEC_ROOT_ENVIRONMENT);
-        if (specRoot != null) {
-            return openSpecRoot(specRoot);
-        }
         return new ClosureFixtureCorpusSource(
                 null, ClosureFixtureInventory.load());
     }
@@ -96,20 +84,6 @@ final class ClosureFixtureCorpusSource {
                 "staged root lacks MANIFEST.sha256");
         require(Files.isDirectory(contractsRoot),
                 "staged root lacks conformance/contracts");
-        return new ClosureFixtureCorpusSource(
-                contractsRoot, verifyCompleteContractsPackage(contractsRoot));
-    }
-
-    private static ClosureFixtureCorpusSource openSpecRoot(String configured) {
-        Path root = Paths.get(configured).toAbsolutePath().normalize();
-        Path contractsRoot = root.resolve("conformance/contracts");
-        require(Files.isDirectory(contractsRoot),
-                "Blue specification root lacks conformance/contracts");
-        byte[] specification = normalized(readBytes(
-                root.resolve(LANGUAGE_SPECIFICATION)));
-        byte[] reference = normalized(readBytes(root.resolve(LANGUAGE_REFERENCE)));
-        require(java.util.Arrays.equals(specification, reference),
-                "Blue specification Language source and release reference differ");
         return new ClosureFixtureCorpusSource(
                 contractsRoot, verifyCompleteContractsPackage(contractsRoot));
     }

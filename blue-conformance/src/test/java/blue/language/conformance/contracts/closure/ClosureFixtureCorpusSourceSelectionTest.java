@@ -13,23 +13,16 @@ final class ClosureFixtureCorpusSourceSelectionTest {
 
     private final String originalPackageRoot = System.getProperty(
             ClosureFixtureCorpusSource.PACKAGE_ROOT_PROPERTY);
-    private final String originalSpecRoot = System.getProperty(
-            ClosureFixtureCorpusSource.SPEC_ROOT_PROPERTY);
-
     @AfterEach
     void restoreConfiguration() {
         restore(
                 ClosureFixtureCorpusSource.PACKAGE_ROOT_PROPERTY,
                 originalPackageRoot);
-        restore(
-                ClosureFixtureCorpusSource.SPEC_ROOT_PROPERTY,
-                originalSpecRoot);
     }
 
     @Test
-    void shouldReadTheCompleteClosureCorpusFromTheSlimSpecRoot() {
+    void shouldReadTheCompleteClosureCorpusFromBundledResources() {
         System.clearProperty(ClosureFixtureCorpusSource.PACKAGE_ROOT_PROPERTY);
-        requireConfiguredSpecRoot();
 
         ClosureFixtureCorpusSource source = ClosureFixtureCorpusSource.open();
 
@@ -38,9 +31,8 @@ final class ClosureFixtureCorpusSourceSelectionTest {
     }
 
     @Test
-    void shouldPreferTheCompletePackageOverrideOverTheSpecRoot(
+    void shouldPreferTheCompletePackageOverrideOverBundledResources(
             @TempDir Path incompletePackage) {
-        requireConfiguredSpecRoot();
         System.setProperty(
                 ClosureFixtureCorpusSource.PACKAGE_ROOT_PROPERTY,
                 incompletePackage.toString());
@@ -50,15 +42,6 @@ final class ClosureFixtureCorpusSourceSelectionTest {
                 ClosureFixtureCorpusSource::open);
 
         assertTrue(failure.getMessage().contains("package-manifest.yaml"));
-    }
-
-    private static void requireConfiguredSpecRoot() {
-        String root = System.getProperty(
-                ClosureFixtureCorpusSource.SPEC_ROOT_PROPERTY);
-        if (root == null || root.isEmpty()) {
-            throw new IllegalStateException(
-                    "The test task did not supply blue.spec.root");
-        }
     }
 
     private static void restore(String property, String value) {

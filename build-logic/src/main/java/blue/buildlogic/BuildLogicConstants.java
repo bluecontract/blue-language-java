@@ -69,7 +69,6 @@ public final class BuildLogicConstants {
     public static final String TASK_VERIFY_REPRODUCIBLE_ARCHIVES =
             "verifyReproducibleArchives";
     public static final String TASK_VERIFY_BUILD_SCRIPT_SHAPE = "verifyBuildScriptShape";
-    public static final String TASK_VERIFY_BLUE_SPEC_INPUTS = "verifyBlueSpecInputs";
     public static final String TASK_VERIFY_CLEAN_BUILD_EVIDENCE = "verifyCleanBuildEvidence";
     public static final String TASK_VERIFY_PUBLISHED_REPOSITORY = "verifyPublishedRepository";
     public static final String TASK_VERIFY_SOURCE_RELEASE_ARCHIVE =
