@@ -50,6 +50,8 @@ final class DefaultClosureProcessorTest {
     private static final DocumentId ROOT = new DocumentId("root");
     private static final DocumentId A = new DocumentId("a");
     private static final DocumentId B = new DocumentId("b");
+    private static final DocumentId C = new DocumentId("c");
+    private static final DocumentId D = new DocumentId("d");
     private static final String C34_A_BLUE_ID =
             "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8";
     private static final String C34_B_BLUE_ID =
@@ -70,6 +72,11 @@ final class DefaultClosureProcessorTest {
             new Node().name("Managed Draft Test Handler");
     private static final String DRAFT_HANDLER_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(DRAFT_HANDLER_TYPE);
+    private static final Node INDEPENDENT_DRAFT_HANDLER_TYPE =
+            new Node().name("Independent Managed Draft Test Handler");
+    private static final String INDEPENDENT_DRAFT_HANDLER_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    INDEPENDENT_DRAFT_HANDLER_TYPE);
 
     @Test
     void executesAndCommitsARealDirectSeedAsOneIsolatedDocumentStep() {
@@ -210,6 +217,59 @@ final class DefaultClosureProcessorTest {
                     capture.evidence.tentativeFinalizations()
                             .get(1)
                             .boundary().afterWorkOrdinal());
+        }
+    }
+
+    @Test
+    void finalizesEachIndependentDraftComponentBeforeStartingTheNext() {
+        List<Node> drafts = Arrays.asList(
+                independentDraftDocument(B),
+                independentDraftDocument(C),
+                independentDraftDocument(D));
+        try (DocumentProcessor owner = independentDraftOwner(drafts)) {
+            Capture capture = new Capture();
+            ClosureInvocationInput input = independentDraftInvocation(
+                    owner, drafts);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.processClosure(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.SUCCESS,
+                    attempt.processResult().status(), diagnostic(attempt));
+            assertTrue(attempt.processResult().commits());
+            assertEquals(Arrays.asList(
+                            WorkKind.EXTERNAL_DELIVERY,
+                            WorkKind.INITIALIZATION,
+                            WorkKind.LIFECYCLE,
+                            WorkKind.EMBEDDED_EVENT,
+                            WorkKind.INITIALIZATION,
+                            WorkKind.LIFECYCLE,
+                            WorkKind.EMBEDDED_EVENT,
+                            WorkKind.INITIALIZATION,
+                            WorkKind.LIFECYCLE,
+                            WorkKind.EMBEDDED_EVENT),
+                    workKinds(capture.evidence.workTrace()));
+            assertEquals(Arrays.asList(
+                            ROOT,
+                            B, B, ROOT,
+                            C, C, ROOT,
+                            D, D, ROOT),
+                    stepTargets(capture.evidence.documentStepTrace()));
+            for (DocumentId documentId : Arrays.asList(B, C, D)) {
+                ResultingDocument child = resultingDocument(
+                        attempt, documentId);
+                assertTrue(child.initialized());
+                assertEquals(0L, child.epoch());
+            }
+
+            List<GasTraceEntry> gas = attempt.processResult().gasTrace();
+            assertInitializationBarrier(gas, B, 3L, Long.valueOf(4L));
+            assertInitializationBarrier(gas, C, 6L, Long.valueOf(7L));
+            assertInitializationBarrier(gas, D, 9L, null);
         }
     }
 
@@ -848,6 +908,188 @@ final class DefaultClosureProcessorTest {
                 + attempt.processResult().diagnostic().message()
                 + " "
                 + attempt.processResult().diagnostic().details();
+    }
+
+    private static DocumentProcessor independentDraftOwner(
+            List<Node> drafts) {
+        Node children = new Node();
+        for (int index = 0; index < drafts.size(); index++) {
+            DocumentId documentId = Arrays.asList(B, C, D).get(index);
+            children.properties(
+                    documentId.value(), drafts.get(index).clone());
+        }
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                CHANNEL_BLUE_ID,
+                                CHANNEL_TYPE,
+                                new TestChannelProcessor())
+                        .register(
+                                INDEPENDENT_DRAFT_HANDLER_BLUE_ID,
+                                INDEPENDENT_DRAFT_HANDLER_TYPE,
+                                new IndependentDraftHandlerProcessor(
+                                        children))
+                        .build();
+        return DocumentProcessor.builder()
+                .runtimeRegistry(registry)
+                .build();
+    }
+
+    private static ClosureInvocationInput independentDraftInvocation(
+            DocumentProcessor owner,
+            List<Node> drafts) {
+        List<DocumentId> childIds = Arrays.asList(B, C, D);
+        if (drafts.size() != childIds.size()) {
+            throw new IllegalArgumentException(
+                    "Independent draft fixture requires three children");
+        }
+        ClosureInvocationInput base = invocation(owner);
+        Node parent = independentDraftParentDocument();
+        String bindingPolicyIdentity = base.environment()
+                .managedBindingPolicyIdentity();
+        ArrayList<ManagedOccurrenceBinding> bindings =
+                new ArrayList<ManagedOccurrenceBinding>();
+        ArrayList<DocumentId> documentIds =
+                new ArrayList<DocumentId>();
+        documentIds.add(ROOT);
+        documentIds.addAll(childIds);
+        LinkedHashMap<DocumentId, Long> generations =
+                new LinkedHashMap<DocumentId, Long>();
+        LinkedHashMap<DocumentId, Node> bodies =
+                new LinkedHashMap<DocumentId, Node>();
+        generations.put(ROOT, Long.valueOf(1L));
+        bodies.put(ROOT, parent);
+        for (int index = 0; index < childIds.size(); index++) {
+            DocumentId documentId = childIds.get(index);
+            Node draft = drafts.get(index);
+            generations.put(documentId, Long.valueOf(1L));
+            bodies.put(documentId, draft);
+            bindings.add(ManagedOccurrenceBinding.derived(
+                    bindingPolicyIdentity,
+                    ROOT,
+                    ScopeAddress.embedded(
+                            "/children/" + documentId.value(), 1L),
+                    documentId,
+                    DirectBlueIdCalculator.calculateBlueId(draft),
+                    false,
+                    null));
+        }
+        Collections.sort(bindings);
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
+                documentIds, bindings);
+        ComponentFinalizationResult finalized =
+                new ComponentFinalizationKernel().finalizeComponents(
+                        new ComponentFinalizationInput(
+                                graph, generations, bodies, bindings));
+        ArrayList<ManagedDocumentSnapshot> documents =
+                new ArrayList<ManagedDocumentSnapshot>();
+        for (DocumentId documentId : Arrays.asList(B, C, D, ROOT)) {
+            FinalizedDocumentEvidence exact = finalized.document(documentId);
+            documents.add(new ManagedDocumentSnapshot(
+                    documentId,
+                    exact.blueId(),
+                    exact.document(),
+                    documentId.equals(ROOT),
+                    false,
+                    documentId.equals(ROOT),
+                    0L,
+                    exact.componentGeneration()));
+        }
+        ArrayList<ComponentSnapshot> components =
+                new ArrayList<ComponentSnapshot>();
+        for (FinalizedComponentEvidence component
+                : finalized.components()) {
+            components.add(component.component());
+        }
+        List<ManagedOccurrenceBinding> exactBindings =
+                finalized.finalizedGraph().bindings();
+        String bindingSetIdentity = IDENTITIES
+                .occurrenceBindingSetIdentity(exactBindings);
+        AffectedClosureSnapshot provisionalSnapshot =
+                new AffectedClosureSnapshot(
+                        hash('0'),
+                        1L,
+                        documents,
+                        exactBindings,
+                        bindingSetIdentity,
+                        components,
+                        Collections.singletonList(ROOT));
+        AffectedClosureSnapshot snapshot =
+                new AffectedClosureSnapshot(
+                        IDENTITIES.affectedClosureIdentity(
+                                provisionalSnapshot),
+                        provisionalSnapshot.graphGeneration(),
+                        provisionalSnapshot.managedDocuments(),
+                        provisionalSnapshot.occurrences(),
+                        provisionalSnapshot
+                                .occurrenceBindingSetIdentity(),
+                        provisionalSnapshot.components(),
+                        provisionalSnapshot.publicRootDocumentIds());
+        ClosureInvocationInput provisional =
+                ClosureInvocationInput.processClosure(
+                        hash('f'),
+                        snapshot,
+                        base.cause(),
+                        base.directDeliveries(),
+                        base.directDeliverySnapshotIdentity(),
+                        base.executionPolicy(),
+                        base.environment());
+        return ClosureInvocationInput.processClosure(
+                IDENTITIES.invocationIdentity(provisional),
+                snapshot,
+                base.cause(),
+                base.directDeliveries(),
+                base.directDeliverySnapshotIdentity(),
+                base.executionPolicy(),
+                base.environment());
+    }
+
+    private static Node independentDraftParentDocument() {
+        Node document = new Node()
+                .name("Independent Draft Parent")
+                .contracts(new Node()
+                        .properties(
+                                "embedded",
+                                typed(RuntimeBlueIds.PROCESS_EMBEDDED)
+                                        .properties(
+                                                "collectionPaths",
+                                                new Node().items(
+                                                        new Node().value(
+                                                                "/children"))))
+                        .properties("source", typed(CHANNEL_BLUE_ID))
+                        .properties(
+                                "createIndependentDrafts",
+                                independentDraftHandler("source"))
+                        .properties(
+                                "fromIndependentChild",
+                                typed(RuntimeBlueIds
+                                        .EMBEDDED_NODE_CHANNEL))
+                        .properties(
+                                "observeIndependentChild",
+                                independentDraftHandler(
+                                        "fromIndependentChild")));
+        return markInitialized(document);
+    }
+
+    private static Node independentDraftDocument(DocumentId documentId) {
+        return new Node()
+                .name("Independent Draft " + documentId.value())
+                .properties(
+                        "documentId",
+                        new Node().value(documentId.value()))
+                .contracts(new Node()
+                        .properties(
+                                "lifecycle",
+                                typed(RuntimeBlueIds
+                                        .LIFECYCLE_EVENT_CHANNEL))
+                        .properties(
+                                "emitIndependentLifecycle",
+                                independentDraftHandler("lifecycle")));
+    }
+
+    private static Node independentDraftHandler(String channel) {
+        return typed(INDEPENDENT_DRAFT_HANDLER_BLUE_ID).properties(
+                "channel", new Node().value(channel));
     }
 
     private static DocumentProcessor managedDraftOwner(
@@ -1646,6 +1888,74 @@ final class DefaultClosureProcessorTest {
         return result;
     }
 
+    private static void assertInitializationBarrier(
+            List<GasTraceEntry> trace,
+            DocumentId documentId,
+            long lastCausedWorkOrdinal,
+            Long nextInitializationOrdinal) {
+        String markerReason = "initialization-batch.marker."
+                + documentId.value();
+        assertEquals(1L, trace.stream()
+                .filter(entry -> "processorMarkerWritten".equals(
+                        entry.counter()))
+                .filter(entry -> markerReason.equals(entry.reason()))
+                .count());
+        long lastWork = firstGasSequence(
+                trace,
+                "closureWorkOccurrenceDequeued",
+                "work." + lastCausedWorkOrdinal + ".dequeue",
+                null,
+                false);
+        long marker = firstGasSequence(
+                trace,
+                "processorMarkerWritten",
+                markerReason,
+                documentId,
+                false);
+        long finalized = firstGasSequence(
+                trace,
+                null,
+                "initialization-batch.acyclic-finalization",
+                documentId,
+                true);
+        assertTrue(lastWork < marker);
+        assertTrue(marker < finalized);
+        if (nextInitializationOrdinal != null) {
+            long nextInitialization = firstGasSequence(
+                    trace,
+                    "closureWorkOccurrenceEnqueued",
+                    "work." + nextInitializationOrdinal
+                            + ".initialization-enqueue",
+                    null,
+                    false);
+            assertTrue(finalized < nextInitialization);
+        }
+    }
+
+    private static long firstGasSequence(
+            List<GasTraceEntry> trace,
+            String counter,
+            String reason,
+            DocumentId documentId,
+            boolean reasonPrefix) {
+        for (GasTraceEntry entry : trace) {
+            boolean counterMatches = counter == null
+                    || counter.equals(entry.counter());
+            boolean reasonMatches = reasonPrefix
+                    ? entry.reason() != null
+                            && entry.reason().startsWith(reason)
+                    : reason.equals(entry.reason());
+            boolean documentMatches = documentId == null
+                    || documentId.equals(entry.documentId());
+            if (counterMatches && reasonMatches && documentMatches) {
+                return entry.sequence();
+            }
+        }
+        throw new AssertionError(
+                "Missing gas trace boundary " + reason + " for "
+                        + documentId);
+    }
+
     private static ResultingDocument resultingDocument(
             ClosureAttemptResult attempt,
             DocumentId documentId) {
@@ -1921,6 +2231,42 @@ final class DefaultClosureProcessorTest {
                 context.emitEvent(new Node().properties(
                         "kind",
                         new Node().value("managed-draft-initialized")));
+            }
+        }
+    }
+
+    /** Handler model for independent component initialization tests. */
+    public static final class IndependentDraftHandler
+            extends HandlerContract {
+    }
+
+    private static final class IndependentDraftHandlerProcessor
+            implements HandlerProcessor<IndependentDraftHandler> {
+        private final Node children;
+
+        private IndependentDraftHandlerProcessor(Node children) {
+            this.children = children.clone();
+        }
+
+        @Override
+        public Class<IndependentDraftHandler> contractType() {
+            return IndependentDraftHandler.class;
+        }
+
+        @Override
+        public void execute(
+                IndependentDraftHandler contract,
+                ProcessorExecutionContext context) {
+            if ("createIndependentDrafts".equals(
+                    context.contractKey())) {
+                context.applyPatch(JsonPatch.add(
+                        "/children", children.clone()));
+            } else if ("emitIndependentLifecycle".equals(
+                    context.contractKey())) {
+                context.emitEvent(new Node().properties(
+                        "kind",
+                        new Node().value(
+                                "independent-draft-initialized")));
             }
         }
     }

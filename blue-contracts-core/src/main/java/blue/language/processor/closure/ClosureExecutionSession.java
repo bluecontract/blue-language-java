@@ -842,9 +842,6 @@ final class ClosureExecutionSession
                     "Initialization batch re-entered its own work boundary");
         }
         initializationBatchRunning = true;
-        initializationBatchLastWorkOrdinal = -1L;
-        LinkedHashMap<DocumentId, FrozenInitialization> frozen =
-                new LinkedHashMap<DocumentId, FrozenInitialization>();
         try {
             while (true) {
                 List<DocumentId> component =
@@ -856,44 +853,107 @@ final class ClosureExecutionSession
                     drainOneEvent();
                     continue;
                 }
-                for (DocumentId documentId : component) {
-                    if (!initializationRequired(documentId)) {
-                        pendingInitializationCauses.remove(documentId);
-                        continue;
-                    }
-                    ManagedDocumentSnapshot document = currentSnapshot
-                            .managedDocument(documentId);
-                    if (document == null || document.initialized()
-                            || initializedDocuments.contains(documentId)) {
-                        pendingInitializationCauses.remove(documentId);
-                        continue;
-                    }
-                    frozen.putIfAbsent(
-                            documentId,
-                            new FrozenInitialization(
-                                    document.blueId(),
-                                    document.document()));
-                }
-                for (DocumentId documentId : component) {
-                    FrozenInitialization initial = frozen.get(documentId);
-                    String causeIdentity = pendingInitializationCauses
-                            .remove(documentId);
-                    if (initial == null || causeIdentity == null
-                            || !initializationRequired(documentId)) {
-                        continue;
-                    }
-                    executeInitialization(
-                            documentId, initial, causeIdentity);
-                }
-                while (!eventQueue.isEmpty()) {
-                    drainOneEvent();
-                }
+                initializationBatchLastWorkOrdinal = -1L;
+                runPendingInitializationComponent(component);
             }
-            installInitializationMarkers(frozen);
         } finally {
             initializationBatchRunning = false;
             initializationBatchLastWorkOrdinal = -1L;
         }
+    }
+
+    private void runPendingInitializationComponent(
+            List<DocumentId> initialMembers) {
+        LinkedHashSet<DocumentId> batchMembers =
+                new LinkedHashSet<DocumentId>(
+                        Objects.requireNonNull(
+                                initialMembers, "initialMembers"));
+        LinkedHashMap<DocumentId, FrozenInitialization> frozen =
+                new LinkedHashMap<DocumentId, FrozenInitialization>();
+        while (true) {
+            List<DocumentId> selected =
+                    pendingMembersInCurrentInitializationComponent(
+                            batchMembers);
+            if (selected.isEmpty()) {
+                if (eventQueue.isEmpty()) {
+                    break;
+                }
+                drainOneEvent();
+                continue;
+            }
+            batchMembers.addAll(selected);
+            for (DocumentId documentId : selected) {
+                if (!initializationRequired(documentId)) {
+                    pendingInitializationCauses.remove(documentId);
+                    continue;
+                }
+                ManagedDocumentSnapshot document = currentSnapshot
+                        .managedDocument(documentId);
+                if (document == null || document.initialized()
+                        || initializedDocuments.contains(documentId)) {
+                    pendingInitializationCauses.remove(documentId);
+                    continue;
+                }
+                frozen.putIfAbsent(
+                        documentId,
+                        new FrozenInitialization(
+                                document.blueId(),
+                                document.document()));
+            }
+            for (DocumentId documentId : selected) {
+                FrozenInitialization initial = frozen.get(documentId);
+                String causeIdentity = pendingInitializationCauses
+                        .remove(documentId);
+                if (initial == null || causeIdentity == null
+                        || !initializationRequired(documentId)) {
+                    continue;
+                }
+                executeInitialization(
+                        documentId, initial, causeIdentity);
+            }
+            while (!eventQueue.isEmpty()) {
+                drainOneEvent();
+            }
+        }
+        installInitializationMarkers(frozen);
+    }
+
+    private List<DocumentId>
+            pendingMembersInCurrentInitializationComponent(
+                    Set<DocumentId> batchMembers) {
+        pendingInitializationCauses.keySet().removeIf(documentId ->
+                initializedDocuments.contains(documentId)
+                        || !initializationRequired(documentId));
+        if (pendingInitializationCauses.isEmpty()) {
+            return Collections.emptyList();
+        }
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
+                inputGraph.documentIds(), currentBindings);
+        ArrayList<DocumentId> selected = new ArrayList<DocumentId>();
+        for (List<DocumentId> component
+                : new SccPartitioner().partition(graph)) {
+            if (!intersects(component, batchMembers)) {
+                continue;
+            }
+            for (DocumentId documentId : component) {
+                if (pendingInitializationCauses.containsKey(documentId)) {
+                    selected.add(documentId);
+                }
+            }
+        }
+        Collections.sort(selected);
+        return Collections.unmodifiableList(selected);
+    }
+
+    private static boolean intersects(
+            List<DocumentId> component,
+            Set<DocumentId> members) {
+        for (DocumentId documentId : component) {
+            if (members.contains(documentId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<DocumentId> nextPendingInitializationComponent() {
