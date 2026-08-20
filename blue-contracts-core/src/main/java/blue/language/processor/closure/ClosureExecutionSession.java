@@ -4,6 +4,7 @@ import blue.language.identity.CyclicSetFinalization;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
 import blue.language.processor.FrozenJsonPatch;
@@ -2694,7 +2695,7 @@ final class ClosureExecutionSession
 
         private FrozenInitialization(String blueId, Node document) {
             this.blueId = Objects.requireNonNull(
-                    blueId, "blueId");
+                    blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
             this.document = Objects.requireNonNull(
                     document, "document").clone();
         }
