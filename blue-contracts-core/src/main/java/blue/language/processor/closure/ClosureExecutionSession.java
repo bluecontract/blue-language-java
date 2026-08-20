@@ -1285,33 +1285,13 @@ final class ClosureExecutionSession
                             + ".public-record"));
         }
 
-        ArrayList<RouteTarget> routes = new ArrayList<RouteTarget>();
-        for (ManagedDocumentStepRoute route
-                : stepProcessor.classifyTriggeredEventRoutes(
-                        emitter.document(), exactEvent)) {
-            routes.add(new RouteTarget(
-                    emitter.documentId(), route));
-        }
-        for (ManagedOccurrenceBinding binding
-                : activeContainingOccurrences(emitter.documentId())) {
-            ManagedDocumentSnapshot containing = currentSnapshot
-                    .managedDocument(binding.sourceDocumentId());
-            for (ManagedDocumentStepRoute route
-                    : stepProcessor.classifyEmbeddedEventRoutes(
-                            containing.document(),
-                            binding.sourcePath(),
-                            exactEvent,
-                            eventBlueId)) {
-                routes.add(new RouteTarget(
-                        containing.documentId(), route));
-            }
-        }
         eventQueue.addLast(new EmittedOccurrence(
                 eventOrdinal,
                 eventBlueId,
                 occurrenceIdentity,
+                emitter.documentId(),
                 exactEvent,
-                routes));
+                activeContainingOccurrences(emitter.documentId())));
         charge("processor", "internalEventEnqueued", 1L,
                 frame.context("event." + eventOrdinal + ".enqueue"));
     }
@@ -1341,7 +1321,7 @@ final class ClosureExecutionSession
                         "event." + occurrence.ordinal + ".dequeue"));
         long deliveryOrdinal = 0L;
         ClosureWorkQueue immediate = new ClosureWorkQueue();
-        for (RouteTarget route : occurrence.routes) {
+        for (RouteTarget route : classifyEventRoutes(occurrence)) {
             WorkKind kind = WorkKind.valueOf(
                     route.route.workKind().name());
             PendingWork pending = causedWork(
@@ -1376,6 +1356,179 @@ final class ClosureExecutionSession
         } finally {
             eventDeliveryBatchDepth--;
         }
+    }
+
+    private List<RouteTarget> classifyEventRoutes(
+            EmittedOccurrence occurrence) {
+        ArrayList<RouteTarget> routes = new ArrayList<RouteTarget>();
+        ManagedDocumentSnapshot source = requireEventDocument(
+                occurrence.sourceDocumentId,
+                "event source");
+        if (!source.terminated()) {
+            for (ManagedDocumentStepRoute route
+                    : stepProcessor.classifyTriggeredEventRoutes(
+                            source.document(), occurrence.event)) {
+                routes.add(new RouteTarget(
+                        source.documentId(), route));
+            }
+        }
+        for (ManagedOccurrenceBinding frozen
+                : occurrence.containingTargets) {
+            revalidateFrozenEventTarget(
+                    occurrence.sourceDocumentId, frozen);
+            ManagedDocumentSnapshot containing = requireEventDocument(
+                    frozen.sourceDocumentId(),
+                    "frozen containing target");
+            if (containing.terminated()) {
+                continue;
+            }
+            for (ManagedDocumentStepRoute route
+                    : stepProcessor.classifyEmbeddedEventRoutes(
+                            containing.document(),
+                            frozen.sourcePath(),
+                            occurrence.event,
+                            occurrence.eventBlueId)) {
+                routes.add(new RouteTarget(
+                        containing.documentId(), route));
+            }
+        }
+        return Collections.unmodifiableList(routes);
+    }
+
+    private ManagedDocumentSnapshot requireEventDocument(
+            DocumentId documentId,
+            String role) {
+        ManagedDocumentSnapshot document = currentSnapshot.managedDocument(
+                documentId);
+        if (document == null) {
+            throw eventBindingFailure(
+                    "Missing " + role + " document " + documentId);
+        }
+        return document;
+    }
+
+    private void revalidateFrozenEventTarget(
+            DocumentId eventSourceDocumentId,
+            ManagedOccurrenceBinding frozen) {
+        verifyFrozenEventBinding(frozen);
+        if (!frozen.active()
+                || !frozen.targetDocumentId().equals(
+                        eventSourceDocumentId)) {
+            throw eventBindingFailure(
+                    "Frozen event target is not eligible for source "
+                            + eventSourceDocumentId + " at "
+                            + frozen.sourcePath());
+        }
+
+        ManagedOccurrenceBinding current = null;
+        int currentMatches = 0;
+        ManagedOccurrenceBinding successor = null;
+        int successorMatches = 0;
+        for (ManagedOccurrenceBinding candidate : currentBindings) {
+            if (candidate.occurrenceIdentity().equals(
+                    frozen.occurrenceIdentity())) {
+                current = candidate;
+                currentMatches++;
+            }
+            if (isNextActivationGeneration(frozen, candidate)) {
+                successor = candidate;
+                successorMatches++;
+            }
+        }
+        if (currentMatches > 1
+                || successorMatches > 1
+                || (current != null && successor != null)) {
+            throw eventBindingFailure(
+                    "Frozen event target has conflicting binding lineage at "
+                            + frozen.sourcePath());
+        }
+        if (current != null) {
+            verifyFrozenEventBinding(current);
+            if (!current.active()
+                    || !sameBindingLineage(frozen, current)) {
+                throw eventBindingFailure(
+                        "Frozen event target conflicts with its latest "
+                                + "binding at " + frozen.sourcePath());
+            }
+            ManagedDocumentSnapshot source = requireEventDocument(
+                    current.sourceDocumentId(),
+                    "latest containing target");
+            ManagedDocumentSnapshot target = requireEventDocument(
+                    current.targetDocumentId(),
+                    "latest event-source target");
+            Node exact = NodePathEditor.getOrNull(
+                    source.document(), current.sourcePath());
+            if (exact == null
+                    || !ManagedOccurrenceTargetVerifier
+                            .establishesExactTarget(exact, target)) {
+                throw eventBindingFailure(
+                        "Latest event target binding is invalid at "
+                                + current.sourcePath());
+            }
+            return;
+        }
+        if (successor == null) {
+            throw eventBindingFailure(
+                    "Frozen event target has no latest or successor binding at "
+                            + frozen.sourcePath());
+        }
+        // A later generation proves retirement/re-add continuity only.  Its
+        // target never replaces the target frozen by this event occurrence.
+        verifyFrozenEventBinding(successor);
+    }
+
+    private void verifyFrozenEventBinding(
+            ManagedOccurrenceBinding binding) {
+        try {
+            ManagedOccurrenceBinding.verified(
+                    binding.occurrenceIdentity(),
+                    binding.bindingIdentity(),
+                    binding.bindingPolicyIdentity(),
+                    binding.sourceDocumentId(),
+                    binding.sourceAddress(),
+                    binding.targetDocumentId(),
+                    binding.expectedTargetBlueId(),
+                    binding.active(),
+                    binding.pendingHistoricalEpoch());
+        } catch (IllegalArgumentException invalid) {
+            throw eventBindingFailure(
+                    "Frozen event binding identity is invalid at "
+                            + binding.sourcePath());
+        }
+    }
+
+    private static boolean sameBindingLineage(
+            ManagedOccurrenceBinding frozen,
+            ManagedOccurrenceBinding current) {
+        return frozen.sourceDocumentId().equals(
+                        current.sourceDocumentId())
+                && frozen.sourceAddress().equals(
+                        current.sourceAddress())
+                && frozen.targetDocumentId().equals(
+                        current.targetDocumentId())
+                && frozen.bindingPolicyIdentity().equals(
+                        current.bindingPolicyIdentity());
+    }
+
+    private static boolean isNextActivationGeneration(
+            ManagedOccurrenceBinding frozen,
+            ManagedOccurrenceBinding candidate) {
+        return frozen.activationGeneration()
+                        < ClosureValueSupport.MAX_SAFE_INTEGER
+                && candidate.activationGeneration()
+                        == frozen.activationGeneration() + 1L
+                && frozen.sourceDocumentId().equals(
+                        candidate.sourceDocumentId())
+                && frozen.sourcePath().equals(candidate.sourcePath())
+                && frozen.bindingPolicyIdentity().equals(
+                        candidate.bindingPolicyIdentity());
+    }
+
+    private static InvalidExecutionEvidenceException eventBindingFailure(
+            String message) {
+        return new InvalidExecutionEvidenceException(
+                message,
+                ProcessorErrorCategory.ManagedOccurrenceBindingMissing);
     }
 
     private PendingWork causedWork(
@@ -2646,21 +2799,31 @@ final class ClosureExecutionSession
         private final long ordinal;
         private final String eventBlueId;
         private final String occurrenceIdentity;
-        private final List<RouteTarget> routes;
+        private final DocumentId sourceDocumentId;
+        private final Node event;
+        private final List<ManagedOccurrenceBinding> containingTargets;
         private final ActiveFrame capturedBy;
 
         private EmittedOccurrence(
                 long ordinal,
                 String eventBlueId,
                 String occurrenceIdentity,
+                DocumentId sourceDocumentId,
                 Node event,
-                List<RouteTarget> routes) {
+                List<ManagedOccurrenceBinding> containingTargets) {
             this.ordinal = ordinal;
-            this.eventBlueId = eventBlueId;
-            this.occurrenceIdentity = occurrenceIdentity;
-            Objects.requireNonNull(event, "event");
-            this.routes = Collections.unmodifiableList(
-                    new ArrayList<RouteTarget>(routes));
+            this.eventBlueId = Objects.requireNonNull(
+                    eventBlueId, "eventBlueId");
+            this.occurrenceIdentity = Objects.requireNonNull(
+                    occurrenceIdentity, "occurrenceIdentity");
+            this.sourceDocumentId = Objects.requireNonNull(
+                    sourceDocumentId, "sourceDocumentId");
+            this.event = Objects.requireNonNull(event, "event").clone();
+            this.containingTargets = Collections.unmodifiableList(
+                    new ArrayList<ManagedOccurrenceBinding>(
+                            Objects.requireNonNull(
+                                    containingTargets,
+                                    "containingTargets")));
             this.capturedBy = activeFrame();
         }
     }

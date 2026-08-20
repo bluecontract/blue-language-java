@@ -2,6 +2,7 @@ package blue.language.processor.closure;
 
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.model.NodePathEditor;
 import blue.language.provider.NodeProvider;
 import blue.language.provider.NodeProviderResult;
 import blue.language.processor.ChannelProcessor;
@@ -77,6 +78,30 @@ final class DefaultClosureProcessorTest {
     private static final String INDEPENDENT_DRAFT_HANDLER_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(
                     INDEPENDENT_DRAFT_HANDLER_TYPE);
+    private static final Node ROUTING_HANDLER_TYPE =
+            new Node().name("Latest Event Routing Test Handler");
+    private static final String ROUTING_HANDLER_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(ROUTING_HANDLER_TYPE);
+    private static final Node FROZEN_TARGET_HANDLER_TYPE =
+            new Node().name("Frozen Event Target Test Handler");
+    private static final String FROZEN_TARGET_HANDLER_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    FROZEN_TARGET_HANDLER_TYPE);
+    private static final String ROUTE_SWITCH_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    routeEvent("switch"));
+    private static final String ROUTE_TARGET_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    routeEvent("target"));
+    private static final String ROUTE_OTHER_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    routeEvent("other"));
+    private static final String ACTIVATE_TARGET_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    routeEvent("activate-target"));
+    private static final String OBSERVE_TARGET_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    routeEvent("observe-target"));
 
     @Test
     void executesAndCommitsARealDirectSeedAsOneIsolatedDocumentStep() {
@@ -531,6 +556,105 @@ final class DefaultClosureProcessorTest {
             assertEquals(1L,
                     resultingDocument(attempt, B).epoch());
             assertTrue(capture.evidence.complete());
+        }
+    }
+
+    @Test
+    void discoversTriggeredHandlersFromTheLatestDocumentAtDequeue() {
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                CHANNEL_BLUE_ID,
+                                CHANNEL_TYPE,
+                                new TestChannelProcessor())
+                        .register(
+                                ROUTING_HANDLER_BLUE_ID,
+                                ROUTING_HANDLER_TYPE,
+                                new RoutingHandlerProcessor())
+                        .build();
+        try (DocumentProcessor owner = DocumentProcessor.builder()
+                .runtimeRegistry(registry)
+                .nodeProvider(routeEventProvider())
+                .build()) {
+            Capture capture = new Capture();
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.processClosure(invocation(
+                        owner,
+                        100000L,
+                        latestRoutingDocument()));
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.SUCCESS,
+                    attempt.processResult().status(), diagnostic(attempt));
+            assertTrue(attempt.processResult().commits());
+            Node result = resultDocument(attempt, ROOT);
+            assertEquals(Boolean.FALSE,
+                    property(result, "staleHandlerRan").getValue());
+            assertEquals(Boolean.TRUE,
+                    property(result, "latestHandlerRan").getValue());
+            assertEquals(Arrays.asList(
+                            "source", "switchRoute", "latestRoute"),
+                    workChannels(capture.evidence.workTrace()));
+        }
+    }
+
+    @Test
+    void retainsRemovedTargetAndExcludesLaterTargetActivation() {
+        Node child = frozenTargetChildDocument();
+        String childBlueId = DirectBlueIdCalculator.calculateBlueId(child);
+        Node parent = frozenTargetParentDocument(childBlueId);
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                CHANNEL_BLUE_ID,
+                                CHANNEL_TYPE,
+                                new TestChannelProcessor())
+                        .register(
+                                FROZEN_TARGET_HANDLER_BLUE_ID,
+                                FROZEN_TARGET_HANDLER_TYPE,
+                                new FrozenTargetHandlerProcessor(
+                                        childBlueId))
+                        .build();
+        try (DocumentProcessor owner = DocumentProcessor.builder()
+                .runtimeRegistry(registry)
+                .nodeProvider(routeEventProvider())
+                .build()) {
+            Capture capture = new Capture();
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.processClosure(
+                        frozenTargetInvocation(
+                                owner, parent, child));
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.SUCCESS,
+                    attempt.processResult().status(), diagnostic(attempt));
+            assertTrue(attempt.processResult().commits());
+            Node result = resultDocument(attempt, A);
+            assertEquals(Boolean.FALSE,
+                    property(result,
+                            "staleEmbeddedHandlerRan").getValue());
+            assertEquals(BigInteger.ONE,
+                    property(result, "observedTargets").getValue());
+            assertNull(NodePathEditor.getOrNull(
+                    result, "/children/first"));
+            assertNotNull(NodePathEditor.getOrNull(
+                    result, "/children/second"));
+            assertEquals(Arrays.asList(
+                            WorkKind.EXTERNAL_DELIVERY,
+                            WorkKind.EMBEDDED_EVENT,
+                            WorkKind.EMBEDDED_EVENT),
+                    workKinds(capture.evidence.workTrace()));
+            assertEquals(Arrays.asList(
+                            "source",
+                            "activateTarget",
+                            "latestObserveTarget"),
+                    workChannels(capture.evidence.workTrace()));
         }
     }
 
@@ -1286,6 +1410,295 @@ final class DefaultClosureProcessorTest {
                 "channel", new Node().value(channel));
     }
 
+    private static Node latestRoutingDocument() {
+        Node document = new Node()
+                .name("Latest Event Routing Root")
+                .properties(
+                        "staleHandlerRan",
+                        new Node().value(Boolean.FALSE))
+                .properties(
+                        "latestHandlerRan",
+                        new Node().value(Boolean.FALSE))
+                .contracts(new Node()
+                        .properties("source", typed(CHANNEL_BLUE_ID))
+                        .properties(
+                                "emitRoutes",
+                                routingHandler("source"))
+                        .properties(
+                                "switchRoute",
+                                typed(RuntimeBlueIds
+                                        .TRIGGERED_EVENT_CHANNEL)
+                                        .properties(
+                                                "event",
+                                                new Node().blueId(
+                                                        ROUTE_SWITCH_BLUE_ID)))
+                        .properties(
+                                "switchHandler",
+                                routingHandler("switchRoute"))
+                        .properties(
+                                "staleRoute",
+                                typed(RuntimeBlueIds
+                                        .TRIGGERED_EVENT_CHANNEL)
+                                        .properties(
+                                                "event",
+                                                new Node().blueId(
+                                                        ROUTE_TARGET_BLUE_ID)))
+                        .properties(
+                                "staleHandler",
+                                routingHandler("staleRoute"))
+                        .properties(
+                                "latestRoute",
+                                typed(RuntimeBlueIds
+                                        .TRIGGERED_EVENT_CHANNEL)
+                                        .properties(
+                                                "event",
+                                                new Node().blueId(
+                                                        ROUTE_OTHER_BLUE_ID)))
+                        .properties(
+                                "latestHandler",
+                                routingHandler("latestRoute")));
+        return markInitialized(document);
+    }
+
+    private static Node routingHandler(String channel) {
+        return typed(ROUTING_HANDLER_BLUE_ID)
+                .properties("channel", new Node().value(channel))
+                .properties(
+                        "order", new Node().value(BigInteger.ZERO));
+    }
+
+    private static Node frozenTargetChildDocument() {
+        Node document = new Node()
+                .name("Frozen Target Event Source")
+                .contracts(new Node()
+                        .properties("source", typed(CHANNEL_BLUE_ID))
+                        .properties(
+                                "emitFrozenTargetEvents",
+                                frozenTargetHandler("source")));
+        return markInitialized(document);
+    }
+
+    private static Node frozenTargetParentDocument(String childBlueId) {
+        Node document = new Node()
+                .name("Frozen Target Event Receiver")
+                .properties(
+                        "observedTargets",
+                        new Node().value(BigInteger.ZERO))
+                .properties(
+                        "staleEmbeddedHandlerRan",
+                        new Node().value(Boolean.FALSE))
+                .properties(
+                        "children",
+                        new Node().properties(
+                                "first",
+                                new Node().blueId(childBlueId)))
+                .contracts(new Node()
+                        .properties(
+                                "embedded",
+                                typed(RuntimeBlueIds.PROCESS_EMBEDDED)
+                                        .properties(
+                                                "collectionPaths",
+                                                new Node().items(
+                                                        new Node().value(
+                                                                "/children"))))
+                        .properties(
+                                "activateTarget",
+                                typed(RuntimeBlueIds
+                                        .EMBEDDED_NODE_CHANNEL)
+                                        .properties(
+                                                "sourcePath",
+                                                new Node().value(
+                                                        "/children/first"))
+                                        .properties(
+                                                "event",
+                                                new Node().blueId(
+                                                        ACTIVATE_TARGET_BLUE_ID)))
+                        .properties(
+                                "activateSecondTarget",
+                                frozenTargetHandler("activateTarget"))
+                        .properties(
+                                "staleObserveTarget",
+                                typed(RuntimeBlueIds
+                                        .EMBEDDED_NODE_CHANNEL)
+                                        .properties(
+                                                "event",
+                                                new Node().blueId(
+                                                        OBSERVE_TARGET_BLUE_ID)))
+                        .properties(
+                                "staleObserveFrozenTarget",
+                                frozenTargetHandler(
+                                        "staleObserveTarget"))
+                        .properties(
+                                "latestObserveTarget",
+                                typed(RuntimeBlueIds
+                                        .EMBEDDED_NODE_CHANNEL)
+                                        .properties(
+                                                "event",
+                                                new Node().blueId(
+                                                        ROUTE_OTHER_BLUE_ID)))
+                        .properties(
+                                "latestObserveFrozenTarget",
+                                frozenTargetHandler(
+                                        "latestObserveTarget")));
+        return markInitialized(document);
+    }
+
+    private static Node frozenTargetHandler(String channel) {
+        return typed(FROZEN_TARGET_HANDLER_BLUE_ID)
+                .properties("channel", new Node().value(channel))
+                .properties(
+                        "order", new Node().value(BigInteger.ZERO));
+    }
+
+    private static Node routeEvent(String kind) {
+        return new Node().properties(
+                "kind", new Node().value(kind));
+    }
+
+    private static NodeProvider routeEventProvider() {
+        return new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                if (ROUTE_SWITCH_BLUE_ID.equals(blueId)) {
+                    return Collections.singletonList(
+                            routeEvent("switch"));
+                }
+                if (ROUTE_TARGET_BLUE_ID.equals(blueId)) {
+                    return Collections.singletonList(
+                            routeEvent("target"));
+                }
+                if (ROUTE_OTHER_BLUE_ID.equals(blueId)) {
+                    return Collections.singletonList(
+                            routeEvent("other"));
+                }
+                if (ACTIVATE_TARGET_BLUE_ID.equals(blueId)) {
+                    return Collections.singletonList(
+                            routeEvent("activate-target"));
+                }
+                if (OBSERVE_TARGET_BLUE_ID.equals(blueId)) {
+                    return Collections.singletonList(
+                            routeEvent("observe-target"));
+                }
+                return BlueRuntimeTypeRegistry.getDefault()
+                        .asProvider().fetchByBlueId(blueId);
+            }
+        };
+    }
+
+    private static ClosureInvocationInput frozenTargetInvocation(
+            DocumentProcessor owner,
+            Node parent,
+            Node child) {
+        ClosureInvocationInput base = invocation(owner);
+        String childBlueId =
+                DirectBlueIdCalculator.calculateBlueId(child);
+        String bindingPolicyIdentity = base.environment()
+                .managedBindingPolicyIdentity();
+        ArrayList<ManagedOccurrenceBinding> bindings =
+                new ArrayList<ManagedOccurrenceBinding>();
+        bindings.add(ManagedOccurrenceBinding.derived(
+                bindingPolicyIdentity,
+                A,
+                ScopeAddress.embedded("/children/first", 1L),
+                B,
+                childBlueId,
+                true,
+                null));
+        bindings.add(ManagedOccurrenceBinding.derived(
+                bindingPolicyIdentity,
+                A,
+                ScopeAddress.embedded("/children/second", 1L),
+                B,
+                childBlueId,
+                false,
+                null));
+        Collections.sort(bindings);
+        ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
+                Arrays.asList(A, B), bindings);
+        LinkedHashMap<DocumentId, Long> generations =
+                new LinkedHashMap<DocumentId, Long>();
+        generations.put(A, Long.valueOf(1L));
+        generations.put(B, Long.valueOf(1L));
+        LinkedHashMap<DocumentId, Node> bodies =
+                new LinkedHashMap<DocumentId, Node>();
+        bodies.put(A, parent);
+        bodies.put(B, child);
+        ComponentFinalizationResult finalized =
+                new ComponentFinalizationKernel().finalizeComponents(
+                        new ComponentFinalizationInput(
+                                graph, generations, bodies, bindings));
+        ArrayList<ManagedDocumentSnapshot> documents =
+                new ArrayList<ManagedDocumentSnapshot>();
+        for (DocumentId documentId : Arrays.asList(A, B)) {
+            FinalizedDocumentEvidence exact = finalized.document(documentId);
+            documents.add(new ManagedDocumentSnapshot(
+                    documentId,
+                    exact.blueId(),
+                    exact.document(),
+                    true,
+                    false,
+                    documentId.equals(B),
+                    0L,
+                    exact.componentGeneration()));
+        }
+        ArrayList<ComponentSnapshot> components =
+                new ArrayList<ComponentSnapshot>();
+        for (FinalizedComponentEvidence component
+                : finalized.components()) {
+            components.add(component.component());
+        }
+        List<ManagedOccurrenceBinding> exactBindings =
+                finalized.finalizedGraph().bindings();
+        String bindingSetIdentity = IDENTITIES
+                .occurrenceBindingSetIdentity(exactBindings);
+        AffectedClosureSnapshot provisionalSnapshot =
+                new AffectedClosureSnapshot(
+                        hash('0'),
+                        1L,
+                        documents,
+                        exactBindings,
+                        bindingSetIdentity,
+                        components,
+                        Collections.singletonList(B));
+        AffectedClosureSnapshot snapshot =
+                new AffectedClosureSnapshot(
+                        IDENTITIES.affectedClosureIdentity(
+                                provisionalSnapshot),
+                        provisionalSnapshot.graphGeneration(),
+                        provisionalSnapshot.managedDocuments(),
+                        provisionalSnapshot.occurrences(),
+                        provisionalSnapshot
+                                .occurrenceBindingSetIdentity(),
+                        provisionalSnapshot.components(),
+                        provisionalSnapshot.publicRootDocumentIds());
+        DirectLogicalDelivery delivery = new DirectLogicalDelivery(
+                ManagedScopeKey.root(B),
+                "source",
+                "logical",
+                0L);
+        List<DirectLogicalDelivery> deliveries =
+                Collections.singletonList(delivery);
+        String deliveryIdentity = IDENTITIES
+                .directDeliverySnapshotIdentity(deliveries);
+        ClosureInvocationInput provisional =
+                ClosureInvocationInput.processClosure(
+                        hash('f'),
+                        snapshot,
+                        base.cause(),
+                        deliveries,
+                        deliveryIdentity,
+                        base.executionPolicy(),
+                        base.environment());
+        return ClosureInvocationInput.processClosure(
+                IDENTITIES.invocationIdentity(provisional),
+                snapshot,
+                base.cause(),
+                deliveries,
+                deliveryIdentity,
+                base.executionPolicy(),
+                base.environment());
+    }
+
     private static DocumentProcessor c34Owner() {
         ContractProcessorRegistry registry =
                 ContractProcessorRegistryBuilder.create()
@@ -1562,7 +1975,14 @@ final class DefaultClosureProcessorTest {
     private static ClosureInvocationInput invocation(
             DocumentProcessor owner,
             long sharedLimit) {
-        Node document = initializedDocument();
+        return invocation(owner, sharedLimit, initializedDocument());
+    }
+
+    private static ClosureInvocationInput invocation(
+            DocumentProcessor owner,
+            long sharedLimit,
+            Node exactDocument) {
+        Node document = exactDocument.clone();
         ManagedDocumentGraph graph = ManagedDocumentGraph.fromBindings(
                 Collections.singletonList(ROOT),
                 Collections.<ManagedOccurrenceBinding>emptyList());
@@ -1877,6 +2297,15 @@ final class DefaultClosureProcessorTest {
         return result;
     }
 
+    private static List<String> workChannels(
+            List<ClosureWorkOccurrence> workTrace) {
+        ArrayList<String> result = new ArrayList<String>();
+        for (ClosureWorkOccurrence work : workTrace) {
+            result.add(work.channelKey());
+        }
+        return result;
+    }
+
     private static List<TentativeFinalization.Boundary.Kind>
             finalizationKinds(
                     List<TentativeFinalization> finalizations) {
@@ -2173,6 +2602,95 @@ final class DefaultClosureProcessorTest {
                     "/tentative", new Node().value("must-roll-back")));
             context.emitEvent(new Node().properties(
                     "kind", new Node().value("tentative-event")));
+        }
+    }
+
+    /** Handler model for dequeue-time event-route discovery tests. */
+    public static final class RoutingHandler extends HandlerContract {
+    }
+
+    private static final class RoutingHandlerProcessor
+            implements HandlerProcessor<RoutingHandler> {
+        @Override
+        public Class<RoutingHandler> contractType() {
+            return RoutingHandler.class;
+        }
+
+        @Override
+        public void execute(
+                RoutingHandler contract,
+                ProcessorExecutionContext context) {
+            String key = context.contractKey();
+            if ("emitRoutes".equals(key)) {
+                context.emitEvent(routeEvent("switch"));
+                context.emitEvent(routeEvent("target"));
+            } else if ("switchHandler".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/contracts/staleRoute/event",
+                        new Node().blueId(ROUTE_OTHER_BLUE_ID)));
+                context.applyPatch(JsonPatch.replace(
+                        "/contracts/latestRoute/event",
+                        new Node().blueId(ROUTE_TARGET_BLUE_ID)));
+            } else if ("staleHandler".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/staleHandlerRan",
+                        new Node().value(Boolean.TRUE)));
+            } else if ("latestHandler".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/latestHandlerRan",
+                        new Node().value(Boolean.TRUE)));
+            }
+        }
+    }
+
+    /** Handler model for frozen containing-target tests. */
+    public static final class FrozenTargetHandler extends HandlerContract {
+    }
+
+    private static final class FrozenTargetHandlerProcessor
+            implements HandlerProcessor<FrozenTargetHandler> {
+        private final String childBlueId;
+
+        private FrozenTargetHandlerProcessor(String childBlueId) {
+            this.childBlueId = childBlueId;
+        }
+
+        @Override
+        public Class<FrozenTargetHandler> contractType() {
+            return FrozenTargetHandler.class;
+        }
+
+        @Override
+        public void execute(
+                FrozenTargetHandler contract,
+                ProcessorExecutionContext context) {
+            String key = context.contractKey();
+            if ("emitFrozenTargetEvents".equals(key)) {
+                context.emitEvent(routeEvent("activate-target"));
+                context.emitEvent(routeEvent("observe-target"));
+            } else if ("activateSecondTarget".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/contracts/staleObserveTarget/event",
+                        new Node().blueId(ROUTE_OTHER_BLUE_ID)));
+                context.applyPatch(JsonPatch.replace(
+                        "/contracts/latestObserveTarget/event",
+                        new Node().blueId(OBSERVE_TARGET_BLUE_ID)));
+                context.applyPatch(JsonPatch.remove(
+                        "/children/first"));
+                context.applyPatch(JsonPatch.add(
+                        "/children/second",
+                        new Node().blueId(childBlueId)));
+            } else if ("staleObserveFrozenTarget".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/staleEmbeddedHandlerRan",
+                        new Node().value(Boolean.TRUE)));
+            } else if ("latestObserveFrozenTarget".equals(key)) {
+                Node current = context.documentAt("/observedTargets");
+                BigInteger count = (BigInteger) current.getValue();
+                context.applyPatch(JsonPatch.replace(
+                        "/observedTargets",
+                        new Node().value(count.add(BigInteger.ONE))));
+            }
         }
     }
 
