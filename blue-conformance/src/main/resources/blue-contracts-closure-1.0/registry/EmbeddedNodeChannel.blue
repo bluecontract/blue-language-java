@@ -1,0 +1,10 @@
+name: Embedded Node Channel
+type:
+  blueId: CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR
+description: Processor-managed Channel receiving descendant event occurrences after source-local Triggered delivery, nearest ancestor first.
+sourcePath:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  description: Optional scope-relative source-path matcher.
+event:
+  description: Optional event matcher.

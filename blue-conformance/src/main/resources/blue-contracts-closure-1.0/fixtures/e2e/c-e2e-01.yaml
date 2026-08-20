@@ -1,0 +1,63 @@
+schema: blue-contracts-fixture/1.0
+id: c-e2e-01
+vectors:
+  - C-E2E-01
+category: e2e
+description: Complete no-match Root result with exact public fields, named trace, gas, and semantic demands.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: false
+        checkpointDomain: domain-v1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: no-match
+  feeder:
+    managedRootRevision: 12
+    indexedRootRevision: 12
+    eventOrderKey: [2000, timeline, 1]
+    deliverySnapshot:
+      - scopePath: /
+        channelKey: in
+        order: 0
+        activationStartExclusive: [0, '', 0]
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+    - actual: result.status
+      op: equals
+      expected: no-match
+    - actual: result.document
+      op: equalsProjection
+      expectedProjection: input.root
+    - actual: result.events
+      op: sequenceEquals
+      expected: []
+    - actual: trace.namedEntries
+      op: sequenceEquals
+      expected:
+        - {namespace: processor, counter: processInvocation, quantity: 1, weight: 50, subtotal: 50, scopePath: /, reason: invocation}
+        - {namespace: processor, counter: deliverySnapshotEntry, quantity: 1, weight: 5, subtotal: 5, scopePath: /, contractKey: in, reason: revalidate-delivery}
+        - {namespace: processor, counter: scopeOpened, quantity: 1, weight: 10, subtotal: 10, scopePath: /, reason: participating-scope}
+        - {namespace: processor, counter: contractHeaderRecognized, quantity: 1, weight: 2, subtotal: 2, scopePath: /, contractKey: in, reason: external-channel-header}
+        - {namespace: processor, counter: channelCandidateTested, quantity: 1, weight: 5, subtotal: 5, scopePath: /, contractKey: in, reason: acceptance}
+    - actual: result.totalGas
+      op: equals
+      expected: 72
+    - actual: demands.semantic
+      op: sequenceEquals
+      expected: ['/', '/contracts', '/contracts/in', '/event/subscriptionKey']

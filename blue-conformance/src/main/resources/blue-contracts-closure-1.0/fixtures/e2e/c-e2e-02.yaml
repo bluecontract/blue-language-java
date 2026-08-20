@@ -1,0 +1,138 @@
+schema: blue-contracts-fixture/1.0
+id: c-e2e-02
+vectors:
+- C-E2E-02
+category: e2e
+description: Complete deep-scope no-match result opens only the selected branch and returns no public Root event.
+operation: process
+input:
+  root:
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /child
+    child:
+      contracts:
+        in:
+          type:
+            blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: false
+          checkpointDomain: domain-v1
+      state: 0
+    unrelated:
+      blueId: AE57CRExXVfGYwpgXisJtSh2D1ZfoMXzZu1cn4XJzuBS
+    counter: 0
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: child-no-match
+  feeder:
+    managedRootRevision: 13
+    indexedRootRevision: 13
+    eventOrderKey:
+    - 2001
+    - timeline
+    - 2
+    deliverySnapshot:
+    - scopePath: /child
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    nodes:
+      AE57CRExXVfGYwpgXisJtSh2D1ZfoMXzZu1cn4XJzuBS:
+        large: unrelated
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: no-match
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: result.events
+    op: sequenceEquals
+    expected: []
+  - actual: result.totalGas
+    op: equals
+    expected: 86
+  - actual: trace.namedEntries
+    op: sequenceEquals
+    expected:
+    - namespace: processor
+      counter: processInvocation
+      quantity: 1
+      weight: 50
+      subtotal: 50
+      scopePath: /
+      reason: invocation
+    - namespace: processor
+      counter: deliverySnapshotEntry
+      quantity: 1
+      weight: 5
+      subtotal: 5
+      scopePath: /child
+      contractKey: in
+      reason: revalidate-delivery
+    - namespace: processor
+      counter: embeddedPathEntryRead
+      quantity: 1
+      weight: 1
+      subtotal: 1
+      scopePath: /
+      logicalPath: /child
+      reason: route
+    - namespace: processor
+      counter: embeddedPathSegmentValidated
+      quantity: 1
+      weight: 1
+      subtotal: 1
+      scopePath: /
+      logicalPath: /child
+      reason: route
+    - namespace: processor
+      counter: scopeOpened
+      quantity: 2
+      weight: 10
+      subtotal: 20
+      scopePath: /
+      reason: participating-closure
+    - namespace: processor
+      counter: contractHeaderRecognized
+      quantity: 2
+      weight: 2
+      subtotal: 4
+      scopePath: /
+      reason: structural-and-channel-headers
+    - namespace: processor
+      counter: channelCandidateTested
+      quantity: 1
+      weight: 5
+      subtotal: 5
+      scopePath: /child
+      contractKey: in
+      reason: acceptance
+  - actual: demands.semantic
+    op: sequenceEquals
+    expected:
+    - /
+    - /contracts/embedded
+    - /child
+    - /child/contracts/in
+    - /event/subscriptionKey
+  - actual: demands.semantic
+    op: notContains
+    expected: AE57CRExXVfGYwpgXisJtSh2D1ZfoMXzZu1cn4XJzuBS

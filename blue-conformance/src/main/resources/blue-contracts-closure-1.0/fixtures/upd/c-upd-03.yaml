@@ -1,0 +1,85 @@
+schema: blue-contracts-fixture/1.0
+id: c-upd-03
+vectors:
+- C-UPD-03
+category: upd
+description: Current update propagation continues on its frozen chain after source cut-off.
+operation: process
+input:
+  root:
+    child:
+      x: 0
+      contracts:
+        in:
+          type:
+            blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        h:
+          type:
+            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          channel: in
+          order: 0
+          result:
+            patches:
+            - op: replace
+              path: /child/x
+              val: 1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /child
+      childXUpdates:
+        type:
+          blueId: 4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An
+        path: /child/x
+        order: 0
+      replaceChild:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: childXUpdates
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /child
+            val:
+              replacement: true
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /child
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: trace.documentUpdateScopes
+    op: contains
+    expected: /
+  - actual: result.document.child.replacement
+    op: equals
+    expected: true

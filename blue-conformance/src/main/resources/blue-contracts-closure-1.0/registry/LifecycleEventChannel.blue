@@ -1,0 +1,4 @@
+name: Lifecycle Event Channel
+type:
+  blueId: CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR
+description: Processor-managed Channel receiving Document Processing Initiated and Document Processing Terminated payloads.

@@ -1,0 +1,35 @@
+name: Document Update
+description: Immutable processor payload describing one successful application or generated type write relative to one receiving scope.
+op:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+    enum:
+    - add
+    - replace
+    - remove
+path:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+beforePresent:
+  type:
+    blueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2
+  schema:
+    required: true
+before:
+  description: Present only when beforePresent is true.
+afterPresent:
+  type:
+    blueId: AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2
+  schema:
+    required: true
+after:
+  description: Present only when afterPresent is true.
+sourceScopePath:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true

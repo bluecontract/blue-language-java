@@ -1,0 +1,23 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-clo-17-embedded-edges-above-bound
+vectors:
+- C-CLO-17
+category: limits
+operation: limit-micro
+description: The processEmbeddedEdgesPerClosure guard independently measures 16385 against the frozen bound 16384 and returns REJECT; this microfixture does not claim that a later gas-expensive invocation phase completes.
+releaseManifest: ../../release-manifest.yaml
+input: {}
+expected:
+  limitDecision: REJECT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+  diagnostic: ProcessEmbeddedEdgesPerClosureExceeded
+  rejectedStep: processEmbeddedEdgesPerClosure:16385
+limit:
+  limit: processEmbeddedEdgesPerClosure
+  configured: 16384
+  observed: 16385
+  generator:
+    kind: embedded-edges
+    parameters:
+      count: 16385

@@ -1,0 +1,79 @@
+schema: blue-contracts-fixture/1.0
+id: c-feed-13
+vectors:
+- C-ROUTE-04
+category: feed
+description: A present same-scope contract that is not a Channel is distinguished from absence; the fixture runtime chooses its declared source fallback.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      source:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-v1
+        dependencyMode: catalog
+        handlerChannelKey: notChannel
+        logicalDeliveryKey: fallback:non-channel
+        fallbackToSourceOnAbsentOrNonChannel: true
+      notChannel:
+        type:
+          blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+        subscriptionKey: inert
+        id: not-a-channel
+      h:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: source
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 3
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: route
+    id: E-route
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - source
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: source
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.value
+    op: equals
+    expected: 3
+  - actual: trace.channelLookupResults
+    op: sequenceEquals
+    expected:
+    - notChannel:NON_CHANNEL
+  - actual: trace.handlerChannelKeys
+    op: sequenceEquals
+    expected:
+    - source
