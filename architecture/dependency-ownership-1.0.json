@@ -142,12 +142,6 @@
           "declaredVersion": "2.15.2"
         },
         {
-          "path": "build-logic/build.gradle",
-          "declaringProject": ":build-logic",
-          "configuration": "implementation",
-          "declaredVersion": "2.15.2"
-        },
-        {
           "path": "build-logic/src/main/java/blue/buildlogic/RootOrchestrationPlugin.java",
           "declaringProject": ":root",
           "configuration": "testImplementation",
