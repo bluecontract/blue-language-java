@@ -1,12 +1,13 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
 import blue.language.mapping.NodeToObjectConverter;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.wire.JsonPointer;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.merge.ResolvedSnapshot;
-import blue.language.model.wire.JsonPointer;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -249,6 +250,12 @@ final class EffectiveSubscriptionSurfaceProjector {
                 if (child == null || child.effective == null) {
                     // A declaration may reserve a future occurrence.
                     continue;
+                }
+                if (child.effective.isReferenceOnly()
+                        && validationContext
+                                .allowsLegacyRecursiveExactReferenceTraversal()) {
+                    child = resolution.openLegacyExactReference(
+                            targetScope, child);
                 }
                 if (!rules.isObject(child.effective)) {
                     throw rules.invalid(
@@ -500,6 +507,42 @@ final class EffectiveSubscriptionSurfaceProjector {
             ScopeView created = new ScopeView(selected, effective, bundle);
             scopes.put(normalized, created);
             return created;
+        }
+
+        private ScopeView openLegacyExactReference(
+                String scopePath,
+                ScopeView unresolved) {
+            String normalized = PointerUtils.normalizeScope(scopePath);
+            ScopeView child = Objects.requireNonNull(
+                    unresolved, "unresolved");
+            if (snapshotManager == null
+                    || child.selected == null
+                    || !child.selected.isReferenceOnly()
+                    || !child.effective.isReferenceOnly()) {
+                return child;
+            }
+            String selectedBlueId = child.selected.getBlueId();
+            if (!selectedBlueId.equals(
+                    child.effective.getBlueId())
+                    || BlueIds.hasCyclicMemberSeparator(selectedBlueId)) {
+                return child;
+            }
+            FrozenNode selected = FrozenNode.fromNode(child.selected);
+            FrozenNode materialized = ExecutableBodyPathCatalog
+                    .materializeVerifiedExact(
+                            snapshotManager,
+                            selected,
+                            "Legacy embedded child projection");
+            Node effective = materialized.toNode();
+            ScopeView opened = new ScopeView(
+                    child.selected,
+                    effective,
+                    contractLoader.load(
+                            materialized,
+                            materialized,
+                            normalized));
+            scopes.put(normalized, opened);
+            return opened;
         }
     }
 

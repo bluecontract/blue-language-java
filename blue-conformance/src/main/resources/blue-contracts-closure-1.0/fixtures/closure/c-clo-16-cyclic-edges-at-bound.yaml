@@ -1,0 +1,22 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-clo-16-cyclic-edges-at-bound
+vectors:
+- C-CLO-16
+category: limits
+operation: limit-micro
+description: The cyclicEdgesPerComponent guard independently measures 1024 against the frozen bound 1024 and returns ACCEPT; this microfixture does not claim that a later gas-expensive invocation phase completes.
+releaseManifest: ../../release-manifest.yaml
+input: {}
+expected:
+  limitDecision: ACCEPT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+limit:
+  limit: cyclicEdgesPerComponent
+  configured: 1024
+  observed: 1024
+  generator:
+    kind: cyclic-edges
+    parameters:
+      count: 1024
+      members: 128

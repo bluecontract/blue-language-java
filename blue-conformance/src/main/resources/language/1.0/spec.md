@@ -2958,7 +2958,9 @@ The algorithm applies to a strongly connected cyclic set. Independent strongly c
 
 A cyclic-set calculation input MUST contain at least one internal cyclic reference. A set with no internal cyclic references SHOULD be treated as ordinary independent documents rather than as a cyclic set.
 
-If two cyclic-set members have identical preliminary BlueIds, implementations MUST compare the RFC 8785 canonical JSON byte sequence of their preliminary BlueId input as a deterministic tie-breaker.
+If two cyclic-set members have identical preliminary BlueIds, implementations MUST compare, as unsigned octets, the RFC 8785 canonical JSON byte sequence of their **normalized preliminary BlueId input** as a deterministic tie-breaker. The normalized preliminary input is the complete BlueId Input produced by the ordinary normalization and projection rules in §§14.2–14.4, with each direct internal cyclic reference then replaced by ZERO_BLUEID. It is not the submitted YAML/JSON representation and MUST NOT preserve source-only sugar, omitted-default spelling, or map insertion order.
+
+RFC 8785 serialization preserves strings as supplied by that normalized Blue value and orders object member names by UTF-16 code units. The canonical writer MUST NOT perform an additional NFC or NFD transformation at this layer and MUST reject lone Unicode surrogates.
 
 If the tie remains equal, the cyclic-set input is invalid in Blue Language 1.0 unless the members contain an explicit identity-bearing disambiguator before preliminary hashing. Implementations MUST fail cyclic-set calculation with `CircularSetError` rather than assigning arbitrary positions.
 
@@ -3000,7 +3002,7 @@ MASTER = id(L)
 MASTER#i
 ```
 
-The **preliminary BlueId input** for each document is the document after replacing each direct internal cyclic `blueId` reference with ZERO_BLUEID and before rewriting those references to `this#<index>`.
+The **normalized preliminary BlueId input** for each document is the complete normalized BlueId Input after applying §§14.2–14.4, then replacing each direct internal cyclic `blueId` reference with ZERO_BLUEID, and before rewriting those references to `this#<index>`. Both preliminary hashing and the §15.3 tie-break use that same normalized value.
 
 `this#<index>` is accepted only by the cyclic-set calculation API. It MUST NOT appear in stored provider content, ordinary BlueId Input, Source Documents outside explicit cyclic-set serialization, or Canonical Identity Input.
 

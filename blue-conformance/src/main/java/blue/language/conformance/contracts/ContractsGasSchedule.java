@@ -42,7 +42,7 @@ final class ContractsGasSchedule {
             "blue-contracts/gas/1.0";
     private static final String MANIFEST_SPECIFICATION_VERSION = "1.0";
     private static final String ADMISSION_RULE_PREFIX =
-            "Admit quantity * weight before the corresponding logical work.";
+            "Admit quantity * weight before the corresponding logical work";
 
     private final String schedule;
     private final long maxProcessGas;

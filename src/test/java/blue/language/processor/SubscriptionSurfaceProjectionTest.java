@@ -294,6 +294,58 @@ final class SubscriptionSurfaceProjectionTest {
     }
 
     @Test
+    void shouldOpenVerifiedOrdinaryChildOnlyThroughLegacyFacade() {
+        // given
+        Node channel = subscriptionChannel("referenced-topic");
+        Node child = childWithSubscription(channel);
+        String childBlueId = DirectBlueIdCalculator.calculateBlueId(child);
+        Node root = new Node()
+                .properties(CHILD_KEY, new Node().blueId(childBlueId))
+                .contracts(new Node().properties(
+                        ProcessorContractConstants.KEY_EMBEDDED,
+                        processEmbeddedChildContract()));
+        FrozenNode opaqueRoot = FrozenNode.fromNode(root);
+        ResolvedSnapshot opaqueSnapshot = new ResolvedSnapshot(
+                opaqueRoot,
+                FrozenNode.fromResolvedNode(root.clone()),
+                opaqueRoot.blueId());
+        SubscriptionDelta legacy;
+        Throwable failure;
+
+        // when
+        try (Blue blue = ProcessorTestSupport.blue(
+                nodeProvider(channel, child))) {
+            blue.registerContractProcessor(new PortableExternalProcessor());
+            DocumentProcessor processor = blue.getDocumentProcessor();
+            SubscriptionSurfaceProjection projection =
+                    new SubscriptionSurfaceProjection(
+                            processor,
+                            lifecycle(new TrackingResources()));
+
+            legacy = projection.projectInitial(
+                    root, 1L, order(1));
+            SubscriptionSurfaceValidationContext strict =
+                    SubscriptionSurfaceValidationContext.builder(
+                                    root,
+                                    root.clone(),
+                                    Collections.singleton("/"),
+                                    processor.gasSchedule())
+                            .snapshots(opaqueSnapshot, opaqueSnapshot)
+                            .build();
+            failure = FailureCapture.captureFailure(
+                    () -> processor.subscriptionSurfaceValidator()
+                            .validate(strict));
+        }
+
+        // then
+        assertEquals(1, legacy.added().size());
+        assertEquals(CHILD_SCOPE, legacy.added().get(0).scopePath());
+        assertTrue(failure instanceof SubscriptionSurfaceInvalidException);
+        assertTrue(failure.getMessage().contains(
+                "Declared embedded child is not an object"));
+    }
+
+    @Test
     void shouldPreserveMutableInputsAndUseConfiguredValidatorAndRuntimeSession() {
         // given
         AtomicReference<SubscriptionSurfaceValidationContext> captured =

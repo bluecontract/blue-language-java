@@ -1,0 +1,1172 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: blue-contracts-closure-fixture/1.0
+title: Blue Contracts 1.0 affected-closure conformance fixture
+type: object
+additionalProperties: false
+required: [schema, id, vectors, category, operation, description, releaseManifest, input, expected, limit]
+properties:
+  schema: {const: blue-contracts-closure-fixture/1.0}
+  id: {type: string, pattern: '^[a-z0-9][a-z0-9-]*$'}
+  vectors:
+    type: array
+    minItems: 1
+    uniqueItems: true
+    items: {type: string, pattern: '^C-CLO-[0-9]{2}$'}
+  category:
+    enum: [admission, atomicity, cycle, dynamic-graph, gas, history, identity, initialization, limits, locality, ordering, public-events, recovery]
+  operation: {enum: [process-closure, admit-closure, limit-micro]}
+  description: {type: string, minLength: 1}
+  releaseManifest: {type: string, const: ../../release-manifest.yaml}
+  oracle: {$ref: '#/$defs/oracleHarness'}
+  runtime: {$ref: '#/$defs/runtimeHarness'}
+  sharedLimitSource: {$ref: '#/$defs/sharedLimitSourceHarness'}
+  provider: {$ref: '#/$defs/providerHarness'}
+  locality: {$ref: '#/$defs/localityHarness'}
+  limit: {}
+  input: {}
+  expected: {}
+allOf:
+- if:
+    properties:
+      operation: {const: limit-micro}
+  then:
+    properties:
+      input: {$ref: '#/$defs/emptyHarnessInput'}
+      expected: {$ref: '#/$defs/limitExpected'}
+      limit: {$ref: '#/$defs/limitInput'}
+  else:
+    required: [runtime, sharedLimitSource, provider, locality]
+    properties:
+      input: {$ref: '#/$defs/input'}
+      expected: {$ref: '#/$defs/expected'}
+      limit: {$ref: '#/$defs/invocationLimitHarness'}
+- if:
+    properties:
+      operation: {const: process-closure}
+    required: [operation]
+  then:
+    properties:
+      input:
+        properties:
+          cause:
+            properties:
+              kind: {enum: [external, managed-revision]}
+          admissionCandidate: {type: 'null'}
+          admissionCandidateIdentity: {type: 'null'}
+- if:
+    properties:
+      operation: {const: admit-closure}
+    required: [operation]
+  then:
+    properties:
+      input:
+        properties:
+          cause:
+            properties:
+              kind: {const: admission}
+          directDeliveries: {maxItems: 0}
+- if:
+    properties:
+      operation: {const: process-closure}
+      input:
+        properties:
+          cause:
+            properties:
+              kind: {const: managed-revision}
+            required: [kind]
+        required: [cause]
+    required: [operation, input]
+  then:
+    properties:
+      input:
+        properties:
+          directDeliveries: {maxItems: 0}
+$defs:
+  blueValue: {}
+  sha256Identity: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
+  blueId: {type: string, pattern: '^[1-9A-HJ-NP-Za-km-z]+(?:#(?:0|[1-9][0-9]*))?$'}
+  nullableSha256Identity:
+    oneOf:
+    - {$ref: '#/$defs/sha256Identity'}
+    - {type: 'null'}
+  nullableBlueId:
+    oneOf:
+    - {$ref: '#/$defs/blueId'}
+    - {type: 'null'}
+  documentId: {type: string, minLength: 1, pattern: '^[^\u0000]+$'}
+  nullableDocumentId:
+    oneOf:
+    - {$ref: '#/$defs/documentId'}
+    - {type: 'null'}
+  nonNegativeSafeInteger: {type: integer, minimum: 0, maximum: 9007199254740991}
+  positiveSafeInteger: {type: integer, minimum: 1, maximum: 9007199254740991}
+  nullableNonNegativeSafeInteger:
+    oneOf:
+    - {$ref: '#/$defs/nonNegativeSafeInteger'}
+    - {type: 'null'}
+  nullablePositiveSafeInteger:
+    oneOf:
+    - {$ref: '#/$defs/positiveSafeInteger'}
+    - {type: 'null'}
+  managedScopePath:
+    description: Normalized absolute Runtime/JSON Pointer; '/' is the managed Root scope.
+    type: string
+    pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'
+  emptyHarnessInput:
+    description: limit-micro has no normative closure invocation input; its generated probe is the top-level limit harness field.
+    type: object
+    additionalProperties: false
+  runtimeHarness:
+    description: Harness-only scripted runtime behavior; never part of AffectedClosureSnapshot or invocation identity.
+    type: object
+    additionalProperties: false
+    required: [handlers, initializationHandlers]
+    properties:
+      handlers:
+        type: object
+        additionalProperties: {$ref: '#/$defs/handlerResult'}
+      initializationHandlers:
+        type: object
+        additionalProperties: {$ref: '#/$defs/handlerResult'}
+  sharedLimitSourceHarness:
+    description: Harness-only provenance for the exact gasPolicy.sharedLimit already present in normative input.
+    oneOf:
+    - type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind: {const: RELEASE_DEFAULT}
+    - type: object
+      additionalProperties: false
+      required: [kind, sharedLimit]
+      properties:
+        kind: {const: FIXTURE_OVERRIDE}
+        sharedLimit: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  providerHarness:
+    description: Harness-only exact-node availability and expected provider interaction. Availability changes do not change normative closure or invocation identity.
+    type: object
+    additionalProperties: false
+    required: [nodes, expectedRequiredBlueIds, expectedLoads]
+    properties:
+      nodes:
+        type: object
+        propertyNames: {pattern: '^[1-9A-HJ-NP-Za-km-z]+(?:#(?:0|[1-9][0-9]*))?$'}
+        additionalProperties: {$ref: '#/$defs/blueValue'}
+      expectedRequiredBlueIds:
+        type: array
+        uniqueItems: true
+        items: {$ref: '#/$defs/blueId'}
+      expectedLoads:
+        type: array
+        uniqueItems: true
+        items: {$ref: '#/$defs/blueId'}
+  localityHarness:
+    description: Harness-only locality setup and observation; neither field is production result API.
+    type: object
+    additionalProperties: false
+    required: [unrelatedDocumentCount, expectedUnrelatedDocumentsOpened]
+    properties:
+      unrelatedDocumentCount: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      expectedUnrelatedDocumentsOpened: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  invocationLimitHarness:
+    description: Harness-only invocation-limit probe. The normative portable limit policy remains in input.environment.
+    type: object
+    additionalProperties: false
+    required: [probe]
+    properties:
+      probe:
+        oneOf:
+        - {type: 'null'}
+        - type: object
+          additionalProperties: false
+          required: [limit, value]
+          properties:
+            limit: {type: string, minLength: 1}
+            value: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  oracleHarness:
+    description: Harness-only route from exact component/finalization evidence to Language oracle stages; labels never enter production API shapes or identities.
+    type: object
+    additionalProperties: false
+    required: [path, componentStages, finalizationStages]
+    properties:
+      path: {type: string, minLength: 1}
+      componentStages:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [location, componentStateIdentity, stage]
+          properties:
+            location: {enum: [INPUT, RESULT]}
+            componentStateIdentity: {$ref: '#/$defs/sha256Identity'}
+            stage: {type: string, minLength: 1}
+      finalizationStages:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [ordinal, stage]
+          properties:
+            ordinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+            stage: {type: string, minLength: 1}
+  document:
+    type: object
+    additionalProperties: false
+    required: [documentId, blueId, document, initialized, terminated, publicRoot, epoch, componentGeneration]
+    properties:
+      documentId: {$ref: '#/$defs/documentId'}
+      blueId: {$ref: '#/$defs/blueId'}
+      document: {$ref: '#/$defs/blueValue'}
+      initialized: {type: boolean}
+      terminated: {type: boolean}
+      publicRoot: {type: boolean}
+      epoch: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      componentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  occurrence:
+    type: object
+    additionalProperties: false
+    required: [occurrenceIdentity, bindingIdentity, bindingPolicyIdentity, sourceDocumentId, sourcePath, activationGeneration, targetDocumentId, expectedTargetBlueId, active, pendingHistoricalEpoch]
+    properties:
+      occurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+      bindingIdentity: {$ref: '#/$defs/sha256Identity'}
+      bindingPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
+      sourceDocumentId: {$ref: '#/$defs/documentId'}
+      sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
+      activationGeneration:
+        description: Positive generation for embedded occurrences; first reservation/activation is 1, active removal allocates its same-lineage inactive successor at exactly previous plus 1, that successor is output-only until committed and supplied as a later invocation input, and later re-add preserves its generation and occurrence identity (ordinary later exact-state rebind may change bindingIdentity). Same-invocation remove-then-re-add and different-lineage retarget are unsupported in Contracts 1.0. Root scope generation 0 is not an occurrence row.
+        $ref: '#/$defs/positiveSafeInteger'
+      targetDocumentId: {$ref: '#/$defs/documentId'}
+      expectedTargetBlueId:
+        description: Exact identity established equally by a pure reference, verified inline acyclic node, or verified materialized cyclic member with its complete owning proof; mixed blueId objects are invalid.
+        $ref: '#/$defs/blueId'
+      active: {type: boolean}
+      pendingHistoricalEpoch: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+    allOf:
+    - if:
+        properties:
+          active: {const: true}
+        required: [active]
+      then:
+        properties:
+          pendingHistoricalEpoch: {type: 'null'}
+  component:
+    type: object
+    additionalProperties: false
+    required: [componentIdentity, componentStateIdentity, componentGeneration, kind, orderedMemberDocumentIds, orderedMemberBlueIds]
+    properties:
+      componentIdentity: {$ref: '#/$defs/sha256Identity'}
+      componentStateIdentity: {$ref: '#/$defs/sha256Identity'}
+      componentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      kind: {enum: [ACYCLIC, CYCLIC]}
+      orderedMemberDocumentIds:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {$ref: '#/$defs/documentId'}
+      orderedMemberBlueIds:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {$ref: '#/$defs/blueId'}
+      masterBlueId: {$ref: '#/$defs/blueId'}
+      completeCyclicProof: {$ref: '#/$defs/blueValue'}
+      cyclicProofIdentity: {$ref: '#/$defs/sha256Identity'}
+    allOf:
+    - if:
+        properties:
+          kind: {const: CYCLIC}
+        required: [kind]
+      then:
+        required: [masterBlueId, completeCyclicProof, cyclicProofIdentity]
+      else:
+        not:
+          anyOf:
+          - required: [masterBlueId]
+          - required: [completeCyclicProof]
+          - required: [cyclicProofIdentity]
+  resultComponent:
+    description: Closed public component result; oracle stage labels exist only in the top-level oracle harness.
+    $ref: '#/$defs/component'
+  directDelivery:
+    type: object
+    additionalProperties: false
+    required: [targetDocumentId, scopePath, activationGeneration, channelKey, logicalDeliveryKey, rawOccurrenceOrder]
+    properties:
+      targetDocumentId: {$ref: '#/$defs/documentId'}
+      scopePath:
+        description: Contracts 1.0 closure profile admits direct work only at a managed document Root scope.
+        const: /
+      activationGeneration:
+        description: Root managed-scope activation generation is exactly zero.
+        const: 0
+      channelKey: {type: string}
+      logicalDeliveryKey: {type: string}
+      rawOccurrenceOrder: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  cause:
+    oneOf:
+    - type: object
+      additionalProperties: false
+      required: [kind, causeIdentity, event, eventBlueId, sourceOrder, externalOrderPolicyIdentity]
+      properties:
+        kind: {const: external}
+        causeIdentity: {$ref: '#/$defs/sha256Identity'}
+        event: {$ref: '#/$defs/blueValue'}
+        eventBlueId: {$ref: '#/$defs/blueId'}
+        sourceOrder:
+          type: array
+          minItems: 3
+          items: {}
+        externalOrderPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
+    - type: object
+      additionalProperties: false
+      required: [kind, causeIdentity, admissionKind, label, triggeringEventBlueId, parentTransitionIdentity, policyIdentity]
+      properties:
+        kind: {const: admission}
+        causeIdentity: {$ref: '#/$defs/sha256Identity'}
+        admissionKind: {enum: [TOP_LEVEL_ADMISSION, EMBEDDED_ACTIVATION, IMPORTED_STATE_ADMISSION]}
+        label: {type: string, minLength: 1}
+        triggeringEventBlueId: {$ref: '#/$defs/nullableBlueId'}
+        parentTransitionIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+        policyIdentity: {$ref: '#/$defs/sha256Identity'}
+    - type: object
+      additionalProperties: false
+      required: [kind, causeIdentity, targetOccurrenceIdentity, childDocumentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId, afterDocument, originalSourceCauseIdentity, sourceRevisionReceiptIdentity]
+      properties:
+        kind: {const: managed-revision}
+        causeIdentity: {$ref: '#/$defs/sha256Identity'}
+        targetOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+        childDocumentId: {$ref: '#/$defs/documentId'}
+        fromEpoch: {$ref: '#/$defs/nonNegativeSafeInteger'}
+        toEpoch:
+          description: Exactly fromEpoch plus 1; enforced by the semantic fixture validator because JSON Schema cannot express cross-field arithmetic.
+          $ref: '#/$defs/positiveSafeInteger'
+        beforeBlueId: {$ref: '#/$defs/blueId'}
+        afterBlueId: {$ref: '#/$defs/blueId'}
+        afterDocument: {$ref: '#/$defs/blueValue'}
+        originalSourceCauseIdentity: {$ref: '#/$defs/sha256Identity'}
+        sourceRevisionReceiptIdentity: {$ref: '#/$defs/sha256Identity'}
+  candidateCyclicMember:
+    type: object
+    additionalProperties: false
+    required: [documentId, document]
+    properties:
+      documentId: {$ref: '#/$defs/documentId'}
+      document: {$ref: '#/$defs/blueValue'}
+  candidateOccurrenceBinding:
+    description: Strict admission evidence; historical staging metadata is not part of this closed record.
+    type: object
+    additionalProperties: false
+    required: [occurrenceIdentity, bindingIdentity, bindingPolicyIdentity, sourceDocumentId, sourcePath, activationGeneration, targetDocumentId, expectedTargetBlueId, active]
+    properties:
+      occurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+      bindingIdentity: {$ref: '#/$defs/sha256Identity'}
+      bindingPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
+      sourceDocumentId: {$ref: '#/$defs/documentId'}
+      sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
+      activationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
+      targetDocumentId: {$ref: '#/$defs/documentId'}
+      expectedTargetBlueId: {$ref: '#/$defs/blueId'}
+      active: {type: boolean}
+  admissionCandidate:
+    oneOf:
+    - type: object
+      additionalProperties: false
+      required: [kind, evidence]
+      properties:
+        kind: {const: BAD_CYCLIC_PROOF}
+        evidence:
+          type: object
+          additionalProperties: false
+          required: [candidateCyclicProof]
+          properties:
+            candidateCyclicProof: {$ref: '#/$defs/blueValue'}
+    - type: object
+      additionalProperties: false
+      required: [kind, evidence]
+      properties:
+        kind: {const: AMBIGUOUS_PRELIMINARY_MEMBERS}
+        evidence:
+          type: object
+          additionalProperties: false
+          required: [candidateCyclicMembers]
+          properties:
+            candidateCyclicMembers:
+              type: array
+              minItems: 1
+              items: {$ref: '#/$defs/candidateCyclicMember'}
+    - type: object
+      additionalProperties: false
+      required: [kind, evidence]
+      properties:
+        kind: {const: INVALID_OCCURRENCE_BINDING}
+        evidence:
+          type: object
+          additionalProperties: false
+          required: [candidateOccurrenceBindings]
+          properties:
+            candidateOccurrenceBindings:
+              type: array
+              minItems: 1
+              items: {$ref: '#/$defs/candidateOccurrenceBinding'}
+  nullableAdmissionCandidate:
+    oneOf:
+    - {$ref: '#/$defs/admissionCandidate'}
+    - {type: 'null'}
+  patch:
+    type: object
+    additionalProperties: false
+    required: [op, path]
+    properties:
+      op: {enum: [add, replace, remove]}
+      path:
+        description: Normalized non-Root Runtime/JSON Pointer; empty segments and malformed escapes are invalid.
+        type: string
+        pattern: '^/(?:[^~/]|~0|~1|/)*(?:[^~/]|~0|~1)$'
+      val: {$ref: '#/$defs/blueValue'}
+    allOf:
+    - if:
+        properties:
+          op: {enum: [add, replace]}
+        required: [op]
+      then:
+        required: [val]
+      else:
+        not: {required: [val]}
+  handlerResult:
+    type: object
+    additionalProperties: false
+    properties:
+      patches: {type: array, items: {$ref: '#/$defs/patch'}}
+      events: {type: array, items: {$ref: '#/$defs/blueValue'}}
+      fail: {type: string}
+  gasPolicy:
+    type: object
+    additionalProperties: false
+    required: [policyIdentity, sharedLimit, label]
+    properties:
+      policyIdentity: {$ref: '#/$defs/sha256Identity'}
+      sharedLimit: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      label: {type: string, minLength: 1}
+      localLimits:
+        type: object
+        additionalProperties: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  identityPolicy:
+    type: object
+    additionalProperties: false
+    required: [identity, label]
+    properties:
+      identity: {$ref: '#/$defs/sha256Identity'}
+      label: {type: string, minLength: 1}
+  portableLimit:
+    type: object
+    additionalProperties: false
+    required: [name, value]
+    properties:
+      name: {type: string, minLength: 1}
+      value: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  portableLimitPolicy:
+    type: object
+    additionalProperties: false
+    required: [identity, label, limits]
+    properties:
+      identity: {$ref: '#/$defs/sha256Identity'}
+      label: {type: string, minLength: 1}
+      limits:
+        type: array
+        minItems: 1
+        items: {$ref: '#/$defs/portableLimit'}
+  environment:
+    type: object
+    additionalProperties: false
+    required: [blueLanguageSpecificationIdentity, contractsSpecificationIdentity, runtimeRegistryIdentity, gasManifestIdentity, managedDocumentIdentityPolicy, managedBindingPolicy, exactNodeProviderDomain, externalOrderPolicy, portableLimitPolicy, cyclicFinalizerIdentity, cyclicProofVerifierIdentity]
+    properties:
+      blueLanguageSpecificationIdentity: {$ref: '#/$defs/sha256Identity'}
+      contractsSpecificationIdentity: {$ref: '#/$defs/sha256Identity'}
+      runtimeRegistryIdentity: {$ref: '#/$defs/sha256Identity'}
+      gasManifestIdentity: {$ref: '#/$defs/sha256Identity'}
+      managedDocumentIdentityPolicy: {$ref: '#/$defs/identityPolicy'}
+      managedBindingPolicy: {$ref: '#/$defs/identityPolicy'}
+      exactNodeProviderDomain: {$ref: '#/$defs/identityPolicy'}
+      externalOrderPolicy: {$ref: '#/$defs/identityPolicy'}
+      portableLimitPolicy: {$ref: '#/$defs/portableLimitPolicy'}
+      cyclicFinalizerIdentity: {$ref: '#/$defs/sha256Identity'}
+      cyclicProofVerifierIdentity: {$ref: '#/$defs/sha256Identity'}
+  input:
+    type: object
+    additionalProperties: false
+    required: [graphGeneration, cause, admissionCandidate, admissionCandidateIdentity, documents, occurrences, components, directDeliveries, publicRootDocumentIds, directDeliverySnapshotIdentity, occurrenceBindingSetIdentity, closureIdentity, invocationIdentity, gasPolicy, environment]
+    properties:
+      graphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      cause: {$ref: '#/$defs/cause'}
+      admissionCandidate: {$ref: '#/$defs/nullableAdmissionCandidate'}
+      admissionCandidateIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+      documents:
+        type: object
+        minProperties: 1
+        additionalProperties: {$ref: '#/$defs/document'}
+      occurrences: {type: array, items: {$ref: '#/$defs/occurrence'}}
+      components: {type: array, minItems: 1, items: {$ref: '#/$defs/component'}}
+      directDeliveries: {type: array, items: {$ref: '#/$defs/directDelivery'}}
+      publicRootDocumentIds:
+        type: array
+        uniqueItems: true
+        items: {$ref: '#/$defs/documentId'}
+      directDeliverySnapshotIdentity: {$ref: '#/$defs/sha256Identity'}
+      occurrenceBindingSetIdentity: {$ref: '#/$defs/sha256Identity'}
+      closureIdentity: {$ref: '#/$defs/sha256Identity'}
+      invocationIdentity: {$ref: '#/$defs/sha256Identity'}
+      gasPolicy: {$ref: '#/$defs/gasPolicy'}
+      environment: {$ref: '#/$defs/environment'}
+    allOf:
+    - if:
+        properties:
+          admissionCandidate: {type: 'null'}
+        required: [admissionCandidate]
+      then:
+        properties:
+          admissionCandidateIdentity: {type: 'null'}
+      else:
+        properties:
+          admissionCandidateIdentity: {$ref: '#/$defs/sha256Identity'}
+    - if:
+        properties:
+          cause:
+            properties:
+              kind: {const: external}
+            required: [kind]
+        required: [cause]
+      then:
+        properties:
+          admissionCandidate: {type: 'null'}
+          admissionCandidateIdentity: {type: 'null'}
+  finalizationBoundary:
+    oneOf:
+    - type: object
+      additionalProperties: false
+      required: [kind, afterWorkOrdinal]
+      properties:
+        kind: {const: WORK}
+        afterWorkOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+    - type: object
+      additionalProperties: false
+      required: [kind, afterWorkOrdinal]
+      properties:
+        kind: {const: INITIALIZATION_BATCH}
+        afterWorkOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+    - type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind: {const: CHECKPOINT_SETTLEMENT}
+  finalization:
+    type: object
+    additionalProperties: false
+    description: Production finalization evidence only; stage routing is top-level oracle harness data.
+    required: [ordinal, boundary, masterBlueId, memberBlueIds, canonicalBytes]
+    properties:
+      ordinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      boundary: {$ref: '#/$defs/finalizationBoundary'}
+      masterBlueId: {$ref: '#/$defs/blueId'}
+      canonicalBytes: {$ref: '#/$defs/positiveSafeInteger'}
+      memberBlueIds:
+        type: object
+        additionalProperties: {$ref: '#/$defs/blueId'}
+  work:
+    type: object
+    additionalProperties: false
+    required: [ordinal, kind, targetDocumentId, channelKey, targetManagedScopeIdentity, sourceOccurrenceIdentity, workIdentity]
+    properties:
+      ordinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      kind: {enum: [EXTERNAL_DELIVERY, INITIALIZATION, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE, LIFECYCLE, CONTAINING_REFERENCE_UPDATE]}
+      targetDocumentId: {$ref: '#/$defs/documentId'}
+      channelKey: {type: string}
+      eventBlueId: {$ref: '#/$defs/blueId'}
+      occurrenceOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      targetManagedScopeIdentity:
+        description: Root managed-scope identity of targetDocumentId under the Contracts 1.0 closure profile; recomputed semantically.
+        $ref: '#/$defs/sha256Identity'
+      sourceOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+      workIdentity: {$ref: '#/$defs/sha256Identity'}
+  documentStepEvidence:
+    type: object
+    additionalProperties: false
+    required: [stepOrdinal, workOrdinal, targetDocumentId, executionRootDocumentId, scopePath, executionMode, ambientContainingDocumentIds]
+    properties:
+      stepOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      workOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      targetDocumentId: {$ref: '#/$defs/documentId'}
+      executionRootDocumentId: {$ref: '#/$defs/documentId'}
+      scopePath: {const: /}
+      executionMode: {const: ISOLATED_DOCUMENT}
+      ambientContainingDocumentIds:
+        type: array
+        maxItems: 0
+        items: {$ref: '#/$defs/documentId'}
+  observation:
+    type: object
+    additionalProperties: false
+    required: [workOrdinal, targetDocumentId, pointer]
+    properties:
+      workOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      targetDocumentId: {$ref: '#/$defs/documentId'}
+      pointer: {type: string}
+      observedBlueId: {$ref: '#/$defs/blueId'}
+      observedValue: {$ref: '#/$defs/blueValue'}
+    anyOf:
+    - required: [observedBlueId]
+    - required: [observedValue]
+  channelOccurrence:
+    type: object
+    additionalProperties: false
+    required: [channelOccurrenceIdentity, managedDocumentId, scopePath, scopeActivationGeneration, rawChannelKey, effectiveRuntimeContributionBlueId, subscriptionHeaderBlueId]
+    properties:
+      channelOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+      managedDocumentId: {$ref: '#/$defs/documentId'}
+      scopePath:
+        description: Contracts 1.0 closure subscription results are Root-scoped.
+        const: /
+      scopeActivationGeneration:
+        description: Root managed-scope activation generation is exactly zero.
+        const: 0
+      rawChannelKey: {type: string, minLength: 1}
+      effectiveRuntimeContributionBlueId: {$ref: '#/$defs/blueId'}
+      subscriptionHeaderBlueId: {$ref: '#/$defs/blueId'}
+  subscriptionState:
+    type: object
+    additionalProperties: false
+    required: [subscriptionIdentity, channelOccurrence, documentBlueId, graphGeneration, componentGeneration]
+    properties:
+      subscriptionIdentity: {$ref: '#/$defs/sha256Identity'}
+      channelOccurrence: {$ref: '#/$defs/channelOccurrence'}
+      documentBlueId: {$ref: '#/$defs/blueId'}
+      graphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      componentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  nullableSubscriptionState:
+    oneOf:
+    - {$ref: '#/$defs/subscriptionState'}
+    - {type: 'null'}
+  graphChange:
+    type: object
+    additionalProperties: false
+    required: [graphChangeOrdinal, changeKind, sourceDocumentId, sourcePath, beforeActivationGeneration, beforeOccurrenceIdentity, beforeBindingIdentity, beforeTargetDocumentId, beforeTargetBlueId, afterActivationGeneration, afterOccurrenceIdentity, afterBindingIdentity, afterTargetDocumentId, afterTargetBlueId]
+    properties:
+      graphChangeOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      changeKind: {enum: [ADD, REMOVE, REBIND]}
+      sourceDocumentId: {$ref: '#/$defs/documentId'}
+      sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
+      beforeActivationGeneration: {$ref: '#/$defs/nullablePositiveSafeInteger'}
+      beforeOccurrenceIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+      beforeBindingIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+      beforeTargetDocumentId: {$ref: '#/$defs/nullableDocumentId'}
+      beforeTargetBlueId: {$ref: '#/$defs/nullableBlueId'}
+      afterActivationGeneration: {$ref: '#/$defs/nullablePositiveSafeInteger'}
+      afterOccurrenceIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+      afterBindingIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+      afterTargetDocumentId: {$ref: '#/$defs/nullableDocumentId'}
+      afterTargetBlueId: {$ref: '#/$defs/nullableBlueId'}
+    allOf:
+    - if:
+        properties:
+          changeKind: {const: ADD}
+        required: [changeKind]
+      then:
+        properties:
+          beforeActivationGeneration: {type: 'null'}
+          beforeOccurrenceIdentity: {type: 'null'}
+          beforeBindingIdentity: {type: 'null'}
+          beforeTargetDocumentId: {type: 'null'}
+          beforeTargetBlueId: {type: 'null'}
+          afterActivationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
+          afterOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+          afterBindingIdentity: {$ref: '#/$defs/sha256Identity'}
+          afterTargetDocumentId: {$ref: '#/$defs/documentId'}
+          afterTargetBlueId: {$ref: '#/$defs/blueId'}
+    - if:
+        properties:
+          changeKind: {const: REMOVE}
+        required: [changeKind]
+      then:
+        properties:
+          beforeActivationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
+          beforeOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+          beforeBindingIdentity: {$ref: '#/$defs/sha256Identity'}
+          beforeTargetDocumentId: {$ref: '#/$defs/documentId'}
+          beforeTargetBlueId: {$ref: '#/$defs/blueId'}
+          afterActivationGeneration: {type: 'null'}
+          afterOccurrenceIdentity: {type: 'null'}
+          afterBindingIdentity: {type: 'null'}
+          afterTargetDocumentId: {type: 'null'}
+          afterTargetBlueId: {type: 'null'}
+    - if:
+        properties:
+          changeKind: {const: REBIND}
+        required: [changeKind]
+      then:
+        properties:
+          beforeActivationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
+          beforeOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+          beforeBindingIdentity: {$ref: '#/$defs/sha256Identity'}
+          beforeTargetDocumentId: {$ref: '#/$defs/documentId'}
+          beforeTargetBlueId: {$ref: '#/$defs/blueId'}
+          afterActivationGeneration: {$ref: '#/$defs/positiveSafeInteger'}
+          afterOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+          afterBindingIdentity: {$ref: '#/$defs/sha256Identity'}
+          afterTargetDocumentId: {$ref: '#/$defs/documentId'}
+          afterTargetBlueId: {$ref: '#/$defs/blueId'}
+  checkpointDomainValue:
+    type: object
+    additionalProperties: false
+    required: [contractsVersion, effectiveTypeBlueId, sourceContributionNodeBlueIds]
+    properties:
+      contractsVersion: {const: '1.0'}
+      effectiveTypeBlueId: {$ref: '#/$defs/blueId'}
+      sourceContributionNodeBlueIds:
+        type: array
+        items: {$ref: '#/$defs/blueId'}
+      deterministicDependencyNodeBlueIds:
+        type: array
+        minItems: 1
+        items: {$ref: '#/$defs/blueId'}
+      runtimeDiscriminator: {type: string, minLength: 1}
+  nullableCheckpointDomainValue:
+    oneOf:
+    - {$ref: '#/$defs/checkpointDomainValue'}
+    - {type: 'null'}
+  checkpointWrite:
+    type: object
+    additionalProperties: false
+    required: [checkpointWriteOrdinal, targetManagedScopeIdentity, rawChannelKey, beforePresent, beforeDomainBlueId, beforeDomainValue, beforeSubjectBlueId, afterPresent, afterDomainBlueId, afterDomainValue, afterSubjectBlueId]
+    properties:
+      checkpointWriteOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      targetManagedScopeIdentity:
+        description: Root managed-scope identity of the receipt's managed document; recomputed semantically.
+        $ref: '#/$defs/sha256Identity'
+      rawChannelKey: {type: string, minLength: 1}
+      beforePresent: {type: boolean}
+      beforeDomainBlueId: {$ref: '#/$defs/nullableBlueId'}
+      beforeDomainValue: {$ref: '#/$defs/nullableCheckpointDomainValue'}
+      beforeSubjectBlueId: {$ref: '#/$defs/nullableBlueId'}
+      afterPresent: {type: boolean}
+      afterDomainBlueId: {$ref: '#/$defs/nullableBlueId'}
+      afterDomainValue: {$ref: '#/$defs/nullableCheckpointDomainValue'}
+      afterSubjectBlueId: {$ref: '#/$defs/nullableBlueId'}
+    allOf:
+    - not:
+        properties:
+          beforePresent: {const: false}
+          afterPresent: {const: false}
+        required: [beforePresent, afterPresent]
+    - if:
+        properties:
+          beforePresent: {const: true}
+        required: [beforePresent]
+      then:
+        properties:
+          beforeDomainBlueId: {$ref: '#/$defs/blueId'}
+          beforeDomainValue: {$ref: '#/$defs/checkpointDomainValue'}
+          beforeSubjectBlueId: {$ref: '#/$defs/blueId'}
+      else:
+        properties:
+          beforeDomainBlueId: {type: 'null'}
+          beforeDomainValue: {type: 'null'}
+          beforeSubjectBlueId: {type: 'null'}
+    - if:
+        properties:
+          afterPresent: {const: true}
+        required: [afterPresent]
+      then:
+        properties:
+          afterDomainBlueId: {$ref: '#/$defs/blueId'}
+          afterDomainValue: {$ref: '#/$defs/checkpointDomainValue'}
+          afterSubjectBlueId: {$ref: '#/$defs/blueId'}
+      else:
+        properties:
+          afterDomainBlueId: {type: 'null'}
+          afterDomainValue: {type: 'null'}
+          afterSubjectBlueId: {type: 'null'}
+  subscriptionDelta:
+    type: object
+    additionalProperties: false
+    required: [subscriptionDeltaOrdinal, operation, targetManagedScopeIdentity, channelOccurrenceIdentity, beforeSubscriptionIdentity, afterSubscriptionIdentity, beforeDocumentBlueId, afterDocumentBlueId, beforeGraphGeneration, afterGraphGeneration, beforeComponentGeneration, afterComponentGeneration, beforeSubscription, afterSubscription]
+    properties:
+      subscriptionDeltaOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      operation: {enum: [ADD, REMOVE, REPLACE]}
+      targetManagedScopeIdentity:
+        description: Root managed-scope identity of the nested ChannelOccurrence managedDocumentId; recomputed semantically.
+        $ref: '#/$defs/sha256Identity'
+      channelOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+      beforeSubscriptionIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+      afterSubscriptionIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+      beforeDocumentBlueId: {$ref: '#/$defs/nullableBlueId'}
+      afterDocumentBlueId: {$ref: '#/$defs/nullableBlueId'}
+      beforeGraphGeneration: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+      afterGraphGeneration: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+      beforeComponentGeneration: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+      afterComponentGeneration: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+      beforeSubscription: {$ref: '#/$defs/nullableSubscriptionState'}
+      afterSubscription: {$ref: '#/$defs/nullableSubscriptionState'}
+    allOf:
+    - if:
+        properties:
+          operation: {const: ADD}
+        required: [operation]
+      then:
+        properties:
+          beforeSubscriptionIdentity: {type: 'null'}
+          beforeDocumentBlueId: {type: 'null'}
+          beforeGraphGeneration: {type: 'null'}
+          beforeComponentGeneration: {type: 'null'}
+          beforeSubscription: {type: 'null'}
+          afterSubscriptionIdentity: {$ref: '#/$defs/sha256Identity'}
+          afterDocumentBlueId: {$ref: '#/$defs/blueId'}
+          afterGraphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          afterComponentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          afterSubscription: {$ref: '#/$defs/subscriptionState'}
+    - if:
+        properties:
+          operation: {const: REMOVE}
+        required: [operation]
+      then:
+        properties:
+          beforeSubscriptionIdentity: {$ref: '#/$defs/sha256Identity'}
+          beforeDocumentBlueId: {$ref: '#/$defs/blueId'}
+          beforeGraphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          beforeComponentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          beforeSubscription: {$ref: '#/$defs/subscriptionState'}
+          afterSubscriptionIdentity: {type: 'null'}
+          afterDocumentBlueId: {type: 'null'}
+          afterGraphGeneration: {type: 'null'}
+          afterComponentGeneration: {type: 'null'}
+          afterSubscription: {type: 'null'}
+    - if:
+        properties:
+          operation: {const: REPLACE}
+        required: [operation]
+      then:
+        properties:
+          beforeSubscriptionIdentity: {$ref: '#/$defs/sha256Identity'}
+          beforeDocumentBlueId: {$ref: '#/$defs/blueId'}
+          beforeGraphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          beforeComponentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          beforeSubscription: {$ref: '#/$defs/subscriptionState'}
+          afterSubscriptionIdentity: {$ref: '#/$defs/sha256Identity'}
+          afterDocumentBlueId: {$ref: '#/$defs/blueId'}
+          afterGraphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          afterComponentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+          afterSubscription: {$ref: '#/$defs/subscriptionState'}
+  publicEvent:
+    type: object
+    additionalProperties: false
+    required: [publicEventOrdinal, eventOccurrenceOrdinal, publicRootDocumentId, eventOccurrenceIdentity, eventBlueId, event]
+    properties:
+      publicEventOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      eventOccurrenceOrdinal:
+        description: Invocation-global emission ordinal bound by eventOccurrenceIdentity; may have gaps in the public projection.
+        $ref: '#/$defs/nonNegativeSafeInteger'
+      publicRootDocumentId: {$ref: '#/$defs/documentId'}
+      eventOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+      eventBlueId: {$ref: '#/$defs/blueId'}
+      event: {$ref: '#/$defs/blueValue'}
+  gasTraceEntry:
+    type: object
+    additionalProperties: false
+    required: [sequence, namespace, counter, quantity, weight, subtotal]
+    properties:
+      sequence: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      namespace: {enum: [processor, semantic, runtime]}
+      counter: {type: string}
+      quantity: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      weight: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      subtotal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      documentId: {$ref: '#/$defs/documentId'}
+      scopePath:
+        description: When present, closure gas scope context is the managed Root.
+        const: /
+      activationGeneration:
+        description: When present, closure gas scope context uses Root generation zero.
+        const: 0
+      componentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      contractKey: {type: string}
+      logicalPath:
+        description: Exact semantic charge attribution; included in gasTraceIdentity when present.
+        type: string
+      workOccurrenceId: {$ref: '#/$defs/sha256Identity'}
+      reason:
+        description: Observable free-form diagnostic text; excluded from gasTraceIdentity.
+        type: string
+    dependentRequired:
+      scopePath: [activationGeneration]
+      activationGeneration: [scopePath]
+  applicableCap:
+    oneOf:
+    - type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind: {const: SHARED}
+    - type: object
+      additionalProperties: false
+      required: [kind, documentId]
+      properties:
+        kind: {const: LOCAL}
+        documentId: {$ref: '#/$defs/documentId'}
+  rejectedChargeOwner:
+    oneOf:
+    - type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind: {const: INVOCATION}
+    - type: object
+      additionalProperties: false
+      required: [kind, workOccurrenceIdentity]
+      properties:
+        kind: {const: WORK}
+        workOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+    - type: object
+      additionalProperties: false
+      required: [kind, finalizationOrdinal, componentIdentity, componentGeneration]
+      properties:
+        kind: {const: FINALIZATION}
+        finalizationOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+        componentIdentity: {$ref: '#/$defs/sha256Identity'}
+        componentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  rejectedCharge:
+    type: object
+    additionalProperties: false
+    required: [rejectedChargeIdentity, namespace, counter, quantity, weight, subtotal, applicableCap, remainingBeforeCharge, owner]
+    properties:
+      rejectedChargeIdentity: {$ref: '#/$defs/sha256Identity'}
+      namespace: {enum: [processor, semantic, runtime]}
+      counter: {type: string, minLength: 1}
+      quantity: {$ref: '#/$defs/positiveSafeInteger'}
+      weight: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      subtotal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      applicableCap: {$ref: '#/$defs/applicableCap'}
+      remainingBeforeCharge: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      owner: {$ref: '#/$defs/rejectedChargeOwner'}
+  limitGenerator:
+    type: object
+    additionalProperties: false
+    required: [kind, parameters]
+    properties:
+      kind:
+        enum: [managed-documents, embedded-edges, cyclic-members, cyclic-edges, cyclic-canonical-bytes, graph-changes, closure-expansions, work-occurrences, tentative-finalizations]
+      parameters:
+        type: object
+        additionalProperties: {$ref: '#/$defs/nonNegativeSafeInteger'}
+  limitInput:
+    type: object
+    additionalProperties: false
+    required: [limit, configured, observed, generator]
+    properties:
+      limit:
+        enum: [managedDocumentsPerClosure, processEmbeddedEdgesPerClosure, cyclicMembersPerComponent, cyclicEdgesPerComponent, cyclicCanonicalBytesPerComponent, closureGraphChangesPerInvocation, closureExpansionsPerInvocation, closureWorkOccurrencesPerInvocation, closureTentativeFinalizationsPerInvocation]
+      configured: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      observed: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      generator: {$ref: '#/$defs/limitGenerator'}
+  limitExpected:
+    type: object
+    additionalProperties: false
+    required: [limitDecision, rejectedStepAdmitted, subsequentOutcome]
+    properties:
+      limitDecision: {enum: [ACCEPT, REJECT]}
+      diagnostic: {type: string}
+      rejectedStep: {type: string}
+      rejectedStepAdmitted: {type: boolean}
+      subsequentOutcome: {enum: [NOT_EXECUTED_BY_MICROFIXTURE]}
+  resultingDocument:
+    type: object
+    additionalProperties: false
+    required: [documentId, beforeBlueId, afterBlueId, document, initialized, terminated, publicRoot, epoch, componentGeneration, componentIdentity, componentStateIdentity, memberIndex]
+    properties:
+      documentId: {$ref: '#/$defs/documentId'}
+      beforeBlueId: {$ref: '#/$defs/blueId'}
+      afterBlueId: {$ref: '#/$defs/blueId'}
+      document: {$ref: '#/$defs/blueValue'}
+      initialized: {type: boolean}
+      terminated: {type: boolean}
+      publicRoot: {type: boolean}
+      epoch: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      componentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      componentIdentity: {$ref: '#/$defs/sha256Identity'}
+      componentStateIdentity: {$ref: '#/$defs/sha256Identity'}
+      memberIndex:
+        description: Exact numeric #n suffix of afterBlueId for CYCLIC; null for ACYCLIC.
+        $ref: '#/$defs/nullableNonNegativeSafeInteger'
+  commitInputDocument:
+    type: object
+    additionalProperties: false
+    required: [documentId, blueId]
+    properties:
+      documentId: {$ref: '#/$defs/documentId'}
+      blueId: {$ref: '#/$defs/blueId'}
+  commitInputComponent:
+    type: object
+    additionalProperties: false
+    required: [componentIdentity, componentStateIdentity, componentGeneration, masterBlueId]
+    properties:
+      componentIdentity: {$ref: '#/$defs/sha256Identity'}
+      componentStateIdentity: {$ref: '#/$defs/sha256Identity'}
+      componentGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      masterBlueId: {$ref: '#/$defs/nullableBlueId'}
+  commitDocumentDelta:
+    type: object
+    additionalProperties: false
+    required: [documentId, beforeBlueId, afterBlueId]
+    properties:
+      documentId: {$ref: '#/$defs/documentId'}
+      beforeBlueId: {$ref: '#/$defs/blueId'}
+      afterBlueId: {$ref: '#/$defs/blueId'}
+  commitResultComponent:
+    type: object
+    additionalProperties: false
+    required: [componentIdentity, componentStateIdentity, cyclicProofIdentity]
+    properties:
+      componentIdentity: {$ref: '#/$defs/sha256Identity'}
+      componentStateIdentity: {$ref: '#/$defs/sha256Identity'}
+      cyclicProofIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+  platformCommitCompanion:
+    type: object
+    additionalProperties: false
+    required: [companionIdentity, invocationIdentity, inputClosureIdentity, outputClosureIdentity, expectedInputGraphGeneration, expectedInputDocuments, expectedInputComponents, inputOccurrenceBindingSetIdentity, outputGraphGeneration, resultingDocuments, resultingComponents, occurrenceBindingSetIdentity, graphChangesIdentity, checkpointWritesIdentity, subscriptionDeltasIdentity, publicEventsIdentity, gasTraceIdentity, blueLanguageSpecificationIdentity, contractsSpecificationIdentity, managedDocumentIdentityPolicyIdentity, managedBindingPolicyIdentity, exactNodeProviderDomainIdentity, externalOrderPolicyIdentity, runtimeRegistryIdentity, gasManifestIdentity, portableLimitPolicyIdentity, cyclicFinalizerIdentity, cyclicProofVerifierIdentity]
+    properties:
+      companionIdentity: {$ref: '#/$defs/sha256Identity'}
+      invocationIdentity: {$ref: '#/$defs/sha256Identity'}
+      inputClosureIdentity: {$ref: '#/$defs/sha256Identity'}
+      outputClosureIdentity: {$ref: '#/$defs/sha256Identity'}
+      expectedInputGraphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      expectedInputDocuments:
+        type: array
+        minItems: 1
+        items: {$ref: '#/$defs/commitInputDocument'}
+      expectedInputComponents:
+        type: array
+        minItems: 1
+        items: {$ref: '#/$defs/commitInputComponent'}
+      inputOccurrenceBindingSetIdentity: {$ref: '#/$defs/sha256Identity'}
+      outputGraphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      resultingDocuments:
+        type: array
+        items: {$ref: '#/$defs/commitDocumentDelta'}
+      resultingComponents:
+        type: array
+        minItems: 1
+        items: {$ref: '#/$defs/commitResultComponent'}
+      occurrenceBindingSetIdentity: {$ref: '#/$defs/sha256Identity'}
+      graphChangesIdentity: {$ref: '#/$defs/sha256Identity'}
+      checkpointWritesIdentity: {$ref: '#/$defs/sha256Identity'}
+      subscriptionDeltasIdentity: {$ref: '#/$defs/sha256Identity'}
+      publicEventsIdentity: {$ref: '#/$defs/sha256Identity'}
+      gasTraceIdentity:
+        description: Identity of the admitted gas entries after removing only each diagnostic reason field.
+        $ref: '#/$defs/sha256Identity'
+      blueLanguageSpecificationIdentity: {$ref: '#/$defs/sha256Identity'}
+      contractsSpecificationIdentity: {$ref: '#/$defs/sha256Identity'}
+      managedDocumentIdentityPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
+      managedBindingPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
+      exactNodeProviderDomainIdentity: {$ref: '#/$defs/sha256Identity'}
+      externalOrderPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
+      runtimeRegistryIdentity: {$ref: '#/$defs/sha256Identity'}
+      gasManifestIdentity: {$ref: '#/$defs/sha256Identity'}
+      portableLimitPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
+      cyclicFinalizerIdentity: {$ref: '#/$defs/sha256Identity'}
+      cyclicProofVerifierIdentity: {$ref: '#/$defs/sha256Identity'}
+  completeExpected:
+    type: object
+    additionalProperties: false
+    required: [attemptOutcome, status, invocationIdentity, inputClosureIdentity, outputClosureIdentity, atomic, workTrace, documentStepTrace, tentativeFinalizations, graphGeneration, resultingDocuments, resultingComponents, occurrenceBindings, occurrenceBindingSetIdentity, graphChanges, graphChangesIdentity, subscriptionDeltas, subscriptionDeltasIdentity, checkpointWrites, checkpointWritesIdentity, publicEvents, publicEventsIdentity, rollbackToInput, totalGas, gasTraceIdentity]
+    properties:
+      attemptOutcome: {const: Complete}
+      status: {enum: [success, no-match, stale, terminated, invalid-processing-document, capability-failure, runtime-fatal, gas-limit-exceeded, portable-limit-exceeded, subscription-surface-invalid]}
+      invocationIdentity: {$ref: '#/$defs/sha256Identity'}
+      inputClosureIdentity: {$ref: '#/$defs/sha256Identity'}
+      outputClosureIdentity: {$ref: '#/$defs/sha256Identity'}
+      diagnostic: {type: string}
+      atomic: {const: true}
+      workTrace: {type: array, items: {$ref: '#/$defs/work'}}
+      documentStepTrace: {type: array, items: {$ref: '#/$defs/documentStepEvidence'}}
+      rejectedWorkOccurrence: {$ref: '#/$defs/work'}
+      rejectedCharge: {$ref: '#/$defs/rejectedCharge'}
+      tentativeFinalizations: {type: array, items: {$ref: '#/$defs/finalization'}}
+      graphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      resultingDocuments: {type: array, items: {$ref: '#/$defs/resultingDocument'}}
+      resultingComponents: {type: array, minItems: 1, items: {$ref: '#/$defs/resultComponent'}}
+      occurrenceBindings: {type: array, items: {$ref: '#/$defs/occurrence'}}
+      occurrenceBindingSetIdentity: {$ref: '#/$defs/sha256Identity'}
+      graphChanges: {type: array, items: {$ref: '#/$defs/graphChange'}}
+      graphChangesIdentity: {$ref: '#/$defs/sha256Identity'}
+      subscriptionDeltas: {type: array, items: {$ref: '#/$defs/subscriptionDelta'}}
+      subscriptionDeltasIdentity: {$ref: '#/$defs/sha256Identity'}
+      checkpointWrites: {type: array, items: {$ref: '#/$defs/checkpointWrite'}}
+      checkpointWritesIdentity: {$ref: '#/$defs/sha256Identity'}
+      publicEvents: {type: array, items: {$ref: '#/$defs/publicEvent'}}
+      publicEventsIdentity: {$ref: '#/$defs/sha256Identity'}
+      rollbackToInput: {type: boolean}
+      totalGas: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      gasTrace: {type: array, items: {$ref: '#/$defs/gasTraceEntry'}}
+      gasTraceFile: {type: string, pattern: '^traces/[a-z0-9][a-z0-9-]*-gas\.yaml$'}
+      gasTraceIdentity:
+        description: Identity of the admitted gas entries after removing only each diagnostic reason field.
+        $ref: '#/$defs/sha256Identity'
+      platformCommitCompanion: {$ref: '#/$defs/platformCommitCompanion'}
+      observations: {type: array, items: {$ref: '#/$defs/observation'}}
+    allOf:
+    - oneOf:
+      - required: [gasTrace]
+        not: {required: [gasTraceFile]}
+      - required: [gasTraceFile]
+        not: {required: [gasTrace]}
+    - if:
+        properties:
+          status: {const: success}
+        required: [status]
+      then:
+        required: [platformCommitCompanion]
+        properties:
+          rollbackToInput: {const: false}
+      else:
+        allOf:
+        - properties:
+            rollbackToInput: {const: true}
+        - not: {required: [platformCommitCompanion]}
+    - if:
+        properties:
+          status: {const: gas-limit-exceeded}
+        required: [status]
+      then:
+        required: [rejectedCharge]
+      else:
+        not:
+          anyOf:
+          - required: [rejectedCharge]
+          - required: [rejectedWorkOccurrence]
+    - if:
+        required: [rejectedCharge]
+        properties:
+          rejectedCharge:
+            properties:
+              owner:
+                properties:
+                  kind: {const: WORK}
+                required: [kind]
+            required: [owner]
+      then:
+        required: [rejectedWorkOccurrence]
+      else:
+        not: {required: [rejectedWorkOccurrence]}
+  needsResourcesExpected:
+    type: object
+    additionalProperties: false
+    required: [attemptOutcome, requiredBlueIds]
+    properties:
+      attemptOutcome: {const: NeedsResources}
+      requiredBlueIds:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {$ref: '#/$defs/blueId'}
+  expected:
+    oneOf:
+    - {$ref: '#/$defs/completeExpected'}
+    - {$ref: '#/$defs/needsResourcesExpected'}

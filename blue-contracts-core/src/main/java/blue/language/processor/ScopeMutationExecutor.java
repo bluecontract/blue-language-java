@@ -2,6 +2,8 @@ package blue.language.processor;
 
 import blue.language.processor.model.JsonPatch;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -19,7 +21,7 @@ final class ScopeMutationExecutor {
     private final ProcessorInvocationState execution;
     private final DocumentProcessingRuntime runtime;
     private final PatchPreflight preflight;
-    private final DocumentUpdateRouter updateRouter;
+    private final UpdateContinuation updateContinuation;
 
     ScopeMutationExecutor(
             ProcessorInvocationServices owner,
@@ -27,12 +29,39 @@ final class ScopeMutationExecutor {
             DocumentProcessingRuntime runtime,
             PatchPreflight preflight,
             DocumentUpdateRouter updateRouter) {
+        this(owner,
+                execution,
+                runtime,
+                preflight,
+                new UpdateContinuation() {
+                    @Override
+                    public void continueAfterPatch(
+                            String scopePath,
+                            ContractBundle bundle,
+                            FrozenJsonPatch patch,
+                            List<DocumentUpdateData> updates) {
+                        for (DocumentUpdateData update : updates) {
+                            updateRouter.route(scopePath, bundle, update);
+                            if (execution.shouldStopScopeWork(scopePath)) {
+                                return;
+                            }
+                        }
+                    }
+                });
+    }
+
+    ScopeMutationExecutor(
+            ProcessorInvocationServices owner,
+            ProcessorInvocationState execution,
+            DocumentProcessingRuntime runtime,
+            PatchPreflight preflight,
+            UpdateContinuation updateContinuation) {
         this.owner = Objects.requireNonNull(owner, "owner");
         this.execution = Objects.requireNonNull(execution, "execution");
         this.runtime = Objects.requireNonNull(runtime, "runtime");
         this.preflight = Objects.requireNonNull(preflight, "preflight");
-        this.updateRouter = Objects.requireNonNull(
-                updateRouter, "updateRouter");
+        this.updateContinuation = Objects.requireNonNull(
+                updateContinuation, "updateContinuation");
     }
 
     void execute(String scopePath,
@@ -61,7 +90,9 @@ final class ScopeMutationExecutor {
             }
         } catch (GasLimitExceededException
                  | PortableLimitExceededException
-                 | SubscriptionSurfaceInvalidException exception) {
+                 | SubscriptionSurfaceInvalidException
+                 | InvalidExecutionEvidenceException
+                 | DocumentStepRuntimeGapException exception) {
             throw exception;
         } catch (RunTerminationException exception) {
             // Root fatal termination is processor control flow, not a
@@ -133,15 +164,18 @@ final class ScopeMutationExecutor {
                     ProcessingMetricId.PATCH_GAS_NANOS,
                     System.nanoTime() - gasStarted);
 
+            FrozenJsonPatch authoredPatch =
+                    patch.frozenAuthoredPatch();
             List<DocumentUpdateData> updates =
                     sequence.applyNext(index);
+            List<DocumentUpdateData> exactUpdates =
+                    Collections.unmodifiableList(
+                            new ArrayList<DocumentUpdateData>(updates));
             long routingStarted = System.nanoTime();
-            for (DocumentUpdateData update
-                    : updates) {
-                updateRouter.route(scopePath, bundle, update);
-                if (execution.shouldStopScopeWork(scopePath)) {
-                    return;
-                }
+            updateContinuation.continueAfterPatch(
+                    scopePath, bundle, authoredPatch, exactUpdates);
+            if (execution.shouldStopScopeWork(scopePath)) {
+                return;
             }
             ProcessingObservations.record(
                     owner.observer(),
@@ -162,6 +196,8 @@ final class ScopeMutationExecutor {
                     execution.fatalReason(
                             exception,
                             "Unsupported runtime contract"));
+        } catch (DocumentStepRuntimeGapException exception) {
+            throw exception;
         } catch (ProcessorFailureException exception) {
             execution.abortRuntimeFailure(
                     scopePath,
@@ -198,5 +234,14 @@ final class ScopeMutationExecutor {
             default:
                 break;
         }
+    }
+
+    /** Exact post-patch continuation used by ordinary and closure runtimes. */
+    interface UpdateContinuation {
+        void continueAfterPatch(
+                String scopePath,
+                ContractBundle bundle,
+                FrozenJsonPatch patch,
+                List<DocumentUpdateData> updates);
     }
 }

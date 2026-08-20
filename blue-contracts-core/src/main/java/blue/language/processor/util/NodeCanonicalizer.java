@@ -59,6 +59,28 @@ public final class NodeCanonicalizer {
         if (node == null || node.isReferenceOnly()) {
             return 0L;
         }
+        return directIdentityCanonicalSize(
+                NodeToBlueIdInput.get(node));
+    }
+
+    /**
+     * Returns the exact direct helper-map byte size while admitting only the
+     * invocation-local placeholder syntax used by Language cyclic-set
+     * finalization.
+     *
+     * @param node cyclic finalization input, or {@code null}
+     * @return direct identity-input byte length, or zero for a reference
+     */
+    public static long directIdentityCanonicalSizeAllowingCyclicPlaceholders(
+            Node node) {
+        if (node == null || node.isReferenceOnly()) {
+            return 0L;
+        }
+        return directIdentityCanonicalSize(
+                NodeToBlueIdInput.getAllowingCyclicPlaceholders(node));
+    }
+
+    private static long directIdentityCanonicalSize(Object input) {
         final long[] directBytes = {0L};
         final Base58Sha256Provider hash = new Base58Sha256Provider();
         DirectBlueIdCalculator calculator = new DirectBlueIdCalculator(value -> {
@@ -66,12 +88,15 @@ public final class NodeCanonicalizer {
             return hash.apply(value);
         });
         calculator.directBlueIdFromCanonicalInput(
-                NodeToBlueIdInput.get(node));
+                input);
         return directBytes[0];
     }
 
     private static long canonicalSize(Object canonical) {
         try {
+            if (FrozenCanonicalWriter.supportsCanonicalValue(canonical)) {
+                return FrozenCanonicalWriter.canonicalValueBytes(canonical).length;
+            }
             byte[] json =
                     UncheckedObjectMapper.JSON_MAPPER
                             .writeValueAsBytes(canonical);

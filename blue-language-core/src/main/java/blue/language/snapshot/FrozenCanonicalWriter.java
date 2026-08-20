@@ -1,6 +1,8 @@
 package blue.language.snapshot;
 
 import blue.language.identity.CanonicalJsonValueWriter;
+import blue.language.identity.Base58Sha256Provider;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.NodeWireForm;
 
 import blue.language.model.Node;
@@ -69,6 +71,47 @@ public final class FrozenCanonicalWriter {
         CountingSink sink = new CountingSink();
         writeOfficial(node, sink);
         return sink.bytes;
+    }
+
+    /**
+     * Computes the exact byte count of the final direct-identity hash input.
+     * Child values are represented by their already-verified BlueIds, matching
+     * {@link DirectBlueIdCalculator} rather than recursively materializing a
+     * mutable node graph.
+     *
+     * @param node strict canonical frozen node, or {@code null}
+     * @return direct identity-input byte count, or zero for null/reference-only
+     */
+    public static long directIdentityCanonicalSize(FrozenNode node) {
+        if (node == null || node.isReferenceOnly()) {
+            return 0L;
+        }
+        DirectSizeObserver observer = new DirectSizeObserver();
+        FrozenCanonicalDigester.calculateBlueId(node, observer);
+        if (!observer.genericFallback) {
+            if (observer.lastCanonicalBytes < 0L) {
+                throw new IllegalStateException(
+                        "Frozen identity sizing produced no canonical input");
+            }
+            return observer.lastCanonicalBytes;
+        }
+        return genericDirectIdentityCanonicalSize(node);
+    }
+
+    private static long genericDirectIdentityCanonicalSize(FrozenNode node) {
+        final long[] directBytes = {-1L};
+        final Base58Sha256Provider hash = new Base58Sha256Provider();
+        DirectBlueIdCalculator calculator = new DirectBlueIdCalculator(value -> {
+            directBytes[0] = canonicalValueBytes(value).length;
+            return hash.apply(value);
+        });
+        calculator.directBlueIdFromCanonicalInput(
+                FrozenNodeToBlueIdInput.get(node));
+        if (directBytes[0] < 0L) {
+            throw new IllegalStateException(
+                    "Frozen identity sizing produced no canonical input");
+        }
+        return directBytes[0];
     }
 
     /**
@@ -407,9 +450,8 @@ public final class FrozenCanonicalWriter {
                         int codePoint = Character.toCodePoint(current, value.charAt(++index));
                         writeUtf8CodePoint(codePoint, sink);
                     } else if (Character.isSurrogate(current)) {
-                        // String.getBytes(UTF_8), used by JsonCanonicalizer 1.1,
-                        // replaces an unpaired UTF-16 surrogate with '?'.
-                        sink.writeByte('?');
+                        throw new IllegalArgumentException(
+                                "RFC 8785 strings must not contain unpaired UTF-16 surrogates.");
                     } else {
                         writeUtf8CodePoint(current, sink);
                     }
@@ -468,6 +510,22 @@ public final class FrozenCanonicalWriter {
         @Override
         public void write(byte[] values, int offset, int length) {
             bytes += length;
+        }
+    }
+
+    private static final class DirectSizeObserver
+            implements FrozenCanonicalDigester.Observer {
+        private long lastCanonicalBytes = -1L;
+        private boolean genericFallback;
+
+        @Override
+        public void canonicalDigest(long canonicalBytes) {
+            lastCanonicalBytes = canonicalBytes;
+        }
+
+        @Override
+        public void genericFallback() {
+            genericFallback = true;
         }
     }
 

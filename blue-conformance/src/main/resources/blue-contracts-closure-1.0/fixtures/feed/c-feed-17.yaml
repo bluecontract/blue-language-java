@@ -1,0 +1,106 @@
+schema: blue-contracts-fixture/1.0
+id: c-feed-17
+vectors:
+- C-ROUTE-05
+category: feed
+description: A stale source is excluded from logical-delivery participation and does not piggyback on a fresh source sharing the same logical key.
+operation: process
+input:
+  root:
+    executions: 0
+    contracts:
+      sourceA:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-A-v1
+        logicalDeliveryKey: shared
+        dependencyMode: catalog
+        handlerChannelKey: target
+      sourceB:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-B-v1
+        logicalDeliveryKey: shared
+        dependencyMode: catalog
+        handlerChannelKey: target
+      target:
+        type:
+          blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
+        order: 0
+      h:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: target
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /executions
+            val: 1
+      checkpoint:
+        type:
+          blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+        entries:
+          sourceA:
+            domain: source-A-v1
+            subject: &id001
+              type:
+                blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+              subscriptionKey: route
+              id: E-route
+  event: *id001
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - source
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: sourceA
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+    - scopePath: /
+      channelKey: sourceB
+      order: 1
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.executions
+    op: equals
+    expected: 1
+  - actual: trace.logicalDeliveryGroups
+    op: sequenceEquals
+    expected:
+    - /:shared:[sourceB]
+  - actual: trace.sourceCheckpointKeys
+    op: sequenceEquals
+    expected:
+    - sourceB
+  - actual: result.document.contracts.checkpoint.entries.sourceA
+    op: present
+  - actual: result.document.contracts.checkpoint.entries.sourceB
+    op: present

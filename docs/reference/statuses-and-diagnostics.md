@@ -69,6 +69,9 @@ This rejects the tentative commit when the effective external Channel subscripti
 - `CyclicMemberProcessingRootUnsupported`
 - `CyclicMemberProcessingEventUnsupported`
 - `CyclicSetEmbeddedBoundaryUnsupported`
+- `CyclicSetProofInvalid`
+- `CyclicPreliminaryMemberAmbiguous`
+- `ManagedOccurrenceBindingMissing`
 - `InconsistentLogicalDelivery`
 - `DirectNodeLimitExceeded`
 - `MatchingDeliveryLimitExceeded`
@@ -79,6 +82,15 @@ This rejects the tentative commit when the effective external Channel subscripti
 - `SubscriptionSurfaceInvalid`
 - `RuntimeExecutionFailure`
 - `GasLimitExceeded`
+- `ManagedDocumentsPerClosureExceeded`
+- `ProcessEmbeddedEdgesPerClosureExceeded`
+- `CyclicComponentMemberLimitExceeded`
+- `CyclicComponentEdgeLimitExceeded`
+- `CyclicComponentCanonicalBytesExceeded`
+- `ClosureGraphChangeLimitExceeded`
+- `ClosureExpansionLimitExceeded`
+- `ClosureWorkOccurrenceLimitExceeded`
+- `ClosureTentativeFinalizationLimitExceeded`
 
 ## Stable detail fields
 

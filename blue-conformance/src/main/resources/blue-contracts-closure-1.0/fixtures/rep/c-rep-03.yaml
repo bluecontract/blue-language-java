@@ -1,0 +1,67 @@
+schema: blue-contracts-fixture/1.0
+id: c-rep-03
+vectors:
+- C-REP-03
+category: rep
+description: Warm/cold cache, batching, prefetch, and physical segmentation do not change portable results or gas.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+  variants:
+  - name: cold-unbatched
+    cache: cold
+    batching: unbatched
+  - name: warm-batched
+    cache: warm
+    batching: batched
+expected:
+  assertions:
+  - actual: result
+    op: sameAcrossVariants
+  - actual: trace.gas
+    op: sameAcrossVariants

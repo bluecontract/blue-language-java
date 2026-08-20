@@ -166,7 +166,16 @@ public final class FinalQualityEvidence {
             packagesValid = packages.values().stream().allMatch(value -> SHA_256.matcher(value).matches());
         }
         String releaseIdentity = report.path("release").path("packageIdentity").asText();
+        String contractsReleaseIdentity = report.path("release")
+                .path("contractsReleaseIdentity").asText();
+        String contractsReleasePackage = report.path("packages")
+                .path("contractsRelease").asText();
         packagesValid &= SHA_256.matcher(releaseIdentity).matches();
+        boolean contractsReleaseBound =
+                SHA_256.matcher(contractsReleaseIdentity).matches()
+                        && contractsReleaseIdentity.equals(
+                                contractsReleasePackage);
+        packagesValid &= contractsReleaseBound;
         int languageFixtures = fixtureCount(report, "language");
         int contractsFixtures = fixtureCount(report, "contracts");
         boolean fixtureBinding = languageFixtures == expectedLanguageFixtures
@@ -182,6 +191,8 @@ public final class FinalQualityEvidence {
         specs.put("languageReportedSha256", reportedLanguage);
         Map<String, Object> value = new TreeMap<>();
         value.put("exactlyBound", exactlyBound);
+        value.put("contractsReleaseBound", contractsReleaseBound);
+        value.put("contractsReleaseIdentity", contractsReleaseIdentity);
         value.put("packageIdentities", packages);
         value.put("packageIdentitiesValid", packagesValid);
         value.put("releasePackageIdentity", releaseIdentity);

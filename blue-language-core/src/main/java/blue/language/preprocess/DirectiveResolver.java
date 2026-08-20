@@ -80,6 +80,7 @@ public final class DirectiveResolver {
                 verifiedProvider.fetchResultByBlueId(blueId);
         if (result.outcome() == NodeProviderOutcome.UNAVAILABLE) {
             throw new ProviderUnavailableException(
+                    blueId,
                     result.diagnostic().orElse(
                             "Provider unavailable for requested BlueId "
                                     + blueId));

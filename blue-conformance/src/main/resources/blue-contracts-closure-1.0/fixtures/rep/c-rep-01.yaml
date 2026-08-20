@@ -1,0 +1,67 @@
+schema: blue-contracts-fixture/1.0
+id: c-rep-01
+vectors:
+- C-REP-01
+category: rep
+description: Inline and pure-reference forms of the same Root produce the same status, resulting Root, Root events, semantic demands, counter trace, and gas.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: true
+        checkpointDomain: domain-v1
+      h:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+  variants:
+  - name: inline
+    rootForm: inline
+  - name: reference
+    rootForm: reference
+expected:
+  assertions:
+  - actual: result.{status,document,events,totalGas}
+    op: sameAcrossVariants
+  - actual: trace.gas
+    op: sameAcrossVariants
+  - actual: demands.semantic
+    op: sameAcrossVariants

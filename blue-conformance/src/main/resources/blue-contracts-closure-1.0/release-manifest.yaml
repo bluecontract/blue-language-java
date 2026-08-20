@@ -1,0 +1,96 @@
+manifestType: blue-contracts-release
+specification: Blue Contracts and Processor Specification
+specificationVersion: '1.0'
+status: final-normative-implementation-target
+specificationDocument:
+  path: ../../specifications/blue-contracts-and-processor-specification-1.0.md
+  sha256: dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930
+languageDependency:
+  specification: Blue Language Specification 1.0
+  referencePath: ../../reference/blue-language-specification-1.0.md
+  specificationSha256: 01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+  cyclicSetSemanticAlgorithm: Blue Language 1.0 section 15
+  cyclicMemberIdentityFormat: MASTER#index
+  cyclicSetFinalizerBaselineIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+  cyclicSetProofVerifierBaselineIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+  inputImplementationBaseline:
+  - path: blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java
+    sha256: 66a5d2e70757c9426a5ab922bcdafd951c7145ae7dcefab491dc533e95922283
+  - path: blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java
+    sha256: 38c4f46e1731247c25469d7d68f0bfff160b68cfa7ab9094ba81811d9ffccf62
+  - path: blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java
+    sha256: 5c29563118ed6cb704e2b0f17445eb7d17ce8f9ac02f00ac0143dc0d753dd5b3
+  - path: blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java
+    sha256: 0ab691e9295f77da991faf1f392411b6223a4feffb9898ef80c999f73611ee65
+  - path: blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java
+    sha256: 3ce68fa55e89299e4c2e57ccba6db264cc9c3416706b1d29a79b7ab47eb071f1
+  - path: blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java
+    sha256: eaad1e3a012454b4486b7283275fc6025af2007608ebcfbf4f1c4e9abf107474
+  - path: blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java
+    sha256: 618ee825785f86697ca06e3fb1670609617da58e0548775cc2717aee2d317204
+  - path: blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java
+    sha256: c14931e3e346f36cf5979aede4ec2c3623318b9b88e13a69801934e65de0cc36
+  - path: blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java
+    sha256: db33225ee9243fa4bae09572ac40733dffa5e7d90c9b3d446694caf39e33f83c
+  - path: blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java
+    sha256: 50a7a207850c43c3e4d6159a6d9c83b9af252fd74261296227d1816d6c58a966
+  - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java
+    sha256: b3682178602d5db2a5c74333782dece9a2256c95092a472fe107f5ce8d23124e
+  - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java
+    sha256: de88deaef42954f9d2d95a42eb3d7593296ce42fa357f8a9a2293fe82f207540
+  - path: blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java
+    sha256: b52f3e7f804cc818b277e8c81bcc04ef2380768d336afaf335e72f0de391920e
+  - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java
+    sha256: cfe0e418e87451d7d31f2522d4150514c197cee552f3cc3b0bab8a8f08c3abb2
+  - path: blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java
+    sha256: b049a54909bc111bf7921a3c4bb5424aea69f580ef389f6bc35bbad03960c302
+  - path: blue-contracts-core/src/main/java/blue/language/processor/PlatformCommitCompanion.java
+    sha256: 0ef97244ea90a43bab60e1708010bcca95a76d50517dc81c31aef3c0079509b6
+contractsRegistry:
+  path: registry/manifest.yaml
+  packageIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+  unchangedCoreTypeNodes: true
+gasManifest:
+  path: gas-manifest.yaml
+  packageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
+  maxProcessGas: 100000
+  numericWeightsStatus: frozen for Blue Contracts and Processor Specification 1.0
+identityConstructors:
+  path: identity-constructors.yaml
+  sha256: 87000e86d09110c140bce7f34334a5f9517e42ba460651136ae815d863759325
+  status: normative
+fixturePackage:
+  path: fixtures/manifest.yaml
+  packageIdentity: sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa
+  vectorCount: 135
+  fixtureCount: 234
+oraclePackage:
+  path: oracles/manifest.yaml
+  packageIdentity: sha256:efbae749b6c076699e9fde1036fd5d84909d2f1b2cbdcb7d5116d7f06a6f0b71
+  oracleCount: 42
+normativeExclusions:
+- delegated-authority eligibility and authority-evidence resolution
+- Timeline provider completeness and Coordination scheduling policy
+- BEX specification, operators, fixtures and gas schedule
+- database, queue, network and storage implementation
+implementationBindingRequirements:
+- Blue Language release identity
+- cyclic-set finalizer implementation identity
+- cyclic-set proof verifier implementation identity
+- Blue Contracts implementation artifact identity
+- Contracts runtime registry identity
+- Contracts gas-manifest identity
+- fixture-package identity
+- host execution-policy identity when lower than the release default
+conformanceLevels:
+  PACKAGE_VALID: Schemas, manifests, exact identities and static fixture laws pass.
+  SEMANTIC_REFERENCE_VALID: Independent cyclic identity, finite, loop, history, identity-constructor and limit checks pass.
+  IMPLEMENTATION_CONFORMANT: The implementation executes every required fixture under this exact release.
+sourceArchiveBaseline:
+  expectedSha256: 7be5116d8e7a64bccf471c11a93127d4924a36686e23bbbf634fc0713d6d33c9
+  filenameIsNonNormative: true
+releaseIdentityAlgorithm:
+  digest: sha256
+  encoding: RFC 8785 canonical JSON encoded as UTF-8
+  normalization: releaseIdentity is null before hashing
+releaseIdentity: sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50

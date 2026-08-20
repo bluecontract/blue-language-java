@@ -1,0 +1,403 @@
+schema: blue-contracts-projection-catalog/2.0
+entries:
+- path: attempt.kind
+  type: scalar-or-node
+  definition: Either complete or needs-resources.
+- path: attempt.portableGas
+  type: integer
+  definition: Absent for needs-resources; otherwise the completed ProcessResult total gas.
+- path: attempt.processResult
+  type: value
+  definition: Present only when attempt.kind is complete.
+- path: commit.casWorkPortableGas
+  type: integer
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.intermediateVisible
+  type: boolean
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.newIntervals.0.scopePath
+  type: scalar-or-node
+  definition: Concrete scope path of the first newly activated subscription interval.
+- path: commit.newIntervals.0.startAfterExternalOrderKey
+  type: value
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.outboxCommitted
+  type: boolean
+  definition: Whether the Root-only outbox committed in the same transaction as Root/progress.
+- path: commit.progressCommitted
+  type: boolean
+  definition: Whether terminal delivery progress committed against the evaluated revision.
+- path: commit.progressWritten
+  type: boolean
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.reason
+  type: scalar-or-node
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.retiredIntervals.0.scopePath
+  type: scalar-or-node
+  definition: Concrete scope path of the first retired subscription interval.
+- path: commit.rootCasCount
+  type: integer
+  definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.rootCommitted
+  type: boolean
+  definition: Whether the revision-bound Root CAS committed.
+- path: commit.subscriptionDelta.mode
+  type: scalar-or-node
+  definition: Canonical incremental subscription-delta classification.
+- path: demands.semantic
+  type: sequence-or-value
+  definition: Canonical ordered logical demand sequence; excludes physical provider operations.
+- path: feeder.acceptanceResult
+  type: scalar-or-node
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.callOrder
+  type: sequence-or-value
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.canonicalSnapshot
+  type: sequence-or-value
+  definition: Full normative ExternalDelivery snapshot derived from Root, event, intervals, and runtime registry.
+- path: feeder.channelLaws
+  type: sequence-or-value
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.currentSnapshot
+  type: sequence-or-value
+  definition: Snapshot derived from the current managed Root revision.
+- path: feeder.intervalCount
+  type: integer
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.intervalIds.0
+  type: sequence-or-value
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: feeder.newInterval.startAfterExternalOrderKey
+  type: value
+  definition: Deterministic managing-feeder derivation for the fixture scenario.
+- path: input.root
+  type: value
+  definition: Exact fixture Root after deterministic builders and before processing.
+- path: manifest.counterCoverage.complete
+  type: boolean
+  definition: Bound package-manifest conformance projection.
+- path: platform.deliveryState
+  type: scalar-or-node
+  definition: Managing-platform terminal projection.
+- path: platform.eventSelected
+  type: scalar-or-node
+  definition: Managing-platform terminal projection.
+- path: platform.reason
+  type: scalar-or-node
+  definition: Managing-platform terminal projection.
+- path: platform.retryScheduled
+  type: value
+  definition: Managing-platform terminal projection.
+- path: platform.status
+  type: scalar-or-node
+  definition: Terminal managing-feeder operation status.
+- path: result
+  type: value
+  definition: Complete public ProcessResult object.
+- path: result.diagnostic.category
+  type: scalar-or-node
+  definition: Exact portable diagnostic category.
+- path: result.document
+  type: value
+  definition: Exact resulting authoritative Root; input Root for every noncommitting status.
+- path: result.document.child.b
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.child.contracts.initialized
+  type: value
+  definition: Exact child-scope initialization marker projection; absence proves no marker was written into a replacement occurrence.
+- path: result.document.child.generation
+  type: scalar-or-node
+  definition: Exact fixture child value after same-path replacement and re-add sequencing.
+- path: result.document.child.ran
+  type: value
+  definition: Whether the child Handler executed.
+- path: result.document.child.replacement
+  type: scalar-or-node
+  definition: Exact fixture child replacement marker in the resulting authoritative Root.
+- path: result.document.child.x
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.in.domain
+  type: scalar-or-node
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.in.subject
+  type: scalar-or-node
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.old
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.source
+  type: value
+  definition: Checkpoint entry owned by the raw source Channel.
+- path: result.document.contracts.checkpoint.entries.sourceA
+  type: value
+  definition: Checkpoint entry owned by sourceA.
+- path: result.document.contracts.checkpoint.entries.sourceB
+  type: value
+  definition: Checkpoint entry owned by sourceB.
+- path: result.document.contracts.checkpoint.entries.target
+  type: value
+  definition: Checkpoint entry at the Handler target key; normally absent.
+- path: result.document.contracts.embedded.collectionPaths
+  type: sequence-or-value
+  definition: Exact resulting Process Embedded collectionPaths value.
+- path: result.document.contracts.embedded.paths
+  type: sequence-or-value
+  definition: Exact resulting Process Embedded paths value.
+- path: result.document.contracts.h2
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.initialized
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.initialized.document
+  type: value
+  definition: Exact pre-initialization scope document retained by the initialization marker.
+- path: result.document.contracts.old
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.parentChannel.subscriptionKey
+  type: scalar-or-node
+  definition: Current explicit parent Channel subscription key.
+- path: result.document.contracts.terminated.reason
+  type: scalar-or-node
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.cyclic.blueId
+  definition: Opaque cyclic member identity preserved in the resulting Root.
+- path: result.document.executions
+  type: integer
+  definition: Number of logical Handler executions recorded by the fixture.
+- path: result.document.h2Ran
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.large
+  type: value
+  definition: Exact large-node reference retained in the resulting Root without semantic materialization.
+- path: result.document.lessons.a.value
+  type: value
+  definition: Resulting value in collection occurrence /lessons/a.
+- path: result.document.lessons.b.blueId
+  type: scalar-or-node
+  definition: Retained exact BlueId at independent collection occurrence /lessons/b.
+- path: result.document.lessons.existing.contracts.teacherChannel.subscriptionKey
+  type: scalar-or-node
+  definition: Explicit retained teacher binding of the existing child.
+- path: result.document.lessons.inline.value
+  type: value
+  definition: Resulting value in the scope using an inline exact Channel binding.
+- path: result.document.lessons.lesson-a.contracts.checkpoint
+  type: value
+  definition: Checkpoint state of the concrete lesson-a occurrence.
+- path: result.document.lessons.lesson-a.generation
+  type: scalar-or-node
+  definition: Generation marker of the re-added lesson occurrence.
+- path: result.document.lessons.lesson-a.handled
+  type: value
+  definition: Whether lesson-a handled the targeted event.
+- path: result.document.lessons.lesson-b.handled
+  type: value
+  definition: Whether lesson-b handled the targeted event.
+- path: result.document.lessons.new.contracts.teacherChannel.subscriptionKey
+  type: scalar-or-node
+  definition: Explicit teacher binding supplied to the newly created child.
+- path: result.document.lessons.reference.value
+  type: value
+  definition: Resulting value in the scope using a pure-reference exact Channel binding.
+- path: result.document.postInitRan
+  type: value
+  definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.value
+  type: value
+  definition: Resulting fixture scalar value.
+- path: result.events
+  type: sequence-or-value
+  definition: Out-of-band ordered sequence of exact events emitted by Root only.
+- path: result.status
+  type: scalar-or-node
+  definition: One status from Contracts §12.1.
+- path: result.totalGas
+  type: integer
+  definition: Weighted sum of admitted canonical named trace entries.
+- path: result.{status,document,events,totalGas}
+  type: value
+  definition: Ordered object projection of the four public result fields.
+- path: retry.trace
+  type: sequence-or-value
+  definition: Canonical trace of the fixture retry attempt.
+- path: runtime.recursiveSizeCounterPresent
+  type: boolean
+  definition: False when no recursive payload-size counter exists in the generic runtime ledger.
+- path: runtime.referenceStateObservable
+  type: boolean
+  definition: False when the registered portable runtime cannot observe reference/materialization state.
+- path: trace.acceptedChannelSnapshot.usedAfterInitialization
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.channelLookupResults
+  type: sequence-or-value
+  definition: Ordered exact same-scope Channel lookup results KEY:CHANNEL|ABSENT|NON_CHANNEL.
+- path: trace.checkpointCleanupKeys
+  type: sequence-or-value
+  definition: Raw checkpoint keys removed by deterministic processor cleanup.
+- path: trace.checkpointNewness
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.checkpointWrites
+  type: sequence-or-value
+  definition: Ordered processor checkpoint Direct Writes after successful channel completion.
+- path: trace.contractSnapshots./h.sourceContributionNodeBlueIds
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.contractSnapshots./h.syntheticBlueId
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.counters.contractHeaderRecognized
+  type: integer
+  definition: Final quantity of the named canonical counter in the invocation trace.
+- path: trace.counters.textBlockExamined
+  type: integer
+  definition: Final quantity of the named canonical counter in the invocation trace.
+- path: trace.directIdentityHashBlock.changedDirectOnly
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.discardedEffects
+  type: sequence-or-value
+  definition: Buffered effects discarded by scope cut-off or whole-invocation rollback.
+- path: trace.documentUpdateScopes
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.documentUpdates
+  type: sequence-or-value
+  definition: Ordered ordinary Document Update payloads produced by application-visible writes.
+- path: trace.documentUpdates.0.beforePresent
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.documentUpdates.1.afterPresent
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.eventDeliveryOrder
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.eventOccurrenceOrder
+  type: sequence-or-value
+  definition: Internal EventOccurrence dequeue order with source occurrence identity.
+- path: trace.eventOccurrencesDequeued
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.externalDeliveryOrder
+  type: sequence-or-value
+  definition: Retained ExternalDelivery occurrences encoded as scopePath:channelKey in canonical execution order.
+- path: trace.failedChargePresent
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.firstMutation
+  type: scalar-or-node
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.gas
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.generalizationSelected
+  type: scalar-or-node
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.generalizationTestOrder
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.handlerChannelKeys
+  type: sequence-or-value
+  definition: Frozen same-scope Channel keys used for Handler binding.
+- path: trace.handlerExecutionCount
+  type: integer
+  definition: Number of Handler executions after logical-delivery coalescing.
+- path: trace.initialDocumentBlueId
+  type: scalar-or-node
+  definition: Exact Node BlueId of the pre-initialization document recorded by marker/event.
+- path: trace.integerLimbOperation
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.lifecycleOrder
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.logicalDeliveryGroups
+  type: sequence-or-value
+  definition: Canonical logical delivery groups and their participating raw source keys.
+- path: trace.markerWrites
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.namedEntries
+  type: sequence-or-value
+  definition: Canonical ordered gas trace entries defined by TRACE-SCHEMA.md.
+- path: trace.nodeManifestOpened.sameId
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.order
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.protectedState.nonPathsUnchanged
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.providerTransportCounters
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.providerVerificationCounters
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.queueDrainOwners
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.reRecognitionAfterGeneralization
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.runtime.textBlockConstructed
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.runtimeChildChargesLiveBounded
+  type: boolean
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.runtimeChildMergedCount
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.scopeExecutions./child
+  type: value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.semantic.nodeIdentityEstablished
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.sortComparison
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.sourceCheckpointKeys
+  type: sequence-or-value
+  definition: Raw accepted source keys whose checkpoints committed.
+- path: trace.terminationEvents
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.textBlockExamined
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.total
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.validatedPaths
+  type: sequence-or-value
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: trace.validationProofReused
+  type: integer
+  definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
+- path: variants.append.trace.semantic.listFoldStepRecomputed
+  type: value
+  definition: Projection from the explicitly named deterministic fixture variant.
+- path: variants.replace-head.trace.semantic.listFoldStepRecomputed
+  type: value
+  definition: Projection from the explicitly named deterministic fixture variant.
+- path: variants.retry-after-commit.result.events
+  type: sequence-or-value
+  definition: Projection from the explicitly named deterministic fixture variant.
+- path: variants.retry-after-commit.result.status
+  type: scalar-or-node
+  definition: Projection from the explicitly named deterministic fixture variant.

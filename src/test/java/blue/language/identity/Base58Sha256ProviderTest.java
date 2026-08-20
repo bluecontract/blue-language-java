@@ -186,6 +186,23 @@ class Base58Sha256ProviderTest {
     }
 
     @Test
+    void shouldRejectUnpairedSurrogatesOnJacksonCompatibilityPath() {
+        // given
+        LinkedList<Object> unsupported = new LinkedList<>();
+        unsupported.add("\uD800");
+        Base58Sha256Provider provider = new Base58Sha256Provider();
+
+        // when
+        IllegalArgumentException failure = captureFailure(
+                () -> provider.applyCanonicalValue(unsupported));
+
+        // then
+        assertFalse(CanonicalJsonValueWriter.supports(unsupported));
+        assertTrue(failure instanceof IllegalArgumentException);
+        assertTrue(failure.getMessage().contains("unpaired UTF-16 surrogate"));
+    }
+
+    @Test
     void shouldUseCompatibleOptimizedPathForPlainCanonicalHelperMaps() {
         // given
         Map<String, Object> value = new LinkedHashMap<>();

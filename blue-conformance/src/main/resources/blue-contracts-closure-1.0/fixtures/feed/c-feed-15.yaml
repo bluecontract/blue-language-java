@@ -1,0 +1,102 @@
+schema: blue-contracts-fixture/1.0
+id: c-feed-15
+vectors:
+- C-ROUTE-06
+category: feed
+description: Fresh sources assigned to one logical delivery must agree on exact payload and target; disagreement fails atomically before initialization or checkpoints.
+operation: process
+input:
+  root:
+    executions: 0
+    contracts:
+      sourceA:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-A-v1
+        dependencyMode: catalog
+        handlerChannelKey: target
+        logicalDeliveryKey: shared-logical-delivery
+        payload:
+          route: A
+      sourceB:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-B-v1
+        dependencyMode: catalog
+        handlerChannelKey: target
+        logicalDeliveryKey: shared-logical-delivery
+        payload:
+          route: B
+      target:
+        type:
+          blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
+        order: 0
+      h:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: target
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /executions
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: route
+    id: E-route
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - source
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: sourceA
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+    - scopePath: /
+      channelKey: sourceB
+      order: 1
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: runtime-fatal
+  - actual: result.diagnostic.category
+    op: equals
+    expected: InconsistentLogicalDelivery
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: result.events
+    op: sequenceEquals
+    expected: []
+  - actual: result.document.contracts.checkpoint
+    op: absent
+  - actual: trace.handlerExecutionCount
+    op: equals
+    expected: 0

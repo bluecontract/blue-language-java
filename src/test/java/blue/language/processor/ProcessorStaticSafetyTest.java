@@ -99,6 +99,8 @@ final class ProcessorStaticSafetyTest {
                 boolean allowed = relative.equals("CheckpointManager.java")
                         || relative.equals("TerminationService.java")
                         || relative.equals("ScopeLifecycleExecutor.java")
+                        || (relative.equals("ManagedDocumentStepRuntime.java")
+                                && line.contains("detached.directWrite("))
                         || (relative.equals("DocumentProcessingRuntime.java") && line.contains("void directWrite("));
                 if (!allowed) {
                     offenders.add(file + ":" + (i + 1) + ": " + line.trim());

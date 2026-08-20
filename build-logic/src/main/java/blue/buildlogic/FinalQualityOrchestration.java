@@ -7,7 +7,9 @@ import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import me.champeau.jmh.JMHTask;
 import org.gradle.api.Project;
@@ -26,6 +28,8 @@ final class FinalQualityOrchestration {
                     "blue.language.ReferenceBlueIdValidationBenchmark.resolveDeepValidReferenceDocument",
                     "blue.language.ProcessingSelectionCacheBenchmark.processWarmSameNode",
                     "blue.language.processor.DeepGraphPhysicalLocalityBenchmark.processPlatformCommit"));
+    private static final Map<String, String> CLASS_SIZE_RATIONALES =
+            classSizeRationales();
 
     private FinalQualityOrchestration() {}
 
@@ -116,6 +120,7 @@ final class FinalQualityOrchestration {
                             .file("reports/published-smoke/verification.json"));
                     task.getSourceCommit().set(sourceCommit);
                     task.getExcludedTasks().set(excludedTasks);
+                    task.getClassSizeRationales().set(CLASS_SIZE_RATIONALES);
                     task.getRequiredSmokeBenchmarks().set(REQUIRED_SMOKE_BENCHMARKS);
                     task.getExpectedModuleCount().set(publishedModules.size());
                     task.getJavadocsSuccessful().set(true);
@@ -169,6 +174,41 @@ final class FinalQualityOrchestration {
         }
         return JmhConventionsPlugin.combineIncludePatterns(
                 exactPatterns);
+    }
+
+    static Map<String, String> classSizeRationales() {
+        Map<String, String> rationales = new LinkedHashMap<>();
+        rationales.put(
+                "blue-contracts-core/src/main/java/blue/language/processor/"
+                        + "ManagedRootSettlementService.java",
+                "One transaction owner keeps managed Root surface projection, external delivery "
+                        + "classification, checkpoint planning, preflight, and ordered mutation "
+                        + "atomic under the shared invocation gas context.");
+        rationales.put(
+                "blue-contracts-core/src/main/java/blue/language/processor/closure/"
+                        + "ClosureExecutionSession.java",
+                "One stateful affected-closure orchestrator owns work and event queues, managed "
+                        + "initialization, graph generations, finalization, rollback, and receipt "
+                        + "ordering so no competing mutable execution authority can emerge.");
+        rationales.put(
+                "blue-contracts-core/src/main/java/blue/language/processor/closure/"
+                        + "ClosureFinalizationGasCharger.java",
+                "The normative finalization gas adapter mirrors canonical identity traversal in "
+                        + "one frame owner so charge order and boundary rejection remain auditable "
+                        + "against exact component evidence.");
+        rationales.put(
+                "blue-contracts-core/src/main/java/blue/language/processor/closure/"
+                        + "ClosureIdentityService.java",
+                "The closed registry-driven Contracts 1.0 identity codec co-locates constructor "
+                        + "schemas, canonical wire encoders, and validators to prevent domain or "
+                        + "field drift across the table-like protocol vocabulary.");
+        rationales.put(
+                "blue-contracts-core/src/main/java/blue/language/processor/closure/"
+                        + "ClosureProcessResult.java",
+                "The immutable affected-closure result enforces all cross-field identities, "
+                        + "rollback rules, ordinals, and commit-companion invariants at its sole "
+                        + "construction boundary so partially checked result shapes cannot exist.");
+        return Collections.unmodifiableMap(rationales);
     }
 
     /** Providers exposed for receipt or future release aliases. */

@@ -250,6 +250,66 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
+    void shouldChargePrecomputedAndOrdinaryPatchesFromSameAuthoredProjection() {
+        // given
+        JsonPatch patch = JsonPatch.add("/typed/added", new Node().value(1));
+        GasMeter ordinaryMeter = new GasMeter();
+        GasMeter precomputedMeter = new GasMeter();
+        Node ordinaryDocument = typedPatchDocument();
+        Node precomputedDocument = typedPatchDocument();
+        DocumentProcessingRuntime ordinary = new DocumentProcessingRuntime(
+                ordinaryDocument, null, generalizingConformanceOverride(),
+                new CountingSnapshotManager(), null, ordinaryMeter);
+        DocumentProcessingRuntime precomputed = new DocumentProcessingRuntime(
+                precomputedDocument, null, generalizingConformanceOverride(),
+                new CountingSnapshotManager(), null, precomputedMeter);
+
+        // when
+        ordinary.applyPatch("/", patch);
+        WorkingDocument.Preview preview = precomputed.workingDocument("/")
+                .previewAndApplyPatches(Collections.singletonList(patch));
+        WorkingDocument.PatchPreview patchPreview = preview.patch(0);
+        String previewGeneralized = String.valueOf(
+                patchPreview.result().canonicalRoot()
+                        .at("/generalized").getValue());
+        precomputed.applyPrecomputedPatch("/", patch, patchPreview);
+
+        // then
+        assertEquals(ordinaryMeter.totalGas(), precomputedMeter.totalGas());
+        assertEquals(ordinaryMeter.trace().size(), precomputedMeter.trace().size());
+        for (int index = 0; index < ordinaryMeter.trace().size(); index++) {
+            GasTraceEntry expected = ordinaryMeter.trace().get(index);
+            GasTraceEntry actual = precomputedMeter.trace().get(index);
+            assertEquals(expected.namespace(), actual.namespace());
+            assertEquals(expected.counter(), actual.counter());
+            assertEquals(expected.quantity(), actual.quantity());
+            assertEquals(expected.weight(), actual.weight());
+            assertEquals(expected.subtotal(), actual.subtotal());
+            assertEquals(expected.documentId(), actual.documentId());
+            assertEquals(expected.scopePath(), actual.scopePath());
+            assertEquals(expected.activationGeneration(),
+                    actual.activationGeneration());
+            assertEquals(expected.componentGeneration(),
+                    actual.componentGeneration());
+            assertEquals(expected.contractKey(), actual.contractKey());
+            assertEquals(expected.logicalPath(), actual.logicalPath());
+            assertEquals(expected.workOccurrenceId(),
+                    actual.workOccurrenceId());
+            assertEquals(expected.reason(), actual.reason());
+            assertEquals(expected.context().finalizationOrdinal(),
+                    actual.context().finalizationOrdinal());
+            assertEquals(expected.context().finalizationComponentIdentity(),
+                    actual.context().finalizationComponentIdentity());
+            assertEquals(expected.context().finalizationComponentGeneration(),
+                    actual.context().finalizationComponentGeneration());
+        }
+        assertEquals(ordinary.document().toString(),
+                precomputed.document().toString());
+        assertEquals(1, ordinary.document().getAsInteger("/typed/added"));
+        assertEquals("derived", previewGeneralized);
+    }
+
+    @Test
     void shouldVerifyFrozenPreviewWithIdentityEquivalentDifferentRepresentationIsReplanned() {
         // given
         Node materialized = new Node().properties("payload", new Node().value("value"));
@@ -728,6 +788,41 @@ class PreparedPatchSequenceTest {
                 return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
             }
         };
+    }
+
+    private static ConformancePlannerOverride generalizingConformanceOverride() {
+        return new ConformancePlannerOverride() {
+            @Override
+            public boolean applies() {
+                return true;
+            }
+
+            @Override
+            public ConformancePlan plan(FrozenNode canonicalRoot,
+                                        FrozenNode resolvedRoot,
+                                        List<ConformanceChangedPath> changedPaths) {
+                Node canonical = canonicalRoot.toNode();
+                canonical.properties("generalized", new Node().value("derived"));
+                Node resolved = resolvedRoot.toNode();
+                resolved.properties("generalized", new Node().value("derived"));
+                return ConformancePlan.generalized(
+                        FrozenNode.fromNode(canonical),
+                        FrozenNode.fromResolvedNode(resolved),
+                        Collections.emptyList(),
+                        Collections.singletonList("/typed/type"),
+                        false);
+            }
+        };
+    }
+
+    private static Node typedPatchDocument() {
+        return new Node().properties(
+                "typed",
+                new Node()
+                        .type(new Node().blueId(
+                                blue.language.model.wire.BlueLanguageConstants
+                                        .TEXT_TYPE_BLUE_ID))
+                        .properties("existing", new Node().value(0)));
     }
 
     private int integerValue(Node node) {

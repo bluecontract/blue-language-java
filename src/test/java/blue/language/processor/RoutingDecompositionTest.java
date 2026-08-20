@@ -113,6 +113,7 @@ final class RoutingDecompositionTest {
                 logical,
                 null,
                 FrozenNode.fromResolvedNode(new Node().value(payload)),
+                java.util.Collections.<ExactBlueValue>emptyList(),
                 null,
                 "event-" + source,
                 new Node().value(source));

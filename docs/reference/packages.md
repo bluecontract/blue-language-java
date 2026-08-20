@@ -15,11 +15,12 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.conformance` | 4 | present |
 | `blue.language.conformance.api` | 9 | present |
 | `blue.language.conformance.cli` | 1 | present |
-| `blue.language.conformance.contracts` | 1 | present |
+| `blue.language.conformance.contracts` | 2 | present |
+| `blue.language.conformance.contracts.closure` | 1 | present |
 | `blue.language.conformance.runner` | 1 | present |
 | `blue.language.dictionary` | 4 | present |
 | `blue.language.graph` | 3 | present |
-| `blue.language.identity` | 21 | present |
+| `blue.language.identity` | 23 | present |
 | `blue.language.mapping` | 16 | present |
 | `blue.language.mapping.provider` | 1 | present |
 | `blue.language.matching` | 4 | present |
@@ -31,7 +32,8 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.patching` | 1 | present |
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
-| `blue.language.processor` | 98 | present |
+| `blue.language.processor` | 122 | present |
+| `blue.language.processor.closure` | 53 | present |
 | `blue.language.processor.model` | 18 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -94,7 +96,12 @@ Package ownership is derived from production Java source files. Only top-level p
 
 ## `blue.language.conformance.contracts`
 
+- `blue.language.conformance.contracts.ClosureFixtureRuntime`
 - `blue.language.conformance.contracts.ContractsConformanceSuite`
+
+## `blue.language.conformance.contracts.closure`
+
+- `blue.language.conformance.contracts.closure.ClosureFixtureConformance`
 
 ## `blue.language.conformance.runner`
 
@@ -126,6 +133,8 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.identity.CanonicalJsonHasher`
 - `blue.language.identity.CanonicalJsonValueWriter`
 - `blue.language.identity.CircularSetIdentityCalculator`
+- `blue.language.identity.CyclicMemberFinalization`
+- `blue.language.identity.CyclicSetFinalization`
 - `blue.language.identity.DirectBlueIdCalculator`
 - `blue.language.identity.ListBlueIdFold`
 - `blue.language.identity.NodeToBlueIdInput`
@@ -267,6 +276,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.ChannelMemberSnapshot`
 - `blue.language.processor.ChannelProcessor`
 - `blue.language.processor.CheckpointDomain`
+- `blue.language.processor.ClosureRuntimeDescriptor`
 - `blue.language.processor.CompositeProcessingObserver`
 - `blue.language.processor.ConformanceChangedPath`
 - `blue.language.processor.ConformancePlannerOverride`
@@ -279,6 +289,8 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.DocumentProcessingResult`
 - `blue.language.processor.DocumentProcessor`
 - `blue.language.processor.DocumentProcessorAdministration`
+- `blue.language.processor.DocumentStepRuntimeGapException`
+- `blue.language.processor.DocumentUpdateOccurrence`
 - `blue.language.processor.EffectiveContractSnapshot`
 - `blue.language.processor.EffectiveContractSnapshotConstants`
 - `blue.language.processor.EffectiveFragmentationCatalog`
@@ -312,6 +324,27 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.IndexedDeliveryPreparation`
 - `blue.language.processor.InvalidExecutionEvidenceException`
 - `blue.language.processor.JfrProcessingObserver`
+- `blue.language.processor.ManagedCheckpointBatchCleanupContextFactory`
+- `blue.language.processor.ManagedCheckpointCandidate`
+- `blue.language.processor.ManagedCheckpointCleanupContextFactory`
+- `blue.language.processor.ManagedCheckpointDomain`
+- `blue.language.processor.ManagedCheckpointMutation`
+- `blue.language.processor.ManagedCheckpointSettlement`
+- `blue.language.processor.ManagedCheckpointSettlementBatch`
+- `blue.language.processor.ManagedCheckpointSettlementEntry`
+- `blue.language.processor.ManagedCheckpointSettlementRequest`
+- `blue.language.processor.ManagedCheckpointState`
+- `blue.language.processor.ManagedDocumentResolutionOverlay`
+- `blue.language.processor.ManagedDocumentStepContinuation`
+- `blue.language.processor.ManagedDocumentStepOutcome`
+- `blue.language.processor.ManagedDocumentStepRequest`
+- `blue.language.processor.ManagedDocumentStepRoute`
+- `blue.language.processor.ManagedDocumentStepRuntime`
+- `blue.language.processor.ManagedDocumentWorkKind`
+- `blue.language.processor.ManagedExternalDeliveryClassification`
+- `blue.language.processor.ManagedRootChannelOccurrence`
+- `blue.language.processor.ManagedRootSubscriptionSurface`
+- `blue.language.processor.ManagedSemanticGasBridge`
 - `blue.language.processor.NoOpProcessingObserver`
 - `blue.language.processor.ObservationKind`
 - `blue.language.processor.PatchSource`
@@ -357,6 +390,62 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.SubscriptionSurfaceValidator`
 - `blue.language.processor.VerifiedExecutionEvidence`
 - `blue.language.processor.WorkingDocument`
+
+## `blue.language.processor.closure`
+
+- `blue.language.processor.closure.AdmissionCandidate`
+- `blue.language.processor.closure.AdmissionCause`
+- `blue.language.processor.closure.AdmissionKind`
+- `blue.language.processor.closure.AffectedClosureSnapshot`
+- `blue.language.processor.closure.BlueClosureContracts`
+- `blue.language.processor.closure.ChannelOccurrence`
+- `blue.language.processor.closure.CheckpointDomainValue`
+- `blue.language.processor.closure.CheckpointWrite`
+- `blue.language.processor.closure.ClosureAttemptResult`
+- `blue.language.processor.closure.ClosureCommitCompanion`
+- `blue.language.processor.closure.ClosureEnvironment`
+- `blue.language.processor.closure.ClosureEvidenceFactory`
+- `blue.language.processor.closure.ClosureExecutionObserver`
+- `blue.language.processor.closure.ClosureImplementationEvidence`
+- `blue.language.processor.closure.ClosureInvocationInput`
+- `blue.language.processor.closure.ClosureProcessResult`
+- `blue.language.processor.closure.ClosureProcessor`
+- `blue.language.processor.closure.ClosureWorkOccurrence`
+- `blue.language.processor.closure.ClosureWorkQueue`
+- `blue.language.processor.closure.ComponentFinalizationInput`
+- `blue.language.processor.closure.ComponentFinalizationKernel`
+- `blue.language.processor.closure.ComponentFinalizationResult`
+- `blue.language.processor.closure.ComponentGenerationTransition`
+- `blue.language.processor.closure.ComponentKind`
+- `blue.language.processor.closure.ComponentSnapshot`
+- `blue.language.processor.closure.DirectLogicalDelivery`
+- `blue.language.processor.closure.DocumentId`
+- `blue.language.processor.closure.DocumentStepEvidence`
+- `blue.language.processor.closure.DocumentStepInput`
+- `blue.language.processor.closure.DocumentStepProcessor`
+- `blue.language.processor.closure.ExecutionPolicy`
+- `blue.language.processor.closure.ExternalEventCause`
+- `blue.language.processor.closure.FinalizedComponentEvidence`
+- `blue.language.processor.closure.FinalizedDocumentEvidence`
+- `blue.language.processor.closure.GasTraceEntry`
+- `blue.language.processor.closure.GraphChange`
+- `blue.language.processor.closure.LocalDocumentStepResult`
+- `blue.language.processor.closure.ManagedDocumentGraph`
+- `blue.language.processor.closure.ManagedDocumentSnapshot`
+- `blue.language.processor.closure.ManagedOccurrenceBinding`
+- `blue.language.processor.closure.ManagedRevisionCause`
+- `blue.language.processor.closure.ManagedScopeKey`
+- `blue.language.processor.closure.ProcessingCause`
+- `blue.language.processor.closure.PublicEventOccurrence`
+- `blue.language.processor.closure.RejectedCharge`
+- `blue.language.processor.closure.ResultingDocument`
+- `blue.language.processor.closure.SccPartitioner`
+- `blue.language.processor.closure.ScopeAddress`
+- `blue.language.processor.closure.SubscriptionDelta`
+- `blue.language.processor.closure.SubscriptionState`
+- `blue.language.processor.closure.TentativeFinalization`
+- `blue.language.processor.closure.TentativeResolutionContext`
+- `blue.language.processor.closure.WorkKind`
 
 ## `blue.language.processor.model`
 

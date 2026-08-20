@@ -36,7 +36,8 @@ import java.util.function.Function;
 public final class BlueContractsConformanceReport {
 
     /** Classpath resources bound into the released conformance package. */
-    public static final String FIXTURE_ROOT_RESOURCE = "blue-contracts-1.0/fixtures/";
+    public static final String FIXTURE_ROOT_RESOURCE =
+            "blue-contracts-closure-1.0/fixtures/";
     /** Authoritative Contracts fixture manifest resource. */
     public static final String FIXTURE_MANIFEST_RESOURCE = FIXTURE_ROOT_RESOURCE + "manifest.yaml";
     /** Contracts gas manifest resource. */
@@ -71,20 +72,20 @@ public final class BlueContractsConformanceReport {
             RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
     /** Exact Contracts gas package identity. */
     public static final String CONTRACTS_GAS_PACKAGE_IDENTITY =
-            "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
+            "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
     /** Exact Contracts fixture package identity. */
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc";
+            "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa";
 
     /** Expected digests for release-bound manifests and specifications. */
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
-            "1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f";
+            "54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8";
     /** Published SHA-256 digest of the Contracts specification. */
     public static final String CONTRACTS_SPECIFICATION_SHA256 =
-            "6406153791ed99cf97163726b8d2a272e3f0ca1078dc6c9f69b81855d81e5c81";
+            "dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930";
     /** Published SHA-256 digest of the Language specification. */
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
-            "a234b0b42190a7982809781b5efdaa2e5f1ab4b7f8d870fbd1ffe7020cc7e869";
+            "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d";
 
 
     private final String specVersion;
@@ -413,6 +414,9 @@ public final class BlueContractsConformanceReport {
         release.put(ConformanceReportConstants.Field.NAME, releaseName);
         release.put(ConformanceReportConstants.Field.PACKAGE_IDENTITY,
                 releasePackageIdentity);
+        release.put(
+                ConformanceReportConstants.Field.CONTRACTS_RELEASE_IDENTITY,
+                BlueContractsFixturePackage.CONTRACTS_RELEASE_IDENTITY);
         report.put(ConformanceReportConstants.Field.RELEASE, release);
 
         Map<String, Object> language = new LinkedHashMap<>();

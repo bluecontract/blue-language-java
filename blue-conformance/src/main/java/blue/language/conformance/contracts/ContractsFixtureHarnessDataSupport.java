@@ -14,6 +14,7 @@ import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.NodeProviderResult;
 import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifiedNodeProvider;
@@ -825,6 +826,8 @@ abstract class ContractsFixtureHarnessDataSupport {
         private final Map<String, Node> cache = new LinkedHashMap<>();
         private final String cacheMode;
         private final String batchingMode;
+        private final Set<String> transientlyUnavailable;
+        private final Set<String> requestedBlueIds = new LinkedHashSet<>();
         private final int initialCacheEntries;
         private long requests;
         private long backendLoads;
@@ -833,6 +836,14 @@ abstract class ContractsFixtureHarnessDataSupport {
         FixturePhysicalProvider(Map<String, Node> nodes,
                                 String cacheMode,
                                 String batchingMode) {
+            this(nodes, cacheMode, batchingMode,
+                    Collections.<String>emptySet());
+        }
+
+        FixturePhysicalProvider(Map<String, Node> nodes,
+                                String cacheMode,
+                                String batchingMode,
+                                Set<String> transientlyUnavailable) {
             if (!"cold".equals(cacheMode)
                     && !"warm".equals(cacheMode)) {
                 throw new IllegalArgumentException(
@@ -846,6 +857,10 @@ abstract class ContractsFixtureHarnessDataSupport {
             }
             this.cacheMode = cacheMode;
             this.batchingMode = batchingMode;
+            this.transientlyUnavailable = Collections.unmodifiableSet(
+                    new LinkedHashSet<String>(Objects.requireNonNull(
+                            transientlyUnavailable,
+                            "transientlyUnavailable")));
             for (Map.Entry<String, Node> entry : nodes.entrySet()) {
                 backing.put(entry.getKey(), entry.getValue().clone());
             }
@@ -857,6 +872,7 @@ abstract class ContractsFixtureHarnessDataSupport {
 
         @Override
         public List<Node> fetchByBlueId(String blueId) {
+            requestedBlueIds.add(blueId);
             requests++;
             Node cached = cache.get(blueId);
             if (cached != null) {
@@ -880,6 +896,19 @@ abstract class ContractsFixtureHarnessDataSupport {
             return loaded == null
                     ? null
                     : Collections.singletonList(loaded.clone());
+        }
+
+        @Override
+        public NodeProviderResult fetchResultByBlueId(String blueId) {
+            if (transientlyUnavailable.contains(blueId)) {
+                requestedBlueIds.add(blueId);
+                requests++;
+                backendLoads++;
+                largestBackendLoad = Math.max(largestBackendLoad, 1);
+                return NodeProviderResult.unavailable(
+                        "Fixture exact node is transiently unavailable");
+            }
+            return NodeProvider.super.fetchResultByBlueId(blueId);
         }
 
         void verifyPreparation() {
@@ -909,6 +938,18 @@ abstract class ContractsFixtureHarnessDataSupport {
                     && backendLoads == 0) {
                 throw new AssertionError(
                         "Cold provider request bypassed physical storage");
+            }
+        }
+
+        void verifyExpectedLoads(Set<String> expectedBlueIds) {
+            Set<String> missing = new LinkedHashSet<String>(
+                    Objects.requireNonNull(expectedBlueIds,
+                            "expectedBlueIds"));
+            missing.removeAll(requestedBlueIds);
+            if (!missing.isEmpty()) {
+                throw new AssertionError(
+                        "Fixture provider did not load expected exact nodes: "
+                                + missing);
             }
         }
 

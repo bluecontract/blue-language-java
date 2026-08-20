@@ -4,7 +4,9 @@ import blue.language.conformance.api.BlueContractsConformanceFailure;
 import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.conformance.api.BlueContractsFixtureCategory;
 import blue.language.conformance.api.BlueContractsFixtureResult;
+import blue.language.conformance.contracts.closure.ClosureFixtureConformance;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,18 +38,22 @@ public final class ContractsConformanceSuite {
                 BlueContractsConformanceReport.loadFixtureInventory();
 
         List<JsonNode> fixtures = new ArrayList<>(inventory.size());
+        List<JsonNode> ordinaryFixtures = new ArrayList<>();
         ContractsFixtureHarness harness = new ContractsFixtureHarness();
         for (BlueContractsConformanceReport.FixtureInventoryEntry entry
                 : inventory) {
             JsonNode fixture = BlueContractsConformanceReport.readFixture(
                     entry.path());
             requireInventoryMatch(entry, fixture);
-            harness.validate(fixture);
+            if (!"closure-fixture".equals(entry.role())) {
+                harness.validate(fixture);
+                ordinaryFixtures.add(fixture);
+            }
             fixtures.add(fixture);
         }
         boolean completeCounterCoverage =
                 new ContractsGasSchedule()
-                        .hasCompleteMicrofixtureCoverage(fixtures);
+                        .hasCompleteMicrofixtureCoverage(ordinaryFixtures);
         if (!completeCounterCoverage) {
             throw new IllegalStateException(
                     "Contracts gas counter microfixture coverage is incomplete");
@@ -68,7 +74,11 @@ public final class ContractsConformanceSuite {
             fixtureIds.add(entry.id());
             categories.put(entry.id(), entry.category());
             try {
-                harness.execute(fixture, completeCounterCoverage);
+                if ("closure-fixture".equals(entry.role())) {
+                    executeClosureFixture(entry, fixture);
+                } else {
+                    harness.execute(fixture, completeCounterCoverage);
+                }
                 passed.add(entry.id());
                 results.add(result(
                         entry, BlueContractsFixtureResult.Status.PASS, null));
@@ -103,6 +113,22 @@ public final class ContractsConformanceSuite {
                 categories,
                 failures,
                 results);
+    }
+
+    private static void executeClosureFixture(
+            BlueContractsConformanceReport.FixtureInventoryEntry entry,
+            JsonNode fixture) {
+        if ("limit-micro".equals(entry.operation())) {
+            ClosureFixtureConformance.execute(entry, fixture, null);
+            return;
+        }
+        ObjectNode executionFixture = (ObjectNode) fixture.deepCopy();
+        executionFixture.remove("expected");
+        try (ClosureFixtureRuntime runtime =
+                     ClosureFixtureRuntime.fromFixture(executionFixture)) {
+            ClosureFixtureConformance.execute(
+                    entry, fixture, runtime.processor());
+        }
     }
 
     /**

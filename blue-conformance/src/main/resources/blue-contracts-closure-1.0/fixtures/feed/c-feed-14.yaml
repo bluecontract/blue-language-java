@@ -1,0 +1,100 @@
+schema: blue-contracts-fixture/1.0
+id: c-feed-14
+vectors:
+- C-ROUTE-05
+category: feed
+description: Equivalent fresh raw sources coalesce into one logical Handler execution while every source writes its own successful checkpoint.
+operation: process
+input:
+  root:
+    executions: 0
+    contracts:
+      sourceA:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-A-v1
+        dependencyMode: catalog
+        handlerChannelKey: target
+        logicalDeliveryKey: shared-logical-delivery
+      sourceB:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: route
+        eventKey: route
+        accept: true
+        checkpointDomain: source-B-v1
+        dependencyMode: catalog
+        handlerChannelKey: target
+        logicalDeliveryKey: shared-logical-delivery
+      target:
+        type:
+          blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
+        order: 0
+      h:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: target
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /executions
+            val: 1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: route
+    id: E-route
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - source
+    - 1
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: sourceA
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+    - scopePath: /
+      channelKey: sourceB
+      order: 1
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.executions
+    op: equals
+    expected: 1
+  - actual: result.document.contracts.checkpoint.entries.sourceA
+    op: present
+  - actual: result.document.contracts.checkpoint.entries.sourceB
+    op: present
+  - actual: result.document.contracts.checkpoint.entries.target
+    op: absent
+  - actual: trace.logicalDeliveryGroups
+    op: sequenceEquals
+    expected:
+    - /:shared-logical-delivery:[sourceA,sourceB]
+  - actual: trace.handlerExecutionCount
+    op: equals
+    expected: 1

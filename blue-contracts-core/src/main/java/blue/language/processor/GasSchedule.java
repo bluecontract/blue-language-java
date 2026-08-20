@@ -44,12 +44,12 @@ public final class GasSchedule {
      * Canonical package identity declared by the bound manifest.
      */
     public static final String CONTRACTS_1_0_PACKAGE_IDENTITY =
-            "sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5";
+            "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
     /**
      * SHA-256 digest of the exact shipped manifest bytes.
      */
     public static final String CONTRACTS_1_0_RESOURCE_SHA256 =
-            "1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f";
+            "54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8";
 
     private static final Pattern RADIX =
             Pattern.compile("2\\^(\\d+)");

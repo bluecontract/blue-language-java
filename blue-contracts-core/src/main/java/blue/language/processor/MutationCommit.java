@@ -35,11 +35,19 @@ final class MutationCommit {
     }
 
     void publishSelected(String path, Node value) {
+        publishSelected(
+                path,
+                value,
+                materializedSelectedRoot(path));
+    }
+
+    void publishSelected(
+            String path,
+            Node value,
+            Node tentativeSelected) {
         Node selectedRollback = runtime.materializedView.copyRoot();
         ResolvedSnapshot snapshotRollback = runtime.snapshot;
         try {
-            Node tentativeSelected = selectedRollback.clone();
-            materializeReferenceAncestors(tentativeSelected, path);
             Node before = ImmutablePatchPlanner.readNode(
                     tentativeSelected, path);
             JsonPatch patch = directWritePatch(path, before, value);
@@ -63,6 +71,12 @@ final class MutationCommit {
             runtime.materializedViewStale = false;
             throw failure;
         }
+    }
+
+    Node materializedSelectedRoot(String path) {
+        Node tentativeSelected = runtime.materializedView.copyRoot();
+        materializeReferenceAncestors(tentativeSelected, path);
+        return tentativeSelected;
     }
 
     void publishSnapshot(String path, Node value) {

@@ -49,7 +49,8 @@ final class ExternalDeliveryExecutor {
                 scopePath,
                 executionBundle,
                 first.handlerChannelKey(),
-                first.payloadNode())) {
+                first.payload(),
+                first.carriedExactValues())) {
             if (!execution.hasFailure()) {
                 execution.recordCompletedDelivery();
             }

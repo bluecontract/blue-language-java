@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
@@ -195,19 +196,30 @@ public final class RuntimeWorkSession {
                             }
 
                             @Override
+                            public GasChargeContext resolveAttribution(
+                                    GasMeter.ChildGasLedger candidate,
+                                    GasChargeContext context) {
+                                RuntimeWorkSession.this
+                                        .ensureChargeable(candidate);
+                                return parent.resolveAttribution(context);
+                            }
+
+                            @Override
                             public void ensureWithinLocalBudget(
                                     GasMeter.ChildGasLedger candidate,
                                     String counter,
                                     long quantity,
                                     long weight,
-                                    long subtotal) {
+                                    long subtotal,
+                                    GasChargeContext context) {
                                 RuntimeWorkSession.this
-                                        .ensureWithinSharedBudget(
+                                        .ensureWithinRuntimeBudgets(
                                                 candidate,
                                                 counter,
                                                 quantity,
                                                 weight,
-                                                subtotal);
+                                                subtotal,
+                                                context);
                             }
 
                             @Override
@@ -216,13 +228,15 @@ public final class RuntimeWorkSession {
                                     String counter,
                                     long quantity,
                                     long weight,
-                                    long subtotal) {
+                                    long subtotal,
+                                    GasChargeContext context) {
                                 RuntimeWorkSession.this.beforeCharge(
                                         candidate,
                                         counter,
                                         quantity,
                                         weight,
-                                        subtotal);
+                                        subtotal,
+                                        context);
                             }
 
                             @Override
@@ -390,6 +404,26 @@ public final class RuntimeWorkSession {
                 .carryExactInput(input, blueId);
     }
 
+    synchronized void carryExactInput(
+            blue.language.snapshot.FrozenNode input,
+            String blueId) {
+        ensureOpen();
+        semanticOutputBoundary()
+                .carryExactInput(input, blueId);
+    }
+
+    synchronized List<ExactBlueValue> exactValuesSnapshot() {
+        return semanticOutputBoundary != null
+                ? semanticOutputBoundary.exactValuesSnapshot()
+                : Collections.<ExactBlueValue>emptyList();
+    }
+
+    synchronized void carryExactInputs(
+            Collection<ExactBlueValue> inputs) {
+        ensureOpen();
+        semanticOutputBoundary().carryExactInputs(inputs);
+    }
+
     synchronized void attachSemanticOutputBoundary(
             SemanticOutputBoundary boundary) {
         ensureOpen();
@@ -452,9 +486,7 @@ public final class RuntimeWorkSession {
     RuntimeWorkSession diagnosticTwin() {
         RuntimeWorkSession twin =
                 new RuntimeWorkSession(
-                        new GasMeter(
-                                parent.schedule(),
-                                initialBudget),
+                        parent.diagnosticTwin(initialBudget),
                         Mode.ADMISSION);
         synchronized (this) {
             if (semanticOutputBoundary != null) {
@@ -501,7 +533,8 @@ public final class RuntimeWorkSession {
             String counter,
             long quantity,
             long weight,
-            long subtotal) {
+            long subtotal,
+            GasChargeContext context) {
         ensureChargeable(ledger);
         LedgerState state = requireOwned(ledger);
         parent.reserveRuntimeGas(
@@ -510,21 +543,28 @@ public final class RuntimeWorkSession {
                 quantity,
                 weight,
                 subtotal,
-                ledger.totalGas(),
-                ledger.effectiveBudget());
+                context);
         if (state.sharedBudget != null) {
             state.sharedBudget.recordAdmission(
                     subtotal);
         }
     }
 
-    private synchronized void ensureWithinSharedBudget(
+    private synchronized void ensureWithinRuntimeBudgets(
             GasMeter.ChildGasLedger ledger,
             String counter,
             long quantity,
             long weight,
-            long subtotal) {
+            long subtotal,
+            GasChargeContext context) {
         ensureChargeable(ledger);
+        parent.ensureRuntimeGasAdmissible(
+                ledger.namespace(),
+                counter,
+                quantity,
+                weight,
+                subtotal,
+                context);
         LedgerState state = requireOwned(ledger);
         if (state.sharedBudget != null) {
             state.sharedBudget.ensureAdmissible(
@@ -532,7 +572,8 @@ public final class RuntimeWorkSession {
                     counter,
                     quantity,
                     weight,
-                    subtotal);
+                    subtotal,
+                    context);
         }
     }
 
@@ -607,8 +648,11 @@ public final class RuntimeWorkSession {
                         == exact.admittedGas()
                         && state.sharedBudget.maximumGas()
                         == exact.effectiveBudget();
+        boolean matchesParentCap =
+                parent.matchesCurrentCapRejection(exact.source());
         if (!matchesLedgerBudget
-                && !matchesSharedBudget) {
+                && !matchesSharedBudget
+                && !matchesParentCap) {
             throw new IllegalArgumentException(
                     "Gas exhaustion does not match the owned ledger state");
         }

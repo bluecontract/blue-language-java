@@ -17,10 +17,13 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.model.NodeWireForm;
 import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.math.BigInteger;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Deterministic implementation of the closed Contracts 1.0 fixture runtime.
@@ -52,6 +55,9 @@ final class ScriptedContractsRuntime {
 
     private final JsonNode controls;
     private final Map<String, JsonNode> handlerScripts = new LinkedHashMap<>();
+    private final Map<String, JsonNode> documentHandlerScripts =
+            new LinkedHashMap<>();
+    private final Set<String> documentHandlerPaths = new HashSet<>();
     private boolean terminationIssued;
     private boolean nestedEnqueueStarted;
     private boolean cascadeMutationApplied;
@@ -72,12 +78,41 @@ final class ScriptedContractsRuntime {
         if (controls == null) {
             return;
         }
-        JsonNode handlers = controls.get(ContractsFixtureConstants.Field.HANDLERS);
+        installHandlerScripts(
+                controls.get(ContractsFixtureConstants.Field.HANDLERS));
+        installHandlerScripts(controls.get("initializationHandlers"));
+    }
+
+    private void installHandlerScripts(JsonNode handlers) {
         if (handlers != null && handlers.isObject()) {
-            handlers.fields().forEachRemaining(entry ->
-                    handlerScripts.put(
-                            normalizeContractPath(entry.getKey()),
-                            entry.getValue().deepCopy()));
+            handlers.fields().forEachRemaining(entry -> {
+                String authoredKey = entry.getKey();
+                int separator = authoredKey.indexOf('/');
+                if (!authoredKey.startsWith("/")
+                        && separator > 0
+                        && separator < authoredKey.length() - 1) {
+                    String documentId = authoredKey.substring(0, separator);
+                    String path = contractPath(
+                            "/", authoredKey.substring(separator + 1));
+                    JsonNode prior = documentHandlerScripts.put(
+                            documentHandlerKey(documentId, path),
+                            normalizedHandlerScript(entry.getValue()));
+                    if (prior != null) {
+                        throw new IllegalArgumentException(
+                                "Duplicate document-qualified Handler control: "
+                                        + authoredKey);
+                    }
+                    documentHandlerPaths.add(path);
+                } else {
+                    JsonNode prior = handlerScripts.put(
+                            normalizeContractPath(authoredKey),
+                            entry.getValue().deepCopy());
+                    if (prior != null) {
+                        throw new IllegalArgumentException(
+                                "Duplicate Handler control: " + authoredKey);
+                    }
+                }
+            });
         }
     }
 
@@ -97,7 +132,9 @@ final class ScriptedContractsRuntime {
      * @return {@code true} when a script is installed
      */
     public boolean hasHandlerScript(String contractPath) {
-        return handlerScripts.containsKey(normalizeContractPath(contractPath));
+        String path = normalizeContractPath(contractPath);
+        return handlerScripts.containsKey(path)
+                || documentHandlerPaths.contains(path);
     }
 
     /**
@@ -125,8 +162,9 @@ final class ScriptedContractsRuntime {
     public void executeHandler(String contractPath,
                                MockHandler.Value contract,
                                ProcessorExecutionContext context) {
-        JsonNode script = handlerScripts.get(normalizeContractPath(contractPath));
+        JsonNode script = handlerScript(contractPath, context);
         if (script == null) {
+            executeDeclaredResult(contract.getResult(), context);
             return;
         }
         String fail = text(script, ContractsFixtureConstants.Field.FAIL);
@@ -136,6 +174,56 @@ final class ScriptedContractsRuntime {
         executeResult(script.get(ContractsFixtureConstants.Field.RESULT), context);
         executeInstalledControl(context);
         applyFirstTerminationRequest(context);
+    }
+
+    private JsonNode handlerScript(
+            String contractPath,
+            ProcessorExecutionContext context) {
+        String path = normalizeContractPath(contractPath);
+        // Closure fixtures qualify scripts by the executing document, not by
+        // an ambient parent.  The lookup reads only that document's authored
+        // application property through the ordinary isolated Root context.
+        Node documentId = context.documentAt("/documentId");
+        if (documentId != null && documentId.getValue() instanceof String) {
+            JsonNode qualified = documentHandlerScripts.get(
+                    documentHandlerKey(
+                            (String) documentId.getValue(), path));
+            if (qualified != null) {
+                return qualified;
+            }
+        } else if (documentHandlerPaths.contains(path)) {
+            throw new IllegalStateException(
+                    "Document-qualified Handler control requires an authored "
+                            + "string /documentId at " + path);
+        }
+        return handlerScripts.get(path);
+    }
+
+    private static String documentHandlerKey(
+            String documentId,
+            String contractPath) {
+        return documentId + '\u0000' + normalizeContractPath(contractPath);
+    }
+
+    private static JsonNode normalizedHandlerScript(JsonNode authored) {
+        if (authored == null || !authored.isObject()) {
+            throw new IllegalArgumentException(
+                    "Closure Handler control must be an object");
+        }
+        ObjectNode script = ((ObjectNode) authored).deepCopy();
+        if (!script.has(ContractsFixtureConstants.Field.RESULT)) {
+            ObjectNode result = script.deepCopy();
+            result.remove(ContractsFixtureConstants.Field.FAIL);
+            script.removeAll();
+            if (authored.has(ContractsFixtureConstants.Field.FAIL)) {
+                script.set(
+                        ContractsFixtureConstants.Field.FAIL,
+                        authored.get(ContractsFixtureConstants.Field.FAIL)
+                                .deepCopy());
+            }
+            script.set(ContractsFixtureConstants.Field.RESULT, result);
+        }
+        return script;
     }
 
     /**

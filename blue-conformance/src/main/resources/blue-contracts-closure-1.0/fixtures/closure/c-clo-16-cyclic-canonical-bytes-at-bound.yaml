@@ -1,0 +1,21 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-clo-16-cyclic-canonical-bytes-at-bound
+vectors:
+- C-CLO-16
+category: limits
+operation: limit-micro
+description: The cyclicCanonicalBytesPerComponent guard independently measures 16777216 against the frozen bound 16777216 and returns ACCEPT; this microfixture does not claim that a later gas-expensive invocation phase completes.
+releaseManifest: ../../release-manifest.yaml
+input: {}
+expected:
+  limitDecision: ACCEPT
+  rejectedStepAdmitted: false
+  subsequentOutcome: NOT_EXECUTED_BY_MICROFIXTURE
+limit:
+  limit: cyclicCanonicalBytesPerComponent
+  configured: 16777216
+  observed: 16777216
+  generator:
+    kind: cyclic-canonical-bytes
+    parameters:
+      count: 16777216

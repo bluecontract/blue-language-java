@@ -135,6 +135,7 @@ final class DocumentationQualityTest {
         assertTrue(codes.contains("MISSING_PACKAGE_INFO"));
         assertTrue(codes.contains("FORBIDDEN_PUBLIC_PACKAGE_NAME"));
         assertTrue(codes.contains("INSUFFICIENT_RUNNABLE_EXAMPLES"));
+        assertTrue(codes.contains("CONTRACTS_RELEASE_IDENTITY_INVALID"));
         @SuppressWarnings("unchecked")
         Map<String, Object> examples = (Map<String, Object>) report.get("examples");
         assertEquals(1, examples.get("sourceCount"));

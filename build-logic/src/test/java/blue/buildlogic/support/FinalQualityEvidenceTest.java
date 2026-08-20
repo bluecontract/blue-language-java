@@ -1,5 +1,6 @@
 package blue.buildlogic.support;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -79,7 +80,9 @@ final class FinalQualityEvidenceTest {
                         smoke,
                         repeat('a'),
                         Collections.singletonList(":releaseVerify"),
-                        Collections.emptyMap(),
+                        Collections.singletonMap(
+                                "module/src/main/java/blue/internal/Hidden.java",
+                                "Reviewed exception that is now below the limit."),
                         Collections.singletonList("RequiredBenchmark.run"),
                         1,
                         1,
@@ -109,6 +112,14 @@ final class FinalQualityEvidenceTest {
         assertTrue(blockers.contains("README_LINE_LIMIT"));
         assertTrue(blockers.contains("ROOT_BUILD_LINE_LIMIT"));
         assertTrue(blockers.contains("TASK_EXCLUSIONS"));
+        assertTrue(blockers.contains(
+                "SPECIFICATION_OR_PACKAGE_IDENTITY_BINDING"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> largestClassReport = (Map<String, Object>)
+                report.get("largestClassReport");
+        assertEquals(Collections.singletonList(
+                "module/src/main/java/blue/internal/Hidden.java"),
+                largestClassReport.get("staleAllowlistEntries"));
     }
 
     private String conformance(String languageHash, String contractsHash) {

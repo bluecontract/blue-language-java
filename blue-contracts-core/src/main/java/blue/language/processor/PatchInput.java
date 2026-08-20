@@ -106,6 +106,13 @@ final class PatchInput {
         return frozenPatch.getAuthoredCanonicalSizeBytes();
     }
 
+    /** Returns the exact immutable authored patch retained by this input. */
+    FrozenJsonPatch frozenAuthoredPatch() {
+        return frozenPatch != null
+                ? frozenPatch
+                : FrozenJsonPatch.from(mutablePatch);
+    }
+
     JsonPatch legacyPatch() {
         if (mutablePatch == null) {
             throw new IllegalStateException("Frozen patch inputs do not expose a mutable validation patch");

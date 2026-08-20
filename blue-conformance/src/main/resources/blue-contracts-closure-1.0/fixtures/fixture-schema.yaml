@@ -1,0 +1,280 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: blue-contracts-fixture/1.0
+title: Blue Contracts 1.0 conformance fixture
+type: object
+$comment: Unknown fixture fields fail closed. Blue values under root, event, provider.nodes, and scripted results are validated separately by the Blue Language fixture validator.
+additionalProperties: false
+required: [schema, id, vectors, category, operation, input, expected]
+properties:
+  schema:
+    const: blue-contracts-fixture/1.0
+  id:
+    type: string
+    pattern: '^[A-Za-z0-9][A-Za-z0-9-]*$'
+  vectors:
+    type: array
+    minItems: 1
+    uniqueItems: true
+    items:
+      type: string
+      pattern: '^C-[A-Z0-9]+-[0-9]{2}$'
+  category:
+    enum: [chk, disc, e2e, emb, evt, fail, feed, gas, idx, init, life, prot, rep, snd, upd]
+  description:
+    type: string
+  operation:
+    enum: [process, process-attempt, platform, gas-micro]
+  input:
+    $ref: '#/$defs/input'
+  expected:
+    $ref: '#/$defs/expected'
+$defs:
+  blueValue: {}
+  orderKey:
+    type: array
+    minItems: 3
+    items: {}
+  deliveryHint:
+    type: object
+    additionalProperties: false
+    required: [scopePath, channelKey]
+    properties:
+      scopePath: {type: string}
+      channelKey: {type: string}
+      order: {type: integer}
+      activationStartExclusive: {$ref: '#/$defs/orderKey'}
+  builder:
+    type: object
+    additionalProperties: false
+    required: [kind, target]
+    properties:
+      kind: {enum: [generated-object, repeated-text, generated-list]}
+      target: {type: string}
+      memberCount: {type: integer, minimum: 0}
+      itemCount: {type: integer, minimum: 0}
+      codePointCount: {type: integer, minimum: 0}
+      keyPrefix: {type: string}
+      value: {}
+      item: {}
+      text: {type: string}
+  provider:
+    type: object
+    additionalProperties: false
+    required: [mode, semanticDemandsOnly]
+    properties:
+      mode: {enum: [exact-node]}
+      semanticDemandsOnly: {const: true}
+      nodes:
+        type: object
+        additionalProperties: {$ref: '#/$defs/blueValue'}
+      transientUnavailableAt:
+        type: string
+  scriptedResult:
+    type: object
+    additionalProperties: false
+    properties:
+      patches:
+        type: array
+        items: {$ref: '#/$defs/blueValue'}
+      events:
+        type: array
+        items: {$ref: '#/$defs/blueValue'}
+      termination:
+        $ref: '#/$defs/blueValue'
+      fail:
+        type: string
+      runtimeCounters:
+        type: object
+        additionalProperties:
+          type: integer
+          minimum: 0
+  runtime:
+    type: object
+    additionalProperties: false
+    required: [typeRegistryManifest]
+    properties:
+      typeRegistryManifest: {type: string}
+      handlers:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            result: {$ref: '#/$defs/scriptedResult'}
+            fail: {type: string}
+      cascadeMutation:
+        type: object
+        additionalProperties: false
+        properties:
+          afterPatchIndex: {type: integer, minimum: 0}
+          replaceScope: {type: string}
+          thenReaddSamePath: {type: boolean}
+          replaceScopeDuringLifecycle: {type: boolean}
+          sourceCutOffDuringUpdate: {type: boolean}
+      childEmissions:
+        type: array
+        items: {$ref: '#/$defs/blueValue'}
+      gasLimit: {type: integer, minimum: 0}
+      gasLimitDuringTermination: {type: boolean}
+      generalizationCandidates:
+        type: array
+        items: {type: string}
+      initializationPatches:
+        type: array
+        items: {$ref: '#/$defs/blueValue'}
+      nestedEnqueues: {type: integer, minimum: 0}
+      rootForwardAll: {type: boolean}
+      terminationRequests:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [cause]
+          properties:
+            cause: {type: string}
+            reason: {type: string}
+      validCandidate: {type: string}
+  feeder:
+    type: object
+    additionalProperties: false
+    required: [managedRootRevision, indexedRootRevision, eventOrderKey, deliverySnapshot]
+    properties:
+      managedRootRevision: {type: integer, minimum: 0}
+      indexedRootRevision: {type: integer, minimum: 0}
+      evaluatedRevision: {type: integer, minimum: 0}
+      eventOrderKey: {$ref: '#/$defs/orderKey'}
+      deliverySnapshot:
+        type: array
+        items: {$ref: '#/$defs/deliveryHint'}
+      acceptanceStateVariants:
+        type: array
+        items: {type: object}
+      canonicalPreselection:
+        type: array
+        items: {$ref: '#/$defs/deliveryHint'}
+      casConflict: {type: boolean}
+      channelLawCases:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [accepts, preselects, keyIntersection]
+          properties:
+            accepts: {type: boolean}
+            preselects: {type: boolean}
+            keyIntersection: {type: boolean}
+      currentEventAddsChannel: {type: boolean}
+      eventQueue:
+        type: array
+        items: {}
+      intervalHistory:
+        type: array
+        items: {type: string}
+      rawIndexCandidates:
+        type: array
+        items: {type: string}
+      sameFailureCount: {type: integer, minimum: 0}
+      targetsByEvent:
+        type: object
+        additionalProperties:
+          type: array
+          items: {type: string}
+  variant:
+    type: object
+    additionalProperties: false
+    required: [name]
+    properties:
+      name: {type: string}
+      accept: {type: boolean}
+      batching: {enum: [batched, unbatched]}
+      cache: {enum: [warm, cold]}
+      checkpointSubject: {}
+      listOperation:
+        type: object
+        additionalProperties: false
+        required: [op, size]
+        properties:
+          op: {enum: [append, replace]}
+          size: {type: integer, minimum: 0}
+          delta: {type: integer, minimum: 0}
+          index: {type: integer, minimum: 0}
+      newEmbeddedSurface: {}
+      rootForm: {enum: [inline, reference, eager, lazy]}
+      rootRevision: {type: integer, minimum: 0}
+      sameEvent: {type: boolean}
+  input:
+    type: object
+    additionalProperties: false
+    properties:
+      root: {$ref: '#/$defs/blueValue'}
+      event: {$ref: '#/$defs/blueValue'}
+      feeder: {$ref: '#/$defs/feeder'}
+      provider: {$ref: '#/$defs/provider'}
+      runtime: {$ref: '#/$defs/runtime'}
+      builders:
+        type: array
+        items: {$ref: '#/$defs/builder'}
+      variants:
+        type: array
+        items: {$ref: '#/$defs/variant'}
+      namespace: {enum: [processor, semantic, runtime]}
+      counter: {type: string}
+      quantity: {type: integer, minimum: 0}
+      weightManifest: {type: string}
+      oldLength: {type: integer, minimum: 0}
+      limit: {type: integer, minimum: 0}
+      charges:
+        type: array
+        items:
+          oneOf:
+          - {type: integer, minimum: 0}
+          - type: object
+            additionalProperties: false
+            required: [counter, quantity]
+            properties:
+              counter: {type: string}
+              quantity: {type: integer, minimum: 0}
+      textCodePointsExamined: {type: integer, minimum: 0}
+      proofKey: {type: string}
+      uses: {type: integer, minimum: 0}
+      directCanonicalBytes: {type: integer, minimum: 0}
+      operation: {type: string}
+      leftLimbs: {type: integer, minimum: 0}
+      rightLimbs: {type: integer, minimum: 0}
+      replaceIndex: {type: integer, minimum: 0}
+      priorExactIdentity: {type: boolean}
+      append: {type: integer, minimum: 0}
+  assertion:
+    type: object
+    additionalProperties: false
+    required: [actual, op]
+    properties:
+      actual: {type: string}
+      op:
+        enum: [equals, notEquals, equalsProjection, absent, present, sequenceEquals, contains, notContains, lessThan, greaterThan, sameAcrossVariants, failsWith, all, none]
+      expected: {}
+      expectedProjection: {type: string}
+      variant: {type: string}
+      ordered: {type: boolean}
+  expected:
+    type: object
+    additionalProperties: false
+    properties:
+      assertions:
+        type: array
+        items: {$ref: '#/$defs/assertion'}
+      trace:
+        type: array
+        items: {$ref: '#/$defs/blueValue'}
+      totalGas: {type: integer, minimum: 0}
+      listFoldStepRecomputed: {type: integer, minimum: 0}
+      admitted:
+        oneOf:
+        - {type: boolean}
+        - type: array
+          items: {type: integer, minimum: 0}
+      failedChargeAbsent: {type: boolean}
+      textBlockExamined: {type: integer, minimum: 0}
+      validationProofReused: {type: integer, minimum: 0}
+      directIdentityHashBlock: {type: integer, minimum: 0}
+      integerLimbOperation: {type: integer, minimum: 0}

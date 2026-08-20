@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 595,
-    "productionResourceCount": 370,
-    "productionSourcePathIdentity": "sha256:98e4e41c68e937876306d3e5dd052ca3d1e1f84fa0559311a7ff59b30152f3d0",
-    "productionResourcePathIdentity": "sha256:a1ccc0c0105048804474a0ac9ac7a2b095e05d3b094a60a046295e78e5203797"
+    "productionSourceCount": 709,
+    "productionResourceCount": 690,
+    "productionSourcePathIdentity": "sha256:633e841ab5239d01eee3be2ca65cd687118157fa1a7a3122ac054b1b27716abe",
+    "productionResourcePathIdentity": "sha256:f93329684acb8151fce93c6fb740c50c3e6860033311efb0cb8e9fcec3060161"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -259,6 +259,13 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ClosureFixtureRuntime.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ClosureFixtureRuntime.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsAssertionEvaluator.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
@@ -413,6 +420,55 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureConformanceHarness.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureConformanceHarness.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureConformanceSuite.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureConformanceSuite.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureConformance.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureConformance.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureInventory.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureInventory.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureParser.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureParser.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureLimitMicroEvaluator.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureLimitMicroEvaluator.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/package-info.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/package-info.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/package-info.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
@@ -532,6 +588,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/CheckpointDomainIdentity.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/CheckpointDomainIdentity.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/CheckpointIdentityCache.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -550,6 +613,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/CheckpointManager.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ClosureRuntimeDescriptor.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ClosureRuntimeDescriptor.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -795,6 +865,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessorSnapshotOperations.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentStepRuntimeGapException.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/DocumentStepRuntimeGapException.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1383,6 +1460,167 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/LogicalDeliveryGrouper.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointBatchCleanupContextFactory.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointBatchCleanupContextFactory.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointCandidate.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointCandidate.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointCleanupContextFactory.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointCleanupContextFactory.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointDomain.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointDomain.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointMutation.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointMutation.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlement.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlement.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementBatch.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementBatch.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementEntry.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementEntry.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementRequest.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointSettlementRequest.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointState.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedCheckpointState.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentOverlaySnapshotManager.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentOverlaySnapshotManager.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentResolutionOverlay.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentResolutionOverlay.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepContinuation.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepContinuation.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepOutcome.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepOutcome.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRequest.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRoute.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRoute.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentWorkKind.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentWorkKind.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedExternalDeliveryClassification.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedExternalDeliveryClassification.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootChannelOccurrence.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootChannelOccurrence.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootSettlementService.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootSettlementService.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootSubscriptionSurface.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootSubscriptionSurface.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedSemanticGasBridge.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedSemanticGasBridge.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -2198,6 +2436,545 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidate.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidateGasVerifier.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCandidateGasVerifier.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCause.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionCause.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionKind.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AdmissionKind.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AffectedClosureSnapshot.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/AffectedClosureSnapshot.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/BlueClosureContracts.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/BlueClosureContracts.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ChannelOccurrence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ChannelOccurrence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CheckpointDomainValue.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CheckpointDomainValue.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CheckpointWrite.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CheckpointWrite.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionExecutionSession.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionExecutionSession.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionPortableLimits.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionPortableLimits.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionRejectionProcessor.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionRejectionProcessor.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionRollbackAssembler.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionRollbackAssembler.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAttemptResult.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAttemptResult.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCapabilityGapException.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCapabilityGapException.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCommitCompanion.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureCommitCompanion.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureDirectSeedPlanner.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureDirectSeedPlanner.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEnvironment.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEnvironment.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceFactory.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceFactory.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceVerifier.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceVerifier.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionObserver.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionObserver.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionRecorder.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionRecorder.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionState.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionState.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureFinalizationGasCharger.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureFinalizationGasCharger.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureGraphGenerationTransition.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureGraphGenerationTransition.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureIdentityService.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureIdentityService.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureImplementationEvidence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureImplementationEvidence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationInput.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationInput.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationVerifier.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureInvocationVerifier.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResult.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessResult.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessor.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessor.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResultAssemblySupport.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResultAssemblySupport.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureRollbackResultAssembler.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureRollbackResultAssembler.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureSuccessResultAssembler.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureSuccessResultAssembler.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureValueSupport.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureValueSupport.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureWorkOccurrence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureWorkOccurrence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureWorkQueue.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureWorkQueue.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationInput.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationInput.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationKernel.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationKernel.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationResult.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentFinalizationResult.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentGenerationTransition.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentGenerationTransition.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentKind.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentKind.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentSnapshot.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ComponentSnapshot.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CyclicCanonicalLimitProjection.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CyclicCanonicalLimitProjection.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DefaultClosureProcessor.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DefaultClosureProcessor.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DirectLogicalDelivery.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DirectLogicalDelivery.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentId.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentId.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepEvidence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepEvidence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepProcessor.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepProcessor.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExecutionPolicy.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExecutionPolicy.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExternalEventCause.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExternalEventCause.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedComponentEvidence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedComponentEvidence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedDocumentEvidence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedDocumentEvidence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GasTraceEntry.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GasTraceEntry.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GraphChange.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/GraphChange.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/LocalDocumentStepResult.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/LocalDocumentStepResult.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentGraph.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentGraph.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentSnapshot.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentSnapshot.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceBinding.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceBinding.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceTargetVerifier.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceTargetVerifier.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRevisionCause.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRevisionCause.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedScopeKey.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedScopeKey.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessingCause.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessingCause.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/PublicEventOccurrence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/PublicEventOccurrence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ResultingDocument.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ResultingDocument.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SccPartitioner.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ScopeAddress.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ScopeAddress.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionDelta.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionDelta.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionState.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/SubscriptionState.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeResolutionContext.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeResolutionContext.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/WorkKind.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/WorkKind.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/package-info.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/package-info.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/model/ChannelContract.java",
       "currentPackage": "blue.language.processor.model",
       "targetModule": ":blue-contracts-core",
@@ -2678,6 +3455,20 @@
       "currentPackage": "blue.language.identity",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
       "targetPackage": "blue.language.identity"
     },
     {
@@ -3322,6 +4113,13 @@
       "currentPackage": "blue.language.provider",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
+      "targetPackage": "blue.language.provider"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
+      "currentPackage": "blue.language.provider",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
       "targetPackage": "blue.language.provider"
     },
     {
@@ -5066,6 +5864,1606 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/vector-coverage.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/vector-coverage.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/CONTROL-LANGUAGE.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/CONTROL-LANGUAGE.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/HARNESS.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/HARNESS.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/README.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/README.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/TRACE-SCHEMA.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/TRACE-SCHEMA.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-07.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/chk/c-chk-07.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure-fixture-schema.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure-fixture-schema.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/LIMIT-GENERATORS.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/LIMIT-GENERATORS.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/README.md",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/README.md"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-04-default-policy-loop.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-04-default-policy-loop.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-04-same-event-gas-loop.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-04-same-event-gas-loop.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-05-direct-both-members.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-05-direct-both-members.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-06-duplicate-event-occurrences.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-06-duplicate-event-occurrences.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-07-self-cycle.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-07-self-cycle.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-08-cycle-during-initialization.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-08-cycle-during-initialization.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-09-merge-two-cycles.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-09-merge-two-cycles.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-10-split-to-singletons.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-10-split-to-singletons.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-11-split-into-two-cycles.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-11-split-into-two-cycles.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-13-frozen-edge-addition.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-13-frozen-edge-addition.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-15-ambiguous-preliminary-members.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-15-ambiguous-preliminary-members.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-closure-expansions-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-closure-expansions-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-cyclic-canonical-bytes-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-cyclic-canonical-bytes-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-cyclic-edges-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-cyclic-edges-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-cyclic-members-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-cyclic-members-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-embedded-edges-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-embedded-edges-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-graph-changes-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-graph-changes-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-limit-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-limit-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-managed-documents-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-managed-documents-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-tentative-finalizations-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-tentative-finalizations-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-work-occurrences-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-16-work-occurrences-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-closure-expansions-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-closure-expansions-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-cyclic-canonical-bytes-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-cyclic-canonical-bytes-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-cyclic-edges-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-cyclic-edges-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-cyclic-members-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-cyclic-members-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-embedded-edges-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-embedded-edges-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-graph-changes-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-graph-changes-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-limit-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-limit-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-managed-documents-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-managed-documents-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-tentative-finalizations-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-tentative-finalizations-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-work-occurrences-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-17-work-occurrences-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-18-locality-1000-unrelated.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-18-locality-1000-unrelated.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-19-multiple-public-roots-canonical.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-19-multiple-public-roots-canonical.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-19-public-event-boundary.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-19-public-event-boundary.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-19-single-public-root.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-19-single-public-root.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-20-late-outer-failure.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-20-late-outer-failure.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-21-admission-zero-direct.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-21-admission-zero-direct.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-00-attach-a5-retry.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-00-attach-a5-retry.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-01-a5-to-a6.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-01-a5-to-a6.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-02-a6-to-a7.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-02-a6-to-a7.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-03-a7-to-a8.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-03-a7-to-a8.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-04-a8-to-a9.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-04-a8-to-a9.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-05-a9-to-a10.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-05-a9-to-a10.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-24-occurrence-continuity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-24-occurrence-continuity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-25-policy-identity-binding.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-25-policy-identity-binding.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-26-embedded-local-cap.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-26-embedded-local-cap.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-27-multiple-scc-one-closure.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-27-multiple-scc-one-closure.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-28-containing-spine-identity-gas.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-28-containing-spine-identity-gas.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-28-mixed-result-shape.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-28-mixed-result-shape.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-29-active-edge-path-validation.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-29-active-edge-path-validation.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-30-language-cyclic-oracles.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-30-language-cyclic-oracles.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-31-invocation-owned-gas-rejection.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-31-invocation-owned-gas-rejection.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-32-finalization-owned-gas-rejection.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-32-finalization-owned-gas-rejection.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-33-checkpoint-domain-retirement.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-33-checkpoint-domain-retirement.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-34-separate-document-steps.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-34-separate-document-steps.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-35-00-remove-and-create-successor.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-35-00-remove-and-create-successor.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-35-01-readd-committed-successor.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-35-01-readd-committed-successor.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/traces/c-clo-04-default-policy-loop-gas.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/traces/c-clo-04-default-policy-loop-gas.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/disc/c-disc-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/e2e/c-e2e-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/e2e/c-e2e-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/e2e/c-e2e-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/e2e/c-e2e-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/e2e/c-e2e-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/e2e/c-e2e-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-cyc-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-cyc-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-07.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-07.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-08.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-08.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-cyclic-member.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-cyclic-member.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-list-target.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-list-target.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-nonobject-member.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-nonobject-member.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-reserved-field.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-reserved-field.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-wildcard.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-09-wildcard.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-10.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-10.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-11.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-11.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-12.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-12.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-13.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-13.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-14.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-14.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-15.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-15.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-16.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-16.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-07.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-07.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-08.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-08.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-09.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-09.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-10.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-10.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-11.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-11.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-12.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-12.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-13.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-13.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-14.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-14.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-15.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-15.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-16.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-16.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-17.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-17.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-18.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/feed/c-feed-18.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fixture-schema.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fixture-schema.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-gas-exhaustion-prefix.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-gas-exhaustion-prefix.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-identity-blocks.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-identity-blocks.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-integer-multiply-3x2-limbs.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-integer-multiply-3x2-limbs.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-list-append-delta.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-list-append-delta.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-list-replace-head.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-list-replace-head.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-text-65-code-points.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-text-65-code-points.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-validation-proof-reuse.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/composite-validation-proof-reuse.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-channelAccepted.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-channelAccepted.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-channelCandidateTested.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-channelCandidateTested.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-checkpointCompared.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-checkpointCompared.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-checkpointWritten.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-checkpointWritten.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-closureExpanded.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-closureExpanded.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-closureInvocation.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-closureInvocation.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-closureWorkOccurrenceDequeued.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-closureWorkOccurrenceDequeued.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-closureWorkOccurrenceEnqueued.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-closureWorkOccurrenceEnqueued.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-componentEdgePartitioned.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-componentEdgePartitioned.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-componentMemberPartitioned.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-componentMemberPartitioned.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-componentPartitionChanged.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-componentPartitionChanged.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-containingReferenceUpdated.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-containingReferenceUpdated.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-contractHeaderRecognized.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-contractHeaderRecognized.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-cyclicMemberFinalized.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-cyclicMemberFinalized.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-deliverySnapshotEntry.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-deliverySnapshotEntry.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-documentUpdateDelivered.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-documentUpdateDelivered.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-embeddedEventDelivered.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-embeddedEventDelivered.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-embeddedPathEntryRead.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-embeddedPathEntryRead.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-embeddedPathSegmentValidated.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-embeddedPathSegmentValidated.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-handlerCall.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-handlerCall.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-handlerCandidateTested.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-handlerCandidateTested.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-internalEventDequeued.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-internalEventDequeued.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-internalEventEnqueued.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-internalEventEnqueued.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-lifecycleDelivered.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-lifecycleDelivered.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-managedDocumentOpened.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-managedDocumentOpened.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-managedOccurrenceBindingVerified.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-managedOccurrenceBindingVerified.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-patchAddOrReplace.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-patchAddOrReplace.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-patchBoundaryChecked.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-patchBoundaryChecked.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-patchRemove.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-patchRemove.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-pointerSegmentTraversed.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-pointerSegmentTraversed.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-processEmbeddedEdgeExamined.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-processEmbeddedEdgeExamined.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-processInvocation.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-processInvocation.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-processorMarkerWritten.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-processorMarkerWritten.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-rootEventRecorded.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-rootEventRecorded.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-scopeInitialization.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-scopeInitialization.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-scopeOpened.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-scopeOpened.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-tentativeComponentFinalization.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-tentativeComponentFinalization.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-terminationRequested.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-terminationRequested.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-triggeredEventDelivered.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/processor-triggeredEventDelivered.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-directIdentityHashBlock.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-directIdentityHashBlock.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-integerLimbOperation.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-integerLimbOperation.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-listFoldStepRecomputed.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-listFoldStepRecomputed.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-listItemRead.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-listItemRead.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-nodeIdentityEstablished.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-nodeIdentityEstablished.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-nodeManifestOpened.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-nodeManifestOpened.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-objectMemberRead.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-objectMemberRead.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-objectMemberRebuilt.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-objectMemberRebuilt.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-scalarComparison.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-scalarComparison.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-schemaPredicateEvaluated.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-schemaPredicateEvaluated.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-sortComparison.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-sortComparison.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-subtypeCandidateTested.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-subtypeCandidateTested.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-textBlockConstructed.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-textBlockConstructed.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-textBlockExamined.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-textBlockExamined.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-typeEdgeFollowed.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-typeEdgeFollowed.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-validationMemberExamined.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-validationMemberExamined.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-validationProofReused.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas-micro/semantic-validationProofReused.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-07.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-07.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-08.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/gas/c-gas-08.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/idx/c-idx-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/idx/c-idx-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/idx/c-idx-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/idx/c-idx-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/init/c-init-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/life/c-life-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/life/c-life-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/life/c-life-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/life/c-life-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/life/c-life-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/life/c-life-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/life/c-life-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/life/c-life-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/manifest.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/manifest.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/projection-catalog.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/projection-catalog.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/prot/c-prot-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/prot/c-prot-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/prot/c-prot-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/prot/c-prot-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-07.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/rep/c-rep-07.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-cyc-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-cyc-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-cyc-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-cyc-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-cyc-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-cyc-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-snd-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-snd-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-snd-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-snd-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-snd-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-snd-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-snd-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/snd/c-snd-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/vector-coverage.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/vector-coverage.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/gas-manifest.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/gas-manifest.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/identity-constructors.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/identity-constructors.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/ambiguous-preliminary-members.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/ambiguous-preliminary-members.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-01-static-cycle-admission.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-01-static-cycle-admission.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-02-dynamic-finite-cycle.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-02-dynamic-finite-cycle.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-03-exact-tentative-identity-visibility.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-03-exact-tentative-identity-visibility.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-04-default-policy-loop.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-04-default-policy-loop.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-04-same-event-gas-loop.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-04-same-event-gas-loop.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-05-direct-both-members.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-05-direct-both-members.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-06-duplicate-event-occurrences.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-06-duplicate-event-occurrences.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-07-self-cycle.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-07-self-cycle.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-08-cycle-during-initialization.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-08-cycle-during-initialization.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-09-merge-two-cycles.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-09-merge-two-cycles.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-10-split-to-singletons.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-10-split-to-singletons.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-11-split-into-two-cycles.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-11-split-into-two-cycles.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-12-frozen-edge-removal.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-12-frozen-edge-removal.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-14-invalid-cyclic-proof.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-14-invalid-cyclic-proof.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-16-limit-at-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-16-limit-at-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-17-limit-above-bound.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-17-limit-above-bound.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-18-locality-1000-unrelated.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-18-locality-1000-unrelated.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-19-public-event-boundary.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-19-public-event-boundary.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-20-late-outer-failure.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-20-late-outer-failure.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-21-admission-zero-direct.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-21-admission-zero-direct.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-23-05-a9-to-a10.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-23-05-a9-to-a10.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-24-occurrence-continuity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-24-occurrence-continuity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-25-policy-identity-binding.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-25-policy-identity-binding.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-26-embedded-local-cap.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-26-embedded-local-cap.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-27-multiple-scc-one-closure.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-27-multiple-scc-one-closure.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-28-containing-spine-identity-gas.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-28-containing-spine-identity-gas.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-28-mixed-result-shape.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-28-mixed-result-shape.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-29-active-edge-path-validation.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-29-active-edge-path-validation.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-30-language-cyclic-oracles.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-30-language-cyclic-oracles.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-33-checkpoint-domain-retirement.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-33-checkpoint-domain-retirement.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-34-separate-document-steps.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-34-separate-document-steps.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-35-00-remove-and-create-successor.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-35-00-remove-and-create-successor.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-35-01-readd-committed-successor.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-35-01-readd-committed-successor.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/finite-dynamic-a-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/finite-dynamic-a-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/infinite-loop-a-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/infinite-loop-a-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/initialization-cycle.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/initialization-cycle.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/limit-ring-128.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/limit-ring-128.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/limit-ring-129.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/limit-ring-129.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/manifest.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/manifest.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/merge-split-four.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/merge-split-four.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/remove-readd-a-b.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/remove-readd-a-b.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/static-and-self-cycle.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/static-and-self-cycle.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/Channel.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/Channel.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ChannelEventCheckpoint.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ChannelEventCheckpoint.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/CheckpointEntry.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/CheckpointEntry.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/Contract.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/Contract.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ContractExecutionResult.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ContractExecutionResult.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentProcessingInitiated.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentProcessingInitiated.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentProcessingTerminated.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentProcessingTerminated.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentUpdate.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentUpdate.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentUpdateChannel.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentUpdateChannel.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/EmbeddedEventDelivery.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/EmbeddedEventDelivery.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/EmbeddedNodeChannel.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/EmbeddedNodeChannel.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ExternalChannel.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ExternalChannel.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/FixtureEvent.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/FixtureEvent.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/Handler.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/Handler.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/JsonPatchEntry.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/JsonPatchEntry.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/LifecycleEventChannel.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/LifecycleEventChannel.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/Marker.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/Marker.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ProcessEmbedded.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ProcessEmbedded.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ProcessingInitializedMarker.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ProcessingInitializedMarker.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ProcessingTerminatedMarker.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ProcessingTerminatedMarker.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/RuntimeCounterEntry.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/RuntimeCounterEntry.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/RuntimeLedger.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/RuntimeLedger.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedExternalChannel.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedExternalChannel.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedHandler.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedHandler.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/TriggeredEventChannel.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/TriggeredEventChannel.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/TypeGeneralizationPolicy.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/TypeGeneralizationPolicy.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/TypeGeneralizationRule.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/TypeGeneralizationRule.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/manifest.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/manifest.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/HARNESS.md",

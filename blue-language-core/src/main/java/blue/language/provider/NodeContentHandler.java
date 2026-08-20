@@ -2,6 +2,8 @@ package blue.language.provider;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
+import blue.language.identity.CircularSetIdentityCalculator;
+import blue.language.identity.CyclicSetFinalization;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -12,12 +14,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -35,6 +34,10 @@ import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
  */
 public class NodeContentHandler {
 
+    private static final CircularSetIdentityCalculator
+            CIRCULAR_SET_IDENTITY_CALCULATOR =
+            new CircularSetIdentityCalculator();
+
     private static final Pattern THIS_REFERENCE_PATTERN =
             Pattern.compile(
                     "^" + BlueIds.THIS_PLACEHOLDER
@@ -42,11 +45,6 @@ public class NodeContentHandler {
                             + Pattern.quote(
                                     BlueIds.CYCLIC_MEMBER_SEPARATOR)
                             + "\\d+)?$");
-    private static final Pattern THIS_INDEX_REFERENCE_PATTERN =
-            Pattern.compile(
-                    "^" + BlueIds.THIS_MEMBER_PREFIX
-                            + "(\\d+)$");
-
     /**
      * Creates a compatibility facade over the static content helpers.
      */
@@ -141,15 +139,30 @@ public class NodeContentHandler {
      * @throws IllegalArgumentException when {@code nodes} is null or empty
      */
     public static ParsedContent parseAndCalculateBlueId(List<Node> nodes, Function<Node, Node> preprocessor) {
+        return parseAndCalculateBlueId(
+                nodes,
+                preprocessor,
+                CIRCULAR_SET_IDENTITY_CALCULATOR);
+    }
+
+    static ParsedContent parseAndCalculateBlueId(
+            List<Node> nodes,
+            Function<Node, Node> preprocessor,
+            CircularSetIdentityCalculator circularSetIdentityCalculator) {
         if (nodes == null || nodes.isEmpty()) {
             throw new IllegalArgumentException("List of nodes cannot be null or empty");
         }
+        Objects.requireNonNull(
+                circularSetIdentityCalculator,
+                "circularSetIdentityCalculator");
 
         List<Node> preprocessedNodes = nodes.stream()
                 .map(preprocessor)
                 .collect(Collectors.toList());
 
-        return calculateParsedContent(preprocessedNodes);
+        return calculateParsedContent(
+                preprocessedNodes,
+                circularSetIdentityCalculator);
     }
 
     private static ParsedContent calculateParsedContent(Node node) {
@@ -170,6 +183,14 @@ public class NodeContentHandler {
     }
 
     private static ParsedContent calculateParsedContent(List<Node> nodes) {
+        return calculateParsedContent(
+                nodes,
+                CIRCULAR_SET_IDENTITY_CALCULATOR);
+    }
+
+    private static ParsedContent calculateParsedContent(
+            List<Node> nodes,
+            CircularSetIdentityCalculator circularSetIdentityCalculator) {
         boolean isMultipleDocuments = nodes.size() > 1;
         List<ThisReference> references = findThisReferences(nodes);
         if (!isMultipleDocuments || references.isEmpty()) {
@@ -177,40 +198,13 @@ public class NodeContentHandler {
             return new ParsedContent(blueId, JSON_MAPPER.valueToTree(nodes), isMultipleDocuments);
         }
 
-        validateMultiDocumentReferences(references, nodes.size());
-
-        List<IndexedNode> indexedNodes = new ArrayList<>();
-        for (int i = 0; i < nodes.size(); i++) {
-            Node preliminary = nodes.get(i).clone();
-            rewriteThisReferences(
-                    preliminary,
-                    reference -> BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER);
-            indexedNodes.add(new IndexedNode(i, nodes.get(i),
-                    DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(preliminary)));
-        }
-
-        indexedNodes.sort(Comparator
-                .comparing((IndexedNode indexedNode) -> indexedNode.preliminaryBlueId)
-                .thenComparingInt(indexedNode -> indexedNode.originalIndex));
-
-        Map<Integer, Integer> originalIndexToSortedIndex = new HashMap<>();
-        for (int sortedIndex = 0; sortedIndex < indexedNodes.size(); sortedIndex++) {
-            originalIndexToSortedIndex.put(indexedNodes.get(sortedIndex).originalIndex, sortedIndex);
-        }
-
-        List<Node> sortedNodes = new ArrayList<>();
-        for (IndexedNode indexedNode : indexedNodes) {
-            Node rewritten = indexedNode.node.clone();
-            rewriteThisReferences(rewritten, reference -> {
-                int targetIndex = parseThisIndex(reference);
-                return BlueIds.indexedThisPlaceholder(
-                        originalIndexToSortedIndex.get(targetIndex));
-            });
-            sortedNodes.add(rewritten);
-        }
-
-        String blueId = DirectBlueIdCalculator.calculateBlueIdAllowingCyclicPlaceholders(sortedNodes);
-        return new ParsedContent(blueId, JSON_MAPPER.valueToTree(sortedNodes), true);
+        CyclicSetFinalization finalization =
+                circularSetIdentityCalculator.finalizeCyclicSet(nodes);
+        return new ParsedContent(
+                finalization.masterBlueId(),
+                JSON_MAPPER.valueToTree(
+                        finalization.canonicalMemberBodies()),
+                true);
     }
 
     /**
@@ -294,33 +288,6 @@ public class NodeContentHandler {
                                 + "<id>'");
             }
         }
-    }
-
-    private static void validateMultiDocumentReferences(List<ThisReference> references, int documentCount) {
-        for (ThisReference reference : references) {
-            Matcher matcher = THIS_INDEX_REFERENCE_PATTERN.matcher(reference.value);
-            if (!matcher.matches()) {
-                throw new IllegalArgumentException(
-                        "For multiple documents, 'this' references must "
-                                + "include an index (e.g., '"
-                                + BlueIds.indexedThisPlaceholder(0)
-                                + "')");
-            }
-            int targetIndex = Integer.parseInt(matcher.group(1));
-            if (targetIndex >= documentCount) {
-                throw new IllegalArgumentException(
-                        "'" + BlueIds.indexedThisPlaceholder(targetIndex)
-                                + "' points outside the cyclic document set.");
-            }
-        }
-    }
-
-    private static int parseThisIndex(String reference) {
-        Matcher matcher = THIS_INDEX_REFERENCE_PATTERN.matcher(reference);
-        if (!matcher.matches()) {
-            throw new IllegalArgumentException("Expected indexed this reference but found: " + reference);
-        }
-        return Integer.parseInt(matcher.group(1));
     }
 
     private static List<ThisReference> findThisReferences(List<Node> nodes) {
@@ -444,15 +411,4 @@ public class NodeContentHandler {
         }
     }
 
-    private static class IndexedNode {
-        private final int originalIndex;
-        private final Node node;
-        private final String preliminaryBlueId;
-
-        private IndexedNode(int originalIndex, Node node, String preliminaryBlueId) {
-            this.originalIndex = originalIndex;
-            this.node = node;
-            this.preliminaryBlueId = preliminaryBlueId;
-        }
-    }
 }

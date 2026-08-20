@@ -1,0 +1,18 @@
+name: Json Patch Entry
+description: One Blue Contracts 1.0 persistent mutation request. Only add, replace, and remove are supported. val is required for add/replace and absent for remove.
+op:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+    enum:
+    - add
+    - replace
+    - remove
+path:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    required: true
+val:
+  description: Patch value for add or replace.

@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Invocation-owned mutable state behind the deterministic processing phases.
@@ -37,6 +38,8 @@ final class ProcessorInvocationState {
     private final EvidenceDeliveryOrchestrator evidenceDeliveryOrchestrator;
     private final ProcessingResultCoordinator resultCoordinator;
     private final ExecutionLifecycleCoordinator lifecycleCoordinator;
+    private final ManagedDocumentStepContinuation
+            documentStepContinuationHook;
     private VerifiedExecutionEvidence executionEvidence;
 
     ProcessorInvocationState(DocumentProcessor owner, Node document) {
@@ -96,15 +99,71 @@ final class ProcessorInvocationState {
             Node document,
             Node processEventSource,
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory) {
+        this(owner,
+                document,
+                processEventSource,
+                processEventSnapshotFactory,
+                owner.newGasContext());
+    }
+
+    /**
+     * Creates one independently isolated document runtime inside a wider
+     * invocation while sharing only its semantic gas/admission context.
+     */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext) {
+        this(owner,
+                document,
+                processEventSource,
+                processEventSnapshotFactory,
+                sharedGasContext,
+                null);
+    }
+
+    /**
+     * Creates an isolated managed-document state with a closure-owned
+     * post-effect continuation boundary.
+     */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext,
+            ManagedDocumentStepContinuation documentStepContinuationHook) {
+        this(owner,
+                document,
+                processEventSource,
+                processEventSnapshotFactory,
+                sharedGasContext,
+                documentStepContinuationHook,
+                owner.snapshotManager());
+    }
+
+    /** Creates an isolated managed state with an invocation-local provider. */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            Node document,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext,
+            ManagedDocumentStepContinuation documentStepContinuationHook,
+            ProcessingSnapshotManager snapshotManager) {
         this.owner = owner;
+        this.documentStepContinuationHook =
+                documentStepContinuationHook;
         this.inputDocument = document.clone();
         this.inputSnapshot = null;
         this.runtime = new DocumentProcessingRuntime(document,
                 owner.conformanceEngine(),
                 owner.conformancePlannerOverride(),
-                owner.snapshotManager(),
+                snapshotManager,
                 owner.observer(),
-                owner.newGasMeter(),
+                sharedGasContext,
                 owner.registry()
                         .executableBodyFieldsByType(),
                 owner.strictPlatformInvocation());
@@ -125,7 +184,12 @@ final class ProcessorInvocationState {
         this.channelRunner = new ChannelRunner(
                 owner, this, runtime, checkpointTransaction);
         this.scopeExecutor = new ScopeExecutor(
-                owner, this, runtime, bundles, channelRunner);
+                owner,
+                this,
+                runtime,
+                bundles,
+                channelRunner,
+                documentStepContinuationHook);
         this.lifecycleCoordinator = new ExecutionLifecycleCoordinator(
                 this,
                 runtime,
@@ -190,7 +254,22 @@ final class ProcessorInvocationState {
             ResolvedSnapshot snapshot,
             Node processEventSource,
             ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory) {
+        this(owner,
+                snapshot,
+                processEventSource,
+                processEventSnapshotFactory,
+                owner.newGasContext());
+    }
+
+    /** Snapshot-backed variant sharing one wider invocation gas context. */
+    ProcessorInvocationState(
+            ProcessorInvocationServices owner,
+            ResolvedSnapshot snapshot,
+            Node processEventSource,
+            ProcessorEngine.ProcessEventSnapshotFactory processEventSnapshotFactory,
+            ProcessingGasContext sharedGasContext) {
         this.owner = owner;
+        this.documentStepContinuationHook = null;
         this.inputDocument = snapshot.canonicalRoot();
         this.inputSnapshot = snapshot;
         this.runtime = new DocumentProcessingRuntime(snapshot,
@@ -198,7 +277,7 @@ final class ProcessorInvocationState {
                 owner.conformancePlannerOverride(),
                 owner.snapshotManager(),
                 owner.observer(),
-                owner.newGasMeter(),
+                sharedGasContext,
                 owner.registry()
                         .executableBodyFieldsByType(),
                 owner.strictPlatformInvocation());
@@ -278,6 +357,11 @@ final class ProcessorInvocationState {
 
     void preflightScope(String scopePath) {
         scopeExecutor.preflightEvidenceScope(scopePath);
+    }
+
+    void executeIsolatedManagedRootWork(
+            ManagedDocumentStepRequest request) {
+        scopeExecutor.executeIsolatedManagedRootWork(request);
     }
 
     /** Applies deterministic processor-owned cleanup before final validation. */
@@ -406,7 +490,10 @@ final class ProcessorInvocationState {
                                             ContractBundle bundle,
                                             Node event,
                                             boolean allowReservedMutation) {
-        return createContext(scopePath, bundle, event, null, null, allowReservedMutation);
+        return createContext(
+                scopePath, bundle, event, event, null,
+                java.util.Collections.<ExactBlueValue>emptyList(),
+                null, null, allowReservedMutation);
     }
 
     ProcessorExecutionContext createContext(String scopePath,
@@ -420,6 +507,8 @@ final class ProcessorInvocationState {
                 bundle,
                 event,
                 event,
+                null,
+                java.util.Collections.<ExactBlueValue>emptyList(),
                 contractKey,
                 contractNode,
                 allowReservedMutation);
@@ -429,6 +518,8 @@ final class ProcessorInvocationState {
                                             ContractBundle bundle,
                                             Node event,
                                             Node occurrenceEvent,
+                                            FrozenNode exactEvent,
+                                            List<ExactBlueValue> carriedExactValues,
                                             String contractKey,
                                             FrozenNode contractNode,
                                             boolean allowReservedMutation) {
@@ -436,6 +527,8 @@ final class ProcessorInvocationState {
                 contractKey, contractNode,
                 cloneEvent(event),
                 cloneEvent(occurrenceEvent),
+                exactEvent,
+                carriedExactValues,
                 allowReservedMutation);
     }
 
@@ -590,6 +683,25 @@ final class ProcessorInvocationState {
                 reason);
     }
 
+    void handleTerminationRequest(
+            String scopePath,
+            ContractBundle bundle,
+            String cause,
+            String reason) {
+        if (documentStepContinuationHook != null) {
+            documentStepContinuationHook.onTerminationRequested(
+                    normalizeScope(scopePath),
+                    cause,
+                    reason);
+            return;
+        }
+        enterGracefulTermination(
+                scopePath,
+                bundle,
+                cause,
+                reason);
+    }
+
     void abortRuntimeFailure(
             String scopePath,
             ContractBundle bundle,
@@ -673,6 +785,14 @@ final class ProcessorInvocationState {
             String contractKey,
             Node event,
             String eventBlueId) {
+        if (documentStepContinuationHook != null) {
+            documentStepContinuationHook.onApplicationEvent(
+                    normalizeScope(scopePath),
+                    contractKey,
+                    event.clone(),
+                    eventBlueId);
+            return;
+        }
         lifecycleCoordinator.enqueueApplicationEvent(
                 scopePath,
                 contractKey,

@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 
 /**
  * Shared live-bounded named gas ledger for one processing invocation.
@@ -23,7 +24,14 @@ public final class GasMeter {
     private final List<GasTraceEntry> trace = new ArrayList<>();
     private final SemanticGasMeter semantic;
     private final ProcessorGasCharges processorCharges;
+    private Map<String, Long> localGasLimits = Collections.emptyMap();
+    private final Map<String, Long> admittedLocalGas =
+            new LinkedHashMap<>();
+    private final Map<String, Long> reservedLocalGas =
+            new LinkedHashMap<>();
+    private boolean localGasLimitsConfigured;
     private long totalGas;
+    private GasChargeContext defaultAttribution = GasChargeContext.empty();
     /*
      * Runtime work sessions stage their ordered child traces until the
      * processor decides whether the execution unit completed, failed
@@ -123,6 +131,52 @@ public final class GasMeter {
         return Collections.unmodifiableList(new ArrayList<>(trace));
     }
 
+    void configureLocalGasLimits(Map<String, Long> limitsByDocumentId) {
+        Objects.requireNonNull(limitsByDocumentId, "limitsByDocumentId");
+        if (localGasLimitsConfigured) {
+            throw new IllegalStateException(
+                    "Document-local gas limits were already configured");
+        }
+        if (totalGas != 0L || reservedRuntimeGas != 0L || !trace.isEmpty()) {
+            throw new IllegalStateException(
+                    "Document-local gas limits must be configured before gas work");
+        }
+        TreeMap<String, Long> sorted = new TreeMap<>();
+        for (Map.Entry<String, Long> entry : limitsByDocumentId.entrySet()) {
+            String documentId = Objects.requireNonNull(
+                    entry.getKey(), "local gas documentId");
+            Long boxedLimit = Objects.requireNonNull(
+                    entry.getValue(), "local gas limit");
+            long localLimit = boxedLimit.longValue();
+            if (documentId.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Local gas documentId must not be empty");
+            }
+            if (localLimit < 0L || localLimit > gasLimit) {
+                throw new IllegalArgumentException(
+                        "Document-local gas limit must be between 0 and the "
+                                + "shared gas limit " + gasLimit);
+            }
+            sorted.put(documentId, Long.valueOf(localLimit));
+        }
+        localGasLimits = Collections.unmodifiableMap(
+                new LinkedHashMap<>(sorted));
+        localGasLimitsConfigured = true;
+    }
+
+    AttributionScope withAttribution(GasChargeContext attribution) {
+        GasChargeContext previous = defaultAttribution;
+        defaultAttribution = Objects.requireNonNull(
+                attribution, "attribution")
+                .withAttributionDefaults(previous);
+        return new AttributionScope(this, previous);
+    }
+
+    GasChargeContext resolveAttribution(GasChargeContext context) {
+        return (context != null ? context : GasChargeContext.empty())
+                .withAttributionDefaults(defaultAttribution);
+    }
+
     /**
      * Charges a named counter without semantic attribution.
      *
@@ -205,7 +259,7 @@ public final class GasMeter {
                         Objects.requireNonNull(ownerToken, "ownerToken"));
         for (ChildGasLedger.Entry entry : entries) {
             long subtotal = multiplyExact(entry.quantity, entry.weight);
-            releaseRuntimeReservation(subtotal);
+            releaseRuntimeReservation(subtotal, entry.context);
             chargeWeighted(child.namespace(),
                     entry.counter,
                     entry.quantity,
@@ -216,9 +270,28 @@ public final class GasMeter {
 
     void discardReserved(ChildGasLedger child, Object ownerToken) {
         Objects.requireNonNull(child, "child");
-        long released = child.takeForDiscard(
+        List<ChildGasLedger.Entry> entries = child.takeForDiscard(
                 Objects.requireNonNull(ownerToken, "ownerToken"));
-        releaseRuntimeReservation(released);
+        for (ChildGasLedger.Entry entry : entries) {
+            releaseRuntimeReservation(
+                    multiplyExact(entry.quantity, entry.weight),
+                    entry.context);
+        }
+    }
+
+    void ensureRuntimeGasAdmissible(String namespace,
+                                    String counter,
+                                    long quantity,
+                                    long weight,
+                                    long subtotal,
+                                    GasChargeContext context) {
+        rejectIfCapExceeded(
+                namespace,
+                counter,
+                quantity,
+                weight,
+                subtotal,
+                resolveAttribution(context));
     }
 
     void reserveRuntimeGas(String namespace,
@@ -226,26 +299,71 @@ public final class GasMeter {
                            long quantity,
                            long weight,
                            long subtotal,
-                           long admittedGas,
-                           long effectiveBudget) {
-        if (subtotal > remainingGas()) {
-            throw new GasLimitExceededException(
-                    namespace,
-                    counter,
-                    quantity,
-                    weight,
-                    admittedGas,
-                    effectiveBudget);
-        }
+                           GasChargeContext context) {
+        GasChargeContext exactContext = resolveAttribution(context);
+        rejectIfCapExceeded(
+                namespace,
+                counter,
+                quantity,
+                weight,
+                subtotal,
+                exactContext);
         reservedRuntimeGas += subtotal;
+        addLocalGas(reservedLocalGas, exactContext, subtotal);
     }
 
-    private void releaseRuntimeReservation(long subtotal) {
+    private void releaseRuntimeReservation(long subtotal,
+                                           GasChargeContext context) {
         if (subtotal < 0L || subtotal > reservedRuntimeGas) {
             throw new IllegalStateException(
                     "Runtime gas reservation accounting mismatch");
         }
         reservedRuntimeGas -= subtotal;
+        removeLocalGas(reservedLocalGas, context, subtotal);
+    }
+
+    boolean matchesCurrentCapRejection(
+            GasLimitExceededException rejection) {
+        Objects.requireNonNull(rejection, "rejection");
+        if (rejection.applicableCapKind()
+                == GasLimitExceededException.ApplicableCapKind.SHARED) {
+            long admitted = totalGas + reservedRuntimeGas;
+            return rejection.localDocumentId() == null
+                    && rejection.effectiveBudget() == gasLimit
+                    && rejection.admittedGas() == admitted
+                    && rejection.remainingBeforeCharge()
+                    == gasLimit - admitted;
+        }
+        String documentId = rejection.localDocumentId();
+        Long limit = localGasLimits.get(documentId);
+        if (limit == null) {
+            return false;
+        }
+        long admitted = localGas(admittedLocalGas, documentId)
+                + localGas(reservedLocalGas, documentId);
+        return rejection.effectiveBudget() == limit.longValue()
+                && rejection.admittedGas() == admitted
+                && rejection.remainingBeforeCharge()
+                == limit.longValue() - admitted;
+    }
+
+    GasMeter diagnosticTwin(long sharedBudget) {
+        GasMeter twin = new GasMeter(schedule, sharedBudget);
+        if (localGasLimitsConfigured) {
+            Map<String, Long> remainingLocalLimits = new LinkedHashMap<>();
+            for (Map.Entry<String, Long> entry : localGasLimits.entrySet()) {
+                String documentId = entry.getKey();
+                long admitted = localGas(admittedLocalGas, documentId)
+                        + localGas(reservedLocalGas, documentId);
+                long remaining = entry.getValue().longValue() - admitted;
+                remainingLocalLimits.put(
+                        documentId,
+                        Long.valueOf(Math.min(remaining, sharedBudget)));
+            }
+            twin.configureLocalGasLimits(remainingLocalLimits);
+        }
+        twin.defaultAttribution = defaultAttribution;
+        return twin;
     }
 
     void chargeProcessInvocation() {
@@ -362,8 +480,16 @@ public final class GasMeter {
         processorCharges.checkpointCompared();
     }
 
+    void chargeCheckpointCompared(GasChargeContext context) {
+        processorCharges.checkpointCompared(context);
+    }
+
     void chargeCheckpointUpdate() {
         processorCharges.checkpointUpdate();
+    }
+
+    void chargeCheckpointUpdate(GasChargeContext context) {
+        processorCharges.checkpointUpdate(context);
     }
 
     void chargeProcessorMarkerWritten(String reason) {
@@ -404,23 +530,181 @@ public final class GasMeter {
             return;
         }
         long subtotal = multiplyExact(quantity, weight);
-        if (subtotal > remainingGas()) {
-            throw new GasLimitExceededException(
-                    namespace,
-                    counter,
-                    quantity,
-                    weight,
-                    totalGas + reservedRuntimeGas,
-                    gasLimit);
-        }
+        GasChargeContext exactContext = resolveAttribution(context);
+        rejectIfCapExceeded(
+                namespace,
+                counter,
+                quantity,
+                weight,
+                subtotal,
+                exactContext);
         trace.add(new GasTraceEntry(trace.size(),
                 namespace,
                 counter,
                 quantity,
                 weight,
                 subtotal,
-                context));
+                exactContext));
         totalGas += subtotal;
+        addLocalGas(admittedLocalGas, exactContext, subtotal);
+    }
+
+    private void rejectIfCapExceeded(String namespace,
+                                     String counter,
+                                     long quantity,
+                                     long weight,
+                                     long subtotal,
+                                     GasChargeContext context) {
+        long sharedRemaining = remainingGas();
+        LocalAllowance local = localAllowance(context);
+        long localRemaining = local != null
+                ? local.remaining
+                : Long.MAX_VALUE;
+        if (subtotal <= sharedRemaining && subtotal <= localRemaining) {
+            return;
+        }
+        if (local != null && localRemaining < sharedRemaining) {
+            throw new GasLimitExceededException(
+                    namespace,
+                    counter,
+                    quantity,
+                    weight,
+                    local.admitted,
+                    local.limit,
+                    GasLimitExceededException.ApplicableCapKind.LOCAL,
+                    local.documentId,
+                    localRemaining,
+                    context);
+        }
+        long sharedAdmitted = totalGas + reservedRuntimeGas;
+        throw new GasLimitExceededException(
+                namespace,
+                counter,
+                quantity,
+                weight,
+                sharedAdmitted,
+                gasLimit,
+                GasLimitExceededException.ApplicableCapKind.SHARED,
+                null,
+                sharedRemaining,
+                context);
+    }
+
+    private LocalAllowance localAllowance(GasChargeContext context) {
+        String documentId = context != null ? context.documentId() : null;
+        if (documentId == null) {
+            return null;
+        }
+        Long limit = localGasLimits.get(documentId);
+        if (limit == null) {
+            return null;
+        }
+        long admitted = localGas(admittedLocalGas, documentId)
+                + localGas(reservedLocalGas, documentId);
+        return new LocalAllowance(
+                documentId,
+                limit.longValue(),
+                admitted,
+                limit.longValue() - admitted);
+    }
+
+    private void addLocalGas(Map<String, Long> gasByDocument,
+                             GasChargeContext context,
+                             long subtotal) {
+        LocalAllowance local = localAllowanceWithoutReservations(
+                context, gasByDocument);
+        if (local == null) {
+            return;
+        }
+        gasByDocument.put(
+                local.documentId,
+                Long.valueOf(local.admitted + subtotal));
+    }
+
+    private void removeLocalGas(Map<String, Long> gasByDocument,
+                                GasChargeContext context,
+                                long subtotal) {
+        String documentId = context != null ? context.documentId() : null;
+        if (documentId == null || !localGasLimits.containsKey(documentId)) {
+            return;
+        }
+        long current = localGas(gasByDocument, documentId);
+        if (subtotal < 0L || subtotal > current) {
+            throw new IllegalStateException(
+                    "Document-local runtime gas reservation mismatch");
+        }
+        long updated = current - subtotal;
+        if (updated == 0L) {
+            gasByDocument.remove(documentId);
+        } else {
+            gasByDocument.put(documentId, Long.valueOf(updated));
+        }
+    }
+
+    private LocalAllowance localAllowanceWithoutReservations(
+            GasChargeContext context,
+            Map<String, Long> gasByDocument) {
+        String documentId = context != null ? context.documentId() : null;
+        if (documentId == null) {
+            return null;
+        }
+        Long limit = localGasLimits.get(documentId);
+        if (limit == null) {
+            return null;
+        }
+        long admitted = localGas(gasByDocument, documentId);
+        return new LocalAllowance(
+                documentId,
+                limit.longValue(),
+                admitted,
+                limit.longValue() - admitted);
+    }
+
+    private static long localGas(Map<String, Long> gasByDocument,
+                                 String documentId) {
+        Long value = gasByDocument.get(documentId);
+        return value != null ? value.longValue() : 0L;
+    }
+
+    private static final class LocalAllowance {
+        private final String documentId;
+        private final long limit;
+        private final long admitted;
+        private final long remaining;
+
+        private LocalAllowance(String documentId,
+                               long limit,
+                               long admitted,
+                               long remaining) {
+            this.documentId = documentId;
+            this.limit = limit;
+            this.admitted = admitted;
+            this.remaining = remaining;
+        }
+    }
+
+    /** Lexically scoped default attribution for one closure work frame. */
+    static final class AttributionScope implements AutoCloseable {
+        private final GasMeter meter;
+        private final GasChargeContext previous;
+        private boolean closed;
+
+        private AttributionScope(
+                GasMeter meter,
+                GasChargeContext previous) {
+            this.meter = meter;
+            this.previous = previous;
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                throw new IllegalStateException(
+                        "Gas attribution scope was already closed");
+            }
+            closed = true;
+            meter.defaultAttribution = previous;
+        }
     }
 
     private static long multiplyExact(long left, long right) {
@@ -565,6 +849,12 @@ public final class GasMeter {
             if (quantity == 0L) {
                 return;
             }
+            GasChargeContext exactContext =
+                    context != null ? context : GasChargeContext.empty();
+            if (admissionController != null) {
+                exactContext = admissionController.resolveAttribution(
+                        this, exactContext);
+            }
             long subtotal = multiplyExact(quantity, weight);
             if (admissionController != null) {
                 try {
@@ -573,7 +863,8 @@ public final class GasMeter {
                             counter,
                             quantity,
                             weight,
-                            subtotal);
+                            subtotal,
+                            exactContext);
                 } catch (GasLimitExceededException rejection) {
                     admissionController.rejected(
                             this, rejection);
@@ -583,7 +874,13 @@ public final class GasMeter {
             if (subtotal > gasLimit - totalGas) {
                 GasLimitExceededException rejection =
                         new GasLimitExceededException(
-                        namespace, counter, quantity, weight, totalGas, gasLimit);
+                        namespace,
+                        counter,
+                        quantity,
+                        weight,
+                        totalGas,
+                        gasLimit,
+                        exactContext);
                 if (admissionController != null) {
                     admissionController.rejected(
                             this, rejection);
@@ -597,7 +894,8 @@ public final class GasMeter {
                             counter,
                             quantity,
                             weight,
-                            subtotal);
+                            subtotal,
+                            exactContext);
                 } catch (GasLimitExceededException rejection) {
                     admissionController.rejected(
                             this, rejection);
@@ -605,7 +903,7 @@ public final class GasMeter {
                 }
             }
             entries.add(new Entry(counter, quantity, weight,
-                    context != null ? context : GasChargeContext.empty()));
+                    exactContext));
             totalGas += subtotal;
         }
 
@@ -616,11 +914,11 @@ public final class GasMeter {
             return new ArrayList<>(entries);
         }
 
-        private long takeForDiscard(Object requesterToken) {
+        private List<Entry> takeForDiscard(Object requesterToken) {
             ensureUnmerged();
             requireOwner(requesterToken);
             merged = true;
-            return totalGas;
+            return new ArrayList<>(entries);
         }
 
         List<GasTraceEntry> snapshotTrace(
@@ -691,6 +989,10 @@ public final class GasMeter {
         /** Verifies that the child ledger may still accept a charge. */
         void ensureChargeable(ChildGasLedger ledger);
 
+        /** Resolves the exact closure attribution at runtime charge time. */
+        GasChargeContext resolveAttribution(ChildGasLedger ledger,
+                                            GasChargeContext context);
+
         /**
          * Verifies invocation-local limits before the child performs its own
          * admission check.
@@ -699,14 +1001,16 @@ public final class GasMeter {
                                      String counter,
                                      long quantity,
                                      long weight,
-                                     long subtotal);
+                                     long subtotal,
+                                     GasChargeContext context);
 
         /** Admits a charge before the child ledger mutates its local trace. */
         void beforeCharge(ChildGasLedger ledger,
                           String counter,
                           long quantity,
                           long weight,
-                          long subtotal);
+                          long subtotal,
+                          GasChargeContext context);
 
         /** Records a deterministic charge rejection for runtime-work lifecycle handling. */
         void rejected(ChildGasLedger ledger,

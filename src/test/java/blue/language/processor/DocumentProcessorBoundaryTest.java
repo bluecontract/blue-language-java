@@ -32,6 +32,39 @@ import static org.junit.jupiter.api.Assertions.*;
 class DocumentProcessorBoundaryTest {
 
     @Test
+    void shouldRejectConfigurationMutationFromCapturedCallbackWithoutDeadlocking()
+            throws Exception {
+        // given
+        DocumentProcessor processor = mutableProcessor(
+                new ContractProcessorRegistry(),
+                new TypeClassResolver());
+        ExecutorService executor = daemonExecutor(1);
+
+        // when
+        IllegalStateException failure;
+        try {
+            Future<IllegalStateException> result = executor.submit(() ->
+                    captureFailure(() -> processor.withCapturedConfiguration(
+                            () -> {
+                                processor.registerContractProcessor(
+                                        "captured-callback-write",
+                                        new SetPropertyContractProcessor());
+                                return null;
+                            })));
+            failure = getWithoutDeadlock(result);
+        } finally {
+            executor.shutdownNow();
+            processor.close();
+        }
+
+        // then
+        assertEquals(IllegalStateException.class, failure.getClass());
+        assertEquals(
+                "Document processor configuration cannot change during active processing",
+                failure.getMessage());
+    }
+
+    @Test
     void shouldKeepProcessorRegistryViewLiveAndUnmodifiableAcrossRegistration() {
         // given
         ContractProcessorRegistry registry = new ContractProcessorRegistry();

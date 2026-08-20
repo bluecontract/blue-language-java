@@ -128,8 +128,16 @@ final class ProcessGasMeter {
         ledger.chargeCheckpointUpdate();
     }
 
+    void checkpointUpdate(GasChargeContext context) {
+        ledger.chargeCheckpointUpdate(context);
+    }
+
     void checkpointCompared() {
         ledger.chargeCheckpointCompared();
+    }
+
+    void checkpointCompared(GasChargeContext context) {
+        ledger.chargeCheckpointCompared(context);
     }
 
     void processorMarker(String reason) {

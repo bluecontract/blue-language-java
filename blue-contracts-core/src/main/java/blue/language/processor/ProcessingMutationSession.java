@@ -8,6 +8,7 @@ import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.wire.ParsedJsonPointer;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -48,20 +49,36 @@ final class ProcessingMutationSession {
 
     void writeProcessorState(String path, Node value) {
         validateMutationPathWithoutResolution(path);
+        String normalizedPath = PointerUtils.normalizePointer(path);
+        JsonPatch processorPatch = value == null
+                ? JsonPatch.remove(normalizedPath)
+                : JsonPatch.replace(normalizedPath, value);
+        PatchInput input = PatchInput.mutable(processorPatch);
+        MutationProjection projection =
+                preflightProcessorWrite(input);
         gasCharger.charge(
-                PointerUtils.normalizePointer(path),
+                normalizedPath,
                 value == null ? JsonPatch.Op.REMOVE : JsonPatch.Op.REPLACE,
                 value,
                 null,
-                false);
+                false,
+                projection.priorCanonicalRoot,
+                projection.resultingCanonicalRoot);
         if (runtime.usesAuthoritativeSelectedSnapshot()) {
-            commit.publishSelected(path, value);
-            runtime.changedPaths.add(PointerUtils.normalizePointer(path));
+            if (projection.materializedSelectedRoot != null) {
+                commit.publishSelected(
+                        path,
+                        value,
+                        projection.materializedSelectedRoot);
+            } else {
+                commit.publishSelected(path, value);
+            }
+            runtime.changedPaths.add(normalizedPath);
             return;
         }
         if (runtime.snapshotManager != null && runtime.snapshot != null) {
             commit.publishSnapshot(path, value);
-            runtime.changedPaths.add(PointerUtils.normalizePointer(path));
+            runtime.changedPaths.add(normalizedPath);
             return;
         }
         runtime.snapshotTransactionComponent()
@@ -162,7 +179,11 @@ final class ProcessingMutationSession {
     }
 
     void chargeSemanticIdentityWork(List<PatchInput> patches) {
-        gasCharger.charge(patches);
+        gasCharger.charge(
+                patches,
+                preflightCanonicalRoots(
+                        patches,
+                        !runtime.selectedDocumentBacked));
     }
 
     void validateMutationPathWithoutResolution(PatchInput patch) {
@@ -221,10 +242,11 @@ final class ProcessingMutationSession {
                     1L);
         }
         try {
-            preflightPatchInputsWithoutResolution(patches);
+            List<FrozenNode> projectedCanonicalRoots =
+                    preflightPatchInputsWithoutResolution(patches);
             PatchPlanningContext planning =
                     runtime.planningContext(runtime.materializedView.root());
-            chargeSemanticIdentityWork(patches);
+            gasCharger.charge(patches, projectedCanonicalRoots);
             BatchPatchTransaction transaction =
                     BatchPatchTransaction.fromInputs(
                             originScopePath,
@@ -247,15 +269,36 @@ final class ProcessingMutationSession {
         }
     }
 
-    private void preflightPatchInputsWithoutResolution(
+    private List<FrozenNode> preflightPatchInputsWithoutResolution(
             List<PatchInput> patches) {
         FrozenNode workingCanonical =
                 runtime.canonicalRootWithoutResolution();
         FrozenNode workingResolved =
                 runtime.resolvedRootWithoutResolution();
+        FrozenNode workingIdentityCanonical = null;
+        boolean canProjectStrictIdentity = false;
+        try {
+            workingIdentityCanonical =
+                    runtime.identityChargeCanonicalRoot();
+            canProjectStrictIdentity =
+                    !workingIdentityCanonical.containsCyclicSetReference();
+        } catch (IllegalArgumentException unsupportedIdentityProjection) {
+            /*
+             * Intrinsic/preprocessing-only shapes are rejected later by the
+             * normal mutation boundary with its precise processor category.
+             * Gas projection must not replace that failure with a generic
+             * strict-freeze diagnostic.
+             */
+        }
         boolean exactReplacement = !runtime.selectedDocumentBacked;
+        List<FrozenNode> projectedCanonicalRoots =
+                new ArrayList<FrozenNode>(patches.size());
         for (PatchInput input : patches) {
             if (input == null) {
+                projectedCanonicalRoots.add(
+                        canProjectStrictIdentity
+                                ? workingIdentityCanonical
+                                : workingCanonical);
                 continue;
             }
             ImmutablePatchPlanner canonicalPlanner =
@@ -281,6 +324,161 @@ final class ProcessingMutationSession {
                     path,
                     preflightValue(input, workingResolved),
                     exactReplacement);
+            if (canProjectStrictIdentity) {
+                ImmutablePatchPlanner identityPlanner =
+                        ImmutablePatchPlanner.forFrozen(
+                                workingIdentityCanonical);
+                workingIdentityCanonical = identityPlanner.applyMutationPreflight(
+                        input.op(),
+                        path,
+                        preflightValue(input, workingIdentityCanonical),
+                        exactReplacement);
+                projectedCanonicalRoots.add(workingIdentityCanonical);
+            } else {
+                projectedCanonicalRoots.add(workingCanonical);
+            }
+        }
+        return Collections.unmodifiableList(projectedCanonicalRoots);
+    }
+
+    private List<FrozenNode> preflightCanonicalRoots(
+            List<PatchInput> patches,
+            boolean exactReplacement) {
+        FrozenNode workingCanonical =
+                runtime.identityChargeCanonicalRoot();
+        List<FrozenNode> projectedCanonicalRoots =
+                new ArrayList<FrozenNode>(patches.size());
+        for (PatchInput input : patches) {
+            if (input == null) {
+                projectedCanonicalRoots.add(workingCanonical);
+                continue;
+            }
+            ImmutablePatchPlanner planner =
+                    ImmutablePatchPlanner.forFrozen(workingCanonical);
+            ParsedJsonPointer path =
+                    ParsedJsonPointer.parse(input.authoredPath());
+            workingCanonical = planner.applyMutationPreflight(
+                    input.op(),
+                    path,
+                    preflightValue(input, workingCanonical),
+                    exactReplacement);
+            projectedCanonicalRoots.add(workingCanonical);
+        }
+        return Collections.unmodifiableList(projectedCanonicalRoots);
+    }
+
+    private MutationProjection preflightProcessorWrite(PatchInput input) {
+        ParsedJsonPointer path =
+                ParsedJsonPointer.parse(input.authoredPath());
+        FrozenNode strictCanonical =
+                strictIdentityChargeCanonicalRootOrNull();
+        if (strictCanonical != null) {
+            FrozenNode strictValue =
+                    preflightValue(input, strictCanonical);
+            try {
+                FrozenNode strictResult = ImmutablePatchPlanner
+                        .forFrozen(strictCanonical)
+                        .applyMutationPreflight(
+                                input.op(),
+                                path,
+                                strictValue,
+                                true);
+                return new MutationProjection(
+                        strictCanonical,
+                        strictResult,
+                        null);
+            } catch (IllegalArgumentException unsupportedStrictProjection) {
+                if (!hasReferenceOnlyAncestor(strictCanonical, path)) {
+                    throw unsupportedStrictProjection;
+                }
+            }
+        }
+        if (runtime.usesAuthoritativeSelectedSnapshot()) {
+            Node materializedSelectedRoot =
+                    commit.materializedSelectedRoot(path.pointer());
+            FrozenNode materializedCanonical =
+                    FrozenNode.fromNode(materializedSelectedRoot);
+            FrozenNode materializedResult = ImmutablePatchPlanner
+                    .forFrozen(materializedCanonical)
+                    .applyMutationPreflight(
+                            input.op(),
+                            path,
+                            preflightValue(input, materializedCanonical),
+                            true);
+            return new MutationProjection(
+                    materializedCanonical,
+                    materializedResult,
+                    materializedSelectedRoot);
+        }
+        FrozenNode resolvedCanonical =
+                runtime.resolvedRootWithoutResolution();
+        FrozenNode resolvedResult = ImmutablePatchPlanner
+                .forFrozen(resolvedCanonical)
+                .applyMutationPreflight(
+                        input.op(),
+                        path,
+                        preflightValue(input, resolvedCanonical),
+                        true);
+        return new MutationProjection(
+                resolvedCanonical,
+                resolvedResult,
+                null);
+    }
+
+    private FrozenNode strictIdentityChargeCanonicalRootOrNull() {
+        try {
+            FrozenNode strictIdentityCanonical =
+                    runtime.identityChargeCanonicalRoot();
+            return strictIdentityCanonical.containsCyclicSetReference()
+                    ? null
+                    : strictIdentityCanonical;
+        } catch (IllegalArgumentException unsupportedIdentityProjection) {
+            /*
+             * Intrinsic/preprocessing-only shapes are rejected later by the
+             * normal mutation boundary with its precise processor category.
+             * Gas projection must not replace that failure with a generic
+             * strict-freeze diagnostic.
+             */
+            return null;
+        }
+    }
+
+    private boolean hasReferenceOnlyAncestor(
+            FrozenNode root,
+            ParsedJsonPointer path) {
+        if (path.isRoot()) {
+            return false;
+        }
+        if (root.isReferenceOnly()) {
+            return true;
+        }
+        List<String> segments = path.segments();
+        for (int count = 1; count < segments.size(); count++) {
+            FrozenNode ancestor = root.at(
+                    JsonPointer.toPointer(
+                            segments.subList(0, count)));
+            if (ancestor == null) {
+                return false;
+            }
+            if (ancestor.isReferenceOnly()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final class MutationProjection {
+        private final FrozenNode priorCanonicalRoot;
+        private final FrozenNode resultingCanonicalRoot;
+        private final Node materializedSelectedRoot;
+
+        private MutationProjection(
+                FrozenNode priorCanonicalRoot,
+                FrozenNode resultingCanonicalRoot,
+                Node materializedSelectedRoot) {
+            this.priorCanonicalRoot = priorCanonicalRoot;
+            this.resultingCanonicalRoot = resultingCanonicalRoot;
+            this.materializedSelectedRoot = materializedSelectedRoot;
         }
     }
 

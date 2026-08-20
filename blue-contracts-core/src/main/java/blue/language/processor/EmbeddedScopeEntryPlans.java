@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.snapshot.FrozenNode;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -49,6 +50,52 @@ final class EmbeddedScopeEntryPlans {
                     declaration.explicitPaths(),
                     declaration.collectionPaths(),
                     runtime.gasMeter());
+            context.freezeEntryEmbeddedScopePlan(plan);
+        }
+        return bundle.withEmbeddedScopePlan(plan);
+    }
+
+    /**
+     * Attaches a declaration-complete plan for an independently executed
+     * managed Root while keeping every selected managed child opaque.
+     */
+    static ContractBundle attachManagedRoot(
+            DocumentProcessingRuntime runtime,
+            String scopePath,
+            FrozenNode effectiveScope,
+            ContractBundle bundle,
+            Map<String, String> expectedManagedBlueIdsByPath) {
+        Objects.requireNonNull(runtime, "runtime");
+        Objects.requireNonNull(bundle, "bundle");
+        Objects.requireNonNull(
+                expectedManagedBlueIdsByPath,
+                "expectedManagedBlueIdsByPath");
+        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        ScopeRuntimeContext context = runtime.scope(normalizedScope);
+        EmbeddedScopePlan plan;
+        if (context.hasEntryEmbeddedScopePlan()) {
+            plan = context.entryEmbeddedScopePlan();
+        } else if (!bundle.hasProcessEmbedded()) {
+            if (!expectedManagedBlueIdsByPath.isEmpty()) {
+                throw new InvalidExecutionEvidenceException(
+                        "Managed occurrences are not covered by an effective "
+                                + "Process Embedded declaration",
+                        ProcessorErrorCategory.SubscriptionSurfaceInvalid);
+            }
+            context.freezeEntryEmbeddedScopePlan(null);
+            plan = null;
+        } else {
+            EmbeddedScopeDeclaration declaration =
+                    bundle.embeddedScopeDeclaration();
+            plan = new EmbeddedScopePlanner()
+                    .planForOpaqueManagedRoot(
+                            Objects.requireNonNull(
+                                    effectiveScope, "effectiveScope"),
+                            normalizedScope,
+                            declaration.explicitPaths(),
+                            declaration.collectionPaths(),
+                            expectedManagedBlueIdsByPath,
+                            runtime.gasMeter());
             context.freezeEntryEmbeddedScopePlan(plan);
         }
         return bundle.withEmbeddedScopePlan(plan);

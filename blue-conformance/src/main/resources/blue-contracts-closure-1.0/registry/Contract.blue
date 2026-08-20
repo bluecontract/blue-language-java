@@ -1,0 +1,6 @@
+name: Contract
+description: Base Blue Contracts and Processor 1.0 declaration under an effective contracts map. A Contract is identity-bearing Blue content. The processor recognizes every effective Contract type in the selected participating closure before mutation, but expands executable bodies only after selection.
+order:
+  type:
+    blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+  description: Optional deterministic order. Missing is zero.

@@ -2,10 +2,9 @@ package blue.language.identity;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
-import blue.language.identity.BlueIds;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,9 +17,10 @@ import java.util.regex.Pattern;
  * Calculates stable member BlueIds for a closed set of mutually referencing
  * documents.
  *
- * <p>Members are ordered by their placeholder-based preliminary identity,
- * making the master fold independent of caller order. A member is never
- * hashed independently as final cyclic evidence.</p>
+ * <p>Members are ordered by their placeholder-based preliminary identity and,
+ * when that digest collides, by the unsigned RFC 8785 bytes of the normalized
+ * preliminary input. This makes the master fold independent of caller order.
+ * A member is never hashed independently as final cyclic evidence.</p>
  */
 public final class CircularSetIdentityCalculator {
 
@@ -40,6 +40,19 @@ public final class CircularSetIdentityCalculator {
         return SHARED.circularBlueIds(documents);
     }
 
+    /**
+     * Calculates complete cyclic-set finalization evidence.
+     *
+     * @param documents non-empty closed cyclic document set
+     * @return immutable canonical finalization result
+     * @throws IllegalArgumentException if the set or its internal references
+     *         are not valid cyclic identity input
+     */
+    public static CyclicSetFinalization calculateCircularSetFinalization(
+            List<Node> documents) {
+        return SHARED.finalizeCyclicSet(documents);
+    }
+
     private static final Pattern THIS_REFERENCE_PATTERN = Pattern.compile(
             "^" + BlueIds.THIS_PLACEHOLDER
                     + "("
@@ -49,6 +62,7 @@ public final class CircularSetIdentityCalculator {
             "^" + BlueIds.THIS_MEMBER_PREFIX + "(\\d+)$");
 
     private final DirectBlueIdCalculator directCalculator;
+    private final BlueIdInputNormalizer inputNormalizer;
 
     /** Creates a calculator using the normative direct identity path. */
     public CircularSetIdentityCalculator() {
@@ -66,6 +80,7 @@ public final class CircularSetIdentityCalculator {
         this.directCalculator = Objects.requireNonNull(
                 directCalculator,
                 "directCalculator");
+        this.inputNormalizer = new BlueIdInputNormalizer();
     }
 
     /**
@@ -75,9 +90,29 @@ public final class CircularSetIdentityCalculator {
      * @return calculated member BlueIds
      * @throws IllegalArgumentException if the set is empty, has no internal
      *         references, contains invalid references, or has duplicate
-     *         preliminary identity inputs
+     *         indistinguishable preliminary identity inputs
      */
     public List<String> circularBlueIds(List<Node> documents) {
+        return new ArrayList<>(
+                finalizeCyclicSet(documents)
+                        .memberBlueIdsInInputOrder());
+    }
+
+    /**
+     * Finalizes one closed cyclic set through the normative Language path.
+     *
+     * <p>The returned evidence includes preliminary ordering inputs, canonical
+     * member bodies, the input-to-canonical mapping, and all final member
+     * identities. It is independent of provider proof verification.</p>
+     *
+     * @param documents non-empty cyclic document set
+     * @return immutable complete finalization evidence
+     * @throws IllegalArgumentException if the set is empty, has no internal
+     *         references, contains invalid references, or has duplicate
+     *         indistinguishable preliminary identity inputs
+     */
+    public CyclicSetFinalization finalizeCyclicSet(
+            List<Node> documents) {
         if (documents == null || documents.isEmpty()) {
             throw new IllegalArgumentException(
                     "Circular BlueId calculation requires at least one document.");
@@ -96,18 +131,19 @@ public final class CircularSetIdentityCalculator {
                     preliminary,
                     reference ->
                             BlueIds.CYCLIC_CALCULATION_ZERO_PLACEHOLDER);
+            Object normalizedPreliminary = inputNormalizer
+                    .normalizeAllowingCyclicPlaceholders(preliminary);
             indexedNodes.add(new IndexedNode(
                     index,
                     documents.get(index),
                     directCalculator
                             .directBlueIdAllowingCyclicPlaceholders(
-                                    preliminary)));
+                                    preliminary),
+                    CanonicalJsonValueWriter.write(
+                            normalizedPreliminary)));
         }
-        rejectDuplicatePreliminaryInputs(indexedNodes);
-
-        indexedNodes.sort(Comparator
-                .comparing((IndexedNode member) -> member.preliminaryBlueId)
-                .thenComparingInt(member -> member.originalIndex));
+        indexedNodes.sort(this::comparePreliminaryMembers);
+        rejectIndistinguishablePreliminaryInputs(indexedNodes);
 
         Map<Integer, Integer> sortedIndexByOriginalIndex = new HashMap<>();
         for (int sortedIndex = 0;
@@ -131,29 +167,82 @@ public final class CircularSetIdentityCalculator {
 
         String masterBlueId = directCalculator
                 .directBlueIdAllowingCyclicPlaceholders(sortedNodes);
-        List<String> result = new ArrayList<>(documents.size());
-        for (int originalIndex = 0;
-             originalIndex < documents.size();
-             originalIndex++) {
-            result.add(BlueIds.indexedCyclicMemberBlueId(
-                    masterBlueId,
-                    sortedIndexByOriginalIndex.get(originalIndex)));
+        byte[] canonicalInputBytes = CanonicalJsonValueWriter.write(
+                inputNormalizer
+                        .normalizeElementsAllowingCyclicPlaceholders(
+                                sortedNodes));
+
+        List<CyclicMemberFinalization> inputMembers = new ArrayList<>(
+                documents.size());
+        for (int index = 0; index < documents.size(); index++) {
+            inputMembers.add(null);
         }
-        return result;
+        List<CyclicMemberFinalization> canonicalMembers = new ArrayList<>(
+                documents.size());
+        for (int canonicalIndex = 0;
+             canonicalIndex < indexedNodes.size();
+             canonicalIndex++) {
+            IndexedNode indexedNode = indexedNodes.get(canonicalIndex);
+            CyclicMemberFinalization member =
+                    new CyclicMemberFinalization(
+                            indexedNode.originalIndex,
+                            canonicalIndex,
+                            indexedNode.preliminaryBlueId,
+                            BlueIds.indexedCyclicMemberBlueId(
+                                    masterBlueId,
+                                    canonicalIndex),
+                            indexedNode.preliminaryInputBytes,
+                            sortedNodes.get(canonicalIndex));
+            inputMembers.set(indexedNode.originalIndex, member);
+            canonicalMembers.add(member);
+        }
+        return new CyclicSetFinalization(
+                masterBlueId,
+                inputMembers,
+                canonicalMembers,
+                canonicalInputBytes);
     }
 
-    private void rejectDuplicatePreliminaryInputs(
+    private int comparePreliminaryMembers(
+            IndexedNode left,
+            IndexedNode right) {
+        int blueIdComparison = left.preliminaryBlueId.compareTo(
+                right.preliminaryBlueId);
+        if (blueIdComparison != 0) {
+            return blueIdComparison;
+        }
+        return compareUnsignedBytes(
+                left.preliminaryInputBytes,
+                right.preliminaryInputBytes);
+    }
+
+    private int compareUnsignedBytes(byte[] left, byte[] right) {
+        int commonLength = Math.min(left.length, right.length);
+        for (int index = 0; index < commonLength; index++) {
+            int compared = Integer.compare(
+                    left[index] & 0xff,
+                    right[index] & 0xff);
+            if (compared != 0) {
+                return compared;
+            }
+        }
+        return Integer.compare(left.length, right.length);
+    }
+
+    private void rejectIndistinguishablePreliminaryInputs(
             List<IndexedNode> indexedNodes) {
-        Map<String, Integer> firstIndexByBlueId = new HashMap<>();
-        for (IndexedNode indexedNode : indexedNodes) {
-            Integer firstIndex = firstIndexByBlueId.putIfAbsent(
-                    indexedNode.preliminaryBlueId,
-                    indexedNode.originalIndex);
-            if (firstIndex != null) {
+        for (int index = 1; index < indexedNodes.size(); index++) {
+            IndexedNode previous = indexedNodes.get(index - 1);
+            IndexedNode current = indexedNodes.get(index);
+            if (previous.preliminaryBlueId.equals(
+                    current.preliminaryBlueId)
+                    && Arrays.equals(
+                    previous.preliminaryInputBytes,
+                    current.preliminaryInputBytes)) {
                 throw new IllegalArgumentException(
-                        "Duplicate preliminary cyclic BlueId input for members "
-                                + firstIndex + " and "
-                                + indexedNode.originalIndex + ".");
+                        "Indistinguishable preliminary cyclic BlueId input for members "
+                                + previous.originalIndex + " and "
+                                + current.originalIndex + ".");
             }
         }
     }
@@ -326,14 +415,17 @@ public final class CircularSetIdentityCalculator {
         private final int originalIndex;
         private final Node node;
         private final String preliminaryBlueId;
+        private final byte[] preliminaryInputBytes;
 
         private IndexedNode(
                 int originalIndex,
                 Node node,
-                String preliminaryBlueId) {
+                String preliminaryBlueId,
+                byte[] preliminaryInputBytes) {
             this.originalIndex = originalIndex;
             this.node = node;
             this.preliminaryBlueId = preliminaryBlueId;
+            this.preliminaryInputBytes = preliminaryInputBytes;
         }
     }
 }

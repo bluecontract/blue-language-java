@@ -1,0 +1,68 @@
+schema: blue-contracts-fixture/1.0
+id: c-upd-01
+vectors:
+- C-UPD-01
+category: upd
+description: Every successful application patch creates one origin-to-Root Document Update cascade.
+operation: process
+input:
+  root:
+    child:
+      x: 0
+      contracts:
+        in:
+          type:
+            blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+          order: 0
+          subscriptionKey: timeline
+          eventKey: timeline
+          accept: true
+          checkpointDomain: domain-v1
+        h:
+          type:
+            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          channel: in
+          order: 0
+          result:
+            patches:
+            - op: replace
+              path: /child/x
+              val: 1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /child
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - timeline
+    - 1
+    deliverySnapshot:
+    - scopePath: /child
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: trace.documentUpdateScopes
+    op: sequenceEquals
+    expected:
+    - /child
+    - /

@@ -303,6 +303,9 @@ class DocumentProcessorHandlerFailureTest {
                 ? -1L : admitted.subtotal();
         ProcessorDiagnostic diagnostic =
                 first.processResult().diagnostic();
+        long cumulativeAdmittedGas = first.trace().gas().stream()
+                .mapToLong(GasTraceEntry::subtotal)
+                .sum();
 
         // then
         assertEquals(
@@ -321,10 +324,7 @@ class DocumentProcessorHandlerFailureTest {
                 "/neverApplied"));
         assertEquals(
                 first.processResult().totalGas(),
-                first.trace().gas().stream()
-                        .mapToLong(
-                                GasTraceEntry::subtotal)
-                        .sum());
+                cumulativeAdmittedGas);
         assertEquals(1, hosted.size());
         assertEquals(
                 "iteration",
@@ -349,9 +349,14 @@ class DocumentProcessorHandlerFailureTest {
                         .get("weight"));
         assertEquals(
                 Long.toString(
-                        admittedSubtotal),
+                        cumulativeAdmittedGas),
                 diagnostic.details()
-                        .get("admittedGas"));
+                        .get("admittedGas"),
+                "diagnostic gas is the cumulative admitted invocation prefix");
+        assertTrue(
+                admittedSubtotal < cumulativeAdmittedGas,
+                "the cumulative prefix includes processor gas admitted before "
+                        + "the hosted child ledger");
         assertEquals(
                 diagnostic.details().get(
                         "gasLimit"),

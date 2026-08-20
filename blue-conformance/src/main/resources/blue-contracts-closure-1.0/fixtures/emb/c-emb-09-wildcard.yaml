@@ -1,0 +1,44 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-09-wildcard
+vectors:
+- C-EMB-09
+category: emb
+description: Runtime pointers do not acquire wildcard meaning for embedded declarations.
+operation: process
+input:
+  root:
+    lessons:
+      lesson-a:
+        x: 1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /lessons/*
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: none
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - none
+    - 1
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: subscription-surface-invalid
+  - actual: result.diagnostic.category
+    op: equals
+    expected: EmbeddedPathSelectorUnsupported

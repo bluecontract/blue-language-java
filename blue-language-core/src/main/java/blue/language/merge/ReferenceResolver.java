@@ -1,6 +1,7 @@
 package blue.language.merge;
 
 import blue.language.provider.NodeProvider;
+import blue.language.provider.ProviderUnavailableException;
 import blue.language.model.Node;
 import blue.language.model.NodeDeserializer;
 import blue.language.model.Schema;
@@ -370,6 +371,8 @@ final class ReferenceResolver {
         String path = engine.currentPath(state);
         try {
             materializeReference(target, blueId, limits, state);
+        } catch (ProviderUnavailableException unavailable) {
+            throw unavailable;
         } catch (RuntimeException ex) {
             throw new IllegalArgumentException("Reference materialization failed at path " + path
                     + " for blueId " + blueId + ": " + ex.getMessage(), ex);

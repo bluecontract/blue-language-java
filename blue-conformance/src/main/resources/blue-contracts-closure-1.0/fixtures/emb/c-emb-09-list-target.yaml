@@ -1,0 +1,46 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-09-list-target
+vectors:
+- C-EMB-09
+category: emb
+description: collectionPaths rejects a list target; lists do not implicitly create embedded scopes.
+operation: process
+input:
+  root:
+    lessons:
+    - x: 1
+    contracts:
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        collectionPaths:
+        - /lessons
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: none
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey:
+    - 1000
+    - none
+    - 1
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: subscription-surface-invalid
+  - actual: result.diagnostic.category
+    op: equals
+    expected: EmbeddedCollectionMustBeObject
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root

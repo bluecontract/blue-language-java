@@ -1,0 +1,15 @@
+schema: blue-contracts-fixture/1.0
+id: gas-composite-list-append-delta
+vectors:
+- C-GAS-02
+- C-GAS-03
+- C-GAS-04
+- C-GAS-05
+category: gas
+operation: gas-micro
+input:
+  priorExactIdentity: true
+  oldLength: 1000
+  append: 2
+expected:
+  listFoldStepRecomputed: 2

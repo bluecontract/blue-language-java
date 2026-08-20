@@ -1,0 +1,16 @@
+name: Type Generalization Policy
+type:
+  blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
+description: Protected effective policy controlling deterministic type generalization after a write.
+defaultMode:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  schema:
+    enum:
+    - nearest-valid-ancestor
+    - reject
+rules:
+  type:
+    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+  itemType:
+    blueId: 5BwjjfvodMVCfD2cKChbUMmjEBd83vv5kbEQwAFHcSnv

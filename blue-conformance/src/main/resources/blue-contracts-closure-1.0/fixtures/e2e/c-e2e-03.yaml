@@ -1,0 +1,68 @@
+schema: blue-contracts-fixture/1.0
+id: c-e2e-03
+vectors:
+- C-E2E-03
+category: e2e
+description: Inline and pure-reference preparations produce the same complete end-to-end no-match result and trace.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: timeline
+        eventKey: timeline
+        accept: false
+        checkpointDomain: domain-v1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: timeline
+    id: representation-no-match
+  feeder:
+    managedRootRevision: 14
+    indexedRootRevision: 14
+    eventOrderKey:
+    - 2002
+    - timeline
+    - 3
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+  variants:
+  - name: inline
+    rootForm: inline
+    cache: cold
+    batching: unbatched
+  - name: reference
+    rootForm: reference
+    cache: warm
+    batching: batched
+expected:
+  assertions:
+  - actual: result.{status,document,events,totalGas}
+    op: sameAcrossVariants
+    variant: all
+  - actual: trace.namedEntries
+    op: sameAcrossVariants
+    variant: all
+  - actual: demands.semantic
+    op: sameAcrossVariants
+    variant: all
+  - actual: result.totalGas
+    op: equals
+    expected: 72
+    variant: all

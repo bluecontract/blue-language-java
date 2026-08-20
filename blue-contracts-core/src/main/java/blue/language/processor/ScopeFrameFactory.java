@@ -5,6 +5,7 @@ import blue.language.model.wire.JsonPointer;
 import blue.language.processor.util.PointerUtils;
 
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -29,12 +30,19 @@ final class ScopeFrameFactory {
     }
 
     ContractBundle refresh(String scopePath) {
-        return refresh(scopePath, true);
+        return refresh(scopePath, true, true);
     }
 
     ContractBundle refresh(
             String scopePath,
             boolean preflightSelectedHeaders) {
+        return refresh(scopePath, preflightSelectedHeaders, true);
+    }
+
+    ContractBundle refresh(
+            String scopePath,
+            boolean preflightSelectedHeaders,
+            boolean attachEmbeddedEntryPlans) {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         ProcessingObserver metrics = owner.observer();
         ProcessingObservations.record(
@@ -59,15 +67,81 @@ final class ScopeFrameFactory {
             return null;
         }
         ContractBundle refreshed = load(
-                resolvedScope, normalizedScope, metrics);
+                resolvedScope,
+                normalizedScope,
+                metrics,
+                attachEmbeddedEntryPlans);
         participation.participate(normalizedScope, refreshed);
         return refreshed;
+    }
+
+    /** Refreshes Root contracts and validates its opaque managed children. */
+    ContractBundle refreshManagedRoot(
+            String scopePath,
+            Map<String, String> expectedManagedBlueIdsByPath) {
+        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        ProcessingObserver metrics = owner.observer();
+        ProcessingObservations.record(
+                metrics, ProcessingMetricId.BUNDLE_SCOPE_REFRESHES, 1L);
+        long resolvedStart = System.nanoTime();
+        FrozenNode selectedScope = selectedAt(normalizedScope);
+        FrozenNode resolvedScope;
+        try {
+            resolvedScope = runtime.resolvedFrozenAt(normalizedScope);
+        } finally {
+            ProcessingObservations.record(
+                    metrics,
+                    ProcessingMetricId.BUNDLE_SCOPE_RESOLVED_LOOKUP_NANOS,
+                    System.nanoTime() - resolvedStart);
+        }
+        if (resolvedScope == null) {
+            participation.withdraw(normalizedScope);
+            return null;
+        }
+        long loadStart = System.nanoTime();
+        try {
+            FrozenNode recognitionScope = runtime.contractRecognitionScope(
+                    selectedScope, resolvedScope);
+            ContractBundle loaded = owner.contractLoader().load(
+                    selectedScope,
+                    recognitionScope,
+                    normalizedScope,
+                    metrics,
+                    execution.contractRecognitionMeter(),
+                    "participating-contract-header");
+            loaded = EmbeddedScopeEntryPlans.attachManagedRoot(
+                    runtime,
+                    normalizedScope,
+                    resolvedScope,
+                    loaded,
+                    expectedManagedBlueIdsByPath);
+            for (EffectiveContractSnapshot snapshot
+                    : loaded.effectiveContractSnapshots()) {
+                runtime.recordContractSnapshot(snapshot);
+            }
+            participation.participate(normalizedScope, loaded);
+            return loaded;
+        } finally {
+            ProcessingObservations.record(
+                    metrics,
+                    ProcessingMetricId.BUNDLE_SCOPE_CONTRACT_LOAD_NANOS,
+                    System.nanoTime() - loadStart);
+        }
     }
 
     ContractBundle load(
             FrozenNode resolvedScope,
             String normalizedScope,
             ProcessingObserver metrics) {
+        return load(
+                resolvedScope, normalizedScope, metrics, true);
+    }
+
+    private ContractBundle load(
+            FrozenNode resolvedScope,
+            String normalizedScope,
+            ProcessingObserver metrics,
+            boolean attachEmbeddedEntryPlans) {
         long loadStart = System.nanoTime();
         try {
             FrozenNode selectedScope = selectedAt(normalizedScope);
@@ -80,11 +154,13 @@ final class ScopeFrameFactory {
                     metrics,
                     execution.contractRecognitionMeter(),
                     "participating-contract-header");
-            loaded = EmbeddedScopeEntryPlans.attach(
-                    runtime,
-                    normalizedScope,
-                    resolvedScope,
-                    loaded);
+            if (attachEmbeddedEntryPlans) {
+                loaded = EmbeddedScopeEntryPlans.attach(
+                        runtime,
+                        normalizedScope,
+                        resolvedScope,
+                        loaded);
+            }
             for (EffectiveContractSnapshot snapshot
                     : loaded.effectiveContractSnapshots()) {
                 runtime.recordContractSnapshot(snapshot);

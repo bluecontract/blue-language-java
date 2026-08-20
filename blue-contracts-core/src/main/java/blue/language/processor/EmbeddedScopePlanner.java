@@ -65,7 +65,8 @@ final class EmbeddedScopePlanner {
                 collectionPaths,
                 schedule,
                 null,
-                true);
+                TargetPolicy.FULL,
+                Collections.<String, String>emptyMap());
     }
 
     /** Builds an unmetered plan from one immutable effective scope. */
@@ -82,7 +83,8 @@ final class EmbeddedScopePlanner {
                 collectionPaths,
                 schedule,
                 null,
-                true);
+                TargetPolicy.FULL,
+                Collections.<String, String>emptyMap());
     }
 
     /**
@@ -103,7 +105,8 @@ final class EmbeddedScopePlanner {
                 collectionPaths,
                 meter.schedule(),
                 meter,
-                true);
+                TargetPolicy.FULL,
+                Collections.<String, String>emptyMap());
     }
 
     /**
@@ -142,7 +145,8 @@ final class EmbeddedScopePlanner {
                 collectionPaths,
                 schedule,
                 null,
-                false);
+                TargetPolicy.REVISION_BOUND,
+                Collections.<String, String>emptyMap());
     }
 
     /**
@@ -163,7 +167,91 @@ final class EmbeddedScopePlanner {
                 collectionPaths,
                 meter.schedule(),
                 meter,
-                false);
+                TargetPolicy.REVISION_BOUND,
+                Collections.<String, String>emptyMap());
+    }
+
+    /**
+     * Builds a declaration-complete plan whose selected managed children stay
+     * opaque and must exactly match the supplied closure occurrence paths.
+     */
+    EmbeddedScopePlan planForOpaqueManagedRoot(
+            FrozenNode effectiveScope,
+            String scopePath,
+            List<String> explicitPaths,
+            List<String> collectionPaths,
+            Map<String, String> expectedManagedBlueIdsByPath,
+            GasMeter meter) {
+        Objects.requireNonNull(meter, "meter");
+        String normalizedScope = normalizedScope(scopePath);
+        LinkedHashMap<String, String> expected =
+                validatedOpaqueExpectations(
+                        normalizedScope,
+                        expectedManagedBlueIdsByPath);
+        return plan(
+                effectiveScope,
+                normalizedScope,
+                explicitPaths,
+                collectionPaths,
+                meter.schedule(),
+                meter,
+                TargetPolicy.OPAQUE_MANAGED,
+                expected);
+    }
+
+    /** Unmetered counterpart for closure-side mutation reclassification. */
+    EmbeddedScopePlan planForOpaqueManagedRoot(
+            FrozenNode effectiveScope,
+            String scopePath,
+            List<String> explicitPaths,
+            List<String> collectionPaths,
+            Map<String, String> expectedManagedBlueIdsByPath,
+            GasSchedule schedule) {
+        Objects.requireNonNull(schedule, "schedule");
+        String normalizedScope = normalizedScope(scopePath);
+        LinkedHashMap<String, String> expected =
+                validatedOpaqueExpectations(
+                        normalizedScope,
+                        expectedManagedBlueIdsByPath);
+        return plan(
+                effectiveScope,
+                normalizedScope,
+                explicitPaths,
+                collectionPaths,
+                schedule,
+                null,
+                TargetPolicy.OPAQUE_MANAGED,
+                expected);
+    }
+
+    private LinkedHashMap<String, String> validatedOpaqueExpectations(
+            String normalizedScope,
+            Map<String, String> expectedManagedBlueIdsByPath) {
+        LinkedHashMap<String, String> expected =
+                new LinkedHashMap<String, String>();
+        for (Map.Entry<String, String> entry : Objects.requireNonNull(
+                expectedManagedBlueIdsByPath,
+                "expectedManagedBlueIdsByPath").entrySet()) {
+            String path = Objects.requireNonNull(
+                    entry.getKey(), "managed embedded path");
+            String normalized = PointerUtils.assertValidRuntimePointer(path);
+            if (!normalized.equals(path)
+                    || JsonPointer.ROOT.equals(normalized)
+                    || !isWithinScope(normalizedScope, normalized)) {
+                throw invalid(
+                        ProcessorErrorCategory.SubscriptionSurfaceInvalid,
+                        "Managed embedded path is outside its declaring Root: "
+                                + path,
+                        normalizedScope);
+            }
+            if (expected.put(normalized, Objects.requireNonNull(
+                    entry.getValue(), "expected managed BlueId")) != null) {
+                throw overlap(
+                        "Duplicate managed embedded path: " + normalized,
+                        normalizedScope);
+            }
+        }
+        return expected;
     }
 
     private EmbeddedScopePlan plan(
@@ -173,7 +261,8 @@ final class EmbeddedScopePlanner {
             List<String> collectionPaths,
             GasSchedule schedule,
             GasMeter meter,
-            boolean verifyDirectExplicitReferences) {
+            TargetPolicy targetPolicy,
+            Map<String, String> expectedManagedBlueIdsByPath) {
         Objects.requireNonNull(effectiveScope, "effectiveScope");
         Objects.requireNonNull(schedule, "schedule");
         String normalizedScope = normalizedScope(scopePath);
@@ -218,8 +307,16 @@ final class EmbeddedScopePlanner {
             if (target == null) {
                 continue;
             }
-            if (target.isReferenceOnly()
-                    && !verifyDirectExplicitReferences) {
+            String absolutePath = PointerUtils.resolvePointer(
+                    normalizedScope, declaration);
+            if (targetPolicy == TargetPolicy.OPAQUE_MANAGED) {
+                requireOpaqueManagedTarget(
+                        target,
+                        absolutePath,
+                        expectedManagedBlueIdsByPath,
+                        normalizedScope);
+            } else if (target.isReferenceOnly()
+                    && targetPolicy == TargetPolicy.REVISION_BOUND) {
                 rejectCyclicMember(
                         target, normalizedScope, declaration, null);
             } else {
@@ -235,7 +332,7 @@ final class EmbeddedScopePlanner {
                         normalizedScope);
             }
             concrete.add(new EmbeddedConcretePath(
-                    PointerUtils.resolvePointer(normalizedScope, declaration),
+                    absolutePath,
                     EmbeddedPathOrigin.EXPLICIT,
                     declaration,
                     null));
@@ -253,7 +350,9 @@ final class EmbeddedScopePlanner {
                     schedule,
                     meter,
                     concrete,
-                    collectionDeclarationByIdentity);
+                    collectionDeclarationByIdentity,
+                    targetPolicy,
+                    expectedManagedBlueIdsByPath);
             memberKeysByDeclaration.put(declaration, memberKeys);
         }
 
@@ -265,6 +364,20 @@ final class EmbeddedScopePlanner {
         rejectConcreteOverlap(concrete, normalizedScope);
         List<EmbeddedConcretePath> orderedConcrete =
                 sortConcrete(concrete, normalizedScope, meter);
+        if (targetPolicy == TargetPolicy.OPAQUE_MANAGED) {
+            LinkedHashSet<String> planned = new LinkedHashSet<String>();
+            for (EmbeddedConcretePath path : orderedConcrete) {
+                planned.add(path.absolutePath());
+            }
+            if (!planned.equals(
+                    expectedManagedBlueIdsByPath.keySet())) {
+                throw invalid(
+                        ProcessorErrorCategory.SubscriptionSurfaceInvalid,
+                        "Managed occurrence paths do not exactly match the "
+                                + "effective Process Embedded declaration",
+                        normalizedScope);
+            }
+        }
         return new EmbeddedScopePlan(
                 normalizedScope,
                 explicitDeclarations,
@@ -360,7 +473,9 @@ final class EmbeddedScopePlanner {
             GasSchedule schedule,
             GasMeter meter,
             List<EmbeddedConcretePath> concrete,
-            Map<String, String> collectionDeclarationByIdentity) {
+            Map<String, String> collectionDeclarationByIdentity,
+            TargetPolicy targetPolicy,
+            Map<String, String> expectedManagedBlueIdsByPath) {
         FrozenNode collection = select(
                 scope,
                 declaration,
@@ -416,30 +531,89 @@ final class EmbeddedScopePlanner {
                     key.codePointCount(0, key.length()),
                     schedule);
             FrozenNode member = properties.get(key);
-            rejectCyclicMember(member, scopePath, declaration, key);
-            member = materialize(member, scopePath,
-                    PointerUtils.appendPointer(declaration, key));
-            if (!isScopeObjectCompatible(member)) {
-                throw invalid(
-                        ProcessorErrorCategory
-                                .EmbeddedCollectionMemberMustBeObject,
-                        "Embedded collection member must be an object: "
-                                + declaration + "/"
-                                + PointerUtils.escapeSegment(key),
-                        scopePath);
-            }
             String generatedDeclaration =
                     PointerUtils.appendPointer(declaration, key);
+            String absolutePath = PointerUtils.resolvePointer(
+                    scopePath, generatedDeclaration);
+            if (targetPolicy == TargetPolicy.OPAQUE_MANAGED) {
+                requireOpaqueManagedTarget(
+                        member,
+                        absolutePath,
+                        expectedManagedBlueIdsByPath,
+                        scopePath);
+            } else {
+                rejectCyclicMember(member, scopePath, declaration, key);
+                member = materialize(member, scopePath,
+                        generatedDeclaration);
+                if (!isScopeObjectCompatible(member)) {
+                    throw invalid(
+                            ProcessorErrorCategory
+                                    .EmbeddedCollectionMemberMustBeObject,
+                            "Embedded collection member must be an object: "
+                                    + declaration + "/"
+                                    + PointerUtils.escapeSegment(key),
+                            scopePath);
+                }
+            }
             validateGeneratedPath(
                     generatedDeclaration, scopePath, schedule, meter);
             concrete.add(new EmbeddedConcretePath(
-                    PointerUtils.resolvePointer(
-                            scopePath, generatedDeclaration),
+                    absolutePath,
                     EmbeddedPathOrigin.COLLECTION_MEMBER,
                     declaration,
                     key));
         }
         return Collections.unmodifiableList(new ArrayList<>(orderedKeys));
+    }
+
+    private void requireOpaqueManagedTarget(
+            FrozenNode target,
+            String absolutePath,
+            Map<String, String> expectedManagedBlueIdsByPath,
+            String scopePath) {
+        String expectedBlueId = expectedManagedBlueIdsByPath.get(
+                absolutePath);
+        if (expectedBlueId == null) {
+            throw invalid(
+                    ProcessorErrorCategory.SubscriptionSurfaceInvalid,
+                    "Process Embedded selected a child without managed "
+                            + "occurrence evidence: " + absolutePath,
+                    scopePath);
+        }
+        if (target == null) {
+            throw invalid(
+                    ProcessorErrorCategory.InvalidProcessingDocument,
+                    "Managed embedded occurrence is absent at "
+                            + absolutePath,
+                    scopePath);
+        }
+        if (!target.isReferenceOnly()
+                && BlueIds.hasCyclicMemberSeparator(expectedBlueId)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Materialized cyclic managed content requires complete "
+                            + "owning cyclic-set proof at " + absolutePath,
+                    ProcessorErrorCategory.InvalidProcessingDocument);
+        }
+        String actualBlueId = target.isReferenceOnly()
+                ? target.getReferenceBlueId()
+                : target.blueId();
+        try {
+            BlueIds.requireBlueIdOrCyclicMember(
+                    actualBlueId,
+                    "managed embedded occurrence");
+        } catch (IllegalArgumentException invalidIdentity) {
+            throw new InvalidExecutionEvidenceException(
+                    "Invalid managed embedded identity at " + absolutePath,
+                    ProcessorErrorCategory.InvalidProcessingDocument);
+        }
+        if (!expectedBlueId.equals(actualBlueId)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Managed embedded reference disagrees with admitted "
+                            + "occurrence evidence at " + absolutePath
+                            + ": expected " + expectedBlueId
+                            + " but found " + actualBlueId,
+                    ProcessorErrorCategory.InvalidProcessingDocument);
+        }
     }
 
     private void validateGeneratedPath(
@@ -703,6 +877,14 @@ final class EmbeddedScopePlanner {
         }
     }
 
+    private boolean isWithinScope(
+            String normalizedScope,
+            String absolutePath) {
+        return PointerUtils.strictlyInside(
+                absolutePath,
+                normalizedScope);
+    }
+
     private List<String> pathsOrEmpty(List<String> paths) {
         return paths != null ? paths : Collections.emptyList();
     }
@@ -781,6 +963,12 @@ final class EmbeddedScopePlanner {
     interface ExactReferenceMaterializer {
         /** Returns verified exact content, or {@code null} only for not-found. */
         FrozenNode materialize(FrozenNode reference);
+    }
+
+    private enum TargetPolicy {
+        FULL,
+        REVISION_BOUND,
+        OPAQUE_MANAGED
     }
 
     private enum DeclarationKind {

@@ -13,8 +13,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import static blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER;
+import java.util.Set;
 
 /**
  * Provider boundary that independently verifies returned content against the
@@ -63,6 +62,7 @@ public class VerifyingNodeProvider implements NodeProvider {
         }
         if (result.outcome() == NodeProviderOutcome.UNAVAILABLE) {
             throw new ProviderUnavailableException(
+                    blueId,
                     result.diagnostic().orElse(
                     "Provider unavailable for requested BlueId " + blueId + "."));
         }
@@ -168,8 +168,9 @@ public class VerifyingNodeProvider implements NodeProvider {
                 expected, requestedBlueId, "Cyclic-set proof member");
         removeMatchingRootIdentity(
                 actual, requestedBlueId, "Provider-returned cyclic member");
-        if (!JSON_MAPPER.valueToTree(expected).equals(
-                JSON_MAPPER.valueToTree(actual))) {
+        if (!new CyclicProofMemberComparator(
+                        verifiedSet.calculatedMemberBlueIdSet)
+                .equivalent(expected, actual)) {
             throw new IllegalArgumentException(
                     "Provider returned cyclic member content that does not match "
                             + "the independently verified complete set for "
@@ -289,6 +290,7 @@ public class VerifyingNodeProvider implements NodeProvider {
         private final CyclicSetProof proof;
         private final List<String> calculatedMemberBlueIds;
         private final Map<String, Integer> memberIndexByBlueId;
+        private final Set<String> calculatedMemberBlueIdSet;
 
         private VerifiedCyclicSet(
                 CyclicSetProof proof,
@@ -297,6 +299,8 @@ public class VerifyingNodeProvider implements NodeProvider {
             this.proof = proof;
             this.calculatedMemberBlueIds = calculatedMemberBlueIds;
             this.memberIndexByBlueId = memberIndexByBlueId;
+            this.calculatedMemberBlueIdSet =
+                    memberIndexByBlueId.keySet();
         }
     }
 }

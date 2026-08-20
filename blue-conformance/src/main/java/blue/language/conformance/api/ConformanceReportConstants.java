@@ -43,6 +43,8 @@ final class ConformanceReportConstants {
         static final String FIXTURE_PACKAGE_IDENTITY =
                 "fixturePackageIdentity";
         static final String PACKAGE_IDENTITY = "packageIdentity";
+        static final String CONTRACTS_RELEASE_IDENTITY =
+                "contractsReleaseIdentity";
         static final String CORE_REGISTRY_BLUE_IDS = "coreRegistryBlueIds";
         static final String FIXTURE_COUNT = "fixtureCount";
         static final String PASSED_COUNT = "passedCount";
@@ -65,6 +67,7 @@ final class ConformanceReportConstants {
         static final String CONTRACTS_REGISTRY = "contractsRegistry";
         static final String CONTRACTS_GAS = "contractsGas";
         static final String CONTRACTS_FIXTURES = "contractsFixtures";
+        static final String CONTRACTS_RELEASE = "contractsRelease";
         static final String LANGUAGE_SHA256 = "languageSha256";
         static final String CONTRACTS_SHA256 = "contractsSha256";
 
@@ -112,8 +115,9 @@ final class ConformanceReportConstants {
 
     /** Normative fixture subtotals not exposed by the combined report API. */
     static final class FixtureCount {
-        static final int CONTRACTS_BEHAVIOR = 96;
-        static final int CONTRACTS_GAS = 58;
+        static final int CONTRACTS_ORDINARY_BEHAVIOR = 96;
+        static final int CONTRACTS_ORDINARY_GAS = 71;
+        static final int CONTRACTS_CLOSURE = 67;
 
         private FixtureCount() {
         }

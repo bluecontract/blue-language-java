@@ -260,6 +260,7 @@ public final class CanonicalJsonValueWriter {
             Object value, ByteSink sink) {
         try {
             byte[] json = JSON_MAPPER.writeValueAsBytes(value);
+            Base58Sha256Provider.requireWellFormedJsonStrings(json);
             byte[] wrapped = new byte[json.length + 2];
             wrapped[0] = '[';
             System.arraycopy(json, 0, wrapped, 1, json.length);
@@ -267,6 +268,8 @@ public final class CanonicalJsonValueWriter {
             byte[] canonical =
                     new JsonCanonicalizer(wrapped).getEncodedUTF8();
             sink.write(canonical, 1, canonical.length - 2);
+        } catch (IllegalArgumentException exception) {
+            throw exception;
         } catch (Exception exception) {
             throw new IllegalStateException(
                     "Failed to canonicalize legacy raw value", exception);
@@ -312,7 +315,8 @@ public final class CanonicalJsonValueWriter {
                         writeUtf8CodePoint(Character.toCodePoint(
                                 current, value.charAt(++index)), sink);
                     } else if (Character.isSurrogate(current)) {
-                        sink.writeByte('?');
+                        throw new IllegalArgumentException(
+                                "RFC 8785 strings must not contain unpaired UTF-16 surrogates.");
                     } else {
                         writeUtf8CodePoint(current, sink);
                     }

@@ -87,7 +87,8 @@ final class SemanticEvidenceOrchestration {
                         "api/modernization-api-migration-ledger-1.0.json");
         Directory contractsFixtures = project.getLayout()
                 .getProjectDirectory().dir(
-                        "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures");
+                        "blue-conformance/src/main/resources/"
+                                + "blue-contracts-closure-1.0/fixtures");
         Directory localityEvidence = project.getLayout()
                 .getBuildDirectory().dir("reports/semantic-baseline/locality").get();
         RegularFile platformInvocationMatrix = localityEvidence.file(
@@ -401,7 +402,8 @@ final class SemanticEvidenceOrchestration {
     }
 
     private static TaskProvider<Sync> registerSemanticVerificationWorkspace(
-            Project project, List<String> publishedModules) {
+            Project project,
+            List<String> publishedModules) {
         return project.getTasks().register(
                 BuildLogicConstants.TASK_PREPARE_SEMANTIC_VERIFICATION_WORKSPACE,
                 Sync.class,
@@ -409,7 +411,8 @@ final class SemanticEvidenceOrchestration {
                     task.setGroup(GROUP);
                     task.setDescription(
                             "Stages module sources at the legacy semantic verifier's logical paths.");
-                    task.dependsOn(project.getTasks().named("fragmentedProcessingTest"));
+                    task.dependsOn(
+                            project.getTasks().named("fragmentedProcessingTest"));
                     task.into(project.getLayout().getBuildDirectory()
                             .dir("semantic-baseline/verification-workspace"));
                     task.setIncludeEmptyDirs(false);

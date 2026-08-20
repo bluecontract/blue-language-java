@@ -17,7 +17,7 @@ import java.util.Objects;
  * Mutable {@link Node} views are materialized on demand as detached values and
  * are never retained by the occurrence.</p>
  */
-final class DocumentUpdateOccurrence {
+public final class DocumentUpdateOccurrence {
 
     private final String path;
     private final FrozenNode beforeFrozen;
@@ -61,41 +61,81 @@ final class DocumentUpdateOccurrence {
         this.recipientChain = immutableRecipientChain(recipientChain);
     }
 
-    String path() {
+    /**
+     * Returns the absolute changed document path.
+     *
+     * @return normalized absolute path
+     */
+    public String path() {
         return path;
     }
 
-    Node before() {
+    /**
+     * Materializes the exact value present before the change.
+     *
+     * @return detached value, or {@code null} when absent
+     */
+    public Node before() {
         if (beforeFrozen == null) {
             return null;
         }
         return beforeFrozen.toNode();
     }
 
-    boolean beforePresent() {
+    /**
+     * Reports whether the before value was present.
+     *
+     * @return {@code true} when {@link #before()} returns a value
+     */
+    public boolean beforePresent() {
         return beforeFrozen != null;
     }
 
-    Node after() {
+    /**
+     * Materializes the exact value present after the change.
+     *
+     * @return detached value, or {@code null} when absent
+     */
+    public Node after() {
         if (afterFrozen == null) {
             return null;
         }
         return afterFrozen.toNode();
     }
 
-    boolean afterPresent() {
+    /**
+     * Reports whether the after value is present.
+     *
+     * @return {@code true} when {@link #after()} returns a value
+     */
+    public boolean afterPresent() {
         return afterFrozen != null;
     }
 
-    JsonPatch.Op op() {
+    /**
+     * Returns the semantic update operation.
+     *
+     * @return add, replace, or remove operation
+     */
+    public JsonPatch.Op op() {
         return operation;
     }
 
-    String originScope() {
+    /**
+     * Returns the local scope that authored the patch.
+     *
+     * @return normalized origin scope
+     */
+    public String originScope() {
         return originScope;
     }
 
-    List<String> recipientChain() {
+    /**
+     * Returns the immutable receiving chain frozen for this occurrence.
+     *
+     * @return normalized recipient scopes in delivery order
+     */
+    public List<String> recipientChain() {
         return recipientChain;
     }
 

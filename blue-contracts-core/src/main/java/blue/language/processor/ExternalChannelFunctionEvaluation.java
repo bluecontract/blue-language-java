@@ -72,6 +72,7 @@ final class ExternalChannelFunctionEvaluation {
     private final String logicalDeliveryKey;
     private final ChannelMemberSnapshot handlerChannel;
     private final ExternalChannelDependencySnapshot dependencies;
+    private final String runtimeDiscriminator;
     private final List<String> channelLookupResults;
 
     private ExternalChannelFunctionEvaluation(
@@ -88,6 +89,7 @@ final class ExternalChannelFunctionEvaluation {
             String logicalDeliveryKey,
             ChannelMemberSnapshot handlerChannel,
             ExternalChannelDependencySnapshot dependencies,
+            String runtimeDiscriminator,
             List<String> channelLookupResults) {
         this.channelKeys = channelKeys;
         this.eventKeys = eventKeys;
@@ -102,6 +104,7 @@ final class ExternalChannelFunctionEvaluation {
         this.logicalDeliveryKey = logicalDeliveryKey;
         this.handlerChannel = handlerChannel;
         this.dependencies = dependencies;
+        this.runtimeDiscriminator = runtimeDiscriminator;
         this.channelLookupResults =
                 Collections.unmodifiableList(
                         Objects.requireNonNull(
@@ -276,6 +279,7 @@ final class ExternalChannelFunctionEvaluation {
                     resolved.logicalDeliveryKey(),
                     resolved.handlerChannel(),
                     resolved.dependencies(),
+                    resolved.runtimeDiscriminator(),
                     resolved.channelLookupResults());
         } finally {
             matcher.close();
@@ -554,6 +558,9 @@ final class ExternalChannelFunctionEvaluation {
                 checkpointSubject,
                 other.checkpointSubject)
                 && dependencies.equals(other.dependencies)
+                && Objects.equals(
+                runtimeDiscriminator,
+                other.runtimeDiscriminator)
                 && channelLookupResults.equals(
                 other.channelLookupResults);
     }
@@ -637,6 +644,10 @@ final class ExternalChannelFunctionEvaluation {
 
     ExternalChannelDependencySnapshot dependencies() {
         return dependencies;
+    }
+
+    String runtimeDiscriminator() {
+        return runtimeDiscriminator;
     }
 
     List<String> channelLookupResults() {

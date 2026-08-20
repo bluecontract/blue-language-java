@@ -58,6 +58,13 @@ final class CheckpointManager {
     }
 
     void ensureCheckpointMarker(String scopePath, ContractBundle bundle) {
+        ensureCheckpointMarker(scopePath, bundle, true);
+    }
+
+    private void ensureCheckpointMarker(
+            String scopePath,
+            ContractBundle bundle,
+            boolean chargeMarkerCreation) {
         MarkerContract marker = bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
         String pointer = PointerUtils.resolvePointer(
                 scopePath, ProcessorPointerConstants.RELATIVE_CHECKPOINT);
@@ -67,7 +74,10 @@ final class CheckpointManager {
                     .properties(
                             ProcessorContractConstants.KEY_ENTRIES,
                             new Node().properties(new LinkedHashMap<>()));
-            runtime.chargeProcessorMarkerWritten("checkpoint-marker-create");
+            if (chargeMarkerCreation) {
+                runtime.chargeProcessorMarkerWritten(
+                        "checkpoint-marker-create");
+            }
             runtime.directWrite(pointer, markerNode);
             runtime.recordTrace(ProcessingTraceRecord.Kind.MARKER_WRITE,
                     scopePath,
@@ -129,10 +139,19 @@ final class CheckpointManager {
         return record.matches(subjectBlueId);
     }
 
-    void recordComparison(String scopePath,
-                          CheckpointRecord record,
-                          String subjectBlueId) {
-        runtime.chargeCheckpointCompared();
+    CheckpointRecord findForComparison(
+            String scopePath,
+            ContractBundle bundle,
+            String rawChannelKey,
+            String checkpointDomainBlueId,
+            String subjectBlueId,
+            GasChargeContext comparisonContext) {
+        /* No checkpoint lookup or materialization may precede this charge. */
+        runtime.chargeCheckpointCompared(
+                Objects.requireNonNull(
+                        comparisonContext, "comparisonContext"));
+        CheckpointRecord record = findCheckpoint(
+                bundle, rawChannelKey, checkpointDomainBlueId);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put(
                 ProcessingTraceConstants.FIELD_DOMAIN,
@@ -149,6 +168,7 @@ final class CheckpointManager {
                 null,
                 details,
                 null);
+        return record;
     }
 
     void persist(String scopePath,
@@ -156,6 +176,40 @@ final class CheckpointManager {
                  CheckpointRecord record,
                  String subjectBlueId,
                  Node exactSubject) {
+        persist(
+                scopePath,
+                bundle,
+                record,
+                subjectBlueId,
+                exactSubject,
+                false,
+                null);
+    }
+
+    /** Settlement variant: one checkpoint-written charge owns marker creation. */
+    void persistSettlement(String scopePath,
+                           ContractBundle bundle,
+                           CheckpointRecord record,
+                           String subjectBlueId,
+                           Node exactSubject,
+                           GasChargeContext writeContext) {
+        persist(
+                scopePath,
+                bundle,
+                record,
+                subjectBlueId,
+                exactSubject,
+                true,
+                Objects.requireNonNull(writeContext, "writeContext"));
+    }
+
+    private void persist(String scopePath,
+                         ContractBundle bundle,
+                         CheckpointRecord record,
+                         String subjectBlueId,
+                         Node exactSubject,
+                         boolean settlement,
+                         GasChargeContext writeContext) {
         if (record == null || subjectBlueId == null) {
             return;
         }
@@ -177,7 +231,13 @@ final class CheckpointManager {
                             + " but calculated "
                             + calculatedSubjectBlueId);
         }
-        ensureCheckpointMarker(scopePath, bundle);
+        if (settlement) {
+            /* The single entry charge precedes every tentative marker write. */
+            runtime.chargeCheckpointUpdate(writeContext);
+            ensureCheckpointMarker(scopePath, bundle, false);
+        } else {
+            ensureCheckpointMarker(scopePath, bundle);
+        }
         /*
          * Every pending update is merged through the invocation's active
          * mutation bundle. A classification-time record may point at a stale
@@ -202,7 +262,13 @@ final class CheckpointManager {
                 .properties(
                         ProcessorContractConstants.KEY_SUBJECT,
                         storedSubject.clone());
-        runtime.chargeCheckpointUpdate();
+        if (!settlement) {
+            runtime.chargeCheckpointUpdate(GasChargeContext.of(
+                    scopePath,
+                    active.channelKey,
+                    pointer,
+                    GasScheduleConstants.ChargeReason.CHECKPOINT_WRITE));
+        }
         runtime.directWrite(pointer, entryNode);
         active.checkpoint.putEntry(
                 active.channelKey, domainBlueId, subjectBlueId);
@@ -266,31 +332,98 @@ final class CheckpointManager {
                     ProcessorPointerConstants.relativeCheckpointEntry(
                             ProcessorContractConstants.KEY_CHECKPOINT,
                             rawKey));
-            runtime.chargeCheckpointUpdate();
-            runtime.directWrite(pointer, null);
-            checkpoint.removeEntry(rawKey);
-            Map<String, Object> details = new LinkedHashMap<>();
-            details.put(
-                    ProcessingTraceConstants.FIELD_ACTION,
-                    ProcessingTraceConstants.ACTION_CLEANUP);
-            if (entry != null) {
-                details.put(
-                        ProcessingTraceConstants.FIELD_OLD_DOMAIN,
-                        entry.domainBlueId());
-            }
-            if (activeDomain != null) {
-                details.put(
-                        ProcessingTraceConstants.FIELD_ACTIVE_DOMAIN,
-                        activeDomain);
-            }
-            runtime.recordTrace(
-                    ProcessingTraceRecord.Kind.CHECKPOINT_WRITE,
+            removeEntry(
                     scopePath,
+                    checkpoint,
                     rawKey,
+                    entry,
+                    activeDomain,
                     pointer,
-                    details,
-                    null);
+                    GasChargeContext.of(
+                            scopePath,
+                            rawKey,
+                            pointer,
+                            GasScheduleConstants.ChargeReason
+                                    .CHECKPOINT_WRITE));
         }
+    }
+
+    /** Removes one already-preflighted inactive entry at settlement. */
+    void removeSettlementEntry(
+            String scopePath,
+            ContractBundle bundle,
+            String rawChannelKey,
+            String expectedDomainBlueId,
+            GasChargeContext cleanupContext) {
+        MarkerContract marker =
+                bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        if (!(marker instanceof ChannelEventCheckpoint)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Checkpoint cleanup marker disappeared before settlement",
+                    ProcessorErrorCategory.CheckpointPolicyError);
+        }
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) marker;
+        CheckpointEntry entry = checkpoint.entry(rawChannelKey);
+        String currentDomainBlueId = entry == null
+                ? null
+                : CheckpointDomainIdentity.exact(entry.getDomain());
+        if (entry == null
+                || !Objects.equals(
+                expectedDomainBlueId,
+                currentDomainBlueId)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Checkpoint cleanup entry changed before settlement: "
+                            + rawChannelKey,
+                    ProcessorErrorCategory.CheckpointPolicyError);
+        }
+        String pointer = PointerUtils.resolvePointer(
+                scopePath,
+                ProcessorPointerConstants.relativeCheckpointEntry(
+                        ProcessorContractConstants.KEY_CHECKPOINT,
+                        rawChannelKey));
+        removeEntry(
+                scopePath,
+                checkpoint,
+                rawChannelKey,
+                entry,
+                null,
+                pointer,
+                Objects.requireNonNull(
+                        cleanupContext, "cleanupContext"));
+    }
+
+    private void removeEntry(
+            String scopePath,
+            ChannelEventCheckpoint checkpoint,
+            String rawKey,
+            CheckpointEntry entry,
+            String activeDomain,
+            String pointer,
+            GasChargeContext writeContext) {
+        runtime.chargeCheckpointUpdate(writeContext);
+        runtime.directWrite(pointer, null);
+        checkpoint.removeEntry(rawKey);
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put(
+                ProcessingTraceConstants.FIELD_ACTION,
+                ProcessingTraceConstants.ACTION_CLEANUP);
+        if (entry != null) {
+            details.put(
+                    ProcessingTraceConstants.FIELD_OLD_DOMAIN,
+                    entry.domainBlueId());
+        }
+        if (activeDomain != null) {
+            details.put(
+                    ProcessingTraceConstants.FIELD_ACTIVE_DOMAIN,
+                    activeDomain);
+        }
+        runtime.recordTrace(
+                ProcessingTraceRecord.Kind.CHECKPOINT_WRITE,
+                scopePath,
+                rawKey,
+                pointer,
+                details,
+                null);
     }
 
     String eventIdentity(Node event) {

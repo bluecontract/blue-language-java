@@ -1,0 +1,13 @@
+name: Document Processing Initiated
+description: >
+  Processor lifecycle event delivered before the direct initialized marker.
+  document is the exact scope document as it existed immediately before
+  initialization effects. It may be materialized inline or represented as an
+  equivalent pure BlueId reference.
+document:
+  description: >
+    Exact pre-initialization scope document. This is the initial document for
+    the scope's processing lifecycle and may be carried inline or as a pure
+    { blueId: ... } reference.
+  schema:
+    required: true

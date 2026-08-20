@@ -117,6 +117,38 @@ public final class SemanticGasMeter {
     }
 
     /**
+     * Charges the same examined prefix for a fixed number of Text operands as
+     * one canonical trace entry.
+     *
+     * <p>This is the aggregate form used by portable comparisons: block
+     * rounding is applied to each operand independently and only then
+     * multiplied by the operand count.</p>
+     *
+     * @param codePointCountPerOperand non-negative examined prefix length
+     * @param operandCount non-negative number of operands
+     * @param context charge attribution, or {@code null}
+     * @throws IllegalArgumentException if a count is negative or the
+     *         calculated quantity overflows
+     * @throws GasLimitExceededException if budget is insufficient
+     */
+    public void textOperandsExamined(
+            long codePointCountPerOperand,
+            long operandCount,
+            GasChargeContext context) {
+        requireNonNegative(
+                codePointCountPerOperand,
+                "codePointCountPerOperand");
+        requireNonNegative(operandCount, "operandCount");
+        charge(
+                GasScheduleConstants.SemanticCounter.TEXT_BLOCK_EXAMINED,
+                multiply(
+                        blocks(meter.schedule(), codePointCountPerOperand),
+                        operandCount,
+                        "examined Text operand blocks"),
+                context);
+    }
+
+    /**
      * Charges examination of an exact Java string.
      *
      * @param text non-null examined text

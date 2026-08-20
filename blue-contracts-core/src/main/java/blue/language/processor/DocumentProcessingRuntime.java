@@ -133,6 +133,26 @@ final class DocumentProcessingRuntime {
             GasMeter gasMeter,
             Map<String, List<String>> executableBodyFieldsByType,
             boolean strictPlatformInvocation) {
+        this(document,
+                conformanceEngine,
+                conformancePlannerOverride,
+                snapshotManager,
+                metrics,
+                new ProcessingGasContext(
+                        Objects.requireNonNull(gasMeter, "gasMeter")),
+                executableBodyFieldsByType,
+                strictPlatformInvocation);
+    }
+
+    DocumentProcessingRuntime(
+            Node document,
+            ConformanceEngine conformanceEngine,
+            ConformancePlannerOverride conformancePlannerOverride,
+            ProcessingSnapshotManager snapshotManager,
+            ProcessingObserver metrics,
+            ProcessingGasContext gasContext,
+            Map<String, List<String>> executableBodyFieldsByType,
+            boolean strictPlatformInvocation) {
         this.materializedView = new MaterializedDocumentView(
                 Objects.requireNonNull(document, "document"));
         this.executableBodyFieldsByType =
@@ -150,8 +170,8 @@ final class DocumentProcessingRuntime {
         this.eventQueue = new ProcessingEventQueue();
         this.outputCollector = new ProcessingOutputCollector();
         this.lifecycleState = new ProcessingLifecycleState(scopeRegistry);
-        this.gasContext = new ProcessingGasContext(
-                Objects.requireNonNull(gasMeter, "gasMeter"));
+        this.gasContext = Objects.requireNonNull(
+                gasContext, "gasContext");
         this.snapshotTransaction = new ProcessingSnapshotTransaction(this);
         this.documentView = new ProcessingDocumentView(this);
         this.mutationSession = new ProcessingMutationSession(this);
@@ -222,10 +242,30 @@ final class DocumentProcessingRuntime {
             GasMeter gasMeter,
             Map<String, List<String>> executableBodyFieldsByType,
             boolean strictPlatformInvocation) {
+        this(snapshot,
+                conformanceEngine,
+                conformancePlannerOverride,
+                snapshotManager,
+                metrics,
+                new ProcessingGasContext(
+                        Objects.requireNonNull(gasMeter, "gasMeter")),
+                executableBodyFieldsByType,
+                strictPlatformInvocation);
+    }
+
+    DocumentProcessingRuntime(
+            ResolvedSnapshot snapshot,
+            ConformanceEngine conformanceEngine,
+            ConformancePlannerOverride conformancePlannerOverride,
+            ProcessingSnapshotManager snapshotManager,
+            ProcessingObserver metrics,
+            ProcessingGasContext gasContext,
+            Map<String, List<String>> executableBodyFieldsByType,
+            boolean strictPlatformInvocation) {
         this.metrics = metrics != null
                 ? metrics : NoOpProcessingObserver.INSTANCE;
-        this.gasContext = new ProcessingGasContext(
-                Objects.requireNonNull(gasMeter, "gasMeter"));
+        this.gasContext = Objects.requireNonNull(
+                gasContext, "gasContext");
         this.executableBodyFieldsByType =
                 ProcessingSnapshotBootstrap.immutableExecutableBodyFields(
                         executableBodyFieldsByType);
@@ -477,8 +517,12 @@ final class DocumentProcessingRuntime {
         gasContext.processMeter().drainEvent(); }
     public void chargeCheckpointUpdate() {
         gasContext.processMeter().checkpointUpdate(); }
+    public void chargeCheckpointUpdate(GasChargeContext context) {
+        gasContext.processMeter().checkpointUpdate(context); }
     public void chargeCheckpointCompared() {
         gasContext.processMeter().checkpointCompared(); }
+    public void chargeCheckpointCompared(GasChargeContext context) {
+        gasContext.processMeter().checkpointCompared(context); }
     public void chargeProcessorMarkerWritten(String reason) {
         gasContext.processMeter().processorMarker(reason); }
     public void chargeTerminationRequest() {

@@ -22,10 +22,21 @@ This registry contains public interface or abstract extension surfaces in provid
 | `blue.language.processor.ExternalDeliveryEvidenceVerifier` | processor extension |
 | `blue.language.processor.ExternalDeliveryPlanDeriver` | processor extension |
 | `blue.language.processor.HandlerProcessor` | handler |
+| `blue.language.processor.ManagedCheckpointBatchCleanupContextFactory` | processor extension |
+| `blue.language.processor.ManagedCheckpointCleanupContextFactory` | processor extension |
+| `blue.language.processor.ManagedDocumentStepContinuation` | processor extension |
 | `blue.language.processor.ProcessingObserver` | observation |
 | `blue.language.processor.ProcessingSnapshotManager` | processor extension |
 | `blue.language.processor.SemanticGasMeter$IntegerOperation` | processor extension |
 | `blue.language.processor.SubscriptionSurfaceValidator` | processor extension |
+| `blue.language.processor.closure.AdmissionCandidate` | processor extension |
+| `blue.language.processor.closure.ClosureExecutionObserver` | observation |
+| `blue.language.processor.closure.ClosureProcessor` | processor extension |
+| `blue.language.processor.closure.DocumentStepProcessor` | processor extension |
+| `blue.language.processor.closure.ProcessingCause` | processor extension |
+| `blue.language.processor.closure.RejectedCharge$ApplicableCap` | processor extension |
+| `blue.language.processor.closure.RejectedCharge$Owner` | processor extension |
+| `blue.language.processor.closure.TentativeFinalization$Boundary` | processor extension |
 | `blue.language.processor.model.ChannelContract` | channel |
 | `blue.language.processor.model.Contract` | processor extension |
 | `blue.language.processor.model.HandlerContract` | handler |
@@ -41,4 +52,4 @@ This registry contains public interface or abstract extension surfaces in provid
 | `blue.language.runtime.LanguageRuntimeAccess` | runtime |
 | `blue.language.runtime.WeightedLruCache$Weigher` | runtime |
 
-Total registered extension surfaces: **32**.
+Total registered extension surfaces: **43**.

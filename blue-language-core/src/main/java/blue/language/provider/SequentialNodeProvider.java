@@ -60,8 +60,10 @@ public class SequentialNodeProvider implements NodeProvider {
                     "Provider returned invalid evidence for " + blueId));
         }
         if (result.outcome() == NodeProviderOutcome.UNAVAILABLE) {
-            throw new ProviderUnavailableException(result.diagnostic().orElse(
-                    "Provider unavailable for " + blueId));
+            throw new ProviderUnavailableException(
+                    blueId,
+                    result.diagnostic().orElse(
+                            "Provider unavailable for " + blueId));
         }
         return null;
     }
