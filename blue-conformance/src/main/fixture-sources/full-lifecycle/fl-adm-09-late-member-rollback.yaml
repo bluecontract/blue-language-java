@@ -26,7 +26,11 @@ documents:
     document:
       documentId: fl-adm-09-b
       name: Full lifecycle later failing member
+      peer: {$documentBlueId: fl-adm-09-a}
       contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/peer]
         lifecycle:
           type: {$registryBlueId: LifecycleEventChannel}
           order: 0
@@ -36,7 +40,12 @@ documents:
           event:
             type: {$registryBlueId: DocumentProcessingInitiated}
           order: 0
-occurrences: []
+occurrences:
+- sourceDocumentId: fl-adm-09-b
+  sourcePath: /peer
+  activationGeneration: 1
+  targetDocumentId: fl-adm-09-a
+  active: true
 runtime:
   initializationHandlers:
     fl-adm-09-a/patchFirst:

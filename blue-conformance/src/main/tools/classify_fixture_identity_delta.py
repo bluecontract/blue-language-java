@@ -245,6 +245,111 @@ def approved_admission_context_removal(
     return planning or marker_write or marker_identity
 
 
+def approved_initialization_cycle_correction(
+    relative: str,
+    before_value: Any,
+    after_value: Any,
+    json_pointer: str,
+) -> str | None:
+    """Classify the exact C-CLO-08 lifecycle/marker evidence correction.
+
+    The lifecycle work that creates the first cycle owns its topology and
+    finalization evidence.  B enters initialization only after that work, so
+    its initialized marker records the intermediate cyclic member identity.
+    All permitted downstream changes are deterministic consequences of those
+    two facts; unrelated edits remain fail-closed.
+    """
+    if relative == "fixtures/closure/c-clo-08-cycle-during-initialization.yaml":
+        try:
+            before_expected = before_value["expected"]
+            after_expected = after_value["expected"]
+            lifecycle = next(
+                item
+                for item in after_expected["workTrace"]
+                if item["ordinal"] == 1 and item["kind"] == "LIFECYCLE"
+            )
+            first = after_expected["tentativeFinalizations"][0]
+            second = after_expected["tentativeFinalizations"][1]
+            before_b = next(
+                item
+                for item in before_expected["resultingDocuments"]
+                if item["documentId"] == "b"
+            )
+            after_b = next(
+                item
+                for item in after_expected["resultingDocuments"]
+                if item["documentId"] == "b"
+            )
+            before_marker = before_b["document"]["contracts"]["initialized"][
+                "document"
+            ]["blueId"]
+            after_marker = after_b["document"]["contracts"]["initialized"][
+                "document"
+            ]["blueId"]
+            final_master = after_expected["resultingComponents"][0][
+                "masterBlueId"
+            ]
+        except (KeyError, IndexError, StopIteration, TypeError):
+            return None
+        if not (
+            fixture_operation(before_value) == "admit-closure"
+            and fixture_operation(after_value) == "admit-closure"
+            and first["boundary"] == {
+                "kind": "WORK",
+                "afterWorkOrdinal": lifecycle["ordinal"],
+            }
+            and after_marker == first["memberBlueIds"]["b"]
+            and before_marker != after_marker
+            and second["masterBlueId"] == final_master
+        ):
+            return None
+        trace_prefixes = (
+            "/expected/gasTrace/",
+            "/expected/tentativeFinalizations/0/boundary/",
+        )
+        semantic_prefixes = (
+            "/expected/graphChanges/",
+            "/expected/occurrenceBindings/",
+            "/expected/platformCommitCompanion/",
+            "/expected/resultingComponents/",
+            "/expected/resultingDocuments/",
+            "/expected/subscriptionDeltas/",
+            "/expected/tentativeFinalizations/1/",
+            "/oracle/componentStages/0/componentStateIdentity",
+        )
+        if json_pointer.startswith(trace_prefixes):
+            return TRACE
+        if json_pointer.startswith(semantic_prefixes):
+            return SEMANTIC
+        return None
+
+    if relative == "oracles/c-clo-08-cycle-during-initialization.yaml":
+        try:
+            stages = after_value["stages"]
+            intermediate_b = stages[0]["memberBlueIdsInSourceOrder"][1]
+            final_master = stages[1]["masterBlueId"]
+            final_b = stages[1]["sourceDocumentsWithThisReferences"][1]
+            result_b = stages[2]["sourceDocumentsWithThisReferences"][1]
+            final_marker = final_b["contracts"]["initialized"]["document"][
+                "blueId"
+            ]
+            result_marker = result_b["contracts"]["initialized"]["document"][
+                "blueId"
+            ]
+        except (KeyError, IndexError, TypeError):
+            return None
+        if not (
+            len(stages) == 3
+            and final_marker == intermediate_b
+            and result_marker == intermediate_b
+            and stages[2]["masterBlueId"] == final_master
+        ):
+            return None
+        if json_pointer.startswith(("/stages/1/", "/stages/2/")):
+            return SEMANTIC
+    return None
+
+
 def allowed_semantic_change(relative: str, json_pointer: str) -> bool:
     if relative in MANIFEST_PATHS:
         return True
@@ -287,16 +392,23 @@ def classify_changed_file(relative: str, before_path: Path, after_path: Path) ->
     operation = fixture_operation(before_value) or fixture_operation(after_value)
     differences = leaf_differences(before_value, after_value)
     for difference in differences:
-        category = (
-            TRACE
-            if approved_admission_context_removal(
-                relative,
-                before_value,
-                after_value,
-                difference["path"],
-            )
-            else identity_category(difference["path"])
+        category = approved_initialization_cycle_correction(
+            relative,
+            before_value,
+            after_value,
+            difference["path"],
         )
+        if category is None:
+            category = (
+                TRACE
+                if approved_admission_context_removal(
+                    relative,
+                    before_value,
+                    after_value,
+                    difference["path"],
+                )
+                else identity_category(difference["path"])
+            )
         if category is None:
             category = SEMANTIC
             if not allowed_semantic_change(relative, difference["path"]):
@@ -342,6 +454,49 @@ def classify_removed_file(relative: str, path: Path) -> dict[str, Any]:
     }
 
 
+def approved_corrections(
+    rows: list[dict[str, Any]], after_files: dict[str, Path]
+) -> list[dict[str, Any]]:
+    """Return machine-readable rationale for each bounded semantic correction."""
+    relative = "fixtures/closure/c-clo-08-cycle-during-initialization.yaml"
+    row = next((item for item in rows if item["path"] == relative), None)
+    if row is None or SEMANTIC not in row["categories"]:
+        return []
+    try:
+        expected = load_structured(after_files[relative])["expected"]
+        lifecycle = next(
+            item
+            for item in expected["workTrace"]
+            if item["ordinal"] == 1 and item["kind"] == "LIFECYCLE"
+        )
+        intermediate_b = expected["tentativeFinalizations"][0][
+            "memberBlueIds"
+        ]["b"]
+        final_master = expected["resultingComponents"][0]["masterBlueId"]
+    except (KeyError, IndexError, StopIteration, TypeError) as failure:
+        raise ClassificationFailure(
+            "approved C-CLO-08 correction lacks exact lifecycle evidence"
+        ) from failure
+    return [
+        {
+            "id": "c-clo-08-initialization-cycle-evidence",
+            "classification": "approved-semantic-correction",
+            "lifecycleWorkOrdinal": lifecycle["ordinal"],
+            "intermediateBMemberBlueId": intermediate_b,
+            "finalMasterBlueId": final_master,
+            "rationale": (
+                "Lifecycle work ordinal 1 owns the topology and first "
+                "finalization; B initializes afterward, so its marker binds "
+                "to the intermediate cyclic member before the final component."
+            ),
+            "failClosedTest": (
+                "ClassifyFixtureIdentityDeltaTest."
+                "test_initialization_cycle_exception_rejects_unrelated_change"
+            ),
+        }
+    ]
+
+
 def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
     before_files = package_files(before_root)
     after_files = package_files(after_root)
@@ -369,8 +524,59 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "changedFileCount": len(rows),
         "summary": {category: counts[category] for category in CATEGORIES},
         "unexpectedCount": sum(1 for row in rows if row["unexpected"]),
+        "approvedCorrections": approved_corrections(rows, after_files),
         "files": rows,
     }
+
+
+def apply_report_context(
+    report: dict[str, Any],
+    *,
+    before_reference: str | None,
+    after_reference: str | None,
+    baseline_commit: str | None,
+    baseline_tree: str | None,
+    baseline_package_identity: str | None,
+) -> dict[str, Any]:
+    """Replace disposable paths with durable, fail-closed provenance."""
+    baseline_values = (
+        baseline_commit,
+        baseline_tree,
+        baseline_package_identity,
+    )
+    if any(value is not None for value in baseline_values) and not all(
+        value is not None and value.strip() for value in baseline_values
+    ):
+        raise ClassificationFailure(
+            "baseline commit, tree, and package identity must be supplied together"
+        )
+    result = dict(report)
+    if before_reference:
+        result["beforePackage"] = before_reference
+    if after_reference:
+        result["afterPackage"] = after_reference
+    if baseline_commit is not None:
+        if len(baseline_commit) != 40 or any(
+            character not in "0123456789abcdef" for character in baseline_commit
+        ):
+            raise ClassificationFailure("baseline commit must be a lowercase Git SHA-1")
+        if len(baseline_tree or "") != 40 or any(
+            character not in "0123456789abcdef"
+            for character in (baseline_tree or "")
+        ):
+            raise ClassificationFailure("baseline tree must be a lowercase Git SHA-1")
+        if not (baseline_package_identity or "").startswith("sha256:") or len(
+            baseline_package_identity or ""
+        ) != 71:
+            raise ClassificationFailure(
+                "baseline package identity must be a prefixed SHA-256"
+            )
+        result["baseline"] = {
+            "commit": baseline_commit,
+            "tree": baseline_tree,
+            "fixturePackageIdentity": baseline_package_identity,
+        }
+    return result
 
 
 def markdown_report(report: dict[str, Any]) -> str:
@@ -381,14 +587,48 @@ def markdown_report(report: dict[str, Any]) -> str:
         f"- After files: {report['afterFileCount']}",
         f"- Changed files: {report['changedFileCount']}",
         f"- Unexpected files: {report['unexpectedCount']}",
-        "",
-        "## Classification summary",
-        "",
-        "| Category | Changed files |",
-        "|---|---:|",
     ]
+    baseline = report.get("baseline")
+    if baseline:
+        lines.extend(
+            [
+                f"- Baseline commit: `{baseline['commit']}`",
+                f"- Baseline tree: `{baseline['tree']}`",
+                "- Baseline fixture package: "
+                f"`{baseline['fixturePackageIdentity']}`",
+            ]
+        )
+    lines.extend(
+        [
+            f"- Before reference: `{report['beforePackage']}`",
+            f"- After reference: `{report['afterPackage']}`",
+            "",
+            "## Classification summary",
+            "",
+            "| Category | Changed files |",
+            "|---|---:|",
+        ]
+    )
     for category in CATEGORIES:
         lines.append(f"| `{category}` | {report['summary'][category]} |")
+    corrections = report.get("approvedCorrections", [])
+    if corrections:
+        lines.extend(["", "## Approved bounded corrections", ""])
+        for correction in corrections:
+            lines.extend(
+                [
+                    f"### `{correction['id']}`",
+                    "",
+                    correction["rationale"],
+                    "",
+                    f"- Lifecycle work ordinal: `{correction['lifecycleWorkOrdinal']}`",
+                    "- Intermediate B member/marker: "
+                    f"`{correction['intermediateBMemberBlueId']}`",
+                    f"- Final MASTER: `{correction['finalMasterBlueId']}`",
+                    f"- Fail-closed guard: `{correction['failClosedTest']}`",
+                    "",
+                ]
+            )
     lines.extend(["", "## Changed files", ""])
     if not report["files"]:
         lines.append("No byte differences.")
@@ -422,6 +662,11 @@ def main() -> None:
     parser.add_argument("--after-package", type=Path, required=True)
     parser.add_argument("--json", type=Path, required=True)
     parser.add_argument("--markdown", type=Path, required=True)
+    parser.add_argument("--before-reference")
+    parser.add_argument("--after-reference")
+    parser.add_argument("--baseline-commit")
+    parser.add_argument("--baseline-tree")
+    parser.add_argument("--baseline-package-identity")
     parser.add_argument("--fail-on-unexpected", action="store_true")
     args = parser.parse_args()
     before = args.before_package.expanduser().resolve()
@@ -442,7 +687,14 @@ def main() -> None:
                 "report output must not mutate either classified package: "
                 f"{output}"
             )
-    report = classify(before, after)
+    report = apply_report_context(
+        classify(before, after),
+        before_reference=args.before_reference,
+        after_reference=args.after_reference,
+        baseline_commit=args.baseline_commit,
+        baseline_tree=args.baseline_tree,
+        baseline_package_identity=args.baseline_package_identity,
+    )
     atomic_write(
         json_output,
         json.dumps(report, indent=2, sort_keys=True) + "\n",

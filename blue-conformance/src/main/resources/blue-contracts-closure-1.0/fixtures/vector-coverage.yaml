@@ -1,7 +1,7 @@
 specification: blue-contracts/1.0
-vectorCount: 135
+vectorCount: 145
 ordinaryVectorCount: 100
-closureVectorCount: 35
+closureVectorCount: 45
 vectors:
   C-CHK-01:
   - chk/c-chk-01.yaml
@@ -412,3 +412,26 @@ vectors:
   - upd/c-upd-02.yaml
   C-UPD-03:
   - upd/c-upd-03.yaml
+  FL-ADM-01:
+  - closure/fl-adm-01-root-patch-event.yaml
+  FL-ADM-02:
+  - closure/fl-adm-02-duplicate-equal-events.yaml
+  FL-ADM-03:
+  - closure/fl-adm-03-non-public-containing-route.yaml
+  FL-ADM-04:
+  - closure/fl-adm-04-document-update-continuation.yaml
+  FL-ADM-05:
+  - closure/fl-adm-05-graceful-termination.yaml
+  FL-ADM-06:
+  - closure/fl-adm-06-order-representation-inline.yaml
+  - closure/fl-adm-06-order-representation-reference.yaml
+  - closure/fl-adm-06-order-representation-reversed.yaml
+  FL-ADM-07:
+  - closure/fl-adm-07-finite-cyclic-route.yaml
+  FL-ADM-08:
+  - closure/fl-adm-08-infinite-cycle-gas-retry-first.yaml
+  - closure/fl-adm-08-infinite-cycle-gas-retry-retry.yaml
+  FL-ADM-09:
+  - closure/fl-adm-09-late-member-rollback.yaml
+  FL-ADM-10:
+  - closure/fl-adm-10-unknown-occurrence.yaml

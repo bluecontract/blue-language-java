@@ -4,7 +4,7 @@ specificationVersion: '1.0'
 status: final-normative-implementation-target
 specificationDocument:
   path: ../../specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193
+  sha256: 389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18
 languageDependency:
   specification: Blue Language Specification 1.0
   referencePath: ../../reference/blue-language-specification-1.0.md
@@ -61,12 +61,12 @@ identityConstructors:
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:6659fd39aaf0a6dcf651ea3d6e752e93da8cd48d2f0afcc87eee4bee95d4300a
-  vectorCount: 135
-  fixtureCount: 234
+  packageIdentity: sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d
+  vectorCount: 145
+  fixtureCount: 247
 oraclePackage:
   path: oracles/manifest.yaml
-  packageIdentity: sha256:efbae749b6c076699e9fde1036fd5d84909d2f1b2cbdcb7d5116d7f06a6f0b71
+  packageIdentity: sha256:6c2ad2b484aa259e2b0a609172ac56882a0b1cb588209809cab979605b98af9d
   oracleCount: 42
 normativeExclusions:
 - delegated-authority eligibility and authority-evidence resolution
@@ -93,4 +93,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:546cd674663c34c455a2e912cfef76653f01acdd7a4a30082077b961148edb6c
+releaseIdentity: sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c

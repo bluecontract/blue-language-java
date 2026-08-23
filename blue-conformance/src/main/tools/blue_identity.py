@@ -130,6 +130,66 @@ def _pure_reference_blue_id(value: Any) -> str | None:
     return blue_id
 
 
+def _empty_list_placeholder(value: Any) -> bool:
+    return isinstance(value, dict) and value == {"$empty": True}
+
+
+def _validate_empty_list_placeholder(value: Mapping[str, Any]) -> None:
+    if "$empty" in value and not _empty_list_placeholder(value):
+        raise ValueError(
+            '"$empty" list placeholder must have exact shape '
+            '{"$empty": true}'
+        )
+
+
+def _clean_direct_object(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Recursively omit object fields whose normalized map is empty."""
+    cleaned: dict[str, Any] = {}
+    for key, child in value.items():
+        if child is None:
+            continue
+        if isinstance(child, dict):
+            normalized_child = _clean_direct_object(child)
+            if not normalized_child:
+                continue
+            cleaned[key] = normalized_child
+        elif isinstance(child, list):
+            cleaned[key] = _clean_direct_list(child)
+        else:
+            cleaned[key] = child
+    return cleaned
+
+
+def _clean_direct_list(value: Sequence[Any]) -> list[Any]:
+    """Clean list contents while preserving their exact positional shape."""
+    cleaned: list[Any] = []
+    for item in value:
+        if item is None:
+            raise ValueError(
+                'Use {"$empty": true} for null list placeholders'
+            )
+        if isinstance(item, dict):
+            _validate_empty_list_placeholder(item)
+            normalized_item = _clean_direct_object(item)
+            if not normalized_item:
+                raise ValueError(
+                    'Use {"$empty": true} for empty object list placeholders'
+                )
+            cleaned.append(normalized_item)
+        elif isinstance(item, list):
+            cleaned.append(_clean_direct_list(item))
+        else:
+            cleaned.append(item)
+    return cleaned
+
+
+def _store_normalized_object_field(
+        target: dict[str, Any], key: str, value: Any) -> None:
+    """Store one field unless its recursively normalized object is empty."""
+    if not isinstance(value, dict) or value:
+        target[key] = value
+
+
 def _normalized_schema_input(value: Any) -> Any:
     if not isinstance(value, dict):
         raise TypeError("schema must be an object")
@@ -139,22 +199,40 @@ def _normalized_schema_input(value: Any) -> Any:
     normalized: dict[str, Any] = {}
     for key, child in cleaned.items():
         if key in SCHEMA_SCALAR_FIELDS:
-            normalized[key] = (
+            normalized_child = (
                 _canonical_scalar_payload(child)
                 if not isinstance(child, (dict, list))
                 else _normalized_preliminary_input(child)
             )
+            _store_normalized_object_field(
+                normalized, key, normalized_child
+            )
         elif key == "enum":
             if not isinstance(child, list):
                 raise TypeError("schema enum must be a list")
-            normalized[key] = [
-                _canonical_scalar_payload(item)
-                if not isinstance(item, (dict, list))
-                else _normalized_preliminary_input(item)
-                for item in child
-            ]
+            normalized_items: list[Any] = []
+            for item in child:
+                if item is None:
+                    raise ValueError(
+                        'Use {"$empty": true} for null list placeholders'
+                    )
+                if isinstance(item, dict):
+                    _validate_empty_list_placeholder(item)
+                normalized_item = (
+                    _canonical_scalar_payload(item)
+                    if not isinstance(item, (dict, list))
+                    else _normalized_preliminary_input(item)
+                )
+                if isinstance(normalized_item, dict) and not normalized_item:
+                    raise ValueError(
+                        'Use {"$empty": true} for empty object list placeholders'
+                    )
+                normalized_items.append(normalized_item)
+            normalized[key] = normalized_items
         else:
-            normalized[key] = _normalized_preliminary_input(child)
+            _store_normalized_object_field(
+                normalized, key, _normalized_preliminary_input(child)
+            )
     return normalized
 
 
@@ -167,10 +245,17 @@ def _normalized_preliminary_input(value: Any) -> Any:
         for item in value:
             if item is None:
                 raise ValueError('Use {"$empty": true} for null list placeholders')
-            if isinstance(item, dict) and item == {"$empty": True}:
+            if isinstance(item, dict):
+                _validate_empty_list_placeholder(item)
+            if _empty_list_placeholder(item):
                 normalized_items.append({"$empty": True})
             else:
-                normalized_items.append(_normalized_preliminary_input(item))
+                normalized_item = _normalized_preliminary_input(item)
+                if isinstance(normalized_item, dict) and not normalized_item:
+                    raise ValueError(
+                        'Use {"$empty": true} for empty object list placeholders'
+                    )
+                normalized_items.append(normalized_item)
         return normalized_items
     if not isinstance(value, dict):
         raise TypeError(f"Unsupported Blue value: {type(value)!r}")
@@ -200,11 +285,17 @@ def _normalized_preliminary_input(value: Any) -> Any:
                     child, explicit_type
                 )
         elif key == "schema":
-            normalized[key] = _normalized_schema_input(child)
+            _store_normalized_object_field(
+                normalized, key, _normalized_schema_input(child)
+            )
         elif key == "items":
-            normalized[key] = _normalized_preliminary_input(child)
+            _store_normalized_object_field(
+                normalized, key, _normalized_preliminary_input(child)
+            )
         else:
-            normalized[key] = _normalized_preliminary_input(child)
+            _store_normalized_object_field(
+                normalized, key, _normalized_preliminary_input(child)
+            )
     return normalized
 
 
@@ -237,10 +328,8 @@ def direct_blue_id(value: Any, *, allow_cyclic_placeholders: bool = False) -> st
         return _object_blue_id(_scalar_node(value), allow_cyclic_placeholders)
     if isinstance(value, list):
         acc = _list_seed()
-        for item in value:
-            if item is None:
-                raise ValueError('Use {"$empty": true} for null list placeholders')
-            if isinstance(item, dict) and item == {"$empty": True}:
+        for item in _clean_direct_list(value):
+            if _empty_list_placeholder(item):
                 empty_id = canonical_sha256_blue_id(
                     {"$empty": {"blueId": canonical_sha256_blue_id(True)}}
                 )
@@ -257,7 +346,7 @@ def direct_blue_id(value: Any, *, allow_cyclic_placeholders: bool = False) -> st
 
 
 def _object_blue_id(value: Mapping[str, Any], allow_cyclic_placeholders: bool) -> str:
-    cleaned = {k: v for k, v in value.items() if v is not None}
+    cleaned = _clean_direct_object(value)
     if set(cleaned) == {"blueId"}:
         blue_id = cleaned["blueId"]
         if not isinstance(blue_id, str):

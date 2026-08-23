@@ -1,0 +1,1734 @@
+schema: blue-contracts-closure-fixture/1.0
+id: fl-adm-03-non-public-containing-route
+vectors:
+- FL-ADM-03
+category: admission
+operation: admit-closure
+description: Non-public B emits during initialization; containing public A receives
+  the internal occurrence and emits its own public event while B's event remains non-public.
+releaseManifest: ../../release-manifest.yaml
+input:
+  graphGeneration: 1
+  cause:
+    kind: admission
+    causeIdentity: sha256:97273a7829a5417d9c3457767b2dc06bcfa03db31a12a5373b49dbfee5697af6
+    admissionKind: TOP_LEVEL_ADMISSION
+    label: fl-adm-03-non-public-containing-route
+    triggeringEventBlueId: null
+    parentTransitionIdentity: null
+    policyIdentity: sha256:768d2577f7fce5123534d3bbe6eaccbf482cbef96e991886b2da61fa7b850386
+  admissionCandidate: null
+  admissionCandidateIdentity: null
+  documents:
+    fl-adm-03-a:
+      documentId: fl-adm-03-a
+      blueId: GvUs1qGWbXKob8LV7H8yMsY2ygRGRctfhE2qAWHFMSRG
+      document:
+        name: Full lifecycle public containing A
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /child
+          fromChild:
+            type:
+              blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
+            sourcePath: /child
+            event:
+              blueId: 9RAEz4qKJgwX87fmTKF4iX6NUbh4bE1rKGQqsPi4Cmtb
+            order: 0
+          receiveChild:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: fromChild
+            order: 0
+        documentId: fl-adm-03-a
+        child:
+          blueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+        observedChild: false
+      initialized: false
+      terminated: false
+      publicRoot: true
+      epoch: 0
+      componentGeneration: 1
+    fl-adm-03-b:
+      documentId: fl-adm-03-b
+      blueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+      document:
+        name: Full lifecycle private B
+        contracts:
+          lifecycle:
+            type:
+              blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
+            order: 0
+          emitChild:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: lifecycle
+            event:
+              type:
+                blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C
+            order: 0
+        documentId: fl-adm-03-b
+      initialized: false
+      terminated: false
+      publicRoot: false
+      epoch: 0
+      componentGeneration: 1
+  occurrences:
+  - occurrenceIdentity: sha256:383425cd3c1cece4eadca4943f383220af24d355773535a521bb1ba20e43b4f8
+    bindingIdentity: sha256:0a324bc7ba2da41b99a0b11f1537d0afe707a49d48c5e735490db4925a0c0dfc
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+    sourceDocumentId: fl-adm-03-a
+    sourcePath: /child
+    activationGeneration: 1
+    targetDocumentId: fl-adm-03-b
+    expectedTargetBlueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+    active: true
+    pendingHistoricalEpoch: null
+  components:
+  - componentIdentity: sha256:5474514879bf5a8f03061eda8762b15fad665f7977dde0545d0208f21d4f6565
+    componentStateIdentity: sha256:6f5be1782850970f59c205eae66b02ed3327288356d8de2140ece0082e8840b5
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - fl-adm-03-b
+    orderedMemberBlueIds:
+    - 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+  - componentIdentity: sha256:2a3eff6d1fbe60464220cf8a2dccf52b028d1b6f39e408c5377997ad63fe9c5c
+    componentStateIdentity: sha256:5228f5998e7618789707cbb363ae76bb2fda872732f26bfed2c5c67b058f3601
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - fl-adm-03-a
+    orderedMemberBlueIds:
+    - GvUs1qGWbXKob8LV7H8yMsY2ygRGRctfhE2qAWHFMSRG
+  directDeliveries: []
+  publicRootDocumentIds:
+  - fl-adm-03-a
+  directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
+  occurrenceBindingSetIdentity: sha256:265da4ae0ce86698b4b308145b71e56c1f962b120682e13414ee353d7ef8a420
+  closureIdentity: sha256:37dbd909688babd5038d71ac8a543f72f5bb1dca8d50af81f6b521dda5e64883
+  invocationIdentity: sha256:70d3f4421336d82aeaffe017f09063e891b5f507c995cff9d4fc29b81927de63
+  gasPolicy:
+    policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
+    sharedLimit: 100000
+    localLimits: {}
+    label: release-default
+  environment:
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    managedDocumentIdentityPolicy:
+      identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+      label: nfc-document-lineage-v1
+    managedBindingPolicy:
+      identity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+      label: exact-document-lineage
+    exactNodeProviderDomain:
+      identity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+      label: fixture-exact-node-provider-v1
+    externalOrderPolicy:
+      identity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+      label: canonical-source-order-v1
+    portableLimitPolicy:
+      identity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+      label: blue-contracts-1.0-portable-limits
+      limits:
+      - name: closureExpansionsPerInvocation
+        value: 4096
+      - name: closureGraphChangesPerInvocation
+        value: 4096
+      - name: closureTentativeFinalizationsPerInvocation
+        value: 8192
+      - name: closureWorkOccurrencesPerInvocation
+        value: 8192
+      - name: contractKeyCodePoints
+        value: 256
+      - name: contractKeyUtf8Bytes
+        value: 1024
+      - name: cyclicCanonicalBytesPerComponent
+        value: 16777216
+      - name: cyclicEdgesPerComponent
+        value: 1024
+      - name: cyclicMembersPerComponent
+        value: 128
+      - name: directCanonicalIdentityInputBytes
+        value: 1048576
+      - name: directInlineIdentityTextCodePoints
+        value: 262144
+      - name: directListItemsMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectEntriesMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectKeyCodePoints
+        value: 4096
+      - name: effectiveContractsPerParticipatingScope
+        value: 8192
+      - name: embeddedDepth
+        value: 256
+      - name: eventsPerContractExecutionResult
+        value: 1024
+      - name: externalChannelsPerScope
+        value: 2048
+      - name: handlersBoundToOneDelivery
+        value: 4096
+      - name: internalEventOccurrencesPerInvocation
+        value: 8192
+      - name: managedDocumentsPerClosure
+        value: 4096
+      - name: nestedDocumentUpdateCascadeDepth
+        value: 256
+      - name: normalizedRuntimePointerUtf8Bytes
+        value: 4096
+      - name: participatingScopesPerEvent
+        value: 4096
+      - name: patchesPerContractExecutionResult
+        value: 1024
+      - name: preselectedExternalOccurrencesPerEvent
+        value: 1024
+      - name: processEmbeddedEdgesPerClosure
+        value: 16384
+      - name: processEmbeddedPathsPerScope
+        value: 4096
+      - name: rootEventsReturned
+        value: 4096
+      - name: runtimeChildLedgerCounterKinds
+        value: 256
+      - name: runtimePointerSegments
+        value: 256
+      - name: subscriptionKeysPerChannel
+        value: 256
+      - name: typeChainEdges
+        value: 256
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+runtime:
+  initializationHandlers:
+    fl-adm-03-b/emitChild:
+      events:
+      - type:
+          blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+        subscriptionKey: full-lifecycle
+        id: FL-ADM-03-CHILD
+  handlers:
+    fl-adm-03-a/receiveChild:
+      patches:
+      - op: replace
+        path: /observedChild
+        val: true
+      events:
+      - type:
+          blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+        subscriptionKey: full-lifecycle
+        id: FL-ADM-03-PARENT
+expected:
+  attemptOutcome: Complete
+  status: success
+  invocationIdentity: sha256:70d3f4421336d82aeaffe017f09063e891b5f507c995cff9d4fc29b81927de63
+  inputClosureIdentity: sha256:37dbd909688babd5038d71ac8a543f72f5bb1dca8d50af81f6b521dda5e64883
+  outputClosureIdentity: sha256:264b80d5e2bed5183e2457163586b1cf367a97af7852d4249f859c89517c6e0b
+  atomic: true
+  workTrace:
+  - ordinal: 0
+    kind: INITIALIZATION
+    targetDocumentId: fl-adm-03-b
+    channelKey: initialization
+    targetManagedScopeIdentity: sha256:7d03bc69903e156c56fdf2db8c6c81b10d645e82dd15d5cb815c6e44c81fc130
+    sourceOccurrenceIdentity: sha256:97273a7829a5417d9c3457767b2dc06bcfa03db31a12a5373b49dbfee5697af6
+    workIdentity: sha256:c9db4a29371b35499099f13b4e8f06a513c67a2505fbbbf127c3edd48b0c99cd
+  - ordinal: 1
+    kind: LIFECYCLE
+    targetDocumentId: fl-adm-03-b
+    channelKey: lifecycle
+    targetManagedScopeIdentity: sha256:7d03bc69903e156c56fdf2db8c6c81b10d645e82dd15d5cb815c6e44c81fc130
+    sourceOccurrenceIdentity: sha256:97273a7829a5417d9c3457767b2dc06bcfa03db31a12a5373b49dbfee5697af6
+    workIdentity: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+  - ordinal: 2
+    kind: EMBEDDED_EVENT
+    targetDocumentId: fl-adm-03-a
+    channelKey: fromChild
+    eventBlueId: 9RAEz4qKJgwX87fmTKF4iX6NUbh4bE1rKGQqsPi4Cmtb
+    occurrenceOrdinal: 0
+    targetManagedScopeIdentity: sha256:a1c05167d37ee4f933b3d22d1ad8384f0553bba2079b702f5bc2bf439d30e2be
+    sourceOccurrenceIdentity: sha256:4ec77e6a4491f708a518052a294f7201830a6de0cc4fa6dc2c3bc80fc867092e
+    workIdentity: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+  - ordinal: 3
+    kind: INITIALIZATION
+    targetDocumentId: fl-adm-03-a
+    channelKey: lifecycle
+    targetManagedScopeIdentity: sha256:a1c05167d37ee4f933b3d22d1ad8384f0553bba2079b702f5bc2bf439d30e2be
+    sourceOccurrenceIdentity: sha256:97273a7829a5417d9c3457767b2dc06bcfa03db31a12a5373b49dbfee5697af6
+    workIdentity: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+  documentStepTrace:
+  - stepOrdinal: 0
+    workOrdinal: 0
+    targetDocumentId: fl-adm-03-b
+    executionRootDocumentId: fl-adm-03-b
+    scopePath: /
+    executionMode: ISOLATED_DOCUMENT
+    ambientContainingDocumentIds: []
+  - stepOrdinal: 1
+    workOrdinal: 1
+    targetDocumentId: fl-adm-03-b
+    executionRootDocumentId: fl-adm-03-b
+    scopePath: /
+    executionMode: ISOLATED_DOCUMENT
+    ambientContainingDocumentIds: []
+  - stepOrdinal: 2
+    workOrdinal: 2
+    targetDocumentId: fl-adm-03-a
+    executionRootDocumentId: fl-adm-03-a
+    scopePath: /
+    executionMode: ISOLATED_DOCUMENT
+    ambientContainingDocumentIds: []
+  - stepOrdinal: 3
+    workOrdinal: 3
+    targetDocumentId: fl-adm-03-a
+    executionRootDocumentId: fl-adm-03-a
+    scopePath: /
+    executionMode: ISOLATED_DOCUMENT
+    ambientContainingDocumentIds: []
+  tentativeFinalizations: []
+  graphGeneration: 1
+  resultingDocuments:
+  - documentId: fl-adm-03-a
+    beforeBlueId: GvUs1qGWbXKob8LV7H8yMsY2ygRGRctfhE2qAWHFMSRG
+    afterBlueId: HgwdSFbu9QcQZjW7yLmVqSnSCc62Zbs31HT5NhXwtoNq
+    document:
+      name: Full lifecycle public containing A
+      contracts:
+        embedded:
+          type:
+            blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          paths:
+          - /child
+        fromChild:
+          type:
+            blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
+          sourcePath: /child
+          event:
+            blueId: 9RAEz4qKJgwX87fmTKF4iX6NUbh4bE1rKGQqsPi4Cmtb
+          order: 0
+        receiveChild:
+          type:
+            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          channel: fromChild
+          order: 0
+        initialized:
+          type:
+            blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+          document:
+            blueId: Rzot4iSnUWth6wGXXLLc7ijQGvvRHjPaerNbQJitiC6
+      documentId: fl-adm-03-a
+      child:
+        blueId: 5KsTeC6e3NRg3Sz1qv5ac1Vw43Zzm8qobAJoBpWBVU3q
+      observedChild: true
+    initialized: true
+    terminated: false
+    publicRoot: true
+    epoch: 0
+    componentGeneration: 1
+    componentIdentity: sha256:2a3eff6d1fbe60464220cf8a2dccf52b028d1b6f39e408c5377997ad63fe9c5c
+    componentStateIdentity: sha256:05a4e1b779ae7a16ebfab4418333d74a49ab5633057c57a8476ce3e82b8e82e9
+    memberIndex: null
+  - documentId: fl-adm-03-b
+    beforeBlueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+    afterBlueId: 5KsTeC6e3NRg3Sz1qv5ac1Vw43Zzm8qobAJoBpWBVU3q
+    document:
+      name: Full lifecycle private B
+      contracts:
+        lifecycle:
+          type:
+            blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
+          order: 0
+        emitChild:
+          type:
+            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          channel: lifecycle
+          event:
+            type:
+              blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C
+          order: 0
+        initialized:
+          type:
+            blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+          document:
+            blueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+      documentId: fl-adm-03-b
+    initialized: true
+    terminated: false
+    publicRoot: false
+    epoch: 0
+    componentGeneration: 1
+    componentIdentity: sha256:5474514879bf5a8f03061eda8762b15fad665f7977dde0545d0208f21d4f6565
+    componentStateIdentity: sha256:403e5833ed347243c2326c4c7e428ed28cbcc4edb49452befc99a1b14a3888ab
+    memberIndex: null
+  resultingComponents:
+  - componentIdentity: sha256:5474514879bf5a8f03061eda8762b15fad665f7977dde0545d0208f21d4f6565
+    componentStateIdentity: sha256:403e5833ed347243c2326c4c7e428ed28cbcc4edb49452befc99a1b14a3888ab
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - fl-adm-03-b
+    orderedMemberBlueIds:
+    - 5KsTeC6e3NRg3Sz1qv5ac1Vw43Zzm8qobAJoBpWBVU3q
+  - componentIdentity: sha256:2a3eff6d1fbe60464220cf8a2dccf52b028d1b6f39e408c5377997ad63fe9c5c
+    componentStateIdentity: sha256:05a4e1b779ae7a16ebfab4418333d74a49ab5633057c57a8476ce3e82b8e82e9
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - fl-adm-03-a
+    orderedMemberBlueIds:
+    - HgwdSFbu9QcQZjW7yLmVqSnSCc62Zbs31HT5NhXwtoNq
+  occurrenceBindings:
+  - occurrenceIdentity: sha256:383425cd3c1cece4eadca4943f383220af24d355773535a521bb1ba20e43b4f8
+    bindingIdentity: sha256:e06ade5cdb6a364e27513a8cd5d323718508a5ff709bfce3212c7163588e1fb3
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+    sourceDocumentId: fl-adm-03-a
+    sourcePath: /child
+    activationGeneration: 1
+    targetDocumentId: fl-adm-03-b
+    expectedTargetBlueId: 5KsTeC6e3NRg3Sz1qv5ac1Vw43Zzm8qobAJoBpWBVU3q
+    active: true
+    pendingHistoricalEpoch: null
+  occurrenceBindingSetIdentity: sha256:040b0c353c23b19efed162bbd4659eccf3697dd7f6f5fc29ddc5dbd596e0e349
+  graphChanges:
+  - graphChangeOrdinal: 0
+    changeKind: REBIND
+    sourceDocumentId: fl-adm-03-a
+    sourcePath: /child
+    beforeActivationGeneration: 1
+    beforeOccurrenceIdentity: sha256:383425cd3c1cece4eadca4943f383220af24d355773535a521bb1ba20e43b4f8
+    beforeBindingIdentity: sha256:0a324bc7ba2da41b99a0b11f1537d0afe707a49d48c5e735490db4925a0c0dfc
+    beforeTargetDocumentId: fl-adm-03-b
+    beforeTargetBlueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+    afterActivationGeneration: 1
+    afterOccurrenceIdentity: sha256:383425cd3c1cece4eadca4943f383220af24d355773535a521bb1ba20e43b4f8
+    afterBindingIdentity: sha256:e06ade5cdb6a364e27513a8cd5d323718508a5ff709bfce3212c7163588e1fb3
+    afterTargetDocumentId: fl-adm-03-b
+    afterTargetBlueId: 5KsTeC6e3NRg3Sz1qv5ac1Vw43Zzm8qobAJoBpWBVU3q
+  graphChangesIdentity: sha256:49a20c7919ec3e77fb324c04aa1c74669ba6d08d03d9e2286056624a62049ef7
+  subscriptionDeltas:
+  - subscriptionDeltaOrdinal: 0
+    operation: REPLACE
+    targetManagedScopeIdentity: sha256:a1c05167d37ee4f933b3d22d1ad8384f0553bba2079b702f5bc2bf439d30e2be
+    channelOccurrenceIdentity: sha256:ef454153051200daafdf23e8fd32094572077cbafb84520b6ac265771c520c9a
+    beforeSubscriptionIdentity: sha256:c3822bc33250d4c9f3e3cfae55b9e08371282f88b3b05eabd51a64c68d8553da
+    afterSubscriptionIdentity: sha256:1451406ab8e41454ff80bf554289fb0cca4c8db086c488efd267ce0bc59c915b
+    beforeDocumentBlueId: GvUs1qGWbXKob8LV7H8yMsY2ygRGRctfhE2qAWHFMSRG
+    afterDocumentBlueId: HgwdSFbu9QcQZjW7yLmVqSnSCc62Zbs31HT5NhXwtoNq
+    beforeGraphGeneration: 1
+    afterGraphGeneration: 1
+    beforeComponentGeneration: 1
+    afterComponentGeneration: 1
+    beforeSubscription:
+      subscriptionIdentity: sha256:c3822bc33250d4c9f3e3cfae55b9e08371282f88b3b05eabd51a64c68d8553da
+      channelOccurrence:
+        channelOccurrenceIdentity: sha256:ef454153051200daafdf23e8fd32094572077cbafb84520b6ac265771c520c9a
+        managedDocumentId: fl-adm-03-a
+        scopePath: /
+        scopeActivationGeneration: 0
+        rawChannelKey: fromChild
+        effectiveRuntimeContributionBlueId: 8knWHSi5ZNx22tS5SADh6V9h8w9KGTvtFqQHe67yLDtc
+        subscriptionHeaderBlueId: BBxRcKHJ4FdaRhjG2TDW1JrkfMisS7DCRMNBRXJ44Axf
+      documentBlueId: GvUs1qGWbXKob8LV7H8yMsY2ygRGRctfhE2qAWHFMSRG
+      graphGeneration: 1
+      componentGeneration: 1
+    afterSubscription:
+      subscriptionIdentity: sha256:1451406ab8e41454ff80bf554289fb0cca4c8db086c488efd267ce0bc59c915b
+      channelOccurrence:
+        channelOccurrenceIdentity: sha256:ef454153051200daafdf23e8fd32094572077cbafb84520b6ac265771c520c9a
+        managedDocumentId: fl-adm-03-a
+        scopePath: /
+        scopeActivationGeneration: 0
+        rawChannelKey: fromChild
+        effectiveRuntimeContributionBlueId: 8knWHSi5ZNx22tS5SADh6V9h8w9KGTvtFqQHe67yLDtc
+        subscriptionHeaderBlueId: BBxRcKHJ4FdaRhjG2TDW1JrkfMisS7DCRMNBRXJ44Axf
+      documentBlueId: HgwdSFbu9QcQZjW7yLmVqSnSCc62Zbs31HT5NhXwtoNq
+      graphGeneration: 1
+      componentGeneration: 1
+  - subscriptionDeltaOrdinal: 1
+    operation: REPLACE
+    targetManagedScopeIdentity: sha256:7d03bc69903e156c56fdf2db8c6c81b10d645e82dd15d5cb815c6e44c81fc130
+    channelOccurrenceIdentity: sha256:351473faf91453e7d86aae92eb264f48bb57aaab8a533ca7129650bff14adf65
+    beforeSubscriptionIdentity: sha256:cf93b7c1f29dc6aeebf9ee68b73e4c294a59cee0b47877e3a2e4026a9c8bf10a
+    afterSubscriptionIdentity: sha256:c648dc2dd4c8e891be91ee1f481d1cca82212cfc5e8ce13bfaccae724adfee92
+    beforeDocumentBlueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+    afterDocumentBlueId: 5KsTeC6e3NRg3Sz1qv5ac1Vw43Zzm8qobAJoBpWBVU3q
+    beforeGraphGeneration: 1
+    afterGraphGeneration: 1
+    beforeComponentGeneration: 1
+    afterComponentGeneration: 1
+    beforeSubscription:
+      subscriptionIdentity: sha256:cf93b7c1f29dc6aeebf9ee68b73e4c294a59cee0b47877e3a2e4026a9c8bf10a
+      channelOccurrence:
+        channelOccurrenceIdentity: sha256:351473faf91453e7d86aae92eb264f48bb57aaab8a533ca7129650bff14adf65
+        managedDocumentId: fl-adm-03-b
+        scopePath: /
+        scopeActivationGeneration: 0
+        rawChannelKey: lifecycle
+        effectiveRuntimeContributionBlueId: 2b54iTF8KQC6vdoh4BjjkzANV41udKWajX5LKfn93bfd
+        subscriptionHeaderBlueId: 398QX3G4pzQF9pKKfw1Ab5tqGCwD5zNfReTyBQnHRtnL
+      documentBlueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+      graphGeneration: 1
+      componentGeneration: 1
+    afterSubscription:
+      subscriptionIdentity: sha256:c648dc2dd4c8e891be91ee1f481d1cca82212cfc5e8ce13bfaccae724adfee92
+      channelOccurrence:
+        channelOccurrenceIdentity: sha256:351473faf91453e7d86aae92eb264f48bb57aaab8a533ca7129650bff14adf65
+        managedDocumentId: fl-adm-03-b
+        scopePath: /
+        scopeActivationGeneration: 0
+        rawChannelKey: lifecycle
+        effectiveRuntimeContributionBlueId: 2b54iTF8KQC6vdoh4BjjkzANV41udKWajX5LKfn93bfd
+        subscriptionHeaderBlueId: 398QX3G4pzQF9pKKfw1Ab5tqGCwD5zNfReTyBQnHRtnL
+      documentBlueId: 5KsTeC6e3NRg3Sz1qv5ac1Vw43Zzm8qobAJoBpWBVU3q
+      graphGeneration: 1
+      componentGeneration: 1
+  subscriptionDeltasIdentity: sha256:7ee50668b506df83228b07cff6b5ccd82f0acce349a1c495afd2c47e0dc63408
+  checkpointWrites: []
+  checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
+  publicEvents:
+  - publicEventOrdinal: 0
+    eventOccurrenceOrdinal: 1
+    publicRootDocumentId: fl-adm-03-a
+    eventOccurrenceIdentity: sha256:b768148a1cc994a5495c0bd8cf5ed3d03a81fadb63c1199476ac11efeeb68201
+    eventBlueId: 6Mr5gwy7jGhHMdB2BxKKHnqRkAviMhdxq9Zb1pnw2iVU
+    event:
+      type:
+        blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+      subscriptionKey: full-lifecycle
+      id: FL-ADM-03-PARENT
+  publicEventsIdentity: sha256:8fa218eb1f72e9356da41da4826d99cd25454a409d38c2abf1de2baa26406619
+  rollbackToInput: false
+  totalGas: 2708
+  gasTrace:
+  - sequence: 0
+    namespace: processor
+    counter: processInvocation
+    quantity: 1
+    weight: 50
+    subtotal: 50
+    reason: admission.process
+  - sequence: 1
+    namespace: processor
+    counter: closureInvocation
+    quantity: 1
+    weight: 100
+    subtotal: 100
+    reason: admission.closure
+  - sequence: 2
+    namespace: processor
+    counter: managedDocumentOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: fl-adm-03-a
+    reason: admission.document.fl-adm-03-a
+  - sequence: 3
+    namespace: processor
+    counter: managedDocumentOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: fl-adm-03-b
+    reason: admission.document.fl-adm-03-b
+  - sequence: 4
+    namespace: processor
+    counter: managedOccurrenceBindingVerified
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-a
+    reason: admission.binding.sha256:383425cd3c1cece4eadca4943f383220af24d355773535a521bb1ba20e43b4f8
+  - sequence: 5
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    reason: admission.edge.sha256:383425cd3c1cece4eadca4943f383220af24d355773535a521bb1ba20e43b4f8
+  - sequence: 6
+    namespace: processor
+    counter: componentMemberPartitioned
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-b
+    reason: admission.component-member
+  - sequence: 7
+    namespace: processor
+    counter: componentMemberPartitioned
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    reason: admission.component-member
+  - sequence: 8
+    namespace: processor
+    counter: componentEdgePartitioned
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    reason: admission.component-edge
+  - sequence: 9
+    namespace: processor
+    counter: closureWorkOccurrenceEnqueued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    logicalPath: work/0
+    workOccurrenceId: sha256:c9db4a29371b35499099f13b4e8f06a513c67a2505fbbbf127c3edd48b0c99cd
+    reason: work.0.initialization-enqueue
+  - sequence: 10
+    namespace: processor
+    counter: closureWorkOccurrenceDequeued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    logicalPath: work/0
+    workOccurrenceId: sha256:c9db4a29371b35499099f13b4e8f06a513c67a2505fbbbf127c3edd48b0c99cd
+    reason: work.0.dequeue
+  - sequence: 11
+    namespace: processor
+    counter: scopeOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    workOccurrenceId: sha256:c9db4a29371b35499099f13b4e8f06a513c67a2505fbbbf127c3edd48b0c99cd
+    reason: participating-scope
+  - sequence: 12
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:c9db4a29371b35499099f13b4e8f06a513c67a2505fbbbf127c3edd48b0c99cd
+    reason: participating-contract-header
+  - sequence: 13
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: emitChild
+    workOccurrenceId: sha256:c9db4a29371b35499099f13b4e8f06a513c67a2505fbbbf127c3edd48b0c99cd
+    reason: participating-contract-header
+  - sequence: 14
+    namespace: processor
+    counter: scopeInitialization
+    quantity: 1
+    weight: 1000
+    subtotal: 1000
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    workOccurrenceId: sha256:c9db4a29371b35499099f13b4e8f06a513c67a2505fbbbf127c3edd48b0c99cd
+    reason: scope-initialization
+  - sequence: 15
+    namespace: processor
+    counter: closureWorkOccurrenceEnqueued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: work.1.lifecycle-enqueue
+  - sequence: 16
+    namespace: processor
+    counter: closureWorkOccurrenceDequeued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: work.1.dequeue
+  - sequence: 17
+    namespace: processor
+    counter: scopeOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: participating-scope
+  - sequence: 18
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: participating-contract-header
+  - sequence: 19
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: emitChild
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: participating-contract-header
+  - sequence: 20
+    namespace: processor
+    counter: lifecycleDelivered
+    quantity: 1
+    weight: 30
+    subtotal: 30
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: lifecycle
+  - sequence: 21
+    namespace: processor
+    counter: handlerCandidateTested
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: emitChild
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: matching
+  - sequence: 22
+    namespace: processor
+    counter: handlerCall
+    quantity: 1
+    weight: 50
+    subtotal: 50
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: emitChild
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: handler-call
+  - sequence: 23
+    namespace: runtime
+    counter: scriptedResultApplied
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: unspecified
+  - sequence: 24
+    namespace: processor
+    counter: internalEventEnqueued
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: fl-adm-03-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:a2435432d15ff2792225df02c5e8b38dd48688d674b3f371c271a56e77d392f2
+    reason: event.0.enqueue
+  - sequence: 25
+    namespace: processor
+    counter: internalEventDequeued
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    reason: event.0.dequeue
+  - sequence: 26
+    namespace: processor
+    counter: closureWorkOccurrenceEnqueued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: work/2
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: event.0.delivery.0.enqueue
+  - sequence: 27
+    namespace: processor
+    counter: closureWorkOccurrenceDequeued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: work/2
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: work.2.dequeue
+  - sequence: 28
+    namespace: processor
+    counter: scopeOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: participating-scope
+  - sequence: 29
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: embedded
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: participating-contract-header
+  - sequence: 30
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: participating-contract-header
+  - sequence: 31
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: receiveChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: participating-contract-header
+  - sequence: 32
+    namespace: processor
+    counter: embeddedPathEntryRead
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: /child
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: route
+  - sequence: 33
+    namespace: processor
+    counter: embeddedPathSegmentValidated
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: /child
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: route
+  - sequence: 34
+    namespace: processor
+    counter: embeddedEventDelivered
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: embedded-event
+  - sequence: 35
+    namespace: processor
+    counter: handlerCandidateTested
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: receiveChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: matching
+  - sequence: 36
+    namespace: processor
+    counter: handlerCall
+    quantity: 1
+    weight: 50
+    subtotal: 50
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: receiveChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: handler-call
+  - sequence: 37
+    namespace: runtime
+    counter: scriptedResultApplied
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: unspecified
+  - sequence: 38
+    namespace: processor
+    counter: patchBoundaryChecked
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: patch-boundary
+  - sequence: 39
+    namespace: processor
+    counter: patchAddOrReplace
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: application-patch
+  - sequence: 40
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: /observedChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: identity-rebuild
+  - sequence: 41
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: /observedChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: identity-rebuild
+  - sequence: 42
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: /observedChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: identity-rebuild
+  - sequence: 43
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: /observedChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: identity-rebuild
+  - sequence: 44
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: /observedChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: identity-rebuild
+  - sequence: 45
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 6
+    weight: 1
+    subtotal: 6
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: /observedChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: identity-rebuild
+  - sequence: 46
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: work.2.acyclic-finalization.child.3.node-established
+  - sequence: 47
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: work.2.acyclic-finalization.child.3.object-members
+  - sequence: 48
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: work.2.acyclic-finalization.child.3.direct-hash
+  - sequence: 49
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: work.2.acyclic-finalization.node-established
+  - sequence: 50
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: work.2.acyclic-finalization.object-members
+  - sequence: 51
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 6
+    weight: 1
+    subtotal: 6
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: work.2.acyclic-finalization.direct-hash
+  - sequence: 52
+    namespace: processor
+    counter: rootEventRecorded
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: work/2
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: event.1.public-record
+  - sequence: 53
+    namespace: processor
+    counter: internalEventEnqueued
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    logicalPath: work/2
+    workOccurrenceId: sha256:d3390cd013e11ca4eb1703bf902aff23c37bab64e56f3b3fa19ab7eb79d1017f
+    reason: event.1.enqueue
+  - sequence: 54
+    namespace: processor
+    counter: internalEventDequeued
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    reason: event.1.dequeue
+  - sequence: 55
+    namespace: processor
+    counter: processorMarkerWritten
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: fl-adm-03-b
+    reason: initialization-batch.marker.fl-adm-03-b
+  - sequence: 56
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 57
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 58
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 59
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 60
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 61
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 62
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 63
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 64
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 65
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.1.node-established
+  - sequence: 66
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.1.object-members
+  - sequence: 67
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.1.direct-hash
+  - sequence: 68
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.node-established
+  - sequence: 69
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.object-members
+  - sequence: 70
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.direct-hash
+  - sequence: 71
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.node-established
+  - sequence: 72
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.object-members
+  - sequence: 73
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.direct-hash
+  - sequence: 74
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.node-established
+  - sequence: 75
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.object-members
+  - sequence: 76
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 6
+    weight: 1
+    subtotal: 6
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.direct-hash
+  - sequence: 77
+    namespace: processor
+    counter: closureWorkOccurrenceEnqueued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/3
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: work.3.initialization-enqueue
+  - sequence: 78
+    namespace: processor
+    counter: closureWorkOccurrenceDequeued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/3
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: work.3.dequeue
+  - sequence: 79
+    namespace: processor
+    counter: scopeOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: participating-scope
+  - sequence: 80
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: embedded
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: participating-contract-header
+  - sequence: 81
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: fromChild
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: participating-contract-header
+  - sequence: 82
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: receiveChild
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: participating-contract-header
+  - sequence: 83
+    namespace: processor
+    counter: embeddedPathEntryRead
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /child
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: route
+  - sequence: 84
+    namespace: processor
+    counter: embeddedPathSegmentValidated
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /child
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: route
+  - sequence: 85
+    namespace: processor
+    counter: scopeInitialization
+    quantity: 1
+    weight: 1000
+    subtotal: 1000
+    documentId: fl-adm-03-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:2d0445d1f1b1b7a225b7f279aad2331d6783be80a4b50c202095410f093986fe
+    reason: scope-initialization
+  - sequence: 86
+    namespace: processor
+    counter: processorMarkerWritten
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: fl-adm-03-a
+    reason: initialization-batch.marker.fl-adm-03-a
+  - sequence: 87
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 88
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 89
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 90
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 91
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 92
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 93
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 94
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 95
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 6
+    weight: 1
+    subtotal: 6
+    documentId: fl-adm-03-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 96
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.1.child.2.node-established
+  - sequence: 97
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.1.child.2.object-members
+  - sequence: 98
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.1.child.2.direct-hash
+  - sequence: 99
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.1.node-established
+  - sequence: 100
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.1.object-members
+  - sequence: 101
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.1.direct-hash
+  - sequence: 102
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.node-established
+  - sequence: 103
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.object-members
+  - sequence: 104
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 6
+    weight: 1
+    subtotal: 6
+    documentId: fl-adm-03-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.direct-hash
+  gasTraceIdentity: sha256:786308645212a28af3fa0095b7ddc9823b7c73c09b6af95e73121f7a6adc95cd
+  platformCommitCompanion:
+    companionIdentity: sha256:e9a8a6571b224c3728c02e36981a63305d2348a0a79469e3d479fcfc449dde1a
+    invocationIdentity: sha256:70d3f4421336d82aeaffe017f09063e891b5f507c995cff9d4fc29b81927de63
+    inputClosureIdentity: sha256:37dbd909688babd5038d71ac8a543f72f5bb1dca8d50af81f6b521dda5e64883
+    outputClosureIdentity: sha256:264b80d5e2bed5183e2457163586b1cf367a97af7852d4249f859c89517c6e0b
+    expectedInputGraphGeneration: 1
+    expectedInputDocuments:
+    - documentId: fl-adm-03-a
+      blueId: GvUs1qGWbXKob8LV7H8yMsY2ygRGRctfhE2qAWHFMSRG
+    - documentId: fl-adm-03-b
+      blueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+    expectedInputComponents:
+    - componentIdentity: sha256:5474514879bf5a8f03061eda8762b15fad665f7977dde0545d0208f21d4f6565
+      componentStateIdentity: sha256:6f5be1782850970f59c205eae66b02ed3327288356d8de2140ece0082e8840b5
+      componentGeneration: 1
+      masterBlueId: null
+    - componentIdentity: sha256:2a3eff6d1fbe60464220cf8a2dccf52b028d1b6f39e408c5377997ad63fe9c5c
+      componentStateIdentity: sha256:5228f5998e7618789707cbb363ae76bb2fda872732f26bfed2c5c67b058f3601
+      componentGeneration: 1
+      masterBlueId: null
+    inputOccurrenceBindingSetIdentity: sha256:265da4ae0ce86698b4b308145b71e56c1f962b120682e13414ee353d7ef8a420
+    outputGraphGeneration: 1
+    resultingDocuments:
+    - documentId: fl-adm-03-a
+      beforeBlueId: GvUs1qGWbXKob8LV7H8yMsY2ygRGRctfhE2qAWHFMSRG
+      afterBlueId: HgwdSFbu9QcQZjW7yLmVqSnSCc62Zbs31HT5NhXwtoNq
+    - documentId: fl-adm-03-b
+      beforeBlueId: 238dYPtLcJvr8m8fWwc1nEUFde66FTqn2XJcsrHtqPZT
+      afterBlueId: 5KsTeC6e3NRg3Sz1qv5ac1Vw43Zzm8qobAJoBpWBVU3q
+    resultingComponents:
+    - componentIdentity: sha256:5474514879bf5a8f03061eda8762b15fad665f7977dde0545d0208f21d4f6565
+      componentStateIdentity: sha256:403e5833ed347243c2326c4c7e428ed28cbcc4edb49452befc99a1b14a3888ab
+      cyclicProofIdentity: null
+    - componentIdentity: sha256:2a3eff6d1fbe60464220cf8a2dccf52b028d1b6f39e408c5377997ad63fe9c5c
+      componentStateIdentity: sha256:05a4e1b779ae7a16ebfab4418333d74a49ab5633057c57a8476ce3e82b8e82e9
+      cyclicProofIdentity: null
+    occurrenceBindingSetIdentity: sha256:040b0c353c23b19efed162bbd4659eccf3697dd7f6f5fc29ddc5dbd596e0e349
+    graphChangesIdentity: sha256:49a20c7919ec3e77fb324c04aa1c74669ba6d08d03d9e2286056624a62049ef7
+    checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
+    subscriptionDeltasIdentity: sha256:7ee50668b506df83228b07cff6b5ccd82f0acce349a1c495afd2c47e0dc63408
+    publicEventsIdentity: sha256:8fa218eb1f72e9356da41da4826d99cd25454a409d38c2abf1de2baa26406619
+    gasTraceIdentity: sha256:786308645212a28af3fa0095b7ddc9823b7c73c09b6af95e73121f7a6adc95cd
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18
+    managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+    managedBindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+    exactNodeProviderDomainIdentity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+    externalOrderPolicyIdentity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    portableLimitPolicyIdentity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds: []
+  expectedLoads: []
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

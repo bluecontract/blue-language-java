@@ -40,8 +40,8 @@ files:
   bytes: 3019
 - path: c-clo-08-cycle-during-initialization.yaml
   role: cyclic-identity-oracle
-  sha256: 513f4b409b9b785c6ce5a530574509ef247b376642aa208ca08cebacf8d8f0c6
-  bytes: 19481
+  sha256: eda70080b536c30349228a1e1e3d294899cbf4c38315a763a8a44086dd4614f1
+  bytes: 19489
 - path: c-clo-09-merge-two-cycles.yaml
   role: cyclic-identity-oracle
   sha256: 85c162cd0b137d4a21be7e976ad5253042dcd78d9617caee2803fafb484e7819
@@ -174,4 +174,4 @@ packageIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: packageIdentity is null before hashing
-packageIdentity: sha256:efbae749b6c076699e9fde1036fd5d84909d2f1b2cbdcb7d5116d7f06a6f0b71
+packageIdentity: sha256:6c2ad2b484aa259e2b0a609172ac56882a0b1cb588209809cab979605b98af9d

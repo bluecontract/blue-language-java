@@ -4,11 +4,11 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 511,
-    "publicTypeIdentity": "sha256:fdb00bb89c9f0f3d98ac70c46787d55f4f0e71913acc948468bb4cfb7f623576",
+    "publicProductionTypeCount": 513,
+    "publicTypeIdentity": "sha256:051f4cf3994b7316e3460146a7229cc327ecb7ab50314086f8386ef3f5cb0832",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
-      "internal-type-removed-from-public-surface": 256,
+      "internal-type-removed-from-public-surface": 258,
       "new-supported-api-spi": 55
     }
   },
@@ -488,6 +488,17 @@
       "currentArtifact": "blue.language:blue-conformance",
       "targetModule": ":blue-conformance",
       "targetType": "blue.language.conformance.contracts.ContractsConformanceSuite",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.conformance.contracts.FullLifecycleFixtureExporter",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureExporter.java",
+      "currentArtifact": "blue.language:blue-conformance",
+      "targetModule": ":blue-conformance",
+      "targetType": "blue.language.conformance.contracts.FullLifecycleFixtureExporter",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
@@ -4790,6 +4801,17 @@
       "currentArtifact": "blue.language:blue-contracts-core",
       "targetModule": ":blue-contracts-core",
       "targetType": "blue.language.processor.closure.TentativeFinalization$InitializationBatchBoundary",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.TentativeFinalization$TerminationMarkerBoundary",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/TentativeFinalization.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.TentativeFinalization$TerminationMarkerBoundary",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",

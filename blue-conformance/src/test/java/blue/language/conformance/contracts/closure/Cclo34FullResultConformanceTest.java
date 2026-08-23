@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /** Exact result-level C-CLO-34 execution through the public Contracts facade. */
-final class Cclo34FullResultConformanceTest {
+public final class Cclo34FullResultConformanceTest {
 
     @Test
     void shouldMatchEveryReleasedCclo34ResultAndImplementationField() {
@@ -91,7 +91,7 @@ final class Cclo34FullResultConformanceTest {
         assertCompleteResult(expected, attempt, capture.evidence);
     }
 
-    static void assertCompleteResult(
+    public static void assertCompleteResult(
             JsonNode expected,
             ClosureAttemptResult completedAttempt,
             ClosureImplementationEvidence implementation) {

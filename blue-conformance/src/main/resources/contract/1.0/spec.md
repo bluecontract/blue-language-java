@@ -4087,10 +4087,14 @@ write and post-marker finalization belonging to that batch.
 
 ### 9.4 Initialization snapshot rule
 
-At batch entry, initialization freezes every then-missing member's exact
-pre-initialization document and initialization contract. A member added by
-dynamic expansion is frozen when it joins the batch and before its lifecycle
-work. Lifecycle execution does not receive ambient containing-document state;
+At entry to each selected component batch, initialization freezes every
+then-missing member's exact current pre-initialization document and
+initialization contract. ADMIT seeds the invocation-input inventory, but that
+seeding is not a global invocation-input-BlueId freeze: a member in a later
+component batch freezes the current state produced by any earlier component
+work in the same invocation. A member added by dynamic expansion is frozen when
+it joins the batch and before its lifecycle work. Lifecycle execution does not
+receive ambient containing-document state;
 ordinary later reads caused by lifecycle work still use the latest exact
 tentatively finalized state under §5.9. The initialized marker records the
 frozen pre-initialization document, not a later post-lifecycle state.

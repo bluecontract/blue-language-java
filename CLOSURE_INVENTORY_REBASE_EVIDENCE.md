@@ -2,23 +2,23 @@
 
 ## Scope
 
-This evidence closes the stale inventory assertion for
+This historical Phase-A evidence closes the stale inventory assertion for
 `fixtures/closure/c-clo-34-separate-document-steps.yaml` at provisional
 Contracts commit `83d7a903cb65ca878aa90d3625e877dea89f3ae9`. The frozen comparison source is
 its parent, `5c4e5c88fa75d6cbc52b2e8772f14f2ac5246f52`.
 
 No fixture was changed while producing this evidence.
 
-## Exact inventory facts
+## Provisional exact inventory facts
 
 | Fact | Observed value | Result |
 | --- | --- | --- |
-| Current file bytes | `117691` | PASS |
-| Current file SHA-256 | `4cef56b998953f6c177df6db56d83176a9ca265b65a9ba690d97c20c7da64763` | PASS |
-| Manifest bytes | `117691` | PASS |
-| Manifest SHA-256 | `4cef56b998953f6c177df6db56d83176a9ca265b65a9ba690d97c20c7da64763` | PASS |
-| Manifest package identity | `sha256:6659fd39aaf0a6dcf651ea3d6e752e93da8cd48d2f0afcc87eee4bee95d4300a` | PASS |
-| `ClosureFixtureInventory.PACKAGE_IDENTITY` | `sha256:6659fd39aaf0a6dcf651ea3d6e752e93da8cd48d2f0afcc87eee4bee95d4300a` | PASS |
+| Provisional file bytes | `117691` | PASS |
+| Provisional file SHA-256 | `4cef56b998953f6c177df6db56d83176a9ca265b65a9ba690d97c20c7da64763` | PASS |
+| Provisional manifest bytes | `117691` | PASS |
+| Provisional manifest SHA-256 | `4cef56b998953f6c177df6db56d83176a9ca265b65a9ba690d97c20c7da64763` | PASS |
+| Provisional manifest package identity | `sha256:6659fd39aaf0a6dcf651ea3d6e752e93da8cd48d2f0afcc87eee4bee95d4300a` | PASS |
+| Provisional `ClosureFixtureInventory.PACKAGE_IDENTITY` | `sha256:6659fd39aaf0a6dcf651ea3d6e752e93da8cd48d2f0afcc87eee4bee95d4300a` | PASS |
 | Frozen-base file bytes | `117691` | PASS |
 | Frozen-base file SHA-256 | `db3d4df9c4d0dc8dacf9e3b33ac1934878361f5daf3e7fb25b56556fb801c682` | PASS |
 
@@ -87,7 +87,24 @@ manifest production are gated separately in the full-lifecycle fixture phase.
 
 ## Conclusion
 
-The old hard-coded C-CLO-34 digest is an inventory assertion left behind by the
-specification-identity rebase. Updating that assertion to the committed and
-manifested `4cef56b9…64763` digest is the only fixture-pin correction supported
-by this evidence.
+The original hard-coded C-CLO-34 digest was an inventory assertion left behind
+by the provisional specification-identity rebase. At that Phase-A boundary,
+updating the assertion to `4cef56b9…64763` was the only supported correction.
+
+## Final full-lifecycle checkpoint state
+
+The later, canonical full-lifecycle package regeneration rebounded the same
+fixture to the final specification and release identities. It did not change
+the fixture byte count or its business result. The final checkpoint values are:
+
+| Fact | Final value | Result |
+| --- | --- | --- |
+| C-CLO-34 bytes | `117691` | PASS |
+| C-CLO-34 SHA-256 | `d5b73d44c5efbe3aeba43aff24961ef992768c5ffee9ef8c63131a73c491024d` | PASS |
+| Final manifest bytes | `117691` | PASS |
+| Final manifest SHA-256 | `d5b73d44c5efbe3aeba43aff24961ef992768c5ffee9ef8c63131a73c491024d` | PASS |
+| Final fixture package identity | `sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d` | PASS |
+
+`ClosureConformanceHarnessTest` pins this final digest. The package-level delta
+classifier separately proves that C-CLO-34 changed only through approved
+specification, invocation, work, event, and trace identity rebinding.

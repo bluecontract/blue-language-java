@@ -10,10 +10,11 @@ documents:
     document:
       documentId: fl-adm-10-root
       name: Full lifecycle unknown initialization occurrence
+      children: {}
       contracts:
         embedded:
           type: {$registryBlueId: ProcessEmbedded}
-          paths: [/child]
+          collectionPaths: [/children]
         lifecycle:
           type: {$registryBlueId: LifecycleEventChannel}
           order: 0
@@ -29,7 +30,7 @@ runtime:
     fl-adm-10-root/installUnknown:
       patches:
       - op: add
-        path: /child
+        path: /children/unknown
         val:
           documentId: fl-adm-10-unknown-child
           name: Unknown child created during initialization
@@ -44,7 +45,7 @@ expect:
   documents:
   - {documentId: fl-adm-10-root, initialized: false, terminated: false}
   absentPointers:
-  - {documentId: fl-adm-10-root, pointer: /child}
+  - {documentId: fl-adm-10-root, pointer: /children/unknown}
   - {documentId: fl-adm-10-root, pointer: /contracts/initialized}
   workCounts:
   - {kind: INITIALIZATION, count: 1}

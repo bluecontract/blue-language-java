@@ -8,14 +8,14 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
-| `blue-conformance` | 21 | 168 | 68 | 257 |
+| `blue-conformance` | 22 | 171 | 68 | 261 |
 | `blue-contracts-core` | 282 | 1834 | 663 | 2779 |
 | `blue-language-core` | 162 | 840 | 96 | 1098 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 95 | 1 | 121 |
 | `blue-language-model` | 23 | 210 | 80 | 313 |
-| **Distribution** | **519** | **3195** | **908** | **4622** |
+| **Distribution** | **520** | **3198** | **908** | **4626** |
 
 ## blue-conformance
 
@@ -23,12 +23,12 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 field blue.language.conformance.api.BlueConformanceReport#BLUE_SPEC_SOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0-final-implementation-baseline"
 field blue.language.conformance.api.BlueConformanceReport#FIXTURE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0/fixtures/manifest.yaml"
 field blue.language.conformance.api.BlueConformanceReport#FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55"
-field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:6659fd39aaf0a6dcf651ea3d6e752e93da8cd48d2f0afcc87eee4bee95d4300a"
+field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_GAS_MANIFEST_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_GAS_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_REGISTRY_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="specifications/blue-contracts-and-processor-specification-1.0.md"
-field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193"
+field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18"
 field blue.language.conformance.api.BlueContractsConformanceReport#FIXTURE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts-closure-1.0/fixtures/manifest.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#FIXTURE_ROOT_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts-closure-1.0/fixtures/"
 field blue.language.conformance.api.BlueContractsConformanceReport#GAS_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue/language/processor/contracts-gas-1.0.yaml"
@@ -84,10 +84,10 @@ field blue.language.conformance.api.BlueFixtureCategory#RESOLUTION descriptor=Lb
 field blue.language.conformance.api.BlueFixtureCategory#SCHEMA descriptor=Lblue/language/conformance/api/BlueFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueFixtureCategory#SERIALIZATION descriptor=Lblue/language/conformance/api/BlueFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueFixtureCategory#SPECIALIZATION descriptor=Lblue/language/conformance/api/BlueFixtureCategory; access=public,static,final,enum signature=- constant=-
-field blue.language.conformance.api.BlueReleaseConformanceReport#CONTRACTS_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=234
+field blue.language.conformance.api.BlueReleaseConformanceReport#CONTRACTS_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=247
 field blue.language.conformance.api.BlueReleaseConformanceReport#LANGUAGE_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=153
 field blue.language.conformance.api.BlueReleaseConformanceReport#SCHEMA descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-java-release-conformance-report/1.0"
-field blue.language.conformance.api.BlueReleaseConformanceReport#TOTAL_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=387
+field blue.language.conformance.api.BlueReleaseConformanceReport#TOTAL_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=400
 method blue.language.conformance.api.BlueConformanceFailure#<init> descriptor=(Ljava/lang/String;Lblue/language/conformance/api/BlueFixtureCategory;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V access=public signature=- throws=-
 method blue.language.conformance.api.BlueConformanceFailure#<init> descriptor=(Ljava/lang/String;Lblue/language/conformance/api/BlueFixtureCategory;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lblue/language/api/BlueLanguageErrorCategory;)V access=public signature=- throws=-
 method blue.language.conformance.api.BlueConformanceFailure#getCategory descriptor=()Lblue/language/conformance/api/BlueFixtureCategory; access=public signature=- throws=-
@@ -202,6 +202,7 @@ method blue.language.conformance.api.BlueReleaseConformanceReport#toMachineReada
 method blue.language.conformance.cli.ReleaseConformanceCli#main descriptor=([Ljava/lang/String;)V access=public,static signature=- throws=java.io.IOException
 method blue.language.conformance.contracts.ClosureFixtureRuntime#close descriptor=()V access=public signature=- throws=-
 method blue.language.conformance.contracts.ClosureFixtureRuntime#fromFixture descriptor=(Lcom/fasterxml/jackson/databind/JsonNode;)Lblue/language/conformance/contracts/ClosureFixtureRuntime; access=public,static signature=- throws=-
+method blue.language.conformance.contracts.ClosureFixtureRuntime#fromFixture descriptor=(Lcom/fasterxml/jackson/databind/JsonNode;Ljava/nio/file/Path;)Lblue/language/conformance/contracts/ClosureFixtureRuntime; access=public,static signature=- throws=-
 method blue.language.conformance.contracts.ClosureFixtureRuntime#processor descriptor=()Lblue/language/processor/DocumentProcessor; access=public signature=- throws=-
 method blue.language.conformance.contracts.ContractsConformanceProjection$Presence#absent descriptor=()Lblue/language/conformance/contracts/ContractsConformanceProjection$Presence; access=public,static signature=- throws=-
 method blue.language.conformance.contracts.ContractsConformanceProjection$Presence#getValue descriptor=()Ljava/lang/Object; access=public signature=- throws=-
@@ -227,6 +228,7 @@ method blue.language.conformance.contracts.FixtureNonChannelContract$Value#getId
 method blue.language.conformance.contracts.FixtureNonChannelContract$Value#getSubscriptionKey descriptor=()Ljava/lang/String; access=public signature=- throws=-
 method blue.language.conformance.contracts.FixtureNonChannelContract$Value#setId descriptor=(Ljava/lang/String;)V access=public signature=- throws=-
 method blue.language.conformance.contracts.FixtureNonChannelContract$Value#setSubscriptionKey descriptor=(Ljava/lang/String;)V access=public signature=- throws=-
+method blue.language.conformance.contracts.FullLifecycleFixtureExporter#main descriptor=([Ljava/lang/String;)V access=public,static signature=- throws=-
 method blue.language.conformance.contracts.MockExternalChannel$Value#<init> descriptor=()V access=public signature=- throws=-
 method blue.language.conformance.contracts.MockExternalChannel$Value#getAccept descriptor=()Ljava/lang/Boolean; access=public signature=- throws=-
 method blue.language.conformance.contracts.MockExternalChannel$Value#getCheckpointDomain descriptor=()Ljava/lang/String; access=public signature=- throws=-
@@ -252,6 +254,7 @@ method blue.language.conformance.contracts.MockHandler$Value#<init> descriptor=(
 method blue.language.conformance.contracts.MockHandler$Value#getResult descriptor=()Lblue/language/model/Node; access=public signature=- throws=-
 method blue.language.conformance.contracts.MockHandler$Value#setResult descriptor=(Lblue/language/model/Node;)V access=public signature=- throws=-
 method blue.language.conformance.contracts.closure.ClosureFixtureConformance#execute descriptor=(Lblue/language/conformance/api/BlueContractsConformanceReport$FixtureInventoryEntry;Lcom/fasterxml/jackson/databind/JsonNode;Lblue/language/processor/DocumentProcessor;)V access=public,static signature=- throws=-
+method blue.language.conformance.contracts.closure.ClosureFixtureConformance#parseAdmissionInput descriptor=(Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lcom/fasterxml/jackson/databind/JsonNode;)Lblue/language/processor/closure/ClosureInvocationInput; access=public,static signature=(Ljava/lang/String;Ljava/lang/String;Ljava/util/List<Ljava/lang/String;>;Lcom/fasterxml/jackson/databind/JsonNode;)Lblue/language/processor/closure/ClosureInvocationInput; throws=-
 method blue.language.conformance.runner.BlueContractsConformanceSuiteRunner#run descriptor=()Lblue/language/conformance/api/BlueContractsConformanceReport; access=public,static signature=- throws=-
 method blue.language.conformance.runner.BlueContractsConformanceSuiteRunner#runFixtureSpecForTest descriptor=(Lcom/fasterxml/jackson/databind/JsonNode;)V access=public,static signature=- throws=-
 method blue.language.conformance.runner.BlueContractsConformanceSuiteRunner#unexecutedReport descriptor=()Lblue/language/conformance/api/BlueContractsConformanceReport; access=public,static signature=- throws=-
@@ -273,6 +276,7 @@ type blue.language.conformance.contracts.ContractsConformanceProjection$Presence
 type blue.language.conformance.contracts.ContractsConformanceSuite access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.conformance.contracts.ContractsGasSchedule$GasMicroResult access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.conformance.contracts.FixtureNonChannelContract$Value access=public,final super=blue.language.processor.model.Contract interfaces=- signature=-
+type blue.language.conformance.contracts.FullLifecycleFixtureExporter access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.conformance.contracts.MockExternalChannel$Value access=public,final super=blue.language.processor.model.ChannelContract interfaces=- signature=-
 type blue.language.conformance.contracts.MockHandler$Value access=public,final super=blue.language.processor.model.HandlerContract interfaces=- signature=-
 type blue.language.conformance.contracts.closure.ClosureFixtureConformance access=public,final super=java.lang.Object interfaces=- signature=-

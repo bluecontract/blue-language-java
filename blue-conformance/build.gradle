@@ -22,7 +22,7 @@ dependencies {
 tasks.register('exportFullLifecycleFixtures', JavaExec) {
     dependsOn tasks.named('classes')
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = 'blue.language.conformance.contracts.closure.FullLifecycleFixtureExporter'
+    mainClass = 'blue.language.conformance.contracts.FullLifecycleFixtureExporter'
     outputs.upToDateWhen { false }
     doFirst {
         def requiredProperties = [

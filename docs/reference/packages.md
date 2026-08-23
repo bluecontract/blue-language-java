@@ -15,7 +15,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.conformance` | 4 | present |
 | `blue.language.conformance.api` | 9 | present |
 | `blue.language.conformance.cli` | 1 | present |
-| `blue.language.conformance.contracts` | 2 | present |
+| `blue.language.conformance.contracts` | 3 | present |
 | `blue.language.conformance.contracts.closure` | 1 | present |
 | `blue.language.conformance.runner` | 1 | present |
 | `blue.language.dictionary` | 4 | present |
@@ -98,6 +98,7 @@ Package ownership is derived from production Java source files. Only top-level p
 
 - `blue.language.conformance.contracts.ClosureFixtureRuntime`
 - `blue.language.conformance.contracts.ContractsConformanceSuite`
+- `blue.language.conformance.contracts.FullLifecycleFixtureExporter`
 
 ## `blue.language.conformance.contracts.closure`
 

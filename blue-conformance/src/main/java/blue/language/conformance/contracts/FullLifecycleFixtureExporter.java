@@ -1,7 +1,7 @@
-package blue.language.conformance.contracts.closure;
+package blue.language.conformance.contracts;
 
 import blue.language.codec.jackson.UncheckedObjectMapper;
-import blue.language.conformance.contracts.ClosureFixtureRuntime;
+import blue.language.conformance.contracts.closure.ClosureFixtureConformance;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
@@ -120,7 +120,11 @@ public final class FullLifecycleFixtureExporter {
     private FullLifecycleFixtureExporter() {
     }
 
-    /** CLI: source root, candidate package root, empty output root. */
+    /**
+     * Runs the deterministic fixture exporter from the command line.
+     *
+     * @param args source root, candidate package root, and empty output root
+     */
     public static void main(String[] args) {
         try {
             if (args.length != 3) {
@@ -386,19 +390,13 @@ public final class FullLifecycleFixtureExporter {
             executionEnvelope.put("operation", "admit-closure");
             executionEnvelope.set("input", input.deepCopy());
             executionEnvelope.set("runtime", runtime.deepCopy());
-            ClosureFixtureInventory.Entry entry =
-                    new ClosureFixtureInventory.Entry(
-                            fixtureId,
-                            "closure/" + fixtureId + ".yaml",
-                            "admit-closure",
-                            Collections.singletonList(scenario),
-                            "source-export",
-                            0L);
             ClosureInvocationInput parsed;
             try {
-                parsed = new ClosureFixtureParser()
-                        .parse(entry, executionEnvelope)
-                        .admit();
+                parsed = ClosureFixtureConformance.parseAdmissionInput(
+                        fixtureId,
+                        "closure/" + fixtureId + ".yaml",
+                        Collections.singletonList(scenario),
+                        executionEnvelope);
             } catch (RuntimeException failure) {
                 throw stageFailure(fixtureId, "parse exact input", failure);
             }
@@ -438,7 +436,7 @@ public final class FullLifecycleFixtureExporter {
             }
 
             ObjectNode envelope = JSON.objectNode();
-            envelope.put("schema", FIXTURE_SCHEMA);
+            envelope.put(BlueLanguageConstants.OBJECT_SCHEMA, FIXTURE_SCHEMA);
             envelope.put("id", fixtureId);
             ArrayNode vectors = envelope.putArray("vectors");
             vectors.add(scenario);
@@ -1161,7 +1159,8 @@ public final class FullLifecycleFixtureExporter {
                     : value.portableLimitPolicy().limits().entrySet()) {
                 ObjectNode limit = limits.addObject();
                 limit.put("name", entry.getKey());
-                limit.put("value", entry.getValue().longValue());
+                limit.put(BlueLanguageConstants.OBJECT_VALUE,
+                        entry.getValue().longValue());
             }
             result.put("cyclicFinalizerIdentity",
                     value.cyclicFinalizerIdentity());
@@ -1658,7 +1657,8 @@ public final class FullLifecycleFixtureExporter {
                     id + " expected pointer is absent: "
                             + documentId + pointer);
             JsonNode actualValue = semanticValue(selected);
-            JsonNode expectedValue = expected.get("value");
+            JsonNode expectedValue = expected.get(
+                    BlueLanguageConstants.OBJECT_VALUE);
             require(actualValue.equals(expectedValue),
                     id + " expected pointer value disagrees: "
                             + documentId + pointer + " (expected "
@@ -1903,7 +1903,8 @@ public final class FullLifecycleFixtureExporter {
     private static void validateSourceEnvelope(JsonNode value) {
         ObjectNode source = requiredObject(value, "source");
         validateStrictSourceSchema(source);
-        require(SOURCE_SCHEMA.equals(text(source, "schema")),
+        require(SOURCE_SCHEMA.equals(text(
+                        source, BlueLanguageConstants.OBJECT_SCHEMA)),
                 "unsupported full-lifecycle source schema");
         require("admit-closure".equals(text(source, "operation")),
                 "full-lifecycle source operation must be admit-closure");
@@ -1955,10 +1956,12 @@ public final class FullLifecycleFixtureExporter {
      */
     private static void validateStrictSourceSchema(ObjectNode source) {
         validateObjectShape(source, "source",
-                fields("schema", "id", "scenario", "description",
+                fields(BlueLanguageConstants.OBJECT_SCHEMA,
+                        "id", "scenario", "description",
                         "operation", "events", "documents", "occurrences",
                         "runtime", "gas", "expect"),
-                fields("schema", "id", "scenario", "description",
+                fields(BlueLanguageConstants.OBJECT_SCHEMA,
+                        "id", "scenario", "description",
                         "operation", "events", "documents", "inputOrder",
                         "occurrences", "runtime", "gas", "cases",
                         "expect"));
@@ -2211,7 +2214,8 @@ public final class FullLifecycleFixtureExporter {
             String label = prefix + index + "]";
             ObjectNode value = requiredObject(values.get(index), label);
             Set<String> required = requireValue
-                    ? fields("documentId", "pointer", "value")
+                    ? fields("documentId", "pointer",
+                            BlueLanguageConstants.OBJECT_VALUE)
                     : fields("documentId", "pointer");
             validateObjectShape(value, label, required, required);
             text(value, "documentId");
@@ -2368,7 +2372,9 @@ public final class FullLifecycleFixtureExporter {
                 require(wrapper != null,
                         "runtime Handler references unknown document");
                 JsonNode contract = requiredObject(wrapper.get("document"),
-                        "authored document").path("contracts").path(parts[1]);
+                        "authored document")
+                        .path(BlueLanguageConstants.OBJECT_CONTRACTS)
+                        .path(parts[1]);
                 require(contract.isObject(),
                         "runtime key does not select an authored contract");
                 ObjectNode result = requiredObject(

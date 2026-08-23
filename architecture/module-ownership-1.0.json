@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 709,
-    "productionResourceCount": 690,
-    "productionSourcePathIdentity": "sha256:633e841ab5239d01eee3be2ca65cd687118157fa1a7a3122ac054b1b27716abe",
-    "productionResourcePathIdentity": "sha256:f93329684acb8151fce93c6fb740c50c3e6860033311efb0cb8e9fcec3060161"
+    "productionSourceCount": 711,
+    "productionResourceCount": 703,
+    "productionSourcePathIdentity": "sha256:72c4883f9bcef58d85f18058a8227e8e1b82246cad82a6aa92140189b75e9774",
+    "productionResourcePathIdentity": "sha256:478e865babb5cdc7a14e677c1ee9842c3e3e68e35b4190a83d00a83db1d69ed6"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -375,6 +375,20 @@
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FixturePackageContradictionException.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureExporter.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureExporter.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/LanguageProcessingScopeSnapshotManager.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/LanguageProcessingScopeSnapshotManager.java",
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
@@ -6269,6 +6283,71 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-35-01-readd-committed-successor.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-35-01-readd-committed-successor.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-01-root-patch-event.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-01-root-patch-event.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-02-duplicate-equal-events.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-02-duplicate-equal-events.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-03-non-public-containing-route.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-03-non-public-containing-route.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-04-document-update-continuation.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-04-document-update-continuation.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-05-graceful-termination.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-05-graceful-termination.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-06-order-representation-inline.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-06-order-representation-inline.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-06-order-representation-reference.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-06-order-representation-reference.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-06-order-representation-reversed.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-06-order-representation-reversed.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-07-finite-cyclic-route.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-07-finite-cyclic-route.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-08-infinite-cycle-gas-retry-first.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-08-infinite-cycle-gas-retry-first.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-08-infinite-cycle-gas-retry-retry.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-08-infinite-cycle-gas-retry-retry.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-09-late-member-rollback.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-09-late-member-rollback.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-10-unknown-occurrence.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-10-unknown-occurrence.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/traces/c-clo-04-default-policy-loop-gas.yaml",

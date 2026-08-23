@@ -186,6 +186,99 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
             self.assertEqual(1, report["unexpectedCount"])
             self.assertIn(classifier.UNEXPECTED, report["files"][0]["categories"])
 
+    @staticmethod
+    def initialization_cycle_fixture(*, corrected: bool) -> dict[str, object]:
+        marker = "intermediate-b" if corrected else "input-b"
+        return {
+            "operation": "admit-closure",
+            "expected": {
+                "status": "success",
+                "workTrace": [
+                    {"ordinal": 1, "kind": "LIFECYCLE"},
+                ],
+                "tentativeFinalizations": [
+                    {
+                        "boundary": {
+                            "kind": "WORK",
+                            "afterWorkOrdinal": 1 if corrected else 0,
+                        },
+                        "memberBlueIds": {"a": "intermediate-a", "b": "intermediate-b"},
+                    },
+                    {
+                        "masterBlueId": "final-master",
+                        "memberBlueIds": {"a": "final-a", "b": "final-b"},
+                    },
+                ],
+                "resultingDocuments": [
+                    {"documentId": "a", "document": {}},
+                    {
+                        "documentId": "b",
+                        "document": {
+                            "contracts": {
+                                "initialized": {
+                                    "document": {"blueId": marker},
+                                },
+                            },
+                        },
+                    },
+                ],
+                "resultingComponents": [{"masterBlueId": "final-master"}],
+            },
+        }
+
+    def test_exact_initialization_cycle_marker_correction_is_expected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="identity-delta-test-") as name:
+            root = Path(name)
+            before = root / "before"
+            after = root / "after"
+            fixture = (
+                "fixtures/closure/"
+                "c-clo-08-cycle-during-initialization.yaml"
+            )
+            write_yaml(
+                before,
+                fixture,
+                self.initialization_cycle_fixture(corrected=False),
+            )
+            write_yaml(
+                after,
+                fixture,
+                self.initialization_cycle_fixture(corrected=True),
+            )
+
+            report = classifier.classify(before, after)
+
+            self.assertEqual(0, report["unexpectedCount"])
+            self.assertEqual(1, report["summary"][classifier.SEMANTIC])
+            self.assertEqual(1, report["summary"][classifier.TRACE])
+            self.assertEqual(1, len(report["approvedCorrections"]))
+            correction = report["approvedCorrections"][0]
+            self.assertEqual(1, correction["lifecycleWorkOrdinal"])
+            self.assertEqual(
+                "intermediate-b", correction["intermediateBMemberBlueId"]
+            )
+            self.assertEqual("final-master", correction["finalMasterBlueId"])
+
+    def test_initialization_cycle_exception_rejects_unrelated_change(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="identity-delta-test-") as name:
+            root = Path(name)
+            before = root / "before"
+            after = root / "after"
+            fixture = (
+                "fixtures/closure/"
+                "c-clo-08-cycle-during-initialization.yaml"
+            )
+            before_fixture = self.initialization_cycle_fixture(corrected=False)
+            after_fixture = self.initialization_cycle_fixture(corrected=True)
+            after_fixture["expected"]["status"] = "rejected"  # type: ignore[index]
+            write_yaml(before, fixture, before_fixture)
+            write_yaml(after, fixture, after_fixture)
+
+            report = classifier.classify(before, after)
+
+            self.assertEqual(1, report["unexpectedCount"])
+            self.assertIn(classifier.UNEXPECTED, report["files"][0]["categories"])
+
     def test_new_full_lifecycle_fixture_is_allowed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="identity-delta-test-") as name:
             root = Path(name)
@@ -218,6 +311,43 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
 
             self.assertEqual(0, report["unexpectedCount"])
             self.assertEqual(1, report["summary"][classifier.FORMATTING])
+
+    def test_report_context_replaces_disposable_paths_with_provenance(self) -> None:
+        report = {
+            "beforePackage": "/private/tmp/before",
+            "afterPackage": "/private/tmp/after",
+            "beforeFileCount": 1,
+            "afterFileCount": 1,
+            "changedFileCount": 0,
+            "unexpectedCount": 0,
+            "summary": {category: 0 for category in classifier.CATEGORIES},
+            "files": [],
+        }
+
+        contextual = classifier.apply_report_context(
+            report,
+            before_reference="git:baseline/package",
+            after_reference="worktree:canonical/package",
+            baseline_commit="a" * 40,
+            baseline_tree="b" * 40,
+            baseline_package_identity="sha256:" + "c" * 64,
+        )
+
+        self.assertEqual("git:baseline/package", contextual["beforePackage"])
+        self.assertEqual("worktree:canonical/package", contextual["afterPackage"])
+        self.assertEqual("a" * 40, contextual["baseline"]["commit"])
+        self.assertNotIn("/private/tmp", classifier.markdown_report(contextual))
+
+    def test_report_context_rejects_partial_baseline_provenance(self) -> None:
+        with self.assertRaises(classifier.ClassificationFailure):
+            classifier.apply_report_context(
+                {},
+                before_reference=None,
+                after_reference=None,
+                baseline_commit="a" * 40,
+                baseline_tree=None,
+                baseline_package_identity=None,
+            )
 
 
 if __name__ == "__main__":

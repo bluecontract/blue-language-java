@@ -87,6 +87,40 @@ public final class ClosureFixtureConformance {
         verifyAttempt(inventory.id(), expected, attempt, capture.evidence);
     }
 
+    /**
+     * Parses one exact admission fixture without exposing the package-private
+     * closure inventory and parser types.
+     *
+     * <p>This boundary is used by the deterministic full-lifecycle source
+     * exporter. The supplied fixture is treated only as invocation input; an
+     * {@code expected} subtree, if present, is removed before parsing.</p>
+     *
+     * @param id fixture identifier
+     * @param path package-relative fixture path
+     * @param vectors normative vector identifiers
+     * @param fixture exact fixture envelope
+     * @return parsed admission input
+     */
+    public static ClosureInvocationInput parseAdmissionInput(
+            String id,
+            String path,
+            List<String> vectors,
+            JsonNode fixture) {
+        ObjectNode executionFixture = (ObjectNode) fixture.deepCopy();
+        executionFixture.remove("expected");
+        ClosureFixtureInventory.Entry entry =
+                new ClosureFixtureInventory.Entry(
+                        id,
+                        path,
+                        "admit-closure",
+                        vectors,
+                        "source-export",
+                        0L);
+        return new ClosureFixtureParser()
+                .parse(entry, executionFixture)
+                .admit();
+    }
+
     private static void executeLimitMicro(String id, JsonNode fixture) {
         JsonNode limit = requiredObject(fixture, "limit");
         JsonNode expected = requiredObject(fixture, "expected");

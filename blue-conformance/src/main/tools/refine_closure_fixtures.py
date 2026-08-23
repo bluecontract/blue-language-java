@@ -1868,14 +1868,7 @@ def _generic_admission_complete_trace(
                         ):
                             activated.append(occurrence_id)
                     if activated:
-                        owner = initialization_owner_by_document.get(
-                            document_id
-                        )
-                        if owner is None:
-                            raise AssertionError(
-                                "initialization topology change lacks its "
-                                f"INITIALIZATION owner: {document_id}"
-                            )
+                        owner = work_item
                         topology_context = work_context(
                             owner, include_work_path=True
                         )
@@ -1884,12 +1877,12 @@ def _generic_admission_complete_trace(
                         )
                         charge(
                             "processor",
-                            "managedOccurrenceBindingVerified",
+                            "processEmbeddedEdgeExamined",
                             len(activated), topology_reason,
                             topology_context,
                         )
                         charge(
-                            "processor", "processEmbeddedEdgeExamined",
+                            "processor", "managedOccurrenceBindingVerified",
                             len(activated), topology_reason,
                             topology_context,
                         )
@@ -1922,7 +1915,7 @@ def _generic_admission_complete_trace(
                                 finalization,
                                 owner,
                                 f"work.{owner['ordinal']}",
-                                attribution_work=work_item,
+                                attribution_work=owner,
                             )
                             applied_finalizations.add(
                                 finalization["ordinal"]
@@ -3537,6 +3530,59 @@ def ensure_complete_gas_traces() -> None:
             expected["gasTraceIdentity"] = trace_identity
             expected.pop("gasTraceFile", None)
         dump_fixture(path.name, fixture)
+
+
+def validate_initialization_cycle_lifecycle_trace_self_check() -> None:
+    """Keep topology and finalization owned by the lifecycle work that patches."""
+    fixture = load("c-clo-08-cycle-during-initialization.yaml")
+    expected = fixture["expected"]
+    lifecycle = next(
+        item
+        for item in expected["workTrace"]
+        if item["ordinal"] == 1 and item["kind"] == "LIFECYCLE"
+    )
+    finalization = next(
+        item for item in expected["tentativeFinalizations"]
+        if item["ordinal"] == 0
+    )
+    if finalization["boundary"] != {
+        "kind": "WORK",
+        "afterWorkOrdinal": lifecycle["ordinal"],
+    }:
+        raise AssertionError(
+            "C-CLO-08 topology finalization is not owned by lifecycle work"
+        )
+    topology = [
+        item for item in expected["gasTrace"]
+        if item.get("logicalPath") == "work/1"
+        and item["counter"] in {
+            "processEmbeddedEdgeExamined",
+            "managedOccurrenceBindingVerified",
+        }
+        and item.get("reason") == "work.1.topology-change"
+    ]
+    if [item["counter"] for item in topology] != [
+        "processEmbeddedEdgeExamined",
+        "managedOccurrenceBindingVerified",
+    ]:
+        raise AssertionError(
+            "C-CLO-08 lifecycle topology charges lost edge-before-binding order"
+        )
+    if any(
+        item.get("workOccurrenceId") != lifecycle["workIdentity"]
+        or item.get("contractKey") != lifecycle["channelKey"]
+        for item in topology
+    ):
+        raise AssertionError(
+            "C-CLO-08 lifecycle topology charges lost exact work ownership"
+        )
+    b_marker_entry = expected["finalDocuments"]["b"]["document"][
+        "contracts"
+    ]["initialized"]["document"]["blueId"]
+    if b_marker_entry != finalization["memberBlueIds"]["b"]:
+        raise AssertionError(
+            "C-CLO-08 B marker lost its component-local initialization entry"
+        )
 
 
 def add_rejected_owner_coverage_fixtures() -> None:
@@ -5171,7 +5217,7 @@ def rewrite_initialization_cycle() -> None:
             "cycle-during-initialization",
             oracle,
             ["a", "b"],
-            boundary={"kind": "WORK", "afterWorkOrdinal": 0},
+            boundary={"kind": "WORK", "afterWorkOrdinal": 1},
         ),
         g.finalize(
             1,
@@ -5929,6 +5975,37 @@ def materialize_processor_state(only_names: set[str] | None = None) -> None:
         marker_by_document: dict[str, Any] = {}
         new_marker_documents: set[str] = set()
         checkpoint_by_document: dict[str, Any] = {}
+
+        # A newly initialized document records the exact identity at which its
+        # initialization work entered the queue.  That entry can be newer than
+        # the invocation input when earlier lifecycle work formed or changed a
+        # component before this member's INITIALIZATION occurrence ran.
+        initialization_entry_ids = dict(old_input_ids)
+        initialization_work_by_document = {
+            item["targetDocumentId"]: item["ordinal"]
+            for item in old_expected.get("workTrace", [])
+            if item.get("kind") == "INITIALIZATION"
+        }
+        for document_id, initialization_ordinal in (
+            initialization_work_by_document.items()
+        ):
+            prior_finalizations = [
+                item
+                for item in old_expected.get("tentativeFinalizations", [])
+                if item.get("boundary", {}).get("kind") == "WORK"
+                and item["boundary"].get("afterWorkOrdinal", -1)
+                < initialization_ordinal
+                and document_id in item.get("memberBlueIds", {})
+            ]
+            if prior_finalizations:
+                latest = max(
+                    prior_finalizations,
+                    key=lambda item: item["boundary"]["afterWorkOrdinal"],
+                )
+                initialization_entry_ids[document_id] = latest[
+                    "memberBlueIds"
+                ][document_id]
+
         for document_id, record in final_documents.items():
             input_record = fixture_input["documents"][document_id]
             input_marker = input_record["document"].get("contracts", {}).get("initialized")
@@ -5939,7 +6016,9 @@ def materialize_processor_state(only_names: set[str] | None = None) -> None:
                     if input_marker is not None
                     else {
                         "type": g.ref(g.INITIALIZED_MARKER),
-                        "document": g.ref(old_input_ids[document_id]),
+                        "document": g.ref(
+                            initialization_entry_ids[document_id]
+                        ),
                     }
                 )
                 marker_by_document[document_id] = marker
@@ -6722,7 +6801,13 @@ def root_channel_contracts(document: Any) -> dict[str, Any]:
             continue
         type_value = contract.get("type")
         type_id = type_value.get("blueId") if isinstance(type_value, dict) else None
-        if type_id in {g.SEC, g.TEC, g.ENC, "2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo"}:
+        if type_id in {
+            g.SEC,
+            g.TEC,
+            g.ENC,
+            "2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo",
+            "4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An",
+        }:
             result[key] = contract
     return result
 
@@ -7722,6 +7807,7 @@ def refine() -> None:
     normalize_admission_candidates()
     normalize_literal_rollback_results()
     ensure_complete_gas_traces()
+    validate_initialization_cycle_lifecycle_trace_self_check()
     add_rejected_owner_coverage_fixtures()
     externalize_large_gas_trace()
     normalize_fixture_harness_boundary()

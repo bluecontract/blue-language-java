@@ -880,9 +880,10 @@
     {
       "id": "phase-full-lifecycle-admission",
       "requirement": "FULL_LIFECYCLE_ADMISSION_DESIGN.md",
-      "rationale": "Approve only the additive public termination-finalization evidence branch required to run ADMIT_CLOSURE through the existing full Contracts lifecycle queue; the Blue value model and identity algorithms remain unchanged.",
+      "rationale": "Approve only the additive public termination-finalization evidence branch required to run ADMIT_CLOSURE through the existing full Contracts lifecycle queue and its deterministic conformance-fixture exporter. The exporter is parent-package owned so the conformance package graph remains acyclic; its narrow parser facade does not expose package-private fixture internals. The Blue value model and identity algorithms remain unchanged.",
       "incompatibleChanges": [],
       "additiveChanges": [
+        "public/protected class added: blue.language.conformance.contracts.FullLifecycleFixtureExporter",
         "public/protected class added: blue.language.processor.closure.TentativeFinalization$TerminationMarkerBoundary"
       ]
     }

@@ -1,6 +1,10 @@
-package blue.language.conformance.contracts.closure;
+package blue.language.conformance.contracts;
 
-import blue.language.conformance.contracts.ClosureFixtureRuntime;
+import blue.language.codec.jackson.UncheckedObjectMapper;
+import blue.language.conformance.contracts.closure.Cclo34FullResultConformanceTest;
+import blue.language.conformance.contracts.closure.ClosureFixtureConformance;
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.model.Node;
 import blue.language.processor.closure.AdmissionCause;
 import blue.language.processor.closure.AdmissionKind;
 import blue.language.processor.closure.BlueClosureContracts;
@@ -33,6 +37,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -85,6 +90,10 @@ final class FullLifecycleFixtureExporterTest {
         for (String name : EXPECTED_NAMES) {
             Path fixturePath = first.resolve(name);
             JsonNode fixture = STRICT_YAML.readTree(fixturePath.toFile());
+            if (name.equals(
+                    "fl-adm-03-non-public-containing-route.yaml")) {
+                assertFlAdm03InitializationSnapshots(fixture);
+            }
             JsonNode cause = fixture.path("input").path("cause");
             String admissionLabel = cause.path("label").textValue();
             AdmissionCause expectedCause =
@@ -142,19 +151,14 @@ final class FullLifecycleFixtureExporterTest {
             assertTrue(limit.get("probe").isNull(), name);
             String fixtureId = name.substring(
                     0, name.length() - ".yaml".length());
-            ClosureFixtureInventory.Entry entry =
-                    new ClosureFixtureInventory.Entry(
+            ClosureInvocationInput input =
+                    ClosureFixtureConformance.parseAdmissionInput(
                             fixtureId,
                             "closure/" + name,
-                            "admit-closure",
                             Collections.singletonList(
                                     fixture.path("vectors").path(0)
                                             .textValue()),
-                            "exporter-test",
-                            Files.size(fixturePath));
-            ClosureInvocationInput input = new ClosureFixtureParser()
-                    .parse(entry, fixture)
-                    .admit();
+                            fixture);
             Capture capture = new Capture();
             ClosureAttemptResult attempt;
             try (ClosureFixtureRuntime runtime =
@@ -200,6 +204,46 @@ final class FullLifecycleFixtureExporterTest {
                 }
             }
         }
+    }
+
+    private static void assertFlAdm03InitializationSnapshots(
+            JsonNode fixture) {
+        ObjectNode aResult = resultingDocument(fixture, "fl-adm-03-a");
+        ObjectNode bResult = resultingDocument(fixture, "fl-adm-03-b");
+        ObjectNode aDocument = (ObjectNode) aResult.path("document")
+                .deepCopy();
+        ObjectNode aContracts = (ObjectNode) aDocument.path("contracts");
+        String aMarkerBlueId = aContracts.path("initialized")
+                .path("document").path("blueId").textValue();
+        aContracts.remove("initialized");
+        String aBatchEntryBlueId = DirectBlueIdCalculator.calculateBlueId(
+                UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                        aDocument, Node.class));
+        String aInvocationBlueId = fixture.path("input").path("documents")
+                .path("fl-adm-03-a").path("blueId").textValue();
+        assertEquals(aBatchEntryBlueId, aMarkerBlueId,
+                "FL-ADM-03 A must freeze its later component-batch entry");
+        assertNotEquals(aInvocationBlueId, aMarkerBlueId,
+                "FL-ADM-03 A must not freeze the earlier invocation input");
+
+        String bInvocationBlueId = fixture.path("input").path("documents")
+                .path("fl-adm-03-b").path("blueId").textValue();
+        String bMarkerBlueId = bResult.path("document").path("contracts")
+                .path("initialized").path("document").path("blueId")
+                .textValue();
+        assertEquals(bInvocationBlueId, bMarkerBlueId,
+                "FL-ADM-03 B must freeze its invocation-input batch entry");
+    }
+
+    private static ObjectNode resultingDocument(
+            JsonNode fixture, String documentId) {
+        for (JsonNode result : fixture.path("expected")
+                .path("resultingDocuments")) {
+            if (documentId.equals(result.path("documentId").textValue())) {
+                return (ObjectNode) result;
+            }
+        }
+        throw new AssertionError("Missing resulting document " + documentId);
     }
 
     @Test

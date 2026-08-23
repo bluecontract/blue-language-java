@@ -56,8 +56,10 @@ SCRIPTED_HANDLER = "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw"
 TRIGGERED_EVENT_CHANNEL = "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf"
 EMBEDDED_NODE_CHANNEL = "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN"
 LIFECYCLE_EVENT_CHANNEL = "2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo"
+DOCUMENT_UPDATE_CHANNEL = "4qgDZkkhfL8FLHLWH711pwPBSJ49SnicutmRXF1RB6An"
 SUBSCRIPTION_CHANNEL_TYPES = {
     SCRIPTED_EXTERNAL,
+    DOCUMENT_UPDATE_CHANNEL,
     TRIGGERED_EVENT_CHANNEL,
     EMBEDDED_NODE_CHANNEL,
     LIFECYCLE_EVENT_CHANNEL,
@@ -889,6 +891,9 @@ def validate_direct_marker_transition(
     after_documents: dict[str, Any],
     before_markers: dict[str, dict[str, Any]],
     after_markers: dict[str, dict[str, Any]],
+    expected: dict[str, Any],
+    before_occurrences: list[dict[str, Any]] | None = None,
+    after_occurrences: list[dict[str, Any]] | None = None,
 ) -> None:
     for document_id in sorted(before_documents):
         before = before_markers[document_id]
@@ -899,17 +904,888 @@ def validate_direct_marker_transition(
                 f"protected initialized marker changed in {path.name}: {document_id}",
             )
         elif after["initialized"] is not None:
-            frozen_blue_id = before_documents[document_id]["blueId"]
+            invocation_input_blue_id = before_documents[document_id]["blueId"]
+            marker_blue_id = after["initialized"]["document"]["blueId"]
+            terminal_batch_entry_blue_id = (
+                terminal_component_batch_entry_blue_id(
+                    path,
+                    document_id,
+                    after_documents[document_id],
+                    before,
+                    after,
+                    expected,
+                )
+            )
+            rebound_batch_entry_blue_id = (
+                stable_rebound_component_batch_entry_blue_id(
+                    path,
+                    document_id,
+                    before_documents,
+                    after_documents,
+                    before,
+                    after,
+                    expected,
+                    before_occurrences,
+                    after_occurrences,
+                )
+            )
             require(
-                after["initialized"]["document"] == {"blueId": frozen_blue_id},
-                f"initialized marker does not reference the exact frozen input document "
-                f"in {path.name}: {document_id}",
+                marker_blue_id == invocation_input_blue_id
+                or marker_blue_id == terminal_batch_entry_blue_id
+                or marker_blue_id == rebound_batch_entry_blue_id,
+                f"initialized marker does not reference the exact invocation-input "
+                f"or proven component-batch-entry document in "
+                f"{path.name}: {document_id}",
             )
         if before["terminated"] is not None:
             require(
                 after["terminated"] == before["terminated"],
                 f"protected terminated marker changed in {path.name}: {document_id}",
             )
+        elif after["terminated"] is not None:
+            validate_new_termination_marker_evidence(
+                path, document_id, expected
+            )
+
+
+def validate_new_termination_marker_evidence(
+    path: Path,
+    document_id: str,
+    expected: dict[str, Any],
+) -> None:
+    """Bind a newly materialized termination marker to retained execution.
+
+    Shape validation alone would allow an invented terminal state.  The exact
+    request owner, invocation-global work ordinal, marker write, component
+    finalization, and their strict order are all retained by the closure
+    result and gas trace, so require that complete causal spine here.
+    """
+    trace = expected_gas_trace(path, expected)
+    work_by_identity = {
+        work["workIdentity"]: work for work in expected["workTrace"]
+    }
+    requests = [
+        entry
+        for entry in trace
+        if entry["counter"] == "terminationRequested"
+        and entry.get("documentId") == document_id
+        and entry.get("workOccurrenceId") in work_by_identity
+        and re.fullmatch(
+            r"work\.\d+\.termination-request",
+            entry.get("reason", ""),
+        )
+        is not None
+    ]
+    require(
+        len(requests) == 1,
+        f"new terminated marker lacks one exact termination request in "
+        f"{path.name}: {document_id}",
+    )
+    request = requests[0]
+    request_match = re.fullmatch(
+        r"work\.(\d+)\.termination-request", request["reason"]
+    )
+    request_work = work_by_identity[request["workOccurrenceId"]]
+    require(
+        request_match is not None
+        and request_work["ordinal"] == int(request_match.group(1))
+        and request_work["targetDocumentId"] == document_id,
+        f"new terminated marker request has the wrong exact work owner in "
+        f"{path.name}: {document_id}",
+    )
+    terminal_finalizations = [
+        finalization
+        for finalization in expected["tentativeFinalizations"]
+        if finalization["boundary"]["kind"] == "TERMINATION_MARKER"
+        and document_id in finalization["memberBlueIds"]
+    ]
+    require(
+        len(terminal_finalizations) == 1,
+        f"new terminated marker lacks one exact component finalization in "
+        f"{path.name}: {document_id}",
+    )
+    after_work_ordinal = terminal_finalizations[0]["boundary"][
+        "afterWorkOrdinal"
+    ]
+    prefix = f"termination-marker.after-work.{after_work_ordinal}"
+    marker_writes = [
+        entry
+        for entry in trace
+        if entry["counter"] == "processorMarkerWritten"
+        and entry.get("documentId") == document_id
+        and entry.get("reason") == f"{prefix}.write"
+        and entry.get("workOccurrenceId") is None
+    ]
+    finalization_charges = [
+        entry
+        for entry in trace
+        if entry["counter"] == "tentativeComponentFinalization"
+        and entry.get("reason") == f"{prefix}.finalization-boundary"
+        and entry.get("workOccurrenceId") is None
+    ]
+    require(
+        len(marker_writes) == 1
+        and len(finalization_charges) == 1
+        and request["sequence"] < marker_writes[0]["sequence"]
+        < finalization_charges[0]["sequence"],
+        f"new terminated marker does not follow its exact request/write/"
+        f"finalization spine in {path.name}: {document_id}",
+    )
+
+
+def terminal_component_batch_entry_blue_id(
+    path: Path,
+    document_id: str,
+    after_record: dict[str, Any],
+    before_markers: dict[str, Any],
+    after_markers: dict[str, Any],
+    expected: dict[str, Any],
+) -> str | None:
+    """Prove the one recoverable terminal initialization-batch entry state.
+
+    The final document with its direct initialized marker removed is an
+    independent candidate for the state frozen at batch entry only when the
+    retained work and gas evidence proves that this document's initialization
+    was the terminal work, its marker write followed that work, and nothing
+    except exact identity reconstruction followed the marker write.  Any
+    missing, ambiguous, or post-batch evidence fails closed to ``None``.
+    """
+    work_trace = expected.get("workTrace")
+    after_blue_id = after_record.get("blueId")
+    after_document = after_record.get("document")
+    if (
+        expected.get("status") != "success"
+        or expected.get("rejectedWorkOccurrence") is not None
+        or expected.get("checkpointWrites") != []
+        or expected.get("tentativeFinalizations") != []
+        or before_markers.get("terminated") != after_markers.get("terminated")
+        or before_markers.get("checkpoint") != after_markers.get("checkpoint")
+        or not isinstance(after_blue_id, str)
+        or "#" in after_blue_id
+        or not valid_exact_blue_id(after_blue_id)
+        or not isinstance(after_document, dict)
+        or not isinstance(work_trace, list)
+        or not work_trace
+    ):
+        return None
+    try:
+        if direct_blue_id(after_document) != after_blue_id:
+            return None
+    except (TypeError, ValueError):
+        return None
+    terminal_work = work_trace[-1]
+    terminal_ordinal = len(work_trace) - 1
+    if (
+        not isinstance(terminal_work, dict)
+        or terminal_work.get("ordinal") != terminal_ordinal
+        or terminal_work.get("kind") != "INITIALIZATION"
+        or terminal_work.get("targetDocumentId") != document_id
+        or not isinstance(terminal_work.get("workIdentity"), str)
+    ):
+        return None
+
+    try:
+        trace = expected_gas_trace(path, expected)
+    except (KeyError, ValidationFailure):
+        return None
+    if (
+        not isinstance(trace, list)
+        or [entry.get("sequence") for entry in trace]
+        != list(range(len(trace)))
+    ):
+        return None
+    work_identity = terminal_work["workIdentity"]
+
+    def exact_work_charge(counter: str, reason: str) -> list[dict[str, Any]]:
+        return [
+            entry
+            for entry in trace
+            if entry.get("counter") == counter
+            and entry.get("documentId") == document_id
+            and entry.get("workOccurrenceId") == work_identity
+            and entry.get("reason") == reason
+        ]
+
+    enqueues = exact_work_charge(
+        "closureWorkOccurrenceEnqueued",
+        f"work.{terminal_ordinal}.initialization-enqueue",
+    )
+    dequeues = exact_work_charge(
+        "closureWorkOccurrenceDequeued",
+        f"work.{terminal_ordinal}.dequeue",
+    )
+    initialization_charges = exact_work_charge(
+        "scopeInitialization", "scope-initialization"
+    )
+    marker_writes = [
+        entry
+        for entry in trace
+        if entry.get("counter") == "processorMarkerWritten"
+        and entry.get("documentId") == document_id
+        and entry.get("reason") == f"initialization-batch.marker.{document_id}"
+        and entry.get("quantity") == 1
+        and entry.get("workOccurrenceId") is None
+    ]
+    if not all(
+        len(entries) == 1
+        for entries in (enqueues, dequeues, initialization_charges, marker_writes)
+    ):
+        return None
+    marker_sequence = marker_writes[0]["sequence"]
+    if not (
+        enqueues[0]["sequence"]
+        < dequeues[0]["sequence"]
+        < initialization_charges[0]["sequence"]
+        < marker_sequence
+    ):
+        return None
+    if any(
+        entry.get("workOccurrenceId") is not None
+        and entry["sequence"] > marker_sequence
+        for entry in trace
+    ):
+        return None
+
+    identity_counters = {
+        "nodeIdentityEstablished",
+        "objectMemberRebuilt",
+        "directIdentityHashBlock",
+    }
+    for entry in trace[marker_sequence + 1 :]:
+        reason = entry.get("reason", "")
+        if not (
+            entry.get("namespace") == "semantic"
+            and entry.get("counter") in identity_counters
+            and entry.get("documentId") == document_id
+            and entry.get("workOccurrenceId") is None
+            and (
+                reason == "identity-rebuild"
+                or (
+                    reason.startswith("initialization-batch.")
+                    and "-finalization." in reason
+                )
+            )
+        ):
+            return None
+
+    candidate = json.loads(json.dumps(after_document))
+    contracts = candidate.get("contracts")
+    if not isinstance(contracts, dict) or "initialized" not in contracts:
+        return None
+    del contracts["initialized"]
+    if not contracts:
+        return None
+    try:
+        return direct_blue_id(candidate)
+    except (TypeError, ValueError):
+        return None
+
+
+def stable_rebound_component_batch_entry_blue_id(
+    path: Path,
+    document_id: str,
+    before_documents: dict[str, Any],
+    after_documents: dict[str, Any],
+    before_markers: dict[str, Any],
+    after_markers: dict[str, Any],
+    expected: dict[str, Any],
+    before_occurrences: list[dict[str, Any]] | None,
+    after_occurrences: list[dict[str, Any]] | None,
+) -> str | None:
+    """Recover a parent initialization-batch entry after stable child rebinds.
+
+    A later member of an initialization batch can enter its own initialization
+    only after already-finalized children have been rebound into its embedded
+    paths.  That batch-entry state is independently reconstructable from the
+    invocation input plus the exact, same-lineage REBIND rows.  The helper is
+    deliberately fail-closed: any graph ambiguity, unexpected work ordering,
+    or incomplete gas evidence returns ``None``.
+    """
+    if (
+        expected.get("status") != "success"
+        or expected.get("rejectedWorkOccurrence") is not None
+        or expected.get("checkpointWrites") != []
+        or expected.get("tentativeFinalizations") != []
+        or before_markers.get("terminated") != after_markers.get("terminated")
+        or before_markers.get("checkpoint") != after_markers.get("checkpoint")
+        or not isinstance(before_occurrences, list)
+        or not isinstance(after_occurrences, list)
+        or document_id not in before_documents
+        or document_id not in after_documents
+    ):
+        return None
+
+    before_record = before_documents[document_id]
+    after_record = after_documents[document_id]
+    before_document = before_record.get("document")
+    after_document = after_record.get("document")
+    if (
+        not isinstance(before_document, dict)
+        or not isinstance(after_document, dict)
+        or not isinstance(before_record.get("blueId"), str)
+        or not isinstance(after_record.get("blueId"), str)
+        or "#" in before_record["blueId"]
+        or "#" in after_record["blueId"]
+    ):
+        return None
+    try:
+        if (
+            direct_blue_id(before_document) != before_record["blueId"]
+            or direct_blue_id(after_document) != after_record["blueId"]
+        ):
+            return None
+    except (TypeError, ValueError):
+        return None
+
+    before_by_path = {
+        row["sourcePath"]: row
+        for row in before_occurrences
+        if row.get("sourceDocumentId") == document_id and row.get("active")
+    }
+    after_by_path = {
+        row["sourcePath"]: row
+        for row in after_occurrences
+        if row.get("sourceDocumentId") == document_id and row.get("active")
+    }
+    if (
+        len(before_by_path)
+        != sum(
+            1
+            for row in before_occurrences
+            if row.get("sourceDocumentId") == document_id
+            and row.get("active")
+        )
+        or len(after_by_path)
+        != sum(
+            1
+            for row in after_occurrences
+            if row.get("sourceDocumentId") == document_id
+            and row.get("active")
+        )
+        or set(before_by_path) != set(after_by_path)
+    ):
+        return None
+
+    changed_rows: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for source_path in sorted(before_by_path):
+        before_row = before_by_path[source_path]
+        after_row = after_by_path[source_path]
+        if before_row == after_row:
+            continue
+        mutable_rebind_fields = {"bindingIdentity", "expectedTargetBlueId"}
+        if (
+            {
+                key: value
+                for key, value in before_row.items()
+                if key not in mutable_rebind_fields
+            }
+            != {
+                key: value
+                for key, value in after_row.items()
+                if key not in mutable_rebind_fields
+            }
+            or before_row.get("expectedTargetBlueId")
+            == after_row.get("expectedTargetBlueId")
+            or before_row.get("bindingIdentity")
+            == after_row.get("bindingIdentity")
+        ):
+            return None
+        target_document_id = after_row.get("targetDocumentId")
+        if (
+            target_document_id not in before_documents
+            or target_document_id not in after_documents
+            or before_documents[target_document_id].get("blueId")
+            != before_row.get("expectedTargetBlueId")
+            or after_documents[target_document_id].get("blueId")
+            != after_row.get("expectedTargetBlueId")
+        ):
+            return None
+        try:
+            after_pointer = pointer_get(after_document, source_path)
+        except (KeyError, ValidationFailure):
+            return None
+        if pure_blue_reference(after_pointer) != after_row.get(
+            "expectedTargetBlueId"
+        ):
+            return None
+        target_before_document = before_documents[target_document_id].get(
+            "document"
+        )
+        target_after_document = after_documents[target_document_id].get(
+            "document"
+        )
+        if (
+            not isinstance(target_before_document, dict)
+            or not isinstance(target_after_document, dict)
+            or "#" in before_documents[target_document_id].get("blueId", "#")
+            or "#" in after_documents[target_document_id].get("blueId", "#")
+        ):
+            return None
+        try:
+            if (
+                direct_blue_id(target_before_document)
+                != before_documents[target_document_id]["blueId"]
+                or direct_blue_id(target_after_document)
+                != after_documents[target_document_id]["blueId"]
+            ):
+                return None
+        except (TypeError, ValueError):
+            return None
+        target_before_contracts = target_before_document.get("contracts", {})
+        target_after_contracts = target_after_document.get("contracts", {})
+        if (
+            not isinstance(target_before_contracts, dict)
+            or not isinstance(target_after_contracts, dict)
+            or "initialized" in target_before_contracts
+            or "initialized" not in target_after_contracts
+        ):
+            return None
+        changed_rows.append((before_row, after_row))
+    if not changed_rows:
+        return None
+
+    try:
+        derived_changes = derive_graph_changes(
+            before_occurrences, after_occurrences
+        )
+    except (KeyError, ValidationFailure):
+        return None
+    if expected.get("graphChanges") != derived_changes:
+        return None
+    source_changes = [
+        change
+        for change in derived_changes
+        if change.get("sourceDocumentId") == document_id
+    ]
+    if (
+        len(source_changes) != len(changed_rows)
+        or any(change.get("changeKind") != "REBIND" for change in source_changes)
+    ):
+        return None
+
+    work_trace = expected.get("workTrace")
+    if not isinstance(work_trace, list) or not work_trace:
+        return None
+    if [work.get("ordinal") for work in work_trace] != list(range(len(work_trace))):
+        return None
+    initialization_work = [
+        work
+        for work in work_trace
+        if work.get("kind") == "INITIALIZATION"
+        and work.get("targetDocumentId") == document_id
+    ]
+    if len(initialization_work) != 1:
+        return None
+    initialization = initialization_work[0]
+    initialization_ordinal = initialization["ordinal"]
+    document_work = [
+        work for work in work_trace if work.get("targetDocumentId") == document_id
+    ]
+    if (
+        initialization_ordinal == 0
+        or any(work["ordinal"] < initialization_ordinal for work in document_work)
+        or any(
+            work.get("targetDocumentId") != document_id
+            or work.get("kind") != "LIFECYCLE"
+            for work in work_trace[initialization_ordinal + 1 :]
+        )
+        or not any(
+            work.get("kind") == "LIFECYCLE"
+            and work["ordinal"] > initialization_ordinal
+            for work in document_work
+        )
+    ):
+        return None
+    target_document_ids = {
+        after_row["targetDocumentId"] for _, after_row in changed_rows
+    }
+    for target_document_id in target_document_ids:
+        target_work = [
+            work
+            for work in work_trace
+            if work.get("targetDocumentId") == target_document_id
+        ]
+        if not target_work or any(
+            work["ordinal"] >= initialization_ordinal for work in target_work
+        ):
+            return None
+
+    try:
+        trace = expected_gas_trace(path, expected)
+    except (KeyError, ValidationFailure):
+        return None
+    if (
+        not isinstance(trace, list)
+        or [entry.get("sequence") for entry in trace]
+        != list(range(len(trace)))
+    ):
+        return None
+    initialization_identity = initialization.get("workIdentity")
+
+    def exact_initialization_charge(counter: str, reason: str) -> list[dict[str, Any]]:
+        return [
+            entry
+            for entry in trace
+            if entry.get("counter") == counter
+            and entry.get("documentId") == document_id
+            and entry.get("workOccurrenceId") == initialization_identity
+            and entry.get("reason") == reason
+        ]
+
+    enqueues = exact_initialization_charge(
+        "closureWorkOccurrenceEnqueued",
+        f"work.{initialization_ordinal}.initialization-enqueue",
+    )
+    dequeues = exact_initialization_charge(
+        "closureWorkOccurrenceDequeued",
+        f"work.{initialization_ordinal}.dequeue",
+    )
+    scopes = exact_initialization_charge("scopeInitialization", "scope-initialization")
+    own_marker_writes = [
+        entry
+        for entry in trace
+        if entry.get("counter") == "processorMarkerWritten"
+        and entry.get("documentId") == document_id
+        and entry.get("quantity") == 1
+        and entry.get("workOccurrenceId") is None
+        and entry.get("reason") == f"initialization-batch.marker.{document_id}"
+    ]
+    if not all(
+        len(entries) == 1
+        for entries in (enqueues, dequeues, scopes, own_marker_writes)
+    ):
+        return None
+    enqueue_sequence = enqueues[0]["sequence"]
+    marker_sequence = own_marker_writes[0]["sequence"]
+    if not (
+        enqueue_sequence
+        < dequeues[0]["sequence"]
+        < scopes[0]["sequence"]
+        < marker_sequence
+    ):
+        return None
+
+    work_identities = {work.get("workIdentity") for work in document_work}
+    work_gas_sequences = [
+        entry["sequence"]
+        for entry in trace
+        if entry.get("workOccurrenceId") in work_identities
+    ]
+    if not work_gas_sequences or max(work_gas_sequences) >= marker_sequence:
+        return None
+
+    child_marker_sequences: list[int] = []
+    for target_document_id in sorted(target_document_ids):
+        markers = [
+            entry
+            for entry in trace
+            if entry.get("counter") == "processorMarkerWritten"
+            and entry.get("documentId") == target_document_id
+            and entry.get("quantity") == 1
+            and entry.get("workOccurrenceId") is None
+            and entry.get("reason")
+            == f"initialization-batch.marker.{target_document_id}"
+        ]
+        if len(markers) != 1 or markers[0]["sequence"] >= enqueue_sequence:
+            return None
+        target_work_identities = {
+            work.get("workIdentity")
+            for work in work_trace
+            if work.get("targetDocumentId") == target_document_id
+        }
+        target_work_sequences = [
+            entry["sequence"]
+            for entry in trace
+            if entry.get("workOccurrenceId") in target_work_identities
+        ]
+        if (
+            not target_work_sequences
+            or max(target_work_sequences) >= markers[0]["sequence"]
+        ):
+            return None
+        child_marker_sequences.append(markers[0]["sequence"])
+    finalization_reasons = {
+        "nodeIdentityEstablished":
+            "initialization-batch.acyclic-finalization.node-established",
+        "objectMemberRebuilt":
+            "initialization-batch.acyclic-finalization.object-members",
+        "directIdentityHashBlock":
+            "initialization-batch.acyclic-finalization.direct-hash",
+    }
+    containing_spine_finalizations = []
+    for counter, reason in finalization_reasons.items():
+        entries = [
+            entry
+            for entry in trace
+            if entry.get("namespace") == "semantic"
+            and entry.get("counter") == counter
+            and entry.get("documentId") == document_id
+            and entry.get("workOccurrenceId") is None
+            and entry.get("reason") == reason
+            and max(child_marker_sequences)
+            < entry["sequence"]
+            < enqueue_sequence
+        ]
+        if len(entries) != 1:
+            return None
+        containing_spine_finalizations.append(entries[0])
+    if [entry["sequence"] for entry in containing_spine_finalizations] != sorted(
+        entry["sequence"] for entry in containing_spine_finalizations
+    ):
+        return None
+
+    identity_counters = {
+        "nodeIdentityEstablished",
+        "objectMemberRebuilt",
+        "directIdentityHashBlock",
+    }
+    for entry in trace[marker_sequence + 1 :]:
+        reason = entry.get("reason", "")
+        if not (
+            entry.get("namespace") == "semantic"
+            and entry.get("counter") in identity_counters
+            and entry.get("documentId") == document_id
+            and entry.get("workOccurrenceId") is None
+            and (
+                reason == "identity-rebuild"
+                or (
+                    reason.startswith("initialization-batch.")
+                    and "finalization" in reason
+                )
+            )
+        ):
+            return None
+
+    candidate = json.loads(json.dumps(before_document))
+    try:
+        for _, after_row in changed_rows:
+            candidate = replace_existing_pointer_value(
+                path,
+                candidate,
+                after_row["sourcePath"],
+                {"blueId": after_row["expectedTargetBlueId"]},
+                f"initialization-batch-entry/{document_id}"
+                f"{after_row['sourcePath']}",
+            )
+        candidate_blue_id = direct_blue_id(candidate)
+        if candidate_blue_id == before_record["blueId"]:
+            return None
+        return candidate_blue_id
+    except (KeyError, TypeError, ValueError, ValidationFailure):
+        return None
+
+
+def validate_direct_marker_transition_self_check() -> None:
+    path = Path("direct-marker-transition-self-check.yaml")
+    document_id = "self-check"
+    invocation_document = {"documentId": document_id, "state": "input"}
+    batch_entry_document = {
+        "documentId": document_id,
+        "state": "batch-entry",
+        "contracts": {"application": {"value": "retained"}},
+    }
+    invocation_blue_id = direct_blue_id(invocation_document)
+    batch_entry_blue_id = direct_blue_id(batch_entry_document)
+    result_document = json.loads(json.dumps(batch_entry_document))
+    result_document["contracts"]["initialized"] = {
+        "type": {"blueId": direct_blue_id({"kind": "initialized-type"})},
+        "document": {"blueId": batch_entry_blue_id},
+    }
+    before_documents = {
+        document_id: {
+            "blueId": invocation_blue_id,
+            "document": invocation_document,
+        }
+    }
+    after_documents = {
+        document_id: {
+            "blueId": direct_blue_id(result_document),
+            "document": result_document,
+        }
+    }
+    before_markers = {
+        document_id: {
+            "initialized": None,
+            "terminated": None,
+            "checkpoint": None,
+        }
+    }
+    after_markers = {
+        document_id: {
+            "initialized": result_document["contracts"]["initialized"],
+            "terminated": None,
+            "checkpoint": None,
+        }
+    }
+    work_identity = "sha256:" + "1" * 64
+    expected = {
+        "status": "success",
+        "rejectedWorkOccurrence": None,
+        "checkpointWrites": [],
+        "tentativeFinalizations": [],
+        "workTrace": [
+            {
+                "ordinal": 0,
+                "kind": "INITIALIZATION",
+                "targetDocumentId": document_id,
+                "workIdentity": work_identity,
+            }
+        ],
+        "gasTrace": [
+            {
+                "sequence": 0,
+                "counter": "closureWorkOccurrenceEnqueued",
+                "documentId": document_id,
+                "workOccurrenceId": work_identity,
+                "reason": "work.0.initialization-enqueue",
+            },
+            {
+                "sequence": 1,
+                "counter": "closureWorkOccurrenceDequeued",
+                "documentId": document_id,
+                "workOccurrenceId": work_identity,
+                "reason": "work.0.dequeue",
+            },
+            {
+                "sequence": 2,
+                "counter": "scopeInitialization",
+                "documentId": document_id,
+                "workOccurrenceId": work_identity,
+                "reason": "scope-initialization",
+            },
+            {
+                "sequence": 3,
+                "counter": "processorMarkerWritten",
+                "documentId": document_id,
+                "quantity": 1,
+                "reason": f"initialization-batch.marker.{document_id}",
+            },
+            {
+                "sequence": 4,
+                "namespace": "semantic",
+                "counter": "directIdentityHashBlock",
+                "documentId": document_id,
+                "reason": "initialization-batch.acyclic-finalization.direct-hash",
+            },
+        ],
+    }
+    validate_direct_marker_transition(
+        path,
+        before_documents,
+        after_documents,
+        before_markers,
+        after_markers,
+        expected,
+    )
+
+    invocation_markers = json.loads(json.dumps(after_markers))
+    invocation_markers[document_id]["initialized"]["document"] = {
+        "blueId": invocation_blue_id
+    }
+    validate_direct_marker_transition(
+        path,
+        before_documents,
+        after_documents,
+        before_markers,
+        invocation_markers,
+        {},
+    )
+
+    invalid_cases: list[
+        tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
+    ] = []
+    arbitrary_markers = json.loads(json.dumps(after_markers))
+    arbitrary_markers[document_id]["initialized"]["document"] = {
+        "blueId": direct_blue_id({"arbitrary": True})
+    }
+    invalid_cases.append((arbitrary_markers, expected, after_documents))
+    missing_gas = json.loads(json.dumps(expected))
+    missing_gas["gasTrace"] = []
+    invalid_cases.append((after_markers, missing_gas, after_documents))
+    later_work = json.loads(json.dumps(expected))
+    later_work["workTrace"].append(
+        {
+            "ordinal": 1,
+            "kind": "EMBEDDED_EVENT",
+            "targetDocumentId": "later-document",
+            "workIdentity": "sha256:" + "2" * 64,
+        }
+    )
+    invalid_cases.append((after_markers, later_work, after_documents))
+    post_marker_work = json.loads(json.dumps(expected))
+    post_marker_work["gasTrace"].append(
+        {
+            "sequence": 5,
+            "counter": "handlerCall",
+            "documentId": document_id,
+            "workOccurrenceId": work_identity,
+            "reason": "post-marker-work",
+        }
+    )
+    invalid_cases.append((after_markers, post_marker_work, after_documents))
+    checkpoint_settlement = json.loads(json.dumps(expected))
+    checkpoint_settlement["checkpointWrites"] = [{"unexpected": True}]
+    invalid_cases.append(
+        (after_markers, checkpoint_settlement, after_documents)
+    )
+    changed_checkpoint_markers = json.loads(json.dumps(after_markers))
+    changed_checkpoint_markers[document_id]["checkpoint"] = {
+        "changed": True
+    }
+    invalid_cases.append(
+        (changed_checkpoint_markers, expected, after_documents)
+    )
+    cyclic_result_documents = json.loads(json.dumps(after_documents))
+    cyclic_result_documents[document_id]["blueId"] = (
+        cyclic_result_documents[document_id]["blueId"] + "#0"
+    )
+    invalid_cases.append(
+        (after_markers, expected, cyclic_result_documents)
+    )
+    empty_batch_entry = {"documentId": document_id, "state": "empty"}
+    empty_batch_entry_blue_id = direct_blue_id(empty_batch_entry)
+    empty_result = json.loads(json.dumps(empty_batch_entry))
+    empty_result["contracts"] = {
+        "initialized": {
+            "type": {"blueId": direct_blue_id({"kind": "initialized-type"})},
+            "document": {"blueId": empty_batch_entry_blue_id},
+        }
+    }
+    empty_result_documents = {
+        document_id: {
+            "blueId": direct_blue_id(empty_result),
+            "document": empty_result,
+        }
+    }
+    empty_result_markers = json.loads(json.dumps(after_markers))
+    empty_result_markers[document_id]["initialized"] = empty_result[
+        "contracts"
+    ]["initialized"]
+    invalid_cases.append(
+        (empty_result_markers, expected, empty_result_documents)
+    )
+    changed_result_documents = json.loads(json.dumps(after_documents))
+    changed_result_documents[document_id]["document"]["state"] = "later"
+    invalid_cases.append(
+        (after_markers, expected, changed_result_documents)
+    )
+
+    for markers, evidence, candidate_after_documents in invalid_cases:
+        try:
+            validate_direct_marker_transition(
+                path,
+                before_documents,
+                candidate_after_documents,
+                before_markers,
+                markers,
+                evidence,
+            )
+        except ValidationFailure:
+            continue
+        raise ValidationFailure(
+            "invalid initialized-marker batch-entry evidence passed the "
+            "static self-check"
+        )
 
 
 def contracts_at_scope(document: Any, scope_path: str) -> dict[str, Any]:
@@ -3182,6 +4058,11 @@ def validate_component_oracle_routes(
     result_components: list[dict[str, Any]] | None,
 ) -> None:
     route, stages = fixture_oracle_stages(path, fixture)
+    if route is None:
+        # validate_components() already reconstructs every cyclic component
+        # through the independent Language oracle.  Explicit route files add
+        # fixture-stage coverage, but are not required for generated vectors.
+        return
     cyclic_by_key = {
         (location, component["componentStateIdentity"]): component
         for location, components in (
@@ -3266,6 +4147,11 @@ def validate_tentative_finalizations(
         f"tentative-finalization ordinals are not contiguous in {path.name}",
     )
     route, stages = fixture_oracle_stages(path, fixture)
+    if route is None:
+        validate_route_less_tentative_finalizations(
+            path, fixture, expected, finalizations
+        )
+        return
     routed_finalizations = [] if route is None else route["finalizationStages"]
     routed_ordinals = [item["ordinal"] for item in routed_finalizations]
     require(
@@ -3294,6 +4180,201 @@ def validate_tentative_finalizations(
             == cyclic_canonical_limit_bytes(oracle),
             f"tentative-finalization oracle mismatch in {path.name}: "
             f"{stage_name}",
+        )
+
+
+def route_less_cyclic_states(
+    path: Path,
+    label: str,
+    documents: dict[str, Any],
+    components: list[dict[str, Any]],
+    occurrences: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Independently derive cyclic states without fixture oracle labels."""
+    states: list[dict[str, Any]] = []
+    for component in components:
+        if component["kind"] != "CYCLIC":
+            continue
+        member_ids = component["orderedMemberDocumentIds"]
+        member_set = set(member_ids)
+        member_index = {
+            document_id: index for index, document_id in enumerate(member_ids)
+        }
+        source_documents: list[Any] = []
+        for source_document_id in member_ids:
+            source_document = json.loads(json.dumps(
+                documents[source_document_id]["document"]
+            ))
+            for occurrence in occurrences:
+                if (
+                    occurrence.get("active")
+                    and occurrence["sourceDocumentId"] == source_document_id
+                    and occurrence["targetDocumentId"] in member_set
+                ):
+                    source_document = replace_existing_pointer_value(
+                        path,
+                        source_document,
+                        occurrence["sourcePath"],
+                        {
+                            "blueId":
+                                f"this#{member_index[occurrence['targetDocumentId']]}"
+                        },
+                        f"route-less/{label}/{source_document_id}"
+                        f"{occurrence['sourcePath']}",
+                    )
+            source_documents.append(source_document)
+        try:
+            oracle = cyclic_set_oracle(source_documents)
+        except (TypeError, ValueError) as exc:
+            raise ValidationFailure(
+                f"route-less cyclic candidate is not exact Language content "
+                f"in {path.name}: {label}/{member_ids}: {exc}"
+            ) from exc
+        states.append(
+            {
+                "label": label,
+                "masterBlueId": oracle.master_blue_id,
+                "memberBlueIds": dict(zip(
+                    member_ids,
+                    oracle.member_ids_in_source_order(),
+                    strict=True,
+                )),
+                "canonicalBytes": cyclic_canonical_limit_bytes(oracle),
+            }
+        )
+    return states
+
+
+def documents_without_new_direct_marker(
+    before_documents: dict[str, Any],
+    after_documents: dict[str, Any],
+    marker_key: str,
+) -> dict[str, Any] | None:
+    candidate = json.loads(json.dumps(after_documents))
+    removed = 0
+    for document_id in sorted(candidate):
+        before_contracts = before_documents[document_id]["document"].get(
+            "contracts", {}
+        )
+        after_contracts = candidate[document_id]["document"].get(
+            "contracts", {}
+        )
+        if (
+            isinstance(before_contracts, dict)
+            and isinstance(after_contracts, dict)
+            and marker_key not in before_contracts
+            and marker_key in after_contracts
+        ):
+            del after_contracts[marker_key]
+            removed += 1
+    return candidate if removed else None
+
+
+def validate_route_less_tentative_finalizations(
+    path: Path,
+    fixture: dict[str, Any],
+    expected: dict[str, Any],
+    finalizations: list[dict[str, Any]],
+) -> None:
+    """Prove generated finalizations from a closed exact candidate set."""
+    fixture_input = fixture["input"]
+    output_documents = result_documents(expected)
+    candidates: list[dict[str, Any]] = []
+    candidates.extend(route_less_cyclic_states(
+        path,
+        "INPUT",
+        fixture_input["documents"],
+        fixture_input["components"],
+        fixture_input.get("occurrences", []),
+    ))
+    candidates.extend(route_less_cyclic_states(
+        path,
+        "RESULT",
+        output_documents,
+        expected["resultingComponents"],
+        expected["occurrenceBindings"],
+    ))
+    for marker_key, label in (
+        ("initialized", "PRE_INITIALIZATION_MARKER"),
+        ("terminated", "PRE_TERMINATION_MARKER"),
+    ):
+        without_marker = documents_without_new_direct_marker(
+            fixture_input["documents"], output_documents, marker_key
+        )
+        if without_marker is not None:
+            candidates.extend(route_less_cyclic_states(
+                path,
+                label,
+                without_marker,
+                expected["resultingComponents"],
+                expected["occurrenceBindings"],
+            ))
+
+    states_by_identity: dict[
+        tuple[str, tuple[tuple[str, str], ...], int], dict[str, Any]
+    ] = {}
+    for candidate in candidates:
+        key = (
+            candidate["masterBlueId"],
+            tuple(sorted(candidate["memberBlueIds"].items())),
+            candidate["canonicalBytes"],
+        )
+        state = states_by_identity.setdefault(
+            key, {"labels": set(), "candidate": candidate}
+        )
+        state["labels"].add(candidate["label"])
+
+    for finalization in finalizations:
+        key = (
+            finalization["masterBlueId"],
+            tuple(sorted(finalization["memberBlueIds"].items())),
+            finalization["canonicalBytes"],
+        )
+        state = states_by_identity.get(key)
+        require(
+            state is not None,
+            f"route-less finalization does not match one independently "
+            f"reconstructable exact state in {path.name}: "
+            f"{finalization['ordinal']}",
+        )
+        boundary = finalization["boundary"]
+        kind = boundary["kind"]
+        after_work = boundary.get("afterWorkOrdinal")
+        labels = state["labels"]
+        member_document_ids = set(finalization["memberBlueIds"])
+        component_work_ordinals = [
+            work["ordinal"]
+            for work in expected["workTrace"]
+            if work["targetDocumentId"] in member_document_ids
+        ]
+        require(
+            component_work_ordinals,
+            f"route-less finalization has no causal component work in "
+            f"{path.name}: {finalization['ordinal']}",
+        )
+        first_component_work_ordinal = min(component_work_ordinals)
+        last_component_work_ordinal = max(component_work_ordinals)
+        permitted = (
+            kind == "WORK"
+            and after_work == first_component_work_ordinal
+            and "INPUT" in labels
+        ) or (
+            kind == "WORK"
+            and after_work == last_component_work_ordinal
+            and bool(labels & {
+                "PRE_INITIALIZATION_MARKER",
+                "PRE_TERMINATION_MARKER",
+            })
+        ) or (
+            kind in {"INITIALIZATION_BATCH", "TERMINATION_MARKER"}
+            and after_work == last_component_work_ordinal
+            and "RESULT" in labels
+        )
+        require(
+            permitted,
+            f"route-less finalization state/boundary pairing is not in the "
+            f"closed reconstructable set in {path.name}: "
+            f"{finalization['ordinal']}/{kind}/{sorted(labels)}",
         )
 
 
@@ -3366,6 +4447,60 @@ def root_subscription_channels(document: Any) -> dict[str, Any]:
         if isinstance(contract, dict) and type_blue_id(contract) in SUBSCRIPTION_CHANNEL_TYPES:
             result[key] = contract
     return result
+
+
+def validate_subscription_channel_types_self_check() -> None:
+    """Keep the independent subscription oracle's closed type set complete."""
+    contracts = {
+        "scripted": {"type": {"blueId": SCRIPTED_EXTERNAL}},
+        "update": {"type": {"blueId": DOCUMENT_UPDATE_CHANNEL}},
+        "triggered": {"type": {"blueId": TRIGGERED_EVENT_CHANNEL}},
+        "embedded": {"type": {"blueId": EMBEDDED_NODE_CHANNEL}},
+        "lifecycle": {"type": {"blueId": LIFECYCLE_EVENT_CHANNEL}},
+        "application": {"type": {"blueId": "11111111111111111111111111111111"}},
+    }
+    require(
+        set(root_subscription_channels({"contracts": contracts}))
+        == {"scripted", "update", "triggered", "embedded", "lifecycle"},
+        "subscription-channel type-set self-check failed",
+    )
+    before_document = {
+        "value": "before",
+        "contracts": {
+            "lifecycle": {"type": {"blueId": LIFECYCLE_EVENT_CHANNEL}},
+            "sourceUpdates": {
+                "type": {"blueId": DOCUMENT_UPDATE_CHANNEL},
+                "path": "/value",
+            },
+        },
+    }
+    after_document = {**before_document, "value": "after"}
+    before_record = {
+        "document": before_document,
+        "blueId": direct_blue_id(before_document),
+        "componentGeneration": 1,
+    }
+    after_record = {
+        "document": after_document,
+        "blueId": direct_blue_id(after_document),
+        "componentGeneration": 1,
+    }
+    deltas = derive_subscription_deltas(
+        {"root": before_record}, {"root": after_record}, 1, 1
+    )
+    expected_occurrences = [
+        subscription_state(
+            "root", before_record, key, before_document["contracts"][key], 1
+        )["channelOccurrence"]["channelOccurrenceIdentity"]
+        for key in ("lifecycle", "sourceUpdates")
+    ]
+    require(
+        len(deltas) == 2
+        and [delta["operation"] for delta in deltas] == ["REPLACE", "REPLACE"]
+        and [delta["channelOccurrenceIdentity"] for delta in deltas]
+        == expected_occurrences,
+        "lifecycle/Document Update subscription-delta self-check failed",
+    )
 
 
 def subscription_state(
@@ -4604,6 +5739,11 @@ def validate_work_trace(
     canonical_direct = canonical_direct_seed_identities(
         path, fixture_input, ordered_direct
     )
+    trace = expected_gas_trace(path, expected)
+    work_by_identity = {
+        item["workIdentity"]: item
+        for item in all_work
+    }
     valid_work_ids: set[str] = set()
     for work_item in all_work:
         scope_identity = domain_identity(
@@ -4650,6 +5790,175 @@ def validate_work_trace(
                     "eventBlueId": work_item["eventBlueId"],
                 },
             )
+        elif work_item["kind"] == "DOCUMENT_UPDATE":
+            enqueue_matches = [
+                entry
+                for entry in trace
+                if entry["counter"] == "closureWorkOccurrenceEnqueued"
+                and entry.get("logicalPath")
+                == f"work/{work_item['ordinal']}"
+                and entry.get("documentId")
+                == work_item["targetDocumentId"]
+                and entry.get("contractKey") == work_item["channelKey"]
+                and entry.get("workOccurrenceId")
+                == work_item["workIdentity"]
+            ]
+            require(
+                len(enqueue_matches) == 1,
+                f"Document Update work lacks one exact enqueue in "
+                f"{path.name}: work {work_item['ordinal']}",
+            )
+            enqueue = enqueue_matches[0]
+            transition_match = re.fullmatch(
+                r"transition\.(\d+)\.update\.(\d+)\.enqueue",
+                enqueue.get("reason", ""),
+            )
+            require(
+                transition_match is not None
+                and work_item.get("occurrenceOrdinal")
+                == int(transition_match.group(2)),
+                f"Document Update work does not name its exact transition "
+                f"occurrence in {path.name}: work {work_item['ordinal']}",
+            )
+            transition_ordinal = int(transition_match.group(1))
+            transition_prefix = f"transition.{transition_ordinal}.update."
+            transition_enqueues = [
+                entry
+                for entry in trace
+                if entry["counter"] == "closureWorkOccurrenceEnqueued"
+                and entry.get("reason", "").startswith(transition_prefix)
+                and entry.get("reason", "").endswith(".enqueue")
+            ]
+            require(
+                transition_enqueues,
+                f"Document Update transition has no exact enqueue group in "
+                f"{path.name}: transition {transition_ordinal}",
+            )
+            transition_start = min(
+                entry["sequence"] for entry in transition_enqueues
+            )
+            preceding_owned = [
+                entry
+                for entry in trace
+                if entry["sequence"] < transition_start
+                and entry.get("workOccurrenceId") in valid_work_ids
+            ]
+            require(
+                preceding_owned,
+                f"Document Update transition has no proven causal work in "
+                f"{path.name}: transition {transition_ordinal}",
+            )
+            causing_work_identity = max(
+                preceding_owned, key=lambda entry: entry["sequence"]
+            )["workOccurrenceId"]
+            causing_work = work_by_identity[causing_work_identity]
+            before_document_id = causing_work["targetDocumentId"]
+            before_blue_ids = {
+                fixture_input["documents"][before_document_id]["blueId"]
+            }
+            for delta in expected.get("subscriptionDeltas", []):
+                before_subscription = delta.get("beforeSubscription")
+                if not isinstance(before_subscription, dict):
+                    continue
+                channel_occurrence = before_subscription.get(
+                    "channelOccurrence"
+                )
+                if (
+                    isinstance(channel_occurrence, dict)
+                    and channel_occurrence.get("managedDocumentId")
+                    == before_document_id
+                    and isinstance(delta.get("beforeDocumentBlueId"), str)
+                ):
+                    before_blue_ids.add(delta["beforeDocumentBlueId"])
+            source_candidates = {
+                domain_identity(
+                    "blue-contracts-transition-occurrence/1.0",
+                    {
+                        "invocationIdentity": invocation_identity,
+                        "transitionOrdinal": transition_ordinal,
+                        "targetDocumentId": before_document_id,
+                        "beforeBlueId": before_blue_id,
+                        "causingWorkOccurrenceIdentity":
+                            causing_work_identity,
+                    },
+                )
+                for before_blue_id in before_blue_ids
+            }
+            matching_sources = [
+                candidate
+                for candidate in source_candidates
+                if candidate == work_item["sourceOccurrenceIdentity"]
+            ]
+            require(
+                len(matching_sources) == 1,
+                f"Document Update work source is not independently proven "
+                f"by exact transition evidence in {path.name}: "
+                f"work {work_item['ordinal']}",
+            )
+            source_identity = matching_sources[0]
+        elif work_item["kind"] == "LIFECYCLE":
+            termination_enqueues = [
+                entry
+                for entry in trace
+                if entry["counter"] == "closureWorkOccurrenceEnqueued"
+                and entry.get("logicalPath")
+                == f"work/{work_item['ordinal']}"
+                and entry.get("documentId")
+                == work_item["targetDocumentId"]
+                and entry.get("contractKey") == work_item["channelKey"]
+                and entry.get("workOccurrenceId")
+                == work_item["workIdentity"]
+                and entry.get("reason")
+                == (
+                    "termination.lifecycle.work."
+                    f"{work_item['ordinal']}.enqueue"
+                )
+            ]
+            if termination_enqueues:
+                require(
+                    len(termination_enqueues) == 1,
+                    f"termination lifecycle work has ambiguous enqueue "
+                    f"evidence in {path.name}: work {work_item['ordinal']}",
+                )
+                enqueue = termination_enqueues[0]
+                requests = [
+                    entry
+                    for entry in trace
+                    if entry["counter"] == "terminationRequested"
+                    and entry["sequence"] < enqueue["sequence"]
+                    and entry.get("documentId")
+                    == work_item["targetDocumentId"]
+                    and entry.get("workOccurrenceId") in valid_work_ids
+                    and re.fullmatch(
+                        r"work\.\d+\.termination-request",
+                        entry.get("reason", ""),
+                    )
+                    is not None
+                ]
+                require(
+                    len(requests) == 1,
+                    f"termination lifecycle work lacks one exact causal "
+                    f"request in {path.name}: work {work_item['ordinal']}",
+                )
+                request = requests[0]
+                request_ordinal = int(
+                    re.fullmatch(
+                        r"work\.(\d+)\.termination-request",
+                        request["reason"],
+                    ).group(1)
+                )
+                causal_work = work_by_identity[
+                    request["workOccurrenceId"]
+                ]
+                require(
+                    causal_work["ordinal"] == request_ordinal
+                    and causal_work["ordinal"] < work_item["ordinal"],
+                    f"termination lifecycle request does not name its exact "
+                    f"earlier work in {path.name}: work {work_item['ordinal']}",
+                )
+                source_identity = causal_work["workIdentity"]
+            else:
+                source_identity = fixture_input["cause"]["causeIdentity"]
         else:
             source_identity = fixture_input["cause"]["causeIdentity"]
         require(
@@ -4925,6 +6234,51 @@ def derive_checkpoint_writes(
     return writes
 
 
+def require_exact_finalization_gas_projection(
+    path: Path,
+    expected_projection: list[tuple[str, str | None]],
+    actual_entries: list[dict[str, Any]],
+) -> None:
+    actual_projection = [
+        (entry.get("reason"), entry.get("workOccurrenceId"))
+        for entry in actual_entries
+    ]
+    require(
+        actual_projection == expected_projection,
+        f"gas trace finalization projection does not exactly match every "
+        f"declared finalization in {path.name}",
+    )
+
+
+def validate_finalization_gas_projection_self_check() -> None:
+    path = Path("finalization-gas-projection-self-check.yaml")
+    first = ("work.0.finalization.finalization-boundary", "work-0")
+    second = ("initialization-batch.finalization-boundary", None)
+    entries = [
+        {"reason": first[0], "workOccurrenceId": first[1]},
+        {"reason": second[0]},
+    ]
+    require_exact_finalization_gas_projection(
+        path, [first, second], entries
+    )
+    invalid_projections = (
+        entries[:1],
+        [entries[0], entries[0], entries[1]],
+        list(reversed(entries)),
+    )
+    for invalid in invalid_projections:
+        try:
+            require_exact_finalization_gas_projection(
+                path, [first, second], invalid
+            )
+        except ValidationFailure:
+            continue
+        raise ValidationFailure(
+            "missing, duplicate, or reordered finalization gas passed the "
+            "static self-check"
+        )
+
+
 def validate_gas_result(
     path: Path,
     fixture: dict[str, Any],
@@ -5015,13 +6369,22 @@ def validate_gas_result(
                 f"dequeue in {path.name}: work {item['ordinal']}",
     )
     for work_item in expected["workTrace"]:
-        work_finalization_prefixes = [
-            f"work.{work_item['ordinal']}."
-            f"{finalization_stage_name(path, fixture, finalization['ordinal'])}."
-            for finalization in expected["tentativeFinalizations"]
-            if finalization["boundary"]
-            == {"kind": "WORK", "afterWorkOrdinal": work_item["ordinal"]}
-        ]
+        work_finalization_prefixes = []
+        for finalization in expected["tentativeFinalizations"]:
+            if finalization["boundary"] != {
+                "kind": "WORK",
+                "afterWorkOrdinal": work_item["ordinal"],
+            }:
+                continue
+            if fixture.get("oracle") is None:
+                work_finalization_prefixes.append(
+                    f"work.{work_item['ordinal']}.finalization."
+                )
+            else:
+                work_finalization_prefixes.append(
+                    f"work.{work_item['ordinal']}."
+                    f"{finalization_stage_name(path, fixture, finalization['ordinal'])}."
+                )
         finalization_entries_for_work = [
             entry
             for entry in trace
@@ -5280,7 +6643,10 @@ def validate_gas_result(
         f"{path.name}",
     )
 
-    finalization_positions: list[int] = []
+    finalization_contexts: list[
+        tuple[dict[str, Any], str, str, str | None]
+    ] = []
+    expected_finalization_gas: list[tuple[str, str | None]] = []
     checkpoint_boundary_seen = False
     work_by_ordinal = {item["ordinal"]: item for item in expected["workTrace"]}
     for finalization in expected["tentativeFinalizations"]:
@@ -5299,17 +6665,53 @@ def validate_gas_result(
                 item["ordinal"]
                 for item in expected["workTrace"]
                 if item["kind"] in {"INITIALIZATION", "LIFECYCLE"}
+                and item["targetDocumentId"]
+                in finalization["memberBlueIds"]
+            ]
+            component_work_ordinals = [
+                item["ordinal"]
+                for item in expected["workTrace"]
+                if item["targetDocumentId"]
+                in finalization["memberBlueIds"]
             ]
             require(
                 not checkpoint_boundary_seen
                 and initialization_ordinals
-                and boundary["afterWorkOrdinal"] == max(initialization_ordinals),
-                f"initialization finalization is not bound to the last causal "
-                f"initialization/lifecycle work in {path.name}",
+                and component_work_ordinals
+                and boundary["afterWorkOrdinal"]
+                == max(component_work_ordinals),
+                f"initialization finalization is not bound to causal component "
+                f"quiescence in {path.name}",
             )
             prefix = "initialization-batch"
             owner_work_id = None
+        elif kind == "TERMINATION_MARKER":
+            component_work_ordinals = [
+                item["ordinal"]
+                for item in expected["workTrace"]
+                if item["targetDocumentId"]
+                in finalization["memberBlueIds"]
+            ]
+            require(
+                not checkpoint_boundary_seen
+                and boundary["afterWorkOrdinal"] in work_by_ordinal
+                and component_work_ordinals
+                and boundary["afterWorkOrdinal"]
+                == max(component_work_ordinals),
+                f"termination-marker finalization is not bound to causal "
+                f"component quiescence in {path.name}",
+            )
+            prefix = (
+                "termination-marker.after-work."
+                f"{boundary['afterWorkOrdinal']}"
+            )
+            owner_work_id = None
         elif kind == "CHECKPOINT_SETTLEMENT":
+            require(
+                fixture.get("oracle") is not None,
+                f"route-less checkpoint finalization is not independently "
+                f"reconstructable in {path.name}",
+            )
             checkpoint_boundary_seen = True
             prefix = "checkpoint-settlement"
             owner_work_id = None
@@ -5317,29 +6719,80 @@ def validate_gas_result(
             raise ValidationFailure(
                 f"unknown finalization boundary in {path.name}: {kind}"
             )
-        stage_name = finalization_stage_name(
-            path, fixture, finalization["ordinal"]
+        if fixture.get("oracle") is None:
+            reason = (
+                f"{prefix}.finalization.finalization-boundary"
+                if kind == "WORK"
+                else f"{prefix}.finalization-boundary"
+            )
+        else:
+            stage_name = finalization_stage_name(
+                path, fixture, finalization["ordinal"]
+            )
+            reason = f"{prefix}.{stage_name}.finalization-boundary"
+        finalization_contexts.append(
+            (finalization, kind, prefix, owner_work_id)
         )
-        reason = f"{prefix}.{stage_name}.finalization-boundary"
-        matches = [
-            entry
-            for entry in trace
-            if entry["counter"] == "tentativeComponentFinalization"
-            and entry.get("reason") == reason
-        ]
-        require(
-            len(matches) == 1
-            and matches[0].get("workOccurrenceId") == owner_work_id,
-            f"gas trace does not bind finalization {finalization['ordinal']} to its "
-            f"exact boundary in {path.name}",
-        )
+        expected_finalization_gas.append((reason, owner_work_id))
+
+    actual_finalization_entries = [
+        entry
+        for entry in trace
+        if entry["counter"] == "tentativeComponentFinalization"
+        and entry.get("reason", "").endswith(".finalization-boundary")
+    ]
+    require_exact_finalization_gas_projection(
+        path,
+        expected_finalization_gas,
+        actual_finalization_entries,
+    )
+
+    finalization_positions: list[int] = []
+    for context, match in zip(
+        finalization_contexts,
+        actual_finalization_entries,
+        strict=True,
+    ):
+        finalization, kind, prefix, _owner_work_id = context
+        if kind == "INITIALIZATION_BATCH" and fixture.get("oracle") is None:
+            marker_writes = [
+                entry
+                for entry in trace
+                if entry["counter"] == "processorMarkerWritten"
+                and entry.get("reason", "").startswith(
+                    "initialization-batch.marker."
+                )
+                and entry.get("workOccurrenceId") is None
+            ]
+            require(
+                marker_writes
+                and max(entry["sequence"] for entry in marker_writes)
+                < match["sequence"],
+                f"initialization component finalized before its complete "
+                f"marker batch in {path.name}",
+            )
+        if kind == "TERMINATION_MARKER":
+            marker_writes = [
+                entry
+                for entry in trace
+                if entry["counter"] == "processorMarkerWritten"
+                and entry.get("reason")
+                == f"{prefix}.write"
+                and entry.get("workOccurrenceId") is None
+            ]
+            require(
+                len(marker_writes) == 1
+                and marker_writes[0]["sequence"] < match["sequence"],
+                f"termination component finalized before its exact marker "
+                f"write in {path.name}",
+            )
         if kind == "CHECKPOINT_SETTLEMENT" and checkpoint_writes:
             require(
-                matches[0]["sequence"]
+                match["sequence"]
                 > max(entry["sequence"] for entry in checkpoint_writes),
                 f"checkpoint component finalized before its batched marker write in {path.name}",
             )
-        finalization_positions.append(matches[0]["sequence"])
+        finalization_positions.append(match["sequence"])
     require(
         finalization_positions == sorted(finalization_positions),
         f"tentative finalizations are not traced in ordinal order in {path.name}",
@@ -5929,14 +7382,6 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
     )
 
     output_documents = result_documents(expected)
-    output_markers = direct_processor_markers(path, output_documents, "result")
-    validate_direct_marker_transition(
-        path,
-        fixture_input["documents"],
-        output_documents,
-        input_markers,
-        output_markers,
-    )
     require(
         [item["documentId"] for item in expected["resultingDocuments"]]
         == sorted(output_documents),
@@ -5945,6 +7390,17 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
     require(
         set(output_documents) == set(fixture_input["documents"]),
         f"resulting document inventory mismatch in {path.name}",
+    )
+    output_markers = direct_processor_markers(path, output_documents, "result")
+    validate_direct_marker_transition(
+        path,
+        fixture_input["documents"],
+        output_documents,
+        input_markers,
+        output_markers,
+        expected,
+        fixture_input.get("occurrences", []),
+        expected["occurrenceBindings"],
     )
     for item in expected["resultingDocuments"]:
         document_id = item["documentId"]
@@ -6642,6 +8098,7 @@ def validate_managed_revision_fixture_sequence() -> int:
 def validate_static_package_laws() -> None:
     validate_occurrence_transition_law_self_check()
     validate_component_order_self_check()
+    validate_subscription_channel_types_self_check()
     spec = SPEC.read_text()
     normative_text = spec + "\n" + GAS.read_text() + "\n" + IDENTITY_CONSTRUCTORS.read_text() + "\n" + RELEASE.read_text()
     for path in REGISTRY.glob("*.blue"):
@@ -6816,6 +8273,8 @@ def main() -> None:
     progress("static laws")
     validate_cyclic_proof_selection_self_check()
     validate_rejected_work_evidence_self_check()
+    validate_finalization_gas_projection_self_check()
+    validate_direct_marker_transition_self_check()
     validate_static_package_laws()
     progress("manifests")
     manifests = validate_manifests()
