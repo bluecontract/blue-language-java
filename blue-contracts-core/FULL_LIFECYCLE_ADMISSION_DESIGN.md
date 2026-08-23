@@ -285,9 +285,10 @@ Independent Contracts tests cover, at minimum:
 16. Unknown initialization-created managed occurrence remains noncommitting.
 17. Explicit bounded-lane compatibility.
 
-Expected frozen fixture counts remain 153 Language and 234 Contracts. New
-JUnit coverage does not rewrite independent identities from implementation
-output alone.
+The release corpus adds ten `FL-ADM` semantic vectors represented by thirteen
+executable cases, for 153 Language and 247 Contracts fixtures in total. Their
+complete exact oracles are generated from identity-free sources by independent
+normative executions; unit-test expected values are never copied into them.
 
 Only after all Contracts tests and complete gates pass will Coordination select
 the full path and add its seven focused admission tests. MyOS and browser

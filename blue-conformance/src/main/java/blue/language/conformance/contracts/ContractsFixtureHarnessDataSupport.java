@@ -68,6 +68,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -424,32 +426,73 @@ abstract class ContractsFixtureHarnessDataSupport {
     }
 
     static String registryId(String key) {
-        return RegistryEnvironment.INSTANCE.idByKey.get(key);
+        return RegistryEnvironment.load().idByKey.get(key);
     }
 
     static final class RegistryEnvironment {
-        private static final RegistryEnvironment INSTANCE = loadInternal();
-
         final Map<String, Node> nodesByBlueId;
         final Map<String, String> idByKey;
         final BlueLanguageRuntime language;
+        final String runtimeRegistryIdentity;
 
         private RegistryEnvironment(Map<String, Node> nodesByBlueId,
-                                    Map<String, String> idByKey) {
+                                    Map<String, String> idByKey,
+                                    String runtimeRegistryIdentity,
+                                    boolean needsResolutionRuntime) {
             this.nodesByBlueId =
                     Collections.unmodifiableMap(new LinkedHashMap<>(nodesByBlueId));
             this.idByKey =
                     Collections.unmodifiableMap(new LinkedHashMap<>(idByKey));
-            this.language = languageRuntime(blueId -> {
-                Node value = this.nodesByBlueId.get(blueId);
-                return value == null
-                        ? null
-                        : Collections.singletonList(value.clone());
-            });
+            this.runtimeRegistryIdentity = Objects.requireNonNull(
+                    runtimeRegistryIdentity, "runtimeRegistryIdentity");
+            this.language = needsResolutionRuntime
+                    ? languageRuntime(blueId -> {
+                        Node value = this.nodesByBlueId.get(blueId);
+                        return value == null
+                                ? null
+                                : Collections.singletonList(value.clone());
+                    })
+                    : null;
         }
 
         static RegistryEnvironment load() {
-            return INSTANCE;
+            return DefaultHolder.INSTANCE;
+        }
+
+        static RegistryEnvironment load(Path packageRoot) {
+            Path root = Objects.requireNonNull(
+                    packageRoot, "packageRoot").toAbsolutePath().normalize();
+            if (!packageRoot.isAbsolute() || !Files.isDirectory(root)) {
+                throw new IllegalArgumentException(
+                        "Contracts package root must be an existing absolute directory");
+            }
+            JsonNode release = readYaml(root.resolve("release-manifest.yaml"));
+            JsonNode contractsRegistry = release.path("contractsRegistry");
+            String registryIdentity = contractsRegistry.path(
+                    "packageIdentity").asText(null);
+            if (registryIdentity == null || registryIdentity.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Candidate release manifest has no Contracts registry identity");
+            }
+            Path manifestPath = root.resolve(
+                    contractsRegistry.path("path").asText("registry/manifest.yaml"))
+                    .normalize();
+            if (!manifestPath.startsWith(root)) {
+                throw new IllegalArgumentException(
+                        "Candidate registry manifest escapes the package root");
+            }
+            Map<String, Node> nodes = new LinkedHashMap<>();
+            Map<String, String> keys = new LinkedHashMap<>();
+            loadRegistry(manifestPath, nodes, keys);
+            if (!MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL.equals(
+                    keys.get("ScriptedExternalChannel"))
+                    || !MockTypeBlueIds.MOCK_HANDLER.equals(
+                    keys.get("ScriptedHandler"))) {
+                throw new IllegalStateException(
+                        "Candidate fixture runtime registry identity mismatch");
+            }
+            return new RegistryEnvironment(
+                    nodes, keys, registryIdentity, false);
         }
 
         Node require(String blueId) {
@@ -462,6 +505,10 @@ abstract class ContractsFixtureHarnessDataSupport {
         }
 
         Node resolve(Node node) {
+            if (language == null) {
+                throw new IllegalStateException(
+                        "Candidate registry environment has no resolution runtime");
+            }
             return language.resolution().resolve(node);
         }
 
@@ -495,7 +542,17 @@ abstract class ContractsFixtureHarnessDataSupport {
                 throw new IllegalStateException(
                         "Fixture runtime registry identity mismatch");
             }
-            return new RegistryEnvironment(nodes, keys);
+            return new RegistryEnvironment(
+                    nodes,
+                    keys,
+                    BlueContractsConformanceReport
+                            .CONTRACTS_REGISTRY_PACKAGE_IDENTITY,
+                    true);
+        }
+
+        /** Defers classpath registry/runtime construction from candidate loads. */
+        private static final class DefaultHolder {
+            private static final RegistryEnvironment INSTANCE = loadInternal();
         }
 
         private static void loadRegistry(String root,
@@ -528,6 +585,47 @@ abstract class ContractsFixtureHarnessDataSupport {
                 keys.put(key, blueId);
             }
         }
+
+        private static void loadRegistry(Path manifestPath,
+                                         Map<String, Node> nodes,
+                                         Map<String, String> keys) {
+            JsonNode manifest = readYaml(manifestPath);
+            JsonNode entries = manifest.get("entries");
+            if (entries == null || !entries.isArray()) {
+                throw new IllegalStateException(
+                        "Registry manifest has no entries: " + manifestPath);
+            }
+            Path registryRoot = manifestPath.getParent();
+            for (JsonNode entry : entries) {
+                String key = entry.path("key").asText();
+                String blueId = entry.path(
+                        BlueLanguageConstants.OBJECT_BLUE_ID).asText();
+                Path nodePath = registryRoot.resolve(
+                        entry.path("path").asText()).normalize();
+                if (!nodePath.startsWith(registryRoot)) {
+                    throw new IllegalStateException(
+                            "Registry entry escapes the candidate package: " + key);
+                }
+                Node node = readNode(readYaml(nodePath));
+                String calculated = DirectBlueIdCalculator.calculateBlueId(node);
+                if (!blueId.equals(calculated)) {
+                    throw new IllegalStateException(
+                            "Registry node identity mismatch for " + nodePath);
+                }
+                Node duplicate = nodes.put(blueId, node);
+                if (duplicate != null
+                        && !semanticEquals(
+                        normalizeNode(duplicate), normalizeNode(node))) {
+                    throw new IllegalStateException(
+                            "Registry BlueId collision for " + blueId);
+                }
+                String previous = keys.put(key, blueId);
+                if (previous != null && !previous.equals(blueId)) {
+                    throw new IllegalStateException(
+                            "Duplicate registry key with different BlueIds: " + key);
+                }
+            }
+        }
     }
 
     static JsonNode readYaml(String resource) {
@@ -541,6 +639,16 @@ abstract class ContractsFixtureHarnessDataSupport {
         } catch (IOException exception) {
             throw new IllegalStateException(
                     "Unable to read Contracts harness resource " + resource,
+                    exception);
+        }
+    }
+
+    static JsonNode readYaml(Path path) {
+        try (InputStream input = Files.newInputStream(path)) {
+            return YAML.readTree(input);
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "Unable to read Contracts harness file " + path,
                     exception);
         }
     }

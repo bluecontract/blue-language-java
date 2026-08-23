@@ -1,0 +1,12 @@
+This package vendors the implementation module from rfc8785.py 0.1.4:
+
+  Copyright Trail of Bits
+  https://github.com/trailofbits/rfc8785.py
+  commit 02ecc03315ff17dd90fc892da4faa6998fa9314b
+
+The upstream work is licensed under the Apache License, Version 2.0. The
+corresponding license is in JCS-LICENSE.txt.
+
+Local modification: the upstream internal module was flattened into jcs.py,
+public docstrings and provenance were adjusted, and no canonicalization
+semantics were intentionally changed.

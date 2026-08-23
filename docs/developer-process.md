@@ -430,7 +430,7 @@ commit the exact result. Do not edit a generated reference by hand.
 ```
 
 The Language fixture package contains 153 exact fixtures and the Contracts
-package contains 234. Generated fixture coverage is the source for category
+package contains 247. Generated fixture coverage is the source for category
 subtotals; avoid copying subtotals into authored docs.
 
 `semanticBaselineCapture` is manual and exceptional. Verification never

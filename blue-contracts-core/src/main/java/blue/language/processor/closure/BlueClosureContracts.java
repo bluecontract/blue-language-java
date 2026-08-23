@@ -95,8 +95,15 @@ public final class BlueClosureContracts
     }
 
     /**
-     * Admits one verified closure candidate against a captured ordinary
-     * runtime revision.
+     * Admits one verified closure candidate through the legacy bounded
+     * compatibility lane against a captured ordinary runtime revision.
+     *
+     * <p>This method does not execute initialization-caused Document Updates,
+     * application events, lifecycle termination, or further queued work. It
+     * is nonconforming for normative {@code ADMIT_CLOSURE} whenever admission
+     * can enqueue lifecycle work. Use
+     * {@link #admitClosureWithLifecycleQueue(ClosureInvocationInput)} for
+     * normative conformance and production admission.</p>
      *
      * @param input exact admission invocation input and evidence
      * @return complete admission result or exact retry disposition
@@ -115,8 +122,13 @@ public final class BlueClosureContracts
     }
 
     /**
-     * Admits one verified closure candidate through the complete lifecycle work
-     * and event queues against a captured ordinary runtime revision.
+     * Admits one verified closure candidate through the normative complete
+     * lifecycle work and event queues against a captured ordinary runtime
+     * revision.
+     *
+     * <p>This is the conforming public Java entry point for
+     * {@code ADMIT_CLOSURE}, including initialization-caused Document Updates,
+     * application events, graceful termination, and further queued work.</p>
      *
      * @param input exact admission invocation input and evidence
      * @return complete admission result or exact retry disposition

@@ -1,0 +1,70 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-09-late-member-rollback
+scenario: FL-ADM-09
+description: The first canonical member tentatively patches and initializes before a later member fails; the complete closure rolls back with no partial publication.
+operation: admit-closure
+events: {}
+documents:
+  fl-adm-09-a:
+    publicRoot: true
+    document:
+      documentId: fl-adm-09-a
+      name: Full lifecycle first admission member
+      first: false
+      contracts:
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        patchFirst:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+  fl-adm-09-b:
+    publicRoot: true
+    document:
+      documentId: fl-adm-09-b
+      name: Full lifecycle later failing member
+      contracts:
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        failLater:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+occurrences: []
+runtime:
+  initializationHandlers:
+    fl-adm-09-a/patchFirst:
+      patches:
+      - {op: replace, path: /first, val: true}
+    fl-adm-09-b/failLater:
+      fail: deterministic-later-member-failure
+  handlers: {}
+gas:
+  sharedLimit: release-default
+expect:
+  status: runtime-fatal
+  diagnosticCategory: RuntimeExecutionFailure
+  atomic: true
+  rollbackToInput: true
+  documents:
+  - {documentId: fl-adm-09-a, initialized: false, terminated: false}
+  - {documentId: fl-adm-09-b, initialized: false, terminated: false}
+  pointers:
+  - {documentId: fl-adm-09-a, pointer: /first, value: false}
+  absentPointers:
+  - {documentId: fl-adm-09-a, pointer: /contracts/initialized}
+  - {documentId: fl-adm-09-b, pointer: /contracts/initialized}
+  workCounts:
+  - {kind: INITIALIZATION, count: 2}
+  - {kind: LIFECYCLE, count: 2}
+  workKindsExact: [INITIALIZATION, LIFECYCLE, INITIALIZATION, LIFECYCLE]
+  publicEvents: []
+  checkpointWrites: 0
+  terminationMarkerCount: 0
+  commitCompanion: absent

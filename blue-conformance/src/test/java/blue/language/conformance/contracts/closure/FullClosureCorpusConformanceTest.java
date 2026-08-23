@@ -51,7 +51,7 @@ final class FullClosureCorpusConformanceTest {
                 if ("process-closure".equals(entry.operation())) {
                     attempt = contracts.processClosure(input);
                 } else if ("admit-closure".equals(entry.operation())) {
-                    attempt = contracts.admitClosure(input);
+                    attempt = contracts.admitClosureWithLifecycleQueue(input);
                 } else {
                     throw new AssertionError(
                             "Unclassified closure operation: "
@@ -89,10 +89,10 @@ final class FullClosureCorpusConformanceTest {
         }
 
         reporter.publishEntry("summary", counts.toString());
-        assertEquals(67, source.entries().size());
-        assertEquals(48, counts.executed);
-        assertEquals(37, counts.success);
-        assertEquals(11, counts.nonSuccess);
+        assertEquals(80, source.entries().size());
+        assertEquals(61, counts.executed);
+        assertEquals(46, counts.success);
+        assertEquals(15, counts.nonSuccess);
         assertEquals(1, counts.needsResources);
         assertEquals(18, counts.unsupported);
     }

@@ -385,7 +385,12 @@ public final class ClosureEvidenceFactory {
     }
 
     /**
-     * Derives a complete admission invocation from semantic evidence.
+     * Derives complete admission input from semantic evidence.
+     *
+     * <p>This factory constructs immutable invocation evidence only; it does
+     * not execute admission. Conforming execution uses
+     * {@link BlueClosureContracts#admitClosureWithLifecycleQueue(
+     * ClosureInvocationInput)}.</p>
      *
      * @param snapshot authoritative candidate closure
      * @param cause admission cause

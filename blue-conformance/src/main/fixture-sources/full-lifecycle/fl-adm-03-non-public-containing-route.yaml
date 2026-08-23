@@ -1,0 +1,87 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-03-non-public-containing-route
+scenario: FL-ADM-03
+description: Non-public B emits during initialization; containing public A receives the internal occurrence and emits its own public event while B's event remains non-public.
+operation: admit-closure
+events:
+  child:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: full-lifecycle
+    id: FL-ADM-03-CHILD
+  parent:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: full-lifecycle
+    id: FL-ADM-03-PARENT
+documents:
+  fl-adm-03-a:
+    publicRoot: true
+    document:
+      documentId: fl-adm-03-a
+      name: Full lifecycle public containing A
+      child: {$documentBlueId: fl-adm-03-b}
+      observedChild: false
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/child]
+        fromChild:
+          type: {$registryBlueId: EmbeddedNodeChannel}
+          sourcePath: /child
+          event: {$eventBlueId: child}
+          order: 0
+        receiveChild:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: fromChild
+          order: 0
+  fl-adm-03-b:
+    publicRoot: false
+    document:
+      documentId: fl-adm-03-b
+      name: Full lifecycle private B
+      contracts:
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        emitChild:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+occurrences:
+- sourceDocumentId: fl-adm-03-a
+  sourcePath: /child
+  activationGeneration: 1
+  targetDocumentId: fl-adm-03-b
+  active: true
+runtime:
+  initializationHandlers:
+    fl-adm-03-b/emitChild:
+      events:
+      - {$eventValue: child}
+  handlers:
+    fl-adm-03-a/receiveChild:
+      patches:
+      - {op: replace, path: /observedChild, val: true}
+      events:
+      - {$eventValue: parent}
+gas:
+  sharedLimit: release-default
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: fl-adm-03-a, initialized: true, terminated: false}
+  - {documentId: fl-adm-03-b, initialized: true, terminated: false}
+  pointers:
+  - {documentId: fl-adm-03-a, pointer: /observedChild, value: true}
+  workCounts:
+  - {kind: INITIALIZATION, count: 2}
+  - {kind: LIFECYCLE, count: 1}
+  - {kind: EMBEDDED_EVENT, count: 1}
+  publicEvents:
+  - {event: parent, emitter: fl-adm-03-a}
+  distinctEventOccurrenceIdentities: 2
+  checkpointWrites: 0
+  commitCompanion: present

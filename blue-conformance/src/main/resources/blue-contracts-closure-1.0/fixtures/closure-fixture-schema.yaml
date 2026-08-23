@@ -11,7 +11,7 @@ properties:
     type: array
     minItems: 1
     uniqueItems: true
-    items: {type: string, pattern: '^C-CLO-[0-9]{2}$'}
+    items: {type: string, pattern: '^(?:C-CLO|FL-ADM)-[0-9]{2}$'}
   category:
     enum: [admission, atomicity, cycle, dynamic-graph, gas, history, identity, initialization, limits, locality, ordering, public-events, recovery]
   operation: {enum: [process-closure, admit-closure, limit-micro]}
@@ -438,6 +438,13 @@ $defs:
     properties:
       patches: {type: array, items: {$ref: '#/$defs/patch'}}
       events: {type: array, items: {$ref: '#/$defs/blueValue'}}
+      termination:
+        type: object
+        additionalProperties: false
+        required: [cause]
+        properties:
+          cause: {type: string, minLength: 1}
+          reason: {type: string}
       fail: {type: string}
   gasPolicy:
     type: object

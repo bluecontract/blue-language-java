@@ -1774,6 +1774,14 @@ terminal progress for the original cause
 commit companion and gas trace identity
 ```
 
+For every operation, including `ADMIT_CLOSURE`, `terminal progress for the
+original cause` is host-internal idempotency evidence keyed exclusively by the
+exact `causeIdentity`. The compare-and-swap dependency set fences installation
+but does not become part of that key. This terminal record is never Timeline
+position, source-occurrence progress, delivery progress, a Channel checkpoint,
+a checkpoint domain or subject, or lifecycle-marker state, and a platform MUST
+NOT derive or advance any such state from it.
+
 For `ADMIT_CLOSURE`, the checkpoint item is inapplicable: the committed
 `checkpointWrites` sequence is empty and the adapter MUST NOT create, advance,
 clean up, or otherwise mutate checkpoint state while installing the admission.
@@ -3784,7 +3792,8 @@ Before success, the processor MUST establish:
 For `ADMIT_CLOSURE`, final soundness additionally requires that the canonical
 initialization plan is exhausted, every initialization-caused lifecycle/event/
 update/termination obligation is quiescent, no unknown managed occurrence was
-adopted, and both checkpoint result sequences are the exact empty sequences.
+adopted, `checkpointWrites` is the exact empty sequence, and
+`checkpointWritesIdentity` is its recomputed empty-sequence identity.
 
 A charge owned by this invocation-wide final-soundness phase uses rejected-charge
 owner `INVOCATION`. A charge inside an explicitly identified tentative
@@ -4587,7 +4596,13 @@ occurrence-binding set identity
 direct-delivery snapshot identity
 ```
 
-A progress-only result cannot be recorded after any dependency changed. A successful closure commits documents, public events, subscriptions, checkpoints, graph/component state, and progress together.
+A progress-only result cannot be recorded after any dependency changed. A
+successful closure commits documents, public events, subscriptions,
+checkpoints, graph/component state, and progress together. In this section,
+`progress` is exactly the host-internal terminal idempotency record keyed only
+by `causeIdentity` from §2.9. Its storage key contains no Timeline identity,
+source-occurrence identity, delivery identity, or checkpoint address, and
+recording it MUST NOT advance Timeline, source, or checkpoint progress.
 
 ### 12.10 External-event liveness
 
@@ -5320,11 +5335,21 @@ demonstrate all of the following through the explicit
 17. The bounded behavior remains available only through the explicit legacy
     `admitClosure` compatibility API and is not reported as the normative result.
 
-These focused tests add no new executable release fixtures; the existing frozen
-semantic vectors are mechanically rebound to this Contracts specification
-identity, without deriving new expected business results from the implementation.
-The frozen executable inventories remain 153 Language fixtures and 234
-Contracts fixtures.
+The portable `FL-ADM-01` through `FL-ADM-10` fixture family supplies thirteen
+executable cases for the full-lifecycle claims above.  Reversed-order and
+inline/reference cases are independent executions, and retry cases reuse the
+exact invocation input and compare the complete deterministic rejection
+evidence.  Claims 13 and 17 additionally have mandatory Java parity and
+architecture gates because node-cache temperature and public API source use are
+not portable fixture inputs.  Fixture oracles are generated from identity-free
+authored sources through the normative entry point; they are never copied from
+unit-test expected values or produced by a second semantic implementation.
+
+The canonical executable inventories contain 153 Language fixtures and 247
+Contracts fixtures, including 80 closure fixtures.  Existing
+`PROCESS_CLOSURE` business results remain frozen; specification, invocation,
+work, event, and trace identities may be mechanically rebound only when the
+identity-delta audit classifies them and reports zero unexpected changes.
 
 ### 15.3 Gas and execution fixtures
 

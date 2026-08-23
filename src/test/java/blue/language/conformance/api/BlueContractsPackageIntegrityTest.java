@@ -136,8 +136,8 @@ class BlueContractsPackageIntegrityTest {
                                 .requiredFixtureIdsForContracts10()).size();
 
         // then
-        assertEquals(234, requiredCount);
-        assertEquals(234, uniqueCount);
+        assertEquals(247, requiredCount);
+        assertEquals(247, uniqueCount);
     }
 
     private static ObjectNode manifest(ObjectNode... files) {

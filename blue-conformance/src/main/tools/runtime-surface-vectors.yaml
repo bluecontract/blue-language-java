@@ -1,0 +1,25 @@
+vectors:
+- name: c-clo-34-from-b
+  fixture: c-clo-34-separate-document-steps.yaml
+  documentId: a
+  channelKey: fromB
+  effectiveRuntimeContributionBlueId: 4Cr7R8Tn4Nrkk5xwG8cdS8rj2Eqcy25un7nFnHmjjpnt
+  subscriptionHeaderBlueId: DR6XHKVYstzARWEEcm7hcKEribpZi7GCKnJfvoZFXLdZ
+- name: c-clo-34-local-x
+  fixture: c-clo-34-separate-document-steps.yaml
+  documentId: a
+  channelKey: localX
+  effectiveRuntimeContributionBlueId: Arfupv7HBSgG9BVjn4NrVv1DSpfJq6JufLdJ9uLoRAgU
+  subscriptionHeaderBlueId: 7XQMmpKtNw3q4G6Jy5NSVSd9Pz8YR7sMqbopN4iS3BzM
+- name: c-clo-34-source
+  fixture: c-clo-34-separate-document-steps.yaml
+  documentId: a
+  channelKey: source
+  effectiveRuntimeContributionBlueId: Csa9euy5vbxsffMqM2Nm4fFeTaVo48ouSdEJ1X74MJ9o
+  subscriptionHeaderBlueId: E8Ado5rBmeoAu2tfzCbtK2LdHV49tJMvGi8bhGrjK22j
+- name: c-clo-34-from-a
+  fixture: c-clo-34-separate-document-steps.yaml
+  documentId: b
+  channelKey: fromA
+  effectiveRuntimeContributionBlueId: J7hboNKxCqP8au4qSTktJmKBGFJFZng54z1ufQ9VBgxg
+  subscriptionHeaderBlueId: EjzmfWobVYkTD48M4xDFUjM9oQmRTU17RjDM2zKgSS21

@@ -1,0 +1,216 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: blue-contracts-full-lifecycle-source/1.0
+title: Blue Contracts full-lifecycle admission authored fixture source
+type: object
+additionalProperties: false
+required: [schema, id, scenario, description, operation, events, documents, occurrences, runtime, gas, expect]
+properties:
+  schema: {const: blue-contracts-full-lifecycle-source/1.0}
+  id: {type: string, pattern: '^fl-adm-[0-9]{2}(?:-[a-z0-9-]+)?$'}
+  scenario: {type: string, pattern: '^FL-ADM-[0-9]{2}$'}
+  description: {type: string, minLength: 1}
+  operation: {const: admit-closure}
+  events:
+    type: object
+    additionalProperties: {$ref: '#/$defs/blueValue'}
+  documents:
+    type: object
+    minProperties: 1
+    additionalProperties: {$ref: '#/$defs/authoredDocument'}
+  inputOrder:
+    type: array
+    uniqueItems: true
+    items: {type: string, minLength: 1}
+  occurrences:
+    type: array
+    items: {$ref: '#/$defs/authoredOccurrence'}
+  runtime: {$ref: '#/$defs/runtime'}
+  gas: {$ref: '#/$defs/gas'}
+  cases:
+    type: array
+    minItems: 1
+    items: {$ref: '#/$defs/case'}
+  expect: {$ref: '#/$defs/expect'}
+$defs:
+  blueValue: {}
+  authoredDocument:
+    type: object
+    additionalProperties: false
+    required: [publicRoot, document]
+    properties:
+      publicRoot: {type: boolean}
+      document: {$ref: '#/$defs/blueValue'}
+  authoredOccurrence:
+    type: object
+    additionalProperties: false
+    required: [sourceDocumentId, sourcePath, activationGeneration, targetDocumentId, active]
+    properties:
+      sourceDocumentId: {type: string, minLength: 1}
+      sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
+      activationGeneration: {type: integer, minimum: 1}
+      targetDocumentId: {type: string, minLength: 1}
+      active: {type: boolean}
+  patch:
+    type: object
+    additionalProperties: false
+    required: [op, path]
+    properties:
+      op: {enum: [add, replace, remove]}
+      path: {type: string, minLength: 1}
+      val: {$ref: '#/$defs/blueValue'}
+    allOf:
+    - if:
+        properties: {op: {enum: [add, replace]}}
+        required: [op]
+      then: {required: [val]}
+      else: {not: {required: [val]}}
+  termination:
+    type: object
+    additionalProperties: false
+    required: [cause]
+    properties:
+      cause: {type: string, minLength: 1}
+      reason: {type: string}
+  handlerResult:
+    type: object
+    additionalProperties: false
+    properties:
+      patches:
+        type: array
+        items: {$ref: '#/$defs/patch'}
+      events:
+        type: array
+        items: {$ref: '#/$defs/blueValue'}
+      termination: {$ref: '#/$defs/termination'}
+      fail: {type: string, minLength: 1}
+    allOf:
+    - if: {required: [fail]}
+      then:
+        not:
+          anyOf:
+          - {required: [patches]}
+          - {required: [events]}
+          - {required: [termination]}
+  runtime:
+    type: object
+    additionalProperties: false
+    required: [handlers, initializationHandlers]
+    properties:
+      handlers:
+        type: object
+        additionalProperties: {$ref: '#/$defs/handlerResult'}
+      initializationHandlers:
+        type: object
+        additionalProperties: {$ref: '#/$defs/handlerResult'}
+  gas:
+    type: object
+    additionalProperties: false
+    required: [sharedLimit]
+    properties:
+      sharedLimit:
+        oneOf:
+        - {const: release-default}
+        - {type: integer, minimum: 0}
+  case:
+    type: object
+    additionalProperties: false
+    required: [suffix]
+    properties:
+      suffix: {type: string, pattern: '^[a-z0-9][a-z0-9-]*$'}
+      inputOrder:
+        type: array
+        uniqueItems: true
+        items: {type: string, minLength: 1}
+      representation:
+        type: object
+        additionalProperties: false
+        required: [documentId, path, form]
+        properties:
+          documentId: {type: string, minLength: 1}
+          path: {type: string, minLength: 1}
+          form: {enum: [pure-reference, inline]}
+      repeatOf: {type: string, minLength: 1}
+  pointerExpectation:
+    type: object
+    additionalProperties: false
+    required: [documentId, pointer, value]
+    properties:
+      documentId: {type: string, minLength: 1}
+      pointer: {type: string, minLength: 1}
+      value: {$ref: '#/$defs/blueValue'}
+  documentExpectation:
+    type: object
+    additionalProperties: false
+    required: [documentId]
+    properties:
+      documentId: {type: string, minLength: 1}
+      initialized: {type: boolean}
+      terminated: {type: boolean}
+  publicEventExpectation:
+    type: object
+    additionalProperties: false
+    required: [event, emitter]
+    properties:
+      event: {type: string, minLength: 1}
+      emitter: {type: string, minLength: 1}
+  workCount:
+    type: object
+    additionalProperties: false
+    required: [kind, count]
+    properties:
+      kind: {enum: [INITIALIZATION, LIFECYCLE, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE]}
+      count: {type: integer, minimum: 0}
+  expect:
+    type: object
+    additionalProperties: false
+    required: [status, atomic, rollbackToInput, publicEvents, checkpointWrites, commitCompanion]
+    properties:
+      status: {enum: [success, gas-limit-exceeded, runtime-fatal, subscription-surface-invalid]}
+      diagnosticCategory: {type: string, minLength: 1}
+      atomic: {type: boolean}
+      rollbackToInput: {type: boolean}
+      documents:
+        type: array
+        items: {$ref: '#/$defs/documentExpectation'}
+      pointers:
+        type: array
+        items: {$ref: '#/$defs/pointerExpectation'}
+      absentPointers:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [documentId, pointer]
+          properties:
+            documentId: {type: string, minLength: 1}
+            pointer: {type: string, minLength: 1}
+      workCounts:
+        type: array
+        items: {$ref: '#/$defs/workCount'}
+      workContainsInOrder:
+        type: array
+        items: {enum: [INITIALIZATION, LIFECYCLE, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE]}
+      workKindsExact:
+        type: array
+        items: {enum: [INITIALIZATION, LIFECYCLE, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE]}
+      publicEvents:
+        type: array
+        items: {$ref: '#/$defs/publicEventExpectation'}
+      distinctEventOccurrenceIdentities: {type: integer, minimum: 0}
+      eventOccurrenceOrdinals:
+        type: array
+        items: {type: integer, minimum: 0}
+      deliverySourceOccurrenceOrdinals:
+        type: array
+        items: {type: integer, minimum: 0}
+      checkpointWrites: {type: integer, minimum: 0}
+      terminationMarkerCount: {type: integer, minimum: 0}
+      finalizationBoundary: {enum: [WORK, INITIALIZATION_BATCH, TERMINATION_MARKER, CHECKPOINT_SETTLEMENT]}
+      finalizationBoundariesExact:
+        type: array
+        items: {enum: [WORK, INITIALIZATION_BATCH, TERMINATION_MARKER, CHECKPOINT_SETTLEMENT]}
+      commitCompanion: {enum: [present, absent]}
+      parityAcrossCases:
+        type: array
+        uniqueItems: true
+        items: {enum: [invocationIdentity, processResult, gas, workTrace, finalizations, rejectionEvidence]}

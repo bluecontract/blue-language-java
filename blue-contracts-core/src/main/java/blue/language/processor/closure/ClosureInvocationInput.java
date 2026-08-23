@@ -122,7 +122,12 @@ public final class ClosureInvocationInput {
     }
 
     /**
-     * Builds admission with no direct-delivery sequence.
+     * Builds admission input with no direct-delivery sequence.
+     *
+     * <p>This factory constructs immutable invocation evidence only; it does
+     * not execute admission. Conforming execution uses
+     * {@link BlueClosureContracts#admitClosureWithLifecycleQueue(
+     * ClosureInvocationInput)}.</p>
      *
      * @param invocationIdentity asserted invocation identity
      * @param snapshot authoritative closure state

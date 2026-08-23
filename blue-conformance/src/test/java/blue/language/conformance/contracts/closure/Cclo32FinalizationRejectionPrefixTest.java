@@ -44,7 +44,7 @@ final class Cclo32FinalizationRejectionPrefixTest {
                      ClosureFixtureRuntime.fromFixture(executionFixture);
              BlueClosureContracts contracts = new BlueClosureContracts(
                      runtime.processor(), capture)) {
-            attempt = contracts.admitClosure(input);
+            attempt = contracts.admitClosureWithLifecycleQueue(input);
         }
 
         assertTrue(attempt.isComplete());

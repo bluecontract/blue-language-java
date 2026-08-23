@@ -37,9 +37,9 @@ public final class PublishedArtifactSmoke {
         BlueContractsConformanceReport contracts =
                 BlueContractsConformanceSuiteRunner.run();
         if (!contracts.isConformant()
-                || contracts.getPassedFixtureIds().size() != 234
+                || contracts.getPassedFixtureIds().size() != 247
                 || contracts.getSkippedFixtureCount() != 0) {
-            throw new IllegalStateException("Published conformance package did not pass 234 fixtures");
+            throw new IllegalStateException("Published conformance package did not pass 247 fixtures");
         }
         Path report = Paths.get(args[0]);
         String current = new String(Files.readAllBytes(report), StandardCharsets.UTF_8).trim();

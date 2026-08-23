@@ -78,7 +78,7 @@ public final class ClosureFixtureConformance {
                      processor, capture)) {
             attempt = "process-closure".equals(inventory.operation())
                     ? contracts.processClosure(input)
-                    : contracts.admitClosure(input);
+                    : contracts.admitClosureWithLifecycleQueue(input);
         }
 
         ObjectNode expected = (ObjectNode) requiredObject(

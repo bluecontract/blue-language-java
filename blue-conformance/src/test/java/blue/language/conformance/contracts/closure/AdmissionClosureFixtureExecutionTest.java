@@ -152,7 +152,7 @@ final class AdmissionClosureFixtureExecutionTest {
                              ClosureFixtureInventory.readFixture(entry));
              BlueClosureContracts contracts = new BlueClosureContracts(
                      runtime.processor(), capture)) {
-            attempt = contracts.admitClosure(input);
+            attempt = contracts.admitClosureWithLifecycleQueue(input);
         }
         assertTrue(attempt.isComplete(), id);
         assertNotNull(capture.evidence, id);

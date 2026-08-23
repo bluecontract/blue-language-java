@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Focused production proof for the bounded successful-admission lane. */
+/** Focused production proof for normative successful admission. */
 final class ClosureAdmissionExecutionTest {
 
     private static final ClosureIdentityService IDENTITIES =
@@ -68,7 +68,7 @@ final class ClosureAdmissionExecutionTest {
             ClosureAttemptResult attempt;
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner, capture)) {
-                attempt = contracts.admitClosure(admission(
+                attempt = contracts.admitClosureWithLifecycleQueue(admission(
                         owner, 100000L, 128L));
             }
 
@@ -122,7 +122,7 @@ final class ClosureAdmissionExecutionTest {
             ClosureAttemptResult baseline;
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner)) {
-                baseline = contracts.admitClosure(admission(
+                baseline = contracts.admitClosureWithLifecycleQueue(admission(
                         owner, 100000L, 128L));
             }
             List<GasTraceEntry> exactMarkerGas = markerGas(
@@ -135,7 +135,7 @@ final class ClosureAdmissionExecutionTest {
             ClosureAttemptResult rejected;
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner, rejectedCapture)) {
-                rejected = contracts.admitClosure(admission(
+                rejected = contracts.admitClosureWithLifecycleQueue(admission(
                         owner, limitThroughSecondMarker, 128L));
             }
 
@@ -201,7 +201,7 @@ final class ClosureAdmissionExecutionTest {
             ClosureAttemptResult attempt;
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner)) {
-                attempt = contracts.admitClosure(input);
+                attempt = contracts.admitClosureWithLifecycleQueue(input);
             }
 
             assertTrue(attempt.isComplete());
@@ -252,7 +252,7 @@ final class ClosureAdmissionExecutionTest {
                          new BlueClosureContracts(owner, capture)) {
                 rejection = assertThrows(
                         IllegalArgumentException.class,
-                        () -> contracts.admitClosure(admission(
+                        () -> contracts.admitClosureWithLifecycleQueue(admission(
                                 owner, 100000L, 129L)));
             }
 
@@ -270,8 +270,9 @@ final class ClosureAdmissionExecutionTest {
             ClosureAttemptResult invocationRejected;
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner)) {
-                invocationRejected = contracts.admitClosure(admission(
-                        owner, 0L, 128L));
+                invocationRejected = contracts
+                        .admitClosureWithLifecycleQueue(admission(
+                                owner, 0L, 128L));
             }
             assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED,
                     invocationRejected.processResult().status());
@@ -285,7 +286,7 @@ final class ClosureAdmissionExecutionTest {
             ClosureAttemptResult baseline;
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner)) {
-                baseline = contracts.admitClosure(admission(
+                baseline = contracts.admitClosureWithLifecycleQueue(admission(
                         owner, 100000L, 128L));
             }
             long admitted = 0L;
@@ -301,8 +302,9 @@ final class ClosureAdmissionExecutionTest {
             Capture capture = new Capture();
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner, capture)) {
-                finalizationRejected = contracts.admitClosure(admission(
-                        owner, admitted + 19L, 128L));
+                finalizationRejected = contracts
+                        .admitClosureWithLifecycleQueue(admission(
+                                owner, admitted + 19L, 128L));
             }
             assertEquals(ProcessorStatus.GAS_LIMIT_EXCEEDED,
                     finalizationRejected.processResult().status());
@@ -363,7 +365,7 @@ final class ClosureAdmissionExecutionTest {
             ClosureAttemptResult attempt;
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner, capture)) {
-                attempt = contracts.admitClosure(admission(
+                attempt = contracts.admitClosureWithLifecycleQueue(admission(
                         owner, 100000L, 128L,
                         UNAVAILABLE_BLUE_ID));
             }
@@ -836,11 +838,9 @@ final class ClosureAdmissionExecutionTest {
                                     + documentId.value()
                             : "identity-rebuild",
                     entry.reason());
-            assertEquals("/", entry.scopePath());
-            assertEquals(Long.valueOf(0L),
-                    entry.activationGeneration());
-            assertEquals(Long.valueOf(1L),
-                    entry.componentGeneration());
+            assertNull(entry.scopePath());
+            assertNull(entry.activationGeneration());
+            assertNull(entry.componentGeneration());
             assertEquals(index == 0
                             ? null
                             : ProcessorPointerConstants.RELATIVE_INITIALIZED,

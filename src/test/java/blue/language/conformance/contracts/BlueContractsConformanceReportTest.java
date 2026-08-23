@@ -32,7 +32,7 @@ class BlueContractsConformanceReportTest {
 
     private static final int CONTRACTS_BEHAVIOR_FIXTURE_COUNT = 96;
     private static final int CONTRACTS_GAS_FIXTURE_COUNT = 71;
-    private static final int CONTRACTS_CLOSURE_FIXTURE_COUNT = 67;
+    private static final int CONTRACTS_CLOSURE_FIXTURE_COUNT = 80;
 
     private static final Pattern SPECIFICATION_REGISTRY_IDENTITY = Pattern.compile(
             "(?s)The canonical core-registry package identity bound by this "
@@ -285,7 +285,7 @@ class BlueContractsConformanceReportTest {
                 nested(report.toMachineReadableMap(),
                         "contracts", "specificationSha256"));
 
-        assertEquals(234, fixtures.size());
+        assertEquals(247, fixtures.size());
         assertTrue(fixtures.stream().allMatch(
                 result -> "FAIL".equals(result.get("status"))
                         && "HarnessDidNotRunFixture".equals(

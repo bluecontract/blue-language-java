@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 final class DynamicClosureCorpusConformanceTest {
 
-    private static final int FIXTURE_COUNT = 67;
+    private static final int FIXTURE_COUNT = 80;
     private static final int LIMIT_MICRO_COUNT = 18;
     private static final String REPORT_PATH_PROPERTY =
             "blue.contracts.closureDiscrepancyReport";
@@ -149,7 +149,7 @@ final class DynamicClosureCorpusConformanceTest {
             if ("process-closure".equals(entry.operation())) {
                 attempt = contracts.processClosure(input);
             } else if ("admit-closure".equals(entry.operation())) {
-                attempt = contracts.admitClosure(input);
+                attempt = contracts.admitClosureWithLifecycleQueue(input);
             } else {
                 throw new AssertionError(
                         "Unclassified closure operation: "

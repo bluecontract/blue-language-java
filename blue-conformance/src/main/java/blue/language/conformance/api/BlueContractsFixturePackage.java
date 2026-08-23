@@ -272,7 +272,9 @@ final class BlueContractsFixturePackage {
         requireCount(manifest, "ordinaryFixtureCount", behavior + gas);
         requireCount(manifest, "totalExecutableFixtureCount",
                 behavior + gas + closure);
-        requireCount(manifest, "vectorCount", 135);
+        requireCount(manifest, "vectorCount", 145);
+        requireCount(manifest, "ordinaryVectorCount", 100);
+        requireCount(manifest, "closureVectorCount", 45);
         if (behavior
                 != ConformanceReportConstants.FixtureCount
                         .CONTRACTS_ORDINARY_BEHAVIOR
@@ -284,7 +286,7 @@ final class BlueContractsFixturePackage {
                         .CONTRACTS_CLOSURE) {
             throw new IllegalStateException(
                     "Contracts fixture inventory must contain exactly 96 "
-                            + "ordinary behavior, 71 ordinary gas, and 67 "
+                            + "ordinary behavior, 71 ordinary gas, and 80 "
                             + "closure fixtures");
         }
         if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
@@ -528,7 +530,7 @@ final class BlueContractsFixturePackage {
                 != BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT) {
             throw new IllegalStateException(
                     "Contracts executable inventory must contain exactly "
-                            + "96 ordinary behavior, 71 ordinary gas, and 67 "
+                            + "96 ordinary behavior, 71 ordinary gas, and 80 "
                             + "closure fixtures; found " + behavior
                             + " ordinary behavior, " + gas
                             + " ordinary gas, and " + closure + " closure");

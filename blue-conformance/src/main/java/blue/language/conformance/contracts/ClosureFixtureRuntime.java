@@ -1,8 +1,7 @@
 package blue.language.conformance.contracts;
 
 import blue.language.conformance.ConformanceEngine;
-import blue.language.conformance.api.BlueContractsConformanceReport;
-import blue.language.merge.ResolvedSnapshot;
+import blue.language.api.BlueCachePolicy;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodeWireForm;
@@ -10,11 +9,13 @@ import blue.language.codec.jackson.UncheckedObjectMapper;
 import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.GasSchedule;
-import blue.language.processor.ProcessingSnapshotManager;
-import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.runtime.BlueLanguageRuntime;
-import blue.language.snapshot.FrozenNode;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
+import blue.language.provider.NodeProvider;
+import blue.language.provider.SequentialNodeProvider;
+import blue.language.provider.VerifiedNodeProvider;
+import blue.language.registry.BootstrapProvider;
+import blue.language.runtime.BlueLanguage;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Collection;
@@ -24,6 +25,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.nio.file.Path;
 
 /**
  * Conformance-owned ordinary processor runtime for closure fixtures.
@@ -38,18 +40,23 @@ import java.util.Set;
 public final class ClosureFixtureRuntime
         implements AutoCloseable {
 
-    private final ContractsFixtureHarnessDataSupport.ProcessorBundle bundle;
+    private final DocumentProcessor processor;
+    private final ConformanceEngine conformance;
+    private final LanguageProcessingScopeSnapshotManager snapshots;
+    private final BlueLanguage language;
+    private final ContractsFixtureHarnessDataSupport.FixturePhysicalProvider
+            provider;
     private final Set<String> requiredProviderLoads;
 
-    private ClosureFixtureRuntime(JsonNode fixture) {
+    private ClosureFixtureRuntime(
+            JsonNode fixture,
+            ContractsFixtureHarnessDataSupport.RegistryEnvironment registry) {
         JsonNode selected = Objects.requireNonNull(fixture, "fixture");
         JsonNode controls = selected.get("runtime");
         if (controls == null || !controls.isObject()) {
             throw new IllegalArgumentException(
                     "Closure fixture requires top-level runtime controls");
         }
-        ContractsFixtureHarnessDataSupport.RegistryEnvironment registry =
-                ContractsFixtureHarnessDataSupport.RegistryEnvironment.load();
         Map<String, Node> providerNodes = new LinkedHashMap<String, Node>(
                 registry.nodesByBlueId);
         LinkedHashSet<String> unavailable = new LinkedHashSet<String>();
@@ -92,21 +99,21 @@ public final class ClosureFixtureRuntime
         ContractsFixtureHarnessDataSupport.FixturePhysicalProvider provider =
                 new ContractsFixtureHarnessDataSupport.FixturePhysicalProvider(
                         providerNodes, "cold", "unbatched", unavailable);
-        final BlueLanguageRuntime language =
-                ContractsFixtureExecutionEngine.languageRuntime(provider);
+        final BlueLanguage language = productionLanguage(provider);
+        final LanguageProcessingScopeSnapshotManager snapshots =
+                new LanguageProcessingScopeSnapshotManager(
+                        language.processing().openScope());
         final ConformanceEngine conformance =
-                language.newConformanceEngine();
-        ProcessingSnapshotManager snapshots = snapshots(language);
+                language.processing().newConformanceEngine();
         ScriptedContractsRuntime scripted =
                 new ScriptedContractsRuntime(controls);
         DocumentProcessor processor = DocumentProcessor.builder()
-                .matchingService(new ContractMatchingService(language))
+                .matchingService(new ContractMatchingService(
+                        language.processing().runtimeAccess()))
                 .conformanceEngine(conformance)
                 .snapshotStore(snapshots)
                 .gasSchedule(GasSchedule.contracts10())
-                .runtimeRegistryIdentity(
-                        BlueContractsConformanceReport
-                                .CONTRACTS_REGISTRY_PACKAGE_IDENTITY)
+                .runtimeRegistryIdentity(registry.runtimeRegistryIdentity)
                 .registerContractType(
                         RuntimeBlueIds.FIXTURE_EVENT,
                         FixtureNonChannelContract.Value.class)
@@ -120,13 +127,11 @@ public final class ClosureFixtureRuntime
                         registry.require(MockTypeBlueIds.MOCK_HANDLER),
                         new MockHandlerProcessor(scripted))
                 .build();
-        this.bundle = new ContractsFixtureHarnessDataSupport.ProcessorBundle(
-                processor,
-                scripted,
-                null,
-                language,
-                conformance,
-                provider);
+        this.processor = processor;
+        this.conformance = conformance;
+        this.snapshots = snapshots;
+        this.language = language;
+        this.provider = provider;
         this.requiredProviderLoads = Collections.unmodifiableSet(
                 new LinkedHashSet<String>(unavailable));
     }
@@ -145,7 +150,32 @@ public final class ClosureFixtureRuntime
             throw new IllegalArgumentException(
                     "Closure fixture requires top-level runtime controls");
         }
-        return new ClosureFixtureRuntime(selected);
+        return new ClosureFixtureRuntime(
+                selected,
+                ContractsFixtureHarnessDataSupport.RegistryEnvironment.load());
+    }
+
+    /**
+     * Creates a runtime whose exact provider and registry identity are loaded
+     * exclusively from an explicit candidate Contracts package.
+     *
+     * @param fixture complete closure fixture envelope
+     * @param packageRoot absolute root of the candidate closure package
+     * @return owned runtime bound to that candidate package
+     */
+    public static ClosureFixtureRuntime fromFixture(
+            JsonNode fixture,
+            Path packageRoot) {
+        JsonNode selected = Objects.requireNonNull(fixture, "fixture");
+        JsonNode runtime = selected.get("runtime");
+        if (runtime == null || !runtime.isObject()) {
+            throw new IllegalArgumentException(
+                    "Closure fixture requires top-level runtime controls");
+        }
+        return new ClosureFixtureRuntime(
+                selected,
+                ContractsFixtureHarnessDataSupport.RegistryEnvironment.load(
+                        Objects.requireNonNull(packageRoot, "packageRoot")));
     }
 
     /**
@@ -155,7 +185,7 @@ public final class ClosureFixtureRuntime
      * @return live conformance-owned document processor
      */
     public DocumentProcessor processor() {
-        return bundle.processor;
+        return processor;
     }
 
     /**
@@ -167,7 +197,7 @@ public final class ClosureFixtureRuntime
      * @param blueIds exact provider nodes expected to have been loaded
      */
     void verifyExactProviderLoads(Collection<String> blueIds) {
-        bundle.provider.verifyExpectedLoads(
+        provider.verifyExpectedLoads(
                 new LinkedHashSet<String>(Objects.requireNonNull(
                         blueIds, "blueIds")));
     }
@@ -175,9 +205,21 @@ public final class ClosureFixtureRuntime
     /** Closes the processor, Language runtime, and conformance engine. */
     @Override
     public void close() {
-        bundle.provider.verifyPreparation();
-        bundle.provider.verifyExpectedLoads(requiredProviderLoads);
-        bundle.close();
+        provider.verifyPreparation();
+        provider.verifyExpectedLoads(requiredProviderLoads);
+        try {
+            processor.close();
+        } finally {
+            try {
+                snapshots.releaseTransientState();
+            } finally {
+                try {
+                    conformance.close();
+                } finally {
+                    language.close();
+                }
+            }
+        }
     }
 
     private static void addTextValues(
@@ -198,54 +240,17 @@ public final class ClosureFixtureRuntime
         }
     }
 
-    private static ProcessingSnapshotManager snapshots(
-            final BlueLanguageRuntime language) {
-        return new ProcessingSnapshotManager() {
-            @Override
-            public ResolvedSnapshot fromDocument(Node document) {
-                return language.snapshots().resolve(document);
-            }
-
-            @Override
-            public ResolvedSnapshot fromDocumentPreservingPaths(
-                    Node document,
-                    Collection<String> preservedPaths) {
-                return language.snapshots().resolvePreservingPaths(
-                        document, preservedPaths);
-            }
-
-            @Override
-            public ResolvedSnapshot fromDocumentTransientPreservingPaths(
-                    Node document,
-                    Collection<String> preservedPaths) {
-                return language.snapshots().resolvePreservingPaths(
-                        document, preservedPaths);
-            }
-
-            @Override
-            public FrozenNode materializeVerifiedExactReference(
-                    FrozenNode reference) {
-                if (!reference.isReferenceOnly()) {
-                    return reference;
-                }
-                return language.snapshots().load(
-                        reference.getReferenceBlueId())
-                        .frozenCanonicalRoot();
-            }
-
-            @Override
-            public ResolvedSnapshot applyPatch(
-                    ResolvedSnapshot snapshot,
-                    JsonPatch patch) {
-                return language.patching().apply(snapshot, patch);
-            }
-
-            @Override
-            public ResolvedSnapshot cacheSnapshot(
-                    ResolvedSnapshot snapshot) {
-                language.snapshots().cache(snapshot);
-                return snapshot;
-            }
-        };
+    private static BlueLanguage productionLanguage(NodeProvider provider) {
+        NodeProvider processorLanguageProvider =
+                new SequentialNodeProvider(
+                        BootstrapProvider.INSTANCE,
+                        new VerifiedNodeProvider(
+                                BlueRuntimeTypeRegistry.getDefault()
+                                        .asProcessorSnapshotProvider()),
+                        provider);
+        return BlueLanguage.builder()
+                .nodeProvider(processorLanguageProvider)
+                .cachePolicy(BlueCachePolicy.boundedDefaults())
+                .build();
     }
 }
