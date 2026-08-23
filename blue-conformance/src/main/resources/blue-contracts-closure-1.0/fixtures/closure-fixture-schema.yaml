@@ -555,6 +555,12 @@ $defs:
         afterWorkOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
     - type: object
       additionalProperties: false
+      required: [kind, afterWorkOrdinal]
+      properties:
+        kind: {const: TERMINATION_MARKER}
+        afterWorkOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+    - type: object
+      additionalProperties: false
       required: [kind]
       properties:
         kind: {const: CHECKPOINT_SETTLEMENT}

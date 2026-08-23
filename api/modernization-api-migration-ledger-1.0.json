@@ -876,6 +876,15 @@
         "public/protected class added: blue.language.processor.closure.TentativeResolutionContext",
         "public/protected class added: blue.language.processor.closure.WorkKind"
       ]
+    },
+    {
+      "id": "phase-full-lifecycle-admission",
+      "requirement": "FULL_LIFECYCLE_ADMISSION_DESIGN.md",
+      "rationale": "Approve only the additive public termination-finalization evidence branch required to run ADMIT_CLOSURE through the existing full Contracts lifecycle queue; the Blue value model and identity algorithms remain unchanged.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "public/protected class added: blue.language.processor.closure.TentativeFinalization$TerminationMarkerBoundary"
+      ]
     }
   ]
 }

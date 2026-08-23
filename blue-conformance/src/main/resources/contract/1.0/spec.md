@@ -165,12 +165,33 @@ For `PROCESS_CLOSURE`:
 
 For `ADMIT_CLOSURE`:
 
-- there is no fabricated Timeline Entry or provider timestamp;
+- there is no external or fabricated Timeline Entry, provider timestamp, source
+  cursor, or checkpoint input;
 - `invocationInput.cause` is the one exact admission cause identifying the admitted closure and policy;
-- zero direct external deliveries are valid;
+- `invocationInput.directDeliveries` is the exact empty sequence; zero direct
+  external deliveries are required and valid;
 - it returns the same closed `ClosureAttemptResult` union as `PROCESS_CLOSURE`;
-- initialization, graph formation, cyclic finalization, gas, soundness, and rollback use the same rules as `PROCESS_CLOSURE`;
+- initialization, lifecycle, Document Update, application-event, termination,
+  graph-formation, and containing-reference work use the same canonical work
+  queue, event queue, immediate continuations, identity constructors, shared gas
+  ledger, soundness rules, and rollback boundary as `PROCESS_CLOSURE`;
+- admission never compares, creates, advances, cleans up, or commits a Timeline
+  checkpoint, and its `checkpointWrites` result sequence is empty;
+- every initialization-caused patch, event, termination, graph change, marker,
+  public event, and finalization is tentative and belongs to the one atomic
+  admission result;
 - each initializing managed document executes as its own isolated document step and cannot inspect the document or occurrence that caused its admission except through exact content or the explicitly available causal `$processingEvent` rules.
+
+The public Java entry point that claims this full-lifecycle operation is
+`admitClosureWithLifecycleQueue(ClosureInvocationInput)`. The existing
+`admitClosure(ClosureInvocationInput)` entry point is a bounded compatibility
+helper retaining its released low-level behavior. It is not a conforming
+substitute for `ADMIT_CLOSURE` when initialization causes Document Updates,
+application events, lifecycle termination, or further queued work. Both methods
+consume an input whose protocol operation is `ADMIT_CLOSURE`; the compatibility
+method does not define another protocol operation, model value, or identity
+domain, and the invocation constructor continues to hash the exact literal
+`admit-closure`.
 
 The closure snapshot, direct-delivery snapshot, occurrence bindings, proofs,
 admission cause, and managed-revision cause are verified platform evidence.
@@ -282,6 +303,8 @@ A conforming implementation MUST preserve all of these invariants:
 14. Checkpoints and lifecycle markers remain tentative and publish only with the
     successful closure. Initialized markers use the whole-component batch, and
     external checkpoints use the post-causal-closure settlement barrier.
+    `ADMIT_CLOSURE` never enters that checkpoint barrier and returns the exact
+    empty checkpoint-write sequence.
 15. Newly activated processable occurrences initialize deterministically before the introducing closure may commit, unless exact valid initialization evidence already exists.
 16. The introducing external event is never redelivered as a direct event to a newly activated occurrence.
 17. One closure invocation uses one exact finite default gas limit when no lower exact limit is bound. A document-authored or host-supplied limit may lower the available allowance but may not create another independent meter or silently raise the release maximum.
@@ -451,6 +474,9 @@ A conforming implementation MUST:
 - recognize the canonical core runtime BlueIds;
 - implement ordinary `PROCESS` and platform commit obligations;
 - implement `PROCESS_CLOSURE` and `ADMIT_CLOSURE` to claim cyclic/closure conformance;
+- implement normative `ADMIT_CLOSURE` through the full lifecycle queue exposed
+  by `admitClosureWithLifecycleQueue`; availability of only the bounded
+  compatibility `admitClosure` helper does not satisfy this requirement;
 - support every processor-managed type in Appendix A;
 - revalidate exact feeder, occurrence-binding, graph, and proof evidence;
 - implement every platform identity exactly from `conformance/contracts/identity-constructors.yaml`;
@@ -869,7 +895,11 @@ AdmissionCause {
 }
 ```
 
-Admission has no fabricated provider timestamp and permits zero direct external deliveries.
+Admission causality is exactly `AdmissionCause.causeIdentity`. Admission has no
+external or fabricated Timeline Entry, provider timestamp, source cursor, or
+checkpoint evidence and requires the recomputed empty direct-delivery snapshot.
+The optional triggering event and parent-transition identities above are exact
+policy-authorized causal evidence; neither is a Timeline Entry or timestamp.
 
 The two nullable Admission fields are always serialized. For
 `TOP_LEVEL_ADMISSION` both are normally JSON `null`; for a causally embedded or
@@ -1233,6 +1263,13 @@ is the invocation-global emission ordinal used by
 `eventOccurrenceIdentity`; it may contain gaps in the public projection because
 non-public event occurrences are omitted. Both are required and independently
 revalidated.
+For `ADMIT_CLOSURE`, initialization and lifecycle effects use these same result
+fields. An event explicitly emitted by work at an admitted public Root appears
+once in `publicEvents`; a non-public member emission remains internal even when
+it causes a containing public Root to react. `checkpointWrites` is the exact
+empty sequence and `checkpointWritesIdentity` is the ordinary identity of that
+empty sequence. No Timeline entry, timestamp, source cursor, or checkpoint is an
+additional result field.
 A committing completed result MUST contain the exact
 `platformCommitCompanion`. A noncommitting completed result MUST omit it and
 MUST return the exact authoritative input documents, graph generation, component
@@ -1701,7 +1738,7 @@ All invocation state is tentative until final success:
 - containing-reference changes;
 - gas trace.
 
-A committing `success` or successful admission returns and publishes the complete result atomically. Every deterministic failure, invalid proof, gas exhaustion, portable-limit failure, schema failure, or finalization failure discards all tentative state and public events.
+A committing `success` or successful admission returns and publishes the complete result atomically. Admission atomicity includes all initialization, lifecycle, termination, update, event, graph, marker, and finalization effects caused before quiescence. Every deterministic failure, invalid proof, gas exhaustion, portable-limit failure, unsupported graph expansion, schema failure, or finalization failure discards all tentative state and public events.
 
 Transient missing exact resources returns `NeedsResources` from an attempt API and commits no portable gas or semantic state.
 
@@ -1723,7 +1760,7 @@ Physical fetch count, cache hits, allocation, storage layout, batching, and temp
 
 A committing result is installed only through compare-and-swap against every exact input document state, graph generation, stable component identity, component-state identity, and current cyclic `MASTER` on which the result depends.
 
-The transaction MUST atomically persist:
+The transaction MUST atomically persist every applicable item below:
 
 ```text
 all resulting exact documents and public Root heads
@@ -1736,6 +1773,12 @@ graph changes and containing-reference updates
 terminal progress for the original cause
 commit companion and gas trace identity
 ```
+
+For `ADMIT_CLOSURE`, the checkpoint item is inapplicable: the committed
+`checkpointWrites` sequence is empty and the adapter MUST NOT create, advance,
+clean up, or otherwise mutate checkpoint state while installing the admission.
+All applicable initialization-caused items, including lifecycle markers and
+public Root outbox events, are nevertheless installed in the same transaction.
 
 `platformCommitCompanion` is not an opaque host object. Its exact constructor is:
 
@@ -2803,6 +2846,13 @@ Acceptance is immutable for the invocation and cannot read mutable business stat
 
 Every successful application patch, generated type-generalization write, or processor-managed containing-reference rewrite creates one immutable update occurrence after exact tentative finalization.
 
+This rule applies without exception to a patch returned by an initialization or
+termination lifecycle Handler. Such a patch crosses the same orchestrator-owned
+`afterPatch` continuation: tentative finalization and exact managed-reference
+synchronization complete first, authored and finalization-caused containing
+updates are classified against the latest finalized bodies, and all matching
+routes are accepted in canonical order before their immediate FIFO is drained.
+
 The occurrence freezes:
 
 ```text
@@ -2861,6 +2911,10 @@ For each event, the processor:
 6. appends the occurrence to the invocation FIFO.
 
 Equal event BlueIds emitted twice have different occurrence IDs and remain two deliveries.
+The allocation and queue rules are identical during admission initialization
+and termination lifecycle work. One emission is appended to the public
+projection at most once, at its creation boundary; delivering or observing that
+same occurrence never appends it again.
 
 ### 6.6 Triggered Event Channel
 
@@ -2911,6 +2965,11 @@ Every caused patch and complete immediate Document Update continuation finishes 
 
 The queue is drained only by the normative event-drain step. External, lifecycle, and update helpers enqueue but do not independently double-drain it.
 
+Normative `ADMIT_CLOSURE` uses this queue and the ordinary closure work queue;
+it does not run initialization events through a bounded side channel. Events
+emitted while handling one occurrence wait behind the complete delivery batch
+already accepted for that occurrence.
+
 ### 6.10 Processor-managed writes
 
 | Write | Creates Document Update? |
@@ -2958,12 +3017,15 @@ RUN.componentStateIdentities
 RUN.currentExactDocumentBlueIds
 RUN.currentCyclicProofs
 RUN.directSeedQueue
+RUN.workQueue
+RUN.admissionInitializationPlan
 RUN.updateContinuations
 RUN.eventQueue
 RUN.publicEvents
 RUN.completedDirectDeliveries
 RUN.initializedDocuments
 RUN.initializationBatches
+RUN.pendingTerminations
 RUN.terminatingDocuments
 RUN.terminatedDocuments
 RUN.checkpointWrites
@@ -3119,6 +3181,12 @@ compare or write no checkpoint, and perform no tentative component
 finalization. Once the first charge is admitted, all other deterministic
 verification follows the ordinary live-meter rules.
 
+For `ADMIT_CLOSURE`, Phase A also verifies the admission portable limits and all
+initial edge, component, cyclic-proof, and finalization evidence required before
+the first initialization seed. These are invocation-owned admission operations
+on the one shared meter; switching from bounded compatibility execution to the
+normative lifecycle queue does not omit or move them to another ledger.
+
 ### 7.3 Phase B — revalidate and classify direct deliveries
 
 For each frozen external snapshot in canonical order:
@@ -3153,7 +3221,8 @@ or failure of its subject policy cannot leave initialization or Handler work in
 the trace.
 
 `ADMIT_CLOSURE` and a managed-revision `PROCESS_CLOSURE` skip direct
-classification.
+classification. Admission also creates no checkpoint comparison or settlement
+candidate.
 
 ### 7.4 Phase C — initial closure and must-understand preflight
 
@@ -3180,6 +3249,23 @@ next work occurrence.
 There is no cyclic-specific Handler path. A work occurrence targeting a member
 of a cyclic component is executed by the same document-step processor as work
 targeting an acyclic document.
+
+For `ADMIT_CLOSURE`, Phase D first constructs one immutable initialization plan.
+It contains every managed document present in the input snapshot whose valid
+initialized marker is absent, including an admitted public Root with no active
+incoming managed occurrence. Components are ordered target-before-source using
+the canonical reverse topological condensation order; members within one
+component are ordered by `DocumentId`. Input map, list, provider, cache, and
+admission order cannot change the plan.
+
+Each planned document is seeded exactly once with
+`sourceOccurrenceIdentity = AdmissionCause.causeIdentity`. Its `INITIALIZATION`
+work, generated `LIFECYCLE` work, patches, Document Updates, application events,
+terminations, graph changes, containing-reference work, and finalizations all
+use the same normal work/event queues and shared invocation meter. The complete
+causal closure for the selected component reaches quiescence before its marker
+barrier and before the next component begins. A document already initialized in
+the input or by an earlier completed admission batch is not seeded again.
 
 For an external cause, every accepted direct seed is materialized as one `EXTERNAL_DELIVERY`
 `WorkOccurrence`, charged once for `closureWorkOccurrenceEnqueued`, enqueued,
@@ -3437,6 +3523,14 @@ When exact resulting content changes active occurrences:
 8. preserve all completed direct deliveries, transition/event ordinals, queues, and gas;
 9. continue without replaying already applied work.
 
+During `ADMIT_CLOSURE`, activation is limited to an exact prospective occurrence
+row already declared in the immutable input and a target managed document
+already present there. If initialization creates an effective managed occurrence
+without that closed evidence, the attempt returns noncommitting
+`SUBSCRIPTION_SURFACE_INVALID` with diagnostic category
+`SubscriptionSurfaceInvalid`. It MUST NOT discover, fabricate, append, or
+initialize a new managed-document lineage dynamically.
+
 A dynamic change may transform:
 
 ```text
@@ -3522,6 +3616,11 @@ A processable managed document initializes when:
 - `ADMIT_CLOSURE` admits it; or
 - a successful tentative patch introduces a new active processable occurrence.
 
+For `ADMIT_CLOSURE`, “admits it” includes every uninitialized managed document
+already present in the immutable input snapshot; an active incoming binding is
+not required. The initial plan is the canonical plan from §7.5, not a scan of
+documents reached opportunistically while work executes.
+
 A newly introduced occurrence does not receive the introducing external event directly.
 
 Initialization order is by reverse topological component order. Initialization
@@ -3531,14 +3630,17 @@ work by normalized `DocumentId`, then local initialization scope order.
 
 For one component initialization batch:
 
-1. verify every existing initialized marker and identify every active member
-   whose marker is missing;
+1. verify every existing initialized marker and identify every member selected
+   by the applicable initialization cause whose marker is missing; for the
+   initial `ADMIT_CLOSURE` plan this includes every such input member, while
+   patch-caused activation retains the ordinary active-member rule;
 2. before any such member's lifecycle work begins, freeze that member's exact
    pre-initialization BlueId and exact initialization-contract snapshot;
-3. for each missing member in canonical order, emit `Document Processing
-   Initiated`, invoke lifecycle handlers, and apply all patches, graph changes,
-   updates, events, and tentative identity finalizations under the ordinary
-   closure algorithm;
+3. for each missing member in canonical order, enqueue and dequeue its exact
+   `INITIALIZATION` work and generated `Document Processing Initiated`
+   `LIFECYCLE` work under the normal queue rules, invoke lifecycle handlers, and
+   apply all patches, graph changes, updates, events, terminations, and tentative
+   identity finalizations under the ordinary closure algorithm;
 4. drain all work caused by the batch to quiescence; if graph expansion or
    reclassification brings another missing active member into a current
    component required by the batch, freeze it before its lifecycle work and
@@ -3588,6 +3690,10 @@ the same boundary and remain ordered by their finalization ordinals.
 ### 7.11 Checkpoint settlement
 
 Every accepted raw external source occurrence retains its own exact checkpoint subject.
+
+This phase applies only to an externally caused processing invocation.
+`ADMIT_CLOSURE` never enters the settlement barrier, including for cleanup, and
+returns empty `checkpointWrites` plus the exact empty-sequence identity.
 
 Successful direct logical delivery records settlement eligibility, but does not
 write or stage a mutated checkpoint document at the delivery boundary. The
@@ -3674,6 +3780,11 @@ Before success, the processor MUST establish:
 - public events satisfy limits and are emitted only by declared public Roots;
 - checkpoint and marker writes are valid;
 - the canonical gas trace is within the exact bound.
+
+For `ADMIT_CLOSURE`, final soundness additionally requires that the canonical
+initialization plan is exhausted, every initialization-caused lifecycle/event/
+update/termination obligation is quiescent, no unknown managed occurrence was
+adopted, and both checkpoint result sequences are the exact empty sequences.
 
 A charge owned by this invocation-wide final-soundness phase uses rejected-charge
 owner `INVOCATION`. A charge inside an explicitly identified tentative
@@ -3975,7 +4086,12 @@ ordinary later reads caused by lifecycle work still use the latest exact
 tentatively finalized state under §5.9. The initialized marker records the
 frozen pre-initialization document, not a later post-lifecycle state.
 
-When initialization introduces another managed occurrence, that target is admitted and initialized under the same closure before commit.
+When initialization activates a prospective managed occurrence already declared
+in the immutable invocation input, its already-present target is initialized
+under the same closure before commit when required. An occurrence or target
+lineage unknown to that input crosses the noncommitting subscription-surface
+validation boundary: status `SUBSCRIPTION_SURFACE_INVALID`, diagnostic category
+`SubscriptionSurfaceInvalid`; admission does not expand the closed graph dynamically.
 
 A document already initialized in the authoritative input or earlier in the same invocation is not initialized again.
 
@@ -3985,13 +4101,19 @@ A ContractExecutionResult may request graceful termination with a deterministic 
 
 The first request for a scope in one invocation wins. Later requests are ignored. A termination request is applied after that result's patches and emitted events have been recorded.
 
+The closure orchestrator records the accepted request as pending and owns its
+transition through pending, terminating, and terminated state. It uses the
+existing `LIFECYCLE` work kind and normal queue; it MUST NOT delegate admission
+termination to an independent document-runtime termination queue.
+
 ### 9.6 Termination algorithm
 
 For one active nonterminating scope:
 
 1. freeze the first termination request;
 2. mark the scope `terminating`;
-3. create and deliver Document Processing Terminated;
+3. create, enqueue, dequeue, and deliver `Document Processing Terminated` as
+   canonical `LIFECYCLE` work;
 4. apply lifecycle Handler results;
 5. call `DRAIN_INTERNAL_EVENTS` to quiescence; its ordinary-delivery predicate excludes scopes marked `terminating`, so no new local Triggered or Embedded Handler begins in that scope, while event occurrences emitted before or during termination continue to nonterminating frozen ancestors;
 6. re-check cut-off;
@@ -4004,6 +4126,15 @@ For one active nonterminating scope:
 The marker and its synchronous finalization create no Document Update or
 synthetic closure-work queue occurrence, but pay their ordinary marker,
 identity, component-finalization, and containing-spine charges.
+
+Let `N` be the ordinal of the last accepted causal work occurrence completed
+before step 7. If the termination drain creates no later work, `N` is the work
+whose Handler result made the accepted termination request. Every cyclic
+finalization caused by the marker Direct Write carries the closed conformance
+boundary `{ kind: TERMINATION_MARKER, afterWorkOrdinal: N }`. Marker and
+finalization charges occur after work `N` completes and before any later work.
+Several changed components from the same marker remain ordered by their
+invocation-global finalization ordinals and share this boundary.
 
 A scope may stop reacting while already-emitted descendant event occurrences continue to higher frozen ancestors.
 
@@ -4140,9 +4271,9 @@ After the external cause's final direct seed and complete queued causal closure
 drain, the processor crosses the single §7.11 settlement barrier. It batches
 every still-valid accepted-new raw-source write together with final cleanup,
 installs the direct marker mutations, and immediately exact-finalizes every
-changed component and containing spine. `ADMIT_CLOSURE` has no accepted external
-source writes; after its complete admission/initialization causal closure drains,
-the same barrier MAY contain only required cleanup.
+changed component and containing spine. `ADMIT_CLOSURE` does not enter this
+barrier at all: it performs neither accepted-source writes nor cleanup, and it
+does not mutate checkpoint state as a side effect of admission.
 
 Only a successful post-quiescence commit candidate crosses that barrier. A
 pre-barrier noncommitting classification or failure performs no checkpoint
@@ -4317,6 +4448,18 @@ There is no separate zero-gas tentative preflight ledger and no portable `attemp
 
 Invalid or unavailable complete cyclic-set evidence, ambiguous member mapping, unsupported component runtime, and component limit violations fail before mutation. A failure after tentative member work rolls back the complete component and containing closure.
 
+For full-lifecycle `ADMIT_CLOSURE`, a failure after any number of tentative
+initialization steps returns the literal authoritative input closure. It
+publishes no initialized or terminated marker, graph/component change, public
+event, checkpoint, committed result sequence, or platform commit companion.
+An initialization-created managed occurrence outside the immutable input is
+rejected at the noncommitting subscription-surface validation boundary with
+status `SUBSCRIPTION_SURFACE_INVALID` and diagnostic category
+`SubscriptionSurfaceInvalid`; it never produces partial publication or an
+implicit graph-expansion request. Retrying identical exact input and environment
+reproduces the same status, diagnostic, invocation identity, accepted trace
+prefix, and rejected next charge/work evidence where applicable.
+
 ### 12.4 Resource acquisition boundary
 
 Core `PROCESS` operates on verified exact-node evidence. Deterministic execution MUST NOT perform ambient network I/O.
@@ -4475,6 +4618,13 @@ Every invocation MUST nevertheless bind one exact finite default maximum from th
 A host or document-specific policy MAY lower the maximum only when the lowered policy has an exact identity included in invocation and receipt evidence. It MUST NOT silently raise the release maximum.
 
 All work in one `PROCESS_CLOSURE` or `ADMIT_CLOSURE` invocation shares one meter. A member-local cap is a lower ceiling over that same ledger, not a new meter.
+
+Full-lifecycle admission retains every admission-specific initial edge,
+component, proof-verification, and finalization charge before its queued work.
+Initialization, lifecycle, update, event, termination-marker, containing-spine,
+and finalization work then debit that same ledger in normative execution order.
+The bounded compatibility helper's released trace is not a normative gas
+substitute for an invocation that requires this queued work.
 
 A charge is debited to a member-local ceiling exactly when its canonical trace context names that member's `documentId`. Global charges without a `documentId` debit only the shared ceiling. Per-document and per-member admission, partition, work, semantic-identity, and finalization units therefore use separate deterministic entries when local attribution differs; they MUST NOT be aggregated across different documents. A charge associated with several members is emitted as the canonical per-member units named by its counter rather than debiting an invisible second ledger.
 
@@ -5145,6 +5295,37 @@ C-E2E      end-to-end ordinary results
 - **C-CLO-34.** Every accepted closure work occurrence executes as one isolated managed-document step. The document-step trace matches the work trace one-for-one, uses the target document as the execution Root, exposes no ambient containing documents, and uses the same execution mode for acyclic and cyclic members.
 - **C-CLO-35.** Cross-invocation remove/re-add commits an inactive generation-plus-one successor, supplies that exact successor in the next invocation, activates it without another increment, never reuses the old occurrence/checkpoint lineage, and rejects same-invocation remove/re-add.
 
+#### 15.2.1 Full-lifecycle admission evidence
+
+An implementation claiming `ADMIT_CLOSURE` conformance MUST independently
+demonstrate all of the following through the explicit
+`admitClosureWithLifecycleQueue` entry point:
+
+1. Root initialization applies its patch.
+2. A Root initialization emission is one event occurrence and its local Handler reacts.
+3. Two equal initialization emissions remain two distinct occurrences and deliveries.
+4. A non-public member emission can cause its containing public Root to react without itself becoming public.
+5. A public Root initialization emission is public exactly once.
+6. An initialization patch produces and routes its Document Update.
+7. A valid initialization termination completes deterministically.
+8. Two documents initialize in canonical order independent of input order.
+9. A finite cyclic A/B initialization-event route reaches quiescence.
+10. An infinite cyclic route exhausts the shared gas ledger and rolls back completely.
+11. Failure after an earlier tentative initialization rolls back the whole closure.
+12. Inline and equivalent pure-reference inputs return the same result.
+13. Cold and warm exact-node availability return the same result, gas, and trace.
+14. Retry of identical evidence returns identical deterministic evidence.
+15. Admission creates no Timeline checkpoint.
+16. An initialization-created unknown managed occurrence returns noncommitting `SUBSCRIPTION_SURFACE_INVALID` with diagnostic category `SubscriptionSurfaceInvalid` and no partial publication.
+17. The bounded behavior remains available only through the explicit legacy
+    `admitClosure` compatibility API and is not reported as the normative result.
+
+These focused tests add no new executable release fixtures; the existing frozen
+semantic vectors are mechanically rebound to this Contracts specification
+identity, without deriving new expected business results from the implementation.
+The frozen executable inventories remain 153 Language fixtures and 234
+Contracts fixtures.
+
 ### 15.3 Gas and execution fixtures
 
 Every named gas counter has one exact microfixture. Composite closure fixtures assert:
@@ -5185,10 +5366,11 @@ Every `tentativeFinalizations[]` receipt carries one closed `boundary` branch:
 ```text
 { kind: WORK, afterWorkOrdinal }
 { kind: INITIALIZATION_BATCH, afterWorkOrdinal }
+{ kind: TERMINATION_MARKER, afterWorkOrdinal }
 { kind: CHECKPOINT_SETTLEMENT }
 ```
 
-The two branches shown with `afterWorkOrdinal` require exactly that non-negative
+The three branches shown with `afterWorkOrdinal` require exactly that non-negative
 safe integer and the branch without it MUST NOT contain it. For `WORK`, the
 ordinal identifies the accepted `workTrace` occurrence immediately after which
 the ordinary work-caused finalization runs. For `INITIALIZATION_BATCH`, it
@@ -5200,6 +5382,13 @@ component. `CHECKPOINT_SETTLEMENT` has no `afterWorkOrdinal`: its position is
 proved instead by external-cause quiescence, the ordered checkpoint-write batch,
 and the immediately following settlement finalization under §7.11. A branch
 contains no field belonging only to another branch.
+
+For `TERMINATION_MARKER`, the ordinal is the `N` defined by §9.6: the last
+accepted causal work completed before the terminated-marker Direct Write. The
+marker and all immediately caused finalizations follow that occurrence. This
+branch remains distinct even when the termination request arose during an
+initialization batch; it MUST NOT be relabeled `INITIALIZATION_BATCH`, `WORK`, or
+`CHECKPOINT_SETTLEMENT`.
 
 Package validation, semantic fixture execution, and implementation conformance are distinct results:
 

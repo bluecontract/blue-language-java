@@ -24,4 +24,18 @@ public interface ClosureProcessor {
      * @return completion or exact-resource suspension
      */
     ClosureAttemptResult admitClosure(ClosureInvocationInput input);
+
+    /**
+     * Admits one closed closure through the complete lifecycle work and event
+     * queues.
+     *
+     * <p>This explicit lane preserves {@link #admitClosure(ClosureInvocationInput)}
+     * as the bounded compatibility operation while allowing callers to select
+     * initialization-caused updates, events, and graceful termination.</p>
+     *
+     * @param input complete closed admission input
+     * @return completion or exact-resource suspension
+     */
+    ClosureAttemptResult admitClosureWithLifecycleQueue(
+            ClosureInvocationInput input);
 }

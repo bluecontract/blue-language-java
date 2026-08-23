@@ -81,7 +81,10 @@ final class DefaultClosureProcessor implements ClosureProcessor {
                 Collections.emptyList();
         try {
             session = new ClosureExecutionSession(
-                    owner, admitted, recorder);
+                    owner,
+                    admitted,
+                    recorder,
+                    ClosureExecutionSession.ExecutionMode.PROCESSING);
             ClosureExecutionState state = session.execute();
             ClosureProcessResult result;
             long assemblyStarted =
@@ -216,6 +219,140 @@ final class DefaultClosureProcessor implements ClosureProcessor {
             ClosureAdmissionPortableLimits.verify(admitted);
             session = new ClosureAdmissionExecutionSession(
                     owner, admitted, recorder);
+            ClosureExecutionState state = session.execute();
+            ClosureProcessResult result;
+            long assemblyStarted =
+                    recorder.beginSuccessfulResultAssembly();
+            boolean assembled = false;
+            try {
+                result = ClosureSuccessResultAssembler.assemble(
+                        admitted, state);
+                assembled = true;
+            } finally {
+                recorder.endSuccessfulResultAssembly(
+                        assemblyStarted, assembled);
+            }
+            observer.onExecutionEvidence(recorder.snapshot(null));
+            return ClosureAttemptResult.complete(result);
+        } catch (ExecutionEvidenceUnavailableException unavailable) {
+            if (unavailable.requiredExactBlueIds().isEmpty()) {
+                throw unavailable;
+            }
+            return ClosureAttemptResult.needsResources(
+                    unavailable.requiredExactBlueIds());
+        } catch (ProviderUnavailableException unavailable) {
+            return providerSuspension(unavailable);
+        } catch (GasLimitExceededException rejection) {
+            if (session != null) {
+                trace = session.state().gasTrace();
+            }
+            ClosureImplementationEvidence evidence = recorder.snapshot(null);
+            observer.onExecutionEvidence(evidence);
+            return ClosureAttemptResult.complete(
+                    ClosureRollbackResultAssembler.gasFailure(
+                            admitted,
+                            trace,
+                            rejection,
+                            evidence.workTrace()));
+        } catch (ProcessorFailureException failure) {
+            if (session != null) {
+                trace = session.state().gasTrace();
+            }
+            observer.onExecutionEvidence(recorder.snapshot(null));
+            return ClosureAttemptResult.complete(
+                    ClosureRollbackResultAssembler.deterministicFailure(
+                            admitted,
+                            trace,
+                            ProcessorStatus.RUNTIME_FATAL,
+                            ProcessorDiagnostic.of(
+                                    failure.errorCategory(),
+                                    failure.getMessage())));
+        } catch (InvalidExecutionEvidenceException invalid) {
+            if (session != null) {
+                trace = session.state().gasTrace();
+            }
+            observer.onExecutionEvidence(recorder.snapshot(null));
+            return ClosureAttemptResult.complete(
+                    ClosureRollbackResultAssembler.deterministicFailure(
+                            admitted,
+                            trace,
+                            ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                            ProcessorDiagnostic.of(
+                                    invalid.errorCategory(),
+                                    invalid.getMessage())));
+        } catch (PortableLimitExceededException limit) {
+            if (session != null) {
+                trace = session.state().gasTrace();
+            }
+            observer.onExecutionEvidence(recorder.snapshot(null));
+            return ClosureAttemptResult.complete(
+                    ClosureRollbackResultAssembler.deterministicFailure(
+                            admitted,
+                            trace,
+                            ProcessorStatus.PORTABLE_LIMIT_EXCEEDED,
+                            limit.diagnostic()));
+        } catch (SubscriptionSurfaceInvalidException invalid) {
+            if (session != null) {
+                trace = session.state().gasTrace();
+            }
+            observer.onExecutionEvidence(recorder.snapshot(null));
+            return ClosureAttemptResult.complete(
+                    ClosureRollbackResultAssembler.deterministicFailure(
+                            admitted,
+                            trace,
+                            ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
+                            invalid.diagnostic()));
+        } catch (ClosureCapabilityGapException gap) {
+            if (session != null) {
+                trace = session.state().gasTrace();
+            }
+            observer.onExecutionEvidence(recorder.snapshot(gap.code()));
+            return ClosureAttemptResult.complete(
+                    ClosureRollbackResultAssembler.capabilityFailure(
+                            admitted,
+                            trace,
+                            gap.code(),
+                            gap.getMessage()));
+        } finally {
+            if (session != null) {
+                session.close();
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public ClosureAttemptResult admitClosureWithLifecycleQueue(
+            ClosureInvocationInput input) {
+        ClosureInvocationInput admitted = Objects.requireNonNull(
+                input, "input");
+        ClosureInvocationVerifier.Verification verification =
+                ClosureInvocationVerifier.verify(admitted);
+        verifyRuntimeBinding(admitted, verification);
+        ClosureExecutionRecorder recorder =
+                new ClosureExecutionRecorder(
+                        verification.invocationIdentity());
+        if (verification.candidateDisposition()
+                == ClosureInvocationVerifier.CandidateDisposition
+                        .SEMANTICALLY_INVALID
+                && ClosureAdmissionRejectionProcessor.supports(
+                        admitted, verification)) {
+            ClosureAdmissionRejectionProcessor.Rejection rejection =
+                    ClosureAdmissionRejectionProcessor.reject(
+                            owner, admitted, verification);
+            observer.onExecutionEvidence(
+                    recorder.snapshot(null));
+            return rejection.attempt();
+        }
+        ClosureExecutionSession session = null;
+        List<blue.language.processor.GasTraceEntry> trace =
+                Collections.emptyList();
+        try {
+            session = new ClosureExecutionSession(
+                    owner,
+                    admitted,
+                    recorder,
+                    ClosureExecutionSession.ExecutionMode.ADMISSION);
             ClosureExecutionState state = session.execute();
             ClosureProcessResult result;
             long assemblyStarted =

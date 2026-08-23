@@ -37,14 +37,14 @@ final class ClosureInvocationVerifierTest {
     private static final String BLUE_B =
             "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ";
     private static final String C_CLO_34_INVOCATION_IDENTITY =
-            "sha256:e912586ad514329cac9fd200af39d6ff67f9c1333d38536e2b24008c90092ff8";
+            "sha256:7a602429b3959efe5bddf701231474a42c9cafe4c58abd65d655dc46265f9a06";
     private static final String C_CLO_34_CANONICAL_INVOCATION_ENVELOPE =
             "{\"domain\":\"blue-contracts-invocation/1.0\",\"value\":{\"admissionCandidateIdenti"
                     + "ty\":null,\"blueLanguageSpecificationIdentity\":\"sha256:01b038b64e3f0a9a11f3f70"
                     + "d544a63ff78a01d5169f1a03f8b8629cf73645a7d\",\"causeIdentity\":\"sha256:08502d369"
                     + "b6bfee172fd72c48637ce4a241fa88348024904e6113f333d3cd57b\",\"contractsSpecifica"
-                    + "tionIdentity\":\"sha256:dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caa"
-                    + "ecd930\",\"cyclicFinalizerIdentity\":\"sha256:0b4bd3bbe4380faa52d14bc6baf8bb"
+                    + "tionIdentity\":\"sha256:e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf58"
+                    + "01193\",\"cyclicFinalizerIdentity\":\"sha256:0b4bd3bbe4380faa52d14bc6baf8bb"
                     + "0a6dbc01acc576985676155ea0115969b4\",\"cyclicProofVerifierIdentity\":\"sha256:eb"
                     + "0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5\",\"directDeliv"
                     + "erySnapshotIdentity\":\"sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60b"
@@ -499,7 +499,7 @@ final class ClosureInvocationVerifierTest {
     private static ClosureEnvironment releasedEnvironment() {
         return new ClosureEnvironment(
                 "sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
-                "sha256:dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930",
+                "sha256:e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193",
                 "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
                 "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
                 labeled(

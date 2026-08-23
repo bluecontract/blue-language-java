@@ -75,14 +75,14 @@ public final class BlueContractsConformanceReport {
             "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
     /** Exact Contracts fixture package identity. */
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa";
+            "sha256:6659fd39aaf0a6dcf651ea3d6e752e93da8cd48d2f0afcc87eee4bee95d4300a";
 
     /** Expected digests for release-bound manifests and specifications. */
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
             "54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8";
     /** Published SHA-256 digest of the Contracts specification. */
     public static final String CONTRACTS_SPECIFICATION_SHA256 =
-            "dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930";
+            "e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193";
     /** Published SHA-256 digest of the Language specification. */
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
             "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d";

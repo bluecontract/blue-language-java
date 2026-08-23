@@ -115,6 +115,26 @@ public final class BlueClosureContracts
     }
 
     /**
+     * Admits one verified closure candidate through the complete lifecycle work
+     * and event queues against a captured ordinary runtime revision.
+     *
+     * @param input exact admission invocation input and evidence
+     * @return complete admission result or exact retry disposition
+     */
+    @Override
+    public synchronized ClosureAttemptResult admitClosureWithLifecycleQueue(
+            final ClosureInvocationInput input) {
+        ensureOpen();
+        return owner.withCapturedConfiguration(
+                new Supplier<ClosureAttemptResult>() {
+                    @Override
+                    public ClosureAttemptResult get() {
+                        return processor.admitClosureWithLifecycleQueue(input);
+                    }
+                });
+    }
+
+    /**
      * Projects the exact externally routable surface of one independently
      * managed Root without traversing a Process Embedded declaration.
      *
