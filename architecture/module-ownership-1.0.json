@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 711,
+    "productionSourceCount": 715,
     "productionResourceCount": 703,
-    "productionSourcePathIdentity": "sha256:72c4883f9bcef58d85f18058a8227e8e1b82246cad82a6aa92140189b75e9774",
+    "productionSourcePathIdentity": "sha256:4bb8d38d717a90c61fa7b0fb7318d320a114770622fa093b9fdc542ed6c30082",
     "productionResourcePathIdentity": "sha256:478e865babb5cdc7a14e677c1ee9842c3e3e68e35b4190a83d00a83db1d69ed6"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -378,10 +378,38 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureAssertions.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureAssertions.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureExporter.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureExporter.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureFiles.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureFiles.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureJson.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureJson.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureSourceValidator.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureSourceValidator.java",
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
