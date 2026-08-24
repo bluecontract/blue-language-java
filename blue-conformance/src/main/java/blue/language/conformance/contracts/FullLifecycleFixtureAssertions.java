@@ -78,19 +78,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import blue.language.conformance.contracts.FullLifecycleFixtureExporter.CompiledFixture;
+import blue.language.conformance.contracts.FullLifecycleFixtureCompiler.CompiledFixture;
 
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.JSON;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.array;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.copyIfPresent;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.longValues;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.object;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.optionalArray;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.requiredBoolean;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.requiredLong;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.semanticValue;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.text;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.textValues;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.JSON;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.array;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.copyIfPresent;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.longValues;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.object;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.optionalArray;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.requiredBoolean;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.requiredLong;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.semanticValue;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.text;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.textValues;
 import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.require;
 
 /** Post-execution source assertions and case-parity projections. */

@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 715,
+    "productionSourceCount": 717,
     "productionResourceCount": 703,
-    "productionSourcePathIdentity": "sha256:4bb8d38d717a90c61fa7b0fb7318d320a114770622fa093b9fdc542ed6c30082",
+    "productionSourcePathIdentity": "sha256:09237795a35f4e6c6052ba824410a7b2df57a127d8e0e351ac55ec46e187ae16",
     "productionResourcePathIdentity": "sha256:478e865babb5cdc7a14e677c1ee9842c3e3e68e35b4190a83d00a83db1d69ed6"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -385,6 +385,13 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureCompiler.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureCompiler.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureExporter.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
@@ -410,6 +417,13 @@
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureSourceValidator.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureSupport.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureSupport.java",
       "targetPackage": "blue.language.conformance.contracts"
     },
     {

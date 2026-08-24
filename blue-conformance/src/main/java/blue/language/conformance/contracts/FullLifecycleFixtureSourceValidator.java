@@ -78,21 +78,21 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.DIRECT;
 import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.EXPECTED_SOURCE_IDS;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.JSON;
 import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.SOURCE_SCHEMA;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.array;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.node;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.nullableText;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.object;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.optionalArray;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.requiredBoolean;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.requiredLong;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.requiredObject;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.text;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.textValues;
 import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.require;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.DIRECT;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.JSON;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.array;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.node;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.nullableText;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.object;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.optionalArray;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.requiredBoolean;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.requiredLong;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.requiredObject;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.text;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.textValues;
 
 /** Strict authored-source and macro validation for full-lifecycle fixtures. */
 final class FullLifecycleFixtureSourceValidator {

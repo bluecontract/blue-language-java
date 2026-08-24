@@ -78,13 +78,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.JSON;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.documentIds;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.nullable;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.nullableDocument;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.nullableNode;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.textArray;
-import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.wire;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.JSON;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.documentIds;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.nullable;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.nullableDocument;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.nullableNode;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.textArray;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.wire;
 import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.require;
 
 /** Exact executable fixture projection; no identity or semantics live here. */

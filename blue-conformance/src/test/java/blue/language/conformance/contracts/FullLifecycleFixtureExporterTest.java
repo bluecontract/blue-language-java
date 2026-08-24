@@ -45,6 +45,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Transactional and exact-evidence tests for the FL source compiler. */
 final class FullLifecycleFixtureExporterTest {
 
+    private static final int EXPORTER_LINE_LIMIT = 400;
+    private static final int HELPER_LINE_LIMIT = 1000;
+
     private static final ObjectMapper STRICT_YAML = new ObjectMapper(
             YAMLFactory.builder()
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -65,6 +68,46 @@ final class FullLifecycleFixtureExporterTest {
                     "fl-adm-08-infinite-cycle-gas-retry-retry.yaml",
                     "fl-adm-09-late-member-rollback.yaml",
                     "fl-adm-10-unknown-occurrence.yaml"));
+
+    @Test
+    void shouldKeepExporterAndHelpersWithinSourceSizeLimits()
+            throws IOException {
+        Path sourceDirectory = modulePath(
+                "src/main/java/blue/language/conformance/contracts");
+        List<Path> sources;
+        try (Stream<Path> files = Files.list(sourceDirectory)) {
+            sources = files
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString()
+                            .startsWith("FullLifecycleFixture"))
+                    .filter(path -> path.getFileName().toString()
+                            .endsWith(".java"))
+                    .sorted()
+                    .collect(Collectors.toList());
+        }
+
+        assertTrue(!sources.isEmpty(),
+                "Full-lifecycle exporter sources must be discoverable");
+        boolean exporterFound = false;
+        for (Path source : sources) {
+            String name = source.getFileName().toString();
+            int limit = HELPER_LINE_LIMIT;
+            if (name.equals("FullLifecycleFixtureExporter.java")) {
+                exporterFound = true;
+                limit = EXPORTER_LINE_LIMIT;
+            }
+            long lineCount;
+            try (Stream<String> lines = Files.lines(
+                    source, StandardCharsets.UTF_8)) {
+                lineCount = lines.count();
+            }
+            assertTrue(lineCount <= limit,
+                    name + " has " + lineCount
+                            + " lines; limit is " + limit);
+        }
+        assertTrue(exporterFound,
+                "FullLifecycleFixtureExporter.java must be present");
+    }
 
     @Test
     void shouldExportDeterministicCompleteFixturesAndReplayExactEvidence(
