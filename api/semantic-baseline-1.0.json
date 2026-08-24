@@ -1,8 +1,8 @@
 {
   "schema" : "blue-language-java-semantic-baseline/1.0",
   "source" : {
-    "commit" : "2f7c3754d51dddbd17ff433026dc64e07f75451c",
-    "sourceInputIdentity" : "sha256:10cf588b8d6905b4019c094e109bde3d5cc15e439467ceaa748a95e37926327e"
+    "commit" : "3ea346d13dba31e65e32827972bcc501776fa49f",
+    "sourceInputIdentity" : "sha256:313ced19ab3f8a32052f15931ae7d63fed705858af656934fdc676d7e8442aa7"
   },
   "specifications" : {
     "languageSha256" : "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
@@ -16807,6 +16807,6 @@
     "jar" : "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0",
     "sourcesJar" : "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518",
     "javadocJar" : "sha256:7634fd796a8daabca094755f2bd0c47ec3e19768acd33d68ced010e93c788e7f",
-    "sourceRelease" : "sha256:17f59ef2877f80f77fd56f90b0a0bd1e43efb5b89bfbba1658a22054838ddf47"
+    "sourceRelease" : "sha256:522543f2851ad1405bcce6fabe48824b47ece771ed07b6b99452cba6a26d83b9"
   }
 }
