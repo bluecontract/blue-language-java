@@ -1,0 +1,788 @@
+{
+  "schemaVersion": 1,
+  "status": "INTERNALLY_REVIEWED",
+  "controllingDecision": "Do not change Blue Language; inherited Process Embedded reveal through generalization is deferred by design.",
+  "acceptedBases": {
+    "blue-language-java": "03db5ee45f96698a45a3f5556dcc1ef6222d8e6f",
+    "blue-contract-java": "c6f9c80d0a33c6c209c7ba3d2b8bff89a223fc5f",
+    "myos-simple": "40ec648b355f3da7331ed89d5fc98152350bf536"
+  },
+  "preservedArtifacts": {
+    "root": "/Users/piotr/data/myos-simple/recovery-artifacts/dynamic-contract-evolution-foundational-stop-20260824",
+    "languageTrackedPatchSha256": "ef28c7827924faf8af4beb887e67c97cd161b7a880d20bb83caaf9e342ece1b1",
+    "languageUntrackedTarSha256": "a2b8eab1a1a4a395748de9894667bf4b507f4a4859a6d8f357952004fddce412",
+    "coordinationTrackedPatchSha256": "3629b88320cb5cef28f21121e1b531c30bf6a5304508e516ae8252a99e4f5fdd",
+    "coordinationUntrackedTarSha256": "d7b6013c5efc699b03e3f16595661412ff46b5190117be200af243b91d472800"
+  },
+  "counts": {
+    "REWRITE_REQUIRED": 41,
+    "ACCEPT_CANDIDATE": 44,
+    "TEST_ONLY_REFERENCE": 38,
+    "REJECT_FAILED_EXPERIMENT": 1
+  },
+  "classifications": [
+    {
+      "repository": "blue-contract-java",
+      "state": " M",
+      "path": "build.gradle",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": "??",
+      "path": "src/main/java/blue/coordination/api/ManagedEnvironmentSnapshot.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": "??",
+      "path": "src/main/java/blue/coordination/api/ManagedOccurrenceEvidenceResolver.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": "??",
+      "path": "src/main/java/blue/coordination/api/ManagedOccurrenceResolution.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": "??",
+      "path": "src/main/java/blue/coordination/internal/DefaultManagedOccurrenceEvidenceResolver.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": " M",
+      "path": "src/main/java/blue/coordination/internal/InMemoryDocumentStore.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": "??",
+      "path": "src/main/java/blue/coordination/internal/ManagedLineageIndex.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": " M",
+      "path": "src/main/java/blue/coordination/internal/MultiDocumentPublicationTransaction.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": " M",
+      "path": "src/main/java/blue/coordination/internal/SequentialDrainCoordinator.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": " M",
+      "path": "src/main/java/blue/coordination/processor/ChatWorkflowOperationProcessor.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": " M",
+      "path": "src/main/java/blue/coordination/processor/OperationProcessor.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": " M",
+      "path": "src/main/java/blue/coordination/processor/SequentialWorkflowOperationProcessor.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-contract-java",
+      "state": "??",
+      "path": "src/test/java/blue/coordination/internal/DefaultManagedOccurrenceEvidenceResolverTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/java/blue/language/conformance/contracts/ClosureFixtureRuntime.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureExecutionEngine.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureHarnessDataSupport.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockOperation.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockOperationProcessor.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockTypeBlueIds.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-01.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-02.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-03.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-04.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-05.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-06.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-07.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-08.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-09.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-10.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-14.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/HARNESS.md",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/projection-catalog.yaml",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure-fixture-schema.yaml",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-11-split-into-two-cycles.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-01.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-02.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-03.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-04.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-05.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-06.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-07.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-08.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-09.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-10.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-14.yaml",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/HARNESS.md",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/projection-catalog.yaml",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/identity-constructors.yaml",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/manifest.yaml",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedOperation.blue",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/resources/contract/1.0/spec.md",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/tools/generate_closure_fixtures.py",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/tools/refine_closure_fixtures.py",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/tools/regenerate_package.py",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/main/tools/validate_package.py",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-conformance/src/test/java/blue/language/conformance/contracts/closure/CombinedClosureFixtureConformanceTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-conformance/src/test/java/blue/language/conformance/contracts/ContractEvolutionFixtureFamilyTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/BatchPatchResult.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ChannelRunner.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAdmissionExecutionSession.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureAttemptResult.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureEvidenceVerifier.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureExecutionSession.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureIdentityService.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemand.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemandException.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureSuccessResultAssembler.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/DefaultClosureProcessor.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepInput.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExactNodeDemand.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/GraphChange.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentStepProcessor.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceEvidenceDemand.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ContractProcessorRegistry.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceCollector.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceDelta.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceReconciler.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceReconciliation.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/DirectContractMutationPreflight.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/DirectProtectedStateMutationGuard.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/DirectSubscriptionSurfaceValidator.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessingRuntime.java",
+      "classification": "REJECT_FAILED_EXPERIMENT"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/DocumentUpdateOccurrence.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/DocumentUpdateRouter.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/EffectiveSubscriptionSurfaceProjector.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/FrozenDispatchContext.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/HandlerProcessor.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRoute.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRuntime.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ManagedProcessEmbeddedPath.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/NoncommittingExecutionException.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningEngine.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingMutationSession.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingSnapshotTransaction.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationState.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ProtectedStateGuard.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ScopeExecutor.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ScopeHandlerDispatcher.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ScopeMutationExecutor.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/ScopePropagationChain.java",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceProjector.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/TypeGeneralizationPolicyResolver.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/java/blue/language/processor/util/ProcessorContractConstants.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/main/resources/specifications/blue-contracts-and-processor-specification-1.0.md",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/ClosureResourceDemandTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/ClosureResultEvidenceTest.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/ManagedOccurrenceDemandDiscoveryTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconcilerTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "docs/processor-contract-matching.md",
+      "classification": "REWRITE_REQUIRED"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "src/test/java/blue/language/processor/ApplicationContractOwnershipTest.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "src/test/java/blue/language/processor/ContractSurfaceReconcilerTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "src/test/java/blue/language/processor/DocumentProcessorBoundaryTest.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "src/test/java/blue/language/processor/DocumentProcessorContractSurfaceEvolutionTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "src/test/java/blue/language/processor/DocumentProcessorGeneralizationTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "src/test/java/blue/language/processor/FrozenDispatchContextTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "src/test/java/blue/language/processor/PreparedPatchSequenceTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "src/test/java/blue/language/processor/ProtectedStateGuardTest.java",
+      "classification": "ACCEPT_CANDIDATE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": " M",
+      "path": "src/test/java/blue/language/processor/ScopeMutationServicesTest.java",
+      "classification": "TEST_ONLY_REFERENCE"
+    },
+    {
+      "repository": "blue-language-java",
+      "state": "??",
+      "path": "src/test/java/blue/language/processor/TypeGeneralizationRuntimeSurfaceIntegrationTest.java",
+      "classification": "ACCEPT_CANDIDATE"
+    }
+  ],
+  "rejectedNonFileSlices": [
+    {
+      "classification": "REJECT_DEBUG",
+      "location": "blue-language-java:ScopeExecutor FRAME_DEBUG stderr hunk"
+    },
+    {
+      "classification": "REJECT_FAILED_EXPERIMENT",
+      "location": "blue-language-java:DocumentProcessingRuntime.acceptManagedContinuationDocumentReplacement and ScopeExecutor refresh/invalidation call path"
+    },
+    {
+      "classification": "REJECT_BLOCKED_REQUIREMENT",
+      "location": "foundation-stop-audit/FrozenProcessEmbeddedPositiveReproducerTest.java and inherited-reveal audit cases"
+    }
+  ],
+  "approval": {
+    "reviewed": true,
+    "productionRecoveryAuthorized": true,
+    "constraint": "Only ACCEPT_CANDIDATE hunks may be ported directly. REWRITE_REQUIRED items must be reconstructed with new focused tests. TEST_ONLY_REFERENCE files are scenario evidence, not source-copy authority."
+  }
+}
