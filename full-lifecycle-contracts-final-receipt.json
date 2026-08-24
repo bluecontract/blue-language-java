@@ -1,0 +1,171 @@
+{
+  "schema": "blue-language-java-full-lifecycle-contracts-final-receipt/1.0",
+  "status": "PASS",
+  "branch": "feat/dynamic-contract-evolution",
+  "phaseStartingCommit": "5c4e5c88fa75d6cbc52b2e8772f14f2ac5246f52",
+  "semanticImplementationPackageCommit": "2f7c3754d51dddbd17ff433026dc64e07f75451c",
+  "semanticSourceUnderTestCommit": "3ea346d13dba31e65e32827972bcc501776fa49f",
+  "baselineRefreshCommitTested": "5357b87bc4b37d6f8306797b57341e2c5905b258",
+  "receiptBoundToTestedParent": true,
+  "receiptCommitIsNotSemanticSourceUnderTest": true,
+  "sourceDateEpoch": "1787567817",
+  "execution": {
+    "path": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+    "noDaemon": true,
+    "maxWorkers": 1,
+    "sequential": true,
+    "uncontended": true,
+    "gradleVersion": "9.6.0",
+    "buildJvm": "Oracle JDK 26.0.1+8-34",
+    "testJvm": "Java 1.8.0_201-b09",
+    "bytecodeTarget": 8
+  },
+  "identities": {
+    "languageSpecificationSha256": "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
+    "contractsSpecificationSha256": "389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18",
+    "contractsFixturePackageIdentity": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
+    "contractsReleaseIdentity": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c",
+    "releasePackageIdentity": "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
+    "runtimeJar": "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0",
+    "sourcesJar": "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518",
+    "javadocJar": "sha256:7634fd796a8daabca094755f2bd0c47ec3e19768acd33d68ced010e93c788e7f",
+    "semanticCharacterizationSourceRelease": "sha256:522543f2851ad1405bcce6fabe48824b47ece771ed07b6b99452cba6a26d83b9",
+    "postRefreshTestedSourceRelease": "sha256:175c7844b050d5e06720b0c4da9c3b688f547472331b8a88b8b535409c434c42",
+    "semanticBaseline": "sha256:e75ad45f0721af593100a4db85ac16de4cc37ba799a8ca6ddef9fc8c6cd900d7",
+    "semanticCharacterizationSourceInput": "sha256:313ced19ab3f8a32052f15931ae7d63fed705858af656934fdc676d7e8442aa7",
+    "postRefreshCleanSourceInput": "sha256:166ca281de37fcedc3788d5c3c6ad2b700dd622d1fcca52e92afb8d5dadb9a8b"
+  },
+  "architecture": {
+    "productionSourceCount": 717,
+    "productionSourcePathIdentity": "sha256:09237795a35f4e6c6052ba824410a7b2df57a127d8e0e351ac55ec46e187ae16",
+    "moduleCount": 7,
+    "moduleCycleCount": 0,
+    "packageCycleCount": 0,
+    "splitPackageCount": 0,
+    "undeclaredEdgeCount": 0,
+    "qualityThresholdsChanged": false,
+    "allowlistsChanged": false,
+    "sourceSizeGuard": {
+      "executable": true,
+      "orchestratorMaximumLines": 400,
+      "helperMaximumLines": 1000,
+      "files": {
+        "FullLifecycleFixtureExporter.java": 246,
+        "FullLifecycleFixtureFiles.java": 66,
+        "FullLifecycleFixtureSupport.java": 353,
+        "FullLifecycleFixtureAssertions.java": 360,
+        "FullLifecycleFixtureJson.java": 771,
+        "FullLifecycleFixtureCompiler.java": 780,
+        "FullLifecycleFixtureSourceValidator.java": 860
+      },
+      "passed": true
+    }
+  },
+  "fixtureReproducibility": {
+    "exportCount": 2,
+    "fixturesPerExport": 13,
+    "successMarker": "FULL_LIFECYCLE_FIXTURES_EXPORTED count=13",
+    "byteEqual": true,
+    "trackedPackageByteEqual": true,
+    "normalizedManifestSha256": "e3b20b517be5e12ccf6b184b68d5ab45f5c4a9503684b60c7b5d14753e0cb02c"
+  },
+  "testEvidence": {
+    "cleanBuildJUnit": {
+      "suites": 336,
+      "tests": 2925,
+      "passed": 2925,
+      "failed": 0,
+      "skipped": 0
+    },
+    "finalQuality": {
+      "suites": 308,
+      "tests": 3214,
+      "passed": 3214,
+      "failed": 0,
+      "skipped": 0,
+      "blockers": 0,
+      "eligible": true
+    },
+    "releaseFixtures": {
+      "language": 153,
+      "contracts": 247,
+      "total": 400,
+      "allPassed": true
+    },
+    "frozenSemanticCharacterization": {
+      "tests": 2381,
+      "passed": 2381,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "gates": [
+    {"name":"focused FullLifecycleAdmissionTest","task":":blue-contracts-core:test --tests blue.language.processor.closure.FullLifecycleAdmissionTest","durationSeconds":12,"tests":20,"failed":0,"skipped":0,"status":"PASS"},
+    {"name":"focused FullLifecycleFixtureExporterTest","task":":blue-conformance:test --tests blue.language.conformance.contracts.FullLifecycleFixtureExporterTest","durationSeconds":51,"tests":20,"failed":0,"skipped":0,"status":"PASS"},
+    {"name":"conformance architecture guards","task":":blue-conformance:test --tests blue.language.conformance.contracts.LanguageProcessingScopeSnapshotManagerArchitectureTest --tests blue.language.conformance.contracts.closure.NormativeAdmissionApiArchitectureTest","durationSeconds":6,"tests":4,"failed":0,"skipped":0,"status":"PASS"},
+    {"name":"bounded API architecture guard","task":":blue-contracts-core:test --tests blue.language.processor.closure.BoundedAdmissionApiArchitectureTest","durationSeconds":7,"tests":1,"failed":0,"skipped":0,"status":"PASS"},
+    {"name":"ownership architecture guard","task":":test --tests blue.language.architecture.PhaseFourModuleOwnershipArchitectureTest","durationSeconds":8,"tests":6,"failed":0,"skipped":0,"status":"PASS"},
+    {"name":"package cycles","task":"verifyJavaPackageCycles","durationSeconds":5,"moduleReports":7,"cycleCount":0,"status":"PASS"},
+    {"name":"identity differential","task":"identityDifferentialTest","durationSeconds":21,"status":"PASS"},
+    {"name":"Contracts core tests","task":":blue-contracts-core:test","durationSeconds":16,"tests":251,"failed":0,"skipped":0,"status":"PASS"},
+    {"name":"conformance tests","task":":blue-conformance:test","durationSeconds":217,"tests":139,"failed":0,"skipped":0,"status":"PASS"},
+    {"name":"release conformance","task":"releaseConformanceTest","durationSeconds":5,"fixtures":400,"failed":0,"status":"PASS"},
+    {"name":"semantic API migration","task":"verifySemanticApiMigration","durationSeconds":5,"approvedIncompatibleChanges":337,"additiveChanges":475,"status":"PASS"},
+    {"name":"final API baseline","task":"verifyFinalApiBaseline","durationSeconds":5,"status":"PASS"},
+    {"name":"module API","task":"moduleApiVerify","durationSeconds":4,"moduleCount":7,"status":"PASS"},
+    {"name":"module archives","task":"moduleArchiveVerify","durationSeconds":5,"moduleCount":7,"status":"PASS"},
+    {"name":"documentation","task":"documentationVerify","durationSeconds":5,"status":"PASS"},
+    {"name":"published artifact smoke","task":"publishedArtifactSmoke","durationSeconds":38,"resolvedCoordinates":7,"staging":"invocation-local","status":"PASS"},
+    {"name":"semantic baseline","task":"semanticBaselineVerify","durationSeconds":367,"verified":true,"status":"PASS"},
+    {"name":"fixture export A","task":":blue-conformance:exportFullLifecycleFixtures","durationSeconds":10,"fixtures":13,"status":"PASS"},
+    {"name":"fixture export B","task":":blue-conformance:exportFullLifecycleFixtures","durationSeconds":9,"fixtures":13,"status":"PASS"},
+    {"name":"fixture byte comparison","task":"diff -qr plus tracked cmp","durationSecondsLessThan":1,"fixtures":13,"status":"PASS"},
+    {"name":"diff and clean status","task":"git diff --check && git status --short","durationSecondsLessThan":1,"status":"PASS"},
+    {"name":"exclusion-free clean build","task":"clean build","durationSeconds":620,"actionableTasks":136,"executedTasks":132,"upToDateTasks":4,"excludedTasks":[],"tests":2925,"failed":0,"skipped":0,"status":"PASS"},
+    {"name":"final quality","task":"finalQualityVerify","durationSeconds":280,"actionableTasks":199,"executedTasks":84,"upToDateTasks":115,"tests":3214,"failed":0,"skipped":0,"blockers":0,"status":"PASS"},
+    {"name":"release candidate","task":"rcVerify","durationSeconds":45,"actionableTasks":190,"executedTasks":41,"upToDateTasks":149,"status":"PASS"}
+  ],
+  "transientMechanicalFailure": {
+    "task": "semanticBaselineCapture",
+    "durationSeconds": 1450,
+    "cause": "build/reports/release-evidence/clean-build.json had not yet been produced",
+    "semanticFailure": false,
+    "sourceChangedByRepair": false,
+    "supportedProducerTask": "clean build",
+    "producerDurationSeconds": 1112,
+    "producerActionableTasks": 136,
+    "unchangedCaptureRetryDurationSeconds": 325,
+    "captureRetryActionableTasks": 105,
+    "captureRetryExecutedTasks": 22,
+    "captureRetryUpToDateTasks": 83,
+    "resolved": true
+  },
+  "changedFiles": {
+    "manifest": "changed-files.sha256",
+    "baselineCommit": "5c4e5c88fa75d6cbc52b2e8772f14f2ac5246f52",
+    "testedCommit": "5357b87bc4b37d6f8306797b57341e2c5905b258",
+    "entryCount": 182,
+    "deletedFiles": 0,
+    "productionJavaFiles": 26,
+    "testJavaFiles": 21,
+    "excludes": [
+      "FULL_LIFECYCLE_CONTRACTS_FINAL_RECEIPT.md",
+      "full-lifecycle-contracts-final-receipt.json",
+      "changed-files.sha256"
+    ]
+  },
+  "claims": {
+    "blueLanguageValueModelChanged": false,
+    "blueContractsProcessorChanged": true,
+    "bexChanged": false,
+    "coordinationAdapterChanged": false,
+    "myosChanged": false,
+    "fullLifecycleAdmissionConformant": true,
+    "dynamicGraphExpansionImplemented": false,
+    "implementationConformanceClaimed": true,
+    "productionReady": false,
+    "published": false,
+    "deployed": false,
+    "mavenLocalUsedAsReleaseEvidence": false
+  }
+}

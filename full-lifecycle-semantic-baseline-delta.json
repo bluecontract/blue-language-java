@@ -1,74 +1,36 @@
 {
   "schema": "blue-language-java-full-lifecycle-semantic-baseline-delta/1.0",
-  "sourceCommit": "2f7c3754d51dddbd17ff433026dc64e07f75451c",
-  "baselineBeforeSha256": "sha256:abc625ba14638bf5caf4004fdb5040d5f9ec40d9d944bb0d9620f05f6d85fb19",
-  "candidateSha256": "sha256:f537b8d712072163652aa2de8ad049d905f31a9a77ac4591990a5e6b5d8db61e",
+  "semanticImplementationCommit": "3ea346d13dba31e65e32827972bcc501776fa49f",
+  "baselineRefreshCommit": "5357b87bc4b37d6f8306797b57341e2c5905b258",
+  "sourceDateEpoch": "1787567817",
+  "baselineBeforeSha256": "sha256:f537b8d712072163652aa2de8ad049d905f31a9a77ac4591990a5e6b5d8db61e",
+  "candidateSha256": "sha256:e75ad45f0721af593100a4db85ac16de4cc37ba799a8ca6ddef9fc8c6cd900d7",
+  "captureCount": 2,
   "independentCandidatesByteEqual": true,
-  "changedFieldCount": 9,
-  "exactlyApprovedNineFields": true,
+  "changedFieldCount": 3,
+  "exactlyApprovedThreeFields": true,
+  "noSemanticBroadening": true,
   "changes": [
     {
       "pointer": "/source/commit",
-      "oldValue": "8b0b646b9b6dbefd5cda107e477edf993b594279",
-      "newValue": "2f7c3754d51dddbd17ff433026dc64e07f75451c",
+      "oldValue": "2f7c3754d51dddbd17ff433026dc64e07f75451c",
+      "newValue": "3ea346d13dba31e65e32827972bcc501776fa49f",
       "classification": "source provenance",
-      "reason": "Binds the characterization to the clean full-lifecycle semantic implementation and package commit."
+      "reason": "Binds the characterization to the clean semantic-neutral full-lifecycle exporter decomposition commit."
     },
     {
       "pointer": "/source/sourceInputIdentity",
-      "oldValue": "sha256:ebb8d3009e7e304d02835426c033af926bf48264579d80d600cef096cd2fe3de",
-      "newValue": "sha256:10cf588b8d6905b4019c094e109bde3d5cc15e439467ceaa748a95e37926327e",
+      "oldValue": "sha256:10cf588b8d6905b4019c094e109bde3d5cc15e439467ceaa748a95e37926327e",
+      "newValue": "sha256:313ced19ab3f8a32052f15931ae7d63fed705858af656934fdc676d7e8442aa7",
       "classification": "source provenance",
-      "reason": "Reflects the exact reviewed source closure at the full-lifecycle implementation commit."
-    },
-    {
-      "pointer": "/specifications/contractsSha256",
-      "oldValue": "dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930",
-      "newValue": "389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18",
-      "classification": "Contracts specification identity",
-      "reason": "Binds the normative Contracts specification containing the reviewed full-lifecycle closure-admission rules."
-    },
-    {
-      "pointer": "/release/contractsReleaseIdentity",
-      "oldValue": "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50",
-      "newValue": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c",
-      "classification": "Contracts release identity",
-      "reason": "Binds the regenerated deterministic Contracts release containing the full-lifecycle package."
-    },
-    {
-      "pointer": "/packages/contractsFixtures",
-      "oldValue": "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
-      "newValue": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
-      "classification": "Contracts fixture/package identity",
-      "reason": "Binds the 247-fixture package including the 13 reviewed full-lifecycle cases."
-    },
-    {
-      "pointer": "/packages/contractsRelease",
-      "oldValue": "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50",
-      "newValue": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c",
-      "classification": "Contracts release identity",
-      "reason": "Matches the regenerated deterministic Contracts release identity."
-    },
-    {
-      "pointer": "/gas/oraclePackageIdentity",
-      "oldValue": "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
-      "newValue": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
-      "classification": "Contracts fixture/package identity",
-      "reason": "The containing fixture package changed while all 71 exact gas expected trees remained byte-semantically equal."
-    },
-    {
-      "pointer": "/artifacts/javadocJar",
-      "oldValue": "sha256:facbd43e944ebc23d4d07c8fedf107e864606f50a300e77e2ddb7291348fa60a",
-      "newValue": "sha256:7634fd796a8daabca094755f2bd0c47ec3e19768acd33d68ced010e93c788e7f",
-      "classification": "derived release artifact provenance",
-      "reason": "Expected documentation provenance change from the reviewed Contracts conformance API and package ownership updates; the runtime JAR is unchanged."
+      "reason": "Binds the exact reviewed source closure at the semantic-neutral decomposition commit."
     },
     {
       "pointer": "/artifacts/sourceRelease",
-      "oldValue": "sha256:5abdc320d6ee4f3a25b9851bd53c608953b99657e16ec67174e586e6b5d71e23",
-      "newValue": "sha256:17f59ef2877f80f77fd56f90b0a0bd1e43efb5b89bfbba1658a22054838ddf47",
+      "oldValue": "sha256:17f59ef2877f80f77fd56f90b0a0bd1e43efb5b89bfbba1658a22054838ddf47",
+      "newValue": "sha256:522543f2851ad1405bcce6fabe48824b47ece771ed07b6b99452cba6a26d83b9",
       "classification": "derived release artifact provenance",
-      "reason": "Expected source-release provenance change from the reviewed full-lifecycle source, specification, fixture, tooling and report additions; the runtime and sources JAR identities are unchanged."
+      "reason": "The source archive contains the reviewed exporter split and ownership-catalog update; executable artifacts and semantics are unchanged."
     }
   ],
   "unchangedProofs": [
@@ -76,6 +38,26 @@
       "pointer": "/specifications/languageSha256",
       "equal": true,
       "value": "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d"
+    },
+    {
+      "pointer": "/specifications/contractsSha256",
+      "equal": true,
+      "value": "389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18"
+    },
+    {
+      "pointer": "/release/contractsReleaseIdentity",
+      "equal": true,
+      "value": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c"
+    },
+    {
+      "pointer": "/release/packageIdentity",
+      "equal": true,
+      "value": "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6"
+    },
+    {
+      "pointer": "/packages/contractsFixtures",
+      "equal": true,
+      "value": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d"
     },
     {
       "pointer": "/gas/fixtureCount",
@@ -108,6 +90,16 @@
       "value": "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518"
     },
     {
+      "pointer": "/artifacts/javadocJar",
+      "equal": true,
+      "value": "sha256:7634fd796a8daabca094755f2bd0c47ec3e19768acd33d68ced010e93c788e7f"
+    },
+    {
+      "pointer": "/tests/all/tests",
+      "equal": true,
+      "value": 2381
+    },
+    {
       "pointer": "/tests/all/failed",
       "equal": true,
       "value": 0
@@ -117,5 +109,12 @@
       "equal": true,
       "value": 0
     }
-  ]
+  ],
+  "postRefreshVerificationLayer": {
+    "testedCommit": "5357b87bc4b37d6f8306797b57341e2c5905b258",
+    "semanticProvenanceCommit": "3ea346d13dba31e65e32827972bcc501776fa49f",
+    "currentSourceInputIdentity": "sha256:166ca281de37fcedc3788d5c3c6ad2b700dd622d1fcca52e92afb8d5dadb9a8b",
+    "currentSourceReleaseIdentity": "sha256:175c7844b050d5e06720b0c4da9c3b688f547472331b8a88b8b535409c434c42",
+    "semanticBaselineVerified": true
+  }
 }
