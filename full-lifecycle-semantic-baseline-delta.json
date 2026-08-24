@@ -1,0 +1,121 @@
+{
+  "schema": "blue-language-java-full-lifecycle-semantic-baseline-delta/1.0",
+  "sourceCommit": "2f7c3754d51dddbd17ff433026dc64e07f75451c",
+  "baselineBeforeSha256": "sha256:abc625ba14638bf5caf4004fdb5040d5f9ec40d9d944bb0d9620f05f6d85fb19",
+  "candidateSha256": "sha256:f537b8d712072163652aa2de8ad049d905f31a9a77ac4591990a5e6b5d8db61e",
+  "independentCandidatesByteEqual": true,
+  "changedFieldCount": 9,
+  "exactlyApprovedNineFields": true,
+  "changes": [
+    {
+      "pointer": "/source/commit",
+      "oldValue": "8b0b646b9b6dbefd5cda107e477edf993b594279",
+      "newValue": "2f7c3754d51dddbd17ff433026dc64e07f75451c",
+      "classification": "source provenance",
+      "reason": "Binds the characterization to the clean full-lifecycle semantic implementation and package commit."
+    },
+    {
+      "pointer": "/source/sourceInputIdentity",
+      "oldValue": "sha256:ebb8d3009e7e304d02835426c033af926bf48264579d80d600cef096cd2fe3de",
+      "newValue": "sha256:10cf588b8d6905b4019c094e109bde3d5cc15e439467ceaa748a95e37926327e",
+      "classification": "source provenance",
+      "reason": "Reflects the exact reviewed source closure at the full-lifecycle implementation commit."
+    },
+    {
+      "pointer": "/specifications/contractsSha256",
+      "oldValue": "dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930",
+      "newValue": "389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18",
+      "classification": "Contracts specification identity",
+      "reason": "Binds the normative Contracts specification containing the reviewed full-lifecycle closure-admission rules."
+    },
+    {
+      "pointer": "/release/contractsReleaseIdentity",
+      "oldValue": "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50",
+      "newValue": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c",
+      "classification": "Contracts release identity",
+      "reason": "Binds the regenerated deterministic Contracts release containing the full-lifecycle package."
+    },
+    {
+      "pointer": "/packages/contractsFixtures",
+      "oldValue": "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
+      "newValue": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
+      "classification": "Contracts fixture/package identity",
+      "reason": "Binds the 247-fixture package including the 13 reviewed full-lifecycle cases."
+    },
+    {
+      "pointer": "/packages/contractsRelease",
+      "oldValue": "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50",
+      "newValue": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c",
+      "classification": "Contracts release identity",
+      "reason": "Matches the regenerated deterministic Contracts release identity."
+    },
+    {
+      "pointer": "/gas/oraclePackageIdentity",
+      "oldValue": "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
+      "newValue": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
+      "classification": "Contracts fixture/package identity",
+      "reason": "The containing fixture package changed while all 71 exact gas expected trees remained byte-semantically equal."
+    },
+    {
+      "pointer": "/artifacts/javadocJar",
+      "oldValue": "sha256:facbd43e944ebc23d4d07c8fedf107e864606f50a300e77e2ddb7291348fa60a",
+      "newValue": "sha256:7634fd796a8daabca094755f2bd0c47ec3e19768acd33d68ced010e93c788e7f",
+      "classification": "derived release artifact provenance",
+      "reason": "Expected documentation provenance change from the reviewed Contracts conformance API and package ownership updates; the runtime JAR is unchanged."
+    },
+    {
+      "pointer": "/artifacts/sourceRelease",
+      "oldValue": "sha256:5abdc320d6ee4f3a25b9851bd53c608953b99657e16ec67174e586e6b5d71e23",
+      "newValue": "sha256:17f59ef2877f80f77fd56f90b0a0bd1e43efb5b89bfbba1658a22054838ddf47",
+      "classification": "derived release artifact provenance",
+      "reason": "Expected source-release provenance change from the reviewed full-lifecycle source, specification, fixture, tooling and report additions; the runtime and sources JAR identities are unchanged."
+    }
+  ],
+  "unchangedProofs": [
+    {
+      "pointer": "/specifications/languageSha256",
+      "equal": true,
+      "value": "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d"
+    },
+    {
+      "pointer": "/gas/fixtureCount",
+      "equal": true,
+      "value": 71
+    },
+    {
+      "pointer": "/gas/fixtures",
+      "equal": true,
+      "canonicalJsonSha256": "sha256:583a1346a55261d80accf1c806f4583f5c1b71c102a871ac33ccc81cdbed15a4"
+    },
+    {
+      "pointer": "/locality",
+      "equal": true,
+      "canonicalJsonSha256": "sha256:3282d9a5a3dfea279f6b95438dd555b901d32ff7d8dc840a58116c61da682f87"
+    },
+    {
+      "pointer": "/publicApi",
+      "equal": true,
+      "canonicalJsonSha256": "sha256:c0815bef82317013f9383717941a9ff3c041a63039eb2728bbd53c8209dda4fc"
+    },
+    {
+      "pointer": "/artifacts/jar",
+      "equal": true,
+      "value": "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0"
+    },
+    {
+      "pointer": "/artifacts/sourcesJar",
+      "equal": true,
+      "value": "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518"
+    },
+    {
+      "pointer": "/tests/all/failed",
+      "equal": true,
+      "value": 0
+    },
+    {
+      "pointer": "/tests/all/skipped",
+      "equal": true,
+      "value": 0
+    }
+  ]
+}

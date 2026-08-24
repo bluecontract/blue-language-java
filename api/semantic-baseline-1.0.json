@@ -1,24 +1,24 @@
 {
   "schema" : "blue-language-java-semantic-baseline/1.0",
   "source" : {
-    "commit" : "8b0b646b9b6dbefd5cda107e477edf993b594279",
-    "sourceInputIdentity" : "sha256:ebb8d3009e7e304d02835426c033af926bf48264579d80d600cef096cd2fe3de"
+    "commit" : "2f7c3754d51dddbd17ff433026dc64e07f75451c",
+    "sourceInputIdentity" : "sha256:10cf588b8d6905b4019c094e109bde3d5cc15e439467ceaa748a95e37926327e"
   },
   "specifications" : {
     "languageSha256" : "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
-    "contractsSha256" : "dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930"
+    "contractsSha256" : "389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18"
   },
   "release" : {
     "packageIdentity" : "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
-    "contractsReleaseIdentity" : "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50"
+    "contractsReleaseIdentity" : "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c"
   },
   "packages" : {
     "languageRegistry" : "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
     "languageFixtures" : "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55",
     "contractsRegistry" : "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
     "contractsGas" : "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a",
-    "contractsFixtures" : "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
-    "contractsRelease" : "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50"
+    "contractsFixtures" : "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
+    "contractsRelease" : "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c"
   },
   "tests" : {
     "all" : {
@@ -31,7 +31,7 @@
   },
   "gas" : {
     "fixtureCount" : 71,
-    "oraclePackageIdentity" : "sha256:071cecb68e1c4dcec2dbb0895de928629281d2b0a18f3e8a83a41a720e621bfa",
+    "oraclePackageIdentity" : "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
     "fixtures" : [ {
       "resultKey" : "contracts:gas-composite-gas-exhaustion-prefix",
       "id" : "gas-composite-gas-exhaustion-prefix",
@@ -16806,7 +16806,7 @@
   "artifacts" : {
     "jar" : "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0",
     "sourcesJar" : "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518",
-    "javadocJar" : "sha256:facbd43e944ebc23d4d07c8fedf107e864606f50a300e77e2ddb7291348fa60a",
-    "sourceRelease" : "sha256:5abdc320d6ee4f3a25b9851bd53c608953b99657e16ec67174e586e6b5d71e23"
+    "javadocJar" : "sha256:7634fd796a8daabca094755f2bd0c47ec3e19768acd33d68ced010e93c788e7f",
+    "sourceRelease" : "sha256:17f59ef2877f80f77fd56f90b0a0bd1e43efb5b89bfbba1658a22054838ddf47"
   }
 }
