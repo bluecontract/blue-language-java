@@ -4,14 +4,14 @@ schemaVersions:
 - blue-contracts-fixture/1.0
 - blue-contracts-closure-fixture/1.0
 registryPackageIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
-vectorCount: 145
-ordinaryVectorCount: 100
-closureVectorCount: 45
-ordinaryFixtureCount: 167
-ordinaryBehaviorFixtureCount: 96
+vectorCount: 168
+ordinaryVectorCount: 114
+closureVectorCount: 54
+ordinaryFixtureCount: 183
+ordinaryBehaviorFixtureCount: 112
 ordinaryGasFixtureCount: 71
-closureFixtureCount: 80
-totalExecutableFixtureCount: 247
+closureFixtureCount: 93
+totalExecutableFixtureCount: 276
 files:
 - path: CONTROL-LANGUAGE.md
   role: support
@@ -19,8 +19,8 @@ files:
   bytes: 12268
 - path: HARNESS.md
   role: support
-  sha256: c4805b7ac37fa770123ba15b9245b728ab68a186df1766e27777335645567573
-  bytes: 12085
+  sha256: 236b9636bb572538dd0750cae1344e729ad482164e1c4098dc42115c6937eb4f
+  bytes: 16402
 - path: README.md
   role: support
   sha256: f86e4e81064f341e27d87baa4eb84477e87ee1d4b7e74efec9c0a8e7b8e2fa0e
@@ -73,8 +73,8 @@ files:
   - C-CHK-07
 - path: closure-fixture-schema.yaml
   role: support
-  sha256: cb92d820de82966b484616287cf083b2f9e25385c5bb622a296f2dcf910e7d91
-  bytes: 51860
+  sha256: e80d537a36bca9be22e072e1c9390656a35e0bb7667acd958c18b723c3cd6bcb
+  bytes: 54018
 - path: closure/LIMIT-GENERATORS.md
   role: support
   sha256: a2affa8c78606081b0e6d0304fd697d1f5292182a33e40582e2433c409415018
@@ -85,21 +85,21 @@ files:
   bytes: 4799
 - path: closure/c-clo-01-cyclic-materialized-parity.yaml
   role: closure-fixture
-  sha256: 78b02f3626ffe21fe6a25945e66a5c0baa794277f704e62b09eec24317b423db
+  sha256: ea07cd078c23f86fc285cfdaf47ada6e83b7bb081d9ddbb92c642eed4925532c
   bytes: 56701
   vectors:
   - C-CLO-01
   - C-CLO-30
 - path: closure/c-clo-01-cyclic-pure-reference-parity.yaml
   role: closure-fixture
-  sha256: cec443fd7868b478b804cd367b8df44203e722ca5bd0965bf4456e84e6da57f3
+  sha256: 43e9fe85fa0cde3837ec9dfd1479c6a755c5adb481226d9c4dd9a7e93259a797
   bytes: 55973
   vectors:
   - C-CLO-01
   - C-CLO-30
 - path: closure/c-clo-01-static-cycle-admission.yaml
   role: closure-fixture
-  sha256: db4669d00f472f56ffdf179ef9bc903da631781bee2523b8a77f30348152826d
+  sha256: 1539182f5bd7995ed2e37e8684375b112dc0dbc857f998634d0e6b83599fcfe3
   bytes: 55979
   vectors:
   - C-CLO-01
@@ -107,40 +107,41 @@ files:
   - C-CLO-30
 - path: closure/c-clo-02-acyclic-materialized-parity.yaml
   role: closure-fixture
-  sha256: f289ce5ff57d7e2d6f32606ee120484d27d8f82556ad1ce9c486795b81b391e8
+  sha256: f746b419190e9ea64cdc87437d64bae408a47c36d550b236749d77e8c3459931
   bytes: 119286
   vectors:
   - C-CLO-02
   - C-CLO-30
 - path: closure/c-clo-02-acyclic-pure-reference-parity.yaml
   role: closure-fixture
-  sha256: c69574e60b8128559056b231d89343b56f6f9c6a9d7a4c3c0d91ed95c401b9bf
+  sha256: a2fa329e26de5c726a3904c56014e8c3b288f291f11f47006ceef36636fe76c2
   bytes: 117602
   vectors:
   - C-CLO-02
   - C-CLO-30
 - path: closure/c-clo-02-dynamic-finite-cycle.yaml
   role: closure-fixture
-  sha256: 0e85c66f7abbb18b92440806fe461faafe8e176aa90fe3a75cc81f5b6deea858
-  bytes: 117688
+  sha256: e6f93451ac5db124d293c2d5d654f5ba58d4a384c9a852f4d45c2563763e5264
+  bytes: 117699
   vectors:
   - C-CLO-02
+  - C-EVO-13
 - path: closure/c-clo-03-exact-tentative-identity-visibility.yaml
   role: closure-fixture
-  sha256: 44677b99036279216d038280b19b32db94e5c7ef253292f5026a71b2714aa180
+  sha256: 5e82a12a9883657bbe386268416dc9a361a8e2cece16cd78192fd07a67e72558
   bytes: 117998
   vectors:
   - C-CLO-03
 - path: closure/c-clo-04-default-policy-loop.yaml
   role: closure-fixture
-  sha256: 68ed11d3b3c38461b55433bc7413bb3840e980d62f7bb7c2b9699480b488c7bd
+  sha256: 5ee4f37765cba39871ea25fb1c7a28304916133534423f450fae43334609f9f7
   bytes: 537078
   vectors:
   - C-CLO-04
   - C-CLO-25
 - path: closure/c-clo-04-same-event-gas-loop.yaml
   role: closure-fixture
-  sha256: 8b8240ba7daa6b61bfa77e6de5db711ea28e5bcc1bc88a0dd089c031b829d742
+  sha256: 4b946b624c159ca940df356af8d351c522704e164bf229dbd0511bb7873ce175
   bytes: 55315
   vectors:
   - C-CLO-04
@@ -148,33 +149,33 @@ files:
   - C-CLO-30
 - path: closure/c-clo-05-direct-both-members.yaml
   role: closure-fixture
-  sha256: 02ef5ae7bc35c8477a1b67336c8f70954af8fccc4e9e735019affe672e323e81
+  sha256: a951e7bba58bbc4fbefe3e559fecb398faf894260d73706a5f300a601e4e5bfc
   bytes: 69835
   vectors:
   - C-CLO-05
 - path: closure/c-clo-06-duplicate-event-occurrences.yaml
   role: closure-fixture
-  sha256: 0e3f074c09fa2d5667d3d530430f807296e7d6873f22e2567fa29fb1f679be09
+  sha256: c205baac640eab8897d11bc75127d3f12ae7da72520fde3dd0945b903d501585
   bytes: 71182
   vectors:
   - C-CLO-06
 - path: closure/c-clo-07-self-cycle.yaml
   role: closure-fixture
-  sha256: c42c7ad6a6ab09612eea25546550cfb33c575f4992fc451bdf47e79fde94cc6b
+  sha256: e8b29fc8f665bc4792ed9ee3b6045229bb06afecdb791586512ed56b07c4473b
   bytes: 16441
   vectors:
   - C-CLO-07
   - C-CLO-30
 - path: closure/c-clo-08-cycle-during-initialization.yaml
   role: closure-fixture
-  sha256: f330a4e493c7e90bc6e94ac55f5768b53aa970289687f0b44ebe4a296339377a
+  sha256: 38aa1de56e18f0da93756597e8afbc68fcf8ce0bbc885ebb4b2d499fb5ce69d4
   bytes: 88165
   vectors:
   - C-CLO-08
   - C-CLO-21
 - path: closure/c-clo-09-merge-two-cycles.yaml
   role: closure-fixture
-  sha256: 260eecb183dd109876cd1ad055257b083e9cc53b7b9d2dbca35dd2324adfe37e
+  sha256: 417b629bbf0cc1ded75498f69d0f2e1b6fa602a97a60756868b741247cf5457b
   bytes: 91183
   vectors:
   - C-CLO-09
@@ -182,40 +183,42 @@ files:
   - C-CLO-30
 - path: closure/c-clo-10-split-to-singletons.yaml
   role: closure-fixture
-  sha256: b0fcd5820808bd07f02fdb9973facb86acc33cc363988a43cd0e34aaf9670ab3
+  sha256: c1535a6a4a6df71d1ee4ac6d4fb7e762b64d472ee50b7764accd27f4e95c00e4
   bytes: 69665
   vectors:
   - C-CLO-10
   - C-CLO-28
 - path: closure/c-clo-11-split-into-two-cycles.yaml
   role: closure-fixture
-  sha256: 59c4962d09c070ad75642cd6d8455d184f430a0ce6869ead74782b674cfc73f9
-  bytes: 117023
+  sha256: 7a428cdd4f1b17d4d5c88c2365a58da7f528df5f24fe23f5ca4079716301dab1
+  bytes: 117034
   vectors:
   - C-CLO-11
   - C-CLO-28
   - C-CLO-30
+  - C-EVO-12
 - path: closure/c-clo-12-frozen-edge-removal.yaml
   role: closure-fixture
-  sha256: b0f728eb86324b1dc167411307b2acf4701a38e6ee7853f7e31d81847bcb747b
-  bytes: 70316
+  sha256: 8d7287978ece4140a8a634f4b5250d2d33e91a8be8c208cea9eed56f817dddbb
+  bytes: 70327
   vectors:
   - C-CLO-12
+  - C-EVO-11
 - path: closure/c-clo-13-frozen-edge-addition.yaml
   role: closure-fixture
-  sha256: 2a37cdc9726e4c45d9158dea2743a8a8767b849596a862ccddd61b9c9b8f94f4
+  sha256: 5107daa0dd743aa3498d6826f962563275f6f0fdf8ebb0e3b2a5efe2cfaa62f5
   bytes: 74805
   vectors:
   - C-CLO-13
 - path: closure/c-clo-14-invalid-cyclic-proof.yaml
   role: closure-fixture
-  sha256: 5cd658fbdb4e07b3b861239b0f12df7c886170c9120d95393330f110037354ea
+  sha256: 07d0998f4ea5f47c801c8d01c98fc21e5b0da566db55489e07e8f48c013c965c
   bytes: 20867
   vectors:
   - C-CLO-14
 - path: closure/c-clo-15-ambiguous-preliminary-members.yaml
   role: closure-fixture
-  sha256: 2e40920a0ce48adf1010e1ac95a8151792a47e97f6ddd8a1dcbe9a27aa41ca7a
+  sha256: ed57bef2340bc0c8267cf57584a746d006311f1bcc022970eac2d0d4730c1ecc
   bytes: 10997
   vectors:
   - C-CLO-15
@@ -257,7 +260,7 @@ files:
   - C-CLO-16
 - path: closure/c-clo-16-limit-at-bound.yaml
   role: closure-fixture
-  sha256: 6d15fcbbb64ecab0f0cad21cd2c40ebe1efde96231cde0c3d3ec05277702b809
+  sha256: 3ca1ee76b1a67d8d2e52d82824855aec2c79900268bea29078e89101eb439cbf
   bytes: 655039
   vectors:
   - C-CLO-16
@@ -317,7 +320,7 @@ files:
   - C-CLO-17
 - path: closure/c-clo-17-limit-above-bound.yaml
   role: closure-fixture
-  sha256: 49540cdac12296092a78e191a567be2f10293a4894f1a804fb6a50abb3efa497
+  sha256: 7806dda0fa56efab27cebcf4028ddd9660060f5161e0b3c6e0ff12de2eb72991
   bytes: 482949
   vectors:
   - C-CLO-17
@@ -341,249 +344,327 @@ files:
   - C-CLO-17
 - path: closure/c-clo-18-locality-1000-unrelated.yaml
   role: closure-fixture
-  sha256: d8c961765819078695c579dc51b6dcd6d1a57d1f57fb86bbfcb576cea702a189
+  sha256: ccc32fd0246fd1435284f775eb3d5b2ae8811e02ab74a699d172d1678059589f
   bytes: 56037
   vectors:
   - C-CLO-18
 - path: closure/c-clo-19-multiple-public-roots-canonical.yaml
   role: closure-fixture
-  sha256: 269c6b4d91e675fbdb116d5f4b8fad3997679600edfca202f0ec25b6427b7a35
+  sha256: da224dd05d28684ad7e25d86afc0361ba07fcd057aeae19ceb45ff12818f7d57
   bytes: 64882
   vectors:
   - C-CLO-19
 - path: closure/c-clo-19-public-event-boundary.yaml
   role: closure-fixture
-  sha256: 02e17c2e079414e397bfd4f88f863bd82bb585575cddbded9555f270079d880d
+  sha256: a56bb03bb9494416d91c15285e074cb8611557ad1f4bfd86cc42531e9cc96e7f
   bytes: 100670
   vectors:
   - C-CLO-19
 - path: closure/c-clo-19-single-public-root.yaml
   role: closure-fixture
-  sha256: 08029d979adba5d0c469eee05787f95e81a38cf6d073a22064ba1affc0220b71
+  sha256: 9eddb7a3f15b3149e07ea3b10e6d82b4ac5287bef4a11d73c6e7ae7c1357dbc1
   bytes: 32744
   vectors:
   - C-CLO-19
 - path: closure/c-clo-20-late-outer-failure.yaml
   role: closure-fixture
-  sha256: 710bf5c23979ffedbdfafbc6660f076559e2092ef79747a0110b4598d9b8e68f
+  sha256: d83824783e449cb69a255aedd5656208e70ff84dc9705b2f76fe2288f6446eaa
   bytes: 65298
   vectors:
   - C-CLO-20
 - path: closure/c-clo-21-admission-zero-direct.yaml
   role: closure-fixture
-  sha256: 604cd6c581ab95cb2474835ab408d678df48c1af79e5cf942e1ed6ab39c0b7ba
+  sha256: 5459e3c682f22e007e0a93f4cb8aae1bbe85891df032ad539f4ffc1f51e7cfb3
   bytes: 55940
   vectors:
   - C-CLO-21
 - path: closure/c-clo-22-a10-attach-a5-needs-resources.yaml
   role: closure-fixture
-  sha256: fd1556720ef315f7a607a16fc382c1a8fdb1df520d0ddf278772e8da79b53870
-  bytes: 9602
+  sha256: a822dff4690c367f3b9eb6fea71f8681a747df808b8a30db209db09d954c5e83
+  bytes: 9955
   vectors:
   - C-CLO-22
 - path: closure/c-clo-23-00-attach-a5-retry.yaml
   role: closure-fixture
-  sha256: a6e06ad6a84f21e85c8f8a31456e7686b01c436f8b9f988331ec089ebdb7d6f6
+  sha256: a490d38352056f1951763ee06a87d91e153526a527059ade289fad3997ed0339
   bytes: 45476
   vectors:
   - C-CLO-23
 - path: closure/c-clo-23-01-a5-to-a6.yaml
   role: closure-fixture
-  sha256: eb89c4bc2a6db5fd4492708d12f8a5a5cf1adb5f58551abbdbc07f79ac448eea
+  sha256: 4e7068e871a31227edb88fae10ceae1806e94be910b03e11fc14757443fd8993
   bytes: 34763
   vectors:
   - C-CLO-23
 - path: closure/c-clo-23-02-a6-to-a7.yaml
   role: closure-fixture
-  sha256: 95be6adb738a464a2ba502cff8111fe84d60d3f8388cf70b72f34d81a14bbbf0
+  sha256: 7f3ea3d3bc96e474d0e6a733a5457ad30fb4490b6d5329f763e1394893a1500e
   bytes: 34773
   vectors:
   - C-CLO-23
 - path: closure/c-clo-23-03-a7-to-a8.yaml
   role: closure-fixture
-  sha256: 1990ca8754ff3472620616a8381f17ec4ab024f1b84e0c57c7d49448cff52ffd
+  sha256: e39fc90b0ca941cb7ca47697883653bba49016442ce25de7aa00c0fcf2b6c664
   bytes: 34773
   vectors:
   - C-CLO-23
 - path: closure/c-clo-23-04-a8-to-a9.yaml
   role: closure-fixture
-  sha256: 305f145a1dbd7fcc5897360cb8c70d8d766b79482b94114d7ab908a8ad8279ca
+  sha256: 803c239ccde2320b745c2592d323fdbd42a84b1d6419546b9acd59368c4dca0d
   bytes: 34773
   vectors:
   - C-CLO-23
 - path: closure/c-clo-23-05-a9-to-a10.yaml
   role: closure-fixture
-  sha256: 6b6390f3e6330b5efd24d65ed2912195d7fc2147d97ee3d0b5fe1aaecdd540e7
+  sha256: da281f42c6a923d3a8c67ff84db858ab9f7bfc7b67d517d9189ef4fc050bc2b8
   bytes: 47345
   vectors:
   - C-CLO-23
   - C-CLO-30
 - path: closure/c-clo-24-occurrence-continuity.yaml
   role: closure-fixture
-  sha256: 8e3bac3846744ec880a48f8d45d652292bda3e3753b5656aa8da5677fed64517
+  sha256: b2263e2f155081e5ba5fda24e8baf586659061c55461103be61b739dc3ecf294
   bytes: 117583
   vectors:
   - C-CLO-24
 - path: closure/c-clo-25-policy-identity-binding.yaml
   role: closure-fixture
-  sha256: fd8bed8eab2693baf4c7d31542bb9cf3d56322ec4d727e35af6d9468b23ee1e6
+  sha256: a8061bc74f49c17bda6f5ecf2584b7b5d30bce20db14d027350cdfe614a8de6d
   bytes: 55270
   vectors:
   - C-CLO-25
 - path: closure/c-clo-26-embedded-local-cap.yaml
   role: closure-fixture
-  sha256: d37a58e1c4ffa7aeade6f07ee99854b445706c7f4d595459f30d0e10ac7f95fa
+  sha256: af4d1943c4b5af4ffa95cbfa50b83ee092a70809551ba4efa14306f8a1a67105
   bytes: 35504
   vectors:
   - C-CLO-26
 - path: closure/c-clo-27-multiple-scc-one-closure.yaml
   role: closure-fixture
-  sha256: 69d448bf0e7eea06499e6ef0132c2668d9c935d998c5660a9f3a5feb63f9bcb4
+  sha256: 7d24460be8ab854d23bc435798bcdb1ba759af32d69dadf71b51c45e89908b47
   bytes: 72249
   vectors:
   - C-CLO-27
 - path: closure/c-clo-28-containing-spine-identity-gas.yaml
   role: closure-fixture
-  sha256: 7cf45e58596464a6e94c3203facaea39903fa4c6b8033998d5234cf76244f9b3
+  sha256: 18818cd9c60dc1941d7e7988153f8198982500b17df9af6d9c2c796b5bfbcc49
   bytes: 73154
   vectors:
   - C-CLO-28
 - path: closure/c-clo-28-mixed-result-shape.yaml
   role: closure-fixture
-  sha256: 4412a3ecdfc0b546e7a93ba7b1cc6471a98ad18b361d5b6f88e950291c73ae96
+  sha256: 2c0eec9496387f24d6c83f8a9f016cdfbcc4e6f2e2c39a346520d8fb8ffb197a
   bytes: 116998
   vectors:
   - C-CLO-28
 - path: closure/c-clo-29-active-edge-path-validation.yaml
   role: closure-fixture
-  sha256: e6c282b2ac7435d5a675200e8098c5fc35ed12064447e5a908d090c4f06353e1
+  sha256: 25e20f7948a7e5cfd898e4ee8f34cace83a1c95b242216aaac22d40fbe881ad9
   bytes: 20001
   vectors:
   - C-CLO-29
 - path: closure/c-clo-30-language-cyclic-oracles.yaml
   role: closure-fixture
-  sha256: 343649591de60357ff79dd6dae9d8397b9ce776261ff2c5a4f97dc211ee21379
+  sha256: 9b9c34e8ef14d825a6b45d9c3ff9c69af7b80d56b9351a351aa7724e4443cf3c
   bytes: 117632
   vectors:
   - C-CLO-30
 - path: closure/c-clo-31-invocation-owned-gas-rejection.yaml
   role: closure-fixture
-  sha256: 20749f90875881e9a2af5f69262fa34a07e3e6d2f5929fac562bd9b1fb00d2cf
+  sha256: cc2e47d3d204d6c617cc60a245a831ea42b0d1cfc139fea0cfb81b2f8fb27e86
   bytes: 16816
   vectors:
   - C-CLO-31
 - path: closure/c-clo-32-finalization-owned-gas-rejection.yaml
   role: closure-fixture
-  sha256: 3d299c41910897a262d7197864749de518ac6fa05fb744079df933a894728408
+  sha256: 72f641e12b3e222d3a1f4e7fcba83a9b9f90972ca8448ef7be7c5dcabebc57fa
   bytes: 23613
   vectors:
   - C-CLO-32
 - path: closure/c-clo-33-checkpoint-domain-retirement.yaml
   role: closure-fixture
-  sha256: f51a883170036f8fe2b3e5c1984ceba570fd18bb3bdc8e3971f87fabe39895d8
+  sha256: 0993901f3d6e829d7ebfd5ad1898c068bd6f785cf8b1408157506c8042b24274
   bytes: 121126
   vectors:
   - C-CLO-33
 - path: closure/c-clo-34-separate-document-steps.yaml
   role: closure-fixture
-  sha256: d5b73d44c5efbe3aeba43aff24961ef992768c5ffee9ef8c63131a73c491024d
+  sha256: 61ea0c1fa1b20bf74b9e8fc1749778a993c5043cf684fbe461ef529a17f7f645
   bytes: 117691
   vectors:
   - C-CLO-34
 - path: closure/c-clo-35-00-remove-and-create-successor.yaml
   role: closure-fixture
-  sha256: 2da182567ccbba19faeb6f2113b4ff98096c816d2bdeb5e5303b9c202db69b5c
+  sha256: 4738982acb8c8d54b493c9d7f26eb89af900854bbdb9d37025b8ab59856cdfbb
   bytes: 70360
   vectors:
   - C-CLO-35
 - path: closure/c-clo-35-01-readd-committed-successor.yaml
   role: closure-fixture
-  sha256: 0758dad085d35d1159855aa5c13e6d053584ac715154757b2ecbd329fa1478fd
+  sha256: e99d3c10155e40bb864a98540081333c6ed202395c8d35e197664d143b4db876
   bytes: 65097
   vectors:
   - C-CLO-35
   - C-CLO-30
+- path: closure/c-evo-18-missing-exact-node.yaml
+  role: closure-fixture
+  sha256: d0f8ebc849840011e6c187e3dcea5641be4ac0f1ec42e0b263c8deff51826100
+  bytes: 6751
+  vectors:
+  - C-EVO-18
+- path: closure/c-evo-19-missing-occurrence-evidence.yaml
+  role: closure-fixture
+  sha256: c41f3d873d41aa09fcd2421cce1bd5a7edaaac70d4af6f6812c30c2fb231e1f5
+  bytes: 7592
+  vectors:
+  - C-EVO-19
+- path: closure/c-evo-20-canonical-demand-order.yaml
+  role: closure-fixture
+  sha256: 5c7c61491419cf9019424df4f4e8ea9f4d218e692eda677a0a3551657219f31b
+  bytes: 10267
+  vectors:
+  - C-EVO-20
+- path: closure/c-evo-21-retry-determinism-missing-first.yaml
+  role: closure-fixture
+  sha256: 8662d2e65884a8d6b0cf79c0b65ed101601d69790e3faa604f4d3efb27759290
+  bytes: 8321
+  vectors:
+  - C-EVO-21
+- path: closure/c-evo-21-retry-determinism-missing-repeat.yaml
+  role: closure-fixture
+  sha256: e378bd3a5a65e6127e4d0d3675af1d051da8d4fc8b907023a95ad423ccc03fed
+  bytes: 8322
+  vectors:
+  - C-EVO-21
+- path: closure/c-evo-21-retry-determinism-resolved-first.yaml
+  role: closure-fixture
+  sha256: 4f173d7b3d53959e6173aa34e6735b1db45ced7d3f2a7cf730f93b8738c19297
+  bytes: 53444
+  vectors:
+  - C-EVO-21
+- path: closure/c-evo-21-retry-determinism-resolved-repeat.yaml
+  role: closure-fixture
+  sha256: 617b7b85ed59c88bd18325d4e2f610d115c6cafc2beb13bc07c69fab99b4dd22
+  bytes: 53445
+  vectors:
+  - C-EVO-21
+- path: closure/c-evo-22-low-gas-expanded-evidence-demand.yaml
+  role: closure-fixture
+  sha256: 306bd169b48416cec3714e42375f57e3c9eb9b6db240ad5170112da72b8ffae6
+  bytes: 8943
+  vectors:
+  - C-EVO-22
+- path: closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml
+  role: closure-fixture
+  sha256: 30fa64b37d78c29787dfbb099448140445fd212950afdf91a99da80a02ab8ab0
+  bytes: 1022494
+  vectors:
+  - C-EVO-22
+- path: closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml
+  role: closure-fixture
+  sha256: d2884f0ea8f047ad13221c26be8824aa8ae3a9dccd7a3f3e82a1f8ffb0416c27
+  bytes: 1022487
+  vectors:
+  - C-EVO-22
+- path: closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml
+  role: closure-fixture
+  sha256: fd60bb40d5882c39a21564231ddda581515c58e9c7c354041ead0ea0d056fcc5
+  bytes: 8776
+  vectors:
+  - C-EVO-23
+- path: closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml
+  role: closure-fixture
+  sha256: 5bf8c3ae6b799c4175ce3c6180662dbbec546034250c226b882137c86eaa6b56
+  bytes: 69551
+  vectors:
+  - C-EVO-23
+- path: closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml
+  role: closure-fixture
+  sha256: fe71a783aaa605333914b3497f71bf88cfe254224aba9db33097a8a4d318b7d2
+  bytes: 69550
+  vectors:
+  - C-EVO-23
 - path: closure/fl-adm-01-root-patch-event.yaml
   role: closure-fixture
-  sha256: bb56c962ada861cae8ffef26a1f3ced0db0e231daf00ce0385d925e0cd9201f8
+  sha256: f8babe166f67283f2d6bdc079c098f71ebfe230f6fab66bf2b8f4036e65419f9
   bytes: 49238
   vectors:
   - FL-ADM-01
 - path: closure/fl-adm-02-duplicate-equal-events.yaml
   role: closure-fixture
-  sha256: dc1ecb4fea984d5ace5fdb757a17db992a93d0adfcb321e378c296939e2fa677
+  sha256: f96a047f78297025c6a097dbfc85756b8c219e98b9a281dc8a68d940c8d76658
   bytes: 44282
   vectors:
   - FL-ADM-02
 - path: closure/fl-adm-03-non-public-containing-route.yaml
   role: closure-fixture
-  sha256: b03d8fcd75cf3eec71802d79e6d73439f216de8616f05f38dcd4530aa99081b8
+  sha256: 6981af4014c1a40ac311fd0769b8d7de1d79fe28cb9bbb6cb7b758838300be73
   bytes: 57994
   vectors:
   - FL-ADM-03
 - path: closure/fl-adm-04-document-update-continuation.yaml
   role: closure-fixture
-  sha256: 6b2c5e2ea561d52bd2f4eb746619d5ec0686f582f72a671082936b99f43bbebd
+  sha256: 7a4e21e62c7b760a4610b74d92fe3da48407aee2dc3ea5ade014e2c84fa9a5e2
   bytes: 47159
   vectors:
   - FL-ADM-04
 - path: closure/fl-adm-05-graceful-termination.yaml
   role: closure-fixture
-  sha256: 81e41016e4a8f31e0c46ffd545999a944455664f16e679e687c5a9bb160d7fc4
+  sha256: c2f670a2f6797473e4c9e35256f19fc7e05787e780766483e06aaa65cc1e4d6c
   bytes: 59379
   vectors:
   - FL-ADM-05
 - path: closure/fl-adm-06-order-representation-inline.yaml
   role: closure-fixture
-  sha256: 3145b1ffbd961de1e52db465d9b0369e0ba11009e602dfcae25a9a71c509234e
+  sha256: 9dec331e34a4c647a3cdf65b091439cd9b31bf351e093dd5e8e1c2e5e3c11ab5
   bytes: 60365
   vectors:
   - FL-ADM-06
 - path: closure/fl-adm-06-order-representation-reference.yaml
   role: closure-fixture
-  sha256: b6d7d5bfd3f957488d9aebe6852ddc388bf2b241a1c965ccb68e56dd268f4e34
+  sha256: ed4a0253c4c257cf99bae37b5dbbc8e4b6b84e13d945e9e713b05018f1f29051
   bytes: 59961
   vectors:
   - FL-ADM-06
 - path: closure/fl-adm-06-order-representation-reversed.yaml
   role: closure-fixture
-  sha256: 9b1cc65a985c0b738cae41f398af0a0e3b42faa2c74b427117a3b8d944ec5a03
+  sha256: 9883f0ab23305ad8a5de823c89b7ff1f1b42e2078306f269379c495868b65be8
   bytes: 59960
   vectors:
   - FL-ADM-06
 - path: closure/fl-adm-07-finite-cyclic-route.yaml
   role: closure-fixture
-  sha256: a893e0ad16a67dcded3d89abc860f60b7b17d0174fe365b2ed47410593396068
+  sha256: 36e21b87bde6464c3fcc0bc79410a20ca497af1e7943e3c6c8c0f321887f11ec
   bytes: 90194
   vectors:
   - FL-ADM-07
 - path: closure/fl-adm-08-infinite-cycle-gas-retry-first.yaml
   role: closure-fixture
-  sha256: 33e3893edb125fe6ee4ca20369dabaf5180d19204dd45274504d26d8c8ddb159
+  sha256: bd6b995911f544ad7978f66cd0a834771a8c1649f315ea28abe83917463a3d3b
   bytes: 920056
   vectors:
   - FL-ADM-08
 - path: closure/fl-adm-08-infinite-cycle-gas-retry-retry.yaml
   role: closure-fixture
-  sha256: c247f041b8d0295305627e59c42777b23d2b1bd81f84427f9aaba6fd8e4b04f9
+  sha256: 38e16f0bd443f5f7a4d504ab1fda037f352008924f6e956f67f848899f0d2804
   bytes: 920056
   vectors:
   - FL-ADM-08
 - path: closure/fl-adm-09-late-member-rollback.yaml
   role: closure-fixture
-  sha256: 99aa02726d1c3cb5cab09ec8599cfc722c882b57841edbf97f827f7ffff661f2
+  sha256: b6cea5dac116b7f8f0a8fbb52ccec5cbe8240ec1a5767e71390440eb7ebf2a0f
   bytes: 42813
   vectors:
   - FL-ADM-09
 - path: closure/fl-adm-10-unknown-occurrence.yaml
   role: closure-fixture
-  sha256: cbfe243dbe3face476975db97f433c0db1b3a9a2452b2385f69f6b837205b2e1
-  bytes: 25499
+  sha256: 5c8b3d4c22845fb374a0dfb12d4c58af39dcd6a94c6937976542b85677a70a84
+  bytes: 7573
   vectors:
   - FL-ADM-10
 - path: closure/traces/c-clo-04-default-policy-loop-gas.yaml
   role: support
-  sha256: a948e233e0e2aebda1ac14d7d64602d23fa762aa8447ab39114dd70a9e34fe73
+  sha256: 20cafc38b3f50cdd43950187714ac3ac9acc6440682d134f700025cf58c5531b
   bytes: 4304069
 - path: disc/c-disc-01.yaml
   role: behavior-fixture
@@ -765,6 +846,102 @@ files:
   bytes: 2555
   vectors:
   - C-EMB-16
+- path: evo/c-evo-01.yaml
+  role: behavior-fixture
+  sha256: aea20ce59d66e3faeedabdef5bbed8abd6d9abb936de11a30348648a67fffe3b
+  bytes: 1585
+  vectors:
+  - C-EVO-01
+- path: evo/c-evo-02.yaml
+  role: behavior-fixture
+  sha256: 5b345869fc8f360aa224b6cc7212b8173e1c08d0949e07681949eada5b08a74d
+  bytes: 1657
+  vectors:
+  - C-EVO-02
+- path: evo/c-evo-03.yaml
+  role: behavior-fixture
+  sha256: c3d4b7376fb5c445c53a4098293e30640bea7c09679bb3501cc99de33409d389
+  bytes: 2078
+  vectors:
+  - C-EVO-03
+- path: evo/c-evo-04.yaml
+  role: behavior-fixture
+  sha256: edcdaf83ea8ef4923c4f15fb9cddefc91d0e653ae82d2ef4e3552a1ac388e991
+  bytes: 2310
+  vectors:
+  - C-EVO-04
+- path: evo/c-evo-05.yaml
+  role: behavior-fixture
+  sha256: 40c813fa967d44c35bc3b7a79641ecae5da77f5dded8e1602f725fe490d99361
+  bytes: 2146
+  vectors:
+  - C-EVO-05
+- path: evo/c-evo-06.yaml
+  role: behavior-fixture
+  sha256: de12377c8e3f155590910f44a2768134904e5c5b740599c922f6b4442de4ff95
+  bytes: 2095
+  vectors:
+  - C-EVO-06
+- path: evo/c-evo-07-checkpoint.yaml
+  role: behavior-fixture
+  sha256: 893a3e8283c05463dada19cd0c67160d42bfb8180f0af34ba10928adae2cae2a
+  bytes: 1818
+  vectors:
+  - C-EVO-07
+- path: evo/c-evo-07-initialized.yaml
+  role: behavior-fixture
+  sha256: 0288528c29cdff6758b80ccad256899eb70f68ebca0c9ecf392d52fdc013a32a
+  bytes: 1794
+  vectors:
+  - C-EVO-07
+- path: evo/c-evo-07-terminated.yaml
+  role: behavior-fixture
+  sha256: 5e9f8f39d2ed6c5c962f61facaceede1317dbda9f50601806fb5533169daec95
+  bytes: 1758
+  vectors:
+  - C-EVO-07
+- path: evo/c-evo-08.yaml
+  role: behavior-fixture
+  sha256: 013796ef7327fccdc747cc8e3e7c9a738559b41d1bfbb416091cc59e4219b2a5
+  bytes: 2603
+  vectors:
+  - C-EVO-08
+- path: evo/c-evo-09.yaml
+  role: behavior-fixture
+  sha256: 1f8b39bb871e67b4e67bc8c7de036fd1636f587ee5fde4ea68c5685e343244e3
+  bytes: 1773
+  vectors:
+  - C-EVO-09
+- path: evo/c-evo-10.yaml
+  role: behavior-fixture
+  sha256: a7c975bb9e018437220076bc4440a1f4b89c19adee8a5a71b62c17892556a578
+  bytes: 1950
+  vectors:
+  - C-EVO-10
+- path: evo/c-evo-14.yaml
+  role: behavior-fixture
+  sha256: 9edc1bb1db852197fc3e4d4d588b94897898858c7426526335c4215cc48734e6
+  bytes: 2308
+  vectors:
+  - C-EVO-14
+- path: evo/c-evo-15.yaml
+  role: behavior-fixture
+  sha256: ed599935419e1bfd3d2a210fe3439a7ca721748db824eba01b1cf81a0b84c774
+  bytes: 2385
+  vectors:
+  - C-EVO-15
+- path: evo/c-evo-16.yaml
+  role: behavior-fixture
+  sha256: d21187b968ca578e685082ec3c14b1ef4cc25df47431fc7e27130569c1323b42
+  bytes: 3148
+  vectors:
+  - C-EVO-16
+- path: evo/c-evo-17.yaml
+  role: behavior-fixture
+  sha256: c8c024c1a45135b090780cd1819deaacf19c44680df63a86e08714e9f64db043
+  bytes: 2711
+  vectors:
+  - C-EVO-17
 - path: evt/c-evt-01.yaml
   role: behavior-fixture
   sha256: 6cc902cc4af35a11e757b1ca5684571ca3450cb7731c44f66ccb85b1d63c8148
@@ -936,8 +1113,8 @@ files:
   - C-FEED-11
 - path: fixture-schema.yaml
   role: support
-  sha256: 561d12ebac220bb7dc1c13e424de2cf34e7b8536f5a4108e3be4ef77ea94308e
-  bytes: 8767
+  sha256: 4bd6b411d54a6baa36e2f8ded244746a75aa0fed7bbd621f794898eeca20e922
+  bytes: 8839
 - path: gas-micro/composite-gas-exhaustion-prefix.yaml
   role: gas-fixture
   sha256: 0fdfc21412f68e622fb42f74d37f7f8df1d6a1f7c4a09fd74178b6c9dea9996c
@@ -1459,8 +1636,8 @@ files:
   - C-LIFE-04
 - path: projection-catalog.yaml
   role: support
-  sha256: 3f8a315495a3b46638b71e077a089d807181204c36cc1ebd9f7e9df0c25a595f
-  bytes: 20011
+  sha256: b694f958cf1d8718e87782ca06588cda5ba3feeabbf09165bb5a40a5e5747a6a
+  bytes: 22409
 - path: prot/c-prot-01.yaml
   role: behavior-fixture
   sha256: 81a3a77b7c8bd2a2d5bc93e97d8fc71a712485ddfb836fe06e02c744d78321cd
@@ -1577,10 +1754,10 @@ files:
   - C-UPD-03
 - path: vector-coverage.yaml
   role: support
-  sha256: 9741200cf3cc6a962416cbc55493b0ef3e4237bb50b96e77ebeff2c2bfe60698
-  bytes: 13485
+  sha256: e6c1a0b96844abed1abd4a028b235ef2bebb5b2f69493ad0c2c6498e260ec3d9
+  bytes: 15104
 packageIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: packageIdentity is null before hashing
-packageIdentity: sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d
+packageIdentity: sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79

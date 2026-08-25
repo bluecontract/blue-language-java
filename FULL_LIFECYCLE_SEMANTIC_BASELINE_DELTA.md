@@ -27,6 +27,23 @@ baseline rebind.
 The exact machine-readable delta is in
 `full-lifecycle-semantic-baseline-delta.json`.
 
+## Subsequent intentional scenario delta
+
+The three-field result above remains the exact record of the earlier
+semantic-neutral exporter refactor. The later Option 2 contract-evolution
+round intentionally changes one existing full-lifecycle scenario and records
+it separately from those baseline hashes:
+
+| Scenario | Old result | New result | Reason |
+| --- | --- | --- | --- |
+| `FL-ADM-10` | `Complete` with `SubscriptionSurfaceInvalid` | `NeedsResources` with one `MANAGED_OCCURRENCE_EVIDENCE` demand | The initialization patch creates a managed Process Embedded occurrence for which no occurrence evidence is supplied. Typed noncommitting resource discovery is now authoritative and suspends before the later subscription-surface rejection. |
+
+This is an intentional semantic correction, not an expectation relaxation.
+The suspended attempt exposes no partial process result, gas total, trace,
+checkpoint, or public event. Its legacy exact-node projection remains the
+empty list (`requiredBlueIds: []`), preserving compatibility while the typed
+demand carries the occurrence requirement.
+
 ## Protected equality proofs
 
 All semantic and release identities below are exactly equal before and after

@@ -1,7 +1,7 @@
 specification: blue-contracts/1.0
-vectorCount: 145
-ordinaryVectorCount: 100
-closureVectorCount: 45
+vectorCount: 168
+ordinaryVectorCount: 114
+closureVectorCount: 54
 vectors:
   C-CHK-01:
   - chk/c-chk-01.yaml
@@ -199,6 +199,61 @@ vectors:
   - emb/c-emb-15.yaml
   C-EMB-16:
   - emb/c-emb-16.yaml
+  C-EVO-01:
+  - evo/c-evo-01.yaml
+  C-EVO-02:
+  - evo/c-evo-02.yaml
+  C-EVO-03:
+  - evo/c-evo-03.yaml
+  C-EVO-04:
+  - evo/c-evo-04.yaml
+  C-EVO-05:
+  - evo/c-evo-05.yaml
+  C-EVO-06:
+  - evo/c-evo-06.yaml
+  C-EVO-07:
+  - evo/c-evo-07-checkpoint.yaml
+  - evo/c-evo-07-initialized.yaml
+  - evo/c-evo-07-terminated.yaml
+  C-EVO-08:
+  - evo/c-evo-08.yaml
+  C-EVO-09:
+  - evo/c-evo-09.yaml
+  C-EVO-10:
+  - evo/c-evo-10.yaml
+  C-EVO-11:
+  - closure/c-clo-12-frozen-edge-removal.yaml
+  C-EVO-12:
+  - closure/c-clo-11-split-into-two-cycles.yaml
+  C-EVO-13:
+  - closure/c-clo-02-dynamic-finite-cycle.yaml
+  C-EVO-14:
+  - evo/c-evo-14.yaml
+  C-EVO-15:
+  - evo/c-evo-15.yaml
+  C-EVO-16:
+  - evo/c-evo-16.yaml
+  C-EVO-17:
+  - evo/c-evo-17.yaml
+  C-EVO-18:
+  - closure/c-evo-18-missing-exact-node.yaml
+  C-EVO-19:
+  - closure/c-evo-19-missing-occurrence-evidence.yaml
+  C-EVO-20:
+  - closure/c-evo-20-canonical-demand-order.yaml
+  C-EVO-21:
+  - closure/c-evo-21-retry-determinism-missing-first.yaml
+  - closure/c-evo-21-retry-determinism-missing-repeat.yaml
+  - closure/c-evo-21-retry-determinism-resolved-first.yaml
+  - closure/c-evo-21-retry-determinism-resolved-repeat.yaml
+  C-EVO-22:
+  - closure/c-evo-22-low-gas-expanded-evidence-demand.yaml
+  - closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml
+  - closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml
+  C-EVO-23:
+  - closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml
+  - closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml
+  - closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml
   C-EVT-01:
   - evt/c-evt-01.yaml
   C-EVT-02:

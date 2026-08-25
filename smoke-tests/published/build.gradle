@@ -16,8 +16,22 @@ def artifacts = [
 ]
 
 repositories {
-    maven { url = uri(stagedRepository) }
-    mavenCentral()
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'stagedBlueLanguage'
+                url = uri(stagedRepository)
+                metadataSources {
+                    mavenPom()
+                    artifact()
+                }
+            }
+        }
+        filter { includeGroup 'blue.language' }
+    }
+    mavenCentral {
+        content { excludeGroup 'blue.language' }
+    }
 }
 
 java {

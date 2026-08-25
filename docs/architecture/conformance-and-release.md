@@ -51,6 +51,19 @@ repository, with no remote fallback. It enforces Java 8 bytecode and allowed
 POM edges and exercises the aggregate and conformance entry points. The
 disposable publication task may delete only `build/staging-deploy`; it never
 deletes or overwrites the repository already handed to a downstream consumer.
+Create an explicit handoff repository with:
+
+```bash
+./gradlew assembleImmutableStagedRepository \
+  -PstagedDependencyRepository=/absolute/path/to/contracts-maven-repository
+```
+
+The destination must be outside `build/staging-deploy`. If it already exists,
+the task succeeds only when its complete file tree is byte-identical; otherwise
+it fails without changing the destination. A downstream build receives that
+absolute path and must not invoke the Contracts `clean`, publication or staging
+tasks. `publishedArtifactSmoke` applies the same repository property and proves
+that all `blue.language` coordinates resolve from the handoff repository only.
 
 ## Evidence is fail-closed
 

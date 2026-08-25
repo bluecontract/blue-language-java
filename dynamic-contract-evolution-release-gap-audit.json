@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 2,
+  "audit": "dynamic-contract-evolution-release-gap",
+  "date": "2026-08-25",
+  "capturedAt": "2026-08-25T06:45:20Z",
+  "acceptedBase": "03db5ee45f96698a45a3f5556dcc1ef6222d8e6f",
+  "resumeHead": "d5484d870f30048009fdbcceb4365f56c235fb7f",
+  "branch": "feat/dynamic-contract-evolution-resume",
+  "discoveryStatus": "COMPLETE",
+  "releaseStatus": "READY_FOR_FINAL_GATES",
+  "finalReleaseApproved": false,
+  "blueLanguageChanged": false,
+  "comparisons": [
+    {
+      "surface": "production implementation",
+      "status": "RESOLVED_PENDING_FINAL_GATES",
+      "finding": "contract evolution, typed demand suspension, cross-lineage REBIND, and production-path C-EVO behavior are implemented"
+    },
+    {
+      "surface": "normative Contracts specification",
+      "status": "RESOLVED_PENDING_FINAL_GATES",
+      "finding": "protected-state ownership, typed demands, retarget semantics, and C-EVO-01..23 are reconciled"
+    },
+    {
+      "surface": "packaged specification",
+      "status": "RESOLVED_PENDING_FINAL_GATES",
+      "finding": "authoritative and packaged SHA-256 are byte-identical"
+    },
+    {
+      "surface": "public Java API",
+      "status": "RESOLVED_PENDING_FINAL_API_GATES",
+      "finding": "closed immutable demand API, compatibility projection, relocation classification, and migration entries are present"
+    },
+    {
+      "surface": "ordinary fixture package",
+      "status": "RESOLVED_PENDING_FINAL_REGENERATION_AND_GATES",
+      "finding": "183 fixtures and 114 vectors include the ordinary C-EVO lane"
+    },
+    {
+      "surface": "closure fixture package",
+      "status": "RESOLVED_PENDING_FINAL_REGENERATION_AND_GATES",
+      "finding": "93 fixtures and 54 vectors include the closure C-EVO lane"
+    },
+    {
+      "surface": "fixture generators",
+      "status": "RESOLVED_PENDING_FINAL_COMMIT_RERUN",
+      "finding": "independent A/B trees were byte-equal and matched tracked resources; 29 focused generator/classifier tests passed"
+    },
+    {
+      "surface": "API and binary baselines",
+      "status": "RESOLVED_PENDING_FINAL_API_GATES",
+      "finding": "reviewed semantic API report has zero unapproved and zero missing entries"
+    },
+    {
+      "surface": "semantic migration ledger",
+      "status": "RESOLVED_PENDING_FINAL_API_GATES",
+      "finding": "the exact seven reviewed additive entries are classified and no incompatible entry was added"
+    },
+    {
+      "surface": "generated documentation",
+      "status": "PENDING_FINAL_REGENERATION",
+      "finding": "README and generated reference pages must be rebound after the five-commit split"
+    },
+    {
+      "surface": "release manifests",
+      "status": "RESOLVED_PENDING_FINAL_REGENERATION_AND_GATES",
+      "finding": "candidate current Contracts identities agree internally and deterministic generation is proven at capture"
+    }
+  ],
+  "contradictions": [
+    {
+      "id": "A1",
+      "name": "protected state ownership",
+      "status": "RESOLVED_PENDING_FINAL_GATES"
+    },
+    {
+      "id": "A2",
+      "name": "typed noncommitting resource demands",
+      "status": "RESOLVED_PENDING_FINAL_GATES"
+    },
+    {
+      "id": "A3",
+      "name": "active different-lineage retarget",
+      "status": "RESOLVED_PENDING_FINAL_GATES"
+    },
+    {
+      "id": "A4",
+      "name": "C-EVO inventory and production-path conformance",
+      "status": "RESOLVED_PENDING_FINAL_GATES"
+    }
+  ],
+  "fixtureDelta": {
+    "schema": "blue-contracts-full-lifecycle-identity-delta/1.0",
+    "baselineCommit": "03db5ee45f96698a45a3f5556dcc1ef6222d8e6f",
+    "beforeFileCount": 333,
+    "afterFileCount": 363,
+    "changedRowCount": 102,
+    "unexpectedCount": 0,
+    "classifierExitCode": 0,
+    "status": "PASS_REVIEWED_CANDIDATE",
+    "finalCommitBound": false,
+    "categoryCounts": {
+      "actual-semantic-state-result-change": 43,
+      "fixture-byte-only-formatting": 0,
+      "invocation-identity-rebind": 63,
+      "spec-identity-rebind": 65,
+      "unexpected": 0,
+      "work-event-trace-identity-rebind": 55
+    },
+    "reviewedExistingFixtureTransitions": [
+      {
+        "fixture": "C-CLO-02",
+        "transition": "ADD_EXACT_VECTOR_ALIAS",
+        "alias": "C-EVO-13"
+      },
+      {
+        "fixture": "C-CLO-11",
+        "transition": "ADD_EXACT_VECTOR_ALIAS",
+        "alias": "C-EVO-12"
+      },
+      {
+        "fixture": "C-CLO-12",
+        "transition": "ADD_EXACT_VECTOR_ALIAS",
+        "alias": "C-EVO-11"
+      },
+      {
+        "fixture": "C-CLO-22",
+        "transition": "ADD_TYPED_EXACT_NODE_DEMAND",
+        "demandKind": "EXACT_NODE",
+        "scope": "WHOLE_DOCUMENT"
+      },
+      {
+        "fixture": "FL-ADM-10",
+        "transition": "REJECTION_TO_NONCOMMITTING_NEEDS_RESOURCES",
+        "before": "Complete/SubscriptionSurfaceInvalid",
+        "after": "NeedsResources",
+        "demandKind": "MANAGED_OCCURRENCE_EVIDENCE",
+        "demandCount": 1,
+        "legacyRequiredBlueIds": [],
+        "partialSemanticOutput": false
+      }
+    ]
+  },
+  "focusedPythonEvidence": {
+    "generatorAndClassifierTestCount": 29,
+    "passed": 29,
+    "failed": 0,
+    "status": "PASS_AT_CANDIDATE_CAPTURE",
+    "finalCommitBound": false
+  },
+  "coverage": {
+    "requiredBehaviorCount": 30,
+    "contractsOwnedBehaviorImplemented": true,
+    "portableVectors": "C-EVO-01..23",
+    "finalGateVerificationPending": true,
+    "coordinationOwnedCrossAttemptBehaviors": [26, 27, 28]
+  },
+  "crossAttemptOwnership": {
+    "contracts": "deterministic canonical demands for one unchanged authoritative invocation",
+    "coordination": "bounded retry invariant and rejection of an alleged evidence expansion that leaves the demand set unchanged"
+  },
+  "candidatePackageEvidence": {
+    "contractsSpecificationSha256": "8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242",
+    "packagedSpecificationSha256": "8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242",
+    "ordinaryFixturePackageIdentity": "sha256:adf4c1542c265d90c4a1181a8691d40e10f61fcc5510d30c55c0c50b8e2d522b",
+    "combinedFixturePackageIdentity": "sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79",
+    "registryPackageIdentity": "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
+    "gasPackageIdentity": "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a",
+    "oraclePackageIdentity": "sha256:6c2ad2b484aa259e2b0a609172ac56882a0b1cb588209809cab979605b98af9d",
+    "identityConstructorsSha256": "e825999bc431483144d1b0d3d2fd556b359087f698a6099683dcf2dcf5db25cf",
+    "contractsReleaseIdentity": "sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3",
+    "fixtureCount": 276,
+    "ordinaryFixtureCount": 183,
+    "closureFixtureCount": 93,
+    "vectorCount": 168,
+    "ordinaryVectorCount": 114,
+    "closureVectorCount": 54,
+    "final": false
+  },
+  "deterministicGeneration": {
+    "status": "PASS_AT_CANDIDATE_CAPTURE",
+    "finalCommitBound": false,
+    "independentTreesByteEqual": true,
+    "trackedTreesByteEqual": true,
+    "ordinaryArchiveSha256": "cdde40243cd55f87c94bd4e62f73566e794014ad3ccab0e3b10e011b0b3b1ef4",
+    "closureArchiveSha256": "3fe49238ff65a37df53b8813d12960b0d0a35fd877840719e8202ac2d6034088"
+  },
+  "semanticApiEvidence": {
+    "baselineApiClasses": 327,
+    "currentApiClasses": 519,
+    "javaMajor": 52,
+    "actualIncompatible": 337,
+    "approvedIncompatible": 337,
+    "actualAdditive": 482,
+    "approvedAdditive": 482,
+    "unapproved": 0,
+    "missing": 0,
+    "finalGateBound": false
+  },
+  "semanticMigrationAdditions": [
+    "blue.language.processor.HandlerProcessor#isOperationRoute()Z",
+    "blue.language.processor.ManagedProcessEmbeddedPath",
+    "blue.language.processor.NoncommittingExecutionException",
+    "blue.language.processor.closure.ClosureResourceDemand",
+    "blue.language.processor.closure.ClosureResourceDemand$Kind",
+    "blue.language.processor.closure.ExactNodeDemand",
+    "blue.language.processor.closure.ManagedOccurrenceEvidenceDemand"
+  ],
+  "missingSemanticMigrationAdditions": [],
+  "frozenAggregateRelease": {
+    "identityPrefix": "sha256:0268c0",
+    "status": "MUST_REMAIN_UNCHANGED",
+    "reason": "historical compatibility evidence predating the directly bound superseding Contracts closure amendment"
+  },
+  "toolingLimitations": {
+    "missingReferenceJavaTemplates": true,
+    "missingCoordinationJavaTemplates": true,
+    "missingLegacyTopLevelPackageManifest": true,
+    "missingOriginalSourceArchive": true,
+    "canonicalValidationOutputProduced": false,
+    "legacyFullReleaseArchiveProduced": false,
+    "resourcePackageArchivesProduced": true
+  },
+  "finalReleaseEvidence": {
+    "fiveCommitHistory": "PENDING",
+    "finalTestedCommit": "PENDING",
+    "sourceDateEpoch": "PENDING",
+    "completeGateCampaign": "PENDING",
+    "stagedArtifacts": "PENDING",
+    "changedFilesManifest": "PENDING",
+    "cleanWorktreeProof": "PENDING"
+  },
+  "finalizationPending": [
+    "bind exact five-commit history",
+    "regenerate generated documentation and release evidence",
+    "rerun deterministic generation and fixture classifier at final commit",
+    "run complete sequential Gradle and release gate campaign",
+    "stage and hash invocation-local Maven artifacts",
+    "bind changed-files.sha256 and receipt self-reference policy",
+    "record final tested commit and SOURCE_DATE_EPOCH",
+    "prove final git diff --check and clean worktree"
+  ],
+  "nextAction": "split the five reviewable Contracts commits, regenerate final evidence, then run the complete sequential release gate campaign"
+}

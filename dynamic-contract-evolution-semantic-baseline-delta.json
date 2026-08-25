@@ -1,0 +1,270 @@
+{
+  "schema": "blue-language-java-dynamic-contract-evolution-semantic-baseline-delta/1.0",
+  "semanticCandidateCommit": "a36d57f34366af8c070a8cdf5b76f5e365433954",
+  "sourceDateEpoch": "1787644014",
+  "baselineBeforeSha256": "sha256:e75ad45f0721af593100a4db85ac16de4cc37ba799a8ca6ddef9fc8c6cd900d7",
+  "candidateSha256": "sha256:c117aafc09319a336364e93bbbc2fa1caa9e60b57d8efc9a19774c23b2e4d92a",
+  "captureCount": 2,
+  "independentCandidatesByteEqual": true,
+  "secondCapture": {
+    "status": "PASSED",
+    "path": "/private/tmp/dce-semantic-repeat-a36d57f/api/semantic-baseline-1.0.json",
+    "candidateSha256": "sha256:c117aafc09319a336364e93bbbc2fa1caa9e60b57d8efc9a19774c23b2e4d92a",
+    "cleanBuildEvidencePath": "/private/tmp/dce-semantic-repeat-a36d57f/build/reports/release-evidence/clean-build.json",
+    "cleanBuildEvidenceSha256": "sha256:59eac8a32b5f801995e12ae40f876ce1280949e7ec07354dbb6e7de0b055d517",
+    "cleanBuildTasks": 136,
+    "cleanBuildResult": "SUCCESS",
+    "captureResult": "SUCCESS"
+  },
+  "structuralDiff": {
+    "addedFields": 0,
+    "removedFields": 0,
+    "typeChanges": 0,
+    "changedScalarPointersOutsideArrays": 13,
+    "changedArrayPointers": 6,
+    "changedScalarArrayPositions": 187,
+    "logicalChangedPointerCount": 19,
+    "unexpectedChangeCount": 0
+  },
+  "protectedProjection": {
+    "algorithm": "SHA-256 of UTF-8 canonical JSON with sorted object keys and no insignificant whitespace after replacing each of the 19 approved values with the same marker",
+    "beforeSha256": "sha256:791cfddaad4abb35a03daf1a556e4d02c34051c02e60bba284bd26640476c6ac",
+    "afterSha256": "sha256:791cfddaad4abb35a03daf1a556e4d02c34051c02e60bba284bd26640476c6ac",
+    "equal": true
+  },
+  "scalarChanges": [
+    {
+      "pointer": "/source/commit",
+      "oldValue": "3ea346d13dba31e65e32827972bcc501776fa49f",
+      "newValue": "a36d57f34366af8c070a8cdf5b76f5e365433954",
+      "classification": "source provenance",
+      "reason": "Bind the reviewed dynamic-evolution semantic candidate used for both controlled captures."
+    },
+    {
+      "pointer": "/source/sourceInputIdentity",
+      "oldValue": "sha256:313ced19ab3f8a32052f15931ae7d63fed705858af656934fdc676d7e8442aa7",
+      "newValue": "sha256:982011c97701030b25aca0e97021f11023e3a2e5e50f4b8bc8161f693b54eb3e",
+      "classification": "source provenance",
+      "reason": "Bind the exact clean source closure of the reviewed candidate."
+    },
+    {
+      "pointer": "/specifications/contractsSha256",
+      "oldValue": "389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18",
+      "newValue": "8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242",
+      "classification": "normative Contracts specification",
+      "reason": "Bind the reviewed deterministic application-contract and managed-occurrence evolution specification."
+    },
+    {
+      "pointer": "/release/contractsReleaseIdentity",
+      "oldValue": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c",
+      "newValue": "sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3",
+      "classification": "Contracts release binding",
+      "reason": "Bind the reviewed Contracts release that contains the new specification, APIs, fixtures, and evidence."
+    },
+    {
+      "pointer": "/packages/contractsFixtures",
+      "oldValue": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
+      "newValue": "sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79",
+      "classification": "Contracts fixture package binding",
+      "reason": "Bind the regenerated closure fixture corpus with the reviewed C-EVO vectors and corrected FL-ADM-10 demand outcome."
+    },
+    {
+      "pointer": "/packages/contractsRelease",
+      "oldValue": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c",
+      "newValue": "sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3",
+      "classification": "Contracts release package binding",
+      "reason": "Match the reviewed direct Contracts release identity."
+    },
+    {
+      "pointer": "/gas/oraclePackageIdentity",
+      "oldValue": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
+      "newValue": "sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79",
+      "classification": "gas-oracle package provenance",
+      "reason": "The package identity changes with the fixture corpus while all 71 gas fixture bodies remain exactly equal."
+    },
+    {
+      "pointer": "/tests/all/minimumTests",
+      "oldValue": 2381,
+      "newValue": 2423,
+      "classification": "monotonic characterization floor",
+      "reason": "Raise the frozen minimum by the 42 added passing root tests."
+    },
+    {
+      "pointer": "/tests/all/tests",
+      "oldValue": 2381,
+      "newValue": 2423,
+      "classification": "test inventory",
+      "reason": "Record the complete passing root test inventory."
+    },
+    {
+      "pointer": "/tests/all/passed",
+      "oldValue": 2381,
+      "newValue": 2423,
+      "classification": "test result",
+      "reason": "All 2,423 characterized root tests pass; failures and skips remain zero."
+    },
+    {
+      "pointer": "/locality/payloads/1/identity",
+      "oldValue": "sha256:798df7dcac7ba30bdb04743a4e5c3425f106e700552b42270ebb9aa222235d8e",
+      "newValue": "sha256:3ba1d34778675bacd3bd133356dbfd521d4b5b890672b2c69c00054fa8bd538e",
+      "classification": "bounded provider-request work order",
+      "reason": "Complete entry and tentative contract-surface capture changes six ordered requested-ID traces without changing backend loads, bytes, semantic demands, replay results, or any other locality field."
+    },
+    {
+      "pointer": "/artifacts/javadocJar",
+      "oldValue": "sha256:7634fd796a8daabca094755f2bd0c47ec3e19768acd33d68ced010e93c788e7f",
+      "newValue": "sha256:309d390b1335d09b965aeb604389b6c2f882160241adf011ac835dee62ad4822",
+      "classification": "derived documentation artifact",
+      "reason": "Public Contracts API and documentation additions intentionally change generated Javadoc; runtime and sources JAR identities remain exact."
+    },
+    {
+      "pointer": "/artifacts/sourceRelease",
+      "oldValue": "sha256:522543f2851ad1405bcce6fabe48824b47ece771ed07b6b99452cba6a26d83b9",
+      "newValue": "sha256:f7aeea366fa0920fbdf0912206b531d8be9607a4d04e1fb562193a313bc5c4f5",
+      "classification": "derived source artifact",
+      "reason": "Bind the exact reviewed dynamic-evolution source closure."
+    }
+  ],
+  "orderedArrayChanges": [
+    {
+      "pointer": "/locality/payloads/1/payload/observations/1/primaryRequestedBlueIds",
+      "variant": "B Root-ref/inline/cold",
+      "oldLength": 73,
+      "newLength": 75,
+      "oldCanonicalSha256": "sha256:713c8acc56be8cb5f3b2686cd955f9d99e91c3e0a9b48c73105649a14c8ffdf8",
+      "newCanonicalSha256": "sha256:5bd371fa619b87cba579998f66af624131f8604c7d83f0ac3fcc6040d2695e3c",
+      "unequalScalarPositions": 35,
+      "editScriptIndexing": "zero-based; apply operations in listed order",
+      "editScript": [
+        {"operation": "move", "value": "9uLRS4ev3aMBCN7SeBfxbt6JgXht62yWSAhHFEsHnCER", "from": 25, "to": 15},
+        {"operation": "insert", "index": 51, "value": "2AkDiAFiQtMrc16VzwettZGhdtXx1wEfWaaQS1d7TkSf"},
+        {"operation": "insert", "index": 52, "value": "HHVCawjWmiUJ7crycrZYzz7X1BUhTJA7XK8dDRMTocN5"}
+      ],
+      "classification": "complete before/after contract-surface capture"
+    },
+    {
+      "pointer": "/locality/payloads/1/payload/observations/3/primaryRequestedBlueIds",
+      "variant": "D Root-ref/Event-ref/cold",
+      "oldLength": 74,
+      "newLength": 76,
+      "oldCanonicalSha256": "sha256:9134cceece9a85f0ad20541d533ba60e9fb390060d97df47ffdce6cea4a5bdf3",
+      "newCanonicalSha256": "sha256:2107d660da2b91dc4bd25550020a16bbf20da072d64a51a7e79ab0cdb99df059",
+      "unequalScalarPositions": 35,
+      "editScriptIndexing": "zero-based; apply operations in listed order",
+      "editScript": [
+        {"operation": "move", "value": "9uLRS4ev3aMBCN7SeBfxbt6JgXht62yWSAhHFEsHnCER", "from": 26, "to": 16},
+        {"operation": "insert", "index": 52, "value": "2AkDiAFiQtMrc16VzwettZGhdtXx1wEfWaaQS1d7TkSf"},
+        {"operation": "insert", "index": 53, "value": "HHVCawjWmiUJ7crycrZYzz7X1BUhTJA7XK8dDRMTocN5"}
+      ],
+      "classification": "complete before/after contract-surface capture"
+    },
+    {
+      "pointer": "/locality/payloads/1/payload/observations/4/primaryRequestedBlueIds",
+      "variant": "E partial/partial/cold",
+      "oldLength": 42,
+      "newLength": 54,
+      "oldCanonicalSha256": "sha256:e6d20134e032591f2717eaa874c0891379cc0fabca10cccb6f9dd14b3f24ad3b",
+      "newCanonicalSha256": "sha256:171e78d59c941060ebf0b57e2a499df4a755a60279e55f2cc85565399b164ab1",
+      "unequalScalarPositions": 12,
+      "editScriptIndexing": "zero-based; append the listed values at index 42",
+      "append": [
+        "2AkDiAFiQtMrc16VzwettZGhdtXx1wEfWaaQS1d7TkSf",
+        "HHVCawjWmiUJ7crycrZYzz7X1BUhTJA7XK8dDRMTocN5",
+        "8jTWHaGEXr5zzNWvknWwS1T7iWK1rbTigSEebxbQwRaE",
+        "GLtAYB64QWKyucg8ZpZ3zWVschaBwr6f3T46y5WHrwkN",
+        "EcwcMmGENqCsorpCUsmULKtaZUWnZ1dEQ8UT1ppSjW4j",
+        "7nphGHJ7uDBFFQ7ERGyTWz4aDnRdtv2ZeWmaBNrptRuo",
+        "7oKcPA9WEPyE1S9hehMUcmQ3V3tDUxdbH8abvZcjLBMG",
+        "8jTWHaGEXr5zzNWvknWwS1T7iWK1rbTigSEebxbQwRaE",
+        "GLtAYB64QWKyucg8ZpZ3zWVschaBwr6f3T46y5WHrwkN",
+        "EcwcMmGENqCsorpCUsmULKtaZUWnZ1dEQ8UT1ppSjW4j",
+        "7nphGHJ7uDBFFQ7ERGyTWz4aDnRdtv2ZeWmaBNrptRuo",
+        "7oKcPA9WEPyE1S9hehMUcmQ3V3tDUxdbH8abvZcjLBMG"
+      ],
+      "classification": "complete before/after contract-surface capture"
+    },
+    {
+      "pointer": "/locality/payloads/1/payload/observations/5/primaryRequestedBlueIds",
+      "variant": "F Root-ref/Event-ref/warm",
+      "oldLength": 74,
+      "newLength": 76,
+      "oldCanonicalSha256": "sha256:9134cceece9a85f0ad20541d533ba60e9fb390060d97df47ffdce6cea4a5bdf3",
+      "newCanonicalSha256": "sha256:2107d660da2b91dc4bd25550020a16bbf20da072d64a51a7e79ab0cdb99df059",
+      "unequalScalarPositions": 35,
+      "editScriptIndexing": "zero-based; apply operations in listed order",
+      "editScript": [
+        {"operation": "move", "value": "9uLRS4ev3aMBCN7SeBfxbt6JgXht62yWSAhHFEsHnCER", "from": 26, "to": 16},
+        {"operation": "insert", "index": 52, "value": "2AkDiAFiQtMrc16VzwettZGhdtXx1wEfWaaQS1d7TkSf"},
+        {"operation": "insert", "index": 53, "value": "HHVCawjWmiUJ7crycrZYzz7X1BUhTJA7XK8dDRMTocN5"}
+      ],
+      "classification": "complete before/after contract-surface capture"
+    },
+    {
+      "pointer": "/locality/payloads/1/payload/observations/6/primaryRequestedBlueIds",
+      "variant": "G Root-ref/Event-ref/batched",
+      "oldLength": 74,
+      "newLength": 76,
+      "oldCanonicalSha256": "sha256:9134cceece9a85f0ad20541d533ba60e9fb390060d97df47ffdce6cea4a5bdf3",
+      "newCanonicalSha256": "sha256:2107d660da2b91dc4bd25550020a16bbf20da072d64a51a7e79ab0cdb99df059",
+      "unequalScalarPositions": 35,
+      "editScriptIndexing": "zero-based; apply operations in listed order",
+      "editScript": [
+        {"operation": "move", "value": "9uLRS4ev3aMBCN7SeBfxbt6JgXht62yWSAhHFEsHnCER", "from": 26, "to": 16},
+        {"operation": "insert", "index": 52, "value": "2AkDiAFiQtMrc16VzwettZGhdtXx1wEfWaaQS1d7TkSf"},
+        {"operation": "insert", "index": 53, "value": "HHVCawjWmiUJ7crycrZYzz7X1BUhTJA7XK8dDRMTocN5"}
+      ],
+      "classification": "complete before/after contract-surface capture"
+    },
+    {
+      "pointer": "/locality/payloads/1/payload/observations/7/primaryRequestedBlueIds",
+      "variant": "H Root-ref/Event-ref/one-at-a-time",
+      "oldLength": 74,
+      "newLength": 76,
+      "oldCanonicalSha256": "sha256:9134cceece9a85f0ad20541d533ba60e9fb390060d97df47ffdce6cea4a5bdf3",
+      "newCanonicalSha256": "sha256:2107d660da2b91dc4bd25550020a16bbf20da072d64a51a7e79ab0cdb99df059",
+      "unequalScalarPositions": 35,
+      "editScriptIndexing": "zero-based; apply operations in listed order",
+      "editScript": [
+        {"operation": "move", "value": "9uLRS4ev3aMBCN7SeBfxbt6JgXht62yWSAhHFEsHnCER", "from": 26, "to": 16},
+        {"operation": "insert", "index": 52, "value": "2AkDiAFiQtMrc16VzwettZGhdtXx1wEfWaaQS1d7TkSf"},
+        {"operation": "insert", "index": 53, "value": "HHVCawjWmiUJ7crycrZYzz7X1BUhTJA7XK8dDRMTocN5"}
+      ],
+      "classification": "complete before/after contract-surface capture"
+    }
+  ],
+  "localityCausalReview": {
+    "implementation": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingResultCoordinator.java",
+    "cause": "ProcessingResultCoordinator now captures complete entry and tentative contract surfaces before reconciliation, using the production effective-contract traversal.",
+    "addedBackendLoads": 0,
+    "addedBackendBytes": 0,
+    "changedSemanticDemands": 0,
+    "changedReplayEvidenceFields": 0,
+    "changedObservationFieldsExcludingPrimaryRequestedBlueIds": 0,
+    "observationsExcludingRequestsCanonicalSha256": "sha256:b4ac3d4e795da84b57bd900654027a141610ab7b0e5ededea610f1dae51da7df"
+  },
+  "protectedEqualities": [
+    {"pointer": "/schema", "value": "blue-language-java-semantic-baseline/1.0", "equal": true},
+    {"pointer": "/specifications/languageSha256", "value": "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d", "equal": true},
+    {"pointer": "/release/packageIdentity", "value": "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6", "equal": true},
+    {"pointer": "/packages/contractsRegistry", "value": "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1", "equal": true},
+    {"pointer": "/packages/contractsGas", "value": "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a", "equal": true},
+    {"pointer": "/gas/fixtureCount", "value": 71, "equal": true},
+    {"pointer": "/gas/fixtures", "canonicalSha256": "sha256:ceaa39162060fea29577bec8d3c00c06841af1ebdf5c7b4959bc6cd94927c865", "equal": true},
+    {"pointer": "/publicApi", "canonicalSha256": "sha256:fe23dcc661357f84352336084134bcb43d73347d8b6f8dea0c1e00e5bacfca3f", "equal": true},
+    {"pointer": "/artifacts/jar", "value": "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0", "equal": true},
+    {"pointer": "/artifacts/sourcesJar", "value": "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518", "equal": true},
+    {"pointer": "/tests/all/failed", "value": 0, "equal": true},
+    {"pointer": "/tests/all/skipped", "value": 0, "equal": true},
+    {"pointer": "/locality/sourceFiles", "canonicalSha256": "sha256:a9d4cc37cfa1fcbea6b482f4cb4a42d5289955c6e6bc28b8445f99272ef9158f", "equal": true},
+    {"pointer": "/locality/requiredTests", "canonicalSha256": "sha256:d3ac4fa6a7cc367e5f5c8d20902df18e4900b9b58a8e9bef19583fc2b02be7d3", "equal": true},
+    {"pointer": "/locality/payloads/0", "canonicalSha256": "sha256:feb5c82991b3a8e5d3a43a0f6069e7690e7b7b2cf46ef625c6a08c35a78a33f7", "equal": true},
+    {"pointer": "/locality/payloads/2", "canonicalSha256": "sha256:1f4d2484496df3e4466bf45347780c0d96952afbd342e4ef48e86267ff5851b3", "equal": true}
+  ],
+  "approval": {
+    "genericBaselineReset": false,
+    "allActualChangesIndividuallyClassified": true,
+    "noSemanticBroadening": true,
+    "readyToBind": true,
+    "blockingCondition": null
+  }
+}

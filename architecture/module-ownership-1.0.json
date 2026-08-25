@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 717,
-    "productionResourceCount": 703,
-    "productionSourcePathIdentity": "sha256:09237795a35f4e6c6052ba824410a7b2df57a127d8e0e351ac55ec46e187ae16",
-    "productionResourcePathIdentity": "sha256:478e865babb5cdc7a14e677c1ee9842c3e3e68e35b4190a83d00a83db1d69ed6"
+    "productionSourceCount": 737,
+    "productionResourceCount": 749,
+    "productionSourcePathIdentity": "sha256:97bc66c85d521a49cd97a5120bc84095e2501f3820291294f66971e2f4bc6fb9",
+    "productionResourcePathIdentity": "sha256:8e70a74e54701ead9d8756d767c7289ca1ad99265bb5425270791bec940e5b12"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -462,6 +462,20 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockOperation.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockOperation.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockOperationProcessor.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockOperationProcessor.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockTypeBlueIds.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
@@ -798,6 +812,34 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceCollector.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceCollector.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceDelta.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceDelta.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceReconciler.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceReconciler.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceReconciliation.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractSurfaceReconciliation.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/DeclaredTypeLineageMatcher.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1026,6 +1068,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeEntryPlans.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeOverlapValidator.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeOverlapValidator.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1358,6 +1407,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/FrozenDispatchContext.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/FrozenDispatchContext.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/FrozenJsonPatch.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1404,6 +1460,20 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/GasTraceEntry.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/GeneralizationMetadataAttributor.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/GeneralizationMetadataAttributor.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/GeneralizationMetadataPaths.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/GeneralizationMetadataPaths.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1652,6 +1722,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedProcessEmbeddedPath.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedProcessEmbeddedPath.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootChannelOccurrence.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1719,6 +1796,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/NoOpProcessingObserver.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/NoncommittingExecutionException.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/NoncommittingExecutionException.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -2198,10 +2282,24 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorOwnedContractsStatePreserver.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorOwnedContractsStatePreserver.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorRuntimeAccess.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorRuntimeAccess.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorStateReferencePathCatalog.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorStateReferencePathCatalog.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -2716,6 +2814,20 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemand.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemand.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemandException.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResourceDemandException.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureResultAssemblySupport.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
@@ -2849,6 +2961,13 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExactNodeDemand.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExactNodeDemand.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ExecutionPolicy.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
@@ -2926,6 +3045,13 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceEvidenceDemand.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceEvidenceDemand.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceTargetVerifier.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
@@ -2944,6 +3070,20 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedScopeKey.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedDemandDiscovery.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedDemandDiscovery.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {
@@ -5317,6 +5457,86 @@
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-16.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-07-checkpoint.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-07-checkpoint.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-07-initialized.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-07-initialized.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-07-terminated.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-07-terminated.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-08.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-08.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-09.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-09.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-10.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-10.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-14.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-14.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-15.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-15.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-16.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-16.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-17.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-17.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-01.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-01.yaml"
@@ -6327,6 +6547,71 @@
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-35-01-readd-committed-successor.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-18-missing-exact-node.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-18-missing-exact-node.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-20-canonical-demand-order.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-20-canonical-demand-order.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-01-root-patch-event.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-01-root-patch-event.yaml"
@@ -6545,6 +6830,86 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-16.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-16.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-07-checkpoint.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-07-checkpoint.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-07-initialized.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-07-initialized.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-07-terminated.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-07-terminated.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-08.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-08.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-09.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-09.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-10.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-10.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-14.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-14.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-15.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-15.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-16.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-16.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-17.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-17.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-01.yaml",
@@ -7560,6 +7925,11 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedHandler.blue",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedHandler.blue"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedOperation.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/ScriptedOperation.blue"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/TriggeredEventChannel.blue",

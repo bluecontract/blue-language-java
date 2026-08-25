@@ -878,6 +878,21 @@
       ]
     },
     {
+      "id": "phase-dynamic-contract-evolution",
+      "requirement": "DYNAMIC_EVOLUTION_NEXT_ROUND.zip",
+      "rationale": "Approve exactly the additive Contracts host API required for deterministic dynamic contract-surface evolution: explicit Operation-route capability metadata, immutable effective Process Embedded path provenance, and a closed typed hierarchy for noncommitting exact-node and managed-occurrence evidence demands, including optional defensive inline supplied-value evidence verified against its exact BlueId. The inline value is resource payload rather than demand identity or ordering input. These additions expose immutable identities and retry requirements without changing the Blue Language value model or approving an incompatible JVM change.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "default interface method added: blue.language.processor.HandlerProcessor :: isOperationRoute()Z",
+        "public/protected class added: blue.language.processor.ManagedProcessEmbeddedPath",
+        "public/protected class added: blue.language.processor.NoncommittingExecutionException",
+        "public/protected class added: blue.language.processor.closure.ClosureResourceDemand",
+        "public/protected class added: blue.language.processor.closure.ClosureResourceDemand$Kind",
+        "public/protected class added: blue.language.processor.closure.ExactNodeDemand",
+        "public/protected class added: blue.language.processor.closure.ManagedOccurrenceEvidenceDemand"
+      ]
+    },
+    {
       "id": "phase-full-lifecycle-admission",
       "requirement": "FULL_LIFECYCLE_ADMISSION_DESIGN.md",
       "rationale": "Approve only the additive public termination-finalization evidence branch required to run ADMIT_CLOSURE through the existing full Contracts lifecycle queue and its deterministic conformance-fixture exporter. The exporter is parent-package owned so the conformance package graph remains acyclic; its narrow parser facade does not expose package-private fixture internals. The Blue value model and identity algorithms remain unchanged.",

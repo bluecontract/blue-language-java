@@ -33,6 +33,21 @@
       "reason": "The source archive contains the reviewed exporter split and ownership-catalog update; executable artifacts and semantics are unchanged."
     }
   ],
+  "subsequentIntentionalSemanticDeltas": [
+    {
+      "round": "option-2-contract-evolution-resume",
+      "scenario": "FL-ADM-10",
+      "oldOutcome": "Complete",
+      "oldFailureKind": "SubscriptionSurfaceInvalid",
+      "newOutcome": "NeedsResources",
+      "resourceDemandKinds": [
+        "MANAGED_OCCURRENCE_EVIDENCE"
+      ],
+      "legacyRequiredBlueIds": [],
+      "noncommitting": true,
+      "reason": "The initialization patch creates a managed Process Embedded occurrence without supplied occurrence evidence. Authoritative typed resource discovery suspends before the later subscription-surface rejection and exposes no partial result, gas, trace, checkpoint, or public event."
+    }
+  ],
   "unchangedProofs": [
     {
       "pointer": "/specifications/languageSha256",

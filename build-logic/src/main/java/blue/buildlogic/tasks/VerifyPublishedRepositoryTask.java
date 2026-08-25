@@ -2,6 +2,7 @@ package blue.buildlogic.tasks;
 
 import blue.buildlogic.support.DeterministicHashing;
 import blue.buildlogic.support.DeterministicJson;
+import blue.buildlogic.support.StagedRepositoryManifest;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +32,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -67,6 +69,17 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
     @Input
     public abstract ListProperty<String> getAllowedModuleEdges();
 
+    @Input
+    public abstract Property<String> getSourceCommit();
+
+    @InputFile
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract RegularFileProperty getContractsSpecification();
+
+    @InputFile
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public abstract RegularFileProperty getContractsReleaseManifest();
+
     @OutputFile
     public abstract RegularFileProperty getReportFile();
 
@@ -80,14 +93,26 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
         List<Map<String, Object>> artifacts = new ArrayList<>();
         Set<String> observedEdges = new TreeSet<>();
         List<String> violations = new ArrayList<>();
+        StagedRepositoryManifest.Bindings bindings = StagedRepositoryManifest.bindings(
+                getContractsSpecification().get().getAsFile().toPath(),
+                getContractsReleaseManifest().get().getAsFile().toPath(),
+                getSourceCommit().get());
+        StagedRepositoryManifest.Verification stagedVerification =
+                StagedRepositoryManifest.verify(
+                        repository,
+                        group,
+                        version,
+                        new ArrayList<>(expected),
+                        bindings);
+        violations.addAll(stagedVerification.getViolations());
 
         for (String artifact : expected) {
             Path directory = repository.resolve(group.replace('.', File.separatorChar))
                     .resolve(artifact).resolve(version);
-            Path jar = artifactFile(directory, artifact, version, ".jar", true);
-            Path sources = artifactFile(directory, artifact, version, "-sources.jar", false);
-            Path javadoc = artifactFile(directory, artifact, version, "-javadoc.jar", false);
-            Path pom = artifactFile(directory, artifact, version, ".pom", false);
+            Path jar = artifactFile(directory, artifact, version, ".jar");
+            Path sources = artifactFile(directory, artifact, version, "-sources.jar");
+            Path javadoc = artifactFile(directory, artifact, version, "-javadoc.jar");
+            Path pom = artifactFile(directory, artifact, version, ".pom");
             require(jar, artifact, violations);
             require(sources, artifact, violations);
             require(javadoc, artifact, violations);
@@ -102,8 +127,12 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
             record.put("classCount", classCount);
             record.put("jarIdentity", jar != null && Files.isRegularFile(jar)
                     ? DeterministicHashing.sha256(jar) : null);
+            record.put("javadocIdentity", javadoc != null && Files.isRegularFile(javadoc)
+                    ? DeterministicHashing.sha256(javadoc) : null);
             record.put("pomIdentity", pom != null && Files.isRegularFile(pom)
                     ? DeterministicHashing.sha256(pom) : null);
+            record.put("sourcesIdentity", sources != null && Files.isRegularFile(sources)
+                    ? DeterministicHashing.sha256(sources) : null);
             artifacts.add(record);
         }
         cycles(expected, observedEdges).forEach(cycle ->
@@ -111,10 +140,17 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
 
         Map<String, Object> report = new TreeMap<>();
         report.put("artifacts", artifacts);
+        report.put("artifactManifestIdentity", stagedVerification.getManifestIdentity());
+        report.put("contractsFixturePackageIdentity",
+                bindings.getContractsFixturePackageIdentity());
+        report.put("contractsReleaseIdentity", bindings.getContractsReleaseIdentity());
+        report.put("contractsSpecificationIdentity",
+                bindings.getContractsSpecificationIdentity());
         report.put("coordinateCount", artifacts.size());
         report.put("groupId", group);
         report.put("observedModuleEdges", new ArrayList<>(observedEdges));
-        report.put("schema", "blue-published-repository-verification/1.0");
+        report.put("schema", "blue-published-repository-verification/2.0");
+        report.put("sourceCommit", bindings.getSourceCommit());
         report.put("valid", violations.isEmpty());
         report.put("version", version);
         report.put("violations", violations);
@@ -281,31 +317,9 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
     }
 
     private static Path artifactFile(
-            Path directory, String artifact, String version, String suffix, boolean primaryJar) {
+            Path directory, String artifact, String version, String suffix) {
         Path exact = directory.resolve(artifact + "-" + version + suffix);
-        if (Files.isRegularFile(exact)) {
-            return exact;
-        }
-        if (!Files.isDirectory(directory)) {
-            return null;
-        }
-        try (java.util.stream.Stream<Path> entries = Files.list(directory)) {
-            List<Path> candidates = entries.filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString().startsWith(artifact + "-"))
-                    .filter(path -> path.getFileName().toString().endsWith(suffix))
-                    .filter(path -> !primaryJar || (!path.getFileName().toString()
-                            .endsWith("-sources.jar") && !path.getFileName().toString()
-                            .endsWith("-javadoc.jar")))
-                    .sorted().collect(java.util.stream.Collectors.toList());
-            if (candidates.size() > 1) {
-                throw new GradleException("Ambiguous staged files for " + artifact
-                        + " and suffix " + suffix + ": " + candidates);
-            }
-            return candidates.isEmpty() ? null : candidates.get(0);
-        } catch (IOException exception) {
-            throw new GradleException("Cannot inspect staged coordinate directory "
-                    + directory, exception);
-        }
+        return Files.isRegularFile(exact) ? exact : null;
     }
 
     private static String oneLine(String value, String label) {
