@@ -89,11 +89,11 @@ final class FullClosureCorpusConformanceTest {
         }
 
         reporter.publishEntry("summary", counts.toString());
-        assertEquals(80, source.entries().size());
-        assertEquals(61, counts.executed);
-        assertEquals(46, counts.success);
-        assertEquals(15, counts.nonSuccess);
-        assertEquals(1, counts.needsResources);
+        assertEquals(93, source.entries().size());
+        assertEquals(66, counts.executed);
+        assertEquals(50, counts.success);
+        assertEquals(16, counts.nonSuccess);
+        assertEquals(9, counts.needsResources);
         assertEquals(18, counts.unsupported);
     }
 

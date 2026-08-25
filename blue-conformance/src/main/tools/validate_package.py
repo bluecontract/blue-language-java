@@ -78,6 +78,19 @@ FULL_LIFECYCLE_FIXTURE_NAMES = {
     "fl-adm-08-infinite-cycle-gas-retry-retry.yaml",
     "fl-adm-09-late-member-rollback.yaml",
     "fl-adm-10-unknown-occurrence.yaml",
+    "c-evo-18-missing-exact-node.yaml",
+    "c-evo-19-missing-occurrence-evidence.yaml",
+    "c-evo-20-canonical-demand-order.yaml",
+    "c-evo-21-retry-determinism-missing-first.yaml",
+    "c-evo-21-retry-determinism-missing-repeat.yaml",
+    "c-evo-21-retry-determinism-resolved-first.yaml",
+    "c-evo-21-retry-determinism-resolved-repeat.yaml",
+    "c-evo-22-low-gas-expanded-evidence-demand.yaml",
+    "c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml",
+    "c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml",
+    "c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml",
+    "c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml",
+    "c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml",
 }
 
 STATUSES = {
@@ -487,6 +500,101 @@ def canonical_identity(value: dict[str, Any], field: str) -> str:
 
 def domain_identity(domain: str, value: Any) -> str:
     return "sha256:" + hashlib.sha256(canonical_json({"domain": domain, "value": value})).hexdigest()
+
+
+def closure_resource_demand_identity(demand: dict[str, Any]) -> str:
+    """Independently derive the closed nine-field demand identity."""
+    exact = demand["kind"] == "EXACT_NODE"
+    value = {
+        "kind": demand["kind"],
+        "logicalCauseIdentity": None if exact else demand["logicalCauseIdentity"],
+        "inputClosureIdentity": None if exact else demand["inputClosureIdentity"],
+        "inputGraphGeneration": None if exact else demand["inputGraphGeneration"],
+        "sourceDocumentId": demand["sourceDocumentId"],
+        "sourcePath": demand["sourcePath"],
+        "processEmbeddedDeclarationIdentity": (
+            None if exact else demand["processEmbeddedDeclarationIdentity"]
+        ),
+        "suppliedValueBlueId": demand["suppliedValueBlueId"],
+        "demandOrdinal": None if exact else demand["demandOrdinal"],
+    }
+    return domain_identity(
+        "blue-contracts-closure-resource-demand/1.0", value
+    )
+
+
+def validate_resource_demands(path: Path, expected: dict[str, Any]) -> None:
+    """Validate identities, closed shapes, ordering and legacy projection."""
+    demands = expected["resourceDemands"]
+    require(bool(demands), f"NeedsResources has no typed demands in {path.name}")
+    identities: set[str] = set()
+    exact_blue_ids: set[str] = set()
+    order_keys: list[tuple[Any, ...]] = []
+    for index, demand in enumerate(demands):
+        context = f"{path.name}.resourceDemands[{index}]"
+        common = {
+            "kind", "demandIdentity", "sourceDocumentId", "sourcePath",
+            "suppliedValueBlueId",
+        }
+        if demand["kind"] == "EXACT_NODE":
+            require(
+                set(demand) == common | {"blueId", "logicalPath"},
+                f"exact demand has an open or incomplete shape: {context}",
+            )
+            require(
+                demand["blueId"] == demand["suppliedValueBlueId"]
+                and demand["logicalPath"] == demand["sourcePath"],
+                f"exact demand aliases disagree: {context}",
+            )
+            exact_blue_ids.add(demand["blueId"])
+            # The canonical identity field is JSON null for an exact-node
+            # demand.  Preserve that ordering distinction explicitly: null
+            # sorts before every managed-occurrence integer, including zero.
+            ordinal_key = (0, 0)
+        else:
+            require(
+                demand["kind"] == "MANAGED_OCCURRENCE_EVIDENCE",
+                f"unknown resource demand kind: {context}",
+            )
+            require(
+                set(demand) == common | {
+                    "logicalCauseIdentity", "inputClosureIdentity",
+                    "inputGraphGeneration",
+                    "processEmbeddedDeclarationIdentity", "demandOrdinal",
+                },
+                f"occurrence demand has an open or incomplete shape: {context}",
+            )
+            ordinal_key = (1, demand["demandOrdinal"])
+        require(
+            demand["demandIdentity"]
+            == closure_resource_demand_identity(demand),
+            f"resource demand identity mismatch: {context}",
+        )
+        require(
+            demand["demandIdentity"] not in identities,
+            f"duplicate resource demand identity: {context}",
+        )
+        identities.add(demand["demandIdentity"])
+        order_keys.append((
+            portable_text_order_key(demand["sourceDocumentId"], context),
+            portable_text_order_key(demand["sourcePath"], context),
+            portable_text_order_key(demand["suppliedValueBlueId"], context),
+            ordinal_key,
+            portable_text_order_key(demand["demandIdentity"], context),
+        ))
+    require(
+        order_keys == sorted(order_keys),
+        f"resource demands are not in canonical source order in {path.name}",
+    )
+    require(
+        expected["requiredBlueIds"] == sorted(
+            exact_blue_ids,
+            key=lambda value: portable_text_order_key(
+                value, f"{path.name}.requiredBlueIds"
+            ),
+        ),
+        f"legacy requiredBlueIds is not the exact-demand projection in {path.name}",
+    )
 
 
 def closure_root_scope_identity(document_id: str) -> str:
@@ -2278,7 +2386,8 @@ def validate_schemas(ordinary: list[Path], closure: list[Path]) -> None:
     )
     needs_expected = needs_payload["expected"]
     require(
-        set(needs_expected) == {"attemptOutcome", "requiredBlueIds"},
+        set(needs_expected)
+        == {"attemptOutcome", "requiredBlueIds", "resourceDemands"},
         "NeedsResources fixture carries completed-result evidence",
     )
     validate_closure_root_profile(needs_path, needs_payload)
@@ -2398,8 +2507,12 @@ def validate_schemas(ordinary: list[Path], closure: list[Path]) -> None:
 
 
 def is_closure_vector(vector: str) -> bool:
-    """Return whether a vector belongs to either normative closure family."""
-    return vector.startswith(("C-CLO-", "FL-ADM-"))
+    """Return whether a vector requires the production closure harness."""
+    if vector.startswith(("C-CLO-", "FL-ADM-")):
+        return True
+    return vector.startswith("C-EVO-") and vector[6:] in {
+        "11", "12", "13", "18", "19", "20", "21", "22", "23",
+    }
 
 
 def validate_vector_coverage(ordinary: list[Path], closure: list[Path]) -> dict[str, list[str]]:
@@ -2423,14 +2536,21 @@ def validate_vector_coverage(ordinary: list[Path], closure: list[Path]) -> dict[
         full_lifecycle == {f"FL-ADM-{i:02d}" for i in range(1, 11)},
         "full-lifecycle vectors must be exactly FL-ADM-01..10",
     )
-    require(len(actual) == 145, "final vector count must be 145")
-    require(
-        len([vector for vector in actual if is_closure_vector(vector)]) == 45,
-        "final closure vector count must be 45",
+    contract_evolution = set(
+        v for v in actual if v.startswith("C-EVO-")
     )
     require(
-        len([vector for vector in actual if not is_closure_vector(vector)]) == 100,
-        "final ordinary vector count must be 100",
+        contract_evolution == {f"C-EVO-{i:02d}" for i in range(1, 24)},
+        "contract-evolution vectors must be exactly C-EVO-01..23",
+    )
+    require(len(actual) == 168, "final vector count must be 168")
+    require(
+        len([vector for vector in actual if is_closure_vector(vector)]) == 54,
+        "final closure vector count must be 54",
+    )
+    require(
+        len([vector for vector in actual if not is_closure_vector(vector)]) == 114,
+        "final ordinary vector count must be 114",
     )
     return actual
 
@@ -7338,10 +7458,7 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         validate_component_oracle_routes(
             path, data, fixture_input["components"], None
         )
-        require(
-            expected["requiredBlueIds"] == sorted(set(expected["requiredBlueIds"])),
-            f"NeedsResources BlueIds are not sorted and unique in {path.name}",
-        )
+        validate_resource_demands(path, expected)
         return {
             "occurrences": occurrence_count,
             "channels": channel_count,
@@ -8138,6 +8255,51 @@ def validate_static_package_laws() -> None:
     require(gas.get("status") == "normative", "gas manifest is not normative")
     require(gas.get("numericWeightsStatus") == "frozen for Blue Contracts and Processor Specification 1.0", "gas weights are not frozen")
     require(gas.get("defaultExecutionPolicy", {}).get("defaultGasLimit") == gas.get("maxProcessGas"), "default gas policy/manifest limit mismatch")
+    constructors = load_yaml(IDENTITY_CONSTRUCTORS)
+    demand_constructor = constructors.get("constructors", {}).get(
+        "closureResourceDemandIdentity", {}
+    )
+    require(
+        demand_constructor.get("domain")
+        == "blue-contracts-closure-resource-demand/1.0",
+        "closure resource-demand constructor domain is missing",
+    )
+    require(
+        demand_constructor.get("value", {}).get("fields")
+        == [
+            "kind",
+            "logicalCauseIdentity",
+            "inputClosureIdentity",
+            "inputGraphGeneration",
+            "sourceDocumentId",
+            "sourcePath",
+            "processEmbeddedDeclarationIdentity",
+            "suppliedValueBlueId",
+            "demandOrdinal",
+        ],
+        "closure resource-demand constructor must expose the exact closed "
+        "nine-field identity value",
+    )
+    require(
+        set(demand_constructor.get("value", {}).get("fieldRules", {}))
+        == {
+            "kind",
+            "logicalCauseIdentity",
+            "inputClosureIdentity",
+            "inputGraphGeneration",
+            "sourceDocumentId",
+            "sourcePath",
+            "processEmbeddedDeclarationIdentity",
+            "suppliedValueBlueId",
+            "demandOrdinal",
+        },
+        "closure resource-demand constructor field rules are incomplete",
+    )
+    require(
+        "Kind is never an ordering prefix"
+        in demand_constructor.get("value", {}).get("order", ""),
+        "closure resource-demand registry does not forbid kind ordering",
+    )
     require(not any("bex" in path.name.lower() or "blue-bex" in path.as_posix().lower() for path in ROOT.rglob("*") if path.is_file()), "BEX file included in Contracts package")
     specs = sorted(path.name for path in (ROOT / "specifications").glob("*.md"))
     require(specs == ["blue-contracts-and-processor-specification-1.0.md"], f"unexpected specification documents: {specs}")
@@ -8281,19 +8443,21 @@ def main() -> None:
     progress("checksums")
     validate_checksum_manifest()
     ordinary, closure = fixture_files()
-    require(len(ordinary) == 167, "final ordinary fixture count must be 167")
-    require(len(closure) == 80, "final closure fixture count must be 80")
+    require(len(ordinary) == 183, "final ordinary fixture count must be 183")
+    require(len(closure) == 93, "final closure fixture count must be 93")
     require(
-        len(ordinary) + len(closure) == 247,
-        "final Contracts fixture count must be 247",
+        len(ordinary) + len(closure) == 276,
+        "final Contracts fixture count must be 276",
     )
     actual_full_lifecycle_names = {
-        path.name for path in closure if path.name.startswith("fl-adm-")
+        path.name
+        for path in closure
+        if path.name.startswith(("fl-adm-", "c-evo-"))
     }
     require(
         actual_full_lifecycle_names == FULL_LIFECYCLE_FIXTURE_NAMES,
         "final full-lifecycle fixture inventory must contain exactly the "
-        "thirteen released FL-ADM cases",
+        "twenty-six released FL-ADM/C-EVO cases",
     )
     progress("schemas")
     validate_schemas(ordinary, closure)

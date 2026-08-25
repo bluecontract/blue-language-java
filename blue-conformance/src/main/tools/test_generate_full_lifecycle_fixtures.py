@@ -17,7 +17,7 @@ def fixture_for(name: str) -> dict[str, object]:
     return {
         "schema": "blue-contracts-closure-fixture/1.0",
         "id": stem,
-        "vectors": [stem[:9].upper()],
+        "vectors": ["-".join(stem.split("-")[:3]).upper()],
         "category": "admission",
         "operation": "admit-closure",
         "releaseManifest": "../../release-manifest.yaml",

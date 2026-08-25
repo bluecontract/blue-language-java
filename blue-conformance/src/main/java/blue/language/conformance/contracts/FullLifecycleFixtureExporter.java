@@ -99,14 +99,14 @@ import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.re
  */
 public final class FullLifecycleFixtureExporter {
 
-    static final int SOURCE_COUNT = 10;
-    static final int FIXTURE_COUNT = 13;
+    static final int SOURCE_COUNT = 16;
+    static final int FIXTURE_COUNT = 26;
     static final String SOURCE_SCHEMA =
             "blue-contracts-full-lifecycle-source/1.0";
     static final String FIXTURE_SCHEMA =
             "blue-contracts-closure-fixture/1.0";
     static final String SUCCESS_MARKER =
-            "FULL_LIFECYCLE_FIXTURES_EXPORTED count=13";
+            "FULL_LIFECYCLE_FIXTURES_EXPORTED count=26";
 
     static final Map<String, String> EXPECTED_SOURCE_IDS =
             FullLifecycleFixtureSourceValidator.expectedSourceIds();
@@ -150,17 +150,18 @@ public final class FullLifecycleFixtureExporter {
         try (Stream<Path> files = Files.list(sources)) {
             sourceFiles = files
                     .filter(path -> path.getFileName().toString()
-                            .matches("fl-adm-[0-9]{2}.*\\.yaml"))
+                            .matches("(?:fl-adm|c-evo)-[0-9]{2}.*\\.yaml"))
                     .sorted()
                     .collect(Collectors.toList());
         }
         require(sourceFiles.size() == SOURCE_COUNT,
-                "source root must contain exactly 10 FL-ADM YAML sources");
+                "source root must contain exactly 16 FL-ADM/C-EVO YAML sources");
         LinkedHashSet<String> sourceNames = sourceFiles.stream()
                 .map(path -> path.getFileName().toString())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         require(sourceNames.equals(EXPECTED_SOURCE_IDS.keySet()),
-                "source root must contain the exact FL-ADM-01..10 family files; "
+                "source root must contain the exact FL-ADM-01..10 and "
+                        + "C-EVO-18..23 family files; "
                         + "expected " + EXPECTED_SOURCE_IDS.keySet()
                         + " but found " + sourceNames);
 
@@ -210,7 +211,7 @@ public final class FullLifecycleFixtureExporter {
                 }
             }
             require(generated.size() == FIXTURE_COUNT,
-                    "sources must compile to exactly 13 fixtures");
+                    "sources must compile to exactly 26 fixtures");
             ArrayList<String> names = generated.stream()
                     .map(path -> path.getFileName().toString())
                     .sorted()

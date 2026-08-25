@@ -163,6 +163,29 @@ def run_full_lifecycle_generator(
     )
 
 
+def run_contract_evolution_generator(
+    release_root: Path,
+    environment: dict[str, str],
+) -> None:
+    """Regenerate the ordinary C-EVO tranche into the staged package."""
+    generator = release_root / "tools/generate_contract_evolution_fixtures.py"
+    if not generator.is_file():
+        raise RegenerationFailure(
+            "contract-evolution generator is missing from the staged tool "
+            "closure"
+        )
+    run(
+        [
+            sys.executable,
+            str(generator),
+            "--output-root",
+            str(release_root / "conformance/contracts/fixtures/evo"),
+        ],
+        cwd=release_root.parent,
+        environment=environment,
+    )
+
+
 def regenerate(
     release_root: Path,
     repository_root: Path,
@@ -176,6 +199,7 @@ def regenerate(
         "--language-source-root",
         str(repository_root),
     ]
+    run_contract_evolution_generator(release_root, environment)
     # The first pass provides implementation/spec identities consumed by the
     # canonical refiner.  The final pass inventories only complete output.
     run(manifest_command, cwd=release_root.parent, environment=environment)
@@ -206,12 +230,12 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
     vectors = load_mapping(package_root / "fixtures/vector-coverage.yaml")
     release = load_mapping(package_root / "release-manifest.yaml")
     expected_fixture_counts = {
-        "ordinaryFixtureCount": 167,
-        "closureFixtureCount": 80,
-        "totalExecutableFixtureCount": 247,
-        "vectorCount": 145,
-        "ordinaryVectorCount": 100,
-        "closureVectorCount": 45,
+        "ordinaryFixtureCount": 183,
+        "closureFixtureCount": 93,
+        "totalExecutableFixtureCount": 276,
+        "vectorCount": 168,
+        "ordinaryVectorCount": 114,
+        "closureVectorCount": 54,
     }
     for field, expected in expected_fixture_counts.items():
         actual = fixtures.get(field)
@@ -221,9 +245,9 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
                 f"expected {expected}"
             )
     expected_vector_counts = {
-        "vectorCount": 145,
-        "ordinaryVectorCount": 100,
-        "closureVectorCount": 45,
+        "vectorCount": 168,
+        "ordinaryVectorCount": 114,
+        "closureVectorCount": 54,
     }
     for field, expected in expected_vector_counts.items():
         actual = vectors.get(field)
@@ -250,18 +274,31 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
             "full-lifecycle vector family mismatch: "
             f"actual={sorted(actual_full_lifecycle_vectors)}"
         )
+    actual_contract_evolution_vectors = {
+        key
+        for key in vector_map
+        if isinstance(key, str) and key.startswith("C-EVO-")
+    }
+    expected_contract_evolution_vectors = {
+        f"C-EVO-{index:02d}" for index in range(1, 24)
+    }
+    if actual_contract_evolution_vectors != expected_contract_evolution_vectors:
+        raise RegenerationFailure(
+            "contract-evolution vector family mismatch: "
+            f"actual={sorted(actual_contract_evolution_vectors)}"
+        )
     fixture_binding = release.get("fixturePackage")
     if not isinstance(fixture_binding, dict):
         raise RegenerationFailure(
             "release manifest has no fixturePackage binding"
         )
-    if fixture_binding.get("vectorCount") != 145:
+    if fixture_binding.get("vectorCount") != 168:
         raise RegenerationFailure(
-            "release fixture-package vectorCount is not 145"
+            "release fixture-package vectorCount is not 168"
         )
-    if fixture_binding.get("fixtureCount") != 247:
+    if fixture_binding.get("fixtureCount") != 276:
         raise RegenerationFailure(
-            "release fixture-package fixtureCount is not 247"
+            "release fixture-package fixtureCount is not 276"
         )
 
 

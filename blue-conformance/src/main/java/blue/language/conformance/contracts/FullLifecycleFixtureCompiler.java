@@ -81,12 +81,14 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static blue.language.conformance.contracts.FullLifecycleFixtureAssertions.assertExpectations;
+import static blue.language.conformance.contracts.FullLifecycleFixtureAssertions.assertAttemptExpectations;
+import static blue.language.conformance.contracts.FullLifecycleFixtureAssertions.verifyCaseParity;
 import static blue.language.conformance.contracts.FullLifecycleFixtureAssertions.verifyParity;
 import static blue.language.conformance.contracts.FullLifecycleFixtureExporter.FIXTURE_SCHEMA;
 import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.require;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSourceValidator.cases;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSourceValidator.inputOrder;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSourceValidator.occurrences;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSourceValidator.referenceIdentityAt;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSourceValidator.scalarTextAt;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSourceValidator.validateDocumentOccurrenceMacros;
@@ -106,6 +108,7 @@ import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.re
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.requiredObject;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.sha256;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.text;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.textValues;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.wire;
 
 /** Compiles validated full-lifecycle sources through normative admission. */
@@ -161,6 +164,7 @@ final class FullLifecycleFixtureCompiler {
                         fixtureId + " repeatOf must name an earlier case");
                 result = executePrepared(
                         source,
+                        caseValue,
                         scenario,
                         fixtureId,
                         events,
@@ -172,6 +176,7 @@ final class FullLifecycleFixtureCompiler {
                         events, resolvedRuntime);
                 result = executePrepared(
                         source,
+                        caseValue,
                         scenario,
                         fixtureId,
                         events,
@@ -182,6 +187,18 @@ final class FullLifecycleFixtureCompiler {
             if (suffix != null) {
                 require(bySuffix.put(suffix, result) == null,
                         sourceId + " case suffixes must be unique");
+            }
+            if (caseValue != null && caseValue.has("parityWith")) {
+                String baselineSuffix = text(caseValue, "parityWith");
+                CompiledFixture baseline = bySuffix.get(baselineSuffix);
+                require(baseline != null,
+                        fixtureId + " parityWith must name an earlier case");
+                verifyCaseParity(
+                        fixtureId,
+                        baseline,
+                        result,
+                        textValues(array(caseValue,
+                                "parityProjections")));
             }
         }
         verifyParity(source, compiled);
@@ -241,6 +258,7 @@ final class FullLifecycleFixtureCompiler {
 
     private CompiledFixture executePrepared(
             JsonNode source,
+            JsonNode caseValue,
             String scenario,
             String fixtureId,
             Map<String, JsonNode> events,
@@ -263,33 +281,30 @@ final class FullLifecycleFixtureCompiler {
         }
         Capture capture = new Capture();
         ClosureAttemptResult attempt;
+        JsonNode tentativeTranscript;
         try {
             try (ClosureFixtureRuntime fixtureRuntime =
                          ClosureFixtureRuntime.fromFixture(
                                  executionEnvelope, candidate.root);
-                 BlueClosureContracts contracts = new BlueClosureContracts(
+                BlueClosureContracts contracts = new BlueClosureContracts(
                          fixtureRuntime.processor(), capture)) {
                 attempt = contracts.admitClosureWithLifecycleQueue(parsed);
+                tentativeTranscript = fixtureRuntime.tentativeTranscript();
             }
         } catch (RuntimeException failure) {
             throw stageFailure(fixtureId, "execute normative admission",
                     failure);
         }
-        require(attempt.isComplete(),
-                fixtureId + " unexpectedly requires provider resources");
-        require(capture.evidence != null,
-                fixtureId + " did not publish implementation evidence");
-        require(capture.evidence.complete(),
-                fixtureId + " published incomplete implementation evidence"
-                        + (capture.evidence.nonConformanceCode() == null
-                        ? "" : ": "
-                        + capture.evidence.nonConformanceCode()));
+        JsonNode selectedExpect = caseValue != null
+                && caseValue.has("expect")
+                ? object(caseValue, "expect")
+                : object(source, "expect");
         try {
-            assertExpectations(
+            assertAttemptExpectations(
                     fixtureId,
-                    object(source, "expect"),
+                    selectedExpect,
                     events,
-                    attempt.processResult(),
+                    attempt,
                     capture.evidence);
         } catch (RuntimeException failure) {
             throw stageFailure(fixtureId, "validate source expectations",
@@ -331,8 +346,12 @@ final class FullLifecycleFixtureCompiler {
         }
         ObjectNode provider = envelope.putObject("provider");
         provider.putObject("nodes");
-        provider.putArray("expectedRequiredBlueIds");
-        provider.putArray("expectedLoads");
+        provider.set("expectedRequiredBlueIds",
+                FullLifecycleFixtureSupport.textArray(
+                        attempt.requiredExactBlueIds()));
+        provider.set("expectedLoads",
+                FullLifecycleFixtureSupport.textArray(
+                        attempt.requiredExactBlueIds()));
         ObjectNode locality = envelope.putObject("locality");
         locality.put("unrelatedDocumentCount", 0);
         locality.put("expectedUnrelatedDocumentsOpened", 0);
@@ -343,7 +362,8 @@ final class FullLifecycleFixtureCompiler {
                 input.deepCopy(),
                 envelope,
                 attempt.processResult(),
-                capture.evidence);
+                capture.evidence,
+                tentativeTranscript);
     }
 
     private IllegalArgumentException stageFailure(
@@ -398,7 +418,7 @@ final class FullLifecycleFixtureCompiler {
 
         ArrayList<ManagedOccurrenceBinding> initialRows =
                 new ArrayList<ManagedOccurrenceBinding>();
-        for (JsonNode occurrence : array(source, "occurrences")) {
+        for (JsonNode occurrence : occurrences(source, caseValue)) {
             DocumentId sourceId = new DocumentId(text(
                     occurrence, "sourceDocumentId"));
             DocumentId targetId = new DocumentId(text(
@@ -407,8 +427,15 @@ final class FullLifecycleFixtureCompiler {
                             && bodies.containsKey(targetId),
                     "occurrence endpoint is not an authored document");
             String path = text(occurrence, "sourcePath");
-            String expected = referenceIdentityAt(
+            Node sourceValue = NodePathEditor.getOrNull(
                     bodies.get(sourceId), path);
+            boolean active = requiredBoolean(occurrence, "active");
+            require(sourceValue != null || !active,
+                    "active occurrence source path is absent: "
+                            + sourceId.value() + path);
+            String expected = sourceValue != null
+                    ? referenceIdentityAt(bodies.get(sourceId), path)
+                    : DIRECT.directBlueId(bodies.get(targetId));
             initialRows.add(ManagedOccurrenceBinding.derived(
                     bindingPolicyIdentity,
                     sourceId,
@@ -418,7 +445,7 @@ final class FullLifecycleFixtureCompiler {
                                     occurrence, "activationGeneration")),
                     targetId,
                     expected,
-                    requiredBoolean(occurrence, "active"),
+                    active,
                     null));
         }
         Collections.sort(initialRows);
@@ -707,18 +734,22 @@ final class FullLifecycleFixtureCompiler {
         final ObjectNode envelope;
         final ClosureProcessResult result;
         final ClosureImplementationEvidence evidence;
+        final JsonNode tentativeTranscript;
 
         CompiledFixture(
                 String fileName,
                 ObjectNode input,
                 ObjectNode envelope,
                 ClosureProcessResult result,
-                ClosureImplementationEvidence evidence) {
+                ClosureImplementationEvidence evidence,
+                JsonNode tentativeTranscript) {
             this.fileName = fileName;
             this.input = input;
             this.envelope = envelope;
             this.result = result;
             this.evidence = evidence;
+            this.tentativeTranscript = Objects.requireNonNull(
+                    tentativeTranscript, "tentativeTranscript").deepCopy();
         }
     }
 

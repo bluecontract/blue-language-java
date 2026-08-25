@@ -24,6 +24,7 @@ import blue.language.processor.closure.ClosureExecutionObserver;
 import blue.language.processor.closure.ClosureImplementationEvidence;
 import blue.language.processor.closure.ClosureInvocationInput;
 import blue.language.processor.closure.ClosureProcessResult;
+import blue.language.processor.closure.ClosureResourceDemand;
 import blue.language.processor.closure.ClosureWorkOccurrence;
 import blue.language.processor.closure.ComponentFinalizationInput;
 import blue.language.processor.closure.ComponentFinalizationKernel;
@@ -84,6 +85,7 @@ import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.JS
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.array;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.copyIfPresent;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.longValues;
+import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.nullableText;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.object;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.optionalArray;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.requiredBoolean;
@@ -98,6 +100,46 @@ final class FullLifecycleFixtureAssertions {
 
     private FullLifecycleFixtureAssertions() {
     }
+
+static void assertAttemptExpectations(
+        String id,
+        JsonNode expect,
+        Map<String, JsonNode> events,
+        ClosureAttemptResult attempt,
+        ClosureImplementationEvidence evidence) {
+    if ("NeedsResources".equals(nullableText(
+            expect, "attemptOutcome"))) {
+        require(!attempt.isComplete(),
+                id + " expected NeedsResources but completed: "
+                        + FullLifecycleFixtureJson.expected(
+                                attempt, evidence));
+        require(attempt.processResult() == null && attempt.totalGas() == null,
+                id + " suspended attempt exposed completed evidence");
+        require(evidence == null,
+                id + " suspended attempt published observer evidence");
+        ArrayList<String> actualKinds = new ArrayList<String>();
+        for (ClosureResourceDemand demand : attempt.resourceDemands()) {
+            actualKinds.add(demand.kind().name());
+        }
+        require(actualKinds.equals(textValues(
+                        array(expect, "resourceDemandKinds"))),
+                id + " typed demand-kind sequence disagrees with execution");
+        if (expect.has("requiredExactCount")) {
+            require(attempt.requiredExactBlueIds().size()
+                            == requiredLong(expect, "requiredExactCount"),
+                    id + " exact-demand compatibility count disagrees");
+        }
+        return;
+    }
+    require(attempt.isComplete(),
+            id + " expected a completed closure attempt");
+    require(attempt.processResult() != null,
+            id + " complete attempt omitted processResult");
+    require(evidence != null && evidence.complete(),
+            id + " complete attempt omitted implementation evidence");
+    assertExpectations(
+            id, expect, events, attempt.processResult(), evidence);
+}
 
 static void assertExpectations(
         String id,
@@ -354,7 +396,30 @@ private static JsonNode parityProjection(
                 "tentativeFinalizations", "gasTrace"));
         return value;
     }
+    if ("resourceDemands".equals(projection)) {
+        return expected.has("resourceDemands")
+                ? expected.get("resourceDemands")
+                : JSON.arrayNode();
+    }
+    if ("attempt".equals(projection)) {
+        return expected;
+    }
+    if ("harnessTranscript".equals(projection)) {
+        return fixture.tentativeTranscript;
+    }
     throw new IllegalArgumentException(
             "unsupported parity projection " + projection);
+}
+
+static void verifyCaseParity(
+        String id,
+        CompiledFixture baseline,
+        CompiledFixture actual,
+        List<String> projections) {
+    for (String projection : projections) {
+        require(parityProjection(baseline, projection).equals(
+                        parityProjection(actual, projection)),
+                id + " parity failed for " + projection);
+    }
 }
 }

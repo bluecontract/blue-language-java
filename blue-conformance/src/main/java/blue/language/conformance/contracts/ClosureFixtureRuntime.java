@@ -47,6 +47,7 @@ public final class ClosureFixtureRuntime
     private final ContractsFixtureHarnessDataSupport.FixturePhysicalProvider
             provider;
     private final Set<String> requiredProviderLoads;
+    private final ScriptedContractsRuntime scripted;
 
     private ClosureFixtureRuntime(
             JsonNode fixture,
@@ -126,6 +127,10 @@ public final class ClosureFixtureRuntime
                         MockTypeBlueIds.MOCK_HANDLER,
                         registry.require(MockTypeBlueIds.MOCK_HANDLER),
                         new MockHandlerProcessor(scripted))
+                .registerContractProcessor(
+                        MockTypeBlueIds.MOCK_OPERATION,
+                        registry.require(MockTypeBlueIds.MOCK_OPERATION),
+                        new MockOperationProcessor(scripted))
                 .build();
         this.processor = processor;
         this.conformance = conformance;
@@ -134,6 +139,7 @@ public final class ClosureFixtureRuntime
         this.provider = provider;
         this.requiredProviderLoads = Collections.unmodifiableSet(
                 new LinkedHashSet<String>(unavailable));
+        this.scripted = scripted;
     }
 
     /**
@@ -200,6 +206,17 @@ public final class ClosureFixtureRuntime
         provider.verifyExpectedLoads(
                 new LinkedHashSet<String>(Objects.requireNonNull(
                         blueIds, "blueIds")));
+    }
+
+    /**
+     * Returns harness-local tentative effects recorded by scripted ordinary
+     * handlers during this runtime's execution.
+     *
+     * <p>The projection is intentionally package-private and never enters the
+     * closure result or observer evidence.</p>
+     */
+    JsonNode tentativeTranscript() {
+        return scripted.tentativeTranscript();
     }
 
     /** Closes the processor, Language runtime, and conformance engine. */

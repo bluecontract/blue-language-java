@@ -11,7 +11,7 @@ properties:
     type: array
     minItems: 1
     uniqueItems: true
-    items: {type: string, pattern: '^(?:C-CLO|FL-ADM)-[0-9]{2}$'}
+    items: {type: string, pattern: '^(?:C-CLO|C-EVO|FL-ADM)-[0-9]{2}$'}
   category:
     enum: [admission, atomicity, cycle, dynamic-graph, gas, history, identity, initialization, limits, locality, ordering, public-events, recovery]
   operation: {enum: [process-closure, admit-closure, limit-micro]}
@@ -233,7 +233,7 @@ $defs:
       sourceDocumentId: {$ref: '#/$defs/documentId'}
       sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
       activationGeneration:
-        description: Positive generation for embedded occurrences; first reservation/activation is 1, active removal allocates its same-lineage inactive successor at exactly previous plus 1, that successor is output-only until committed and supplied as a later invocation input, and later re-add preserves its generation and occurrence identity (ordinary later exact-state rebind may change bindingIdentity). Same-invocation remove-then-re-add and different-lineage retarget are unsupported in Contracts 1.0. Root scope generation 0 is not an occurrence row.
+        description: Positive generation for embedded occurrences. First reservation/activation is 1. Active removal allocates its same-lineage inactive successor at exactly previous plus 1; the successor is output-only until committed, and later re-add preserves its generation and occurrence identity. Same-lineage exact-state REBIND preserves generation and occurrence identity. Active different-lineage REBIND changes target DocumentId, uses exactly previous plus 1, and carries fresh occurrence/binding identities. An inactive row cannot retarget, and same-invocation remove-then-re-add is unsupported. Root scope generation 0 is not an occurrence row.
         $ref: '#/$defs/positiveSafeInteger'
       targetDocumentId: {$ref: '#/$defs/documentId'}
       expectedTargetBlueId:
@@ -664,7 +664,9 @@ $defs:
     required: [graphChangeOrdinal, changeKind, sourceDocumentId, sourcePath, beforeActivationGeneration, beforeOccurrenceIdentity, beforeBindingIdentity, beforeTargetDocumentId, beforeTargetBlueId, afterActivationGeneration, afterOccurrenceIdentity, afterBindingIdentity, afterTargetDocumentId, afterTargetBlueId]
     properties:
       graphChangeOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
-      changeKind: {enum: [ADD, REMOVE, REBIND]}
+      changeKind:
+        description: REBIND has both complete sides. A same-lineage REBIND preserves target DocumentId, activation generation, and occurrenceIdentity. An active different-lineage REBIND changes target DocumentId, uses exactly before generation plus 1, and uses fresh occurrence/binding identities; mixed shapes are invalid.
+        enum: [ADD, REMOVE, REBIND]
       sourceDocumentId: {$ref: '#/$defs/documentId'}
       sourcePath: {type: string, pattern: '^/(?:[^~]|~0|~1)*(?:/(?:[^~]|~0|~1)*)*$'}
       beforeActivationGeneration: {$ref: '#/$defs/nullablePositiveSafeInteger'}
@@ -1171,14 +1173,65 @@ $defs:
   needsResourcesExpected:
     type: object
     additionalProperties: false
-    required: [attemptOutcome, requiredBlueIds]
+    required: [attemptOutcome, requiredBlueIds, resourceDemands]
     properties:
       attemptOutcome: {const: NeedsResources}
       requiredBlueIds:
         type: array
-        minItems: 1
         uniqueItems: true
         items: {$ref: '#/$defs/blueId'}
+      resourceDemands:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          oneOf:
+          - $ref: '#/$defs/exactNodeDemand'
+          - $ref: '#/$defs/managedOccurrenceEvidenceDemand'
+  exactNodeDemand:
+    type: object
+    additionalProperties: false
+    required:
+    - kind
+    - demandIdentity
+    - sourceDocumentId
+    - sourcePath
+    - suppliedValueBlueId
+    - blueId
+    - logicalPath
+    properties:
+      kind: {const: EXACT_NODE}
+      demandIdentity: {$ref: '#/$defs/sha256Identity'}
+      sourceDocumentId: {$ref: '#/$defs/documentId'}
+      sourcePath: {$ref: '#/$defs/managedScopePath'}
+      suppliedValueBlueId: {$ref: '#/$defs/blueId'}
+      blueId: {$ref: '#/$defs/blueId'}
+      logicalPath: {$ref: '#/$defs/managedScopePath'}
+  managedOccurrenceEvidenceDemand:
+    type: object
+    additionalProperties: false
+    required:
+    - kind
+    - demandIdentity
+    - sourceDocumentId
+    - sourcePath
+    - suppliedValueBlueId
+    - logicalCauseIdentity
+    - inputClosureIdentity
+    - inputGraphGeneration
+    - processEmbeddedDeclarationIdentity
+    - demandOrdinal
+    properties:
+      kind: {const: MANAGED_OCCURRENCE_EVIDENCE}
+      demandIdentity: {$ref: '#/$defs/sha256Identity'}
+      sourceDocumentId: {$ref: '#/$defs/documentId'}
+      sourcePath: {$ref: '#/$defs/managedScopePath'}
+      suppliedValueBlueId: {$ref: '#/$defs/blueId'}
+      logicalCauseIdentity: {$ref: '#/$defs/sha256Identity'}
+      inputClosureIdentity: {$ref: '#/$defs/sha256Identity'}
+      inputGraphGeneration: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      processEmbeddedDeclarationIdentity: {$ref: '#/$defs/blueId'}
+      demandOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
   expected:
     oneOf:
     - {$ref: '#/$defs/completeExpected'}

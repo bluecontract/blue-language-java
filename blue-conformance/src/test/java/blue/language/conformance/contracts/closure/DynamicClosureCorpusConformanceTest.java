@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 final class DynamicClosureCorpusConformanceTest {
 
-    private static final int FIXTURE_COUNT = 80;
+    private static final int FIXTURE_COUNT = 93;
     private static final int LIMIT_MICRO_COUNT = 18;
     private static final String REPORT_PATH_PROPERTY =
             "blue.contracts.closureDiscrepancyReport";

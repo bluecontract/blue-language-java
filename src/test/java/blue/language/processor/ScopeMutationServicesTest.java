@@ -3,7 +3,13 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessEmbedded;
+import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -143,6 +149,187 @@ final class ScopeMutationServicesTest {
     }
 
     @Test
+    void shouldPreflightProcessEmbeddedRoleSeparatelyFromOwnership() {
+        // given
+        DocumentProcessor processor = new DocumentProcessor();
+        DirectContractMutationPreflight preflight =
+                new DirectContractMutationPreflight(
+                        processor.contractLoader());
+        PatchInput valid = PatchInput.mutable(JsonPatch.add(
+                "/contracts/embedded",
+                processEmbedded("/child")));
+        PatchInput invalid = PatchInput.mutable(JsonPatch.add(
+                "/contracts/embedded",
+                new Node().type(new Node().blueId(
+                        RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL))));
+
+        // when
+        Throwable validFailure = FailureCapture.captureFailure(
+                () -> preflight.validate("/", valid));
+        Throwable invalidFailure = FailureCapture.captureFailure(
+                () -> preflight.validate("/", invalid));
+
+        // then
+        assertNull(validFailure);
+        MustUnderstandFailureException failure = assertInstanceOf(
+                MustUnderstandFailureException.class,
+                invalidFailure);
+        assertEquals(
+                ProcessorErrorCategory.InvalidContractKey,
+                failure.errorCategory());
+    }
+
+    @Test
+    void shouldRejectDirectGeneralizationPolicyMutation() {
+        // given
+        DirectProtectedStateMutationGuard guard =
+                new DirectProtectedStateMutationGuard(
+                        execution(new Node()).runtime());
+        PatchInput patch = PatchInput.mutable(JsonPatch.add(
+                "/contracts/generalization",
+                protectedValue("forged")));
+
+        // when
+        Throwable captured = FailureCapture.captureFailure(
+                () -> guard.validate("/", patch, false));
+
+        // then
+        assertProtectedFailure(captured, "generalization direct write");
+    }
+
+    @Test
+    void shouldAllowMutableAndFrozenWholeContractsReplacementWhenProtectedStateIsExact() {
+        // given
+        Node protectedContracts = allProtectedContracts("same");
+        Node document = new Node().contracts(protectedContracts.clone());
+        Node replacement = allProtectedContracts("same").properties(
+                "workflow", new Node().properties(
+                        "revision", new Node().value(2)),
+                "embedded", processEmbedded("/child"));
+        DirectProtectedStateMutationGuard mutableGuard =
+                new DirectProtectedStateMutationGuard(
+                        execution(document.clone()).runtime());
+        DirectProtectedStateMutationGuard frozenGuard =
+                new DirectProtectedStateMutationGuard(
+                        execution(document.clone()).runtime());
+        PatchInput mutable = PatchInput.mutable(JsonPatch.replace(
+                "/contracts", replacement.clone()));
+        PatchInput frozen = PatchInput.frozen(FrozenJsonPatch.from(
+                JsonPatch.replace("/contracts", replacement.clone())));
+
+        // when
+        Throwable mutableFailure = FailureCapture.captureFailure(
+                () -> mutableGuard.validate("/", mutable, false));
+        Throwable frozenFailure = FailureCapture.captureFailure(
+                () -> frozenGuard.validate("/", frozen, false));
+
+        // then
+        assertNull(mutableFailure);
+        assertNull(frozenFailure);
+    }
+
+    @Test
+    void shouldRejectWholeContractsReplacementThatChangesAnyProtectedKey() {
+        // given
+        List<String> protectedKeys = Arrays.asList(
+                "initialized",
+                "terminated",
+                "checkpoint",
+                "generalization");
+        Map<String, Throwable> failures = new LinkedHashMap<>();
+
+        // when
+        for (String key : protectedKeys) {
+            Node document = new Node().contracts(new Node().properties(
+                    key, protectedValue("before"),
+                    "workflow", new Node()));
+            DirectProtectedStateMutationGuard mutableGuard =
+                    new DirectProtectedStateMutationGuard(
+                            execution(document.clone()).runtime());
+            DirectProtectedStateMutationGuard frozenGuard =
+                    new DirectProtectedStateMutationGuard(
+                            execution(document.clone()).runtime());
+            Node replacement = new Node().properties(
+                    key, protectedValue("after"),
+                    "workflow", new Node());
+
+            Throwable mutableFailure = FailureCapture.captureFailure(
+                    () -> mutableGuard.validate(
+                            "/",
+                            PatchInput.mutable(JsonPatch.replace(
+                                    "/contracts", replacement.clone())),
+                            false));
+            Throwable frozenFailure = FailureCapture.captureFailure(
+                    () -> frozenGuard.validate(
+                            "/",
+                            PatchInput.frozen(FrozenJsonPatch.from(
+                                    JsonPatch.replace(
+                                            "/contracts",
+                                            replacement.clone()))),
+                            false));
+
+            failures.put(key + " mutable replacement", mutableFailure);
+            failures.put(key + " frozen replacement", frozenFailure);
+        }
+
+        // then
+        for (Map.Entry<String, Throwable> failure : failures.entrySet()) {
+            assertProtectedFailure(failure.getValue(), failure.getKey());
+        }
+    }
+
+    @Test
+    void shouldRejectWholeContractsReplacementThatDropsOrIntroducesAnyProtectedKey() {
+        // given
+        List<String> protectedKeys = Arrays.asList(
+                "initialized",
+                "terminated",
+                "checkpoint",
+                "generalization");
+        Map<String, Throwable> failures = new LinkedHashMap<>();
+
+        // when
+        for (String key : protectedKeys) {
+            DirectProtectedStateMutationGuard populated =
+                    new DirectProtectedStateMutationGuard(
+                            execution(new Node().contracts(
+                                    new Node().properties(
+                                            key,
+                                            protectedValue("before"))))
+                                    .runtime());
+            DirectProtectedStateMutationGuard empty =
+                    new DirectProtectedStateMutationGuard(
+                            execution(new Node()).runtime());
+
+            Throwable dropFailure = FailureCapture.captureFailure(
+                    () -> populated.validate(
+                            "/",
+                            PatchInput.mutable(JsonPatch.replace(
+                                    "/contracts",
+                                    new Node().properties(
+                                            "workflow", new Node()))),
+                            false));
+            Throwable introductionFailure = FailureCapture.captureFailure(
+                    () -> empty.validate(
+                            "/",
+                            PatchInput.mutable(JsonPatch.add(
+                                    "/contracts",
+                                    new Node().properties(
+                                            key,
+                                            protectedValue("forged")))),
+                            false));
+
+            failures.put(key + " drop", dropFailure);
+            failures.put(key + " introduction", introductionFailure);
+        }
+
+        // then
+        for (Map.Entry<String, Throwable> failure : failures.entrySet()) {
+            assertProtectedFailure(failure.getValue(), failure.getKey());
+        }
+    }
+
+    @Test
     void shouldRejectInlineTypeThatContributesProtectedState() {
         // given
         ProcessorInvocationState execution = execution(new Node());
@@ -174,6 +361,26 @@ final class ScopeMutationServicesTest {
                 failure.getMessage());
     }
 
+    @Test
+    void shouldAllowInlineTypeThatContributesProcessEmbedded() {
+        // given
+        DirectProtectedStateMutationGuard guard =
+                new DirectProtectedStateMutationGuard(
+                        execution(new Node()).runtime());
+        Node applicationType = new Node().contracts(
+                new Node().properties(
+                        "embedded", processEmbedded("/child")));
+        PatchInput patch = PatchInput.mutable(JsonPatch.add(
+                "/type", applicationType));
+
+        // when
+        Throwable failure = FailureCapture.captureFailure(
+                () -> guard.validate("/", patch, false));
+
+        // then
+        assertNull(failure);
+    }
+
     private static ContractBundle embeddedChildBundle() {
         return embeddedBundle("/child");
     }
@@ -187,5 +394,40 @@ final class ScopeMutationServicesTest {
     private static ProcessorInvocationState execution(Node document) {
         return new ProcessorInvocationState(
                 new DocumentProcessor(), document);
+    }
+
+    private static Node processEmbedded(String path) {
+        return new Node()
+                .type(new Node().blueId(
+                        RuntimeBlueIds.PROCESS_EMBEDDED))
+                .properties(
+                        "paths",
+                        new Node().items(new Node().value(path)));
+    }
+
+    private static Node protectedValue(String value) {
+        return new Node().properties(
+                "identity", new Node().value(value));
+    }
+
+    private static Node allProtectedContracts(String value) {
+        return new Node().properties(
+                "initialized", protectedValue(value),
+                "terminated", protectedValue(value),
+                "checkpoint", protectedValue(value),
+                "generalization", protectedValue(value));
+    }
+
+    private static void assertProtectedFailure(
+            Throwable captured,
+            String description) {
+        ProcessorFailureException failure = assertInstanceOf(
+                ProcessorFailureException.class,
+                captured,
+                description);
+        assertEquals(
+                ProcessorErrorCategory.ProtectedProcessorStateMutation,
+                failure.errorCategory(),
+                description);
     }
 }

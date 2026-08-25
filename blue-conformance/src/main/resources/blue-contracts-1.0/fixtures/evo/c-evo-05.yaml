@@ -1,0 +1,87 @@
+schema: blue-contracts-fixture/1.0
+id: c-evo-05
+vectors:
+- C-EVO-05
+category: snd
+description: Removing a subtype-required application contract uses the frozen nearest-valid-ancestor policy.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: evolution
+        eventKey: evolution
+        accept: true
+        checkpointDomain: evolution-v1
+      requiredWorkflow:
+        type:
+          blueId: FE68gr14jPkb9RfHbQH1tHGE4YALJbZvgC6CtdHwYheX
+        channel: in
+        operationId: EVO-UNRELATED-REQUIRED-WORKFLOW
+      mutate:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: in
+        order: 0
+      generalization:
+        type:
+          blueId: 8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz
+        defaultMode: nearest-valid-ancestor
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: evolution
+    id: C-EVO-05-EVENT
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - evolution
+    - 5
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+    generalizationCandidates:
+    - MostSpecific
+    - NearestValidAncestor
+    - Any
+    generalizationSubtypeContracts:
+      requiredWorkflow:
+        schema:
+          required: true
+    handlers:
+      /contracts/mutate:
+        result:
+          patches:
+          - op: remove
+            path: /contracts/requiredWorkflow
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.contracts.requiredWorkflow
+    op: absent
+  - actual: trace.generalizationSelected
+    op: equals
+    expected: NearestValidAncestor
+  - actual: trace.generalizationTestOrder
+    op: sequenceEquals
+    expected:
+    - MostSpecific
+    - NearestValidAncestor

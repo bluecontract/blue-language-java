@@ -24,6 +24,7 @@ import blue.language.processor.closure.ClosureExecutionObserver;
 import blue.language.processor.closure.ClosureImplementationEvidence;
 import blue.language.processor.closure.ClosureInvocationInput;
 import blue.language.processor.closure.ClosureProcessResult;
+import blue.language.processor.closure.ClosureResourceDemand;
 import blue.language.processor.closure.ClosureWorkOccurrence;
 import blue.language.processor.closure.ComponentFinalizationInput;
 import blue.language.processor.closure.ComponentFinalizationKernel;
@@ -31,6 +32,7 @@ import blue.language.processor.closure.ComponentFinalizationResult;
 import blue.language.processor.closure.ComponentSnapshot;
 import blue.language.processor.closure.DocumentId;
 import blue.language.processor.closure.DocumentStepEvidence;
+import blue.language.processor.closure.ExactNodeDemand;
 import blue.language.processor.closure.ExecutionPolicy;
 import blue.language.processor.closure.FinalizedDocumentEvidence;
 import blue.language.processor.closure.GasTraceEntry;
@@ -38,6 +40,7 @@ import blue.language.processor.closure.GraphChange;
 import blue.language.processor.closure.ManagedDocumentGraph;
 import blue.language.processor.closure.ManagedDocumentSnapshot;
 import blue.language.processor.closure.ManagedOccurrenceBinding;
+import blue.language.processor.closure.ManagedOccurrenceEvidenceDemand;
 import blue.language.processor.closure.PublicEventOccurrence;
 import blue.language.processor.closure.RejectedCharge;
 import blue.language.processor.closure.ResultingDocument;
@@ -130,10 +133,21 @@ final class FullLifecycleFixtureJson {
     static ObjectNode expected(
             ClosureAttemptResult attempt,
             ClosureImplementationEvidence implementation) {
-        require(attempt.isComplete(),
-                "export supports only completed attempts");
-        ClosureProcessResult value = attempt.processResult();
         ObjectNode result = JSON.objectNode();
+        if (!attempt.isComplete()) {
+            require(implementation == null,
+                    "suspended attempt exposed implementation evidence");
+            result.put("attemptOutcome", "NeedsResources");
+            result.set("requiredBlueIds",
+                    textArray(attempt.requiredExactBlueIds()));
+            result.set("resourceDemands",
+                    resourceDemands(attempt.resourceDemands()));
+            return result;
+        }
+        ClosureProcessResult value = attempt.processResult();
+        require(value != null, "complete attempt omitted processResult");
+        require(implementation != null,
+                "complete attempt omitted implementation evidence");
         result.put("attemptOutcome", "Complete");
         result.put("status", value.status().wireValue());
         result.put("invocationIdentity", value.invocationIdentity());
@@ -184,6 +198,42 @@ final class FullLifecycleFixtureJson {
         if (value.platformCommitCompanion() != null) {
             result.set("platformCommitCompanion",
                     companion(value.platformCommitCompanion()));
+        }
+        return result;
+    }
+
+    private static ArrayNode resourceDemands(
+            List<ClosureResourceDemand> values) {
+        ArrayNode result = JSON.arrayNode();
+        for (ClosureResourceDemand value : values) {
+            ObjectNode item = result.addObject();
+            item.put("kind", value.kind().name());
+            item.put("demandIdentity", value.demandIdentity());
+            item.put("sourceDocumentId", value.sourceDocumentId().value());
+            item.put("sourcePath", value.sourcePath());
+            item.put("suppliedValueBlueId", value.suppliedValueBlueId());
+            if (value instanceof ExactNodeDemand) {
+                ExactNodeDemand exact = (ExactNodeDemand) value;
+                item.put(BlueLanguageConstants.OBJECT_BLUE_ID,
+                        exact.blueId());
+                item.put("logicalPath", exact.logicalPath());
+            } else if (value instanceof ManagedOccurrenceEvidenceDemand) {
+                ManagedOccurrenceEvidenceDemand occurrence =
+                        (ManagedOccurrenceEvidenceDemand) value;
+                item.put("logicalCauseIdentity",
+                        occurrence.logicalCauseIdentity());
+                item.put("inputClosureIdentity",
+                        occurrence.inputClosureIdentity());
+                item.put("inputGraphGeneration",
+                        occurrence.inputGraphGeneration());
+                item.put("processEmbeddedDeclarationIdentity",
+                        occurrence.processEmbeddedDeclarationIdentity());
+                item.put("demandOrdinal", occurrence.demandOrdinal());
+            } else {
+                throw new IllegalArgumentException(
+                        "unsupported closure resource demand "
+                                + value.getClass().getName());
+            }
         }
         return result;
     }

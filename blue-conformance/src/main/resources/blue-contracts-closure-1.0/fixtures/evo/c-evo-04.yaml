@@ -1,0 +1,95 @@
+schema: blue-contracts-fixture/1.0
+id: c-evo-04
+vectors:
+- C-EVO-04
+category: feed
+description: Removing and later re-adding one Channel creates a fresh activation interval rather than reusing its retired lineage.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: evolution
+        eventKey: evolution
+        accept: true
+        checkpointDomain: evolution-v1
+      target:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 1
+        subscriptionKey: evolution
+        eventKey: evolution
+        accept: true
+        checkpointDomain: target-v1
+      mutate:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: remove
+            path: /contracts/target
+          - op: add
+            path: /contracts/target
+            val:
+              type:
+                blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+              order: 1
+              subscriptionKey: evolution
+              eventKey: evolution
+              accept: true
+              checkpointDomain: target-v2
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: evolution
+    id: EVO-CHANNEL-READD
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - evolution
+    - 4
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+    - scopePath: /
+      channelKey: target
+      order: 1
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: commit.retiredIntervals.0.channelKey
+    op: equals
+    expected: target
+  - actual: commit.newIntervals.0.channelKey
+    op: equals
+    expected: target
+  - actual: commit.newIntervals.0.startAfterExternalOrderKey
+    op: sequenceEquals
+    expected:
+    - 100
+    - evolution
+    - 4

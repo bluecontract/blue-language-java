@@ -1,0 +1,11 @@
+name: Scripted Operation
+type:
+  blueId: 2Ag2NfcWpCfPqBAR7bFAEL9L3roX3UWGUkDq7nN3D4gV
+description: Conformance-only Operation adapter whose optional operationId selects an exact fixture event id and whose result is declared directly in fixture content.
+operationId:
+  type:
+    blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
+  description: Optional exact Fixture Event id required for external Operation invocation; absent accepts the bound Channel event normally.
+result:
+  type:
+    blueId: 3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv

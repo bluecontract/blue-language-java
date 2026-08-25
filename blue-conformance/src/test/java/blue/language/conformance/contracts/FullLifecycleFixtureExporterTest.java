@@ -37,8 +37,10 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -67,7 +69,20 @@ final class FullLifecycleFixtureExporterTest {
                     "fl-adm-08-infinite-cycle-gas-retry-first.yaml",
                     "fl-adm-08-infinite-cycle-gas-retry-retry.yaml",
                     "fl-adm-09-late-member-rollback.yaml",
-                    "fl-adm-10-unknown-occurrence.yaml"));
+                    "fl-adm-10-unknown-occurrence.yaml",
+                    "c-evo-18-missing-exact-node.yaml",
+                    "c-evo-19-missing-occurrence-evidence.yaml",
+                    "c-evo-20-canonical-demand-order.yaml",
+                    "c-evo-21-retry-determinism-missing-first.yaml",
+                    "c-evo-21-retry-determinism-missing-repeat.yaml",
+                    "c-evo-21-retry-determinism-resolved-first.yaml",
+                    "c-evo-21-retry-determinism-resolved-repeat.yaml",
+                    "c-evo-22-low-gas-expanded-evidence-demand.yaml",
+                    "c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml",
+                    "c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml",
+                    "c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml",
+                    "c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml",
+                    "c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml"));
 
     @Test
     void shouldKeepExporterAndHelpersWithinSourceSizeLimits()
@@ -120,7 +135,7 @@ final class FullLifecycleFixtureExporterTest {
         List<Path> secondFiles = FullLifecycleFixtureExporter.export(
                 sourceRoot(), packageRoot(), second);
 
-        assertEquals(13, firstFiles.size());
+        assertEquals(26, firstFiles.size());
         assertEquals(EXPECTED_NAMES, names(first));
         assertEquals(EXPECTED_NAMES, names(second));
         for (String name : EXPECTED_NAMES) {
@@ -153,7 +168,8 @@ final class FullLifecycleFixtureExporterTest {
             JsonNode sharedLimitSource = fixture.get("sharedLimitSource");
             assertNotNull(sharedLimitSource, name);
             assertTrue(sharedLimitSource.isObject(), name);
-            if (name.startsWith("fl-adm-08-")) {
+            if (name.startsWith("fl-adm-08-")
+                    || name.startsWith("c-evo-22-")) {
                 assertEquals(2, sharedLimitSource.size(), name);
                 assertEquals("FIXTURE_OVERRIDE",
                         sharedLimitSource.path("kind").textValue(), name);
@@ -173,10 +189,13 @@ final class FullLifecycleFixtureExporterTest {
             assertEquals(0, provider.path("nodes").size(), name);
             assertTrue(provider.path("expectedRequiredBlueIds").isArray(),
                     name);
-            assertEquals(0,
+            assertEquals(fixture.path("expected")
+                            .path("requiredBlueIds").size(),
                     provider.path("expectedRequiredBlueIds").size(), name);
             assertTrue(provider.path("expectedLoads").isArray(), name);
-            assertEquals(0, provider.path("expectedLoads").size(), name);
+            assertEquals(fixture.path("expected")
+                            .path("requiredBlueIds").size(),
+                    provider.path("expectedLoads").size(), name);
             JsonNode locality = fixture.get("locality");
             assertNotNull(locality, name);
             assertTrue(locality.isObject(), name);
@@ -211,12 +230,22 @@ final class FullLifecycleFixtureExporterTest {
                          runtime.processor(), capture)) {
                 attempt = contracts.admitClosureWithLifecycleQueue(input);
             }
-            assertNotNull(capture.evidence, name);
-            assertTrue(capture.evidence.complete(), name);
             JsonNode semanticExpected = fixture.get("expected").deepCopy();
             normalizeIntegralWidths(semanticExpected);
-            Cclo34FullResultConformanceTest.assertCompleteResult(
-                    semanticExpected, attempt, capture.evidence);
+            if ("NeedsResources".equals(semanticExpected.path(
+                    "attemptOutcome").textValue())) {
+                assertFalse(attempt.isComplete(), name);
+                assertNull(capture.evidence, name);
+                JsonNode actual = FullLifecycleFixtureJson.expected(
+                        attempt, null);
+                normalizeIntegralWidths(actual);
+                assertEquals(semanticExpected, actual, name);
+            } else {
+                assertNotNull(capture.evidence, name);
+                assertTrue(capture.evidence.complete(), name);
+                Cclo34FullResultConformanceTest.assertCompleteResult(
+                        semanticExpected, attempt, capture.evidence);
+            }
         }
     }
 
@@ -611,7 +640,27 @@ final class FullLifecycleFixtureExporterTest {
                 temporary, stagedSources);
 
         assertTrue(failure.getMessage().contains(
-                        "repeatOf cannot add inputOrder or representation"),
+                        "repeatOf cannot alter exact input"),
+                failure.getMessage());
+    }
+
+    @Test
+    void shouldRejectActiveProspectiveOccurrenceWithoutAnAuthoredValue(
+            @TempDir Path temporary) throws IOException {
+        Path stagedSources = stageSources(temporary);
+        Path sourcePath = stagedSources.resolve(
+                "c-evo-21-retry-determinism.yaml");
+        ObjectNode source = source(sourcePath);
+        ObjectNode occurrence = (ObjectNode) source.path("cases")
+                .path(2).path("occurrences").path(0);
+        occurrence.put("active", true);
+        STRICT_YAML.writeValue(sourcePath.toFile(), source);
+
+        IllegalArgumentException failure = assertRejectedWithoutOutput(
+                temporary, stagedSources);
+
+        assertTrue(failure.getMessage().contains(
+                        "active occurrence source path is absent"),
                 failure.getMessage());
     }
 
@@ -658,7 +707,7 @@ final class FullLifecycleFixtureExporterTest {
         try (Stream<Path> files = Files.list(sourceRoot())) {
             for (Path source : files
                     .filter(path -> path.getFileName().toString()
-                            .matches("fl-adm-[0-9]{2}.*\\.yaml"))
+                            .matches("(?:fl-adm|c-evo)-[0-9]{2}.*\\.yaml"))
                     .collect(Collectors.toList())) {
                 Files.copy(source, stagedSources.resolve(
                         source.getFileName().toString()));

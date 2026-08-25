@@ -4211,7 +4211,7 @@ def add_exact_identity_visibility_fixture() -> None:
     finite = load("c-clo-02-dynamic-finite-cycle.yaml")
     # Keep vector-to-fixture coverage explicit rather than claiming several
     # distinct conformance laws from one file.
-    finite["vectors"] = ["C-CLO-02"]
+    finite["vectors"] = ["C-CLO-02", "C-EVO-13"]
     dump_fixture("c-clo-02-dynamic-finite-cycle.yaml", finite)
 
     result = deepcopy(finite)
@@ -4315,7 +4315,7 @@ def rewrite_frozen_edge_removal() -> None:
         "rollbackToInput": False,
     })
     f = g.base_fixture(
-        "c-clo-12-frozen-edge-removal", ["C-CLO-12"], "ordering", "process-closure",
+        "c-clo-12-frozen-edge-removal", ["C-CLO-12", "C-EVO-11"], "ordering", "process-closure",
         "X is created while A<->B exists. A's local X reaction retires /b, but B remains an exact frozen target for this X occurrence once. Later occurrences use the new B->A graph.",
         "finite-dynamic-a-b.yaml", input_value, expected,
     )
@@ -7226,9 +7226,38 @@ def bind_exact_fixture_identities() -> None:
         fixture_input["environment"] = deepcopy(environment)
 
         if old_expected.get("attemptOutcome") == "NeedsResources":
+            resource_demands = deepcopy(
+                old_expected.get("resourceDemands", [])
+            )
+            if not resource_demands:
+                for blue_id in sorted(old_expected["requiredBlueIds"]):
+                    identity_value = {
+                        "kind": "EXACT_NODE",
+                        "logicalCauseIdentity": None,
+                        "inputClosureIdentity": None,
+                        "inputGraphGeneration": None,
+                        "sourceDocumentId": "blue-contracts/exact-node-provider",
+                        "sourcePath": "/",
+                        "processEmbeddedDeclarationIdentity": None,
+                        "suppliedValueBlueId": blue_id,
+                        "demandOrdinal": None,
+                    }
+                    resource_demands.append({
+                        "kind": "EXACT_NODE",
+                        "demandIdentity": g.sha_id(
+                            "blue-contracts-closure-resource-demand/1.0",
+                            identity_value,
+                        ),
+                        "sourceDocumentId": "blue-contracts/exact-node-provider",
+                        "sourcePath": "/",
+                        "suppliedValueBlueId": blue_id,
+                        "blueId": blue_id,
+                        "logicalPath": "/",
+                    })
             fixture["expected"] = {
                 "attemptOutcome": "NeedsResources",
                 "requiredBlueIds": sorted(old_expected["requiredBlueIds"]),
+                "resourceDemands": resource_demands,
             }
             publish_oracle_harness()
             dump_fixture(path.name, fixture)

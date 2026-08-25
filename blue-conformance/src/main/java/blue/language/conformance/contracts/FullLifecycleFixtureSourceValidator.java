@@ -123,6 +123,18 @@ static Map<String, String> expectedSourceIds() {
             "fl-adm-09-late-member-rollback");
     values.put("fl-adm-10-unknown-occurrence.yaml",
             "fl-adm-10-unknown-occurrence");
+    values.put("c-evo-18-missing-exact-node.yaml",
+            "c-evo-18-missing-exact-node");
+    values.put("c-evo-19-missing-occurrence-evidence.yaml",
+            "c-evo-19-missing-occurrence-evidence");
+    values.put("c-evo-20-canonical-demand-order.yaml",
+            "c-evo-20-canonical-demand-order");
+    values.put("c-evo-21-retry-determinism.yaml",
+            "c-evo-21-retry-determinism");
+    values.put("c-evo-22-low-gas-expanded-evidence.yaml",
+            "c-evo-22-low-gas-expanded-evidence");
+    values.put("c-evo-23-automatic-explicit-retry-parity.yaml",
+            "c-evo-23-automatic-explicit-retry-parity");
     return Collections.unmodifiableMap(values);
 }
 
@@ -134,7 +146,9 @@ static void validateSourceFamily(Path sourceFile, JsonNode value) {
     ObjectNode source = requiredObject(value, "source");
     require(expectedId.equals(text(source, "id")),
             fileName + " must declare id " + expectedId);
-    String expectedScenario = "FL-ADM-" + fileName.substring(7, 9);
+    String expectedScenario = fileName.startsWith("c-evo-")
+            ? "C-EVO-" + fileName.substring(6, 8)
+            : "FL-ADM-" + fileName.substring(7, 9);
     require(expectedScenario.equals(text(source, "scenario")),
             fileName + " must declare scenario " + expectedScenario);
 }
@@ -148,9 +162,10 @@ static void validateSourceEnvelope(JsonNode value) {
     require("admit-closure".equals(text(source, "operation")),
             "full-lifecycle source operation must be admit-closure");
     require(text(source, "id").matches(
-                    "fl-adm-[0-9]{2}(?:-[a-z0-9-]+)?"),
+                    "(?:fl-adm|c-evo)-[0-9]{2}(?:-[a-z0-9-]+)?"),
             "invalid full-lifecycle source id");
-    require(text(source, "scenario").matches("FL-ADM-[0-9]{2}"),
+    require(text(source, "scenario").matches(
+                    "(?:FL-ADM|C-EVO)-[0-9]{2}"),
             "invalid full-lifecycle scenario");
     require(!text(source, "description").isEmpty(),
             "source description must not be empty");
@@ -173,7 +188,7 @@ static void validateSourceEnvelope(JsonNode value) {
         for (JsonNode caseValue : cases) {
             String suffix = text(caseValue, "suffix");
             require(suffix.matches("[a-z0-9][a-z0-9-]*")
-                            && suffixes.add(suffix),
+                            && !suffixes.contains(suffix),
                     "case suffixes must be valid and unique");
             if (caseValue.has("inputOrder")) {
                 validatePermutation(array(caseValue, "inputOrder"),
@@ -183,6 +198,11 @@ static void validateSourceEnvelope(JsonNode value) {
                 require(suffixes.contains(text(caseValue, "repeatOf")),
                         "repeatOf must name an earlier case");
             }
+            if (caseValue.has("parityWith")) {
+                require(suffixes.contains(text(caseValue, "parityWith")),
+                        "parityWith must name an earlier case");
+            }
+            suffixes.add(suffix);
         }
     }
     validateAuthoredReferences(source);
@@ -219,11 +239,26 @@ private static void validateStrictSourceSchema(ObjectNode source) {
         requiredBoolean(wrapper, "publicRoot");
     }
 
-    ArrayNode occurrences = array(source, "occurrences");
+    validateOccurrenceSchema(array(source, "occurrences"), "occurrences");
+    validateRuntimeSchema(object(source, "runtime"));
+    validateGasSchema(object(source, "gas"));
+    if (source.has("inputOrder")) {
+        validateUniqueTextArray(array(source, "inputOrder"),
+                "inputOrder");
+    }
+    if (source.has("cases")) {
+        validateCasesSchema(array(source, "cases"));
+    }
+    validateExpectSchema(object(source, "expect"));
+}
+
+private static void validateOccurrenceSchema(
+        ArrayNode occurrences,
+        String prefix) {
     for (int index = 0; index < occurrences.size(); index++) {
         ObjectNode occurrence = requiredObject(occurrences.get(index),
-                "occurrences[" + index + "]");
-        String label = "occurrences[" + index + "]";
+                prefix + "[" + index + "]");
+        String label = prefix + "[" + index + "]";
         validateObjectShape(occurrence, label,
                 fields("sourceDocumentId", "sourcePath",
                         "activationGeneration", "targetDocumentId",
@@ -241,17 +276,6 @@ private static void validateStrictSourceSchema(ObjectNode source) {
         text(occurrence, "targetDocumentId");
         requiredBoolean(occurrence, "active");
     }
-
-    validateRuntimeSchema(object(source, "runtime"));
-    validateGasSchema(object(source, "gas"));
-    if (source.has("inputOrder")) {
-        validateUniqueTextArray(array(source, "inputOrder"),
-                "inputOrder");
-    }
-    if (source.has("cases")) {
-        validateCasesSchema(array(source, "cases"));
-    }
-    validateExpectSchema(object(source, "expect"));
 }
 
 private static void validateRuntimeSchema(ObjectNode runtime) {
@@ -340,7 +364,8 @@ private static void validateCasesSchema(ArrayNode cases) {
         String label = "cases[" + index + "]";
         validateObjectShape(value, label, fields("suffix"),
                 fields("suffix", "inputOrder", "representation",
-                        "repeatOf"));
+                        "repeatOf", "occurrences", "expect",
+                        "parityWith", "parityProjections"));
         require(text(value, "suffix").matches(
                         "[a-z0-9][a-z0-9-]*"),
                 label + ".suffix is invalid");
@@ -363,13 +388,50 @@ private static void validateCasesSchema(ArrayNode cases) {
         if (value.has("repeatOf")) {
             text(value, "repeatOf");
             require(!value.has("inputOrder")
-                            && !value.has("representation"),
-                    label + ".repeatOf cannot add inputOrder or representation");
+                            && !value.has("representation")
+                            && !value.has("occurrences"),
+                    label + ".repeatOf cannot alter exact input");
+        }
+        if (value.has("occurrences")) {
+            validateOccurrenceSchema(
+                    array(value, "occurrences"), label + ".occurrences");
+        }
+        if (value.has("expect")) {
+            validateExpectSchema(object(value, "expect"));
+        }
+        require(value.has("parityWith")
+                        == value.has("parityProjections"),
+                label + " parityWith and parityProjections are paired");
+        if (value.has("parityWith")) {
+            text(value, "parityWith");
+            validateEnumArray(value, "parityProjections",
+                    fields("invocationIdentity", "processResult", "gas",
+                            "workTrace", "finalizations",
+                            "rejectionEvidence", "resourceDemands",
+                            "attempt", "harnessTranscript"), true);
+            require(array(value, "parityProjections").size() > 0,
+                    label + ".parityProjections must not be empty");
         }
     }
 }
 
 private static void validateExpectSchema(ObjectNode expect) {
+    if ("NeedsResources".equals(nullableText(
+            expect, "attemptOutcome"))) {
+        validateObjectShape(expect, "expect",
+                fields("attemptOutcome", "resourceDemandKinds"),
+                fields("attemptOutcome", "resourceDemandKinds",
+                        "requiredExactCount", "parityAcrossCases"));
+        require(array(expect, "resourceDemandKinds").size() > 0,
+                "expect.resourceDemandKinds must not be empty");
+        validateEnumArray(expect, "resourceDemandKinds",
+                fields("EXACT_NODE", "MANAGED_OCCURRENCE_EVIDENCE"),
+                false);
+        validateOptionalNonNegative(expect, "requiredExactCount");
+        validateEnumArray(expect, "parityAcrossCases",
+                fields("resourceDemands", "attempt"), true);
+        return;
+    }
     validateObjectShape(expect, "expect",
             fields("status", "atomic", "rollbackToInput",
                     "publicEvents", "checkpointWrites",
@@ -424,7 +486,8 @@ private static void validateExpectSchema(ObjectNode expect) {
             "expect.commitCompanion is invalid");
     validateEnumArray(expect, "parityAcrossCases",
             fields("invocationIdentity", "processResult", "gas",
-                    "workTrace", "finalizations", "rejectionEvidence"),
+                    "workTrace", "finalizations", "rejectionEvidence",
+                    "resourceDemands", "attempt"),
             true);
 }
 
@@ -562,7 +625,32 @@ private static void validateAuthoredReferences(ObjectNode source) {
     documents.fieldNames().forEachRemaining(documentIds::add);
     Set<String> eventIds = new LinkedHashSet<String>();
     object(source, "events").fieldNames().forEachRemaining(eventIds::add);
-    for (JsonNode occurrence : array(source, "occurrences")) {
+    validateAuthoredReferences(
+            documentIds,
+            eventIds,
+            array(source, "occurrences"),
+            object(source, "expect"));
+    for (JsonNode caseValue : cases(source)) {
+        if (caseValue != null
+                && (caseValue.has("occurrences")
+                || caseValue.has("expect"))) {
+            validateAuthoredReferences(
+                    documentIds,
+                    eventIds,
+                    occurrences(source, caseValue),
+                    caseValue.has("expect")
+                            ? object(caseValue, "expect")
+                            : object(source, "expect"));
+        }
+    }
+}
+
+private static void validateAuthoredReferences(
+        Set<String> documentIds,
+        Set<String> eventIds,
+        ArrayNode occurrences,
+        JsonNode expect) {
+    for (JsonNode occurrence : occurrences) {
         require(documentIds.contains(text(
                         occurrence, "sourceDocumentId"))
                         && documentIds.contains(text(
@@ -571,7 +659,6 @@ private static void validateAuthoredReferences(ObjectNode source) {
         require(requiredLong(occurrence, "activationGeneration") > 0L,
                 "occurrence activationGeneration must be positive");
     }
-    JsonNode expect = object(source, "expect");
     for (String field : Arrays.asList(
             "documents", "pointers", "absentPointers")) {
         for (JsonNode item : optionalArray(expect, field)) {
@@ -648,6 +735,12 @@ static List<JsonNode> cases(JsonNode source) {
     return result;
 }
 
+static ArrayNode occurrences(JsonNode source, JsonNode caseValue) {
+    return caseValue != null && caseValue.has("occurrences")
+            ? array(caseValue, "occurrences")
+            : array(source, "occurrences");
+}
+
 static List<String> inputOrder(
         JsonNode source,
         JsonNode caseValue,
@@ -685,7 +778,7 @@ static void validateDocumentOccurrenceMacros(
     ObjectNode documents = object(source, "documents");
     LinkedHashMap<String, String> targetsByLocation =
             new LinkedHashMap<String, String>();
-    for (JsonNode occurrence : array(source, "occurrences")) {
+    for (JsonNode occurrence : occurrences(source, caseValue)) {
         String sourceDocumentId = text(
                 occurrence, "sourceDocumentId");
         String sourcePath = text(occurrence, "sourcePath");
@@ -701,9 +794,12 @@ static void validateDocumentOccurrenceMacros(
                 "document " + sourceDocumentId).get("document");
         JsonNode authored = body == null
                 ? null : body.at(sourcePath);
-        require(authored != null && !authored.isMissingNode(),
-                "occurrence source path is absent in authored document: "
-                        + sourceDocumentId + sourcePath);
+        if (authored == null || authored.isMissingNode()) {
+            require(!requiredBoolean(occurrence, "active"),
+                    "active occurrence source path is absent in authored "
+                            + "document: " + sourceDocumentId + sourcePath);
+            continue;
+        }
         validateAlignedDocumentMacro(
                 authored,
                 sourceDocumentId,

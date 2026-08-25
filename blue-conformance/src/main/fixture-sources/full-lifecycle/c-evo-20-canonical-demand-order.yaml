@@ -1,0 +1,60 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: c-evo-20-canonical-demand-order
+scenario: C-EVO-20
+description: Mixed exact-node and occurrence-evidence demands are returned in canonical source-document and source-path order, never grouped by demand kind.
+operation: admit-closure
+events:
+  knownK:
+    documentId: c-evo-20-k
+    name: C-EVO 20 known K
+  knownC:
+    documentId: c-evo-20-c
+    name: C-EVO 20 known C
+  missingD:
+    documentId: c-evo-20-d
+    name: C-EVO 20 unavailable D
+documents:
+  c-evo-20-a:
+    publicRoot: true
+    document:
+      documentId: c-evo-20-a
+      name: C-EVO 20 mixed demands A
+      aKnown: {$eventBlueId: knownK}
+      zUnknown: {$eventBlueId: missingD}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/zUnknown, /aKnown]
+  c-evo-20-b:
+    publicRoot: false
+    document:
+      documentId: c-evo-20-b
+      name: C-EVO 20 known B
+      peer: {$eventBlueId: knownC}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/peer]
+  c-evo-20-c:
+    publicRoot: false
+    document:
+      documentId: c-evo-20-c
+      name: C-EVO 20 known C
+  c-evo-20-k:
+    publicRoot: false
+    document:
+      documentId: c-evo-20-k
+      name: C-EVO 20 known K
+occurrences: []
+runtime:
+  initializationHandlers: {}
+  handlers: {}
+gas:
+  sharedLimit: release-default
+expect:
+  attemptOutcome: NeedsResources
+  resourceDemandKinds:
+  - MANAGED_OCCURRENCE_EVIDENCE
+  - EXACT_NODE
+  - MANAGED_OCCURRENCE_EVIDENCE
+  requiredExactCount: 1

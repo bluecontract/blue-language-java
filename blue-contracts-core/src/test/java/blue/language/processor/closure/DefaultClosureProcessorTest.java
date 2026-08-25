@@ -891,6 +891,13 @@ final class DefaultClosureProcessorTest {
             assertEquals(
                     Arrays.asList(C34_Y_BLUE_ID, C34_X_BLUE_ID),
                     attempt.requiredExactBlueIds());
+            assertEquals(2, attempt.resourceDemands().size());
+            assertEquals(C34_Y_BLUE_ID,
+                    ((ExactNodeDemand) attempt.resourceDemands().get(0))
+                            .blueId());
+            assertEquals(C34_X_BLUE_ID,
+                    ((ExactNodeDemand) attempt.resourceDemands().get(1))
+                            .blueId());
         }
     }
 
@@ -950,6 +957,9 @@ final class DefaultClosureProcessorTest {
                     attempt.kind());
             assertEquals(Collections.singletonList(C34_X_BLUE_ID),
                     attempt.requiredExactBlueIds());
+            assertEquals(C34_X_BLUE_ID,
+                    ((ExactNodeDemand) attempt.resourceDemands().get(0))
+                            .blueId());
             assertNull(capture.evidence,
                     "A retryable provider suspension must not publish completion evidence");
         }

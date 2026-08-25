@@ -124,8 +124,12 @@ def build_vector_coverage(ordinary: list[Path], closure: list[Path]) -> dict[str
 
 
 def is_closure_vector(vector: str) -> bool:
-    """Return whether a vector belongs to either normative closure family."""
-    return vector.startswith(("C-CLO-", "FL-ADM-"))
+    """Return whether a vector requires the production closure harness."""
+    if vector.startswith(("C-CLO-", "FL-ADM-")):
+        return True
+    return vector.startswith("C-EVO-") and vector[6:] in {
+        "11", "12", "13", "18", "19", "20", "21", "22", "23",
+    }
 
 
 def file_entry(base: Path, path: Path, role: str, vectors: list[str] | None = None) -> dict[str, Any]:

@@ -1,0 +1,1633 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-evo-21-retry-determinism-resolved-repeat
+vectors:
+- C-EVO-21
+category: admission
+operation: admit-closure
+description: "Repeating an unresolved attempt reproduces the same typed demand and\
+  \ actual tentative patch/event prefix, while repeating the resolved input reproduces\
+  \ the complete successful attempt byte for byte."
+releaseManifest: ../../release-manifest.yaml
+input:
+  graphGeneration: 1
+  cause:
+    kind: admission
+    causeIdentity: sha256:ae9ca03169455613e8d9f2cfb17a153142a1995052be52d922c5ce67e7b4f756
+    admissionKind: TOP_LEVEL_ADMISSION
+    label: c-evo-21-retry-determinism
+    triggeringEventBlueId: null
+    parentTransitionIdentity: null
+    policyIdentity: sha256:350df0e4d84513e7fdb56c7c8b5a0575797733b0e97ac12ffbfe1c807ec98f83
+  admissionCandidate: null
+  admissionCandidateIdentity: null
+  documents:
+    c-evo-21-a:
+      documentId: c-evo-21-a
+      blueId: HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+      document:
+        name: C-EVO 21 dynamic A
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /peer
+          lifecycle:
+            type:
+              blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
+            order: 0
+          installPeer:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: lifecycle
+            event:
+              type:
+                blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C
+            order: 0
+        documentId: c-evo-21-a
+        phase: before
+      initialized: false
+      terminated: false
+      publicRoot: true
+      epoch: 0
+      componentGeneration: 1
+    c-evo-21-b:
+      documentId: c-evo-21-b
+      blueId: zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
+      document:
+        name: C-EVO 21 known B
+        documentId: c-evo-21-b
+      initialized: false
+      terminated: false
+      publicRoot: false
+      epoch: 0
+      componentGeneration: 1
+  occurrences:
+  - occurrenceIdentity: sha256:a575774041397b555443f4dd7e2674e8cf79262926f8f33f19c8473e90417a82
+    bindingIdentity: sha256:f20a6ada87fec7913bb78df7dfd40a07abb90e2d996f8e4522d5abb11b17b29b
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+    sourceDocumentId: c-evo-21-a
+    sourcePath: /peer
+    activationGeneration: 1
+    targetDocumentId: c-evo-21-b
+    expectedTargetBlueId: zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
+    active: false
+    pendingHistoricalEpoch: null
+  components:
+  - componentIdentity: sha256:1fef29579e9ec0690ae41833de602e409aefac0ada0f6856ff686f13f7a4a88b
+    componentStateIdentity: sha256:8c40ff61a1a11e0ab676b1023fc271707edca481089cd4d79a7f406b5e84bd66
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-21-a
+    orderedMemberBlueIds:
+    - HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+  - componentIdentity: sha256:c48425fcbb0645c45886345ac2b203966f11b546eed804b52d5ca55419ebda20
+    componentStateIdentity: sha256:652e5074bd58c0a695f9dceb90946792c8d575fa510e38c78ac8e5cb81c6e501
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-21-b
+    orderedMemberBlueIds:
+    - zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
+  directDeliveries: []
+  publicRootDocumentIds:
+  - c-evo-21-a
+  directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
+  occurrenceBindingSetIdentity: sha256:46bf3406722638b7cbd96e0361a0d6befc401676f5b32efbbc4a115eac9f3abe
+  closureIdentity: sha256:dc7e874888445fc29d8fb9ae311391e3fcd836ac27fa7d0762cee4b82cf16d07
+  invocationIdentity: sha256:47b86e08fea14a5836e3f72f8b07a14b2b0407da495d6756bb98aad6bb4d2b9f
+  gasPolicy:
+    policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
+    sharedLimit: 100000
+    localLimits: {}
+    label: release-default
+  environment:
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    managedDocumentIdentityPolicy:
+      identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+      label: nfc-document-lineage-v1
+    managedBindingPolicy:
+      identity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+      label: exact-document-lineage
+    exactNodeProviderDomain:
+      identity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+      label: fixture-exact-node-provider-v1
+    externalOrderPolicy:
+      identity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+      label: canonical-source-order-v1
+    portableLimitPolicy:
+      identity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+      label: blue-contracts-1.0-portable-limits
+      limits:
+      - name: closureExpansionsPerInvocation
+        value: 4096
+      - name: closureGraphChangesPerInvocation
+        value: 4096
+      - name: closureTentativeFinalizationsPerInvocation
+        value: 8192
+      - name: closureWorkOccurrencesPerInvocation
+        value: 8192
+      - name: contractKeyCodePoints
+        value: 256
+      - name: contractKeyUtf8Bytes
+        value: 1024
+      - name: cyclicCanonicalBytesPerComponent
+        value: 16777216
+      - name: cyclicEdgesPerComponent
+        value: 1024
+      - name: cyclicMembersPerComponent
+        value: 128
+      - name: directCanonicalIdentityInputBytes
+        value: 1048576
+      - name: directInlineIdentityTextCodePoints
+        value: 262144
+      - name: directListItemsMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectEntriesMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectKeyCodePoints
+        value: 4096
+      - name: effectiveContractsPerParticipatingScope
+        value: 8192
+      - name: embeddedDepth
+        value: 256
+      - name: eventsPerContractExecutionResult
+        value: 1024
+      - name: externalChannelsPerScope
+        value: 2048
+      - name: handlersBoundToOneDelivery
+        value: 4096
+      - name: internalEventOccurrencesPerInvocation
+        value: 8192
+      - name: managedDocumentsPerClosure
+        value: 4096
+      - name: nestedDocumentUpdateCascadeDepth
+        value: 256
+      - name: normalizedRuntimePointerUtf8Bytes
+        value: 4096
+      - name: participatingScopesPerEvent
+        value: 4096
+      - name: patchesPerContractExecutionResult
+        value: 1024
+      - name: preselectedExternalOccurrencesPerEvent
+        value: 1024
+      - name: processEmbeddedEdgesPerClosure
+        value: 16384
+      - name: processEmbeddedPathsPerScope
+        value: 4096
+      - name: rootEventsReturned
+        value: 4096
+      - name: runtimeChildLedgerCounterKinds
+        value: 256
+      - name: runtimePointerSegments
+        value: 256
+      - name: subscriptionKeysPerChannel
+        value: 256
+      - name: typeChainEdges
+        value: 256
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+runtime:
+  initializationHandlers:
+    c-evo-21-a/installPeer:
+      patches:
+      - op: replace
+        path: /phase
+        val: initialized
+      - op: add
+        path: /peer
+        val:
+          blueId: zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
+      events:
+      - type:
+          blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+        subscriptionKey: contract-evolution
+        id: C-EVO-21-INITIALIZED
+  handlers: {}
+expected:
+  attemptOutcome: Complete
+  status: success
+  invocationIdentity: sha256:47b86e08fea14a5836e3f72f8b07a14b2b0407da495d6756bb98aad6bb4d2b9f
+  inputClosureIdentity: sha256:dc7e874888445fc29d8fb9ae311391e3fcd836ac27fa7d0762cee4b82cf16d07
+  outputClosureIdentity: sha256:fa19cd7fa426f165cf787ab5599c3752cf4d755fc9408548673326f7f71e87a4
+  atomic: true
+  workTrace:
+  - ordinal: 0
+    kind: INITIALIZATION
+    targetDocumentId: c-evo-21-a
+    channelKey: initialization
+    targetManagedScopeIdentity: sha256:c1fd40e31266c830a88a5bf7ed7de2243dd1e5e5d9b43b01f95d2d30a861e9cf
+    sourceOccurrenceIdentity: sha256:ae9ca03169455613e8d9f2cfb17a153142a1995052be52d922c5ce67e7b4f756
+    workIdentity: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+  - ordinal: 1
+    kind: LIFECYCLE
+    targetDocumentId: c-evo-21-a
+    channelKey: lifecycle
+    targetManagedScopeIdentity: sha256:c1fd40e31266c830a88a5bf7ed7de2243dd1e5e5d9b43b01f95d2d30a861e9cf
+    sourceOccurrenceIdentity: sha256:ae9ca03169455613e8d9f2cfb17a153142a1995052be52d922c5ce67e7b4f756
+    workIdentity: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+  - ordinal: 2
+    kind: INITIALIZATION
+    targetDocumentId: c-evo-21-b
+    channelKey: lifecycle
+    targetManagedScopeIdentity: sha256:fcf7de395e3d29869680621cfa9572a24a7f78577859c0830699c1be4b0df155
+    sourceOccurrenceIdentity: sha256:ae9ca03169455613e8d9f2cfb17a153142a1995052be52d922c5ce67e7b4f756
+    workIdentity: sha256:6694a1acec16d82e86ad26d50ab5a5b48d4237968d0b2f840dafa8a86448d177
+  documentStepTrace:
+  - stepOrdinal: 0
+    workOrdinal: 0
+    targetDocumentId: c-evo-21-a
+    executionRootDocumentId: c-evo-21-a
+    scopePath: /
+    executionMode: ISOLATED_DOCUMENT
+    ambientContainingDocumentIds: []
+  - stepOrdinal: 1
+    workOrdinal: 1
+    targetDocumentId: c-evo-21-a
+    executionRootDocumentId: c-evo-21-a
+    scopePath: /
+    executionMode: ISOLATED_DOCUMENT
+    ambientContainingDocumentIds: []
+  - stepOrdinal: 2
+    workOrdinal: 2
+    targetDocumentId: c-evo-21-b
+    executionRootDocumentId: c-evo-21-b
+    scopePath: /
+    executionMode: ISOLATED_DOCUMENT
+    ambientContainingDocumentIds: []
+  tentativeFinalizations: []
+  graphGeneration: 2
+  resultingDocuments:
+  - documentId: c-evo-21-a
+    beforeBlueId: HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+    afterBlueId: HNGBC811jQw5tS4dR38oXVvUPgV7ccEdyTGrTfcv4wZn
+    document:
+      name: C-EVO 21 dynamic A
+      contracts:
+        embedded:
+          type:
+            blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          paths:
+          - /peer
+        lifecycle:
+          type:
+            blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
+          order: 0
+        installPeer:
+          type:
+            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          channel: lifecycle
+          event:
+            type:
+              blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C
+          order: 0
+        initialized:
+          type:
+            blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+          document:
+            blueId: HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+      documentId: c-evo-21-a
+      phase: initialized
+      peer:
+        blueId: EHHTn1GN9pLRfc5PDFt2r2EqiSpzphActRrMVDGgjKQh
+    initialized: true
+    terminated: false
+    publicRoot: true
+    epoch: 0
+    componentGeneration: 1
+    componentIdentity: sha256:1fef29579e9ec0690ae41833de602e409aefac0ada0f6856ff686f13f7a4a88b
+    componentStateIdentity: sha256:7bbfc763bcd39d46505c6d74e727d69a26330d5a619bd370b1fadc241a8cf460
+    memberIndex: null
+  - documentId: c-evo-21-b
+    beforeBlueId: zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
+    afterBlueId: EHHTn1GN9pLRfc5PDFt2r2EqiSpzphActRrMVDGgjKQh
+    document:
+      name: C-EVO 21 known B
+      contracts:
+        initialized:
+          type:
+            blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+          document:
+            blueId: zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
+      documentId: c-evo-21-b
+    initialized: true
+    terminated: false
+    publicRoot: false
+    epoch: 0
+    componentGeneration: 1
+    componentIdentity: sha256:c48425fcbb0645c45886345ac2b203966f11b546eed804b52d5ca55419ebda20
+    componentStateIdentity: sha256:e408601fa5440d9c7e3a27d9a623631ea1afa9d3527c911c3371aa55efb56964
+    memberIndex: null
+  resultingComponents:
+  - componentIdentity: sha256:c48425fcbb0645c45886345ac2b203966f11b546eed804b52d5ca55419ebda20
+    componentStateIdentity: sha256:e408601fa5440d9c7e3a27d9a623631ea1afa9d3527c911c3371aa55efb56964
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-21-b
+    orderedMemberBlueIds:
+    - EHHTn1GN9pLRfc5PDFt2r2EqiSpzphActRrMVDGgjKQh
+  - componentIdentity: sha256:1fef29579e9ec0690ae41833de602e409aefac0ada0f6856ff686f13f7a4a88b
+    componentStateIdentity: sha256:7bbfc763bcd39d46505c6d74e727d69a26330d5a619bd370b1fadc241a8cf460
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-21-a
+    orderedMemberBlueIds:
+    - HNGBC811jQw5tS4dR38oXVvUPgV7ccEdyTGrTfcv4wZn
+  occurrenceBindings:
+  - occurrenceIdentity: sha256:a575774041397b555443f4dd7e2674e8cf79262926f8f33f19c8473e90417a82
+    bindingIdentity: sha256:5c6578366e39c03f7117a6a546c5fdf24b135c7465b803ba606c5babae84759b
+    bindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+    sourceDocumentId: c-evo-21-a
+    sourcePath: /peer
+    activationGeneration: 1
+    targetDocumentId: c-evo-21-b
+    expectedTargetBlueId: EHHTn1GN9pLRfc5PDFt2r2EqiSpzphActRrMVDGgjKQh
+    active: true
+    pendingHistoricalEpoch: null
+  occurrenceBindingSetIdentity: sha256:843efae486104120d5d0b21cc77d99719302618b05925c234a6f66bcf22b9d6f
+  graphChanges:
+  - graphChangeOrdinal: 0
+    changeKind: ADD
+    sourceDocumentId: c-evo-21-a
+    sourcePath: /peer
+    beforeActivationGeneration: null
+    beforeOccurrenceIdentity: null
+    beforeBindingIdentity: null
+    beforeTargetDocumentId: null
+    beforeTargetBlueId: null
+    afterActivationGeneration: 1
+    afterOccurrenceIdentity: sha256:a575774041397b555443f4dd7e2674e8cf79262926f8f33f19c8473e90417a82
+    afterBindingIdentity: sha256:5c6578366e39c03f7117a6a546c5fdf24b135c7465b803ba606c5babae84759b
+    afterTargetDocumentId: c-evo-21-b
+    afterTargetBlueId: EHHTn1GN9pLRfc5PDFt2r2EqiSpzphActRrMVDGgjKQh
+  graphChangesIdentity: sha256:aef652c1b35ccc0f8ac99c77cd1142e892ac793fe4bd2915ebd6a21a5402eed2
+  subscriptionDeltas:
+  - subscriptionDeltaOrdinal: 0
+    operation: REPLACE
+    targetManagedScopeIdentity: sha256:c1fd40e31266c830a88a5bf7ed7de2243dd1e5e5d9b43b01f95d2d30a861e9cf
+    channelOccurrenceIdentity: sha256:e5804c5ec75b63c138651b06b3f4e61cfab76d8eb5c3d7e9f495d36f384e8433
+    beforeSubscriptionIdentity: sha256:2a3878dd20d951503dc6ad9d289dc089dd4a0f9aa71bbd3b926f80ccf97541da
+    afterSubscriptionIdentity: sha256:19a1ce9b0ee216a2b493b9ad49b4e82b12c931a6ba2ce0b68c8f88d5e37367e6
+    beforeDocumentBlueId: HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+    afterDocumentBlueId: HNGBC811jQw5tS4dR38oXVvUPgV7ccEdyTGrTfcv4wZn
+    beforeGraphGeneration: 1
+    afterGraphGeneration: 2
+    beforeComponentGeneration: 1
+    afterComponentGeneration: 1
+    beforeSubscription:
+      subscriptionIdentity: sha256:2a3878dd20d951503dc6ad9d289dc089dd4a0f9aa71bbd3b926f80ccf97541da
+      channelOccurrence:
+        channelOccurrenceIdentity: sha256:e5804c5ec75b63c138651b06b3f4e61cfab76d8eb5c3d7e9f495d36f384e8433
+        managedDocumentId: c-evo-21-a
+        scopePath: /
+        scopeActivationGeneration: 0
+        rawChannelKey: lifecycle
+        effectiveRuntimeContributionBlueId: 2b54iTF8KQC6vdoh4BjjkzANV41udKWajX5LKfn93bfd
+        subscriptionHeaderBlueId: 398QX3G4pzQF9pKKfw1Ab5tqGCwD5zNfReTyBQnHRtnL
+      documentBlueId: HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+      graphGeneration: 1
+      componentGeneration: 1
+    afterSubscription:
+      subscriptionIdentity: sha256:19a1ce9b0ee216a2b493b9ad49b4e82b12c931a6ba2ce0b68c8f88d5e37367e6
+      channelOccurrence:
+        channelOccurrenceIdentity: sha256:e5804c5ec75b63c138651b06b3f4e61cfab76d8eb5c3d7e9f495d36f384e8433
+        managedDocumentId: c-evo-21-a
+        scopePath: /
+        scopeActivationGeneration: 0
+        rawChannelKey: lifecycle
+        effectiveRuntimeContributionBlueId: 2b54iTF8KQC6vdoh4BjjkzANV41udKWajX5LKfn93bfd
+        subscriptionHeaderBlueId: 398QX3G4pzQF9pKKfw1Ab5tqGCwD5zNfReTyBQnHRtnL
+      documentBlueId: HNGBC811jQw5tS4dR38oXVvUPgV7ccEdyTGrTfcv4wZn
+      graphGeneration: 2
+      componentGeneration: 1
+  subscriptionDeltasIdentity: sha256:59c04f5e0682bb05f0408a8f818cab4d25523584516c030aa24ba2cc5c0de1b2
+  checkpointWrites: []
+  checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
+  publicEvents:
+  - publicEventOrdinal: 0
+    eventOccurrenceOrdinal: 0
+    publicRootDocumentId: c-evo-21-a
+    eventOccurrenceIdentity: sha256:31f2859bd41f6cf6ff0df769b4e76ff9a1f2e8afeefdaeebd70b736f5f16886d
+    eventBlueId: 5uhT6ggxLFDf13Rt3xZ2AxtFhaRqyfuy3qBtRwgVpvnV
+    event:
+      type:
+        blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+      subscriptionKey: contract-evolution
+      id: C-EVO-21-INITIALIZED
+  publicEventsIdentity: sha256:079e42ff6added2aff4870b6fccc8a15362eceac33ad516eb3b1f3e409511dd6
+  rollbackToInput: false
+  totalGas: 2620
+  gasTrace:
+  - sequence: 0
+    namespace: processor
+    counter: processInvocation
+    quantity: 1
+    weight: 50
+    subtotal: 50
+    reason: admission.process
+  - sequence: 1
+    namespace: processor
+    counter: closureInvocation
+    quantity: 1
+    weight: 100
+    subtotal: 100
+    reason: admission.closure
+  - sequence: 2
+    namespace: processor
+    counter: managedDocumentOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: c-evo-21-a
+    reason: admission.document.c-evo-21-a
+  - sequence: 3
+    namespace: processor
+    counter: managedDocumentOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: c-evo-21-b
+    reason: admission.document.c-evo-21-b
+  - sequence: 4
+    namespace: processor
+    counter: managedOccurrenceBindingVerified
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-a
+    reason: admission.binding.sha256:a575774041397b555443f4dd7e2674e8cf79262926f8f33f19c8473e90417a82
+  - sequence: 5
+    namespace: processor
+    counter: componentMemberPartitioned
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    reason: admission.component-member
+  - sequence: 6
+    namespace: processor
+    counter: componentMemberPartitioned
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-b
+    reason: admission.component-member
+  - sequence: 7
+    namespace: processor
+    counter: closureWorkOccurrenceEnqueued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    logicalPath: work/0
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: work.0.initialization-enqueue
+  - sequence: 8
+    namespace: processor
+    counter: closureWorkOccurrenceDequeued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    logicalPath: work/0
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: work.0.dequeue
+  - sequence: 9
+    namespace: processor
+    counter: scopeOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: participating-scope
+  - sequence: 10
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: embedded
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: participating-contract-header
+  - sequence: 11
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: participating-contract-header
+  - sequence: 12
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: installPeer
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: participating-contract-header
+  - sequence: 13
+    namespace: processor
+    counter: embeddedPathEntryRead
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    logicalPath: /peer
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: route
+  - sequence: 14
+    namespace: processor
+    counter: embeddedPathSegmentValidated
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    logicalPath: /peer
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: route
+  - sequence: 15
+    namespace: processor
+    counter: scopeInitialization
+    quantity: 1
+    weight: 1000
+    subtotal: 1000
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: initialization
+    workOccurrenceId: sha256:38a91c5b06a406d34988b9de1bf392d380904edb7f8975ee7d8be7cb110cd173
+    reason: scope-initialization
+  - sequence: 16
+    namespace: processor
+    counter: closureWorkOccurrenceEnqueued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.lifecycle-enqueue
+  - sequence: 17
+    namespace: processor
+    counter: closureWorkOccurrenceDequeued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.dequeue
+  - sequence: 18
+    namespace: processor
+    counter: scopeOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: participating-scope
+  - sequence: 19
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: embedded
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: participating-contract-header
+  - sequence: 20
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: participating-contract-header
+  - sequence: 21
+    namespace: processor
+    counter: contractHeaderRecognized
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: installPeer
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: participating-contract-header
+  - sequence: 22
+    namespace: processor
+    counter: embeddedPathEntryRead
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /peer
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: route
+  - sequence: 23
+    namespace: processor
+    counter: embeddedPathSegmentValidated
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /peer
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: route
+  - sequence: 24
+    namespace: processor
+    counter: lifecycleDelivered
+    quantity: 1
+    weight: 30
+    subtotal: 30
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: lifecycle
+  - sequence: 25
+    namespace: processor
+    counter: handlerCandidateTested
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: installPeer
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: matching
+  - sequence: 26
+    namespace: processor
+    counter: handlerCall
+    quantity: 1
+    weight: 50
+    subtotal: 50
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: installPeer
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: handler-call
+  - sequence: 27
+    namespace: runtime
+    counter: scriptedResultApplied
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: unspecified
+  - sequence: 28
+    namespace: processor
+    counter: patchBoundaryChecked
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: patch-boundary
+  - sequence: 29
+    namespace: processor
+    counter: patchAddOrReplace
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: application-patch
+  - sequence: 30
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /phase
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 31
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /phase
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 32
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /phase
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 33
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /phase
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 34
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /phase
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 35
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /phase
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 36
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.child.2.node-established
+  - sequence: 37
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.child.2.object-members
+  - sequence: 38
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.child.2.direct-hash
+  - sequence: 39
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.node-established
+  - sequence: 40
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.object-members
+  - sequence: 41
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.direct-hash
+  - sequence: 42
+    namespace: processor
+    counter: patchBoundaryChecked
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: patch-boundary
+  - sequence: 43
+    namespace: processor
+    counter: patchAddOrReplace
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: application-patch
+  - sequence: 44
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /peer
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 45
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /peer
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 46
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: /peer
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: identity-rebuild
+  - sequence: 47
+    namespace: processor
+    counter: processEmbeddedEdgeExamined
+    quantity: 1
+    weight: 2
+    subtotal: 2
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.topology-change
+  - sequence: 48
+    namespace: processor
+    counter: managedOccurrenceBindingVerified
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.topology-change
+  - sequence: 49
+    namespace: processor
+    counter: componentMemberPartitioned
+    quantity: 2
+    weight: 2
+    subtotal: 4
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.topology-change
+  - sequence: 50
+    namespace: processor
+    counter: componentEdgePartitioned
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.topology-change
+  - sequence: 51
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.node-established
+  - sequence: 52
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.object-members
+  - sequence: 53
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: work.1.acyclic-finalization.direct-hash
+  - sequence: 54
+    namespace: processor
+    counter: rootEventRecorded
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: event.0.public-record
+  - sequence: 55
+    namespace: processor
+    counter: internalEventEnqueued
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: c-evo-21-a
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/1
+    workOccurrenceId: sha256:ef1fa0d809280ef9710bfc59738d71f57ee2a1f8a0aeb799c4a3441c2505ffdb
+    reason: event.0.enqueue
+  - sequence: 56
+    namespace: processor
+    counter: internalEventDequeued
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    reason: event.0.dequeue
+  - sequence: 57
+    namespace: processor
+    counter: processorMarkerWritten
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: c-evo-21-a
+    reason: initialization-batch.marker.c-evo-21-a
+  - sequence: 58
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 59
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 60
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 61
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 62
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 63
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 64
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 65
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 66
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 67
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.1.node-established
+  - sequence: 68
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.1.object-members
+  - sequence: 69
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.1.direct-hash
+  - sequence: 70
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.node-established
+  - sequence: 71
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 4
+    weight: 1
+    subtotal: 4
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.object-members
+  - sequence: 72
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.direct-hash
+  - sequence: 73
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.node-established
+  - sequence: 74
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.object-members
+  - sequence: 75
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.direct-hash
+  - sequence: 76
+    namespace: processor
+    counter: closureWorkOccurrenceEnqueued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/2
+    workOccurrenceId: sha256:6694a1acec16d82e86ad26d50ab5a5b48d4237968d0b2f840dafa8a86448d177
+    reason: work.2.initialization-enqueue
+  - sequence: 77
+    namespace: processor
+    counter: closureWorkOccurrenceDequeued
+    quantity: 1
+    weight: 5
+    subtotal: 5
+    documentId: c-evo-21-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    logicalPath: work/2
+    workOccurrenceId: sha256:6694a1acec16d82e86ad26d50ab5a5b48d4237968d0b2f840dafa8a86448d177
+    reason: work.2.dequeue
+  - sequence: 78
+    namespace: processor
+    counter: scopeOpened
+    quantity: 1
+    weight: 10
+    subtotal: 10
+    documentId: c-evo-21-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:6694a1acec16d82e86ad26d50ab5a5b48d4237968d0b2f840dafa8a86448d177
+    reason: participating-scope
+  - sequence: 79
+    namespace: processor
+    counter: scopeInitialization
+    quantity: 1
+    weight: 1000
+    subtotal: 1000
+    documentId: c-evo-21-b
+    scopePath: /
+    activationGeneration: 0
+    componentGeneration: 1
+    contractKey: lifecycle
+    workOccurrenceId: sha256:6694a1acec16d82e86ad26d50ab5a5b48d4237968d0b2f840dafa8a86448d177
+    reason: scope-initialization
+  - sequence: 80
+    namespace: processor
+    counter: processorMarkerWritten
+    quantity: 1
+    weight: 20
+    subtotal: 20
+    documentId: c-evo-21-b
+    reason: initialization-batch.marker.c-evo-21-b
+  - sequence: 81
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 82
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 83
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 84
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 85
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 86
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 87
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 88
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 89
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: c-evo-21-b
+    logicalPath: /contracts/initialized
+    reason: identity-rebuild
+  - sequence: 90
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.0.node-established
+  - sequence: 91
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.0.object-members
+  - sequence: 92
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.child.0.direct-hash
+  - sequence: 93
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.node-established
+  - sequence: 94
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.object-members
+  - sequence: 95
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 2
+    weight: 1
+    subtotal: 2
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.child.0.direct-hash
+  - sequence: 96
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.node-established
+  - sequence: 97
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.object-members
+  - sequence: 98
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 3
+    weight: 1
+    subtotal: 3
+    documentId: c-evo-21-b
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.direct-hash
+  - sequence: 99
+    namespace: semantic
+    counter: nodeIdentityEstablished
+    quantity: 1
+    weight: 1
+    subtotal: 1
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.node-established
+  - sequence: 100
+    namespace: semantic
+    counter: objectMemberRebuilt
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.object-members
+  - sequence: 101
+    namespace: semantic
+    counter: directIdentityHashBlock
+    quantity: 5
+    weight: 1
+    subtotal: 5
+    documentId: c-evo-21-a
+    componentGeneration: 1
+    reason: initialization-batch.acyclic-finalization.direct-hash
+  gasTraceIdentity: sha256:7074c24259d4f0f97984e882e7c2046bfbf5bb8787c453e29603de781a373e94
+  platformCommitCompanion:
+    companionIdentity: sha256:c78951d79e76ac6156a04cf199c83ba078c3d73a2e0b5b5e2c20a50e9f89a291
+    invocationIdentity: sha256:47b86e08fea14a5836e3f72f8b07a14b2b0407da495d6756bb98aad6bb4d2b9f
+    inputClosureIdentity: sha256:dc7e874888445fc29d8fb9ae311391e3fcd836ac27fa7d0762cee4b82cf16d07
+    outputClosureIdentity: sha256:fa19cd7fa426f165cf787ab5599c3752cf4d755fc9408548673326f7f71e87a4
+    expectedInputGraphGeneration: 1
+    expectedInputDocuments:
+    - documentId: c-evo-21-a
+      blueId: HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+    - documentId: c-evo-21-b
+      blueId: zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
+    expectedInputComponents:
+    - componentIdentity: sha256:1fef29579e9ec0690ae41833de602e409aefac0ada0f6856ff686f13f7a4a88b
+      componentStateIdentity: sha256:8c40ff61a1a11e0ab676b1023fc271707edca481089cd4d79a7f406b5e84bd66
+      componentGeneration: 1
+      masterBlueId: null
+    - componentIdentity: sha256:c48425fcbb0645c45886345ac2b203966f11b546eed804b52d5ca55419ebda20
+      componentStateIdentity: sha256:652e5074bd58c0a695f9dceb90946792c8d575fa510e38c78ac8e5cb81c6e501
+      componentGeneration: 1
+      masterBlueId: null
+    inputOccurrenceBindingSetIdentity: sha256:46bf3406722638b7cbd96e0361a0d6befc401676f5b32efbbc4a115eac9f3abe
+    outputGraphGeneration: 2
+    resultingDocuments:
+    - documentId: c-evo-21-a
+      beforeBlueId: HE8WdJU8DUw1dmLuvPJdqh3e5V1pXzMMsb6zR9LBQ2Jd
+      afterBlueId: HNGBC811jQw5tS4dR38oXVvUPgV7ccEdyTGrTfcv4wZn
+    - documentId: c-evo-21-b
+      beforeBlueId: zAtkbj3jWKvYNKfF3T37g5KUPp9VpXW1NW8YTG9ub2v
+      afterBlueId: EHHTn1GN9pLRfc5PDFt2r2EqiSpzphActRrMVDGgjKQh
+    resultingComponents:
+    - componentIdentity: sha256:c48425fcbb0645c45886345ac2b203966f11b546eed804b52d5ca55419ebda20
+      componentStateIdentity: sha256:e408601fa5440d9c7e3a27d9a623631ea1afa9d3527c911c3371aa55efb56964
+      cyclicProofIdentity: null
+    - componentIdentity: sha256:1fef29579e9ec0690ae41833de602e409aefac0ada0f6856ff686f13f7a4a88b
+      componentStateIdentity: sha256:7bbfc763bcd39d46505c6d74e727d69a26330d5a619bd370b1fadc241a8cf460
+      cyclicProofIdentity: null
+    occurrenceBindingSetIdentity: sha256:843efae486104120d5d0b21cc77d99719302618b05925c234a6f66bcf22b9d6f
+    graphChangesIdentity: sha256:aef652c1b35ccc0f8ac99c77cd1142e892ac793fe4bd2915ebd6a21a5402eed2
+    checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
+    subscriptionDeltasIdentity: sha256:59c04f5e0682bb05f0408a8f818cab4d25523584516c030aa24ba2cc5c0de1b2
+    publicEventsIdentity: sha256:079e42ff6added2aff4870b6fccc8a15362eceac33ad516eb3b1f3e409511dd6
+    gasTraceIdentity: sha256:7074c24259d4f0f97984e882e7c2046bfbf5bb8787c453e29603de781a373e94
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+    managedBindingPolicyIdentity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+    exactNodeProviderDomainIdentity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+    externalOrderPolicyIdentity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    portableLimitPolicyIdentity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds: []
+  expectedLoads: []
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

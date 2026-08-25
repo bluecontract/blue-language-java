@@ -1,0 +1,90 @@
+schema: blue-contracts-fixture/1.0
+id: c-evo-08
+vectors:
+- C-EVO-08
+category: prot
+description: A complete contracts-map replacement is accepted when protected state preserves its exact Blue identity across canonical inline/reference representation.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          name: exact pre-initialization witness
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: evolution
+        eventKey: evolution
+        accept: true
+        checkpointDomain: evolution-v1
+      replaceContracts:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /contracts
+            val:
+              initialized:
+                type:
+                  blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+                document:
+                  name: exact pre-initialization witness
+              next:
+                type:
+                  blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+                order: 0
+                subscriptionKey: next-evolution
+                eventKey: next-evolution
+                accept: true
+                checkpointDomain: next-evolution-v1
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: evolution
+    id: EVO-PRESERVE-MARKER
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - evolution
+    - 8
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.contracts.initialized.document
+    op: equalsProjection
+    expectedProjection: input.root.contracts.initialized.document
+  - actual: result.document.contracts.initialized.directBlueId
+    op: equalsProjection
+    expectedProjection: input.root.contracts.initialized.directBlueId
+  - actual: result.document.contracts.next.subscriptionKey
+    op: equals
+    expected: next-evolution
+  - actual: result.document.contracts.in
+    op: absent
+  - actual: result.document.contracts.replaceContracts
+    op: absent

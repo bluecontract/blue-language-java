@@ -306,6 +306,111 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void managedCurrentDeliveryDoesNotRouteThroughContractsItCreates() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            Node body = new Node()
+                    .name("Frozen added update surface Root")
+                    .properties(
+                            "createdRouteRan",
+                            new Node().value(Boolean.FALSE))
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties(
+                                    "installFutureUpdateSurface",
+                                    handler("lifecycle")));
+            ClosureInvocationInput input = simpleAdmission(
+                    owner, A, body, true, GENEROUS_GAS);
+            Capture capture = new Capture();
+
+            ClosureProcessResult result = full(owner, input, capture)
+                    .processResult();
+
+            assertSuccess(result);
+            Node admitted = document(result, A).document();
+            assertFalse((Boolean) admitted.get("/createdRouteRan"));
+            assertNotNull(admitted.get("/contracts/createdUpdates"));
+            assertNotNull(admitted.get("/contracts/createdUpdateHandler"));
+            assertEquals(0L, countKind(
+                    capture.evidence, WorkKind.DOCUMENT_UPDATE));
+        }
+    }
+
+    @Test
+    void managedLaterTransitionUsesSurfaceCreatedByPriorTransition() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            Node body = new Node()
+                    .name("Live later update surface Root")
+                    .properties(
+                            "laterSignal",
+                            new Node().value(Boolean.FALSE))
+                    .properties(
+                            "futureRouteRuns",
+                            new Node().value(BigInteger.ZERO))
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties(
+                                    "installThenUseFutureUpdateSurface",
+                                    handler("lifecycle")));
+            ClosureInvocationInput input = simpleAdmission(
+                    owner, A, body, true, GENEROUS_GAS);
+            Capture capture = new Capture();
+
+            ClosureProcessResult result = full(owner, input, capture)
+                    .processResult();
+
+            assertSuccess(result);
+            Node admitted = document(result, A).document();
+            assertTrue((Boolean) admitted.get("/laterSignal"));
+            assertEquals(BigInteger.ONE,
+                    admitted.get("/futureRouteRuns"));
+            assertEquals(1L, countKind(
+                    capture.evidence, WorkKind.DOCUMENT_UPDATE));
+        }
+    }
+
+    @Test
+    void managedCurrentDeliveryCompletesRemovedRouteOnceThenUsesNewSurface() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            Node body = new Node()
+                    .name("Frozen removed update surface Root")
+                    .properties(
+                            "removedRouteRuns",
+                            new Node().value(BigInteger.ZERO))
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("updates", updateChannel("/contracts"))
+                            .properties(
+                                    "removeCurrentUpdateSurface",
+                                    handler("lifecycle"))
+                            .properties(
+                                    "handleRemovedUpdate",
+                                    handler("updates")));
+            ClosureInvocationInput input = simpleAdmission(
+                    owner, A, body, true, GENEROUS_GAS);
+            Capture capture = new Capture();
+
+            ClosureProcessResult result = full(owner, input, capture)
+                    .processResult();
+
+            assertSuccess(result);
+            Node admitted = document(result, A).document();
+            assertEquals(BigInteger.ONE,
+                    admitted.get("/removedRouteRuns"));
+            Node contracts = admitted.getContracts();
+            assertNull(contracts.getProperties().get("updates"));
+            assertNull(contracts.getProperties().get(
+                    "handleRemovedUpdate"));
+            assertNull(contracts.getProperties().get(
+                    "removeCurrentUpdateSurface"));
+            assertEquals(1L, countKind(
+                    capture.evidence, WorkKind.DOCUMENT_UPDATE));
+        }
+    }
+
+    @Test
     void requirement07TerminationCommitsAcyclicStateAndCyclicReceipt() {
         ProbeProcessor acyclicProbe = new ProbeProcessor();
         try (DocumentProcessor owner = owner(acyclicProbe)) {
@@ -811,6 +916,61 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void requirement16aInitialMissingExactReferenceSuspendsBeforeLifecycleWork() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            String missingBlueId = blueId(
+                    new Node().name("Unavailable initial peer"));
+            Node body = new Node()
+                    .name("Initial missing exact peer Root")
+                    .properties("peer", new Node().blueId(missingBlueId))
+                    .contracts(new Node().properties(
+                            "embedded", processEmbedded("/peer")));
+            ClosureInvocationInput input = simpleAdmission(
+                    owner, A, body, true, GENEROUS_GAS);
+
+            assertInitialResourceDemandPreflight(
+                    owner,
+                    probe,
+                    input,
+                    ExactNodeDemand.class,
+                    missingBlueId,
+                    Collections.singletonList(missingBlueId));
+        }
+    }
+
+    @Test
+    void requirement16bInitialKnownPeerWithoutRowSuspendsBeforeLifecycleWork() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            Node target = new Node().name("Known initial peer target");
+            String targetBlueId = blueId(target);
+            Node source = new Node()
+                    .name("Initial peer without occurrence evidence Root")
+                    .properties("peer", new Node().blueId(targetBlueId))
+                    .contracts(new Node().properties(
+                            "embedded", processEmbedded("/peer")));
+            ClosureInvocationInput input = admission(
+                    finalizedSnapshot(
+                            bodies(A, source, B, target),
+                            Collections.<ManagedOccurrenceBinding>emptyList(),
+                            Collections.singletonList(A)),
+                    environment(owner),
+                    GENEROUS_GAS);
+            assertEquals(targetBlueId,
+                    input.snapshot().managedDocument(B).blueId());
+
+            assertInitialResourceDemandPreflight(
+                    owner,
+                    probe,
+                    input,
+                    ManagedOccurrenceEvidenceDemand.class,
+                    targetBlueId,
+                    Collections.<String>emptyList());
+        }
+    }
+
+    @Test
     void requirement17ExistingAdmitClosureRemainsExplicitlyBounded() {
         ProbeProcessor probe = new ProbeProcessor();
         try (DocumentProcessor owner = owner(probe)) {
@@ -1089,6 +1249,78 @@ final class FullLifecycleAdmissionTest {
         }
         assertTrue(result.isComplete(),
                 "The fixed test provider has every required exact node");
+        return result;
+    }
+
+    private static void assertInitialResourceDemandPreflight(
+            DocumentProcessor owner,
+            ProbeProcessor probe,
+            ClosureInvocationInput input,
+            Class<? extends ClosureResourceDemand> expectedDemandType,
+            String expectedSuppliedBlueId,
+            List<String> expectedExactBlueIds) {
+        Map<DocumentId, Object> beforeDocuments = snapshotDocuments(input);
+        Captures captures = new Captures();
+        ClosureAttemptResult fullFirst;
+        ClosureAttemptResult fullRetry;
+        owner.administration().clearCaches();
+        assertEquals(0, owner.administration().cacheEntryCount(),
+                "The first typed-demand attempt must start cold");
+        try (BlueClosureContracts contracts =
+                     new BlueClosureContracts(owner, captures)) {
+            fullFirst = contracts.admitClosureWithLifecycleQueue(input);
+            int warmedCacheEntries = owner.administration()
+                    .cacheEntryCount();
+            assertTrue(warmedCacheEntries > 0,
+                    "Typed-demand discovery must populate processor caches");
+            fullRetry = contracts.admitClosureWithLifecycleQueue(input);
+            assertEquals(warmedCacheEntries,
+                    owner.administration().cacheEntryCount(),
+                    "Full-lifecycle typed-demand retries must be cache invariant");
+        }
+
+        List<ClosureAttemptResult> attempts = Arrays.asList(
+                fullFirst, fullRetry);
+        for (ClosureAttemptResult attempt : attempts) {
+            assertEquals(ClosureAttemptResult.Kind.NEEDS_RESOURCES,
+                    attempt.kind());
+            assertFalse(attempt.isComplete());
+            assertNull(attempt.processResult());
+            assertNull(attempt.totalGas());
+            assertEquals(expectedExactBlueIds,
+                    attempt.requiredExactBlueIds());
+            assertEquals(1, attempt.resourceDemands().size());
+            ClosureResourceDemand demand =
+                    attempt.resourceDemands().get(0);
+            assertTrue(expectedDemandType.isInstance(demand));
+            assertEquals(A, demand.sourceDocumentId());
+            assertEquals("/peer", demand.sourcePath());
+            assertEquals(expectedSuppliedBlueId,
+                    demand.suppliedValueBlueId());
+        }
+        assertEquals(fullFirst.resourceDemands(),
+                fullRetry.resourceDemands());
+        assertEquals(0, probe.executionCount,
+                "Admission resource preflight must precede application code");
+        assertTrue(captures.values.isEmpty(),
+                "A resource demand must not publish completion evidence");
+        assertEquals(beforeDocuments, snapshotDocuments(input),
+                "Admission resource preflight must not mutate input documents");
+        assertTrue(input.snapshot().occurrences().isEmpty());
+    }
+
+    private static Map<DocumentId, Object> snapshotDocuments(
+            ClosureInvocationInput input) {
+        LinkedHashMap<DocumentId, Object> result =
+                new LinkedHashMap<DocumentId, Object>();
+        for (ManagedDocumentSnapshot document
+                : input.snapshot().managedDocuments()) {
+            result.put(
+                    document.documentId(),
+                    NodeWireForm.get(
+                            document.document(),
+                            NodeWireForm.Strategy.SIMPLE));
+        }
         return result;
     }
 
@@ -1801,6 +2033,7 @@ final class FullLifecycleAdmissionTest {
                 new ArrayList<String>();
         private String reactivationTargetBlueId;
         private int reactivationInitializationCount;
+        private int executionCount;
 
         @Override
         public Class<ProbeHandler> contractType() {
@@ -1811,6 +2044,7 @@ final class FullLifecycleAdmissionTest {
         public void execute(
                 ProbeHandler contract,
                 ProcessorExecutionContext context) {
+            executionCount++;
             String key = context.contractKey();
             if ("initPatch".equals(key)) {
                 if (initiated(context)) {
@@ -1858,6 +2092,63 @@ final class FullLifecycleAdmissionTest {
             } else if ("handleUpdate".equals(key)) {
                 context.applyPatch(JsonPatch.replace(
                         "/handled", new Node().value(Boolean.TRUE)));
+            } else if ("installFutureUpdateSurface".equals(key)) {
+                if (initiated(context)) {
+                    Node contracts = context.documentAt(
+                            "/contracts");
+                    contracts.properties(
+                            "createdUpdates",
+                            updateChannel("/contracts"));
+                    contracts.properties(
+                            "createdUpdateHandler",
+                            handler("createdUpdates"));
+                    context.applyPatch(JsonPatch.replace(
+                            "/contracts", contracts));
+                }
+            } else if ("createdUpdateHandler".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/createdRouteRan",
+                        new Node().value(Boolean.TRUE)));
+            } else if ("installThenUseFutureUpdateSurface".equals(key)) {
+                if (initiated(context)) {
+                    Node contracts = context.documentAt(
+                            "/contracts");
+                    contracts.properties(
+                            "futureUpdates",
+                            updateChannel("/laterSignal"));
+                    contracts.properties(
+                            "futureUpdateHandler",
+                            handler("futureUpdates"));
+                    context.applyPatch(JsonPatch.replace(
+                            "/contracts", contracts));
+                    context.applyPatch(JsonPatch.replace(
+                            "/laterSignal",
+                            new Node().value(Boolean.TRUE)));
+                }
+            } else if ("futureUpdateHandler".equals(key)) {
+                BigInteger count = (BigInteger) context.documentAt(
+                        "/futureRouteRuns").getValue();
+                context.applyPatch(JsonPatch.replace(
+                        "/futureRouteRuns",
+                        new Node().value(count.add(BigInteger.ONE))));
+            } else if ("removeCurrentUpdateSurface".equals(key)) {
+                if (initiated(context)) {
+                    Node first = context.documentAt(
+                            "/contracts");
+                    first.getProperties().remove("updates");
+                    first.getProperties().remove(
+                            "handleRemovedUpdate");
+                    first.getProperties().remove(
+                            "removeCurrentUpdateSurface");
+                    context.applyPatch(JsonPatch.replace(
+                            "/contracts", first));
+                }
+            } else if ("handleRemovedUpdate".equals(key)) {
+                BigInteger count = (BigInteger) context.documentAt(
+                        "/removedRouteRuns").getValue();
+                context.applyPatch(JsonPatch.replace(
+                        "/removedRouteRuns",
+                        new Node().value(count.add(BigInteger.ONE))));
             } else if ("reactivateSelf".equals(key)) {
                 if (initiated(context)) {
                     reactivationInitializationCount++;

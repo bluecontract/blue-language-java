@@ -50,6 +50,8 @@ class DocumentProcessorGeneralizationTest {
                 runtime.applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD")));
 
         // then
+        assertEquals("/price/currency", update.path(),
+                "singleton API keeps returning the authored update");
         assertEquals("USD", update.after().getValue());
         assertEquals(nodeProvider.getBlueIdByName("Price"),
                 document.getAsNode("/price/type").getBlueId());
@@ -135,6 +137,40 @@ class DocumentProcessorGeneralizationTest {
                 document.getAsNode("/price/type").getBlueId());
         assertEquals(nodeProvider.getBlueIdByName("Global Product"),
                 document.getType().getBlueId());
+    }
+
+    @Test
+    void shouldAttributeNestedAndRootTypeWritesToTheCausalMiddlePatch() {
+        // given
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
+                "name: Shoes\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
+                "price:\n" +
+                "  amount: 150\n" +
+                "  currency: EUR\n" +
+                "stock: 5", Node.class));
+
+        // when
+        List<DocumentUpdateData> updates = runtime(blue, document)
+                .applyPatches("/", Arrays.asList(
+                        JsonPatch.replace("/stock", new Node().value(6)),
+                        JsonPatch.replace(
+                                "/price/currency",
+                                new Node().value("USD")),
+                        JsonPatch.replace("/stock", new Node().value(7))));
+
+        // then
+        assertEquals(5, updates.size(), updatePaths(updates).toString());
+        assertEquals("/stock", updates.get(0).path());
+        assertEquals("/price/type", updates.get(1).path());
+        assertEquals("/type", updates.get(2).path());
+        assertEquals("/price/currency", updates.get(3).path());
+        assertEquals("/stock", updates.get(4).path());
+        assertEquals(7, document.getAsInteger("/stock"));
+        assertEquals("USD", document.getAsText("/price/currency"));
     }
 
     @Test
@@ -674,6 +710,214 @@ class DocumentProcessorGeneralizationTest {
     }
 
     @Test
+    void shouldKeepCurrentTypeWhenRemovingOptionalWorkflowContract() throws Exception {
+        // given
+        BasicNodeProvider nodeProvider = applicationContractEvolutionProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = YAML_MAPPER.readValue(
+                "name: Optional workflow instance\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Workflow Optional Document") + "\n" +
+                "note: retained\n" +
+                "contracts:\n" +
+                "  workflow:\n" +
+                "    kind: optional\n" +
+                "  generalization:\n" +
+                "    type:\n" +
+                "      blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
+                "    defaultMode: nearest-valid-ancestor", Node.class);
+
+        // when
+        List<DocumentUpdateData> updates = runtime(blue, document)
+                .applyPatches("/", Collections.singletonList(
+                        JsonPatch.remove("/contracts/workflow")));
+
+        // then
+        assertEquals(1, updates.size());
+        assertEquals("/contracts/workflow", updates.get(0).path());
+        assertEquals(nodeProvider.getBlueIdByName("Workflow Optional Document"),
+                document.getType().getBlueId());
+        assertEquals("retained", document.getAsText("/note"));
+    }
+
+    @Test
+    void shouldEmitGeneratedTypeWriteBeforeRequiredWorkflowRemovalUpdate() throws Exception {
+        // given
+        BasicNodeProvider nodeProvider = applicationContractEvolutionProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = requiredWorkflowInstance(nodeProvider, true);
+
+        // when
+        List<DocumentUpdateData> updates = runtime(blue, document)
+                .applyPatches("/", Collections.singletonList(
+                        JsonPatch.remove("/contracts/workflow")));
+
+        // then
+        assertEquals(2, updates.size());
+        assertEquals("/type", updates.get(0).path(),
+                "the generated type write precedes delivery of the authored update");
+        assertEquals(nodeProvider.getBlueIdByName("Workflow Optional Document"),
+                updates.get(0).after().getBlueId());
+        assertEquals("/contracts/workflow", updates.get(1).path());
+        assertEquals(nodeProvider.getBlueIdByName("Workflow Optional Document"),
+                document.getType().getBlueId());
+        assertEquals("retained", document.getAsText("/note"),
+                "generalization must not delete unrelated application content");
+    }
+
+    @Test
+    void shouldAttributeRootTypeWriteToRequiredRemovalBetweenUnrelatedPatches()
+            throws Exception {
+        // given
+        BasicNodeProvider nodeProvider = applicationContractEvolutionProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = requiredWorkflowInstance(nodeProvider, true);
+
+        // when
+        List<DocumentUpdateData> updates = runtime(blue, document)
+                .applyPatches("/", Arrays.asList(
+                        JsonPatch.replace(
+                                "/note",
+                                new Node().value("before removal")),
+                        JsonPatch.remove("/contracts/workflow"),
+                        JsonPatch.replace(
+                                "/note",
+                                new Node().value("after removal"))));
+
+        // then
+        assertEquals(4, updates.size());
+        assertEquals("/note", updates.get(0).path());
+        assertEquals("/type", updates.get(1).path(),
+                "root type metadata belongs to the removal that requires it");
+        assertEquals("/contracts/workflow", updates.get(2).path());
+        assertEquals("/note", updates.get(3).path());
+        assertEquals(nodeProvider.getBlueIdByName("Workflow Optional Document"),
+                updates.get(1).after().getBlueId());
+        assertEquals("after removal", document.getAsText("/note"));
+    }
+
+    @Test
+    void shouldRejectRequiredWorkflowRemovalWhenGeneralizationPolicyIsAbsent() throws Exception {
+        // given
+        BasicNodeProvider nodeProvider = applicationContractEvolutionProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = requiredWorkflowInstance(nodeProvider, false);
+        Node original = document.clone();
+
+        // when
+        ProcessorFailureException failure = captureFailure(
+                () -> runtime(blue, document).applyPatch(
+                        "/", JsonPatch.remove("/contracts/workflow")));
+
+        // then
+        assertEquals(ProcessorFailureException.class, failure.getClass());
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure,
+                failure.errorCategory());
+        assertEquivalentDocuments(original, document,
+                "an absent policy fails closed and rolls back atomically");
+    }
+
+    @Test
+    void shouldNotUsePolicyWrittenBySameBatchToAuthorizeGeneralization() throws Exception {
+        // given
+        BasicNodeProvider nodeProvider = applicationContractEvolutionProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = requiredWorkflowInstance(nodeProvider, true);
+        document.getContracts().getProperties().get("generalization")
+                .getProperties().put("defaultMode", new Node().value("reject"));
+        Node original = document.clone();
+
+        // when
+        ProcessorFailureException failure = captureFailure(
+                () -> runtime(blue, document).applyPatches("/", Arrays.asList(
+                        JsonPatch.replace("/contracts/generalization/defaultMode",
+                                new Node().value("nearest-valid-ancestor")),
+                        JsonPatch.remove("/contracts/workflow"))));
+
+        // then
+        assertEquals(ProcessorFailureException.class, failure.getClass());
+        assertTrue(failure.errorCategory()
+                        == ProcessorErrorCategory.ProtectedProcessorStateMutation
+                        || failure.errorCategory()
+                        == ProcessorErrorCategory.TypeGeneralizationFailure,
+                "the frozen reject policy or protected-state guard must reject self-authorization");
+        assertEquivalentDocuments(original, document,
+                "policy mutation and dependent patch roll back together");
+    }
+
+    @Test
+    void shouldNotSpecializeWhenAddingSubtypeCompatibleWorkflowContract() throws Exception {
+        // given
+        BasicNodeProvider nodeProvider = applicationContractEvolutionProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = YAML_MAPPER.readValue(
+                "name: Optional workflow instance\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Workflow Optional Document") + "\n" +
+                "note: retained\n" +
+                "contracts:\n" +
+                "  generalization:\n" +
+                "    type:\n" +
+                "      blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
+                "    defaultMode: nearest-valid-ancestor", Node.class);
+
+        // when
+        List<DocumentUpdateData> updates = runtime(blue, document).applyPatches(
+                "/", Collections.singletonList(JsonPatch.add(
+                        "/contracts/workflow",
+                        new Node().properties("kind", new Node().value("required")))));
+
+        // then
+        assertEquals(1, updates.size());
+        assertEquals("/contracts/workflow", updates.get(0).path());
+        assertEquals(nodeProvider.getBlueIdByName("Workflow Optional Document"),
+                document.getType().getBlueId(),
+                "adding a subtype-compatible contract cannot specialize the node");
+    }
+
+    @Test
+    void shouldGeneralizeWhenRemovedDirectWorkflowHasNoSemanticInheritedValue()
+            throws Exception {
+        // given
+        BasicNodeProvider nodeProvider = applicationContractEvolutionProvider();
+        Blue blue = snapshotBlue(nodeProvider);
+        Node document = YAML_MAPPER.readValue(
+                "name: Inherited workflow instance\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Workflow Inherited Document") + "\n" +
+                "note: retained\n" +
+                "contracts:\n" +
+                "  workflow:\n" +
+                "    kind: direct\n" +
+                "  generalization:\n" +
+                "    type:\n" +
+                "      blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
+                "    defaultMode: nearest-valid-ancestor", Node.class);
+        DocumentProcessingRuntime runtime = runtime(blue, document);
+        String initialResolvedKind = runtime.snapshot().resolvedRoot()
+                .getAsText("/contracts/workflow/kind");
+        String initialCanonicalKind = runtime.snapshot().canonicalRoot()
+                .getAsText("/contracts/workflow/kind");
+
+        // when
+        List<DocumentUpdateData> updates = runtime.applyPatches(
+                "/", Collections.singletonList(
+                        JsonPatch.remove("/contracts/workflow")));
+
+        // then
+        assertEquals("direct", initialResolvedKind);
+        assertEquals("direct", initialCanonicalKind);
+        assertEquals(Arrays.asList("/type", "/contracts/workflow"),
+                updatePaths(updates));
+        assertEquals(nodeProvider.getBlueIdByName("Workflow Optional Document"),
+                document.getType().getBlueId());
+        assertTrue(runtime.snapshot().canonicalRoot()
+                .getContracts().getProperties().get("workflow") == null);
+        assertTrue(runtime.snapshot().resolvedRoot()
+                .getContracts().getProperties().get("workflow") == null);
+    }
+
+    @Test
     void shouldVerifyProductionGeneralizationPolicyRejectModeFailsWithoutScriptedRuntime() throws Exception {
         // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
@@ -953,19 +1197,86 @@ class DocumentProcessorGeneralizationTest {
         return nodeProvider;
     }
 
+    private BasicNodeProvider applicationContractEvolutionProvider() {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Workflow Optional Document\n" +
+                "note:\n" +
+                "  type: Text");
+        nodeProvider.addSingleDocs(
+                "name: Workflow Required Document\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Workflow Optional Document") + "\n" +
+                "contracts:\n" +
+                "  workflow:\n" +
+                "    schema:\n" +
+                "      required: true");
+        nodeProvider.addSingleDocs(
+                "name: Workflow Inherited Document\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Workflow Optional Document") + "\n" +
+                "contracts:\n" +
+                "  workflow:\n" +
+                "    schema:\n" +
+                "      required: true");
+        return nodeProvider;
+    }
+
+    private Node requiredWorkflowInstance(
+            BasicNodeProvider nodeProvider,
+            boolean includeGeneralizationPolicy) throws Exception {
+        String policy = includeGeneralizationPolicy
+                ? "  generalization:\n" +
+                  "    type:\n" +
+                  "      blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
+                  "    defaultMode: nearest-valid-ancestor\n"
+                : "";
+        return YAML_MAPPER.readValue(
+                "name: Required workflow instance\n" +
+                "type:\n" +
+                "  blueId: " + nodeProvider.getBlueIdByName("Workflow Required Document") + "\n" +
+                "note: retained\n" +
+                "contracts:\n" +
+                "  workflow:\n" +
+                "    kind: required\n" +
+                policy,
+                Node.class);
+    }
+
     private Node generalizationPolicy(Node rules) {
         return new Node().properties("generalization",
                 new Node()
                         .type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
-                        .properties("rules", rules));
+                        .properties(
+                                "defaultMode",
+                                new Node().value("nearest-valid-ancestor"),
+                                "rules",
+                                rules));
     }
 
     private Node canonicalRoot(Blue blue, Node source) {
         /*
          * The runtime owns resolution. Passing a minimized or merged synthetic
          * root here would lose selected fixed values and would violate the
-         * PROCESS boundary's exact-document rule.
+         * PROCESS boundary's exact-document rule. Legacy widening fixtures
+         * explicitly opt in to nearest-valid-ancestor now that missing policy
+         * fails closed.
          */
+        Node contracts = source.getContracts();
+        if (contracts == null) {
+            contracts = new Node();
+            source.contracts(contracts);
+        }
+        if (contracts.getProperties() == null
+                || !contracts.getProperties().containsKey("generalization")) {
+            contracts.properties("generalization",
+                    new Node()
+                            .type(new Node().blueId(
+                                    RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                            .properties("defaultMode",
+                                    new Node().value(
+                                            "nearest-valid-ancestor")));
+        }
         return source;
     }
 

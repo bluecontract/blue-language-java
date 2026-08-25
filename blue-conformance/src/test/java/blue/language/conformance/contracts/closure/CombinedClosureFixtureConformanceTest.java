@@ -20,10 +20,10 @@ final class CombinedClosureFixtureConformanceTest {
         List<BlueContractsConformanceReport.FixtureInventoryEntry> entries =
                 BlueContractsConformanceReport.loadFixtureInventory();
 
-        assertEquals(247, entries.size());
-        assertEquals(96L, count(entries, "behavior-fixture"));
+        assertEquals(276, entries.size());
+        assertEquals(112L, count(entries, "behavior-fixture"));
         assertEquals(71L, count(entries, "gas-fixture"));
-        assertEquals(80L, count(entries, "closure-fixture"));
+        assertEquals(93L, count(entries, "closure-fixture"));
     }
 
     @Test

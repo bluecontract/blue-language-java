@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from collections import Counter
+from copy import deepcopy
 from pathlib import Path
 import hashlib
 import json
@@ -17,6 +18,7 @@ sys.dont_write_bytecode = True
 import yaml
 
 from gas_reference import gas_trace_identity
+from jcs import dumps as jcs_dumps
 from package_hygiene import release_inventory_files
 
 
@@ -28,16 +30,6 @@ FORMATTING = "fixture-byte-only-formatting"
 UNEXPECTED = "unexpected"
 CATEGORIES = (SPEC, INVOCATION, TRACE, SEMANTIC, FORMATTING, UNEXPECTED)
 
-MANIFEST_PATHS = frozenset(
-    {
-        "fixtures/manifest.yaml",
-        "fixtures/vector-coverage.yaml",
-        "oracles/manifest.yaml",
-        "registry/manifest.yaml",
-        "release-manifest.yaml",
-        "gas-manifest.yaml",
-    }
-)
 APPROVED_SUPPORT_DOCUMENTS = frozenset(
     {
         "fixtures/README.md",
@@ -90,12 +82,132 @@ SPEC_FIELDS = frozenset(
         "contractsSpecificationIdentity",
     }
 )
+
+# This classifier compares the accepted 03db5ee package with the bounded
+# dynamic-contract-evolution release.  Added fixtures have no "before" value,
+# so their canonical structured content is pinned here.  This is deliberately
+# stricter than accepting a filename prefix: changing status, gas, events,
+# checkpoints, or any other fixture evidence requires a new reviewed release.
+APPROVED_CEVO_FIXTURE_IDENTITIES = {
+    "fixtures/evo/c-evo-01.yaml": "2293214b979464fd87b251618d0462b75f3d661f1f8355e226ff7907836dca9d",
+    "fixtures/evo/c-evo-02.yaml": "74110197e82cca10f6d86c55400f0c1035766147c0ac8f8258db3a8a41a19567",
+    "fixtures/evo/c-evo-03.yaml": "67f70bbedae84635fc2dba0b7cba2a60bd8879c7cb65d6a7c69004475c886eea",
+    "fixtures/evo/c-evo-04.yaml": "bc91496f2d3a29d138abf4afcf9fe90238e5f517ee5c1584bac2731557b05468",
+    "fixtures/evo/c-evo-05.yaml": "7aba7f8ba014e239b870e31f83c3b2d54e39aac57b36475ea650cfc0c22fc82d",
+    "fixtures/evo/c-evo-06.yaml": "fccb64da8809682b03a8372003d1387ea3bdb9c0141beaf85302d1f29c736213",
+    "fixtures/evo/c-evo-07-checkpoint.yaml": "529e71f3ef49ef32d97bc545c38db7cbd57864f8fc2f5d9efc8267cc3962f9b2",
+    "fixtures/evo/c-evo-07-initialized.yaml": "8af8736373932c52d909a8b35159c7547cc5349e86baefb0e4b561364cf5e7da",
+    "fixtures/evo/c-evo-07-terminated.yaml": "3f759bd7c88de3c67484e8590288d0ad3c7c0f49c4a48b9ad3b88c7584649826",
+    "fixtures/evo/c-evo-08.yaml": "76bb22a18cd04482337e78b55be1eb9921141c36bfa3c45c12b50c2247164d54",
+    "fixtures/evo/c-evo-09.yaml": "8f560a0734caf915c85634844a8741f13a56525907c33dd205c6e28c6d45e26d",
+    "fixtures/evo/c-evo-10.yaml": "dc7ab97a8e56476534f64fb050ed0c74677fb77e93a2cbde7901ba796cc3e8d0",
+    "fixtures/evo/c-evo-14.yaml": "87169a55b0b4c14b10c0acfc607785e5500ae17447dec41355b21fcdf40c01cf",
+    "fixtures/evo/c-evo-15.yaml": "54d63b6c727bedce7d8882be24e8283d0ed7b18aef19736cb518b394c75f8cc1",
+    "fixtures/evo/c-evo-16.yaml": "b1752e7211108d89b9b1780a63c3146860bec1ca6f04a0faf86690885f4c265f",
+    "fixtures/evo/c-evo-17.yaml": "4043e7894b6568bedd0c932a8501defcce98d79d9ee39f516dbf883ee774b09a",
+    "fixtures/closure/c-evo-18-missing-exact-node.yaml": "02217cbae4dc66e755e58476c0d9fbe30ff885afd88650ddbfb3434a5233f463",
+    "fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml": "2c4462a4e6d4b95d13fda4862e892bcd15d147484d9a99311f80e7ab3c2b5295",
+    "fixtures/closure/c-evo-20-canonical-demand-order.yaml": "2243eaacca9254af004c01616381856241b1b3cc95e0dc4abfa9691666856063",
+    "fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml": "5e68a95bb266ab547f2bc108d46e93e39f23dd7d78cee5b568f40f7c6659c742",
+    "fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml": "48e8537ee92f514e50f72b3cb14555dec471129d6904d3f788d7795825da6c02",
+    "fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml": "257604b22e5b756376d6910dfec9432901ce77dcafbcf05188b037e22fafd558",
+    "fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml": "45ead3c1e0430c0891c9a31d3f09e50944f4577c0a5e3506a02c995f3fd77e82",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml": "0c3187976a9f7fa87f0c67a9ca805618889f016aed087baa7a4dabea48f499f7",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml": "71b9264c20bae63200cff67a49b5306e41c8c47c12bccbaaf31feadf60305074",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml": "fc9da0d6f81bd19ee1aa18feba09ac11f945fca93047d283facd38ae21931f05",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml": "34a2adadd5e61f6acd7fdd81b64f6d5489db1960270c0d96dd405d357991cba0",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml": "941ddb1357e7eba9d93b4fa75b719d7974a9a8dd74926e47a4800ca38887a14b",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml": "8ebc4446c42bedb6dd9fcecb62a2f9c44bce1d177886f3bdf280b6ad21db60b5",
+}
+
+APPROVED_CONTRACTS_SPECIFICATION_SHA256 = (
+    "8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242"
+)
+
+APPROVED_SCRIPTED_OPERATION_SHA256 = (
+    "b8304f600d22c0faa98222a96664f133fd6a34c73c9148989c143e7b435a2fc8"
+)
+
+# The two larger normative documents are pinned by canonical structured
+# identity.  List ordering remains semantic, which protects constructor field
+# order and the schema's oneOf ordering while ignoring YAML presentation.
+APPROVED_STRUCTURED_TRANSITIONS = {
+    "fixtures/closure-fixture-schema.yaml": (
+        "eeb167d13cc2088d3d5760613e2d1eb395fe0d0a354b8f9c511952cafb35f693",
+        "dca5231dce4ec1cabb27f0670ccd64c4c4087bae12c9f6f5e20ca6d4ee750952",
+    ),
+    "identity-constructors.yaml": (
+        "d4fd3263fcf40c3dbae2a11f5e05573b9b88063b2ef33c9065e5dc481fc73f89",
+        "4b46b82af73f496a4ce6a09987379b50d06889c41f4e76b301dd6719392031c2",
+    ),
+}
+
+GENERATED_RELEASE_MANIFESTS = frozenset(
+    {
+        "fixtures/manifest.yaml",
+        "fixtures/vector-coverage.yaml",
+        "registry/manifest.yaml",
+        "release-manifest.yaml",
+    }
+)
+
+APPROVED_VECTOR_ALIASES = {
+    "fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml": "C-EVO-13",
+    "fixtures/closure/c-clo-11-split-into-two-cycles.yaml": "C-EVO-12",
+    "fixtures/closure/c-clo-12-frozen-edge-removal.yaml": "C-EVO-11",
+}
+
+APPROVED_EXACT_NODE_DEMAND = {
+    "kind": "EXACT_NODE",
+    "demandIdentity": "sha256:8c1e312399e706565572986d131bdf829e57666285b6486fb931cfe9dd41920f",
+    "sourceDocumentId": "blue-contracts/exact-node-provider",
+    "sourcePath": "/",
+    "suppliedValueBlueId": "78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA",
+    "blueId": "78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA",
+    "logicalPath": "/",
+}
+
+APPROVED_PROJECTION_ADDITIONS = {
+    "commit.newIntervals.0.channelKey": ("scalar-or-node", "Contract key of the first newly activated subscription interval."),
+    "commit.retiredIntervals.0.channelKey": ("scalar-or-node", "Contract key of the first retired subscription interval."),
+    "input.root.contracts.initialized": ("value", "Exact protected initialization marker in the input Root."),
+    "input.root.contracts.initialized.directBlueId": ("scalar-or-node", "Direct BlueId of the protected input initialization marker."),
+    "input.root.contracts.initialized.document": ("value", "Exact pre-initialization witness document in the protected input marker; inline and pure-reference forms compare by canonical Blue identity."),
+    "result.document.child.payload": ("value", "Passive child payload retained across Process Embedded surface evolution."),
+    "result.document.contracts.embedded": ("value", "Exact resulting Process Embedded contract, or absence after removal."),
+    "result.document.contracts.in": ("value", "Exact input Channel contract, or absence after whole-surface replacement."),
+    "result.document.contracts.initialized.directBlueId": ("scalar-or-node", "Direct BlueId of the protected resulting initialization marker."),
+    "result.document.contracts.newOperation": ("value", "Scripted Operation introduced by the current transition for later entries."),
+    "result.document.contracts.next.subscriptionKey": ("scalar-or-node", "Subscription key on a Channel introduced by whole contracts replacement."),
+    "result.document.contracts.operation": ("value", "Distinct Scripted Operation contract, or absence after self-removal."),
+    "result.document.contracts.replaceContracts": ("value", "Whole-contracts replacement Workflow, or absence after its transition."),
+    "result.document.contracts.requiredWorkflow": ("value", "Subtype-required Workflow, or absence after successful type widening."),
+    "result.document.contracts.terminated": ("value", "Exact protected termination marker, or absence after a rejected application write."),
+    "result.document.contracts.workflow": ("value", "Selected Workflow contract, or absence after self-removal."),
+}
 class ClassificationFailure(RuntimeError):
     """Raised for malformed inputs or unsafe report destinations."""
 
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def structured_identity(value: Any) -> str:
+    """Return a presentation-independent identity for JSON-shaped YAML."""
+    encoded = json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def package_identity(value: dict[str, Any], field: str) -> str:
+    normalized = deepcopy(value)
+    normalized[field] = None
+    return "sha256:" + hashlib.sha256(jcs_dumps(normalized)).hexdigest()
 
 
 def package_files(root: Path) -> dict[str, Path]:
@@ -176,6 +288,486 @@ def identity_category(json_pointer: str) -> str | None:
 
 def fixture_operation(value: Any | None) -> str | None:
     return value.get("operation") if isinstance(value, dict) else None
+
+
+def approved_cevo_added_fixture(relative: str, path: Path) -> bool:
+    expected_identity = APPROVED_CEVO_FIXTURE_IDENTITIES.get(relative)
+    if expected_identity is None:
+        return False
+    value = load_structured(path)
+    if not isinstance(value, dict):
+        return False
+    expected_id = Path(relative).stem
+    expected_vector = f"C-EVO-{expected_id[6:8]}"
+    expected_operation = (
+        "process" if relative.startswith("fixtures/evo/") else "admit-closure"
+    )
+    return (
+        value.get("id") == expected_id
+        and value.get("vectors") == [expected_vector]
+        and value.get("operation") == expected_operation
+        and structured_identity(value) == expected_identity
+    )
+
+
+def approved_identity_rebinding_transition(
+    relative: str,
+    before_value: Any,
+    after_value: Any,
+) -> bool:
+    """Accept only already-classified identity changes around an exact delta."""
+    return all(
+        identity_category(difference["path"]) is not None
+        or approved_admission_context_removal(
+            relative,
+            before_value,
+            after_value,
+            difference["path"],
+        )
+        for difference in leaf_differences(before_value, after_value)
+    )
+
+
+def approved_vector_alias_transition(
+    relative: str,
+    before_value: Any,
+    after_value: Any,
+) -> bool:
+    alias = APPROVED_VECTOR_ALIASES.get(relative)
+    if alias is None or not isinstance(after_value, dict):
+        return False
+    normalized = deepcopy(after_value)
+    vectors = normalized.get("vectors")
+    if not isinstance(vectors, list) or not vectors or vectors[-1] != alias:
+        return False
+    vectors.pop()
+    return approved_identity_rebinding_transition(
+        relative, before_value, normalized
+    )
+
+
+def approved_exact_node_demand_transition(
+    relative: str,
+    before_value: Any,
+    after_value: Any,
+) -> bool:
+    if relative != (
+        "fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+    ) or not isinstance(after_value, dict):
+        return False
+    normalized = deepcopy(after_value)
+    try:
+        expected = normalized["expected"]
+        demands = expected.pop("resourceDemands")
+    except (KeyError, TypeError):
+        return False
+    return demands == [APPROVED_EXACT_NODE_DEMAND] and (
+        approved_identity_rebinding_transition(
+            relative, before_value, normalized
+        )
+    )
+
+
+def approved_fixture_schema_transition(
+    relative: str,
+    before_value: Any,
+    after_value: Any,
+) -> bool:
+    if relative != "fixtures/fixture-schema.yaml" or not isinstance(
+        after_value, dict
+    ):
+        return False
+    normalized = deepcopy(after_value)
+    try:
+        properties = normalized["$defs"]["runtime"]["properties"]
+        addition = properties.pop("generalizationSubtypeContracts")
+    except (KeyError, TypeError):
+        return False
+    return addition == {"$ref": "#/$defs/blueValue"} and normalized == before_value
+
+
+def projection_entries(value: Any) -> tuple[dict[str, dict[str, Any]], Any] | None:
+    if not isinstance(value, dict) or not isinstance(value.get("entries"), list):
+        return None
+    entries: dict[str, dict[str, Any]] = {}
+    for entry in value["entries"]:
+        if (
+            not isinstance(entry, dict)
+            or set(entry) not in (
+                {"path", "definition"},
+                {"path", "type", "definition"},
+            )
+            or not isinstance(entry.get("path"), str)
+            or entry["path"] in entries
+        ):
+            return None
+        entries[entry["path"]] = entry
+    envelope = deepcopy(value)
+    envelope.pop("entries")
+    return entries, envelope
+
+
+def approved_projection_catalog_transition(
+    relative: str,
+    before_value: Any,
+    after_value: Any,
+) -> bool:
+    if relative != "fixtures/projection-catalog.yaml":
+        return False
+    before_projection = projection_entries(before_value)
+    after_projection = projection_entries(after_value)
+    if before_projection is None or after_projection is None:
+        return False
+    before_entries, before_envelope = before_projection
+    after_entries, after_envelope = after_projection
+    if before_envelope != after_envelope:
+        return False
+    if set(after_entries) != set(before_entries) | set(APPROVED_PROJECTION_ADDITIONS):
+        return False
+    if any(after_entries[path] != entry for path, entry in before_entries.items()):
+        return False
+    for path, (value_type, definition) in APPROVED_PROJECTION_ADDITIONS.items():
+        if after_entries[path] != {
+            "path": path,
+            "type": value_type,
+            "definition": definition,
+        }:
+            return False
+    return True
+
+
+def approved_pinned_structured_transition(
+    relative: str,
+    before_value: Any,
+    after_value: Any,
+) -> bool:
+    transition = APPROVED_STRUCTURED_TRANSITIONS.get(relative)
+    return transition == (
+        structured_identity(before_value),
+        structured_identity(after_value),
+    )
+
+
+def approved_cevo_structured_transition(
+    relative: str,
+    before_value: Any,
+    after_value: Any,
+) -> bool:
+    return (
+        approved_vector_alias_transition(relative, before_value, after_value)
+        or approved_exact_node_demand_transition(
+            relative, before_value, after_value
+        )
+        or approved_fixture_schema_transition(relative, before_value, after_value)
+        or approved_projection_catalog_transition(
+            relative, before_value, after_value
+        )
+        or approved_pinned_structured_transition(
+            relative, before_value, after_value
+        )
+    )
+
+
+def bounded_cevo_transition_path(relative: str) -> bool:
+    return (
+        relative in APPROVED_VECTOR_ALIASES
+        or relative
+        == "fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+        or relative in {
+            "fixtures/fixture-schema.yaml",
+            "fixtures/projection-catalog.yaml",
+        }
+        or relative in APPROVED_STRUCTURED_TRANSITIONS
+    )
+
+
+def is_closure_vector(vector: str) -> bool:
+    if vector.startswith(("C-CLO-", "FL-ADM-")):
+        return True
+    return vector.startswith("C-EVO-") and vector[6:] in {
+        "11", "12", "13", "18", "19", "20", "21", "22", "23",
+    }
+
+
+def fixture_manifest_entry(
+    base: Path,
+    path: Path,
+    role: str,
+    vectors: list[str] | None = None,
+) -> dict[str, Any]:
+    entry: dict[str, Any] = {
+        "path": path.relative_to(base).as_posix(),
+        "role": role,
+        "sha256": sha256(path),
+        "bytes": path.stat().st_size,
+    }
+    if vectors:
+        entry["vectors"] = vectors
+    return entry
+
+
+def expected_fixture_release_documents(
+    package_root: Path,
+    registry_package_identity: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    fixture_root = package_root / "fixtures"
+    ignored = {
+        "manifest.yaml",
+        "vector-coverage.yaml",
+        "projection-catalog.yaml",
+        "fixture-schema.yaml",
+        "closure-fixture-schema.yaml",
+    }
+    ordinary: list[tuple[Path, dict[str, Any]]] = []
+    closure: list[tuple[Path, dict[str, Any]]] = []
+    for path in sorted(fixture_root.rglob("*.yaml")):
+        if path.parent == fixture_root / "closure/traces" or path.name in ignored:
+            continue
+        value = load_structured(path)
+        if not isinstance(value, dict) or "vectors" not in value:
+            continue
+        vectors = value["vectors"]
+        if not isinstance(vectors, list) or not all(
+            isinstance(vector, str) and vector for vector in vectors
+        ):
+            raise ClassificationFailure(
+                f"invalid executable fixture vectors: {path}"
+            )
+        item = (path, value)
+        (closure if path.parent.name == "closure" else ordinary).append(item)
+
+    vector_map: dict[str, list[str]] = {}
+    for path, value in ordinary + closure:
+        relative = path.relative_to(fixture_root).as_posix()
+        for vector in value["vectors"]:
+            vector_map.setdefault(vector, []).append(relative)
+    for paths in vector_map.values():
+        paths.sort()
+    vector_coverage = {
+        "specification": "blue-contracts/1.0",
+        "vectorCount": len(vector_map),
+        "ordinaryVectorCount": sum(
+            not is_closure_vector(vector) for vector in vector_map
+        ),
+        "closureVectorCount": sum(
+            is_closure_vector(vector) for vector in vector_map
+        ),
+        "vectors": {vector: vector_map[vector] for vector in sorted(vector_map)},
+    }
+
+    support = [
+        fixture_root / "CONTROL-LANGUAGE.md",
+        fixture_root / "HARNESS.md",
+        fixture_root / "README.md",
+        fixture_root / "TRACE-SCHEMA.md",
+        fixture_root / "fixture-schema.yaml",
+        fixture_root / "closure-fixture-schema.yaml",
+        fixture_root / "projection-catalog.yaml",
+        fixture_root / "vector-coverage.yaml",
+        fixture_root / "closure/README.md",
+        fixture_root / "closure/LIMIT-GENERATORS.md",
+        *sorted((fixture_root / "closure/traces").glob("*.yaml")),
+    ]
+    if any(not path.is_file() for path in support):
+        missing = [str(path) for path in support if not path.is_file()]
+        raise ClassificationFailure(f"fixture support inventory is incomplete: {missing}")
+    entries = [
+        fixture_manifest_entry(fixture_root, path, "support")
+        for path in support
+    ]
+    for path, value in ordinary:
+        role = "gas-fixture" if value.get("category") == "gas" else "behavior-fixture"
+        entries.append(
+            fixture_manifest_entry(fixture_root, path, role, value["vectors"])
+        )
+    for path, value in closure:
+        entries.append(
+            fixture_manifest_entry(
+                fixture_root, path, "closure-fixture", value["vectors"]
+            )
+        )
+    entries.sort(key=lambda entry: entry["path"])
+    ordinary_gas = sum(value.get("category") == "gas" for _, value in ordinary)
+    manifest: dict[str, Any] = {
+        "fixturePackage": "blue-contracts-conformance",
+        "specificationVersion": "1.0",
+        "schemaVersions": [
+            "blue-contracts-fixture/1.0",
+            "blue-contracts-closure-fixture/1.0",
+        ],
+        "registryPackageIdentity": registry_package_identity,
+        "vectorCount": vector_coverage["vectorCount"],
+        "ordinaryVectorCount": vector_coverage["ordinaryVectorCount"],
+        "closureVectorCount": vector_coverage["closureVectorCount"],
+        "ordinaryFixtureCount": len(ordinary),
+        "ordinaryBehaviorFixtureCount": len(ordinary) - ordinary_gas,
+        "ordinaryGasFixtureCount": ordinary_gas,
+        "closureFixtureCount": len(closure),
+        "totalExecutableFixtureCount": len(ordinary) + len(closure),
+        "files": entries,
+        "packageIdentityAlgorithm": {
+            "digest": "sha256",
+            "encoding": "RFC 8785 canonical JSON encoded as UTF-8",
+            "normalization": "packageIdentity is null before hashing",
+        },
+        "packageIdentity": None,
+    }
+    manifest["packageIdentity"] = package_identity(manifest, "packageIdentity")
+    return vector_coverage, manifest
+
+
+def approved_registry_manifest_transition(
+    before: dict[str, Any],
+    after: dict[str, Any],
+    fixture_package_identity: str,
+) -> bool:
+    if after.get("fixturePackageIdentity") != fixture_package_identity:
+        return False
+    normalized = deepcopy(after)
+    normalized["fixturePackageIdentity"] = before.get("fixturePackageIdentity")
+    normalized["packageIdentity"] = before.get("packageIdentity")
+    if normalized != before:
+        return False
+    identity_input = deepcopy(after)
+    identity_input["packageIdentity"] = None
+    identity_input["fixturePackageIdentity"] = None
+    actual = "sha256:" + hashlib.sha256(jcs_dumps(identity_input)).hexdigest()
+    return actual == after.get("packageIdentity") == before.get("packageIdentity")
+
+
+def approved_release_manifest_transition(
+    package_root: Path,
+    before: dict[str, Any],
+    after: dict[str, Any],
+    fixture_manifest: dict[str, Any],
+    registry_manifest: dict[str, Any],
+) -> bool:
+    try:
+        fixture = after["fixturePackage"]
+        constructors = after["identityConstructors"]
+        implementation = after["languageDependency"]["inputImplementationBaseline"]
+        embedded_scope = implementation[12]
+    except (KeyError, IndexError, TypeError):
+        return False
+    if fixture != {
+        "path": "fixtures/manifest.yaml",
+        "packageIdentity": fixture_manifest["packageIdentity"],
+        "vectorCount": fixture_manifest["vectorCount"],
+        "fixtureCount": fixture_manifest["totalExecutableFixtureCount"],
+    }:
+        return False
+    if after.get("contractsRegistry", {}).get("packageIdentity") != registry_manifest.get(
+        "packageIdentity"
+    ):
+        return False
+    if constructors.get("sha256") != sha256(package_root / "identity-constructors.yaml"):
+        return False
+    if embedded_scope.get("sha256") != (
+        "2d17ebcd49932ef7cf36ffa4ac949f338fa5728d313a7f7f2fe17535859571c6"
+    ):
+        return False
+    if after.get("specificationDocument", {}).get("sha256") != (
+        APPROVED_CONTRACTS_SPECIFICATION_SHA256
+    ):
+        return False
+    if package_identity(after, "releaseIdentity") != after.get("releaseIdentity"):
+        return False
+    normalized = deepcopy(after)
+    normalized["fixturePackage"] = deepcopy(before["fixturePackage"])
+    normalized["identityConstructors"]["sha256"] = before[
+        "identityConstructors"
+    ]["sha256"]
+    normalized["languageDependency"]["inputImplementationBaseline"][12][
+        "sha256"
+    ] = before["languageDependency"]["inputImplementationBaseline"][12]["sha256"]
+    normalized["specificationDocument"]["sha256"] = before[
+        "specificationDocument"
+    ]["sha256"]
+    normalized["releaseIdentity"] = before["releaseIdentity"]
+    return normalized == before
+
+
+def cevo_release_integrity_violations(
+    before_root: Path,
+    after_root: Path,
+    after_files: dict[str, Path],
+) -> list[str]:
+    release_present = bool(set(after_files) & set(APPROVED_CEVO_FIXTURE_IDENTITIES))
+    if not release_present:
+        return []
+    violations: list[str] = []
+    expected_added = set(APPROVED_CEVO_FIXTURE_IDENTITIES)
+    actual_added = {
+        relative
+        for relative in after_files
+        if (
+            relative.startswith("fixtures/evo/c-evo-")
+            or relative.startswith("fixtures/closure/c-evo-")
+        )
+        and relative.endswith(".yaml")
+    }
+    if actual_added != expected_added:
+        violations.append(
+            "C-EVO fixture inventory mismatch: "
+            f"missing={sorted(expected_added - actual_added)}, "
+            f"unexpected={sorted(actual_added - expected_added)}"
+        )
+    for relative in sorted(expected_added & set(after_files)):
+        if not approved_cevo_added_fixture(relative, after_files[relative]):
+            violations.append(f"C-EVO fixture content drifted: {relative}")
+    scripted = after_files.get("registry/ScriptedOperation.blue")
+    if scripted is None or sha256(scripted) != APPROVED_SCRIPTED_OPERATION_SHA256:
+        violations.append("ScriptedOperation.blue is missing or changed")
+
+    try:
+        before_registry = load_structured(before_root / "registry/manifest.yaml")
+        after_registry = load_structured(after_root / "registry/manifest.yaml")
+        actual_coverage = load_structured(
+            after_root / "fixtures/vector-coverage.yaml"
+        )
+        actual_fixture_manifest = load_structured(
+            after_root / "fixtures/manifest.yaml"
+        )
+        before_release = load_structured(before_root / "release-manifest.yaml")
+        after_release = load_structured(after_root / "release-manifest.yaml")
+        if not all(
+            isinstance(value, dict)
+            for value in (
+                before_registry,
+                after_registry,
+                actual_coverage,
+                actual_fixture_manifest,
+                before_release,
+                after_release,
+            )
+        ):
+            raise ClassificationFailure("release manifest is not a mapping")
+        expected_coverage, expected_fixture_manifest = (
+            expected_fixture_release_documents(
+                after_root, after_registry["packageIdentity"]
+            )
+        )
+        if actual_coverage != expected_coverage:
+            violations.append("vector coverage is not the exact physical fixture reverse map")
+        if actual_fixture_manifest != expected_fixture_manifest:
+            violations.append("fixture manifest hashes/counts/identity are stale")
+        if not approved_registry_manifest_transition(
+            before_registry,
+            after_registry,
+            expected_fixture_manifest["packageIdentity"],
+        ):
+            violations.append("registry reverse fixture binding is invalid")
+        if not approved_release_manifest_transition(
+            after_root,
+            before_release,
+            after_release,
+            expected_fixture_manifest,
+            after_registry,
+        ):
+            violations.append("release manifest bindings or identity are invalid")
+    except (ClassificationFailure, KeyError, OSError, TypeError, ValueError) as failure:
+        violations.append(f"release integrity could not be evaluated: {failure}")
+    return violations
 
 
 def approved_admission_context_removal(
@@ -351,17 +943,8 @@ def approved_initialization_cycle_correction(
 
 
 def allowed_semantic_change(relative: str, json_pointer: str) -> bool:
-    if relative in MANIFEST_PATHS:
-        return True
     if relative.startswith("fixtures/closure/fl-adm-") and relative.endswith(".yaml"):
         return True
-    if relative == "fixtures/closure-fixture-schema.yaml":
-        return (
-            json_pointer.startswith(
-                "/$defs/handlerResult/properties/termination"
-            )
-            or json_pointer == "/properties/vectors/items/pattern"
-        )
     return False
 
 
@@ -391,6 +974,17 @@ def classify_changed_file(relative: str, before_path: Path, after_path: Path) ->
     categories: set[str] = set()
     operation = fixture_operation(before_value) or fixture_operation(after_value)
     differences = leaf_differences(before_value, after_value)
+    if approved_cevo_structured_transition(
+        relative, before_value, after_value
+    ):
+        for difference in differences:
+            category = identity_category(difference["path"]) or SEMANTIC
+            difference["category"] = category
+            categories.add(category)
+        result["categories"] = sorted(categories)
+        result["differences"] = differences
+        return result
+
     for difference in differences:
         category = approved_initialization_cycle_correction(
             relative,
@@ -417,12 +1011,13 @@ def classify_changed_file(relative: str, before_path: Path, after_path: Path) ->
                 result["unexpected"] = True
         difference["category"] = category
         categories.add(category)
+    if bounded_cevo_transition_path(relative):
+        result["unexpected"] = True
     if result["unexpected"]:
         categories.add(UNEXPECTED)
         result["reason"] = (
-            "non-identity change outside generated manifests, new FL-ADM "
-            "fixtures, approved fixture support documents, or the approved "
-            "schema extensions"
+            "non-identity change outside the bounded lifecycle/C-EVO "
+            "release transitions and approved fixture support documents"
         )
     result["categories"] = sorted(categories)
     result["differences"] = differences
@@ -430,7 +1025,16 @@ def classify_changed_file(relative: str, before_path: Path, after_path: Path) ->
 
 
 def classify_added_file(relative: str, path: Path) -> dict[str, Any]:
-    allowed = relative.startswith("fixtures/closure/fl-adm-") and relative.endswith(".yaml")
+    full_lifecycle = (
+        relative.startswith("fixtures/closure/fl-adm-")
+        and relative.endswith(".yaml")
+    )
+    cevo = approved_cevo_added_fixture(relative, path)
+    scripted_operation = (
+        relative == "registry/ScriptedOperation.blue"
+        and sha256(path) == APPROVED_SCRIPTED_OPERATION_SHA256
+    )
+    allowed = full_lifecycle or cevo or scripted_operation
     return {
         "path": relative,
         "change": "added",
@@ -512,6 +1116,34 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
                     relative, before_files[relative], after_files[relative]
                 )
             )
+    cevo_release_present = bool(
+        set(after_files) & set(APPROVED_CEVO_FIXTURE_IDENTITIES)
+    )
+    integrity_violations = cevo_release_integrity_violations(
+        before_root, after_root, after_files
+    )
+    if cevo_release_present and not integrity_violations:
+        for row in rows:
+            if row["path"] not in GENERATED_RELEASE_MANIFESTS:
+                continue
+            row["unexpected"] = False
+            row["categories"] = [
+                category
+                for category in row["categories"]
+                if category != UNEXPECTED
+            ]
+            row.pop("reason", None)
+    elif integrity_violations:
+        rows.append(
+            {
+                "path": "<C-EVO release integrity>",
+                "change": "validation",
+                "categories": [UNEXPECTED],
+                "differences": [],
+                "unexpected": True,
+                "reason": "; ".join(integrity_violations),
+            }
+        )
     counts: Counter[str] = Counter()
     for row in rows:
         counts.update(row["categories"])

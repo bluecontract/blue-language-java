@@ -6,8 +6,8 @@ additionalProperties: false
 required: [schema, id, scenario, description, operation, events, documents, occurrences, runtime, gas, expect]
 properties:
   schema: {const: blue-contracts-full-lifecycle-source/1.0}
-  id: {type: string, pattern: '^fl-adm-[0-9]{2}(?:-[a-z0-9-]+)?$'}
-  scenario: {type: string, pattern: '^FL-ADM-[0-9]{2}$'}
+  id: {type: string, pattern: '^(?:fl-adm|c-evo)-[0-9]{2}(?:-[a-z0-9-]+)?$'}
+  scenario: {type: string, pattern: '^(?:FL-ADM|C-EVO)-[0-9]{2}$'}
   description: {type: string, minLength: 1}
   operation: {const: admit-closure}
   events:
@@ -130,6 +130,19 @@ $defs:
           path: {type: string, minLength: 1}
           form: {enum: [pure-reference, inline]}
       repeatOf: {type: string, minLength: 1}
+      occurrences:
+        type: array
+        items: {$ref: '#/$defs/authoredOccurrence'}
+      expect: {$ref: '#/$defs/expect'}
+      parityWith: {type: string, minLength: 1}
+      parityProjections:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {enum: [invocationIdentity, processResult, gas, workTrace, finalizations, rejectionEvidence, resourceDemands, attempt, harnessTranscript]}
+    dependentRequired:
+      parityWith: [parityProjections]
+      parityProjections: [parityWith]
   pointerExpectation:
     type: object
     additionalProperties: false
@@ -160,7 +173,7 @@ $defs:
     properties:
       kind: {enum: [INITIALIZATION, LIFECYCLE, TRIGGERED_EVENT, EMBEDDED_EVENT, DOCUMENT_UPDATE]}
       count: {type: integer, minimum: 0}
-  expect:
+  completeExpect:
     type: object
     additionalProperties: false
     required: [status, atomic, rollbackToInput, publicEvents, checkpointWrites, commitCompanion]
@@ -213,4 +226,23 @@ $defs:
       parityAcrossCases:
         type: array
         uniqueItems: true
-        items: {enum: [invocationIdentity, processResult, gas, workTrace, finalizations, rejectionEvidence]}
+        items: {enum: [invocationIdentity, processResult, gas, workTrace, finalizations, rejectionEvidence, resourceDemands, attempt]}
+  needsResourcesExpect:
+    type: object
+    additionalProperties: false
+    required: [attemptOutcome, resourceDemandKinds]
+    properties:
+      attemptOutcome: {const: NeedsResources}
+      resourceDemandKinds:
+        type: array
+        minItems: 1
+        items: {enum: [EXACT_NODE, MANAGED_OCCURRENCE_EVIDENCE]}
+      requiredExactCount: {type: integer, minimum: 0}
+      parityAcrossCases:
+        type: array
+        uniqueItems: true
+        items: {enum: [resourceDemands, attempt]}
+  expect:
+    oneOf:
+    - {$ref: '#/$defs/completeExpect'}
+    - {$ref: '#/$defs/needsResourcesExpect'}

@@ -1,0 +1,180 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-evo-18-missing-exact-node
+vectors:
+- C-EVO-18
+category: admission
+operation: admit-closure
+description: A Process Embedded pure reference whose exact target is absent suspends
+  admission with one typed exact-node demand and no legacy occurrence projection.
+releaseManifest: ../../release-manifest.yaml
+input:
+  graphGeneration: 1
+  cause:
+    kind: admission
+    causeIdentity: sha256:c2f4c86b7de502385f27a3519f8d0a749ce7e46a5cd0460bde496a506d033a44
+    admissionKind: TOP_LEVEL_ADMISSION
+    label: c-evo-18-missing-exact-node
+    triggeringEventBlueId: null
+    parentTransitionIdentity: null
+    policyIdentity: sha256:9f952a171c4041f97d980d0a7f43625c224290b636bd5b6d15b23e5a12b62d35
+  admissionCandidate: null
+  admissionCandidateIdentity: null
+  documents:
+    c-evo-18-a:
+      documentId: c-evo-18-a
+      blueId: HHzHuH7bpYxCUKSPZcM1NxD4mCbPBMURehP4Mu9XiQUj
+      document:
+        name: C-EVO 18 missing exact target A
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /peer
+        documentId: c-evo-18-a
+        peer:
+          blueId: 3eo1wjLPegHK9yEsKUSJQ1pdKKPthAeqdLjTZAevQa5u
+      initialized: false
+      terminated: false
+      publicRoot: true
+      epoch: 0
+      componentGeneration: 1
+  occurrences: []
+  components:
+  - componentIdentity: sha256:cc498a05240e7808b5611f5001721d78104862380d1c84b0b02fa64e4f630441
+    componentStateIdentity: sha256:62255f05248b1be6a74f9e04acb7894a1f637ea74878bd85922be66262937519
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-18-a
+    orderedMemberBlueIds:
+    - HHzHuH7bpYxCUKSPZcM1NxD4mCbPBMURehP4Mu9XiQUj
+  directDeliveries: []
+  publicRootDocumentIds:
+  - c-evo-18-a
+  directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
+  occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
+  closureIdentity: sha256:db15586325464c3c0d2128a550010ae9fd183a3c51d29ca78cb95467b2c8ab5a
+  invocationIdentity: sha256:4d4268af4288aca61e8a7c97a3720c616df276df9e2de403a272542e000aa30f
+  gasPolicy:
+    policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
+    sharedLimit: 100000
+    localLimits: {}
+    label: release-default
+  environment:
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    managedDocumentIdentityPolicy:
+      identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+      label: nfc-document-lineage-v1
+    managedBindingPolicy:
+      identity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+      label: exact-document-lineage
+    exactNodeProviderDomain:
+      identity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+      label: fixture-exact-node-provider-v1
+    externalOrderPolicy:
+      identity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+      label: canonical-source-order-v1
+    portableLimitPolicy:
+      identity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+      label: blue-contracts-1.0-portable-limits
+      limits:
+      - name: closureExpansionsPerInvocation
+        value: 4096
+      - name: closureGraphChangesPerInvocation
+        value: 4096
+      - name: closureTentativeFinalizationsPerInvocation
+        value: 8192
+      - name: closureWorkOccurrencesPerInvocation
+        value: 8192
+      - name: contractKeyCodePoints
+        value: 256
+      - name: contractKeyUtf8Bytes
+        value: 1024
+      - name: cyclicCanonicalBytesPerComponent
+        value: 16777216
+      - name: cyclicEdgesPerComponent
+        value: 1024
+      - name: cyclicMembersPerComponent
+        value: 128
+      - name: directCanonicalIdentityInputBytes
+        value: 1048576
+      - name: directInlineIdentityTextCodePoints
+        value: 262144
+      - name: directListItemsMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectEntriesMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectKeyCodePoints
+        value: 4096
+      - name: effectiveContractsPerParticipatingScope
+        value: 8192
+      - name: embeddedDepth
+        value: 256
+      - name: eventsPerContractExecutionResult
+        value: 1024
+      - name: externalChannelsPerScope
+        value: 2048
+      - name: handlersBoundToOneDelivery
+        value: 4096
+      - name: internalEventOccurrencesPerInvocation
+        value: 8192
+      - name: managedDocumentsPerClosure
+        value: 4096
+      - name: nestedDocumentUpdateCascadeDepth
+        value: 256
+      - name: normalizedRuntimePointerUtf8Bytes
+        value: 4096
+      - name: participatingScopesPerEvent
+        value: 4096
+      - name: patchesPerContractExecutionResult
+        value: 1024
+      - name: preselectedExternalOccurrencesPerEvent
+        value: 1024
+      - name: processEmbeddedEdgesPerClosure
+        value: 16384
+      - name: processEmbeddedPathsPerScope
+        value: 4096
+      - name: rootEventsReturned
+        value: 4096
+      - name: runtimeChildLedgerCounterKinds
+        value: 256
+      - name: runtimePointerSegments
+        value: 256
+      - name: subscriptionKeysPerChannel
+        value: 256
+      - name: typeChainEdges
+        value: 256
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+runtime:
+  initializationHandlers: {}
+  handlers: {}
+expected:
+  attemptOutcome: NeedsResources
+  requiredBlueIds:
+  - 3eo1wjLPegHK9yEsKUSJQ1pdKKPthAeqdLjTZAevQa5u
+  resourceDemands:
+  - kind: EXACT_NODE
+    demandIdentity: sha256:4eb7317902dd3953fbb7605e58a03339406564f951b5a40cfbb45cbbf3bc5ecb
+    sourceDocumentId: c-evo-18-a
+    sourcePath: /peer
+    suppliedValueBlueId: 3eo1wjLPegHK9yEsKUSJQ1pdKKPthAeqdLjTZAevQa5u
+    blueId: 3eo1wjLPegHK9yEsKUSJQ1pdKKPthAeqdLjTZAevQa5u
+    logicalPath: /peer
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds:
+  - 3eo1wjLPegHK9yEsKUSJQ1pdKKPthAeqdLjTZAevQa5u
+  expectedLoads:
+  - 3eo1wjLPegHK9yEsKUSJQ1pdKKPthAeqdLjTZAevQa5u
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

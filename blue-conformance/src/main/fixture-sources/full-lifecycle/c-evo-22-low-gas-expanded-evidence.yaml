@@ -1,0 +1,96 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: c-evo-22-low-gas-expanded-evidence
+scenario: C-EVO-22
+description: Automatic occurrence demand discovery is followed by the same transition with supplied prospective evidence under low gas, proving complete rollback after real patch and event work and deterministic retry evidence.
+operation: admit-closure
+events:
+  knownB:
+    documentId: c-evo-22-b
+    name: C-EVO 22 known B
+  loop:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: contract-evolution
+    id: C-EVO-22-LOOP
+documents:
+  c-evo-22-a:
+    publicRoot: true
+    document:
+      documentId: c-evo-22-a
+      name: C-EVO 22 low-gas A
+      phase: before
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/peer]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        loopChannel:
+          type: {$registryBlueId: TriggeredEventChannel}
+          event: {$eventBlueId: loop}
+          order: 0
+        installPeer:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+        relay:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: loopChannel
+          order: 0
+  c-evo-22-b:
+    publicRoot: false
+    document:
+      documentId: c-evo-22-b
+      name: C-EVO 22 known B
+occurrences: []
+runtime:
+  initializationHandlers:
+    c-evo-22-a/installPeer:
+      patches:
+      - {op: replace, path: /phase, val: attempted}
+      - {op: add, path: /peer, val: {$eventBlueId: knownB}}
+      events:
+      - {$eventValue: loop}
+  handlers:
+    c-evo-22-a/relay:
+      events:
+      - {$eventValue: loop}
+gas:
+  sharedLimit: 20000
+cases:
+- suffix: demand
+  expect:
+    attemptOutcome: NeedsResources
+    resourceDemandKinds: [MANAGED_OCCURRENCE_EVIDENCE]
+    requiredExactCount: 0
+- suffix: expanded-low-gas
+  occurrences:
+  - sourceDocumentId: c-evo-22-a
+    sourcePath: /peer
+    activationGeneration: 1
+    targetDocumentId: c-evo-22-b
+    active: false
+- suffix: expanded-low-gas-repeat
+  repeatOf: expanded-low-gas
+  parityWith: expanded-low-gas
+  parityProjections: [attempt]
+expect:
+  status: gas-limit-exceeded
+  diagnosticCategory: GasLimitExceeded
+  atomic: true
+  rollbackToInput: true
+  documents:
+  - {documentId: c-evo-22-a, initialized: false, terminated: false}
+  - {documentId: c-evo-22-b, initialized: false, terminated: false}
+  pointers:
+  - {documentId: c-evo-22-a, pointer: /phase, value: before}
+  absentPointers:
+  - {documentId: c-evo-22-a, pointer: /peer}
+  - {documentId: c-evo-22-a, pointer: /contracts/initialized}
+  workContainsInOrder: [INITIALIZATION, LIFECYCLE, TRIGGERED_EVENT]
+  publicEvents: []
+  checkpointWrites: 0
+  terminationMarkerCount: 0
+  commitCompanion: absent

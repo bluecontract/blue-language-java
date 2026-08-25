@@ -18,11 +18,8 @@ import blue.language.provider.NodeProviderResult;
 import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifiedNodeProvider;
-import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
-import blue.language.processor.ConformanceChangedPath;
-import blue.language.processor.ConformancePlannerOverride;
 import blue.language.processor.ContractMatchingService;
 import blue.language.processor.CheckpointDomain;
 import blue.language.processor.DocumentProcessingResult;
@@ -49,6 +46,7 @@ import blue.language.processor.SubscriptionDelta;
 import blue.language.processor.VerifiedExecutionEvidence;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
@@ -122,6 +120,8 @@ abstract class ContractsFixtureHarnessDataSupport {
             "registry/blue-contracts-1.0/";
     static final String LANGUAGE_REGISTRY_ROOT =
             "registry/blue-language-1.0/";
+    static final String CONFORMANCE_OPERATION_RESOURCE =
+            "blue-contracts-closure-1.0/registry/ScriptedOperation.blue";
 
     final ClosedContractsFixtureValidator validator =
             new ClosedContractsFixtureValidator();
@@ -484,10 +484,13 @@ abstract class ContractsFixtureHarnessDataSupport {
             Map<String, Node> nodes = new LinkedHashMap<>();
             Map<String, String> keys = new LinkedHashMap<>();
             loadRegistry(manifestPath, nodes, keys);
+            loadConformanceOperation(nodes, keys);
             if (!MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL.equals(
                     keys.get("ScriptedExternalChannel"))
                     || !MockTypeBlueIds.MOCK_HANDLER.equals(
-                    keys.get("ScriptedHandler"))) {
+                    keys.get("ScriptedHandler"))
+                    || !MockTypeBlueIds.MOCK_OPERATION.equals(
+                    keys.get("ScriptedOperation"))) {
                 throw new IllegalStateException(
                         "Candidate fixture runtime registry identity mismatch");
             }
@@ -535,10 +538,13 @@ abstract class ContractsFixtureHarnessDataSupport {
             Map<String, String> keys = new LinkedHashMap<>();
             loadRegistry(CONTRACTS_REGISTRY_ROOT, nodes, keys);
             loadRegistry(LANGUAGE_REGISTRY_ROOT, nodes, keys);
+            loadConformanceOperation(nodes, keys);
             if (!MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL.equals(
                     keys.get("ScriptedExternalChannel"))
                     || !MockTypeBlueIds.MOCK_HANDLER.equals(
-                    keys.get("ScriptedHandler"))) {
+                    keys.get("ScriptedHandler"))
+                    || !MockTypeBlueIds.MOCK_OPERATION.equals(
+                    keys.get("ScriptedOperation"))) {
                 throw new IllegalStateException(
                         "Fixture runtime registry identity mismatch");
             }
@@ -548,6 +554,35 @@ abstract class ContractsFixtureHarnessDataSupport {
                     BlueContractsConformanceReport
                             .CONTRACTS_REGISTRY_PACKAGE_IDENTITY,
                     true);
+        }
+
+        private static void loadConformanceOperation(
+                Map<String, Node> nodes,
+                Map<String, String> keys) {
+            /*
+             * This adapter is owned and package-inventoried by the
+             * conformance harness.  It is deliberately loaded beside the
+             * frozen Contracts runtime registry instead of changing that
+             * production registry's package identity.
+             */
+            Node node = readNode(readYaml(CONFORMANCE_OPERATION_RESOURCE));
+            String calculated = DirectBlueIdCalculator.calculateBlueId(node);
+            if (!MockTypeBlueIds.MOCK_OPERATION.equals(calculated)) {
+                throw new IllegalStateException(
+                        "Conformance Operation registry identity mismatch");
+            }
+            Node previous = nodes.put(calculated, node);
+            if (previous != null
+                    && !semanticEquals(
+                            normalizeNode(previous), normalizeNode(node))) {
+                throw new IllegalStateException(
+                        "Conformance Operation BlueId collision");
+            }
+            String previousKey = keys.put("ScriptedOperation", calculated);
+            if (previousKey != null && !previousKey.equals(calculated)) {
+                throw new IllegalStateException(
+                        "Conformance Operation registry key collision");
+            }
         }
 
         /** Defers classpath registry/runtime construction from candidate loads. */
@@ -682,22 +717,28 @@ abstract class ContractsFixtureHarnessDataSupport {
 
     static final class FixtureGeneralization {
         final List<String> candidates;
-        final String validCandidate;
         final Map<String, String> blueIdByCandidate;
         final Map<String, Node> nodesByBlueId;
+        final Set<String> subtypeContractKeys;
+        final ObjectNode subtypeContracts;
 
         private FixtureGeneralization(
                 List<String> candidates,
-                String validCandidate,
                 Map<String, String> blueIdByCandidate,
-                Map<String, Node> nodesByBlueId) {
+                Map<String, Node> nodesByBlueId,
+                Set<String> subtypeContractKeys,
+                ObjectNode subtypeContracts) {
             this.candidates = Collections.unmodifiableList(
                     new ArrayList<>(candidates));
-            this.validCandidate = validCandidate;
             this.blueIdByCandidate = Collections.unmodifiableMap(
                     new LinkedHashMap<>(blueIdByCandidate));
             this.nodesByBlueId = Collections.unmodifiableMap(
                     new LinkedHashMap<>(nodesByBlueId));
+            this.subtypeContractKeys = Collections.unmodifiableSet(
+                    new LinkedHashSet<>(subtypeContractKeys));
+            this.subtypeContracts = subtypeContracts != null
+                    ? subtypeContracts.deepCopy()
+                    : null;
         }
 
         static FixtureGeneralization create(
@@ -713,14 +754,36 @@ abstract class ContractsFixtureHarnessDataSupport {
             for (JsonNode candidate : declared) {
                 candidates.add(candidate.asText());
             }
+            if (candidates.isEmpty()
+                    || new LinkedHashSet<String>(candidates).size()
+                    != candidates.size()) {
+                throw new IllegalArgumentException(
+                        "Generalization controls require a non-empty "
+                                + "duplicate-free ancestor chain");
+            }
             String validCandidate =
                     runtime.path("validCandidate").asText(null);
-            if (candidates.isEmpty()
-                    || validCandidate == null
-                    || !candidates.contains(validCandidate)) {
+            if (validCandidate != null
+                    && !candidates.contains(validCandidate)) {
                 throw new IllegalArgumentException(
-                        "Generalization controls require a valid candidate "
-                                + "from the declared ancestor chain");
+                        "validCandidate must belong to the declared "
+                                + "ancestor chain");
+            }
+            int firstValidCandidateIndex = validCandidate == null
+                    ? 0
+                    : candidates.indexOf(validCandidate);
+            Object fixedValidatingValue = null;
+            if (firstValidCandidateIndex > 0) {
+                JsonNode authoredValue = root.get(
+                        BlueLanguageConstants.OBJECT_VALUE);
+                if (authoredValue == null
+                        || !authoredValue.isValueNode()
+                        || authoredValue.isNull()) {
+                    throw new IllegalArgumentException(
+                            "validCandidate requires an exact initial scalar "
+                                    + "Root value");
+                }
+                fixedValidatingValue = readNode(authoredValue).getRawValue();
             }
             if (root.has(BlueLanguageConstants.OBJECT_TYPE)) {
                 throw new IllegalArgumentException(
@@ -729,16 +792,64 @@ abstract class ContractsFixtureHarnessDataSupport {
 
             Map<String, String> blueIds = new LinkedHashMap<>();
             Map<String, Node> nodes = new LinkedHashMap<>();
-            String parentBlueId = registryId("Integer");
+            Node subtypeContracts = null;
+            ObjectNode authoredSubtypeContracts = null;
+            Set<String> subtypeContractKeys = new LinkedHashSet<>();
+            JsonNode declaredSubtypeContracts = runtime.get(
+                    "generalizationSubtypeContracts");
+            if (declaredSubtypeContracts != null) {
+                if (!declaredSubtypeContracts.isObject()) {
+                    throw new IllegalArgumentException(
+                            "generalizationSubtypeContracts must be an object");
+                }
+                authoredSubtypeContracts =
+                        ((ObjectNode) declaredSubtypeContracts).deepCopy();
+                subtypeContracts = readNode(declaredSubtypeContracts);
+                Map<String, Node> properties =
+                        subtypeContracts.getProperties();
+                if (properties == null || properties.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "generalizationSubtypeContracts must declare "
+                                    + "at least one contract key");
+                }
+                subtypeContractKeys.addAll(properties.keySet());
+            }
+            BasicNodeProvider generatedTypes = new BasicNodeProvider();
+            String parentBlueId = null;
             for (int index = candidates.size() - 1;
                  index >= 0;
                  index--) {
-                Node typeNode = new Node()
+                String typeName = "Fixture Generalization "
+                        + candidates.get(index);
+                Node typeNode = parentBlueId == null
+                        ? new Node().name(typeName)
+                        : new Node().name(typeName)
                         .type(new Node().blueId(parentBlueId));
-                String blueId =
-                        DirectBlueIdCalculator.calculateBlueId(typeNode);
+                if (index == 0 && subtypeContracts != null) {
+                    typeNode.contracts(subtypeContracts.clone());
+                }
+                if (index == firstValidCandidateIndex - 1) {
+                    typeNode.value(fixedValidatingValue);
+                }
+                generatedTypes.addSingleNodes(typeNode);
+                String blueId = generatedTypes.getBlueIdByName(typeName);
+                List<Node> exact = generatedTypes.fetchByBlueId(blueId);
+                if (exact == null || exact.size() != 1) {
+                    throw new IllegalStateException(
+                            "Generated generalization type is unavailable: "
+                                    + typeName);
+                }
                 blueIds.put(candidates.get(index), blueId);
-                nodes.put(blueId, typeNode);
+                Node exactContent = exact.get(0).clone().blueId(null);
+                if (!blueId.equals(
+                        DirectBlueIdCalculator.calculateBlueId(
+                                exactContent))) {
+                    throw new IllegalStateException(
+                            "Generated generalization type content does not "
+                                    + "match its retained identity: "
+                                    + typeName);
+                }
+                nodes.put(blueId, exactContent);
                 parentBlueId = blueId;
             }
             Map<String, String> orderedBlueIds =
@@ -752,9 +863,10 @@ abstract class ContractsFixtureHarnessDataSupport {
                     orderedBlueIds.get(candidates.get(0)));
             return new FixtureGeneralization(
                     candidates,
-                    validCandidate,
                     orderedBlueIds,
-                    nodes);
+                    nodes,
+                    subtypeContractKeys,
+                    authoredSubtypeContracts);
         }
 
         FixtureGeneralizationPlanner newPlanner() {
@@ -762,8 +874,7 @@ abstract class ContractsFixtureHarnessDataSupport {
         }
     }
 
-    static final class FixtureGeneralizationPlanner
-            implements ConformancePlannerOverride {
+    static final class FixtureGeneralizationPlanner {
         private final FixtureGeneralization definition;
         private final List<String> tested = new ArrayList<>();
         private String selected;
@@ -773,49 +884,29 @@ abstract class ContractsFixtureHarnessDataSupport {
             this.definition = definition;
         }
 
-        @Override
-        public boolean applies() {
-            return true;
-        }
-
-        @Override
-        public ConformancePlan plan(
-                FrozenNode canonicalRoot,
-                FrozenNode resolvedRoot,
-                List<ConformanceChangedPath> changedPaths) {
+        void observe(Node committedDocument) {
             if (selected != null) {
-                return ConformancePlan.unchanged(
-                        canonicalRoot, resolvedRoot);
+                return;
             }
+            String selectedBlueId = selectedTypeBlueId(committedDocument);
             for (String candidate : definition.candidates) {
                 tested.add(candidate);
-                if (definition.validCandidate.equals(candidate)) {
+                if (definition.blueIdByCandidate.get(candidate).equals(
+                        selectedBlueId)) {
                     selected = candidate;
-                    break;
+                    return;
                 }
             }
-            if (selected == null) {
-                throw new IllegalStateException(
-                        "No valid fixture generalization candidate");
-            }
+            throw new IllegalStateException(
+                    "Released conformance engine selected a type outside "
+                            + "the declared exact ancestor chain");
+        }
 
-            String selectedBlueId =
-                    definition.blueIdByCandidate.get(selected);
-            Node nextCanonicalNode = canonicalRoot.toNode()
-                    .type(new Node().blueId(selectedBlueId));
-            Node nextResolvedNode = resolvedRoot.toNode()
-                    .type(new Node().blueId(selectedBlueId));
-            FrozenNode nextCanonical =
-                    FrozenNode.fromNode(nextCanonicalNode);
-            FrozenNode nextResolved =
-                    FrozenNode.fromResolvedNode(nextResolvedNode);
-            return ConformancePlan.generalized(
-                    nextCanonical,
-                    nextResolved,
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                            ProcessorPointerConstants.RELATIVE_TYPE),
-                    false);
+        private static String selectedTypeBlueId(Node root) {
+            Node type = root != null ? root.getType() : null;
+            return type != null && type.getBlueId() != null
+                    ? type.getBlueId()
+                    : "";
         }
 
         List<String> tested() {

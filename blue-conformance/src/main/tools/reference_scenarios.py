@@ -55,6 +55,70 @@ def domain_identity(domain: str, value: Any) -> str:
     ).hexdigest()
 
 
+def closure_resource_demand_identity(demand: dict[str, Any]) -> str:
+    """Independent RFC 8785/SHA-256 replay of the closed demand constructor."""
+    exact = demand["kind"] == "EXACT_NODE"
+    return domain_identity(
+        "blue-contracts-closure-resource-demand/1.0",
+        {
+            "kind": demand["kind"],
+            "logicalCauseIdentity": (
+                None if exact else demand["logicalCauseIdentity"]
+            ),
+            "inputClosureIdentity": (
+                None if exact else demand["inputClosureIdentity"]
+            ),
+            "inputGraphGeneration": (
+                None if exact else demand["inputGraphGeneration"]
+            ),
+            "sourceDocumentId": demand["sourceDocumentId"],
+            "sourcePath": demand["sourcePath"],
+            "processEmbeddedDeclarationIdentity": (
+                None if exact
+                else demand["processEmbeddedDeclarationIdentity"]
+            ),
+            "suppliedValueBlueId": demand["suppliedValueBlueId"],
+            "demandOrdinal": None if exact else demand["demandOrdinal"],
+        },
+    )
+
+
+def assert_typed_demand_result(
+    fixture: dict[str, Any],
+    kinds: list[str],
+) -> list[dict[str, Any]]:
+    """Independently verify one authoritative NeedsResources transcript."""
+    expected = fixture["expected"]
+    assert expected["attemptOutcome"] == "NeedsResources"
+    demands = expected["resourceDemands"]
+    assert [demand["kind"] for demand in demands] == kinds
+    assert all(
+        demand["demandIdentity"]
+        == closure_resource_demand_identity(demand)
+        for demand in demands
+    )
+    order = [
+        (
+            demand["sourceDocumentId"],
+            demand["sourcePath"],
+            demand["suppliedValueBlueId"],
+            ((0, 0) if demand["kind"] == "EXACT_NODE"
+             else (1, demand["demandOrdinal"])),
+            demand["demandIdentity"],
+        )
+        for demand in demands
+    ]
+    assert order == sorted(order)
+    assert expected["requiredBlueIds"] == sorted(
+        {
+            demand["blueId"]
+            for demand in demands
+            if demand["kind"] == "EXACT_NODE"
+        }
+    )
+    return demands
+
+
 def stable_route_sort_comparisons(
     values: list[str],
 ) -> list[tuple[str, str, int]]:
@@ -3078,6 +3142,13 @@ def check_history() -> dict[str, Any]:
     for field in ("runtime", "sharedLimitSource", "locality", "limit"):
         assert missing[field] == retry[field]
     required = missing["expected"]["requiredBlueIds"]
+    demands = missing["expected"]["resourceDemands"]
+    assert len(demands) == 1
+    assert demands[0]["kind"] == "EXACT_NODE"
+    assert demands[0]["blueId"] == required[0]
+    assert demands[0]["demandIdentity"] == (
+        closure_resource_demand_identity(demands[0])
+    )
     assert missing["provider"]["expectedRequiredBlueIds"] == required
     assert retry["provider"]["expectedRequiredBlueIds"] == []
     assert missing["provider"]["expectedLoads"] == retry["provider"]["expectedLoads"]
@@ -3253,6 +3324,117 @@ def check_history() -> dict[str, Any]:
         "revisions": len(revision_paths),
         "finalizations": finalizations,
         "finalMaster": final_component["masterBlueId"],
+    }
+
+
+def check_contract_evolution_demands() -> dict[str, Any]:
+    """Pin C-EVO-18..23 typed suspension and retry semantics."""
+    exact = load_yaml(FIX / "c-evo-18-missing-exact-node.yaml")
+    exact_demands = assert_typed_demand_result(exact, ["EXACT_NODE"])
+    assert exact["expected"]["requiredBlueIds"] == [
+        exact_demands[0]["suppliedValueBlueId"]
+    ]
+    assert exact_demands[0]["sourceDocumentId"] == "c-evo-18-a"
+    assert exact_demands[0]["sourcePath"] == "/peer"
+
+    occurrence = load_yaml(
+        FIX / "c-evo-19-missing-occurrence-evidence.yaml"
+    )
+    occurrence_demands = assert_typed_demand_result(
+        occurrence, ["MANAGED_OCCURRENCE_EVIDENCE"]
+    )
+    assert occurrence["expected"]["requiredBlueIds"] == []
+    assert occurrence_demands[0]["sourceDocumentId"] == "c-evo-19-a"
+    assert occurrence_demands[0]["sourcePath"] == "/peer"
+
+    mixed = load_yaml(FIX / "c-evo-20-canonical-demand-order.yaml")
+    mixed_demands = assert_typed_demand_result(
+        mixed,
+        [
+            "MANAGED_OCCURRENCE_EVIDENCE",
+            "EXACT_NODE",
+            "MANAGED_OCCURRENCE_EVIDENCE",
+        ],
+    )
+    assert [
+        (demand["sourceDocumentId"], demand["sourcePath"])
+        for demand in mixed_demands
+    ] == [
+        ("c-evo-20-a", "/aKnown"),
+        ("c-evo-20-a", "/zUnknown"),
+        ("c-evo-20-b", "/peer"),
+    ]
+
+    missing_first = load_yaml(
+        FIX / "c-evo-21-retry-determinism-missing-first.yaml"
+    )
+    missing_repeat = load_yaml(
+        FIX / "c-evo-21-retry-determinism-missing-repeat.yaml"
+    )
+    assert_typed_demand_result(
+        missing_first, ["MANAGED_OCCURRENCE_EVIDENCE"]
+    )
+    assert missing_repeat["input"] == missing_first["input"]
+    assert missing_repeat["expected"] == missing_first["expected"]
+    resolved_first = load_yaml(
+        FIX / "c-evo-21-retry-determinism-resolved-first.yaml"
+    )
+    resolved_repeat = load_yaml(
+        FIX / "c-evo-21-retry-determinism-resolved-repeat.yaml"
+    )
+    assert resolved_repeat["input"] == resolved_first["input"]
+    assert resolved_repeat["expected"] == resolved_first["expected"]
+    assert resolved_first["expected"]["attemptOutcome"] == "Complete"
+
+    low_gas_demand = load_yaml(
+        FIX / "c-evo-22-low-gas-expanded-evidence-demand.yaml"
+    )
+    assert_typed_demand_result(
+        low_gas_demand, ["MANAGED_OCCURRENCE_EVIDENCE"]
+    )
+    low_gas = load_yaml(
+        FIX / "c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml"
+    )
+    low_gas_repeat = load_yaml(
+        FIX
+        / "c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml"
+    )
+    assert low_gas_repeat["input"] == low_gas["input"]
+    assert low_gas_repeat["expected"] == low_gas["expected"]
+    assert low_gas["expected"]["attemptOutcome"] == "Complete"
+    assert low_gas["expected"]["status"] == "gas-limit-exceeded"
+    assert low_gas["expected"]["rollbackToInput"] is True
+    assert low_gas["expected"]["workTrace"]
+    assert low_gas["expected"]["documentStepTrace"]
+    assert low_gas["expected"]["publicEvents"] == []
+    assert low_gas["expected"]["checkpointWrites"] == []
+    assert low_gas["expected"]["commitCompanion"] is None
+
+    automatic_demand = load_yaml(
+        FIX
+        / "c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml"
+    )
+    assert_typed_demand_result(
+        automatic_demand, ["MANAGED_OCCURRENCE_EVIDENCE"]
+    )
+    automatic = load_yaml(
+        FIX
+        / "c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml"
+    )
+    explicit = load_yaml(
+        FIX
+        / "c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml"
+    )
+    assert automatic["input"] == explicit["input"]
+    assert automatic["expected"] == explicit["expected"]
+    assert automatic["expected"]["attemptOutcome"] == "Complete"
+    assert automatic["expected"]["status"] == "success"
+
+    return {
+        "exactDemands": len(exact_demands),
+        "occurrenceDemands": len(occurrence_demands),
+        "mixedKinds": [demand["kind"] for demand in mixed_demands],
+        "deterministicPairs": 4,
     }
 
 
@@ -3720,6 +3902,7 @@ def main() -> None:
         "loop": check_loop(),
         "identityTransitionGas": check_identity_transition_gas(),
         "history": check_history(),
+        "contractEvolutionDemands": check_contract_evolution_demands(),
         "limits": check_limits(),
         "occurrenceTransitionLaw": check_occurrence_transition_law(),
         "generationTransitionLaw": check_generation_transition_law(),

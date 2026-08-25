@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute the normative Java exporter and append the thirteen FL fixtures.
+"""Execute the normative Java exporter and append the FL/C-EVO fixtures.
 
 This adapter owns no Contracts semantics. It supplies explicit paths to the
 checked-in Java exporter, validates the complete exported inventory, and only
@@ -22,7 +22,7 @@ sys.dont_write_bytecode = True
 import yaml
 
 
-SUCCESS_MARKER = "FULL_LIFECYCLE_FIXTURES_EXPORTED count=13"
+SUCCESS_MARKER = "FULL_LIFECYCLE_FIXTURES_EXPORTED count=26"
 EXPECTED_FIXTURES = frozenset(
     {
         "fl-adm-01-root-patch-event.yaml",
@@ -38,6 +38,19 @@ EXPECTED_FIXTURES = frozenset(
         "fl-adm-08-infinite-cycle-gas-retry-retry.yaml",
         "fl-adm-09-late-member-rollback.yaml",
         "fl-adm-10-unknown-occurrence.yaml",
+        "c-evo-18-missing-exact-node.yaml",
+        "c-evo-19-missing-occurrence-evidence.yaml",
+        "c-evo-20-canonical-demand-order.yaml",
+        "c-evo-21-retry-determinism-missing-first.yaml",
+        "c-evo-21-retry-determinism-missing-repeat.yaml",
+        "c-evo-21-retry-determinism-resolved-first.yaml",
+        "c-evo-21-retry-determinism-resolved-repeat.yaml",
+        "c-evo-22-low-gas-expanded-evidence-demand.yaml",
+        "c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml",
+        "c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml",
+        "c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml",
+        "c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml",
+        "c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml",
     }
 )
 
@@ -96,14 +109,14 @@ def validate_export(output_root: Path) -> dict[str, Path]:
     actual_entries = {path.name for path in output_root.iterdir()}
     if actual_entries != EXPECTED_FIXTURES or set(files) != EXPECTED_FIXTURES:
         raise ExportFailure(
-            "Java exporter did not produce the exact thirteen-file inventory: "
+            "Java exporter did not produce the exact 26-file inventory: "
             f"actual={sorted(actual_entries)}"
         )
     for name in sorted(files):
         path = files[name]
         fixture = load_mapping(path)
         stem = name.removesuffix(".yaml")
-        vector = stem[:9].upper()
+        vector = "-".join(stem.split("-")[:3]).upper()
         required = {
             "schema": "blue-contracts-closure-fixture/1.0",
             "id": stem,
@@ -140,6 +153,7 @@ def run_exporter(
     command = [
         str(gradlew),
         ":blue-conformance:exportFullLifecycleFixtures",
+        "--no-parallel",
         f"-PfullLifecycleSourceRoot={source_root}",
         f"-PfullLifecyclePackageRoot={package_root}",
         f"-PfullLifecycleOutputRoot={output_root}",
@@ -168,7 +182,9 @@ def run_exporter(
 def publish(files: dict[str, Path], closure_root: Path) -> None:
     closure_root.mkdir(parents=True, exist_ok=True)
     existing_full_lifecycle = {
-        path.name for path in closure_root.glob("fl-adm-*.yaml")
+        path.name
+        for pattern in ("fl-adm-*.yaml", "c-evo-*.yaml")
+        for path in closure_root.glob(pattern)
     }
     unexpected = existing_full_lifecycle - EXPECTED_FIXTURES
     if unexpected:
@@ -225,7 +241,7 @@ def main() -> None:
         run_exporter(repository_root, source_root, package_root, output_root)
         files = validate_export(output_root)
         publish(files, package_root / "fixtures/closure")
-    print("FULL_LIFECYCLE_FIXTURES_APPENDED count=13")
+    print("FULL_LIFECYCLE_FIXTURES_APPENDED count=26")
 
 
 if __name__ == "__main__":

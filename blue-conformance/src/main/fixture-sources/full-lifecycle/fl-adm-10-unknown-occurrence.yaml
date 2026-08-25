@@ -1,7 +1,7 @@
 schema: blue-contracts-full-lifecycle-source/1.0
 id: fl-adm-10-unknown-occurrence
 scenario: FL-ADM-10
-description: Initialization creates a Process Embedded occurrence absent from the immutable admission snapshot, producing an exact noncommitting subscription-surface failure with no partial publication.
+description: Initialization creates a Process Embedded occurrence absent from the immutable admission snapshot, suspending noncommitting with authoritative typed occurrence-evidence demand and no legacy exact-node demand.
 operation: admit-closure
 events: {}
 documents:
@@ -38,19 +38,6 @@ runtime:
 gas:
   sharedLimit: release-default
 expect:
-  status: subscription-surface-invalid
-  diagnosticCategory: SubscriptionSurfaceInvalid
-  atomic: true
-  rollbackToInput: true
-  documents:
-  - {documentId: fl-adm-10-root, initialized: false, terminated: false}
-  absentPointers:
-  - {documentId: fl-adm-10-root, pointer: /children/unknown}
-  - {documentId: fl-adm-10-root, pointer: /contracts/initialized}
-  workCounts:
-  - {kind: INITIALIZATION, count: 1}
-  - {kind: LIFECYCLE, count: 1}
-  publicEvents: []
-  checkpointWrites: 0
-  terminationMarkerCount: 0
-  commitCompanion: absent
+  attemptOutcome: NeedsResources
+  resourceDemandKinds: [MANAGED_OCCURRENCE_EVIDENCE]
+  requiredExactCount: 0

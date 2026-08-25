@@ -5,6 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
@@ -816,13 +817,22 @@ class PreparedPatchSequenceTest {
     }
 
     private static Node typedPatchDocument() {
-        return new Node().properties(
-                "typed",
-                new Node()
-                        .type(new Node().blueId(
-                                blue.language.model.wire.BlueLanguageConstants
-                                        .TEXT_TYPE_BLUE_ID))
-                        .properties("existing", new Node().value(0)));
+        return new Node()
+                .contracts(new Node().properties(
+                        "generalization",
+                        new Node()
+                                .type(new Node().blueId(
+                                        RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                                .properties("defaultMode",
+                                        new Node().value(
+                                                "nearest-valid-ancestor"))))
+                .properties(
+                        "typed",
+                        new Node()
+                                .type(new Node().blueId(
+                                        blue.language.model.wire.BlueLanguageConstants
+                                                .TEXT_TYPE_BLUE_ID))
+                                .properties("existing", new Node().value(0)));
     }
 
     private int integerValue(Node node) {
