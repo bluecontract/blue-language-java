@@ -18,12 +18,12 @@ import blue.language.processor.ManagedCheckpointSettlementRequest;
 import blue.language.processor.ManagedDocumentStepContinuation;
 import blue.language.processor.ManagedDocumentStepRoute;
 import blue.language.processor.ManagedExternalDeliveryClassification;
+import blue.language.processor.ManagedProcessEmbeddedPath;
 import blue.language.processor.ManagedRootChannelOccurrence;
 import blue.language.processor.ProcessorErrorCategory;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.ArrayDeque;
@@ -72,6 +72,9 @@ final class ClosureExecutionSession
     private final ManagedDocumentStepProcessor stepProcessor;
     private final ComponentFinalizationKernel finalizer =
             new ComponentFinalizationKernel();
+    private final ProcessEmbeddedSurfaceReconciler
+            processEmbeddedReconciler =
+            new ProcessEmbeddedSurfaceReconciler();
     private final ClosureFinalizationGasCharger finalizationGas =
             new ClosureFinalizationGasCharger();
     private final ManagedDocumentGraph inputGraph;
@@ -93,6 +96,10 @@ final class ClosureExecutionSession
             new LinkedHashSet<DocumentId>();
     private final Set<DocumentId> terminatedDocuments =
             new LinkedHashSet<DocumentId>();
+    private final Set<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+            processEmbeddedRetirementFences =
+            new LinkedHashSet<
+                    ProcessEmbeddedSurfaceReconciler.OccurrencePath>();
     private final Deque<PendingTermination> pendingTerminations =
             new ArrayDeque<PendingTermination>();
     private final Map<DocumentId, Node> latestBodies =
@@ -638,8 +645,7 @@ final class ClosureExecutionSession
                     TentativeFinalization.Boundary
                             .checkpointSettlement(),
                     null,
-                    null,
-                    Collections.<String>emptySet());
+                    null);
         }
     }
 
@@ -802,7 +808,8 @@ final class ClosureExecutionSession
         LocalDocumentStepResult result;
         frame.beginTiming();
         try {
-            result = stepProcessor.process(step);
+            result = stepProcessor.process(
+                    step, pending.selectedRoute);
         } finally {
             try {
                 ActiveFrame removed = activeFrames.removeLast();
@@ -814,7 +821,6 @@ final class ClosureExecutionSession
                 frame.endTiming();
             }
         }
-        requireExactManagedReferences(frame);
         if (!result.documentId().equals(work.targetDocumentId())
                 || !result.workOccurrenceIdentity().equals(
                         work.workIdentity())
@@ -837,8 +843,7 @@ final class ClosureExecutionSession
             List<FinalizationUpdate> generatedUpdates = finalizeTentative(
                     TentativeFinalization.Boundary.work(work.ordinal()),
                     work,
-                    beforeWorkBoundary,
-                    Collections.<String>emptySet());
+                    beforeWorkBoundary);
             if (!generatedUpdates.isEmpty()) {
                 throw new ClosureCapabilityGapException(
                         "UNATTRIBUTED_FINALIZATION_UPDATE_TRANSITION",
@@ -895,11 +900,6 @@ final class ClosureExecutionSession
                 transitionOrdinal);
         Node admitted = Objects.requireNonNull(
                 currentDocument, "currentDocument");
-        Set<String> prospectiveActivations =
-                prospectiveActivations(
-                        frame.work.targetDocumentId(),
-                        patch,
-                        admitted);
         Map<DocumentId, Node> beforeWorkBoundary =
                 cloneBodies(latestBodies);
         latestBodies.put(frame.work.targetDocumentId(), admitted.clone());
@@ -907,10 +907,7 @@ final class ClosureExecutionSession
                 TentativeFinalization.Boundary.work(
                         frame.work.ordinal()),
                 frame.work,
-                beforeWorkBoundary,
-                prospectiveActivations);
-        retainActivatedInitializationRequests(
-                prospectiveActivations, frame.work);
+                beforeWorkBoundary);
         if (shouldActivateManagedRevision(frame.work)) {
             ArrayList<FinalizationUpdate> combined =
                     new ArrayList<FinalizationUpdate>(generatedUpdates);
@@ -962,10 +959,11 @@ final class ClosureExecutionSession
     }
 
     private void retainActivatedInitializationRequests(
-            Set<String> prospectiveActivations,
+            Set<String> activatedOccurrenceIdentities,
             ClosureWorkOccurrence owner) {
         Set<String> activated = Objects.requireNonNull(
-                prospectiveActivations, "prospectiveActivations");
+                activatedOccurrenceIdentities,
+                "activatedOccurrenceIdentities");
         if (activated.isEmpty()) {
             return;
         }
@@ -1192,8 +1190,7 @@ final class ClosureExecutionSession
                     TentativeFinalization.Boundary.work(
                             initialization.work.ordinal()),
                     initialization.work,
-                    cloneBodies(latestBodies),
-                    Collections.<String>emptySet());
+                    cloneBodies(latestBodies));
         }
         for (ManagedDocumentStepRoute route : lifecycle) {
             if (!initializationCanContinue(documentId)) {
@@ -1348,8 +1345,7 @@ final class ClosureExecutionSession
                 TentativeFinalization.Boundary.initializationBatch(
                         initializationBatchLastWorkOrdinal),
                 null,
-                null,
-                Collections.<String>emptySet());
+                null);
     }
 
     private static Node lifecycleEvent(String preInitializationBlueId) {
@@ -1441,8 +1437,7 @@ final class ClosureExecutionSession
             return finalizeTentative(
                     TentativeFinalization.Boundary.work(work.ordinal()),
                     work,
-                    beforeActivation,
-                    Collections.<String>emptySet());
+                    beforeActivation);
         } finally {
             activateManagedRevision = false;
             managedRevisionActivationCompleted = true;
@@ -1696,8 +1691,7 @@ final class ClosureExecutionSession
                 TentativeFinalization.Boundary.terminationMarker(
                         afterWorkOrdinal),
                 null,
-                null,
-                Collections.<String>emptySet());
+                null);
     }
 
     private static Node terminationValue(
@@ -1994,7 +1988,8 @@ final class ClosureExecutionSession
                 route.occurrenceEvent(),
                 processorPatch,
                 null,
-                null);
+                null,
+                route);
     }
 
     private long nextWorkOrdinal() {
@@ -2046,12 +2041,13 @@ final class ClosureExecutionSession
     private List<FinalizationUpdate> finalizeTentative(
             TentativeFinalization.Boundary boundary,
             ClosureWorkOccurrence owner,
-            Map<DocumentId, Node> beforeWorkBoundary,
-            Set<String> prospectiveActivations) {
+            Map<DocumentId, Node> beforeWorkBoundary) {
         List<ManagedOccurrenceBinding> bindingsBeforeFinalization =
                 currentBindings;
+        ProcessEmbeddedReclassification surfaceReclassification =
+                reconcileProcessEmbeddedSurfaces();
         List<ManagedOccurrenceBinding> reclassified =
-                reclassifyKnownOccurrences(prospectiveActivations);
+                surfaceReclassification.bindings;
         ManagedDocumentGraph before = ManagedDocumentGraph.fromBindings(
                 inputGraph.documentIds(), currentBindings);
         ManagedDocumentGraph after = ManagedDocumentGraph.fromBindings(
@@ -2195,6 +2191,16 @@ final class ClosureExecutionSession
         }
         currentFinalization = finalized;
         currentSnapshot = snapshot(finalized);
+        processEmbeddedRetirementFences.addAll(
+                surfaceReclassification.retiredOccurrencePaths);
+        if (owner != null
+                && !surfaceReclassification
+                        .activatedOccurrenceIdentities.isEmpty()) {
+            retainActivatedInitializationRequests(
+                    surfaceReclassification
+                            .activatedOccurrenceIdentities,
+                    owner);
+        }
         if (boundary.kind()
                 == TentativeFinalization.Boundary.Kind.WORK) {
             Map<DocumentId, Node> beforeBodies = Objects.requireNonNull(
@@ -2498,100 +2504,87 @@ final class ClosureExecutionSession
         return Collections.unmodifiableList(result);
     }
 
-    private List<ManagedOccurrenceBinding> reclassifyKnownOccurrences(
-            Set<String> prospectiveActivations) {
-        Set<String> eligible = Objects.requireNonNull(
-                prospectiveActivations, "prospectiveActivations");
+    /**
+     * Projects every current Root before replacing any occurrence evidence.
+     * The returned value is tentative until component finalization and its gas
+     * frame complete successfully.
+     */
+    private ProcessEmbeddedReclassification
+    reconcileProcessEmbeddedSurfaces() {
+        Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected =
+                projectProcessEmbeddedSurfaces();
+
+        ArrayList<DocumentId> sources =
+                new ArrayList<DocumentId>(latestBodies.keySet());
+        Collections.sort(sources);
+        List<ManagedDocumentSnapshot> currentDocuments =
+                currentSnapshot.managedDocuments();
+        ArrayList<ManagedOccurrenceBinding> working =
+                new ArrayList<ManagedOccurrenceBinding>();
         ManagedRevisionCause revision = input.cause()
                 instanceof ManagedRevisionCause
                 ? (ManagedRevisionCause) input.cause()
                 : null;
-        ArrayList<ManagedOccurrenceBinding> result =
-                new ArrayList<ManagedOccurrenceBinding>();
         for (ManagedOccurrenceBinding binding : currentBindings) {
             if (revision != null
                     && binding.occurrenceIdentity().equals(
                             revision.targetOccurrenceIdentity())) {
-                result.add(reconcileManagedRevision(binding, revision));
-                continue;
+                working.add(reconcileManagedRevision(binding, revision));
+            } else {
+                working.add(binding);
             }
-            if (!binding.active()
-                    && !eligible.contains(binding.occurrenceIdentity())) {
-                result.add(binding);
-                continue;
-            }
-            Node value = NodePathEditor.getOrNull(
-                    latestBodies.get(binding.sourceDocumentId()),
-                    binding.sourcePath());
-            ManagedDocumentSnapshot target = currentSnapshot.managedDocument(
-                    binding.targetDocumentId());
-            if (value == null) {
-                if (binding.active()) {
-                    ManagedOccurrenceBinding successor =
-                            retirementSuccessor(binding, target);
-                    result.add(successor);
-                    continue;
-                }
-                result.add(binding);
-                continue;
-            }
-            boolean exactTarget = ManagedOccurrenceTargetVerifier
-                    .establishesExactTarget(value, target);
-            if (!exactTarget) {
-                throw new ClosureCapabilityGapException(
-                        "NEW_OCCURRENCE_ADMISSION_REQUIRED",
-                        "A changed occurrence target requires affected-closure admission");
-            }
-            String reference = value.isReferenceOnly()
-                    ? value.getBlueId()
-                    : target.blueId();
-            if (!reference.equals(target.blueId())
-                    && !reference.equals(binding.expectedTargetBlueId())) {
-                throw new ClosureCapabilityGapException(
-                        "NEW_OCCURRENCE_ADMISSION_REQUIRED",
-                        "A changed occurrence target requires affected-closure admission");
-            }
-            String expectedTarget = target.blueId();
-            String bindingIdentity = IDENTITIES
-                    .managedOccurrenceBindingIdentity(
-                            binding.sourceDocumentId(),
-                            binding.sourceAddress(),
-                            binding.targetDocumentId(),
-                            expectedTarget,
-                            binding.bindingPolicyIdentity());
-            result.add(new ManagedOccurrenceBinding(
-                    binding.occurrenceIdentity(),
-                    bindingIdentity,
-                    binding.bindingPolicyIdentity(),
-                    binding.sourceDocumentId(),
-                    binding.sourceAddress(),
-                    binding.targetDocumentId(),
-                    expectedTarget,
-                    true,
-                    null));
         }
-        Collections.sort(result);
+        Collections.sort(working);
+
+        LinkedHashSet<String> activated =
+                new LinkedHashSet<String>();
+        LinkedHashSet<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+                retired =
+                new LinkedHashSet<
+                        ProcessEmbeddedSurfaceReconciler.OccurrencePath>();
+        LinkedHashSet<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+                fences =
+                new LinkedHashSet<
+                        ProcessEmbeddedSurfaceReconciler.OccurrencePath>(
+                        processEmbeddedRetirementFences);
+        for (DocumentId source : sources) {
+            ProcessEmbeddedSurfaceReconciler.Reconciliation result =
+                    processEmbeddedReconciler.reconcileProjected(
+                            source,
+                            latestBodies.get(source),
+                            projected.get(source),
+                            working,
+                            currentDocuments,
+                            fences);
+            working = new ArrayList<ManagedOccurrenceBinding>(
+                    result.bindings());
+            activated.addAll(
+                    result.activatedOccurrenceIdentities());
+            retired.addAll(result.retiredOccurrencePaths());
+            fences.addAll(result.retiredOccurrencePaths());
+        }
+        return new ProcessEmbeddedReclassification(
+                working, activated, retired);
+    }
+
+
+    private Map<DocumentId, List<ManagedProcessEmbeddedPath>>
+    projectProcessEmbeddedSurfaces() {
+        ArrayList<DocumentId> sources =
+                new ArrayList<DocumentId>(latestBodies.keySet());
+        Collections.sort(sources);
+        LinkedHashMap<DocumentId, List<ManagedProcessEmbeddedPath>> result =
+                new LinkedHashMap<DocumentId,
+                        List<ManagedProcessEmbeddedPath>>();
+        for (DocumentId source : sources) {
+            result.put(
+                    source,
+                    stepProcessor.projectManagedProcessEmbeddedSurface(
+                            latestBodies.get(source)));
+        }
         return result;
     }
 
-    private ManagedOccurrenceBinding retirementSuccessor(
-            ManagedOccurrenceBinding removed,
-            ManagedDocumentSnapshot target) {
-        long generation = removed.activationGeneration();
-        if (generation == ClosureValueSupport.MAX_SAFE_INTEGER) {
-            throw new IllegalArgumentException(
-                    "Occurrence activation generation cannot overflow");
-        }
-        return ManagedOccurrenceBinding.derived(
-                removed.bindingPolicyIdentity(),
-                removed.sourceDocumentId(),
-                ScopeAddress.embedded(
-                        removed.sourcePath(), generation + 1L),
-                removed.targetDocumentId(),
-                target.blueId(),
-                false,
-                null);
-    }
 
     private ComponentFinalizationResult rebindInactiveProspectiveRows(
             ComponentFinalizationResult finalized) {
@@ -2677,132 +2670,6 @@ final class ClosureExecutionSession
                             + "lineage");
         }
         return reconciled;
-    }
-
-    private Set<String> prospectiveActivations(
-            DocumentId sourceDocumentId,
-            FrozenJsonPatch patch,
-            Node resultingDocument) {
-        ActiveFrame frame = activeFrame();
-        LinkedHashSet<String> eligible = new LinkedHashSet<String>();
-        LinkedHashMap<String, String> expectedByPath =
-                new LinkedHashMap<String, String>();
-        Node validationDocument = resultingDocument.clone();
-        ArrayList<ManagedOccurrenceBinding> sourceBindings =
-                new ArrayList<ManagedOccurrenceBinding>();
-        for (ManagedOccurrenceBinding binding : currentBindings) {
-            if (binding.sourceDocumentId().equals(sourceDocumentId)) {
-                sourceBindings.add(binding);
-            }
-        }
-        Collections.sort(sourceBindings,
-                new Comparator<ManagedOccurrenceBinding>() {
-                    @Override
-                    public int compare(
-                            ManagedOccurrenceBinding left,
-                            ManagedOccurrenceBinding right) {
-                        return ClosureValueSupport.comparePortableText(
-                                left.sourcePath(), right.sourcePath());
-                    }
-                });
-        ManagedRevisionCause revision = input.cause()
-                instanceof ManagedRevisionCause
-                ? (ManagedRevisionCause) input.cause()
-                : null;
-        for (ManagedOccurrenceBinding binding : sourceBindings) {
-            Node value = NodePathEditor.getOrNull(
-                    resultingDocument, binding.sourcePath());
-            if (value == null) {
-                continue;
-            }
-            boolean currentManaged = binding.active()
-                    || binding.pendingHistoricalEpoch() != null;
-            boolean mutationEligible = !binding.active()
-                    && binding.pendingHistoricalEpoch() == null
-                    && mutationTouches(
-                            patch.getPath(), binding.sourcePath());
-            if (!currentManaged && !mutationEligible) {
-                continue;
-            }
-            boolean revisionTarget = revision != null
-                    && binding.occurrenceIdentity().equals(
-                            revision.targetOccurrenceIdentity());
-            String validationBlueId = revisionTarget
-                    ? revision.afterBlueId()
-                    : binding.expectedTargetBlueId();
-            if (expectedByPath.put(
-                    binding.sourcePath(),
-                    validationBlueId) != null) {
-                throw new IllegalStateException(
-                        "Managed Root has duplicate current occurrence paths");
-            }
-            if (binding.pendingHistoricalEpoch() != null
-                    && mutationTouches(
-                            patch.getPath(), binding.sourcePath())) {
-                if (!revisionTarget) {
-                    frame.requiredExactManagedBlueIds.add(
-                            binding.expectedTargetBlueId());
-                }
-            }
-            if (mutationEligible) {
-                ManagedDocumentSnapshot target = currentSnapshot
-                        .managedDocument(binding.targetDocumentId());
-                if (target == null
-                        || !binding.expectedTargetBlueId().equals(
-                                target.blueId())
-                        || !ManagedOccurrenceTargetVerifier
-                                .establishesExactTarget(value, target)) {
-                    throw new InvalidExecutionEvidenceException(
-                            "Prospective managed occurrence did not install "
-                                    + "its exact expected target at "
-                                    + binding.sourcePath(),
-                            ProcessorErrorCategory
-                                    .ManagedOccurrenceBindingMissing);
-                }
-                /*
-                 * The mutation runtime may hold the already-authenticated
-                 * target as a materialized cursor.  Managed declaration
-                 * validation is identity-based and intentionally keeps child
-                 * documents opaque, so validate the equivalent authoritative
-                 * reference representation after exact body equality has
-                 * been established against the invocation snapshot.
-                 */
-                NodePathEditor.put(
-                        validationDocument,
-                        binding.sourcePath(),
-                        new Node().blueId(binding.expectedTargetBlueId()));
-                eligible.add(binding.occurrenceIdentity());
-            }
-        }
-        stepProcessor.validateManagedEmbeddedPaths(
-                validationDocument, expectedByPath);
-        return Collections.unmodifiableSet(eligible);
-    }
-
-    private void requireExactManagedReferences(ActiveFrame frame) {
-        ArrayList<String> required = new ArrayList<String>(
-                frame.requiredExactManagedBlueIds);
-        Collections.sort(required, new Comparator<String>() {
-            @Override
-            public int compare(String left, String right) {
-                return ClosureValueSupport.comparePortableText(left, right);
-            }
-        });
-        for (String blueId : required) {
-            stepProcessor.requireExactManagedReference(blueId);
-        }
-    }
-
-    private static boolean mutationTouches(
-            String patchPath,
-            String occurrencePath) {
-        String mutation = Objects.requireNonNull(
-                patchPath, "patchPath");
-        String occurrence = Objects.requireNonNull(
-                occurrencePath, "occurrencePath");
-        return PointerUtils.descendantOrEqual(
-                occurrence,
-                mutation);
     }
 
     private AffectedClosureSnapshot snapshot(
@@ -3265,6 +3132,7 @@ final class ClosureExecutionSession
         private final FrozenJsonPatch processorPatch;
         private final ManagedCheckpointCandidate checkpointCandidate;
         private final Long rawOccurrenceOrder;
+        private final ManagedDocumentStepRoute selectedRoute;
 
         private PendingWork(
                 ClosureWorkOccurrence work,
@@ -3273,6 +3141,23 @@ final class ClosureExecutionSession
                 FrozenJsonPatch processorPatch,
                 ManagedCheckpointCandidate checkpointCandidate,
                 Long rawOccurrenceOrder) {
+            this(work,
+                    exactPayload,
+                    occurrenceEvent,
+                    processorPatch,
+                    checkpointCandidate,
+                    rawOccurrenceOrder,
+                    null);
+        }
+
+        private PendingWork(
+                ClosureWorkOccurrence work,
+                Node exactPayload,
+                Node occurrenceEvent,
+                FrozenJsonPatch processorPatch,
+                ManagedCheckpointCandidate checkpointCandidate,
+                Long rawOccurrenceOrder,
+                ManagedDocumentStepRoute selectedRoute) {
             this.work = Objects.requireNonNull(work, "work");
             this.exactPayload = Objects.requireNonNull(
                     exactPayload, "exactPayload").clone();
@@ -3286,6 +3171,7 @@ final class ClosureExecutionSession
                         "Checkpoint candidate and raw order must appear together");
             }
             this.rawOccurrenceOrder = rawOccurrenceOrder;
+            this.selectedRoute = selectedRoute;
         }
     }
 
@@ -3299,6 +3185,30 @@ final class ClosureExecutionSession
             this.candidate = Objects.requireNonNull(
                     candidate, "candidate");
             this.rawOccurrenceOrder = rawOccurrenceOrder;
+        }
+    }
+
+    private static final class ProcessEmbeddedReclassification {
+        private final List<ManagedOccurrenceBinding> bindings;
+        private final Set<String> activatedOccurrenceIdentities;
+        private final Set<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+                retiredOccurrencePaths;
+
+        private ProcessEmbeddedReclassification(
+                List<ManagedOccurrenceBinding> bindings,
+                Set<String> activatedOccurrenceIdentities,
+                Set<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+                        retiredOccurrencePaths) {
+            this.bindings = Collections.unmodifiableList(
+                    new ArrayList<ManagedOccurrenceBinding>(bindings));
+            this.activatedOccurrenceIdentities =
+                    Collections.unmodifiableSet(
+                            new LinkedHashSet<String>(
+                                    activatedOccurrenceIdentities));
+            this.retiredOccurrencePaths = Collections.unmodifiableSet(
+                    new LinkedHashSet<
+                            ProcessEmbeddedSurfaceReconciler.OccurrencePath>(
+                            retiredOccurrencePaths));
         }
     }
 
@@ -3398,8 +3308,6 @@ final class ClosureExecutionSession
         private final ClosureWorkOccurrence work;
         private final long componentGeneration;
         private final String targetBeforeBlueId;
-        private final Set<String> requiredExactManagedBlueIds =
-                new LinkedHashSet<String>();
         private String currentPrePatchBlueId;
         private long patchCount;
         private long applicationEventCount;

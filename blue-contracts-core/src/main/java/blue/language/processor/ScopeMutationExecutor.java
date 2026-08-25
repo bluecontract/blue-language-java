@@ -35,13 +35,26 @@ final class ScopeMutationExecutor {
                 preflight,
                 new UpdateContinuation() {
                     @Override
+                    public FrozenDispatchContext freezeBeforePatch(
+                            String scopePath,
+                            ContractBundle bundle) {
+                        return updateRouter.freezeCurrentDelivery(
+                                scopePath, bundle);
+                    }
+
+                    @Override
                     public void continueAfterPatch(
                             String scopePath,
                             ContractBundle bundle,
                             FrozenJsonPatch patch,
-                            List<DocumentUpdateData> updates) {
+                            List<DocumentUpdateData> updates,
+                            FrozenDispatchContext dispatchContext) {
                         for (DocumentUpdateData update : updates) {
-                            updateRouter.route(scopePath, bundle, update);
+                            updateRouter.route(
+                                    scopePath,
+                                    bundle,
+                                    update,
+                                    dispatchContext);
                             if (execution.shouldStopScopeWork(scopePath)) {
                                 return;
                             }
@@ -166,6 +179,9 @@ final class ScopeMutationExecutor {
 
             FrozenJsonPatch authoredPatch =
                     patch.frozenAuthoredPatch();
+            FrozenDispatchContext dispatchContext =
+                    updateContinuation.freezeBeforePatch(
+                            scopePath, bundle);
             List<DocumentUpdateData> updates =
                     sequence.applyNext(index);
             List<DocumentUpdateData> exactUpdates =
@@ -173,7 +189,11 @@ final class ScopeMutationExecutor {
                             new ArrayList<DocumentUpdateData>(updates));
             long routingStarted = System.nanoTime();
             updateContinuation.continueAfterPatch(
-                    scopePath, bundle, authoredPatch, exactUpdates);
+                    scopePath,
+                    bundle,
+                    authoredPatch,
+                    exactUpdates,
+                    dispatchContext);
             if (execution.shouldStopScopeWork(scopePath)) {
                 return;
             }
@@ -238,10 +258,17 @@ final class ScopeMutationExecutor {
 
     /** Exact post-patch continuation used by ordinary and closure runtimes. */
     interface UpdateContinuation {
+        default FrozenDispatchContext freezeBeforePatch(
+                String scopePath,
+                ContractBundle bundle) {
+            return FrozenDispatchContext.empty();
+        }
+
         void continueAfterPatch(
                 String scopePath,
                 ContractBundle bundle,
                 FrozenJsonPatch patch,
-                List<DocumentUpdateData> updates);
+                List<DocumentUpdateData> updates,
+                FrozenDispatchContext dispatchContext);
     }
 }

@@ -1,9 +1,11 @@
 package blue.language.processor;
 
-import blue.language.model.Node;
-import blue.language.snapshot.FrozenNode;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
+import blue.language.snapshot.FrozenNode;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -25,6 +27,8 @@ final class ProcessingResultCoordinator {
     private final ResolvedSnapshot inputSnapshot;
     private final boolean hasProcessEvent;
     private final Supplier<VerifiedExecutionEvidence> evidenceSupplier;
+    private final SubscriptionSurfaceProjector contractSurfaceProjector;
+    private final ContractSurfaceReconciler contractSurfaceReconciler;
     private ProcessorStatus failureStatus;
     private ProcessorDiagnostic failureDiagnostic;
     private ResolvedSnapshot resultSnapshot;
@@ -33,6 +37,7 @@ final class ProcessingResultCoordinator {
     private boolean staleDelivery;
     private boolean completedDelivery;
     private SubscriptionDelta subscriptionDelta = SubscriptionDelta.empty();
+    private ContractSurfaceReconciliation contractSurfaceReconciliation;
 
     ProcessingResultCoordinator(
             ProcessorInvocationServices owner,
@@ -47,6 +52,13 @@ final class ProcessingResultCoordinator {
         this.inputSnapshot = inputSnapshot;
         this.hasProcessEvent = hasProcessEvent;
         this.evidenceSupplier = evidenceSupplier;
+        this.contractSurfaceProjector = new SubscriptionSurfaceProjector(
+                owner.contractLoader(),
+                owner.snapshotManager(),
+                owner.registry(),
+                owner.contractConverter());
+        this.contractSurfaceReconciler = new ContractSurfaceReconciler(
+                owner.registry()::isOperationRoute);
     }
 
     boolean admitDirectRootState() {
@@ -84,13 +96,22 @@ final class ProcessingResultCoordinator {
         if (hasFailure() || !completedDelivery) {
             return;
         }
+        subscriptionDelta = SubscriptionDelta.empty();
+        contractSurfaceReconciliation = null;
+        Node validationInput = inputDocument.clone();
+        Node validationTentative = runtime.document().clone();
+        ResolvedSnapshot retainedEntrySnapshot = runtime.entrySnapshot();
         SubscriptionSurfaceValidationContext.Builder validation =
                 SubscriptionSurfaceValidationContext.builder(
-                        inputDocument,
-                        runtime.document(),
+                        validationInput,
+                        validationTentative,
                         runtime.changedPaths(),
                         owner.gasSchedule())
-                        .snapshots(inputSnapshot, runtime.snapshot())
+                        .snapshots(
+                                retainedEntrySnapshot != null
+                                        ? retainedEntrySnapshot
+                                        : inputSnapshot,
+                                runtime.snapshot())
                         .entryEmbeddedScopePlans(
                                 runtime.entryEmbeddedScopePlans())
                         .replacedScopePaths(
@@ -116,15 +137,44 @@ final class ProcessingResultCoordinator {
                         evidence.activeSubscriptionIntervals());
             }
         }
-        subscriptionDelta = owner.subscriptionSurfaceValidator()
-                .validate(validation.build());
+        SubscriptionSurfaceValidationContext context = validation.build();
+        ContractSurfaceReconciler.Capture before =
+                contractSurfaceReconciler.newCapture();
+        ContractSurfaceReconciler.Capture after =
+                contractSurfaceReconciler.newCapture();
+        contractSurfaceProjector.captureCompleteEntry(
+                context.inputRoot(),
+                context.inputSnapshot(),
+                context.gasSchedule(),
+                context,
+                before);
+        contractSurfaceProjector.captureCompleteTentative(
+                context.tentativeRoot(),
+                context.tentativeSnapshot(),
+                context.gasSchedule(),
+                context,
+                after);
+        String beforeIdentity = rootIdentity(
+                context.inputRoot(), context.inputSnapshot());
+        String afterIdentity = rootIdentity(
+                context.tentativeRoot(), context.tentativeSnapshot());
+        SubscriptionDelta validated = Objects.requireNonNull(
+                owner.subscriptionSurfaceValidator().validate(context),
+                "subscription surface validator result");
+        ContractSurfaceReconciliation reconciled =
+                contractSurfaceReconciler.reconcile(
+                        beforeIdentity,
+                        afterIdentity,
+                        before,
+                        after,
+                        validated);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put(
                 ProcessingTraceConstants.FIELD_ADDED,
-                subscriptionDelta.added().size());
+                validated.added().size());
         details.put(
                 ProcessingTraceConstants.FIELD_REMOVED,
-                subscriptionDelta.removed().size());
+                validated.removed().size());
         runtime.recordTrace(
                 ProcessingTraceRecord.Kind.SUBSCRIPTION_DELTA,
                 JsonPointer.ROOT,
@@ -132,16 +182,25 @@ final class ProcessingResultCoordinator {
                 null,
                 details,
                 null);
+        subscriptionDelta = validated;
+        contractSurfaceReconciliation = reconciled;
     }
 
     SubscriptionDelta subscriptionDelta() {
         return subscriptionDelta;
     }
 
+    /** Returns successful ordinary pre-commit surface evidence, if present. */
+    ContractSurfaceReconciliation contractSurfaceReconciliation() {
+        return contractSurfaceReconciliation;
+    }
+
     DocumentProcessingResult result() {
         ProcessorStatus status = selectStatus();
         if (!status.commits()) {
             resultSnapshot = inputSnapshot;
+            contractSurfaceReconciliation = null;
+            subscriptionDelta = SubscriptionDelta.empty();
             return DocumentProcessingResult.nonCommitting(
                     inputDocument.clone(),
                     runtime.totalGas(),
@@ -218,6 +277,8 @@ final class ProcessingResultCoordinator {
         failureDiagnostic = Objects.requireNonNull(
                 diagnostic,
                 "diagnostic");
+        contractSurfaceReconciliation = null;
+        subscriptionDelta = SubscriptionDelta.empty();
         runtime.markRunTerminated();
     }
 
@@ -256,6 +317,14 @@ final class ProcessingResultCoordinator {
             return ProcessorStatus.STALE;
         }
         return ProcessorStatus.NO_MATCH;
+    }
+
+    private static String rootIdentity(
+            Node root,
+            ResolvedSnapshot snapshot) {
+        return snapshot != null
+                ? snapshot.blueId()
+                : DirectBlueIdCalculator.calculateBlueId(root);
     }
 
     private ResolvedSnapshot publishableSnapshot(

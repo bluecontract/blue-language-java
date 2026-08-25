@@ -49,6 +49,7 @@ final class DocumentProcessingRuntime {
     final boolean strictPlatformInvocation;
 
     ResolvedSnapshot snapshot;
+    private ResolvedSnapshot entrySnapshot;
     ProcessingSnapshotManager activeSequenceSnapshotManager;
     boolean materializedViewStale;
     long stateVersion;
@@ -279,6 +280,7 @@ final class DocumentProcessingRuntime {
         this.materializedView = new MaterializedDocumentView(
                 prepared.canonicalRoot());
         this.snapshot = prepared;
+        this.entrySnapshot = prepared;
         this.lazyMaterializedCommits = true;
         this.selectedDocumentBacked = false;
         this.strictPlatformInvocation = strictPlatformInvocation;
@@ -548,6 +550,17 @@ final class DocumentProcessingRuntime {
         return documentView.snapshot();
     }
 
+    ResolvedSnapshot entrySnapshot() {
+        return entrySnapshot;
+    }
+
+    void retainEntrySnapshot(ResolvedSnapshot candidate) {
+        if (entrySnapshot == null && stateVersion == 0L) {
+            entrySnapshot = Objects.requireNonNull(
+                    candidate, "entry snapshot");
+        }
+    }
+
     public Node resolvedNodeAt(String path) {
         return documentView.resolvedNodeAt(path);
     }
@@ -562,6 +575,14 @@ final class DocumentProcessingRuntime {
             FrozenNode selectedScope, FrozenNode resolvedScope) {
         return documentView.contractRecognitionScope(
                 selectedScope, resolvedScope); }
+    FrozenNode contractRecognitionScope(
+            FrozenNode selectedScope,
+            FrozenNode resolvedScope,
+            Set<String> recognizedContractKeys) {
+        return documentView.contractRecognitionScope(
+                selectedScope,
+                resolvedScope,
+                recognizedContractKeys); }
     public Node canonicalNodeAt(String path) {
         return documentView.canonicalNodeAt(path); }
     public FrozenNode canonicalFrozenAt(String path) {
@@ -619,8 +640,11 @@ final class DocumentProcessingRuntime {
     public List<DocumentUpdateData> applyFrozenPatches(
             String originScopePath, List<FrozenJsonPatch> patches) {
         return mutationSession.applyFrozenPatches(originScopePath, patches); }
-    void chargeSemanticIdentityWork(List<PatchInput> patches) {
-        mutationSession.chargeSemanticIdentityWork(patches); }
+    void chargeSemanticIdentityWork(
+            String originScopePath,
+            List<PatchInput> patches) {
+        mutationSession.chargeSemanticIdentityWork(
+                originScopePath, patches); }
     void validateMutationPathWithoutResolution(PatchInput patch) {
         mutationSession.validateMutationPathWithoutResolution(patch); }
     void validateProcessEmbeddedTraversalWithoutResolution(String path) {

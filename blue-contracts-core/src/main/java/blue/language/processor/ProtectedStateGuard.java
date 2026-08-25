@@ -6,8 +6,6 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.model.wire.JsonPointer;
 import blue.language.identity.NodeToBlueIdInput;
-import blue.language.model.Nodes;
-import blue.language.resolve.MinimizedOverlayBuilder;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -403,17 +401,6 @@ final class ProtectedStateGuard {
         }
         FrozenNode contracts = node.getContracts();
         if (contracts != null) {
-            FrozenNode embedded = contracts.property(
-                    ProcessorContractConstants.KEY_EMBEDDED);
-            if (ProcessingSnapshotBootstrap
-                    .isProcessEmbeddedContract(embedded)) {
-                putEffectiveIdentity(
-                        result,
-                        "effective:" + contractPath(
-                                path,
-                                ProcessorContractConstants.KEY_EMBEDDED),
-                        withoutEmbeddedPaths(embedded));
-            }
             putEffectiveIdentity(result,
                     "effective:" + contractPath(
                             path,
@@ -421,24 +408,6 @@ final class ProtectedStateGuard {
                     contracts.property(
                             ProcessorContractConstants.KEY_GENERALIZATION));
         }
-    }
-
-    private static FrozenNode withoutEmbeddedPaths(FrozenNode embedded) {
-        if (embedded == null) {
-            return null;
-        }
-        Node stripped = new MinimizedOverlayBuilder().build(
-                embedded.toNode());
-        if (stripped.getProperties() != null) {
-            stripped.getProperties().remove(
-                    ProcessorContractConstants.KEY_PATHS);
-            stripped.getProperties().remove(
-                    ProcessorContractConstants.KEY_COLLECTION_PATHS);
-        }
-        NodeToBlueIdInput.stripResolvedBlueIdMetadata(stripped);
-        return Nodes.isEmptyNode(stripped)
-                ? null
-                : FrozenNode.fromResolvedNode(stripped);
     }
 
     private static void putIdentity(Map<String, String> result,

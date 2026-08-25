@@ -18,6 +18,19 @@ import java.util.List;
 public interface HandlerProcessor<T extends HandlerContract> extends ContractProcessor<T> {
 
     /**
+     * Reports whether this exact Handler runtime is a callable Operation
+     * route.
+     *
+     * <p>The capability is explicit runtime metadata. Generic Handlers keep
+     * the historical default and only an Operation implementation opts in.</p>
+     *
+     * @return {@code true} only for a runtime-recognized Operation route
+     */
+    default boolean isOperationRoute() {
+        return false;
+    }
+
+    /**
      * Direct fields whose values are executable bodies for this exact runtime
      * type.
      *

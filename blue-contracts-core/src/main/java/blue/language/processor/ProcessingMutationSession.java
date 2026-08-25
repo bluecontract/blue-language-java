@@ -97,7 +97,7 @@ final class ProcessingMutationSession {
                         originScopePath,
                         Collections.singletonList(patch),
                         source);
-        return updates.isEmpty() ? null : updates.get(0);
+        return authoredUpdate(updates, patch.getPath());
     }
 
     List<DocumentUpdateData> applyPatches(
@@ -122,7 +122,7 @@ final class ProcessingMutationSession {
                 applyFrozenPatches(
                         originScopePath,
                         Collections.singletonList(patch));
-        return updates.isEmpty() ? null : updates.get(0);
+        return authoredUpdate(updates, patch.getPath());
     }
 
     List<DocumentUpdateData> applyFrozenPatches(
@@ -134,6 +134,26 @@ final class ProcessingMutationSession {
         return applyPatchInputs(
                 originScopePath,
                 PatchInput.frozenList(patches));
+    }
+
+    private DocumentUpdateData authoredUpdate(
+            List<DocumentUpdateData> updates,
+            String authoredPath) {
+        if (updates == null || updates.isEmpty()) {
+            return null;
+        }
+        String normalizedPath = PointerUtils.normalizePointer(
+                authoredPath);
+        for (int index = updates.size() - 1; index >= 0; index--) {
+            DocumentUpdateData update = updates.get(index);
+            if (normalizedPath.equals(
+                    PointerUtils.normalizePointer(update.path()))) {
+                return update;
+            }
+        }
+        throw new IllegalStateException(
+                "Authored Document Update is missing for "
+                        + normalizedPath);
     }
 
     List<DocumentUpdateData> applyPrecomputedPatch(
@@ -155,8 +175,9 @@ final class ProcessingMutationSession {
         ResolvedSnapshot snapshotRollback = runtime.snapshot;
         runtime.counters().recordBatchPatch(1);
         try {
-            chargeSemanticIdentityWork(Collections.singletonList(
-                    PatchInput.mutable(patch)));
+            chargeSemanticIdentityWork(
+                    originScopePath,
+                    Collections.singletonList(PatchInput.mutable(patch)));
             long buildUpdatesStart = System.nanoTime();
             BatchPatchResult result;
             try {
@@ -178,12 +199,15 @@ final class ProcessingMutationSession {
         }
     }
 
-    void chargeSemanticIdentityWork(List<PatchInput> patches) {
+    void chargeSemanticIdentityWork(
+            String originScopePath,
+            List<PatchInput> patches) {
         gasCharger.charge(
                 patches,
                 preflightCanonicalRoots(
                         patches,
-                        !runtime.selectedDocumentBacked));
+                        !runtime.selectedDocumentBacked,
+                        originScopePath));
     }
 
     void validateMutationPathWithoutResolution(PatchInput patch) {
@@ -243,7 +267,8 @@ final class ProcessingMutationSession {
         }
         try {
             List<FrozenNode> projectedCanonicalRoots =
-                    preflightPatchInputsWithoutResolution(patches);
+                    preflightPatchInputsWithoutResolution(
+                            originScopePath, patches);
             PatchPlanningContext planning =
                     runtime.planningContext(runtime.materializedView.root());
             gasCharger.charge(patches, projectedCanonicalRoots);
@@ -270,6 +295,7 @@ final class ProcessingMutationSession {
     }
 
     private List<FrozenNode> preflightPatchInputsWithoutResolution(
+            String originScopePath,
             List<PatchInput> patches) {
         FrozenNode workingCanonical =
                 runtime.canonicalRootWithoutResolution();
@@ -290,7 +316,7 @@ final class ProcessingMutationSession {
              * strict-freeze diagnostic.
              */
         }
-        boolean exactReplacement = !runtime.selectedDocumentBacked;
+        boolean defaultExactReplacement = !runtime.selectedDocumentBacked;
         List<FrozenNode> projectedCanonicalRoots =
                 new ArrayList<FrozenNode>(patches.size());
         for (PatchInput input : patches) {
@@ -307,6 +333,12 @@ final class ProcessingMutationSession {
                     ImmutablePatchPlanner.forFrozen(workingResolved);
             ParsedJsonPointer path =
                     ParsedJsonPointer.parse(input.authoredPath());
+            boolean exactReplacement = defaultExactReplacement
+                    || ProcessorOwnedContractsStatePreserver
+                            .requiresExactReplacement(
+                                    originScopePath,
+                                    input.op(),
+                                    path.pointer());
             canonicalPlanner.validateMutationPath(path);
             if (!path.isRoot()
                     && resolvedPlanner.read(path.parent()) == null) {
@@ -343,7 +375,8 @@ final class ProcessingMutationSession {
 
     private List<FrozenNode> preflightCanonicalRoots(
             List<PatchInput> patches,
-            boolean exactReplacement) {
+            boolean defaultExactReplacement,
+            String originScopePath) {
         FrozenNode workingCanonical =
                 runtime.identityChargeCanonicalRoot();
         List<FrozenNode> projectedCanonicalRoots =
@@ -357,6 +390,12 @@ final class ProcessingMutationSession {
                     ImmutablePatchPlanner.forFrozen(workingCanonical);
             ParsedJsonPointer path =
                     ParsedJsonPointer.parse(input.authoredPath());
+            boolean exactReplacement = defaultExactReplacement
+                    || ProcessorOwnedContractsStatePreserver
+                            .requiresExactReplacement(
+                                    originScopePath,
+                                    input.op(),
+                                    path.pointer());
             workingCanonical = planner.applyMutationPreflight(
                     input.op(),
                     path,

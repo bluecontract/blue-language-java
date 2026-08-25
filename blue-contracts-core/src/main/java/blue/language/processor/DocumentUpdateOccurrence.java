@@ -25,6 +25,7 @@ public final class DocumentUpdateOccurrence {
     private final JsonPatch.Op operation;
     private final String originScope;
     private final List<String> recipientChain;
+    private final ContractBundle frozenRootDispatchBundle;
 
     DocumentUpdateOccurrence(
             String path,
@@ -40,7 +41,8 @@ public final class DocumentUpdateOccurrence {
                         : freeze(after),
                 operation,
                 originScope,
-                recipientChain);
+                recipientChain,
+                null);
     }
 
     DocumentUpdateOccurrence(
@@ -50,6 +52,23 @@ public final class DocumentUpdateOccurrence {
             JsonPatch.Op operation,
             String originScope,
             List<String> recipientChain) {
+        this(path,
+                beforeFrozen,
+                afterFrozen,
+                operation,
+                originScope,
+                recipientChain,
+                null);
+    }
+
+    private DocumentUpdateOccurrence(
+            String path,
+            FrozenNode beforeFrozen,
+            FrozenNode afterFrozen,
+            JsonPatch.Op operation,
+            String originScope,
+            List<String> recipientChain,
+            ContractBundle frozenRootDispatchBundle) {
         this.path = Objects.requireNonNull(path, "path");
         this.beforeFrozen = beforeFrozen;
         this.operation = Objects.requireNonNull(operation, "operation");
@@ -59,6 +78,7 @@ public final class DocumentUpdateOccurrence {
         this.originScope = Objects.requireNonNull(
                 originScope, "originScope");
         this.recipientChain = immutableRecipientChain(recipientChain);
+        this.frozenRootDispatchBundle = frozenRootDispatchBundle;
     }
 
     /**
@@ -137,6 +157,22 @@ public final class DocumentUpdateOccurrence {
      */
     public List<String> recipientChain() {
         return recipientChain;
+    }
+
+    DocumentUpdateOccurrence withFrozenRootDispatchBundle(
+            ContractBundle bundle) {
+        return new DocumentUpdateOccurrence(
+                path,
+                beforeFrozen,
+                afterFrozen,
+                operation,
+                originScope,
+                recipientChain,
+                Objects.requireNonNull(bundle, "bundle"));
+    }
+
+    ContractBundle frozenRootDispatchBundle() {
+        return frozenRootDispatchBundle;
     }
 
     private static FrozenNode freeze(Node value) {

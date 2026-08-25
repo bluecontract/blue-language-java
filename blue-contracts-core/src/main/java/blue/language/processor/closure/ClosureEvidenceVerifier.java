@@ -476,28 +476,17 @@ final class ClosureEvidenceVerifier {
                 occurrencesById(input.occurrences());
         Map<String, ManagedOccurrenceBinding> afterRows =
                 occurrencesById(output.occurrences());
-        Map<String, ManagedOccurrenceBinding> known =
-                new HashMap<String, ManagedOccurrenceBinding>(beforeRows);
-        known.putAll(afterRows);
         Map<String, GraphChange.Side> active = activeSides(input.occurrences());
 
         for (GraphChange change : changes) {
-            GraphChange.Side selected = change.after() != null
-                    ? change.after() : change.before();
-            ManagedOccurrenceBinding lineage = known.get(
-                    selected.occurrenceIdentity());
-            if (lineage == null
-                    || !lineage.sourceDocumentId().equals(
-                            change.sourceDocumentId())
-                    || !lineage.sourcePath().equals(change.sourcePath())) {
-                throw new IllegalArgumentException(
-                        "Graph change does not name a known occurrence lineage");
-            }
-            verifyGraphSide(change.before(), lineage);
-            verifyGraphSide(change.after(), lineage);
-            GraphChange.Side current = active.get(
-                    selected.occurrenceIdentity());
             if (change.changeKind() == GraphChange.Kind.ADD) {
+                GraphChange.Side selected = change.after();
+                ManagedOccurrenceBinding lineage = afterRows.get(
+                        selected.occurrenceIdentity());
+                requireGraphChangeLocation(change, lineage);
+                verifyGraphSide(selected, lineage);
+                GraphChange.Side current = active.get(
+                        selected.occurrenceIdentity());
                 ManagedOccurrenceBinding reserved = beforeRows.get(
                         selected.occurrenceIdentity());
                 if (current != null || reserved == null || reserved.active()
@@ -507,6 +496,13 @@ final class ClosureEvidenceVerifier {
                 }
                 active.put(selected.occurrenceIdentity(), change.after());
             } else if (change.changeKind() == GraphChange.Kind.REMOVE) {
+                GraphChange.Side selected = change.before();
+                ManagedOccurrenceBinding lineage = beforeRows.get(
+                        selected.occurrenceIdentity());
+                requireGraphChangeLocation(change, lineage);
+                verifyGraphSide(selected, lineage);
+                GraphChange.Side current = active.get(
+                        selected.occurrenceIdentity());
                 if (!sameSide(current, change.before())) {
                     throw new IllegalArgumentException(
                             "Graph REMOVE before side is not authoritative");
@@ -514,11 +510,7 @@ final class ClosureEvidenceVerifier {
                 requireRetirementSuccessor(lineage, output);
                 active.remove(selected.occurrenceIdentity());
             } else {
-                if (!sameSide(current, change.before())) {
-                    throw new IllegalArgumentException(
-                            "Graph REBIND before side is not authoritative");
-                }
-                active.put(selected.occurrenceIdentity(), change.after());
+                verifyRebind(change, beforeRows, afterRows, active);
             }
         }
         Map<String, GraphChange.Side> expected = activeSides(
@@ -532,6 +524,72 @@ final class ClosureEvidenceVerifier {
                 throw new IllegalArgumentException(
                         "Graph changes do not produce the resulting bindings");
             }
+        }
+    }
+
+    private static void verifyRebind(
+            GraphChange change,
+            Map<String, ManagedOccurrenceBinding> beforeRows,
+            Map<String, ManagedOccurrenceBinding> afterRows,
+            Map<String, GraphChange.Side> active) {
+        GraphChange.Side before = change.before();
+        GraphChange.Side after = change.after();
+        ManagedOccurrenceBinding beforeLineage = beforeRows.get(
+                before.occurrenceIdentity());
+        ManagedOccurrenceBinding afterLineage = afterRows.get(
+                after.occurrenceIdentity());
+        requireGraphChangeLocation(change, beforeLineage);
+        requireGraphChangeLocation(change, afterLineage);
+        verifyGraphSide(before, beforeLineage);
+        verifyGraphSide(after, afterLineage);
+        if (!sameSide(active.get(before.occurrenceIdentity()), before)) {
+            throw new IllegalArgumentException(
+                    "Graph REBIND before side is not authoritative");
+        }
+
+        if (before.occurrenceIdentity().equals(
+                after.occurrenceIdentity())) {
+            if (!beforeLineage.active() || !afterLineage.active()
+                    || !sameLineage(beforeLineage, afterLineage)) {
+                throw new IllegalArgumentException(
+                        "Same-lineage REBIND must preserve its active occurrence lineage");
+            }
+            active.put(after.occurrenceIdentity(), after);
+            return;
+        }
+
+        if (!beforeLineage.active() || !afterLineage.active()
+                || !beforeLineage.sourceDocumentId().equals(
+                        afterLineage.sourceDocumentId())
+                || !beforeLineage.sourcePath().equals(
+                        afterLineage.sourcePath())
+                || !beforeLineage.bindingPolicyIdentity().equals(
+                        afterLineage.bindingPolicyIdentity())
+                || beforeLineage.targetDocumentId().equals(
+                        afterLineage.targetDocumentId())
+                || beforeLineage.activationGeneration()
+                        == ClosureValueSupport.MAX_SAFE_INTEGER
+                || afterLineage.activationGeneration()
+                        != beforeLineage.activationGeneration() + 1L
+                || beforeRows.containsKey(after.occurrenceIdentity())
+                || afterRows.containsKey(before.occurrenceIdentity())
+                || active.containsKey(after.occurrenceIdentity())) {
+            throw new IllegalArgumentException(
+                    "Different-lineage REBIND must atomically retire the old occurrence and activate a fresh next-generation retarget");
+        }
+        active.remove(before.occurrenceIdentity());
+        active.put(after.occurrenceIdentity(), after);
+    }
+
+    private static void requireGraphChangeLocation(
+            GraphChange change,
+            ManagedOccurrenceBinding lineage) {
+        if (lineage == null
+                || !lineage.sourceDocumentId().equals(
+                        change.sourceDocumentId())
+                || !lineage.sourcePath().equals(change.sourcePath())) {
+            throw new IllegalArgumentException(
+                    "Graph change does not name a known occurrence lineage");
         }
     }
 

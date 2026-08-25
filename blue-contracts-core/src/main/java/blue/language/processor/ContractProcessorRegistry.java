@@ -51,6 +51,8 @@ public class ContractProcessorRegistry {
     private final Map<String, HandlerProcessor<? extends HandlerContract>> handlerProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, List<String>> handlerExecutableBodyFieldsByBlueId =
             new LinkedHashMap<>();
+    private final Set<String> operationRouteBlueIds =
+            new LinkedHashSet<>();
     private final Map<String, List<String>> nodeValuedHeaderFieldsByBlueId =
             new LinkedHashMap<>();
     private final Map<String, ChannelProcessor<? extends ChannelContract>> channelProcessorsByBlueId = new LinkedHashMap<>();
@@ -147,6 +149,8 @@ public class ContractProcessorRegistry {
             this.markerProcessors.putAll(source.markerProcessors);
             this.handlerProcessorsByBlueId.putAll(
                     source.handlerProcessorsByBlueId);
+            this.operationRouteBlueIds.addAll(
+                    source.operationRouteBlueIds);
             for (Map.Entry<String, List<String>> entry
                     : source.handlerExecutableBodyFieldsByBlueId
                             .entrySet()) {
@@ -417,6 +421,11 @@ public class ContractProcessorRegistry {
         return fields != null ? fields : Collections.emptyList();
     }
 
+    /** Reports whether an exact Handler type is a runtime Operation route. */
+    synchronized boolean isOperationRoute(String blueId) {
+        return operationRouteBlueIds.contains(blueId);
+    }
+
     synchronized Map<String, List<String>> executableBodyFieldsByType() {
         Map<String, List<String>> snapshot = new LinkedHashMap<>();
         for (Map.Entry<String, List<String>> entry
@@ -573,7 +582,8 @@ public class ContractProcessorRegistry {
      * header fields, and whether the generation carries canonical type
      * content. Evidence prepared by one custom generation therefore cannot be
      * replayed against a registry with the same keys but different processing
-     * metadata. Java class names and object identities never participate.</p>
+     * metadata, including the explicit Operation-route capability. Java class
+     * names and object identities never participate.</p>
      *
      * @return lowercase {@code sha256:} identity of the exact registry
      *         generation
@@ -592,6 +602,11 @@ public class ContractProcessorRegistry {
                     processorsByBlueId.get(blueId);
             ProcessorKind kind = requireSupportedProcessor(processor);
             updateDigest(digest, kind.name());
+            updateDigest(
+                    digest,
+                    operationRouteBlueIds.contains(blueId)
+                            ? "operation-route"
+                            : "not-operation-route");
             updateDigest(
                     digest,
                     canonicalTypeNodesByBlueId.containsKey(blueId)
@@ -760,11 +775,18 @@ public class ContractProcessorRegistry {
             handlerProcessorsByBlueId.put(blueId, handler);
             handlerExecutableBodyFieldsByBlueId.put(
                     blueId, executableBodyFields);
+            if (handler.isOperationRoute()) {
+                operationRouteBlueIds.add(blueId);
+            } else {
+                operationRouteBlueIds.remove(blueId);
+            }
         } else if (kind == ProcessorKind.CHANNEL) {
+            operationRouteBlueIds.remove(blueId);
             @SuppressWarnings("unchecked")
             ChannelProcessor<? extends ChannelContract> channel = (ChannelProcessor<? extends ChannelContract>) processor;
             channelProcessorsByBlueId.put(blueId, channel);
         } else {
+            operationRouteBlueIds.remove(blueId);
             @SuppressWarnings("unchecked")
             ContractProcessor<? extends MarkerContract> marker = (ContractProcessor<? extends MarkerContract>) processor;
             markerProcessorsByBlueId.put(blueId, marker);

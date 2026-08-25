@@ -150,6 +150,33 @@ final class EmbeddedScopePlanner {
     }
 
     /**
+     * Builds the declaration-complete concrete surface used by managed graph
+     * reconciliation.
+     *
+     * <p>Direct selected children and direct collection members remain opaque
+     * when represented by exact references, including cyclic-member
+     * references. The closure reconciler owns their exact target verification.
+     * Collection containers still open strictly because their direct key set
+     * is required to derive the concrete occurrence paths.</p>
+     */
+    EmbeddedScopePlan planForManagedReconciliation(
+            FrozenNode effectiveScope,
+            String scopePath,
+            List<String> explicitPaths,
+            List<String> collectionPaths,
+            GasSchedule schedule) {
+        return plan(
+                effectiveScope,
+                scopePath,
+                explicitPaths,
+                collectionPaths,
+                schedule,
+                null,
+                TargetPolicy.MANAGED_RECONCILIATION,
+                Collections.<String, String>emptyMap());
+    }
+
+    /**
      * Metered counterpart of {@link #planForRevisionBoundEvent(FrozenNode,
      * String, List, List, GasSchedule)}.
      */
@@ -293,7 +320,7 @@ final class EmbeddedScopePlanner {
                 DeclarationKind.COLLECTION,
                 schedule,
                 meter);
-        validateDeclarationOverlap(
+        EmbeddedScopeOverlapValidator.validateDeclarations(
                 explicitDeclarations, collectionDeclarations,
                 normalizedScope);
 
@@ -316,9 +343,13 @@ final class EmbeddedScopePlanner {
                         expectedManagedBlueIdsByPath,
                         normalizedScope);
             } else if (target.isReferenceOnly()
-                    && targetPolicy == TargetPolicy.REVISION_BOUND) {
-                rejectCyclicMember(
-                        target, normalizedScope, declaration, null);
+                    && (targetPolicy == TargetPolicy.REVISION_BOUND
+                    || targetPolicy
+                    == TargetPolicy.MANAGED_RECONCILIATION)) {
+                if (targetPolicy == TargetPolicy.REVISION_BOUND) {
+                    rejectCyclicMember(
+                            target, normalizedScope, declaration, null);
+                }
             } else {
                 target = materialize(
                         target, normalizedScope, declaration);
@@ -541,6 +572,14 @@ final class EmbeddedScopePlanner {
                         absolutePath,
                         expectedManagedBlueIdsByPath,
                         scopePath);
+            } else if (targetPolicy
+                    == TargetPolicy.MANAGED_RECONCILIATION
+                    && member != null
+                    && member.isReferenceOnly()) {
+                /*
+                 * The closure reconciler verifies the exact managed target.
+                 * This planner needs only the already-open container's keys.
+                 */
             } else {
                 rejectCyclicMember(member, scopePath, declaration, key);
                 member = materialize(member, scopePath,
@@ -720,91 +759,12 @@ final class EmbeddedScopePlanner {
                 scopePath);
     }
 
-    private void validateDeclarationOverlap(
-            List<String> explicit,
-            List<String> collections,
-            String scopePath) {
-        List<String> all = new ArrayList<>(explicit.size() + collections.size());
-        all.addAll(explicit);
-        all.addAll(collections);
-        Map<String, String> declarationsByPath = new LinkedHashMap<>();
-        for (String declaration : all) {
-            String duplicate = declarationsByPath.put(
-                    declaration, declaration);
-            if (duplicate != null) {
-                throw overlap(
-                        "Overlapping Process Embedded declarations: "
-                                + duplicate + " and " + declaration,
-                        scopePath);
-            }
-        }
-        for (String declaration : all) {
-            String ancestor = strictAncestorIn(
-                    declarationsByPath, declaration);
-            if (ancestor != null) {
-                throw overlap(
-                        "Overlapping Process Embedded declarations: "
-                                + ancestor + " and " + declaration,
-                        scopePath);
-            }
-        }
-    }
-
     /** Rejects duplicate and ancestor-related concrete paths in bounded time. */
     void rejectConcreteOverlap(
             List<EmbeddedConcretePath> concrete,
             String scopePath) {
-        Map<String, EmbeddedConcretePath> concreteByPath =
-                new LinkedHashMap<>();
-        for (EmbeddedConcretePath candidate : concrete) {
-            EmbeddedConcretePath duplicate = concreteByPath.put(
-                    candidate.absolutePath(), candidate);
-            if (duplicate != null) {
-                throw concreteOverlap(
-                        duplicate.absolutePath(),
-                        candidate.absolutePath(),
-                        scopePath);
-            }
-        }
-        for (EmbeddedConcretePath candidate : concrete) {
-            String ancestor = strictAncestorIn(
-                    concreteByPath, candidate.absolutePath());
-            if (ancestor != null) {
-                throw concreteOverlap(
-                        ancestor,
-                        candidate.absolutePath(),
-                        scopePath);
-            }
-        }
-    }
-
-    private SubscriptionSurfaceInvalidException concreteOverlap(
-            String left,
-            String right,
-            String scopePath) {
-        return overlap(
-                "Overlapping concrete embedded paths: "
-                        + left + " and " + right,
-                scopePath);
-    }
-
-    /**
-     * Finds a strict segment ancestor using a complete-path index. Pointer
-     * depth and bytes are already portable-bounded, so this is linear in the
-     * indexed path count rather than quadratic in sibling count.
-     */
-    private String strictAncestorIn(
-            Map<String, ?> pathsByPointer,
-            String pointer) {
-        List<String> segments = JsonPointer.split(pointer);
-        for (int length = segments.size() - 1; length > 0; length--) {
-            String ancestor = JsonPointer.toPointer(
-                    segments.subList(0, length));
-            if (pathsByPointer.containsKey(ancestor)) {
-                return ancestor;
-            }
-        }
-        return null;
+        EmbeddedScopeOverlapValidator.rejectConcreteOverlap(
+                concrete, scopePath);
     }
 
     private List<EmbeddedConcretePath> sortConcrete(
@@ -968,7 +928,8 @@ final class EmbeddedScopePlanner {
     private enum TargetPolicy {
         FULL,
         REVISION_BOUND,
-        OPAQUE_MANAGED
+        OPAQUE_MANAGED,
+        MANAGED_RECONCILIATION
     }
 
     private enum DeclarationKind {

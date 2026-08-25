@@ -235,9 +235,14 @@ final class ScopeHandlerDispatcher {
             ProcessingObserver metrics) {
         runtime.chargeHandlerOverhead(
                 scopePath, selectedHandler.key());
+        ContractBundle effectBundle = execution.bundleForScope(
+                ProcessorEngine.normalizeScope(scopePath));
+        if (effectBundle == null) {
+            effectBundle = bundle;
+        }
         ProcessorExecutionContext context = execution.createContext(
                 scopePath,
-                bundle,
+                effectBundle,
                 event,
                 occurrenceEvent,
                 exactEvent,
@@ -272,7 +277,7 @@ final class ScopeHandlerDispatcher {
             } catch (ExecutionEvidenceUnavailableException unavailable) {
                 ownedContext.suspendRuntimeWork();
                 throw unavailable;
-            }
+        }
         } catch (GasLimitExceededException
                  | PortableLimitExceededException
                  | SubscriptionSurfaceInvalidException

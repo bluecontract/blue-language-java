@@ -2,7 +2,6 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
-import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.model.wire.JsonPointer;
@@ -84,8 +83,8 @@ final class DirectContractMutationPreflight {
     }
 
     private void preflightContract(String key, FrozenNode value) {
-        if (!ProcessorContractConstants.RESERVED_CONTRACT_KEYS
-                .contains(key)) {
+        if (!DirectProtectedStateMutationGuard
+                .isProcessorProtectedContractKey(key)) {
             contractLoader.preflightDirectContractHeader(key, value);
         }
     }

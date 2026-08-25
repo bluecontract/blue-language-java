@@ -92,6 +92,59 @@ final class SubscriptionSurfaceProjector {
                 EmbeddedMembership.TENTATIVE);
     }
 
+    /** Captures the complete current-event contract surface. */
+    void captureCompleteEntry(
+            Node root,
+            ResolvedSnapshot snapshot,
+            GasSchedule schedule,
+            SubscriptionSurfaceValidationContext context,
+            ContractSurfaceCollector collector) {
+        captureComplete(
+                root,
+                snapshot,
+                schedule,
+                context,
+                EmbeddedMembership.ENTRY,
+                collector);
+    }
+
+    /** Captures the complete post-commit candidate contract surface. */
+    void captureCompleteTentative(
+            Node root,
+            ResolvedSnapshot snapshot,
+            GasSchedule schedule,
+            SubscriptionSurfaceValidationContext context,
+            ContractSurfaceCollector collector) {
+        captureComplete(
+                root,
+                snapshot,
+                schedule,
+                context,
+                EmbeddedMembership.TENTATIVE,
+                collector);
+    }
+
+    private void captureComplete(
+            Node root,
+            ResolvedSnapshot snapshot,
+            GasSchedule schedule,
+            SubscriptionSurfaceValidationContext context,
+            EmbeddedMembership membership,
+            ContractSurfaceCollector collector) {
+        if (effective == null) {
+            throw new IllegalStateException(
+                    "Complete contract-surface capture requires configured "
+                            + "effective contract traversal");
+        }
+        effective.captureComplete(
+                root,
+                snapshot,
+                schedule,
+                context,
+                membership,
+                collector);
+    }
+
     private Map<String, SubscriptionDelta.Entry> project(
             Node root,
             ResolvedSnapshot snapshot,

@@ -243,7 +243,7 @@ public final class ProcessorRuntimeAccess {
         }
     }
 
-    private BlueOperationResult<FrozenNode> verifiedMaterialization(
+    static BlueOperationResult<FrozenNode> verifiedMaterialization(
             FrozenNode reference,
             FrozenNode materialized) {
         if (materialized == null) {

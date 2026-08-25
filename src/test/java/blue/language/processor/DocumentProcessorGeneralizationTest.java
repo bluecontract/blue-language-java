@@ -123,7 +123,12 @@ class DocumentProcessorGeneralizationTest {
         ));
 
         // then
-        assertEquals(2, updates.size());
+        assertEquals(4, updates.size(),
+                "two generated type writes and two authored writes are observable");
+        assertEquals("/price/type", updates.get(0).path());
+        assertEquals("/type", updates.get(1).path());
+        assertEquals("/price/currency", updates.get(2).path());
+        assertEquals("/stock", updates.get(3).path());
         assertEquals("USD", document.getAsText("/price/currency"));
         assertEquals(6, document.getAsInteger("/stock"));
         assertEquals(nodeProvider.getBlueIdByName("Price"),
@@ -483,10 +488,13 @@ class DocumentProcessorGeneralizationTest {
         ));
 
         // then
-        assertEquals(1, updates.size());
-        assertEquals("USD", updates.get(0).after().getAsText("/currency"));
+        assertEquals(3, updates.size());
+        assertEquals("/price/type", updates.get(0).path());
+        assertEquals("/type", updates.get(1).path());
+        assertEquals("/price", updates.get(2).path());
+        assertEquals("USD", updates.get(2).after().getAsText("/currency"));
         assertEquals(nodeProvider.getBlueIdByName("Price"),
-                updates.get(0).after().getType().getBlueId());
+                updates.get(2).after().getType().getBlueId());
         assertEquals(nodeProvider.getBlueIdByName("Price"),
                 document.getAsNode("/price/type").getBlueId());
         assertEquals(nodeProvider.getBlueIdByName("Global Product"),
@@ -857,6 +865,7 @@ class DocumentProcessorGeneralizationTest {
                 "  generalization:\n" +
                 "    type:\n" +
                 "      blueId: " + RuntimeBlueIds.TYPE_GENERALIZATION_POLICY + "\n" +
+                "    defaultMode: nearest-valid-ancestor\n" +
                 "    rules:\n" +
                 "      - path: /price\n" +
                 "        mode: reject\n" +
@@ -1092,7 +1101,8 @@ class DocumentProcessorGeneralizationTest {
         DocumentProcessingRuntime sequential = runtime(blue, document);
         List<DocumentUpdateData> updates = new ArrayList<>();
         for (JsonPatch patch : patches) {
-            updates.add(sequential.applyPatch("/", patch));
+            updates.addAll(sequential.applyPatches(
+                    "/", Collections.singletonList(patch)));
         }
         return updates;
     }

@@ -100,16 +100,39 @@ final class ScopeExecutor {
                         patchPreflight,
                         new ScopeMutationExecutor.UpdateContinuation() {
                             @Override
+                            public FrozenDispatchContext freezeBeforePatch(
+                                    String scopePath,
+                                    ContractBundle bundle) {
+                                /*
+                                 * Refresh only at the next authored patch
+                                 * boundary. The prior transition has already
+                                 * committed, so this is the live surface whose
+                                 * current delivery must now be frozen. Closure
+                                 * continuation output never replaces or
+                                 * invalidates this runtime's document.
+                                 */
+                                ContractBundle live = frameFactory.refresh(
+                                        scopePath, true, false);
+                                return FrozenDispatchContext.capture(
+                                        participation,
+                                        scopePath,
+                                        live != null ? live : bundle);
+                            }
+
+                            @Override
                             public void continueAfterPatch(
                                     String scopePath,
                                     ContractBundle bundle,
                                     FrozenJsonPatch patch,
-                                    List<DocumentUpdateData> updates) {
+                                    List<DocumentUpdateData> updates,
+                                    FrozenDispatchContext dispatchContext) {
                                 continuationHook.afterPatch(
                                         scopePath,
                                         runtime.document(),
                                         patch,
-                                        updateOccurrences(updates));
+                                        updateOccurrences(
+                                                updates,
+                                                dispatchContext));
                             }
                         });
     }
@@ -152,13 +175,18 @@ final class ScopeExecutor {
     /** Executes one already-selected Root work occurrence without a FIFO drain. */
     void executeIsolatedManagedRootWork(
             ManagedDocumentStepRequest request) {
+        executeIsolatedManagedRootWork(request, null);
+    }
+
+    /** Executes one Root work occurrence with an optional frozen route. */
+    void executeIsolatedManagedRootWork(
+            ManagedDocumentStepRequest request,
+            ManagedDocumentStepRoute selectedRoute) {
         Objects.requireNonNull(request, "request");
         ManagedDocumentWorkKind kind = request.workKind();
         String channelKey = request.channelKey();
-        Node exactPayload = request.exactPayload();
         Objects.requireNonNull(kind, "kind");
-        Objects.requireNonNull(exactPayload, "exactPayload");
-        ContractBundle bundle = preflightIsolatedManagedRoot(request);
+        ContractBundle liveBundle = preflightIsolatedManagedRoot(request);
         if (kind == ManagedDocumentWorkKind.INITIALIZATION) {
             /*
              * Closure initialization freezes the member and lifecycle
@@ -171,7 +199,7 @@ final class ScopeExecutor {
         if (kind == ManagedDocumentWorkKind.CONTAINING_REFERENCE_UPDATE) {
             mutationExecutor.execute(
                     JsonPointer.ROOT,
-                    bundle,
+                    liveBundle,
                     Collections.singletonList(
                             PatchInput.frozen(request.processorPatch())),
                     false,
@@ -179,8 +207,15 @@ final class ScopeExecutor {
             return;
         }
 
+        ContractBundle dispatchBundle = selectedRoute == null
+                ? liveBundle
+                : requireFrozenDispatchBundle(request, selectedRoute);
+        Node exactPayload = selectedRoute == null
+                ? request.exactPayload()
+                : selectedRoute.exactPayload();
+        Objects.requireNonNull(exactPayload, "exactPayload");
         ContractBundle.ChannelBinding channel = requireStepChannel(
-                bundle, channelKey);
+                dispatchBundle, channelKey);
         requireStepChannelRole(kind, channel);
         if (kind == ManagedDocumentWorkKind.TRIGGERED_EVENT) {
             runtime.chargeTriggeredDelivery();
@@ -192,18 +227,40 @@ final class ScopeExecutor {
         if (kind == ManagedDocumentWorkKind.EMBEDDED_EVENT) {
             channelRunner.runHandlers(
                     JsonPointer.ROOT,
-                    bundle,
+                    dispatchBundle,
                     channel.key(),
                     exactPayload,
-                    request.occurrenceEvent());
+                    selectedRoute == null
+                            ? request.occurrenceEvent()
+                            : selectedRoute.occurrenceEvent());
         } else {
             channelRunner.runHandlers(
                     JsonPointer.ROOT,
-                    bundle,
+                    dispatchBundle,
                     channel.key(),
                     exactPayload,
                     kind == ManagedDocumentWorkKind.LIFECYCLE);
         }
+    }
+
+    private ContractBundle requireFrozenDispatchBundle(
+            ManagedDocumentStepRequest request,
+            ManagedDocumentStepRoute selectedRoute) {
+        if (request.workKind() != selectedRoute.workKind()
+                || !Objects.equals(
+                        request.channelKey(),
+                        selectedRoute.channelKey())) {
+            throw new InvalidExecutionEvidenceException(
+                    "Selected managed route disagrees with accepted routed work",
+                    ProcessorErrorCategory.InvalidContractBinding);
+        }
+        ContractBundle dispatch = selectedRoute.frozenDispatchBundle();
+        if (dispatch == null) {
+            throw new InvalidExecutionEvidenceException(
+                    "Selected managed route lost its frozen dispatch surface",
+                    ProcessorErrorCategory.InvalidContractBinding);
+        }
+        return dispatch;
     }
 
     private ContractBundle.ChannelBinding requireStepChannel(
@@ -260,11 +317,19 @@ final class ScopeExecutor {
     }
 
     private static List<DocumentUpdateOccurrence> updateOccurrences(
-            List<DocumentUpdateData> updates) {
+            List<DocumentUpdateData> updates,
+            FrozenDispatchContext dispatchContext) {
+        ContractBundle rootBundle = Objects.requireNonNull(
+                dispatchContext, "dispatchContext")
+                .bundle(JsonPointer.ROOT);
         List<DocumentUpdateOccurrence> exact =
                 new ArrayList<DocumentUpdateOccurrence>(updates.size());
         for (DocumentUpdateData update : updates) {
-            exact.add(update.occurrence());
+            DocumentUpdateOccurrence occurrence = update.occurrence();
+            exact.add(rootBundle == null
+                    ? occurrence
+                    : occurrence.withFrozenRootDispatchBundle(
+                            rootBundle));
         }
         return Collections.unmodifiableList(exact);
     }
@@ -438,10 +503,6 @@ final class ScopeExecutor {
                     "External delivery scope was not preflighted: "
                             + normalizedScope);
         }
-        if (bundle == null) {
-            throw new InvalidExecutionEvidenceException(
-                    "External delivery scope disappeared: " + normalizedScope);
-        }
         ContractBundle.ChannelBinding channel =
                 bundle.channelBinding(channelKey);
         if (channel == null
@@ -540,8 +601,10 @@ final class ScopeExecutor {
                         "Logical delivery group changed before execution at "
                                 + normalizedScope);
             }
+            ContractBundle dispatchBundle =
+                    classification.dispatchBundle();
             ContractBundle.ChannelBinding channel =
-                    bundle.channelBinding(
+                    dispatchBundle.channelBinding(
                             classification.sourceChannelKey());
             if (channel == null
                     || ProcessorManagedChannelTypes

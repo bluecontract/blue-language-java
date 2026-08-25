@@ -112,6 +112,7 @@ final class RoutingDecompositionTest {
                 handler,
                 logical,
                 null,
+                ContractBundle.empty(),
                 FrozenNode.fromResolvedNode(new Node().value(payload)),
                 java.util.Collections.<ExactBlueValue>emptyList(),
                 null,

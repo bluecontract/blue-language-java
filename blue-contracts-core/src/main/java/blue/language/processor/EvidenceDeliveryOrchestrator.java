@@ -201,11 +201,49 @@ final class EvidenceDeliveryOrchestrator {
             logicalDeliveries = Collections.emptyList();
             return;
         }
+        List<ChannelRunner.ExternalClassification> frozenDeliveries =
+                freezePreTransitionDispatchBundles(acceptedDeliveries);
+        acceptedDeliveries = frozenDeliveries;
         List<List<ChannelRunner.ExternalClassification>> groups =
-                groupLogicalDeliveries(acceptedDeliveries);
+                groupLogicalDeliveries(frozenDeliveries);
         validateLogicalDeliveryGroups(groups);
         recordLogicalDeliveryGroups(groups);
         logicalDeliveries = groups;
+    }
+
+    private List<ChannelRunner.ExternalClassification>
+    freezePreTransitionDispatchBundles(
+            List<ChannelRunner.ExternalClassification> classifications) {
+        List<ChannelRunner.ExternalClassification> frozen =
+                new ArrayList<>(classifications.size());
+        for (ChannelRunner.ExternalClassification classification
+                : classifications) {
+            String scopePath = ProcessorEngine.normalizeScope(
+                    classification.scopePath());
+            ContractBundle dispatchBundle = bundles.get(scopePath);
+            if (dispatchBundle == null) {
+                throw new IllegalStateException(
+                        "Accepted external delivery scope was not "
+                                + "preflighted: " + scopePath);
+            }
+            frozen.add(classification.withDispatchBundle(
+                    dispatchBundle,
+                    initializationPending(scopePath)));
+        }
+        return Collections.unmodifiableList(frozen);
+    }
+
+    private boolean initializationPending(String scopePath) {
+        List<String> path = initializationPaths.get(scopePath);
+        if (path == null || path.isEmpty()) {
+            path = Collections.singletonList(scopePath);
+        }
+        for (String participatingScope : path) {
+            if (!runtime.hasInitializationMarker(participatingScope)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void executeLogicalDeliveries() {

@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Representation-blind read boundary for one PROCESS invocation.
@@ -54,6 +55,7 @@ final class ProcessingDocumentView {
         if (runtime.snapshot == null && runtime.snapshotManager != null) {
             runtime.snapshot = runtime.snapshotFromDocument(
                     runtime.materializedView.root());
+            runtime.retainEntrySnapshot(runtime.snapshot);
             if (!runtime.selectedDocumentBacked) {
                 runtime.materializedView.replaceWithSnapshot(runtime.snapshot);
             }
@@ -254,6 +256,14 @@ final class ProcessingDocumentView {
     FrozenNode contractRecognitionScope(
             FrozenNode selectedScope,
             FrozenNode resolvedScope) {
+        return contractRecognitionScope(
+                selectedScope, resolvedScope, null);
+    }
+
+    FrozenNode contractRecognitionScope(
+            FrozenNode selectedScope,
+            FrozenNode resolvedScope,
+            Set<String> recognizedContractKeys) {
         if (!hasContractProperties(selectedScope)
                 || !hasContractProperties(resolvedScope)) {
             return resolvedScope;
@@ -262,6 +272,10 @@ final class ProcessingDocumentView {
         Node recognitionScope = null;
         FrozenNode refreshedEffectiveScope = null;
         for (String key : selectedScope.getContracts().getProperties().keySet()) {
+            if (recognizedContractKeys != null
+                    && !recognizedContractKeys.contains(key)) {
+                continue;
+            }
             FrozenNode effectiveContract =
                     resolvedScope.getContracts().property(key);
             if (effectiveContract == null
@@ -370,6 +384,7 @@ final class ProcessingDocumentView {
             current = runtime.snapshotFromDocument(
                     runtime.materializedView.copyRoot());
             runtime.snapshot = current;
+            runtime.retainEntrySnapshot(current);
             runtime.sharedSnapshotVersion = runtime.stateVersion;
             materializedFallback = true;
         }
