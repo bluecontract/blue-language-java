@@ -993,6 +993,312 @@ def direct_processor_markers(
     return result
 
 
+def validate_initialization_marker_write_set(
+    path: Path,
+    before_markers: dict[str, dict[str, Any]],
+    after_markers: dict[str, dict[str, Any]],
+    expected: dict[str, Any],
+    fixture: dict[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    trace = expected_gas_trace(path, expected)
+    installed = sorted(
+        document_id
+        for document_id in before_markers
+        if before_markers[document_id]["initialized"] is None
+        and after_markers[document_id]["initialized"] is not None
+    )
+    rows = [
+        entry
+        for entry in trace
+        if entry.get("counter") == "processorMarkerWritten"
+        and entry.get("reason", "").startswith("initialization-batch.marker.")
+    ]
+    require(
+        all(
+            entry.get("namespace") == "processor"
+            and isinstance(entry.get("documentId"), str)
+            and entry.get("workOccurrenceId") is None
+            and entry.get("quantity") == 1
+            and entry.get("reason")
+            == f"initialization-batch.marker.{entry['documentId']}"
+            for entry in rows
+        ),
+        f"malformed initialization marker write row in {path.name}",
+    )
+    row_document_ids = [entry["documentId"] for entry in rows]
+    require(
+        len(row_document_ids) == len(set(row_document_ids)),
+        f"initialization marker write set repeats a document in {path.name}",
+    )
+    require(
+        all(
+            document_id in before_markers
+            and before_markers[document_id]["initialized"] is None
+            for document_id in row_document_ids
+        ),
+        f"initialization marker write set names a non-managed or already "
+        f"initialized document in {path.name}",
+    )
+    marker_positions = [
+        index
+        for index, entry in enumerate(trace)
+        if entry.get("counter") == "processorMarkerWritten"
+        and entry.get("reason", "").startswith("initialization-batch.marker.")
+    ]
+    owned_rebuild_positions: set[int] = set()
+    identity_counters = {
+        "nodeIdentityEstablished",
+        "objectMemberRebuilt",
+        "directIdentityHashBlock",
+    }
+    failing_work_ids: dict[str, set[str]] = defaultdict(set)
+    initialization_work_ids: dict[str, set[str]] = defaultdict(set)
+    if fixture is not None:
+        work_by_identity: dict[str, dict[str, Any]] = {}
+        for work in expected.get("workTrace", []):
+            document_id = work.get("targetDocumentId")
+            work_identity = work.get("workIdentity")
+            if isinstance(work_identity, str):
+                work_by_identity[work_identity] = work
+            if (
+                work.get("kind") == "INITIALIZATION"
+                and isinstance(document_id, str)
+                and isinstance(work_identity, str)
+            ):
+                initialization_work_ids[document_id].add(work_identity)
+            if any(
+                isinstance(result, dict) and result.get("fail") is not None
+                for result in handler_results_for_work(path, fixture, work)
+            ) and isinstance(document_id, str) and isinstance(
+                work_identity, str
+            ):
+                failing_work_ids[document_id].add(work_identity)
+        rejected_work = expected.get("rejectedWorkOccurrence")
+        if isinstance(rejected_work, dict):
+            rejected_work_identity = rejected_work.get("workIdentity")
+            traced_work = work_by_identity.get(rejected_work_identity)
+            require(
+                traced_work is not None,
+                f"rejected work occurrence is absent from work trace in "
+                f"{path.name}",
+            )
+            rejected_document_id = traced_work.get("targetDocumentId")
+            require(
+                isinstance(rejected_document_id, str)
+                and isinstance(rejected_work_identity, str),
+                f"rejected work occurrence lacks a traced document in "
+                f"{path.name}",
+            )
+            failing_work_ids[rejected_document_id].add(
+                rejected_work_identity
+            )
+    for marker_position in marker_positions:
+        document_id = trace[marker_position]["documentId"]
+        if fixture is not None:
+            work_ids = initialization_work_ids.get(document_id, set())
+            initialization_positions = [
+                index
+                for index, entry in enumerate(trace)
+                if entry.get("workOccurrenceId") in work_ids
+            ]
+            earlier_failing_positions = [
+                index
+                for index, entry in enumerate(trace[:marker_position])
+                if entry.get("workOccurrenceId")
+                in failing_work_ids.get(document_id, set())
+            ]
+            require(
+                work_ids
+                and initialization_positions
+                and max(initialization_positions) < marker_position
+                and not earlier_failing_positions,
+                f"initialization marker write is not causally after successful "
+                f"initialization work in {path.name}: {document_id}",
+            )
+        rebuild_positions: list[int] = []
+        cursor = marker_position + 1
+        while cursor < len(trace):
+            entry = trace[cursor]
+            if not (
+                entry.get("namespace") == "semantic"
+                and entry.get("counter") in identity_counters
+                and entry.get("documentId") == document_id
+                and entry.get("logicalPath") == "/contracts/initialized"
+                and entry.get("workOccurrenceId") is None
+                and entry.get("reason") == "identity-rebuild"
+            ):
+                break
+            rebuild_positions.append(cursor)
+            cursor += 1
+        require(
+            [trace[index]["counter"] for index in rebuild_positions]
+            == [
+                "nodeIdentityEstablished",
+                "objectMemberRebuilt",
+                "directIdentityHashBlock",
+            ]
+            * 3,
+            f"initialization marker write lacks its exact contiguous identity "
+            f"rebuild spine "
+            f"in {path.name}: {document_id}",
+        )
+        owned_rebuild_positions.update(rebuild_positions)
+    all_rebuild_positions = {
+        index
+        for index, entry in enumerate(trace)
+        if entry.get("namespace") == "semantic"
+        and entry.get("counter") in identity_counters
+        and entry.get("logicalPath") == "/contracts/initialized"
+        and entry.get("workOccurrenceId") is None
+        and entry.get("reason") == "identity-rebuild"
+    }
+    require(
+        owned_rebuild_positions == all_rebuild_positions,
+        f"initialization-marker identity rebuild evidence is not in exact "
+        f"bijection with marker writes in {path.name}",
+    )
+    if expected.get("status") == "success":
+        require(
+            sorted(row_document_ids) == installed,
+            f"initialization marker write set does not equal the exact newly "
+            f"installed marker set in {path.name}",
+        )
+    else:
+        require(
+            not installed,
+            f"non-successful result committed an initialization marker in "
+            f"{path.name}",
+        )
+    return {entry["documentId"]: entry for entry in rows}
+
+
+def validate_rollback_marker_prefix_self_check() -> None:
+    path = CLOSURE / "fl-adm-09-late-member-rollback.yaml"
+    fixture = load_yaml(path)
+    expected = fixture["expected"]
+    before = direct_processor_markers(
+        path, fixture["input"]["documents"], "rollback-self-check-input"
+    )
+    after = direct_processor_markers(
+        path, result_documents(expected), "rollback-self-check-result"
+    )
+    writes = validate_initialization_marker_write_set(
+        path, before, after, expected, fixture
+    )
+    require(
+        sorted(writes) == ["fl-adm-09-a"],
+        "FL-ADM-09 rollback marker prefix was not admitted exactly",
+    )
+
+    invalid: list[tuple[str, dict[str, Any]]] = []
+    missing = json.loads(json.dumps(expected))
+    missing["gasTrace"] = [
+        row
+        for row in missing["gasTrace"]
+        if row.get("reason") != "initialization-batch.marker.fl-adm-09-a"
+    ]
+    invalid.append(("missing completed-prefix marker", missing))
+
+    retargeted = json.loads(json.dumps(expected))
+    retargeted_row = next(
+        row
+        for row in retargeted["gasTrace"]
+        if row.get("reason") == "initialization-batch.marker.fl-adm-09-a"
+    )
+    retargeted_row["documentId"] = "not-a-managed-document"
+    retargeted_row["reason"] = (
+        "initialization-batch.marker.not-a-managed-document"
+    )
+    invalid.append(("retargeted marker", retargeted))
+
+    extra = json.loads(json.dumps(expected))
+    extra_row = json.loads(json.dumps(
+        next(
+            row
+            for row in extra["gasTrace"]
+            if row.get("reason") == "initialization-batch.marker.fl-adm-09-a"
+        )
+    ))
+    extra_row["documentId"] = "fl-adm-09-b"
+    extra_row["reason"] = "initialization-batch.marker.fl-adm-09-b"
+    extra["gasTrace"].append(extra_row)
+    source_marker_position = next(
+        index
+        for index, row in enumerate(expected["gasTrace"])
+        if row.get("reason") == "initialization-batch.marker.fl-adm-09-a"
+    )
+    for row in expected["gasTrace"][
+        source_marker_position + 1 : source_marker_position + 10
+    ]:
+        fabricated_rebuild = json.loads(json.dumps(row))
+        fabricated_rebuild["documentId"] = "fl-adm-09-b"
+        extra["gasTrace"].append(fabricated_rebuild)
+    invalid.append(("marker from failing component", extra))
+
+    for label, evidence in invalid:
+        try:
+            validate_initialization_marker_write_set(
+                path, before, after, evidence, fixture
+            )
+        except ValidationFailure:
+            continue
+        raise ValidationFailure(
+            f"rollback marker prefix self-check accepted {label}"
+        )
+
+
+def validate_rejected_work_marker_causality_self_check() -> None:
+    path = CLOSURE / (
+        "c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml"
+    )
+    fixture = load_yaml(path)
+    expected = fixture["expected"]
+    before = direct_processor_markers(
+        path, fixture["input"]["documents"], "rejected-work-self-check-input"
+    )
+    after = direct_processor_markers(
+        path,
+        result_documents(expected),
+        "rejected-work-self-check-result",
+    )
+    require(
+        not validate_initialization_marker_write_set(
+            path, before, after, expected, fixture
+        ),
+        "C-EVO-22 low-gas baseline unexpectedly writes a marker",
+    )
+
+    forged = json.loads(json.dumps(expected))
+    spine_fixture = load_yaml(
+        CLOSURE / "fl-adm-09-late-member-rollback.yaml"
+    )
+    spine_trace = spine_fixture["expected"]["gasTrace"]
+    spine_start = next(
+        index
+        for index, row in enumerate(spine_trace)
+        if row.get("reason") == "initialization-batch.marker.fl-adm-09-a"
+    )
+    for row in spine_trace[spine_start : spine_start + 10]:
+        fabricated = json.loads(json.dumps(row))
+        fabricated["documentId"] = "c-evo-22-a"
+        if fabricated.get("counter") == "processorMarkerWritten":
+            fabricated["reason"] = (
+                "initialization-batch.marker.c-evo-22-a"
+            )
+        forged["gasTrace"].append(fabricated)
+
+    try:
+        validate_initialization_marker_write_set(
+            path, before, after, forged, fixture
+        )
+    except ValidationFailure:
+        return
+    raise ValidationFailure(
+        "rejected-work marker causality self-check accepted a marker after "
+        "gas-rejected work"
+    )
+
+
 def validate_direct_marker_transition(
     path: Path,
     before_documents: dict[str, Any],
@@ -1002,6 +1308,8 @@ def validate_direct_marker_transition(
     expected: dict[str, Any],
     before_occurrences: list[dict[str, Any]] | None = None,
     after_occurrences: list[dict[str, Any]] | None = None,
+    fixture: dict[str, Any] | None = None,
+    initialization_marker_writes: dict[str, dict[str, Any]] | None = None,
 ) -> None:
     for document_id in sorted(before_documents):
         before = before_markers[document_id]
@@ -1037,10 +1345,22 @@ def validate_direct_marker_transition(
                     after_occurrences,
                 )
             )
+            intermediate_batch_entry_blue_id = (
+                intermediate_cyclic_component_batch_entry_blue_id(
+                    path,
+                    document_id,
+                    before_markers,
+                    after_markers,
+                    expected,
+                    fixture,
+                    initialization_marker_writes,
+                )
+            )
             require(
                 marker_blue_id == invocation_input_blue_id
                 or marker_blue_id == terminal_batch_entry_blue_id
-                or marker_blue_id == rebound_batch_entry_blue_id,
+                or marker_blue_id == rebound_batch_entry_blue_id
+                or marker_blue_id == intermediate_batch_entry_blue_id,
                 f"initialized marker does not reference the exact invocation-input "
                 f"or proven component-batch-entry document in "
                 f"{path.name}: {document_id}",
@@ -1287,6 +1607,269 @@ def terminal_component_batch_entry_blue_id(
         return direct_blue_id(candidate)
     except (TypeError, ValueError):
         return None
+
+
+def intermediate_cyclic_component_batch_entry_blue_id(
+    path: Path,
+    document_id: str,
+    before_markers: dict[str, dict[str, Any]],
+    after_markers: dict[str, dict[str, Any]],
+    expected: dict[str, Any],
+    fixture: dict[str, Any] | None,
+    marker_writes: dict[str, dict[str, Any]] | None,
+) -> str | None:
+    """Correlate an already-proven intermediate cyclic batch-entry state."""
+    if (
+        fixture is None
+        or marker_writes is None
+        or expected.get("status") != "success"
+        or document_id not in marker_writes
+        or before_markers.get(document_id, {}).get("initialized") is not None
+        or after_markers.get(document_id, {}).get("initialized") is None
+    ):
+        return None
+    marker_blue_id = after_markers[document_id]["initialized"]["document"][
+        "blueId"
+    ]
+    work_trace = expected["workTrace"]
+    initialization_work = [
+        work
+        for work in work_trace
+        if work["kind"] == "INITIALIZATION"
+        and work["targetDocumentId"] == document_id
+    ]
+    if len(initialization_work) != 1:
+        return None
+    initialization = initialization_work[0]
+    trace = expected_gas_trace(path, expected)
+    initialization_enqueues = [
+        entry
+        for entry in trace
+        if entry["counter"] == "closureWorkOccurrenceEnqueued"
+        and entry.get("workOccurrenceId") == initialization["workIdentity"]
+    ]
+    if (
+        len(initialization_enqueues) != 1
+        or initialization_enqueues[0].get("namespace") != "processor"
+        or initialization_enqueues[0].get("quantity") != 1
+        or initialization_enqueues[0].get("documentId") != document_id
+        or initialization_enqueues[0].get("contractKey")
+        != initialization.get("channelKey")
+        or initialization_enqueues[0].get("logicalPath")
+        != f"work/{initialization['ordinal']}"
+        or initialization_enqueues[0].get("reason")
+        != f"work.{initialization['ordinal']}.enqueue"
+    ):
+        return None
+    initialization_enqueue_sequence = initialization_enqueues[0]["sequence"]
+    work_by_ordinal = {work["ordinal"]: work for work in work_trace}
+
+    def gas_key(entry: dict[str, Any]) -> tuple[Any, ...]:
+        return tuple(
+            entry.get(key)
+            for key in (
+                "namespace",
+                "counter",
+                "quantity",
+                "documentId",
+                "reason",
+                "workOccurrenceId",
+            )
+        )
+
+    def finalization_coverage(
+        finalization: dict[str, Any],
+        prefix: str,
+        owner: str | None,
+        owner_document_id: str | None,
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
+        try:
+            ordered_members = sorted(
+                (int(blue_id.rsplit("#", 1)[1]), member)
+                for member, blue_id in finalization["memberBlueIds"].items()
+            )
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return None
+        if [index for index, _member in ordered_members] != list(
+            range(len(ordered_members))
+        ):
+            return None
+        boundary_reason = finalization_gas_reason(
+            path, fixture, finalization, prefix
+        )
+        boundary_rows = [
+            entry
+            for entry in trace
+            if entry["counter"] == "tentativeComponentFinalization"
+            and entry.get("reason") == boundary_reason
+        ]
+        member_prefix = boundary_reason.removesuffix(
+            ".finalization-boundary"
+        )
+        member_rows = sorted(
+            (
+                entry
+                for entry in trace
+                if entry["counter"] == "cyclicMemberFinalized"
+                and entry.get("reason", "").startswith(
+                    f"{member_prefix}.member-finalized."
+                )
+            ),
+            key=lambda entry: entry["sequence"],
+        )
+        expected_projection = [
+            (
+                "processor",
+                "cyclicMemberFinalized",
+                1,
+                member,
+                f"{member_prefix}.member-finalized.{index}",
+                owner,
+            )
+            for index, member in ordered_members
+        ]
+        if (
+            len(boundary_rows) != 1
+            or gas_key(boundary_rows[0])
+            != (
+                "processor",
+                "tentativeComponentFinalization",
+                1,
+                owner_document_id,
+                boundary_reason,
+                owner,
+            )
+            or [gas_key(entry) for entry in member_rows]
+            != expected_projection
+            or not member_rows
+            or boundary_rows[0]["sequence"] >= member_rows[0]["sequence"]
+        ):
+            return None
+        return boundary_rows[0], member_rows
+
+    prior_finalizations = [
+        finalization
+        for finalization in expected["tentativeFinalizations"]
+        if finalization["boundary"]["kind"] == "WORK"
+        and finalization["boundary"]["afterWorkOrdinal"]
+        < initialization["ordinal"]
+        and document_id in finalization["memberBlueIds"]
+    ]
+    if not prior_finalizations:
+        return None
+    latest_boundary = max(
+        item["boundary"]["afterWorkOrdinal"] for item in prior_finalizations
+    )
+    latest = [
+        item
+        for item in prior_finalizations
+        if item["boundary"]["afterWorkOrdinal"] == latest_boundary
+    ]
+    if len(latest) != 1 or latest[0]["memberBlueIds"][document_id] != marker_blue_id:
+        return None
+    entry_finalization = latest[0]
+    owner_work = work_by_ordinal.get(latest_boundary)
+    entry_members = set(entry_finalization["memberBlueIds"])
+    prior_component_work = [
+        work["ordinal"]
+        for work in work_trace
+        if work["ordinal"] < initialization["ordinal"]
+        and work["targetDocumentId"] in entry_members
+    ]
+    if (
+        owner_work is None
+        or not prior_component_work
+        or latest_boundary != max(prior_component_work)
+    ):
+        return None
+    entry_coverage = finalization_coverage(
+        entry_finalization,
+        f"work.{latest_boundary}",
+        owner_work["workIdentity"],
+        owner_work["targetDocumentId"],
+    )
+    if (
+        entry_coverage is None
+        or entry_coverage[1][-1]["sequence"] >= initialization_enqueue_sequence
+    ):
+        return None
+
+    final_batch_proofs = []
+    for finalization in expected["tentativeFinalizations"]:
+        boundary = finalization["boundary"]
+        members = set(finalization["memberBlueIds"])
+        if (
+            boundary["kind"] != "INITIALIZATION_BATCH"
+            or finalization["ordinal"] <= entry_finalization["ordinal"]
+            or document_id not in members
+            or boundary["afterWorkOrdinal"] < initialization["ordinal"]
+            or not members <= before_markers.keys()
+            or not members <= after_markers.keys()
+        ):
+            continue
+        member_work_ids = {
+            work["workIdentity"]
+            for work in work_trace
+            if work["targetDocumentId"] in members
+            and work["ordinal"] <= boundary["afterWorkOrdinal"]
+        }
+        member_work_rows = [
+            entry
+            for entry in trace
+            if entry.get("workOccurrenceId") in member_work_ids
+        ]
+        if not member_work_rows or {
+            entry["workOccurrenceId"] for entry in member_work_rows
+        } != member_work_ids:
+            continue
+        coverage = finalization_coverage(
+            finalization, "initialization-batch", None, None
+        )
+        if coverage is None:
+            continue
+        boundary_row, final_member_rows = coverage
+        if boundary_row["sequence"] >= final_member_rows[0]["sequence"]:
+            continue
+        last_member_work = max(row["sequence"] for row in member_work_rows)
+        batch_rows = sorted(
+            (
+                entry
+                for entry in marker_writes.values()
+                if last_member_work < entry["sequence"]
+                < boundary_row["sequence"]
+            ),
+            key=lambda entry: entry["sequence"],
+        )
+        batch_document_ids = [entry["documentId"] for entry in batch_rows]
+        if (
+            not batch_document_ids
+            or document_id not in batch_document_ids
+            or batch_document_ids != sorted(batch_document_ids)
+            or not set(batch_document_ids) <= members
+        ):
+            continue
+        first_marker = batch_rows[0]["sequence"]
+        later_finalization_rows = [
+            entry
+            for entry in trace
+            if entry.get("counter") == "tentativeComponentFinalization"
+            and entry["sequence"] > first_marker
+        ]
+        if (
+            not later_finalization_rows
+            or min(entry["sequence"] for entry in later_finalization_rows)
+            != boundary_row["sequence"]
+        ):
+            continue
+        final_member_sequence = final_member_rows[-1]["sequence"]
+        if any(
+            entry.get("workOccurrenceId") is not None
+            and last_member_work < entry["sequence"] <= final_member_sequence
+            for entry in trace
+        ):
+            continue
+        final_batch_proofs.append(finalization)
+    return marker_blue_id if len(final_batch_proofs) == 1 else None
 
 
 def stable_rebound_component_batch_entry_blue_id(
@@ -1896,6 +2479,169 @@ def validate_direct_marker_transition_self_check() -> None:
         )
 
 
+def validate_intermediate_cyclic_marker_transition_self_check() -> None:
+    path = CLOSURE / "c-clo-08-cycle-during-initialization.yaml"
+    fixture = load_yaml(path)
+    expected = fixture["expected"]
+    before = direct_processor_markers(
+        path, fixture["input"]["documents"], "self-check-input"
+    )
+    after = direct_processor_markers(
+        path, result_documents(expected), "self-check-result"
+    )
+    marker_blue_id = after["b"]["initialized"]["document"]["blueId"]
+
+    def clone() -> dict[str, Any]:
+        return json.loads(json.dumps(expected))
+
+    def gas_row(evidence: dict[str, Any], reason: str) -> dict[str, Any]:
+        matches = [
+            row for row in evidence["gasTrace"] if row.get("reason") == reason
+        ]
+        require(
+            len(matches) == 1,
+            f"C-CLO-08 self-check mutation has non-unique row: {reason}",
+        )
+        return matches[0]
+
+    def insert_gas(
+        evidence: dict[str, Any],
+        after_sequence: int,
+        row: dict[str, Any],
+    ) -> None:
+        for existing in evidence["gasTrace"]:
+            if existing["sequence"] > after_sequence:
+                existing["sequence"] += 1
+        row["sequence"] = after_sequence + 1
+        evidence["gasTrace"].append(row)
+        evidence["gasTrace"].sort(key=lambda item: item["sequence"])
+
+    def work_charge(document_id: str, digit: str) -> dict[str, Any]:
+        return {
+            "namespace": "processor",
+            "counter": "handlerCall",
+            "quantity": 1,
+            "documentId": document_id,
+            "workOccurrenceId": "sha256:" + digit * 64,
+            "reason": "self-check.intervening-work",
+        }
+
+    def admitted(evidence: dict[str, Any]) -> str | None:
+        try:
+            writes = validate_initialization_marker_write_set(
+                path, before, after, evidence
+            )
+        except ValidationFailure:
+            return None
+        return intermediate_cyclic_component_batch_entry_blue_id(
+            path, "b", before, after, evidence, fixture, writes
+        )
+
+    require(
+        admitted(expected) == marker_blue_id,
+        "C-CLO-08 intermediate cyclic marker proof was not admitted",
+    )
+    rejected: list[tuple[str, dict[str, Any]]] = []
+
+    missing_marker = clone()
+    missing_marker["gasTrace"] = [
+        row
+        for row in missing_marker["gasTrace"]
+        if row.get("reason") != "initialization-batch.marker.a"
+    ]
+    rejected.append(("missing marker write", missing_marker))
+
+    malformed_marker = clone()
+    duplicate = json.loads(json.dumps(
+        gas_row(malformed_marker, "initialization-batch.marker.a")
+    ))
+    duplicate["quantity"] = 2
+    malformed_marker["gasTrace"].append(duplicate)
+    rejected.append(("malformed duplicate marker write", malformed_marker))
+
+    final_prefix = (
+        "initialization-batch."
+        "transition-1-cycle-after-initialization-batch."
+    )
+    for label, reason, changes in (
+        (
+            "incorrect initialization enqueue binding",
+            "work.2.enqueue",
+            {"logicalPath": "work/99", "contractKey": "wrong"},
+        ),
+        ("malformed finalization boundary", final_prefix + "finalization-boundary", {"quantity": 2}),
+        ("malformed cyclic member finalization", final_prefix + "member-finalized.0", {"quantity": 2}),
+    ):
+        evidence = clone()
+        gas_row(evidence, reason).update(changes)
+        rejected.append((label, evidence))
+
+    stale_entry = clone()
+    for work in stale_entry["workTrace"]:
+        if work["ordinal"] >= 2:
+            work["ordinal"] += 1
+    extra_work = json.loads(json.dumps(stale_entry["workTrace"][3]))
+    extra_work.update(
+        ordinal=2,
+        workIdentity="sha256:" + "2" * 64,
+    )
+    stale_entry["workTrace"].insert(2, extra_work)
+    stale_entry["tentativeFinalizations"][1]["boundary"][
+        "afterWorkOrdinal"
+    ] = 4
+    initialization_enqueue = gas_row(stale_entry, "work.2.enqueue")
+    initialization_enqueue.update(reason="work.3.enqueue", logicalPath="work/3")
+    insert_gas(
+        stale_entry,
+        72,
+        work_charge("b", "2"),
+    )
+    rejected.append(("stale state before later component work", stale_entry))
+
+    noncanonical_batch = clone()
+    first = gas_row(noncanonical_batch, "initialization-batch.marker.a")
+    second = gas_row(noncanonical_batch, "initialization-batch.marker.b")
+    first["sequence"], second["sequence"] = second["sequence"], first["sequence"]
+    rejected.append(("noncanonical marker batch", noncanonical_batch))
+
+    intervening_work = clone()
+    insert_gas(
+        intervening_work,
+        108,
+        work_charge("c", "3"),
+    )
+    rejected.append(("work inside finalization interval", intervening_work))
+
+    pre_marker_work = clone()
+    insert_gas(pre_marker_work, 97, work_charge("c", "6"))
+    rejected.append(("work after member work before first marker", pre_marker_work))
+
+    later_entry = clone()
+    later_finalization = json.loads(json.dumps(
+        later_entry["tentativeFinalizations"][0]
+    ))
+    later_finalization["ordinal"] = 1
+    later_finalization["memberBlueIds"]["b"] = later_entry[
+        "tentativeFinalizations"
+    ][1]["memberBlueIds"]["b"]
+    later_entry["tentativeFinalizations"][1]["ordinal"] = 2
+    later_entry["tentativeFinalizations"].insert(1, later_finalization)
+    rejected.append(("later changed state containing initialized member", later_entry))
+
+    for label, evidence in rejected:
+        require(
+            admitted(evidence) is None,
+            f"intermediate cyclic marker self-check accepted {label}",
+        )
+
+    later_work = clone()
+    insert_gas(later_work, 149, work_charge("c", "5"))
+    require(
+        admitted(later_work) == marker_blue_id,
+        "intermediate cyclic marker proof rejected later independent work",
+    )
+
+
 def contracts_at_scope(document: Any, scope_path: str) -> dict[str, Any]:
     scope = pointer_get(document, scope_path)
     require(isinstance(scope, dict), f"scope is not object: {scope_path}")
@@ -1943,6 +2689,8 @@ def validate_process_embedded_declaration_coverage(
     path: Path,
     documents: dict[str, Any],
     occurrences: list[dict[str, Any]],
+    *,
+    suspended_demand_sites: set[tuple[str, str]] | None = None,
 ) -> None:
     """Prove that declarations and managed occurrence rows cover each other.
 
@@ -1952,6 +2700,7 @@ def validate_process_embedded_declaration_coverage(
     The later occurrence-value checks remain representation-neutral and prove
     each row's exact target identity.
     """
+    allowed_missing = suspended_demand_sites or set()
     rows_by_path: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for occurrence in occurrences:
         source_document_id = occurrence.get("sourceDocumentId")
@@ -2040,7 +2789,14 @@ def validate_process_embedded_declaration_coverage(
             present: bool,
             owner: str,
         ) -> None:
-            rows = rows_by_path.get((document_id, source_path), [])
+            source_key = (document_id, source_path)
+            rows = rows_by_path.get(source_key, [])
+            if not rows and source_key in allowed_missing:
+                # NeedsResources is the only state in which the exact typed
+                # demand may stand in for the row that the suspended attempt
+                # deliberately did not invent or reconcile. The mandatory
+                # Java replay proves tentative discovery semantics.
+                return
             require(
                 len(rows) == 1,
                 f"Process Embedded declaration lacks exactly one occurrence row in "
@@ -2302,6 +3058,59 @@ def validate_affected_closure_connectivity(
     require(
         reached == document_ids,
         f"{phase} affected closure is not weakly connected in {path.name}: "
+        f"unreachable={sorted(document_ids - reached)}",
+    )
+
+
+def validate_admission_input_membership(
+    path: Path,
+    documents: dict[str, Any],
+    occurrences: list[dict[str, Any]],
+) -> None:
+    """Prove ADMIT input membership from immutable input graph facts.
+
+    Every uninitialized input document is an ADMIT seed under §7.10.  An
+    already-initialized non-Root member still needs a real active edge.  A
+    resource demand is not occurrence evidence and cannot invent membership.
+    """
+    document_ids = set(documents)
+    require(
+        document_ids,
+        f"admission input is empty in {path.name}",
+    )
+    seeds = {
+        document_id
+        for document_id, record in documents.items()
+        if record["initialized"] is False or record["publicRoot"] is True
+    }
+    require(
+        seeds,
+        f"admission has no initialization or public-Root seed in "
+        f"{path.name}",
+    )
+    neighbors: dict[str, set[str]] = {
+        document_id: set() for document_id in document_ids
+    }
+    for occurrence in occurrences:
+        if not occurrence.get("active"):
+            continue
+        source_id = occurrence["sourceDocumentId"]
+        target_id = occurrence["targetDocumentId"]
+        if source_id in neighbors and target_id in neighbors:
+            neighbors[source_id].add(target_id)
+            neighbors[target_id].add(source_id)
+    pending = sorted(seeds, reverse=True)
+    reached: set[str] = set()
+    while pending:
+        document_id = pending.pop()
+        if document_id in reached:
+            continue
+        reached.add(document_id)
+        pending.extend(sorted(neighbors[document_id] - reached, reverse=True))
+    require(
+        reached == document_ids,
+        f"admission contains an initialized non-Root document with "
+        f"no actual active membership edge in {path.name}: "
         f"unreachable={sorted(document_ids - reached)}",
     )
 
@@ -3636,8 +4445,14 @@ def validate_occurrence_set(
     components: list[dict[str, Any]],
     *,
     allow_invalid: bool,
+    suspended_demand_sites: set[tuple[str, str]] | None = None,
 ) -> int:
-    validate_process_embedded_declaration_coverage(path, documents, occurrences)
+    validate_process_embedded_declaration_coverage(
+        path,
+        documents,
+        occurrences,
+        suspended_demand_sites=suspended_demand_sites,
+    )
     occurrence_order = [
         (row["occurrenceIdentity"], row["bindingIdentity"])
         for row in occurrences
@@ -4255,6 +5070,25 @@ def finalization_stage_name(
         f"{path.name}: {ordinal}",
     )
     return matches[0]["stage"]
+
+
+def finalization_gas_reason(
+    path: Path,
+    fixture: dict[str, Any],
+    finalization: dict[str, Any],
+    prefix: str,
+) -> str:
+    if fixture.get("oracle") is None:
+        return (
+            f"{prefix}.finalization.finalization-boundary"
+            if finalization["boundary"]["kind"] == "WORK"
+            else f"{prefix}.finalization-boundary"
+        )
+    return (
+        f"{prefix}."
+        f"{finalization_stage_name(path, fixture, finalization['ordinal'])}."
+        f"finalization-boundary"
+    )
 
 
 def validate_tentative_finalizations(
@@ -4906,6 +5740,195 @@ def validate_managed_occurrence_patch_boundary_self_check() -> None:
     require_not_strict_occurrence_descendant_patch(
         path, "/", "/child", "synthetic containing ancestor replacement"
     )
+
+
+def validate_needs_resources_demand_sites(
+    path: Path, data: dict[str, Any]
+) -> set[tuple[str, str]]:
+    """Gate the exact declaration sites represented by closed typed demands.
+
+    Full tentative demand discovery is proved by the mandatory Java runtime
+    replay. This package-level check deliberately does not duplicate Language
+    resolution or Contracts patch execution.
+    """
+    expected = data["expected"]
+    require(
+        expected.get("attemptOutcome") == "NeedsResources",
+        f"typed demand gating used for a completed fixture in {path.name}",
+    )
+    validate_resource_demands(path, expected)
+    fixture_input = data["input"]
+    documents = fixture_input["documents"]
+    provider_site = ("blue-contracts/exact-node-provider", "/")
+    sites: set[tuple[str, str]] = set()
+
+    for demand in expected["resourceDemands"]:
+        site = (demand["sourceDocumentId"], demand["sourcePath"])
+        if demand["kind"] == "MANAGED_OCCURRENCE_EVIDENCE":
+            require(
+                demand["logicalCauseIdentity"]
+                == fixture_input["cause"]["causeIdentity"]
+                and demand["inputClosureIdentity"]
+                == fixture_input["closureIdentity"]
+                and demand["inputGraphGeneration"]
+                == fixture_input["graphGeneration"],
+                f"managed-occurrence demand is not bound to the immutable "
+                f"invocation input in {path.name}: {site}",
+            )
+        if site == provider_site:
+            require(
+                demand["kind"] == "EXACT_NODE",
+                f"managed-occurrence demand impersonates the reserved "
+                f"exact-node provider in {path.name}",
+            )
+            continue
+        require(
+            data.get("operation") == "admit-closure",
+            f"declaration-site demand appears outside ADMIT_CLOSURE in "
+            f"{path.name}: {site}",
+        )
+        require(
+            site not in sites and site[0] in documents,
+            f"typed demand repeats a site or names a document outside the "
+            f"admission input in {path.name}: {site}",
+        )
+        require(
+            active_declared_path(
+                documents[site[0]]["document"], site[1]
+            ),
+            f"typed demand does not name a declared Process Embedded site in "
+            f"{path.name}: {site[0]}{site[1]}",
+        )
+        source_document = documents[site[0]]["document"]
+        absent = object()
+        try:
+            supplied_value = pointer_get(source_document, site[1])
+        except KeyError:
+            # Some released demand fixtures discover a path from the
+            # mandatory Java resulting-surface replay.  Do not reproduce its
+            # patch engine here; bind every value already present in the
+            # immutable input and leave absent resulting values to that replay.
+            supplied_value = absent
+        if supplied_value is not absent:
+            require(
+                isinstance(supplied_value, dict),
+                f"typed demand source value is not an object in "
+                f"{path.name}: {site}",
+            )
+            reject_mixed_blue_id_wrappers(
+                path,
+                supplied_value,
+                f"{path.name}.resourceDemand[{site[0]}{site[1]}]",
+            )
+            supplied_reference = pure_blue_reference(supplied_value)
+            try:
+                supplied_blue_id = (
+                    supplied_reference
+                    if supplied_reference is not None
+                    else direct_blue_id(supplied_value)
+                )
+            except (TypeError, ValueError) as exc:
+                raise ValidationFailure(
+                    f"typed demand source value has no direct exact BlueId "
+                    f"in {path.name}: {site}"
+                ) from exc
+            require(
+                demand["suppliedValueBlueId"] == supplied_blue_id,
+                f"typed demand supplied-value identity does not match its "
+                f"immutable source value in {path.name}: {site}",
+            )
+        sites.add(site)
+    return sites
+
+
+def validate_needs_resources_demand_self_check() -> None:
+    """Pin declaration-site, immutable-context and membership gating."""
+    fixture_path = CLOSURE / "c-evo-19-missing-occurrence-evidence.yaml"
+    fixture = load_yaml(fixture_path)
+    sites = validate_needs_resources_demand_sites(fixture_path, fixture)
+    require(
+        sites == {("c-evo-19-a", "/peer")},
+        "NeedsResources demand-site self-check rejected the released fixture",
+    )
+
+    invalid = json.loads(json.dumps(fixture))
+    demand = invalid["expected"]["resourceDemands"][0]
+    demand["sourcePath"] = "/undeclared"
+    demand["demandIdentity"] = closure_resource_demand_identity(demand)
+    try:
+        validate_needs_resources_demand_sites(fixture_path, invalid)
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "NeedsResources demand-site self-check accepted an undeclared path"
+        )
+
+    for field, invalid_value in (
+        ("logicalCauseIdentity", "sha256:" + "1" * 64),
+        ("inputClosureIdentity", "sha256:" + "2" * 64),
+        ("inputGraphGeneration", 999),
+        (
+            "suppliedValueBlueId",
+            fixture["input"]["documents"]["c-evo-19-a"]["blueId"],
+        ),
+    ):
+        invalid = json.loads(json.dumps(fixture))
+        demand = invalid["expected"]["resourceDemands"][0]
+        demand[field] = invalid_value
+        demand["demandIdentity"] = closure_resource_demand_identity(demand)
+        try:
+            validate_needs_resources_demand_sites(fixture_path, invalid)
+        except ValidationFailure:
+            pass
+        else:
+            raise ValidationFailure(
+                f"NeedsResources demand-site self-check accepted forged "
+                f"{field}"
+            )
+
+    invalid = json.loads(json.dumps(fixture))
+    demand = invalid["expected"]["resourceDemands"][0]
+    demand["sourceDocumentId"] = "blue-contracts/exact-node-provider"
+    demand["sourcePath"] = "/"
+    demand["demandIdentity"] = closure_resource_demand_identity(demand)
+    try:
+        validate_needs_resources_demand_sites(fixture_path, invalid)
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "NeedsResources demand-site self-check accepted a managed demand "
+            "at the reserved exact-node provider site"
+        )
+
+    invalid = json.loads(json.dumps(fixture))
+    invalid["input"]["documents"]["c-evo-19-a"]["document"]["peer"] = None
+    try:
+        validate_needs_resources_demand_sites(fixture_path, invalid)
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "NeedsResources demand-site self-check accepted a present null "
+            "source value as an absent resulting path"
+        )
+
+    membership_documents = json.loads(
+        json.dumps(fixture["input"]["documents"])
+    )
+    membership_documents["c-evo-19-b"]["initialized"] = True
+    try:
+        validate_admission_input_membership(
+            fixture_path, membership_documents, []
+        )
+    except ValidationFailure:
+        pass
+    else:
+        raise ValidationFailure(
+            "NeedsResources membership self-check accepted an unreachable "
+            "initialized non-Root document"
+        )
 
 
 def validate_runtime_reserved_occurrence_patches(
@@ -6839,17 +7862,9 @@ def validate_gas_result(
             raise ValidationFailure(
                 f"unknown finalization boundary in {path.name}: {kind}"
             )
-        if fixture.get("oracle") is None:
-            reason = (
-                f"{prefix}.finalization.finalization-boundary"
-                if kind == "WORK"
-                else f"{prefix}.finalization-boundary"
-            )
-        else:
-            stage_name = finalization_stage_name(
-                path, fixture, finalization["ordinal"]
-            )
-            reason = f"{prefix}.{stage_name}.finalization-boundary"
+        reason = finalization_gas_reason(
+            path, fixture, finalization, prefix
+        )
         finalization_contexts.append(
             (finalization, kind, prefix, owner_work_id)
         )
@@ -7371,6 +8386,12 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         f"direct-delivery snapshot identity mismatch in {path.name}",
     )
 
+    suspended_demand_sites: set[tuple[str, str]] = set()
+    if expected["attemptOutcome"] == "NeedsResources":
+        suspended_demand_sites = validate_needs_resources_demand_sites(
+            path, data
+        )
+
     validate_components(
         path,
         fixture_input["documents"],
@@ -7383,13 +8404,21 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         fixture_input.get("occurrences", []),
         fixture_input["components"],
         allow_invalid=False,
+        suspended_demand_sites=suspended_demand_sites,
     )
-    validate_affected_closure_connectivity(
-        path,
-        fixture_input["documents"],
-        fixture_input.get("occurrences", []),
-        "input",
-    )
+    if data["operation"] == "admit-closure":
+        validate_admission_input_membership(
+            path,
+            fixture_input["documents"],
+            fixture_input.get("occurrences", []),
+        )
+    else:
+        validate_affected_closure_connectivity(
+            path,
+            fixture_input["documents"],
+            fixture_input.get("occurrences", []),
+            "input",
+        )
     validate_runtime_reserved_occurrence_patches(path, data)
     input_closure_identity, input_binding_set_identity, public_roots = (
         affected_closure_identity(
@@ -7458,7 +8487,6 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         validate_component_oracle_routes(
             path, data, fixture_input["components"], None
         )
-        validate_resource_demands(path, expected)
         return {
             "occurrences": occurrence_count,
             "channels": channel_count,
@@ -7509,16 +8537,6 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         f"resulting document inventory mismatch in {path.name}",
     )
     output_markers = direct_processor_markers(path, output_documents, "result")
-    validate_direct_marker_transition(
-        path,
-        fixture_input["documents"],
-        output_documents,
-        input_markers,
-        output_markers,
-        expected,
-        fixture_input.get("occurrences", []),
-        expected["occurrenceBindings"],
-    )
     for item in expected["resultingDocuments"]:
         document_id = item["documentId"]
         require(
@@ -7779,6 +8797,21 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         gas_policy,
         valid_work_ids,
         expected["resultingComponents"],
+    )
+    initialization_marker_writes = validate_initialization_marker_write_set(
+        path, input_markers, output_markers, expected, data
+    )
+    validate_direct_marker_transition(
+        path,
+        fixture_input["documents"],
+        output_documents,
+        input_markers,
+        output_markers,
+        expected,
+        fixture_input.get("occurrences", []),
+        expected["occurrenceBindings"],
+        data,
+        initialization_marker_writes,
     )
 
     successful = expected["status"] == "success"
@@ -8437,6 +9470,10 @@ def main() -> None:
     validate_rejected_work_evidence_self_check()
     validate_finalization_gas_projection_self_check()
     validate_direct_marker_transition_self_check()
+    validate_intermediate_cyclic_marker_transition_self_check()
+    validate_rollback_marker_prefix_self_check()
+    validate_rejected_work_marker_causality_self_check()
+    validate_needs_resources_demand_self_check()
     validate_static_package_laws()
     progress("manifests")
     manifests = validate_manifests()

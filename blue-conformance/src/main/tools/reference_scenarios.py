@@ -3408,7 +3408,7 @@ def check_contract_evolution_demands() -> dict[str, Any]:
     assert low_gas["expected"]["documentStepTrace"]
     assert low_gas["expected"]["publicEvents"] == []
     assert low_gas["expected"]["checkpointWrites"] == []
-    assert low_gas["expected"]["commitCompanion"] is None
+    assert low_gas["expected"].get("commitCompanion") is None
 
     automatic_demand = load_yaml(
         FIX
