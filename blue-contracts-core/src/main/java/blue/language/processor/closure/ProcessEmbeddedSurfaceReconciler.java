@@ -26,6 +26,86 @@ import java.util.Set;
  */
 final class ProcessEmbeddedSurfaceReconciler {
 
+    private final ProcessEmbeddedDemandDiscovery demandDiscovery =
+            new ProcessEmbeddedDemandDiscovery();
+
+    /**
+     * Canonically aggregates demand discovery across every projected Root.
+     * No source is reconciled unless this complete aggregate is empty.
+     */
+    List<ClosureResourceDemand> resourceDemands(
+            Map<DocumentId, Node> resultingSources,
+            Map<DocumentId, List<ManagedProcessEmbeddedPath>>
+                    effectiveSurfaces,
+            List<ManagedOccurrenceBinding> currentBindings,
+            List<ManagedDocumentSnapshot> currentDocuments,
+            DemandContext demandContext) {
+        return demandDiscovery.discoverAll(
+                resultingSources,
+                effectiveSurfaces,
+                currentBindings,
+                currentDocuments,
+                demandContext);
+    }
+
+    /**
+     * Discovers every independently missing resource for one complete
+     * resulting Process Embedded surface.
+     *
+     * <p>This boundary is read-only: it never changes occurrence rows,
+     * retirement fences, graph state, or the supplied document. Callers that
+     * own several Roots must aggregate this result for every Root before
+     * invoking {@link #reconcileProjected} for any of them.</p>
+     */
+    List<ClosureResourceDemand> resourceDemands(
+            DocumentId sourceDocumentId,
+            Node resultingSource,
+            List<ManagedProcessEmbeddedPath> effectiveSurface,
+            List<ManagedOccurrenceBinding> currentBindings,
+            List<ManagedDocumentSnapshot> currentDocuments,
+            DemandContext demandContext) {
+        return demandDiscovery.discover(
+                sourceDocumentId,
+                resultingSource,
+                effectiveSurface,
+                currentBindings,
+                currentDocuments,
+                demandContext);
+    }
+
+    /**
+     * Typed single-source preflight followed by closed reconciliation.
+     * Multi-Root callers must aggregate {@link #resourceDemands} for every
+     * Root first and use the context-free overload only after that aggregate
+     * is empty.
+     */
+    Reconciliation reconcileProjected(
+            DocumentId sourceDocumentId,
+            Node resultingSource,
+            List<ManagedProcessEmbeddedPath> effectiveSurface,
+            List<ManagedOccurrenceBinding> currentBindings,
+            List<ManagedDocumentSnapshot> currentDocuments,
+            Set<OccurrencePath> invocationRetirementFences,
+            DemandContext demandContext) {
+        List<ClosureResourceDemand> demands = resourceDemands(
+                sourceDocumentId,
+                resultingSource,
+                effectiveSurface,
+                currentBindings,
+                currentDocuments,
+                demandContext);
+        if (!demands.isEmpty()) {
+            throw new ClosureResourceDemandException(demands);
+        }
+        return reconcileProjected(
+                sourceDocumentId,
+                resultingSource,
+                effectiveSurface,
+                currentBindings,
+                currentDocuments,
+                invocationRetirementFences);
+    }
+
     /**
      * Reconciles one independently managed source Root.
      *
@@ -359,6 +439,77 @@ final class ProcessEmbeddedSurfaceReconciler {
                     "Occurrence activation generation cannot overflow");
         }
         return generation + 1L;
+    }
+
+    /** Read-only exact-reference availability owned by the processor host. */
+    interface ExactReferenceAvailability {
+        boolean isAvailable(String blueId);
+    }
+
+    /** Frozen identity and lookup context for one demand-discovery boundary. */
+    static final class DemandContext {
+        private final String logicalCauseIdentity;
+        private final String inputClosureIdentity;
+        private final long inputGraphGeneration;
+        private final ExactReferenceAvailability exactReferenceAvailability;
+        private final boolean verifyHistoricalExactReferences;
+
+        DemandContext(
+                String logicalCauseIdentity,
+                String inputClosureIdentity,
+                long inputGraphGeneration,
+                ExactReferenceAvailability exactReferenceAvailability) {
+            this(logicalCauseIdentity,
+                    inputClosureIdentity,
+                    inputGraphGeneration,
+                    exactReferenceAvailability,
+                    false);
+        }
+
+        DemandContext(
+                String logicalCauseIdentity,
+                String inputClosureIdentity,
+                long inputGraphGeneration,
+                ExactReferenceAvailability exactReferenceAvailability,
+                boolean verifyHistoricalExactReferences) {
+            this.logicalCauseIdentity =
+                    ClosureValueSupport.requireSha256Identity(
+                            logicalCauseIdentity,
+                            "logicalCauseIdentity");
+            this.inputClosureIdentity =
+                    ClosureValueSupport.requireSha256Identity(
+                            inputClosureIdentity,
+                            "inputClosureIdentity");
+            this.inputGraphGeneration =
+                    ClosureValueSupport.requireSafeInteger(
+                            inputGraphGeneration,
+                            "inputGraphGeneration");
+            this.exactReferenceAvailability = Objects.requireNonNull(
+                    exactReferenceAvailability,
+                    "exactReferenceAvailability");
+            this.verifyHistoricalExactReferences =
+                    verifyHistoricalExactReferences;
+        }
+
+        String logicalCauseIdentity() {
+            return logicalCauseIdentity;
+        }
+
+        String inputClosureIdentity() {
+            return inputClosureIdentity;
+        }
+
+        long inputGraphGeneration() {
+            return inputGraphGeneration;
+        }
+
+        ExactReferenceAvailability exactReferenceAvailability() {
+            return exactReferenceAvailability;
+        }
+
+        boolean verifyHistoricalExactReferences() {
+            return verifyHistoricalExactReferences;
+        }
     }
 
     /** Stable source-lineage/path fence for one invocation. */

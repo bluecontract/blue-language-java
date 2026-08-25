@@ -107,6 +107,8 @@ final class ScopeMutationExecutor {
                  | InvalidExecutionEvidenceException
                  | DocumentStepRuntimeGapException exception) {
             throw exception;
+        } catch (NoncommittingExecutionException suspension) {
+            throw suspension;
         } catch (RunTerminationException exception) {
             // Root fatal termination is processor control flow, not a
             // snapshot-publication failure.

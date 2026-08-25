@@ -192,6 +192,7 @@ final class ClosureExecutionSession
         ensureSupportedInvocation();
         if (executionMode == ExecutionMode.ADMISSION) {
             ClosureAdmissionPortableLimits.verify(input);
+            requireAvailableProcessEmbeddedResources();
         }
         chargeAdmission();
         captureChannelSurfaces(inputChannelSurfaces);
@@ -2513,6 +2514,7 @@ final class ClosureExecutionSession
     reconcileProcessEmbeddedSurfaces() {
         Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected =
                 projectProcessEmbeddedSurfaces();
+        requireAvailableProcessEmbeddedResources(projected, true);
 
         ArrayList<DocumentId> sources =
                 new ArrayList<DocumentId>(latestBodies.keySet());
@@ -2567,6 +2569,30 @@ final class ClosureExecutionSession
                 working, activated, retired);
     }
 
+    /**
+     * Suspends admission before causal work when the current effective Process
+     * Embedded surface requires exact external resources.
+     */
+    private void requireAvailableProcessEmbeddedResources() {
+        requireAvailableProcessEmbeddedResources(
+                projectProcessEmbeddedSurfaces(), false);
+    }
+
+    private void requireAvailableProcessEmbeddedResources(
+            Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected,
+            boolean verifyHistoricalExactReferences) {
+        List<ClosureResourceDemand> demands =
+                processEmbeddedReconciler.resourceDemands(
+                        latestBodies,
+                        projected,
+                        currentBindings,
+                        currentSnapshot.managedDocuments(),
+                        processEmbeddedDemandContext(
+                                verifyHistoricalExactReferences));
+        if (!demands.isEmpty()) {
+            throw new ClosureResourceDemandException(demands);
+        }
+    }
 
     private Map<DocumentId, List<ManagedProcessEmbeddedPath>>
     projectProcessEmbeddedSurfaces() {
@@ -2585,6 +2611,22 @@ final class ClosureExecutionSession
         return result;
     }
 
+    private ProcessEmbeddedSurfaceReconciler.DemandContext
+    processEmbeddedDemandContext(boolean verifyHistoricalExactReferences) {
+        return new ProcessEmbeddedSurfaceReconciler.DemandContext(
+                input.cause().causeIdentity(),
+                input.snapshot().closureIdentity(),
+                input.snapshot().graphGeneration(),
+                new ProcessEmbeddedSurfaceReconciler
+                        .ExactReferenceAvailability() {
+                    @Override
+                    public boolean isAvailable(String blueId) {
+                        return stepProcessor
+                                .isExactManagedReferenceAvailable(blueId);
+                    }
+                },
+                verifyHistoricalExactReferences);
+    }
 
     private ComponentFinalizationResult rebindInactiveProspectiveRows(
             ComponentFinalizationResult finalized) {

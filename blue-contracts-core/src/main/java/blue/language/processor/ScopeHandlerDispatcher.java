@@ -277,7 +277,17 @@ final class ScopeHandlerDispatcher {
             } catch (ExecutionEvidenceUnavailableException unavailable) {
                 ownedContext.suspendRuntimeWork();
                 throw unavailable;
-        }
+            } catch (NoncommittingExecutionException suspension) {
+                /*
+                 * Buffered application effects run only after hosted runtime
+                 * work has completed. The closure attempt owns that tentative
+                 * gas prefix and discards it with the noncommitting attempt;
+                 * a completed child runtime session cannot be suspended.
+                 */
+                throw suspension;
+            }
+        } catch (NoncommittingExecutionException suspension) {
+            throw suspension;
         } catch (GasLimitExceededException
                  | PortableLimitExceededException
                  | SubscriptionSurfaceInvalidException

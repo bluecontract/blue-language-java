@@ -121,6 +121,12 @@ final class ClosureIdentityService {
                 "blue-contracts-direct-delivery-snapshot/1.0"),
         OCCURRENCE_BINDING_SET(
                 "blue-contracts-occurrence-binding-set/1.0"),
+        CLOSURE_RESOURCE_DEMAND(
+                "blue-contracts-closure-resource-demand/1.0",
+                "kind", "logicalCauseIdentity", "inputClosureIdentity",
+                "inputGraphGeneration", "sourceDocumentId", "sourcePath",
+                "processEmbeddedDeclarationIdentity",
+                "suppliedValueBlueId", "demandOrdinal"),
         AFFECTED_CLOSURE(
                 "blue-contracts-affected-closure/1.0",
                 "graphGeneration", "documents",
@@ -662,6 +668,39 @@ final class ClosureIdentityService {
         return identity(Constructor.OCCURRENCE_BINDING_SET, values);
     }
 
+    /**
+     * Constructs one typed closure-resource demand from its closed union.
+     *
+     * <p>Both demand forms use this one domain. Exact-node demands retain
+     * explicit {@code null} values for every occurrence-only input, while
+     * managed-occurrence demands bind all retry-relevant authoritative
+     * evidence.</p>
+     */
+    String closureResourceDemandIdentity(
+            ClosureResourceDemand.Kind kind,
+            String logicalCauseIdentity,
+            String inputClosureIdentity,
+            Long inputGraphGeneration,
+            DocumentId sourceDocumentId,
+            String sourcePath,
+            String processEmbeddedDeclarationIdentity,
+            String suppliedValueBlueId,
+            Long demandOrdinal) {
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("kind", Objects.requireNonNull(kind, "kind").name());
+        value.put("logicalCauseIdentity", logicalCauseIdentity);
+        value.put("inputClosureIdentity", inputClosureIdentity);
+        value.put("inputGraphGeneration", inputGraphGeneration);
+        value.put("sourceDocumentId", Objects.requireNonNull(
+                sourceDocumentId, "sourceDocumentId").value());
+        value.put("sourcePath", sourcePath);
+        value.put("processEmbeddedDeclarationIdentity",
+                processEmbeddedDeclarationIdentity);
+        value.put("suppliedValueBlueId", suppliedValueBlueId);
+        value.put("demandOrdinal", demandOrdinal);
+        return identity(Constructor.CLOSURE_RESOURCE_DEMAND, value);
+    }
+
     /** Reconstructs durable affected-closure identity from typed state. */
     String affectedClosureIdentity(AffectedClosureSnapshot snapshot) {
         AffectedClosureSnapshot selected = Objects.requireNonNull(
@@ -840,6 +879,10 @@ final class ClosureIdentityService {
                 return;
             case OCCURRENCE_BINDING_SET:
                 validateBindingSet(value);
+                return;
+            case CLOSURE_RESOURCE_DEMAND:
+                validateClosureResourceDemand(
+                        requireObject(value, OBJECT_VALUE));
                 return;
             case AFFECTED_CLOSURE:
                 validateClosure(requireObject(value, OBJECT_VALUE));
@@ -1204,6 +1247,40 @@ final class ClosureIdentityService {
             previousOccurrence = occurrence;
             previousBinding = binding;
         }
+    }
+
+    private static void validateClosureResourceDemand(
+            Map<String, Object> value) {
+        String kindValue = requireNonEmptyText(value, "kind");
+        ClosureResourceDemand.Kind kind;
+        try {
+            kind = ClosureResourceDemand.Kind.valueOf(kindValue);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException(
+                    "Invalid closure resource demand kind", exception);
+        }
+        requireNonEmptyText(value, "sourceDocumentId");
+        requireAbsolutePointer(value, "sourcePath");
+        requireNonEmptyText(value, "suppliedValueBlueId");
+        if (kind == ClosureResourceDemand.Kind.EXACT_NODE) {
+            for (String field : Arrays.asList(
+                    "logicalCauseIdentity", "inputClosureIdentity",
+                    "inputGraphGeneration",
+                    "processEmbeddedDeclarationIdentity",
+                    "demandOrdinal")) {
+                if (value.get(field) != null) {
+                    throw new IllegalArgumentException(
+                            field + " must be null for an exact-node demand");
+                }
+            }
+            return;
+        }
+        requireSha256(value, "logicalCauseIdentity", false);
+        requireSha256(value, "inputClosureIdentity", false);
+        requireSafeInteger(value, "inputGraphGeneration");
+        requireNonEmptyText(value,
+                "processEmbeddedDeclarationIdentity");
+        requireSafeInteger(value, "demandOrdinal");
     }
 
     private static void validateClosure(Map<String, Object> value) {

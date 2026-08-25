@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.model.DocumentUpdateChannel;
@@ -414,6 +416,64 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         return Collections.unmodifiableList(projected);
     }
 
+    /**
+     * Checks one exact managed reference without charging shared gas or
+     * executing application code.
+     *
+     * <p>Snapshot-native generations use their verified exact-materialization
+     * boundary. Compatibility generations configured with only a
+     * {@code NodeProvider} use the same verified provider path that loads
+     * exact contract contributions. Missing or temporarily unavailable
+     * content remains a retryable absence; invalid content fails closed.</p>
+     *
+     * @param expectedBlueId exact requested identity
+     * @return {@code true} only when verified canonical content is available
+     */
+    public boolean isExactManagedReferenceAvailable(String expectedBlueId) {
+        ensureOpen();
+        String blueId = Objects.requireNonNull(
+                expectedBlueId, "expectedBlueId");
+        FrozenNode reference = FrozenNode.fromNode(
+                new Node().blueId(blueId));
+        final FrozenNode materialized;
+        try {
+            ProcessingSnapshotManager manager = owner.snapshotManager();
+            materialized = manager != null
+                    ? manager.materializeVerifiedExactReference(reference)
+                    : owner.contractLoader()
+                            .materializeVerifiedReference(reference);
+        } catch (ExecutionEvidenceUnavailableException unavailable) {
+            return false;
+        } catch (MustUnderstandFailureException absent) {
+            return false;
+        } catch (InvalidExecutionEvidenceException invalid) {
+            throw invalidManagedReference(invalid.getMessage());
+        } catch (IllegalArgumentException invalid) {
+            throw invalidManagedReference(invalid.getMessage());
+        }
+        BlueOperationResult<FrozenNode> verified =
+                ProcessorRuntimeAccess.verifiedMaterialization(
+                        reference, materialized);
+        BlueOperationOutcome outcome = verified.outcome();
+        if (outcome == BlueOperationOutcome.ESTABLISHED) {
+            return true;
+        }
+        if (outcome == BlueOperationOutcome.ABSENT
+                || outcome == BlueOperationOutcome.INCOMPLETE) {
+            return false;
+        }
+        throw invalidManagedReference(verified.reason().orElse(
+                "Exact managed reference is invalid: " + blueId));
+    }
+
+    private InvalidExecutionEvidenceException invalidManagedReference(
+            String diagnostic) {
+        return new InvalidExecutionEvidenceException(
+                diagnostic != null && !diagnostic.isEmpty()
+                        ? diagnostic
+                        : "Exact managed reference is invalid",
+                ProcessorErrorCategory.InvalidProcessingDocument);
+    }
 
     /**
      * Selects matching Root Embedded Event channels and constructs their exact

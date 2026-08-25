@@ -782,19 +782,31 @@ final class FullLifecycleAdmissionTest {
                                     handler("lifecycle")));
             ClosureInvocationInput input = simpleAdmission(
                     owner, A, body, true, GENEROUS_GAS);
+            Capture capture = new Capture();
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.admitClosureWithLifecycleQueue(input);
+            }
 
-            ClosureProcessResult result = full(owner, input, null)
-                    .processResult();
-
-            assertEquals(ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
-                    result.status(), diagnostic(result));
-            assertEquals(ProcessorErrorCategory.SubscriptionSurfaceInvalid,
-                    result.diagnostic().category());
-            assertLiteralRollback(input, result);
+            assertEquals(ClosureAttemptResult.Kind.NEEDS_RESOURCES,
+                    attempt.kind());
+            assertFalse(attempt.isComplete());
+            assertNull(attempt.processResult());
+            assertNull(attempt.totalGas());
+            assertEquals(1, attempt.resourceDemands().size());
+            ClosureResourceDemand demand =
+                    attempt.resourceDemands().get(0);
+            assertTrue(demand
+                    instanceof ManagedOccurrenceEvidenceDemand);
+            assertEquals(A, demand.sourceDocumentId());
+            assertEquals("/child", demand.sourcePath());
+            assertNull(capture.evidence,
+                    "A resource demand must not publish completion evidence");
             assertNull(NodePathEditor.getOrNull(
-                    document(result, A).document(), "/child"));
-            assertTrue(result.publicEvents().isEmpty());
-            assertTrue(result.checkpointWrites().isEmpty());
+                    input.snapshot().managedDocument(A).document(),
+                    "/child"));
+            assertTrue(input.snapshot().occurrences().isEmpty());
         }
     }
 

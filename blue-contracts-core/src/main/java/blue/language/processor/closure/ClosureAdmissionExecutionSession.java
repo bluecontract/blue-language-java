@@ -121,6 +121,7 @@ final class ClosureAdmissionExecutionSession
 
     ClosureExecutionState execute() {
         requireAdmission();
+        requireAvailableProcessEmbeddedResources();
         chargeAdmission();
         captureSurfaces(inputChannelSurfaces);
         currentFinalization = verifyCurrentFinalization();
@@ -634,6 +635,7 @@ final class ClosureAdmissionExecutionSession
     reconcileProcessEmbeddedSurfaces() {
         Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected =
                 projectProcessEmbeddedSurfaces();
+        requireAvailableProcessEmbeddedResources(projected, true);
 
         ArrayList<DocumentId> sources =
                 new ArrayList<DocumentId>(latestBodies.keySet());
@@ -669,6 +671,30 @@ final class ClosureAdmissionExecutionSession
         return new ProcessEmbeddedReclassification(working, retired);
     }
 
+    /**
+     * Suspends before admission work when the current effective Process
+     * Embedded surface requires exact external resources.
+     */
+    private void requireAvailableProcessEmbeddedResources() {
+        requireAvailableProcessEmbeddedResources(
+                projectProcessEmbeddedSurfaces(), false);
+    }
+
+    private void requireAvailableProcessEmbeddedResources(
+            Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected,
+            boolean verifyHistoricalExactReferences) {
+        List<ClosureResourceDemand> demands =
+                processEmbeddedReconciler.resourceDemands(
+                        latestBodies,
+                        projected,
+                        currentBindings,
+                        currentSnapshot.managedDocuments(),
+                        processEmbeddedDemandContext(
+                                verifyHistoricalExactReferences));
+        if (!demands.isEmpty()) {
+            throw new ClosureResourceDemandException(demands);
+        }
+    }
 
     private Map<DocumentId, List<ManagedProcessEmbeddedPath>>
     projectProcessEmbeddedSurfaces() {
@@ -687,6 +713,22 @@ final class ClosureAdmissionExecutionSession
         return result;
     }
 
+    private ProcessEmbeddedSurfaceReconciler.DemandContext
+    processEmbeddedDemandContext(boolean verifyHistoricalExactReferences) {
+        return new ProcessEmbeddedSurfaceReconciler.DemandContext(
+                input.cause().causeIdentity(),
+                input.snapshot().closureIdentity(),
+                input.snapshot().graphGeneration(),
+                new ProcessEmbeddedSurfaceReconciler
+                        .ExactReferenceAvailability() {
+                    @Override
+                    public boolean isAvailable(String blueId) {
+                        return stepProcessor
+                                .isExactManagedReferenceAvailable(blueId);
+                    }
+                },
+                verifyHistoricalExactReferences);
+    }
 
     private void chargeTopologyChange(
             ManagedDocumentGraph before,

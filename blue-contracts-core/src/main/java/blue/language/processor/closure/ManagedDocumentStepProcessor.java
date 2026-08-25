@@ -215,6 +215,14 @@ final class ManagedDocumentStepProcessor
         return runtime.projectManagedProcessEmbeddedSurface(exactDocument);
     }
 
+    /**
+     * Performs an unmetered, read-only availability check for an exact
+     * reference needed during noncommitting demand discovery.
+     */
+    boolean isExactManagedReferenceAvailable(String expectedBlueId) {
+        return runtime.isExactManagedReferenceAvailable(
+                Objects.requireNonNull(expectedBlueId, "expectedBlueId"));
+    }
 
     void requireExactManagedReference(String expectedBlueId) {
         String blueId = Objects.requireNonNull(
