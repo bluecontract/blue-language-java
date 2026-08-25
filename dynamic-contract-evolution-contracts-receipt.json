@@ -1,10 +1,11 @@
 {
-  "schema": "blue-language-java-dynamic-contract-evolution-contracts-receipt/1.0",
+  "schema": "blue-language-java-dynamic-contract-evolution-contracts-receipt/1.1",
   "status": "PASS",
   "createdAt": "2026-08-25T15:33:10Z",
   "branch": "feat/dynamic-contract-evolution-resume",
   "acceptedBaseCommit": "03db5ee45f96698a45a3f5556dcc1ef6222d8e6f",
   "semanticSourceUnderTestCommit": "a74dfb310f71073493803d7817b8b09ebfbed211",
+  "finalSemanticSourceUnderTestCommit": "5a57bb82180fa31e868cd13fe41933a67a532d62",
   "sourceDateEpoch": "1787669428",
   "receiptBinding": {
     "expectedTestedParent": "a74dfb310f71073493803d7817b8b09ebfbed211",
@@ -293,6 +294,52 @@
     "published": false,
     "deployed": false,
     "mavenLocalUsedAsReleaseEvidence": false
+  },
+  "finalTransitionEvidenceCheckpoint": {
+    "status": "PASS",
+    "createdAt": "2026-08-25T21:33:52Z",
+    "sourceCommit": "5a57bb82180fa31e868cd13fe41933a67a532d62",
+    "commitSequence": [
+      {"commit": "f5a4698f90b0bf3d49c38ff8c34fa70934f9d895", "subject": "feat: expose managed transition evidence"},
+      {"commit": "5b938b8287ab90e19046a655debb07eb3a495448", "subject": "chore: approve transition evidence API"},
+      {"commit": "ace3e32c69591100cc50ad4f6d82d33fe835e05b", "subject": "docs: regenerate transition evidence references"},
+      {"commit": "5a57bb82180fa31e868cd13fe41933a67a532d62", "subject": "chore: close transition evidence release gates"}
+    ],
+    "typedDocumentTransitionEvidence": true,
+    "beforeAfterBlueIdAndEffectiveType": true,
+    "typedContractPatches": true,
+    "generatedGeneralizationWrites": true,
+    "rollbackEvidenceEmpty": true,
+    "blueLanguageValueModelCoreMappingChanged": false,
+    "cleanBuildTests": 2950,
+    "semanticApi": {"approvedIncompatibleChanges": 337, "additiveChanges": 487},
+    "immutableStage": {
+      "path": "/private/tmp/dce-contracts-final.GXg7oo/repository",
+      "schema": "blue-staged-dependency-repository/1.0",
+      "groupId": "blue.language",
+      "version": "3.1.0-rc.21",
+      "sourceCommit": "5a57bb82180fa31e868cd13fe41933a67a532d62",
+      "artifactManifestSha256": "sha256:6f719a206318a91f510da18f56ef34b863c95b062ef87a6784bef47737a09d52",
+      "artifactManifestSidecarSha256": "sha256:ff00db6d09be4a21338ee2401a78fc53e4b35d15009314570f9ad23883f7daa0",
+      "byteIdenticalRepeatNoMutation": true,
+      "mavenLocalAllowed": false,
+      "remoteFallbackAllowed": false
+    },
+    "reportEvidence": {
+      "finalQuality": "sha256:14277a737ab8df27240ea5772a7901c98a4856bdc44846842e16d7f26109bd6a",
+      "finalQualityVerification": "sha256:ce9385d33d56ad116ace9640d6021051d8e7d45458f39f5eed2720a79aac512f",
+      "cleanBuild": "sha256:04259455149001afb85532968454591d67e7bdcd124d3e797632d871b5b1eacf",
+      "cleanBuildVerification": "sha256:4ae26b97ba56abcd038540a8ac246801ea51703a7d9eb42f880617405612a5fe",
+      "aggregateReleaseReceipt": "sha256:3f29fa8b3cba72dd15c86dfcc335458a10b6e492d04b6c87817937603869775e",
+      "aggregateReleaseVerification": "sha256:8492264c15bdd39bbb3931a1f8be20ac3813ad1e6a3b42687ff256e73d8abe47",
+      "semanticBaselineVerification": "sha256:654a1cbd06701d15dba3cc9d43aee260afda4ed48ec259d0e713523d3a604f5d",
+      "publishedRepositoryVerification": "sha256:6ac5fe8b7c8e286419327b7f5b5100b0589088c99a55d954ae265c1185a49dc7",
+      "publishedSmokeVerification": "sha256:306967b0e765271ef63599096e8b819bdd5bc5fff16a0cea4e1fdb14801e8cae",
+      "releaseConformance": "sha256:b06ff17c3faf05968287d00fe6e83c35a06271aaf77352e3d8e689785d57461f",
+      "documentationVerification": "sha256:764ec9512dcdbdb2b1adac4db3d59771197f83e2a77d7ad2428f623c95a82d3b",
+      "fragmentedProcessing": "sha256:6c9d650c62370fc184d0f8e3df5e4916997cb8da4056ad8adbf967b6d3648b52",
+      "fragmentedProcessingVerification": "sha256:0c681455f08ca7a764fe83cec0db478d95e88ad2a7ba035b6957b8a4d0668115"
+    }
   },
   "outOfScope": [
     "historical retained-epoch catch-up",

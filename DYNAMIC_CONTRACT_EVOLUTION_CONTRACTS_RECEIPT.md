@@ -1,14 +1,18 @@
 # Dynamic contract evolution Contracts checkpoint receipt
 
 Created: 2026-08-25T15:33:10Z
+Final transition-evidence addendum: 2026-08-25T21:33:52Z
 
 ## Outcome
 
 **PASS.** The deterministic Contracts package, fixture delta, reviewed
-implementation commits, exact change manifest, full gate campaign, and
-immutable staged-repository evidence are bound to
-`a74dfb310f71073493803d7817b8b09ebfbed211`. This checkpoint claims Contracts
-implementation conformance and authorizes the downstream Coordination phase.
+implementation commits, exact change manifest, and initial full gate campaign
+are bound to `a74dfb310f71073493803d7817b8b09ebfbed211`. The subsequently reviewed typed
+document-transition evidence and repeated release campaign are bound to
+`5a57bb82180fa31e868cd13fe41933a67a532d62`. The immutable repository consumed
+by Coordination is assembled from that final source commit. This checkpoint
+claims Contracts implementation conformance and authorizes the downstream
+Coordination phase.
 
 This is a local Contracts checkpoint. It is not a publication, deployment, or
 production-readiness claim.
@@ -24,14 +28,17 @@ production-readiness claim.
 | Dynamic graph conformance | 1714cc7b6343619112caff5356f0b89363e20582 |
 | Normative specification | 37968eedc1d259ecf0c4274bd23125bc2f86f5c2 |
 | Release evidence rebind | 914bc4906208735eceeee4e9744f4e28896b2874 |
-| Semantic source under test | a74dfb310f71073493803d7817b8b09ebfbed211 |
+| Initial package source under test | a74dfb310f71073493803d7817b8b09ebfbed211 |
+| Typed transition evidence | f5a4698f90b0bf3d49c38ff8c34fa70934f9d895 |
+| Transition API approval | 5b938b8287ab90e19046a655debb07eb3a495448 |
+| Regenerated evidence references | ace3e32c69591100cc50ad4f6d82d33fe835e05b |
+| Final semantic source under test | 5a57bb82180fa31e868cd13fe41933a67a532d62 |
 
 Branch: feat/dynamic-contract-evolution-resume
 
-The receipt-only commit containing this file is not the semantic source under
-test and must have a74dfb3 as its tested parent. The reproducible gate
-environment is bound to GIT_COMMIT=a74dfb310f71073493803d7817b8b09ebfbed211
-and SOURCE_DATE_EPOCH=1787669428.
+The receipt-only commit containing this addendum is not the semantic source
+under test. The initial package campaign remains bound to a74dfb3; the final
+transition-evidence and immutable-stage campaign is bound to 5a57bb8.
 
 ## Normative and release identities
 
@@ -249,3 +256,50 @@ files and both checksum aliases, so they contain no self-reference.
 
 Out of scope are historical retained-epoch catch-up, Timeline
 import/completeness, Mandates, and production multi-node durability.
+
+## Final typed transition-evidence addendum
+
+The final Contracts source adds a typed, immutable
+`ClosureProcessResult.documentTransitionEvidence()` surface. For each retained
+document transition it reports before/after BlueId and effective type, typed
+authored ADD/REPLACE/REMOVE contract patches, and processor-generated
+generalization writes with deterministic indexes. A rejected closure exposes no
+committed transition evidence. These observations do not alter Blue value,
+identity, reference, model, core, or mapping semantics.
+
+The complete gate campaign was repeated after this API was approved and its
+references regenerated. The clean build executed 2,950 tests with zero
+failures. Semantic API verification recorded 337 reviewed incompatibilities and
+487 additive changes. Final quality, release candidate, Java 8 bytecode,
+published-artifact smoke, documentation, module API/archive, and release
+conformance gates all passed.
+
+The final immutable repository is:
+
+| Evidence | Value |
+| --- | --- |
+| Path | `/private/tmp/dce-contracts-final.GXg7oo/repository` |
+| Source commit | `5a57bb82180fa31e868cd13fe41933a67a532d62` |
+| Version | `3.1.0-rc.21` |
+| Manifest SHA-256 | `6f719a206318a91f510da18f56ef34b863c95b062ef87a6784bef47737a09d52` |
+| Manifest sidecar SHA-256 | `ff00db6d09be4a21338ee2401a78fc53e4b35d15009314570f9ad23883f7daa0` |
+| Repeat assembly | byte-identical |
+| Repository isolation | no Maven Local and no remote fallback |
+
+Final report hashes:
+
+| Report | SHA-256 |
+| --- | --- |
+| final-quality.json | `14277a737ab8df27240ea5772a7901c98a4856bdc44846842e16d7f26109bd6a` |
+| final-quality verification | `ce9385d33d56ad116ace9640d6021051d8e7d45458f39f5eed2720a79aac512f` |
+| clean-build.json | `04259455149001afb85532968454591d67e7bdcd124d3e797632d871b5b1eacf` |
+| clean-build verification | `4ae26b97ba56abcd038540a8ac246801ea51703a7d9eb42f880617405612a5fe` |
+| aggregate release receipt | `3f29fa8b3cba72dd15c86dfcc335458a10b6e492d04b6c87817937603869775e` |
+| aggregate release verification | `8492264c15bdd39bbb3931a1f8be20ac3813ad1e6a3b42687ff256e73d8abe47` |
+| semantic baseline verification | `654a1cbd06701d15dba3cc9d43aee260afda4ed48ec259d0e713523d3a604f5d` |
+| published repository verification | `6ac5fe8b7c8e286419327b7f5b5100b0589088c99a55d954ae265c1185a49dc7` |
+| published smoke verification | `306967b0e765271ef63599096e8b819bdd5bc5fff16a0cea4e1fdb14801e8cae` |
+| release conformance | `b06ff17c3faf05968287d00fe6e83c35a06271aaf77352e3d8e689785d57461f` |
+| documentation verification | `764ec9512dcdbdb2b1adac4db3d59771197f83e2a77d7ad2428f623c95a82d3b` |
+| fragmented-processing report | `6c9d650c62370fc184d0f8e3df5e4916997cb8da4056ad8adbf967b6d3648b52` |
+| fragmented-processing verification | `0c681455f08ca7a764fe83cec0db478d95e88ad2a7ba035b6957b8a4d0668115` |
