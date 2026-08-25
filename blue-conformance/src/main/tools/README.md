@@ -18,11 +18,12 @@ PYTHONDONTWRITEBYTECODE=1 python3 \
 
 With no output option, regeneration is a read-only byte-identity check.
 `--stage-output DIR` writes a candidate to a new or empty external directory.
-Only `--write` can replace the checked-in resource package. An optional
-`--fixture-source-root DIR` requests the identity-free `FL-ADM` source pass;
-that mode invokes the checked-in normative Java exporter and fails closed if
-the bridge fails or returns anything other than the complete thirteen-file
-inventory.
+Only `--write` can replace the checked-in resource package. The ordinary
+`C-EVO-01..17` tranche is always rebuilt by the checked-in deterministic
+generator before manifest rebinding. An optional `--fixture-source-root DIR`
+requests the identity-free `FL-ADM` and `C-EVO-18..23` source pass; that mode
+invokes the checked-in normative Java exporter and fails closed if the bridge
+fails or returns anything other than the complete twenty-six-file inventory.
 
 The Python pipeline uses Python 3, PyYAML, and (for full package validation)
 `jsonschema`. It does not import or execute tools from an external checkout and

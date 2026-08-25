@@ -50,7 +50,8 @@ Execute:
 ```text
 PROCESS_ATTEMPT(root, event, verifiedEvidence)
     -> Complete(ProcessResult)
-     | NeedsResources(sortedExactBlueIds)
+     | NeedsResources(canonicallyOrderedTypedDemands,
+                      sortedExactBlueIdProjection)
 ```
 
 A `NeedsResources` result is represented under `attempt.*`. It has no `ProcessResult`, no committed state, no Root events, no progress, and no portable gas. A fixture MUST NOT encode `needs-resources` as `result.status`.
@@ -74,6 +75,47 @@ Evaluate one exact named counter or one formula declared by the bound Contracts 
 - `input.feeder.deliverySnapshot` is compact fixture shorthand and MUST be expanded and verified as the complete normative `ExternalDelivery` snapshot;
 - representation variants transform exact preparation only and cannot alter semantic values;
 - every variant is an object that explicitly names its transformation; a bare variant label is invalid.
+
+### 4.1 Portable contract-evolution family
+
+`C-EVO-*` is the release fixture family for application contract-surface
+evolution. Ordinary vectors use the exact `PROCESS(root,event)` harness;
+closure vectors use the production closure/admission harness. No
+evolution-specific host mutation is permitted.
+
+| Vector | Portable proof |
+|---|---|
+| `C-EVO-01` | A selected Workflow removes itself after its frozen current delivery. |
+| `C-EVO-02` | A selected distinct Scripted Operation removes itself after its frozen invocation. |
+| `C-EVO-03` | A newly added Operation does not receive its creating entry. |
+| `C-EVO-04` | Channel removal and re-add retire the old interval and create fresh lineage. |
+| `C-EVO-05` | Required-Workflow removal selects the nearest valid ancestor. |
+| `C-EVO-06` | Frozen reject policy rolls the mutation back completely. |
+| `C-EVO-07` | Initialized, checkpoint, and terminated processor state is protected. |
+| `C-EVO-08` | Whole-Root/contracts replacement preserves the initialized marker and its exact identity. |
+| `C-EVO-09` | A complete Process Embedded declaration can be removed atomically. |
+| `C-EVO-10` | A former embedded child remains passive application content. |
+| `C-EVO-11` | Removing an edge dissolves a two-member cycle. |
+| `C-EVO-12` | Edge removal splits one component into two cycles. |
+| `C-EVO-13` | Closed prospective evidence permits reciprocal cycle formation. |
+| `C-EVO-14` | A generated type write retains exact causal attribution. |
+| `C-EVO-15` | Generalization removes a subtype-only Channel. |
+| `C-EVO-16` | Generalization removes a subtype-only Process Embedded declaration. |
+| `C-EVO-17` | A direct Process Embedded addition and generalization reconcile in one transition. |
+| `C-EVO-18` | Missing exact child content yields an exact-node demand. |
+| `C-EVO-19` | Known content without a frozen row yields an occurrence-evidence demand. |
+| `C-EVO-20` | Mixed demands use source order, never demand-kind grouping. |
+| `C-EVO-21` | Unchanged retries reproduce demands, tentative effect prefix, and completed evidence. |
+| `C-EVO-22` | Expanded occurrence evidence can reach metered work and still roll back completely on gas failure. |
+| `C-EVO-23` | Automatic-demand retry and explicit prospective evidence produce byte-equal resolved execution. |
+
+The harness-owned `ScriptedOperation` is a distinct fixture subtype of
+`Handler`, loaded beside (and excluded from) the frozen production runtime
+registry. It receives the ordinary frozen selection and
+`ProcessorExecutionContext`, and can apply only its declared
+`ContractExecutionResult`. It is not a substitute for a downstream
+Coordination implementation. The intentionally deferred inherited
+Process-Embedded reveal scenario is not part of this family.
 
 ## 5. Canonical delivery derivation
 

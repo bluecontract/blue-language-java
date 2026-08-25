@@ -53,7 +53,8 @@ Execute:
 ```text
 PROCESS_ATTEMPT(root, event, verifiedEvidence)
     -> Complete(ProcessResult)
-     | NeedsResources(sortedExactBlueIds)
+     | NeedsResources(canonicallyOrderedTypedDemands,
+                      sortedExactBlueIdProjection)
 ```
 
 A `NeedsResources` result is represented under `attempt.*`. It has no `ProcessResult`, no committed state, no Root events, no progress, and no portable gas. A fixture MUST NOT encode `needs-resources` as `result.status`.
@@ -75,7 +76,8 @@ coupling in the closure schema. `process-closure` accepts an external or
 `managed-revision` cause; `admit-closure` accepts an admission cause. Admission
 and managed revision have empty direct-delivery snapshots. Both operations
 return exactly `Complete(ClosureProcessResult)` or
-`NeedsResources(sortedExactBlueIds)`.
+`NeedsResources(canonicallyOrderedTypedDemands,
+sortedExactBlueIdProjection)`.
 
 One `ManagedRevisionCause` is one invocation and one
 `CONTAINING_REFERENCE_UPDATE`; the runner MUST NOT pass a transition list or
@@ -105,23 +107,86 @@ fields**, not members of normative `input` or production `expected` result:
 - `oracle`: oracle path plus component-state/finalization-stage routing.
 
 An availability-only provider retry preserves both normative
-`inputClosureIdentity` and `invocationIdentity`. `NeedsResources` names exact
-already-known BlueIds only; a runner must never turn it into a range query or
-historical discovery operation. Oracle stage labels never appear in component
-or finalization production API records.
+`inputClosureIdentity` and `invocationIdentity`. The authoritative
+`resourceDemands` list contains exact-node and/or exact managed-occurrence
+evidence demands in canonical source order; its legacy `requiredBlueIds`
+projection contains exact-node demands only and can be empty. A runner must
+never turn either form into a range query or historical discovery operation.
+Resolving an occurrence-evidence demand retains the authoritative document
+heads and logical cause but constructs a new closed occurrence set, so the
+occurrence-set, input-closure, and invocation identities are recomputed. A
+byte-equal automatically derived prospective row and explicit prospective row
+must then produce byte-equal resolved invocation input and execution.
+Oracle stage labels never appear in component or finalization production API
+records.
 
-Prospective occurrence rows are input-only except for the exact inactive
-successor derived when an active row retires. A pending-null row's declared
-path may be absent; a historical cursor value may be present while the row
-remains inactive. Root managed-scope generation is 0, the first embedded
-reservation/activation is 1, active removal allocates its successor at exactly
-generation plus one, and that successor is output-only until committed and
-supplied as a later invocation input; later re-add preserves its
-generation/occurrence identity (ordinary later exact-state rebind may change
-binding identity). Same-invocation remove-then-re-add and different-lineage
-retarget are unsupported in Contracts 1.0 and fail before mutation. Pure
-references, verified inline acyclic values, and verified materialized cyclic
-members are exact parity variants; mixed `blueId` objects are invalid.
+Prospective occurrence rows are closed invocation evidence except for the exact
+inactive successor derived when an active row retires. When exact resulting
+content lacks exact-node or prospective-row evidence, the harness expects the
+authoritative typed demand rather than a hidden row or invalid-surface shortcut.
+Every resulting Root's complete Process Embedded surface is projected and all
+demands are aggregated before any Root is reconciled.
+
+A pending-null row's declared path may be absent; a historical cursor value may
+be present while the row remains inactive. Root managed-scope generation is 0,
+and the first embedded reservation/activation is 1. Active removal allocates
+its same-lineage successor at exactly generation plus one; that successor is
+output-only until committed and supplied as a later invocation input, whose
+re-add preserves its generation and occurrence identity. An inactive row cannot
+retarget. An active different-lineage `REBIND` is atomic: it retains source path
+and binding policy, retires the old lineage, changes target DocumentId, uses the
+next generation and fresh occurrence/binding identities, advances the active
+graph generation, and does not redirect frozen old-lineage work.
+Same-invocation remove-then-re-add remains unsupported. Pure references,
+verified inline acyclic values, and verified materialized cyclic members are
+exact parity variants; mixed `blueId` objects are invalid.
+
+Direct initialized, terminated, and checkpoint state plus the effective
+generalization policy are protected. Workflow, Handler, Operation, Channel,
+lifecycle, actor-policy, and the complete Process Embedded declaration are
+application-owned; their mutation is admitted only through frozen-current-work
+and complete post-write reconciliation.
+
+### 4.1 Portable contract-evolution family
+
+`C-EVO-*` is the release fixture family for application contract-surface
+evolution. Ordinary vectors use the exact `PROCESS(root,event)` harness;
+closure vectors use the production closure/admission harness. No
+evolution-specific host mutation is permitted.
+
+| Vector | Portable proof |
+|---|---|
+| `C-EVO-01` | A selected Workflow removes itself after its frozen current delivery. |
+| `C-EVO-02` | A selected distinct Scripted Operation removes itself after its frozen invocation. |
+| `C-EVO-03` | A newly added Operation does not receive its creating entry. |
+| `C-EVO-04` | Channel removal and re-add retire the old interval and create fresh lineage. |
+| `C-EVO-05` | Required-Workflow removal selects the nearest valid ancestor. |
+| `C-EVO-06` | Frozen reject policy rolls the mutation back completely. |
+| `C-EVO-07` | Initialized, checkpoint, and terminated processor state is protected. |
+| `C-EVO-08` | Whole-Root/contracts replacement preserves the initialized marker and its exact identity. |
+| `C-EVO-09` | A complete Process Embedded declaration can be removed atomically. |
+| `C-EVO-10` | A former embedded child remains passive application content. |
+| `C-EVO-11` | Removing an edge dissolves a two-member cycle. |
+| `C-EVO-12` | Edge removal splits one component into two cycles. |
+| `C-EVO-13` | Closed prospective evidence permits reciprocal cycle formation. |
+| `C-EVO-14` | A generated type write retains exact causal attribution. |
+| `C-EVO-15` | Generalization removes a subtype-only Channel. |
+| `C-EVO-16` | Generalization removes a subtype-only Process Embedded declaration. |
+| `C-EVO-17` | A direct Process Embedded addition and generalization reconcile in one transition. |
+| `C-EVO-18` | Missing exact child content yields an exact-node demand. |
+| `C-EVO-19` | Known content without a frozen row yields an occurrence-evidence demand. |
+| `C-EVO-20` | Mixed demands use source order, never demand-kind grouping. |
+| `C-EVO-21` | Unchanged retries reproduce demands, tentative effect prefix, and completed evidence. |
+| `C-EVO-22` | Expanded occurrence evidence can reach metered work and still roll back completely on gas failure. |
+| `C-EVO-23` | Automatic-demand retry and explicit prospective evidence produce byte-equal resolved execution. |
+
+The harness-owned `ScriptedOperation` is a distinct fixture subtype of
+`Handler`, loaded beside (and excluded from) the frozen production runtime
+registry. It receives the ordinary frozen selection and
+`ProcessorExecutionContext`, and can apply only its declared
+`ContractExecutionResult`. It is not a substitute for a downstream
+Coordination implementation. The intentionally deferred inherited
+Process-Embedded reveal scenario is not part of this family.
 
 ## 5. Canonical delivery derivation
 

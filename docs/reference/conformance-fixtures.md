@@ -10,7 +10,7 @@ Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af7504
 
 | Suite | Fixture count |
 | --- | ---: |
-| `contracts` | 247 |
+| `contracts` | 276 |
 | `language` | 153 |
 
 ## Package identities
@@ -21,31 +21,31 @@ Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af7504
 | `languageFixtures` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` |
 | `contractsRegistry` | `sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1` |
 | `contractsGas` | `sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a` |
-| `contractsFixtures` | `sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d` |
-| `contractsRelease` | `sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c` |
+| `contractsFixtures` | `sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79` |
+| `contractsRelease` | `sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3` |
 
 ## Specification hashes
 
 | Specification | SHA-256 |
 | --- | --- |
 | `languageSha256` | `01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d` |
-| `contractsSha256` | `389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18` |
+| `contractsSha256` | `8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242` |
 
 ## Category coverage
 
 | Suite and category | Fixtures |
 | --- | ---: |
-| `contracts:admission` | 19 |
+| `contracts:admission` | 32 |
 | `contracts:atomicity` | 2 |
 | `contracts:chk` | 7 |
 | `contracts:cycle` | 6 |
-| `contracts:disc` | 6 |
+| `contracts:disc` | 8 |
 | `contracts:dynamic-graph` | 6 |
 | `contracts:e2e` | 3 |
-| `contracts:emb` | 21 |
+| `contracts:emb` | 25 |
 | `contracts:evt` | 5 |
-| `contracts:fail` | 5 |
-| `contracts:feed` | 18 |
+| `contracts:fail` | 6 |
+| `contracts:feed` | 19 |
 | `contracts:gas` | 75 |
 | `contracts:history` | 7 |
 | `contracts:identity` | 6 |
@@ -56,11 +56,11 @@ Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af7504
 | `contracts:limits` | 20 |
 | `contracts:locality` | 1 |
 | `contracts:ordering` | 5 |
-| `contracts:prot` | 2 |
+| `contracts:prot` | 6 |
 | `contracts:public-events` | 3 |
 | `contracts:rep` | 7 |
-| `contracts:snd` | 7 |
-| `contracts:upd` | 3 |
+| `contracts:snd` | 10 |
+| `contracts:upd` | 4 |
 | `language:BlueId` | 32 |
 | `language:Canonicalization` | 12 |
 | `language:Circular` | 5 |
