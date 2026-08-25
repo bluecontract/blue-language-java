@@ -111,7 +111,8 @@ final class ClosureSuccessResultAssembler {
                 null,
                 companion,
                 null,
-                execution.finalization());
+                execution.finalization(),
+                execution.transitionEvidence());
     }
 
     private static AffectedClosureSnapshot committedSnapshot(

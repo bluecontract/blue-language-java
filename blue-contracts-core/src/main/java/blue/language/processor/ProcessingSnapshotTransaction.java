@@ -96,8 +96,10 @@ final class ProcessingSnapshotTransaction {
             BatchPatchResult result,
             boolean insertSharedSnapshot,
             ProcessingSnapshotManager commitManager) {
+        BatchPatchResult exactResult = Objects.requireNonNull(
+                result, "result");
         if (runtime.selectedDocumentBacked) {
-            Node tentativeSelected = tentativeSelectedRoot(result);
+            Node tentativeSelected = tentativeSelectedRoot(exactResult);
             ResolvedSnapshot authoritative = commitManager != null
                     ? snapshotFromDocument(
                             tentativeSelected, true, commitManager)
@@ -105,7 +107,7 @@ final class ProcessingSnapshotTransaction {
             long buildUpdatesStart = System.nanoTime();
             List<DocumentUpdateData> updates;
             try {
-                updates = result.updatesAgainst(
+                updates = exactResult.updatesAgainst(
                         authoritative != null
                                 ? authoritative.frozenResolvedRoot()
                                 : FrozenNode.fromResolvedNode(
@@ -133,21 +135,23 @@ final class ProcessingSnapshotTransaction {
             runtime.snapshot = committed;
             runtime.materializedViewStale = false;
             markStateAdvanced(published);
+            runtime.recordCommittedPatchEvidence(exactResult);
             return updates;
         }
         if (commitManager == null) {
-            Node next = result.resolvedRoot().toNode();
+            Node next = exactResult.resolvedRoot().toNode();
             runtime.materializedView.replaceWith(next);
             runtime.snapshot = null;
             runtime.materializedViewStale = false;
             markStateAdvanced(false);
-            return result.updates();
+            runtime.recordCommittedPatchEvidence(exactResult);
+            return exactResult.updates();
         }
         ResolvedSnapshot next =
                 DocumentProcessingRuntime.snapshotWithCompleteness(
-                        result.canonicalRoot(),
-                        result.resolvedRoot(),
-                        result.isResolutionComplete(),
+                        exactResult.canonicalRoot(),
+                        exactResult.resolvedRoot(),
+                        exactResult.isResolutionComplete(),
                         insertSharedSnapshot);
         boolean published = insertSharedSnapshot
                 && next.isResolutionComplete();
@@ -158,7 +162,8 @@ final class ProcessingSnapshotTransaction {
         runtime.snapshot = committed;
         commitMaterializedSnapshot(committed);
         markStateAdvanced(published);
-        return result.updates();
+        runtime.recordCommittedPatchEvidence(exactResult);
+        return exactResult.updates();
     }
 
     void commitMaterializedSnapshot(ResolvedSnapshot committed) {

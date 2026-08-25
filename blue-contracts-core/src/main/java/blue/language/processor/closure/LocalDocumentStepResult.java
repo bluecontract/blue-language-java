@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Tentative local effects of one isolated document step.
@@ -27,6 +28,7 @@ public final class LocalDocumentStepResult {
     private final long gasBefore;
     private final long gasAfter;
     private final boolean identityAffecting;
+    private final DocumentTransitionEvidence transitionEvidence;
 
     /**
      * Creates one pre-finalization local result.
@@ -51,6 +53,29 @@ public final class LocalDocumentStepResult {
             long gasBefore,
             long gasAfter,
             boolean identityAffecting) {
+        this(documentId,
+                workOccurrenceIdentity,
+                beforeBlueId,
+                resultingBody,
+                emittedEvents,
+                orderedPatches,
+                gasBefore,
+                gasAfter,
+                identityAffecting,
+                null);
+    }
+
+    LocalDocumentStepResult(
+            DocumentId documentId,
+            String workOccurrenceIdentity,
+            String beforeBlueId,
+            Node resultingBody,
+            List<Node> emittedEvents,
+            List<FrozenJsonPatch> orderedPatches,
+            long gasBefore,
+            long gasAfter,
+            boolean identityAffecting,
+            DocumentTransitionEvidence transitionEvidence) {
         this.documentId = Objects.requireNonNull(documentId, "documentId");
         this.workOccurrenceIdentity =
                 ClosureValueSupport.requireSha256Identity(
@@ -70,6 +95,7 @@ public final class LocalDocumentStepResult {
             throw new IllegalArgumentException("gasAfter precedes gasBefore");
         }
         this.identityAffecting = identityAffecting;
+        this.transitionEvidence = transitionEvidence;
     }
 
     /**
@@ -139,6 +165,15 @@ public final class LocalDocumentStepResult {
     /** Reports whether identity reconciliation is required.
      * @return flag */
     public boolean identityAffecting() { return identityAffecting; }
+
+    /**
+     * Returns optional non-identity-bearing processor presentation evidence.
+     * Custom document-step processors using the compatibility constructors do
+     * not manufacture this evidence.
+     */
+    Optional<DocumentTransitionEvidence> transitionEvidence() {
+        return Optional.ofNullable(transitionEvidence);
+    }
 
     private static List<Node> immutableNodes(List<Node> values) {
         ArrayList<Node> copy = new ArrayList<Node>();

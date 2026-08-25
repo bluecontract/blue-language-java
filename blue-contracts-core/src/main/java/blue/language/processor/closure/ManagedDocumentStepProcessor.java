@@ -150,7 +150,16 @@ final class ManagedDocumentStepProcessor
                 outcome.orderedPatches(),
                 outcome.gasBefore(),
                 outcome.gasAfter(),
-                outcome.identityAffecting());
+                outcome.identityAffecting(),
+                DocumentTransitionEvidence.fromManagedStep(
+                        target.documentId(),
+                        admitted.work().workIdentity(),
+                        target.blueId(),
+                        outcome.beforeEffectiveTypeBlueId(),
+                        outcome.afterEffectiveTypeBlueId(),
+                        outcome.orderedPatches(),
+                        outcome.orderedPatchUpdates(),
+                        outcome.generatedGeneralizationWrites()));
     }
 
     private static ManagedDocumentWorkKind map(WorkKind kind) {

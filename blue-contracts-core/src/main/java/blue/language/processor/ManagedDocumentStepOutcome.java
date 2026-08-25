@@ -13,6 +13,11 @@ public final class ManagedDocumentStepOutcome {
     private final Node resultingBody;
     private final List<Node> emittedEvents;
     private final List<FrozenJsonPatch> orderedPatches;
+    private final List<DocumentUpdateOccurrence> orderedPatchUpdates;
+    private final String beforeEffectiveTypeBlueId;
+    private final String afterEffectiveTypeBlueId;
+    private final List<ManagedGeneralizationWrite>
+            generatedGeneralizationWrites;
     private final long gasBefore;
     private final long gasAfter;
     private final boolean identityAffecting;
@@ -21,6 +26,10 @@ public final class ManagedDocumentStepOutcome {
             Node resultingBody,
             List<Node> emittedEvents,
             List<FrozenJsonPatch> orderedPatches,
+            List<DocumentUpdateOccurrence> orderedPatchUpdates,
+            String beforeEffectiveTypeBlueId,
+            String afterEffectiveTypeBlueId,
+            List<ManagedGeneralizationWrite> generatedGeneralizationWrites,
             long gasBefore,
             long gasAfter,
             boolean identityAffecting) {
@@ -30,6 +39,22 @@ public final class ManagedDocumentStepOutcome {
         this.orderedPatches = Collections.unmodifiableList(
                 new ArrayList<FrozenJsonPatch>(Objects.requireNonNull(
                         orderedPatches, "orderedPatches")));
+        this.orderedPatchUpdates = Collections.unmodifiableList(
+                new ArrayList<DocumentUpdateOccurrence>(
+                        Objects.requireNonNull(
+                                orderedPatchUpdates,
+                                "orderedPatchUpdates")));
+        if (this.orderedPatchUpdates.size() != this.orderedPatches.size()) {
+            throw new IllegalArgumentException(
+                    "Every authored patch requires one exact update transition");
+        }
+        this.beforeEffectiveTypeBlueId = beforeEffectiveTypeBlueId;
+        this.afterEffectiveTypeBlueId = afterEffectiveTypeBlueId;
+        this.generatedGeneralizationWrites = Collections.unmodifiableList(
+                new ArrayList<ManagedGeneralizationWrite>(
+                        Objects.requireNonNull(
+                                generatedGeneralizationWrites,
+                                "generatedGeneralizationWrites")));
         this.gasBefore = gasBefore;
         this.gasAfter = gasAfter;
         if (gasBefore < 0L || gasAfter < gasBefore) {
@@ -58,6 +83,42 @@ public final class ManagedDocumentStepOutcome {
      * @return immutable exact authored patches in applied order
      */
     public List<FrozenJsonPatch> orderedPatches() { return orderedPatches; }
+
+    /**
+     * Returns one exact before/after occurrence per authored patch.
+     *
+     * @return immutable occurrences in authored patch order
+     */
+    public List<DocumentUpdateOccurrence> orderedPatchUpdates() {
+        return orderedPatchUpdates;
+    }
+
+    /**
+     * Returns the admitted effective Root type BlueId, or {@code null}.
+     *
+     * @return admitted effective type identity, or {@code null}
+     */
+    public String beforeEffectiveTypeBlueId() {
+        return beforeEffectiveTypeBlueId;
+    }
+
+    /**
+     * Returns the resulting effective Root type BlueId, or {@code null}.
+     *
+     * @return resulting effective type identity, or {@code null}
+     */
+    public String afterEffectiveTypeBlueId() {
+        return afterEffectiveTypeBlueId;
+    }
+
+    /**
+     * Returns processor-generated generalization writes in commit order.
+     *
+     * @return immutable committed write evidence
+     */
+    public List<ManagedGeneralizationWrite> generatedGeneralizationWrites() {
+        return generatedGeneralizationWrites;
+    }
 
     /**
      * Returns the shared ledger total immediately before this step.

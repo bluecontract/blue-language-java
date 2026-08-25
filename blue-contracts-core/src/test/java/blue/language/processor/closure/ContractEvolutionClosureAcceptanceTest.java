@@ -1,22 +1,28 @@
 package blue.language.processor.closure;
 
+import blue.language.api.BlueCachePolicy;
+import blue.language.conformance.ConformanceEngine;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.SequentialNodeProvider;
 import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
+import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.GasSchedule;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.HandlerRegistrationContext;
 import blue.language.processor.ManagedProcessEmbeddedPath;
 import blue.language.processor.ProcessorErrorCategory;
 import blue.language.processor.ProcessorExecutionContext;
+import blue.language.processor.ProcessingSnapshotManager;
 import blue.language.processor.ProcessorStatus;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
@@ -24,6 +30,8 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.runtime.BlueLanguageRuntime;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -42,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** Focused acceptance proofs for closure-owned dynamic contract surfaces. */
 final class ContractEvolutionClosureAcceptanceTest {
@@ -463,6 +472,11 @@ final class ContractEvolutionClosureAcceptanceTest {
                             document(result, A).document(),
                             runtimeBlueId,
                             action);
+                    assertContractTransitionEvidence(
+                            result,
+                            "/contracts/target",
+                            action);
+                    assertTransitionStepChainIsCrossBound(result, A);
                     if (ACTOR_POLICY_BLUE_ID.equals(runtimeBlueId)) {
                         actorPolicyMutations.add(action);
                     }
@@ -475,6 +489,260 @@ final class ContractEvolutionClosureAcceptanceTest {
                         "add", "replace", "remove")),
                 actorPolicyMutations,
                 "the typed registered Actor Policy must remain mutable");
+    }
+
+    @Test
+    void exposesGeneratedGeneralizationAndEffectiveTypeEvidence() {
+        BasicNodeProvider applicationTypes = new BasicNodeProvider();
+        applicationTypes.addSingleDocs(
+                "name: Price\n"
+                        + "amount:\n"
+                        + "  type: Integer\n"
+                        + "currency:\n"
+                        + "  type: Text");
+        applicationTypes.addSingleDocs(
+                "name: Price in EUR\n"
+                        + "type:\n"
+                        + "  blueId: "
+                        + applicationTypes.getBlueIdByName(
+                                "Price")
+                        + "\ncurrency: EUR");
+        applicationTypes.addSingleDocs(
+                "name: Global Product\n"
+                        + "price:\n"
+                        + "  type:\n"
+                        + "    blueId: "
+                        + applicationTypes.getBlueIdByName("Price"));
+        applicationTypes.addSingleDocs(
+                "name: European Product\n"
+                        + "type:\n"
+                        + "  blueId: "
+                        + applicationTypes.getBlueIdByName(
+                                "Global Product")
+                        + "\nprice:\n"
+                        + "  type:\n"
+                        + "    blueId: "
+                        + applicationTypes.getBlueIdByName(
+                                "Price in EUR"));
+        String requiredType = applicationTypes.getBlueIdByName(
+                "European Product");
+        String optionalType = applicationTypes.getBlueIdByName(
+                "Global Product");
+        String genericPriceType = applicationTypes.getBlueIdByName("Price");
+        EvolutionProcessor probe = new EvolutionProcessor();
+        ContractProcessorRegistry runtime = registry(probe, null);
+        NodeProvider evidenceProvider = new SequentialNodeProvider(
+                applicationTypes,
+                new ExactEventProvider());
+        try (BlueLanguageRuntime language = BlueLanguageRuntime.create(
+                    evidenceProvider,
+                    BlueCachePolicy.disabled(),
+                    Collections.<String, String>emptyMap());
+             ConformanceEngine conformance =
+                     language.newConformanceEngine();
+             DocumentProcessor owner = DocumentProcessor.builder()
+                .runtimeRegistry(runtime)
+                .nodeProvider(evidenceProvider)
+                .conformanceEngine(conformance)
+                .snapshotStore(new LanguageSnapshotManager(language))
+                .build()) {
+            Node body = new Node()
+                    .name("Generated generalization evidence")
+                    .type(new Node().blueId(requiredType))
+                    .properties("price", new Node()
+                            .properties("amount", new Node().value(150))
+                            .properties("currency", new Node().value("EUR")))
+                    .contracts(new Node()
+                            .properties("generalization", typed(
+                                    RuntimeBlueIds.TYPE_GENERALIZATION_POLICY)
+                                    .properties("defaultMode", new Node()
+                                            .value("nearest-valid-ancestor")))
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("generalizePrice",
+                                    handler("lifecycle", null)));
+
+            ClosureProcessResult result = full(
+                    owner,
+                    simpleAdmission(owner, A, body, true));
+
+            assertSuccess(result);
+            DocumentTransitionEvidence transition =
+                    transitionWithGeneralizationWrite(result, "/type");
+            assertEquals(requiredType,
+                    transition.beforeEffectiveTypeBlueId().get());
+            assertFalse(transition.beforeDocumentBlueId().equals(
+                    transition.afterDocumentBlueId()));
+            assertEquals(2,
+                    transition.generatedGeneralizationWrites().size());
+            DocumentTransitionEvidence.GeneratedGeneralizationWrite
+                    nestedWrite = generalizationWrite(
+                            transitionWithGeneralizationWrite(
+                                    result, "/price/type"),
+                            "/price/type");
+            DocumentTransitionEvidence.GeneratedGeneralizationWrite
+                    rootWrite = null;
+            for (DocumentTransitionEvidence.GeneratedGeneralizationWrite write
+                    : transition.generatedGeneralizationWrites()) {
+                if ("/type".equals(write.path())) {
+                    rootWrite = write;
+                }
+            }
+            assertNotNull(rootWrite);
+            assertEquals(genericPriceType, nestedWrite.valueBlueId());
+            assertEquals(optionalType, rootWrite.valueBlueId());
+            assertEquals(optionalType,
+                    document(result, A).document().getType().getBlueId());
+            assertEquals(0, nestedWrite.requiringPatchIndex());
+            assertEquals(0, rootWrite.requiringPatchIndex());
+            assertTransitionStepChainIsCrossBound(result, A);
+        }
+    }
+
+    @Test
+    void doesNotClassifyAnOrdinaryNestedContractsMemberAsContractSurface() {
+        EvolutionProcessor probe = new EvolutionProcessor();
+        try (DocumentProcessor owner = owner(probe, null)) {
+            Node body = new Node()
+                    .name("Ordinary nested contracts data")
+                    .properties("payload", new Node()
+                            .properties("contracts", new Node()
+                                    .properties("target", new Node()
+                                            .value("before"))))
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("mutatePayloadContracts",
+                                    handler("lifecycle", null)));
+
+            ClosureProcessResult result = full(
+                    owner,
+                    simpleAdmission(owner, A, body, true));
+
+            assertSuccess(result);
+            assertEquals("after", document(result, A).document()
+                    .getAsText("/payload/contracts/target"));
+            assertFalse(result.documentTransitionEvidence().isEmpty());
+            for (DocumentTransitionEvidence transition
+                    : result.documentTransitionEvidence()) {
+                assertTrue(transition.authoredContractPatches().isEmpty());
+            }
+        }
+    }
+
+    @Test
+    void exposesExactEvidenceForANestedContractValuePatch() {
+        EvolutionProcessor probe = new EvolutionProcessor();
+        ContractProcessorRegistry runtime = registry(probe, null);
+        try (DocumentProcessor owner = owner(runtime)) {
+            Node body = new Node()
+                    .name("Nested contract mutation evidence")
+                    .contracts(new Node()
+                            .properties("actorPolicy",
+                                    matrixContract(ACTOR_POLICY_BLUE_ID, 1))
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("mutateNestedContractValue",
+                                    handler("lifecycle", null)));
+
+            ClosureProcessResult result = full(
+                    owner,
+                    simpleAdmission(owner, A, body, true));
+
+            assertSuccess(result);
+            assertEquals(2, document(result, A).document()
+                    .getAsInteger("/contracts/actorPolicy/revision"));
+            DocumentTransitionEvidence transition = transitionWithPatch(
+                    result, "/contracts/actorPolicy/revision");
+            assertEquals(1, transition.authoredContractPatches().size());
+            DocumentTransitionEvidence.AuthoredContractPatch patch =
+                    transition.authoredContractPatches().get(0);
+            assertEquals(DocumentTransitionEvidence.Operation.REPLACE,
+                    patch.operation());
+            assertTrue(patch.beforeValueBlueId().isPresent());
+            assertTrue(patch.afterValueBlueId().isPresent());
+            assertFalse(patch.beforeValueBlueId().get().equals(
+                    patch.afterValueBlueId().get()));
+        }
+    }
+
+    @Test
+    void legacyResultConstructorKeepsEvidenceEmptyAndIdentitySurfaceStable() {
+        EvolutionProcessor probe = new EvolutionProcessor();
+        try (DocumentProcessor owner = owner(probe, null)) {
+            ClosureInvocationInput input = simpleAdmission(
+                    owner,
+                    A,
+                    matrixBody(
+                            ACTOR_POLICY_BLUE_ID,
+                            new ActorPolicyProcessor(),
+                            "replace"),
+                    true);
+            ClosureProcessResult actual = full(owner, input);
+
+            ClosureProcessResult compatibility = new ClosureProcessResult(
+                    input.snapshot(),
+                    actual.status(),
+                    actual.invocationIdentity(),
+                    actual.outputClosureIdentity(),
+                    actual.graphGeneration(),
+                    actual.resultingDocuments(),
+                    actual.resultingComponents(),
+                    actual.occurrenceBindings(),
+                    actual.occurrenceBindingSetIdentity(),
+                    actual.graphChanges(),
+                    actual.graphChangesIdentity(),
+                    actual.subscriptionDeltas(),
+                    actual.subscriptionDeltasIdentity(),
+                    actual.checkpointWrites(),
+                    actual.checkpointWritesIdentity(),
+                    actual.publicEvents(),
+                    actual.publicEventsIdentity(),
+                    actual.totalGas(),
+                    actual.gasTrace(),
+                    actual.gasTraceIdentity(),
+                    actual.rejectedCharge(),
+                    actual.rejectedWorkOccurrence(),
+                    actual.platformCommitCompanion(),
+                    actual.diagnostic());
+
+            assertFalse(actual.documentTransitionEvidence().isEmpty());
+            DocumentTransitionEvidence first =
+                    actual.documentTransitionEvidence().get(0);
+            LocalDocumentStepResult legacyLocal =
+                    new LocalDocumentStepResult(
+                            first.documentId(),
+                            first.workOccurrenceIdentity(),
+                            first.beforeDocumentBlueId(),
+                            document(actual, A).document(),
+                            Collections.<Node>emptyList(),
+                            Collections.<FrozenJsonPatch>emptyList(),
+                            0L,
+                            0L,
+                            false);
+            assertFalse(legacyLocal.transitionEvidence().isPresent());
+            assertEquals(Collections.emptyList(),
+                    compatibility.documentTransitionEvidence());
+            assertEquals(actual.invocationIdentity(),
+                    compatibility.invocationIdentity());
+            assertEquals(actual.inputClosureIdentity(),
+                    compatibility.inputClosureIdentity());
+            assertEquals(actual.outputClosureIdentity(),
+                    compatibility.outputClosureIdentity());
+            assertEquals(actual.occurrenceBindingSetIdentity(),
+                    compatibility.occurrenceBindingSetIdentity());
+            assertEquals(actual.graphChangesIdentity(),
+                    compatibility.graphChangesIdentity());
+            assertEquals(actual.subscriptionDeltasIdentity(),
+                    compatibility.subscriptionDeltasIdentity());
+            assertEquals(actual.checkpointWritesIdentity(),
+                    compatibility.checkpointWritesIdentity());
+            assertEquals(actual.publicEventsIdentity(),
+                    compatibility.publicEventsIdentity());
+            assertEquals(actual.gasTraceIdentity(),
+                    compatibility.gasTraceIdentity());
+            assertEquals(actual.platformCommitCompanion(),
+                    compatibility.platformCommitCompanion());
+            assertThrows(UnsupportedOperationException.class,
+                    () -> actual.documentTransitionEvidence().clear());
+        }
     }
 
     @Test
@@ -980,6 +1248,102 @@ final class ContractEvolutionClosureAcceptanceTest {
         }
     }
 
+    private static void assertContractTransitionEvidence(
+            ClosureProcessResult result,
+            String path,
+            String action) {
+        DocumentTransitionEvidence transition = transitionWithPatch(
+                result, path);
+        DocumentTransitionEvidence.AuthoredContractPatch patch = null;
+        for (DocumentTransitionEvidence.AuthoredContractPatch candidate
+                : transition.authoredContractPatches()) {
+            if (candidate.path().equals(path)) {
+                patch = candidate;
+                break;
+            }
+        }
+        assertNotNull(patch);
+        assertEquals(
+                DocumentTransitionEvidence.Operation.valueOf(
+                        action.toUpperCase(java.util.Locale.ROOT)),
+                patch.operation());
+        assertEquals(!"add".equals(action),
+                patch.beforeValueBlueId().isPresent());
+        assertEquals(!"remove".equals(action),
+                patch.afterValueBlueId().isPresent());
+        assertEquals(!"remove".equals(action),
+                patch.authoredValueBlueId().isPresent());
+        assertNotNull(transition.beforeDocumentBlueId());
+        assertNotNull(transition.afterDocumentBlueId());
+    }
+
+    private static DocumentTransitionEvidence transitionWithPatch(
+            ClosureProcessResult result,
+            String path) {
+        for (DocumentTransitionEvidence transition
+                : result.documentTransitionEvidence()) {
+            for (DocumentTransitionEvidence.AuthoredContractPatch patch
+                    : transition.authoredContractPatches()) {
+                if (patch.path().equals(path)) {
+                    return transition;
+                }
+            }
+        }
+        throw new AssertionError(
+                "Missing transition evidence for " + path);
+    }
+
+    private static DocumentTransitionEvidence transitionWithGeneralizationWrite(
+            ClosureProcessResult result,
+            String path) {
+        for (DocumentTransitionEvidence transition
+                : result.documentTransitionEvidence()) {
+            for (DocumentTransitionEvidence.GeneratedGeneralizationWrite write
+                    : transition.generatedGeneralizationWrites()) {
+                if (write.path().equals(path)) {
+                    return transition;
+                }
+            }
+        }
+        throw new AssertionError(
+                "Missing generated generalization evidence for " + path);
+    }
+
+    private static DocumentTransitionEvidence.GeneratedGeneralizationWrite
+    generalizationWrite(
+            DocumentTransitionEvidence transition,
+            String path) {
+        for (DocumentTransitionEvidence.GeneratedGeneralizationWrite write
+                : transition.generatedGeneralizationWrites()) {
+            if (write.path().equals(path)) {
+                return write;
+            }
+        }
+        throw new AssertionError(
+                "Missing generated generalization evidence for " + path);
+    }
+
+    private static void assertTransitionStepChainIsCrossBound(
+            ClosureProcessResult result,
+            DocumentId documentId) {
+        String previousAfter = null;
+        int observed = 0;
+        for (DocumentTransitionEvidence transition
+                : result.documentTransitionEvidence()) {
+            if (!documentId.equals(transition.documentId())) {
+                continue;
+            }
+            if (previousAfter != null) {
+                assertEquals(previousAfter,
+                        transition.beforeDocumentBlueId());
+            }
+            previousAfter = transition.afterDocumentBlueId();
+            observed++;
+        }
+        assertTrue(observed > 0,
+                "expected at least one transition for " + documentId.value());
+    }
+
     private static Node typed(String blueId) {
         return new Node().type(new Node().blueId(blueId));
     }
@@ -1238,6 +1602,17 @@ final class ContractEvolutionClosureAcceptanceTest {
                         JsonPatch.add(
                                 "/contracts/unsupported",
                                 typed(UNSUPPORTED_BLUE_ID))));
+            } else if ("generalizePrice".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/price/currency", new Node().value("USD")));
+            } else if ("mutatePayloadContracts".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/payload/contracts/target",
+                        new Node().value("after")));
+            } else if ("mutateNestedContractValue".equals(key)) {
+                context.applyPatch(JsonPatch.replace(
+                        "/contracts/actorPolicy/revision",
+                        new Node().value(2)));
             }
         }
 
@@ -1410,11 +1785,69 @@ final class ContractEvolutionClosureAcceptanceTest {
             if (EVENT_ONE_BLUE_ID.equals(blueId)) {
                 return Collections.singletonList(EVENT_ONE.clone());
             }
+            if (HANDLER_BLUE_ID.equals(blueId)) {
+                return Collections.singletonList(HANDLER_TYPE.clone());
+            }
+            if (EXTERNAL_BLUE_ID.equals(blueId)) {
+                return Collections.singletonList(EXTERNAL_TYPE.clone());
+            }
+            if (OPERATION_BLUE_ID.equals(blueId)) {
+                return Collections.singletonList(OPERATION_TYPE.clone());
+            }
+            if (ACTOR_POLICY_BLUE_ID.equals(blueId)) {
+                return Collections.singletonList(ACTOR_POLICY_TYPE.clone());
+            }
             if (UNSUPPORTED_BLUE_ID.equals(blueId)) {
                 return Collections.singletonList(
                         UNSUPPORTED_TYPE.clone());
             }
             return runtime.fetchByBlueId(blueId);
+        }
+    }
+
+    private static final class LanguageSnapshotManager
+            implements ProcessingSnapshotManager {
+        private final BlueLanguageRuntime language;
+
+        private LanguageSnapshotManager(BlueLanguageRuntime language) {
+            this.language = language;
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocument(Node document) {
+            return language.snapshots().resolve(document.clone());
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransient(Node document) {
+            return language.snapshots().resolve(document.clone());
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentPreservingPaths(
+                Node document,
+                java.util.Collection<String> preservedPaths) {
+            return language.snapshots().resolvePreservingPaths(
+                    document.clone(), preservedPaths);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+                Node document,
+                java.util.Collection<String> preservedPaths) {
+            return fromDocumentPreservingPaths(document, preservedPaths);
+        }
+
+        @Override
+        public ResolvedSnapshot applyPatch(
+                ResolvedSnapshot snapshot,
+                JsonPatch patch) {
+            return language.patching().apply(snapshot, patch);
+        }
+
+        @Override
+        public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
+            return language.snapshots().cache(snapshot);
         }
     }
 }

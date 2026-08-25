@@ -72,6 +72,8 @@ final class ClosureAdmissionExecutionSession
             resultingChannelSurfaces =
             new LinkedHashMap<DocumentId,
                     List<ManagedRootChannelOccurrence>>();
+    private final List<DocumentTransitionEvidence> transitionEvidence =
+            new ArrayList<DocumentTransitionEvidence>();
 
     private AffectedClosureSnapshot currentSnapshot;
     private List<ManagedOccurrenceBinding> currentBindings;
@@ -357,6 +359,16 @@ final class ClosureAdmissionExecutionSession
         if (!sameNode(expected, result.resultingBody())) {
             latestBodies.put(work.targetDocumentId(),
                     result.resultingBody());
+        }
+        ManagedDocumentSnapshot finalized = currentSnapshot.managedDocument(
+                result.documentId());
+        if (finalized == null) {
+            throw new IllegalStateException(
+                    "Transition target left the finalized admission closure");
+        }
+        if (result.transitionEvidence().isPresent()) {
+            transitionEvidence.add(result.transitionEvidence().get()
+                    .finalizedWith(finalized.blueId()));
         }
     }
 
@@ -910,7 +922,8 @@ final class ClosureAdmissionExecutionSession
                 resultingChannelSurfaces,
                 Collections.<ManagedCheckpointSettlementBatch.Mutation>
                         emptyList(),
-                Collections.<DocumentId>emptySet());
+                Collections.<DocumentId>emptySet(),
+                transitionEvidence);
     }
 
     private void captureSurfaces(

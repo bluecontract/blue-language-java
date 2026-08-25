@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.model.DocumentUpdateChannel;
@@ -122,6 +123,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 request, "request");
         ensureOpen();
         Node document = admitted.exactDocument();
+        String beforeEffectiveTypeBlueId = effectiveTypeBlueId(document);
         validateTargetState(admitted, document);
         DocumentProcessingResult invalid =
                 ProcessingInputAdmission.validateDocument(document);
@@ -144,11 +146,15 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 : null;
         List<FrozenJsonPatch> orderedPatches =
                 new ArrayList<FrozenJsonPatch>();
+        List<DocumentUpdateOccurrence> orderedPatchUpdates =
+                new ArrayList<DocumentUpdateOccurrence>();
         List<Node> orderedEmittedEvents =
                 new ArrayList<Node>();
         ManagedDocumentStepContinuation stepContinuation =
                 collectingContinuation(
-                        orderedPatches, orderedEmittedEvents);
+                        orderedPatches,
+                        orderedPatchUpdates,
+                        orderedEmittedEvents);
         long gasBefore = sharedGasContext.meter().totalGas();
         ProcessorInvocationState execution = new ProcessorInvocationState(
                 owner,
@@ -195,9 +201,24 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 runtime.document(),
                 orderedEmittedEvents,
                 orderedPatches,
+                orderedPatchUpdates,
+                beforeEffectiveTypeBlueId,
+                effectiveTypeBlueId(runtime.document()),
+                runtime.committedGeneralizationWrites(),
                 gasBefore,
                 gasAfter,
                 !runtime.changedPaths().isEmpty());
+    }
+
+    private static String effectiveTypeBlueId(Node document) {
+        Node type = Objects.requireNonNull(document, "document").getType();
+        if (type == null) {
+            return null;
+        }
+        return type.getBlueId() != null
+                ? BlueIds.requirePlainBlueId(
+                        type.getBlueId(), "/type/blueId")
+                : FrozenNode.fromResolvedNode(type).blueId();
     }
 
     /**
@@ -960,6 +981,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
 
     private ManagedDocumentStepContinuation collectingContinuation(
             final List<FrozenJsonPatch> orderedPatches,
+            final List<DocumentUpdateOccurrence> orderedPatchUpdates,
             final List<Node> orderedEmittedEvents) {
         return new ManagedDocumentStepContinuation() {
             @Override
@@ -968,7 +990,13 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                     Node currentDocument,
                     FrozenJsonPatch patch,
                     List<DocumentUpdateOccurrence> updates) {
-                orderedPatches.add(Objects.requireNonNull(patch, "patch"));
+                FrozenJsonPatch exactPatch = Objects.requireNonNull(
+                        patch, "patch");
+                DocumentUpdateOccurrence authored = authoredPatchUpdate(
+                        patch,
+                        updates);
+                orderedPatches.add(exactPatch);
+                orderedPatchUpdates.add(authored);
                 continuation.afterPatch(
                         scopePath,
                         currentDocument,
@@ -1000,6 +1028,25 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                         scopePath, cause, reason);
             }
         };
+    }
+
+    private static DocumentUpdateOccurrence authoredPatchUpdate(
+            FrozenJsonPatch patch,
+            List<DocumentUpdateOccurrence> updates) {
+        DocumentUpdateOccurrence matched = null;
+        for (DocumentUpdateOccurrence update : Objects.requireNonNull(
+                updates, "updates")) {
+            DocumentUpdateOccurrence exact = Objects.requireNonNull(
+                    update, "update");
+            if (exact.path().equals(patch.parsedPath().pointer())) {
+                matched = exact;
+            }
+        }
+        if (matched == null) {
+            throw new IllegalStateException(
+                    "Authored patch has no exact update transition");
+        }
+        return matched;
     }
 
     private static void validateTargetState(

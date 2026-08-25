@@ -128,6 +128,8 @@ final class ClosureExecutionSession
     private final List<ManagedCheckpointSettlementBatch.Mutation>
             checkpointMutations =
             new ArrayList<ManagedCheckpointSettlementBatch.Mutation>();
+    private final List<DocumentTransitionEvidence> transitionEvidence =
+            new ArrayList<DocumentTransitionEvidence>();
 
     private AffectedClosureSnapshot currentSnapshot;
     private List<ManagedOccurrenceBinding> currentBindings;
@@ -852,6 +854,7 @@ final class ClosureExecutionSession
                                 + "source patch transition");
             }
         }
+        recordTransitionEvidence(result);
         recordCompletedWork(work.ordinal());
         if (activeFrames.isEmpty()
                 && eventDeliveryBatchDepth == 0
@@ -882,6 +885,20 @@ final class ClosureExecutionSession
                     pending.checkpointCandidate,
                     pending.rawOccurrenceOrder.longValue()));
         }
+    }
+
+    private void recordTransitionEvidence(LocalDocumentStepResult result) {
+        if (!result.transitionEvidence().isPresent()) {
+            return;
+        }
+        ManagedDocumentSnapshot finalized = currentSnapshot.managedDocument(
+                result.documentId());
+        if (finalized == null) {
+            throw new IllegalStateException(
+                    "Transition target left the finalized closure");
+        }
+        transitionEvidence.add(result.transitionEvidence().get()
+                .finalizedWith(finalized.blueId()));
     }
 
     @Override
@@ -3118,7 +3135,8 @@ final class ClosureExecutionSession
                 inputChannelSurfaces,
                 resultingChannelSurfaces,
                 checkpointMutations,
-                epochAdvanceDocuments);
+                epochAdvanceDocuments,
+                transitionEvidence);
     }
 
     @Override

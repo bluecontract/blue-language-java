@@ -9,6 +9,7 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -59,6 +60,10 @@ final class DocumentProcessingRuntime {
             new LinkedHashSet<>();
     private final Set<String> evidenceScopePaths =
             new LinkedHashSet<>();
+    private final List<ManagedGeneralizationWrite>
+            committedGeneralizationWrites =
+                    new ArrayList<ManagedGeneralizationWrite>();
+    private int committedAuthoredPatchCount;
 
     /** Creates a node-backed invocation with default services. */
     public DocumentProcessingRuntime(Node document) {
@@ -792,6 +797,26 @@ final class DocumentProcessingRuntime {
             ProcessingSnapshotManager commitSnapshotManager) {
         return snapshotTransaction.commitBatchPatchResult(
                 result, insertSharedSnapshot, commitSnapshotManager);
+    }
+
+    void recordCommittedPatchEvidence(BatchPatchResult result) {
+        BatchPatchResult exact = Objects.requireNonNull(result, "result");
+        for (BatchPatchResult.GeneralizationMetadataWrite write
+                : exact.generalizationMetadataWrites()) {
+            committedGeneralizationWrites.add(
+                    new ManagedGeneralizationWrite(
+                            write.path(),
+                            write.value().blueId(),
+                            committedAuthoredPatchCount
+                                    + write.requiringPatchIndex()));
+        }
+        committedAuthoredPatchCount += exact.requestedPatches().size();
+    }
+
+    List<ManagedGeneralizationWrite> committedGeneralizationWrites() {
+        return Collections.unmodifiableList(
+                new ArrayList<ManagedGeneralizationWrite>(
+                        committedGeneralizationWrites));
     }
 
     void commitMaterializedSnapshot(ResolvedSnapshot committed) {
