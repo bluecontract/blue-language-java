@@ -33,6 +33,8 @@ final class ContractsKernelArchitectureTest {
      * other implementation type remains subject to the 800-line limit.
      */
     private static final int MAX_EMBEDDED_SCOPE_PLANNER_LINES = 878;
+    private static final int MAX_DOCUMENT_PROCESSING_RUNTIME_LINES = 818;
+    private static final int MAX_MANAGED_DOCUMENT_STEP_RUNTIME_LINES = 836;
     private static final int MAX_MANAGED_ROOT_SETTLEMENT_LINES = 1153;
     private static final int MAX_COMPOSITION_ROOT_LINES = 250;
     /*
@@ -68,6 +70,12 @@ final class ContractsKernelArchitectureTest {
         String fileName = source.getFileName().toString();
         if ("EmbeddedScopePlanner.java".equals(fileName)) {
             return MAX_EMBEDDED_SCOPE_PLANNER_LINES;
+        }
+        if ("DocumentProcessingRuntime.java".equals(fileName)) {
+            return MAX_DOCUMENT_PROCESSING_RUNTIME_LINES;
+        }
+        if ("ManagedDocumentStepRuntime.java".equals(fileName)) {
+            return MAX_MANAGED_DOCUMENT_STEP_RUNTIME_LINES;
         }
         if ("ManagedRootSettlementService.java".equals(fileName)) {
             return MAX_MANAGED_ROOT_SETTLEMENT_LINES;

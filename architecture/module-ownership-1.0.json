@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 737,
+    "productionSourceCount": 739,
     "productionResourceCount": 749,
-    "productionSourcePathIdentity": "sha256:97bc66c85d521a49cd97a5120bc84095e2501f3820291294f66971e2f4bc6fb9",
+    "productionSourcePathIdentity": "sha256:c8cd11b0f301e231f542b9e79ce2ec97b45d32b5cfe885c0703395107bca66e3",
     "productionResourcePathIdentity": "sha256:8e70a74e54701ead9d8756d767c7289ca1ad99265bb5425270791bec940e5b12"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -1722,6 +1722,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedGeneralizationWrite.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedGeneralizationWrite.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedProcessEmbeddedPath.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -2958,6 +2965,13 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentStepProcessor.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {

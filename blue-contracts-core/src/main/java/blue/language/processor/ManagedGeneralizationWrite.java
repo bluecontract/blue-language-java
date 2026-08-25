@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.identity.BlueIds;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.Objects;
 
@@ -22,7 +23,7 @@ public final class ManagedGeneralizationWrite {
             String path,
             String valueBlueId,
             int requiringPatchIndex) {
-        this.path = requirePointer(path);
+        this.path = PointerUtils.assertValidRuntimePointer(path);
         this.valueBlueId = BlueIds.requirePlainBlueId(
                 Objects.requireNonNull(valueBlueId, "valueBlueId"),
                 "/valueBlueId");
@@ -60,12 +61,4 @@ public final class ManagedGeneralizationWrite {
         return requiringPatchIndex;
     }
 
-    private static String requirePointer(String value) {
-        String checked = Objects.requireNonNull(value, "path");
-        if (!checked.startsWith("/")) {
-            throw new IllegalArgumentException(
-                    "path must be an absolute JSON Pointer");
-        }
-        return checked;
-    }
 }

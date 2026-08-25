@@ -6,6 +6,8 @@ import blue.language.processor.DocumentUpdateOccurrence;
 import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.ManagedGeneralizationWrite;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.util.PointerUtils;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.ArrayList;
@@ -55,7 +57,9 @@ public final class DocumentTransitionEvidence {
             FrozenJsonPatch exact = Objects.requireNonNull(
                     patch, "ordered patch");
             List<String> segments = exact.parsedPath().segments();
-            if (!segments.isEmpty() && "contracts".equals(segments.get(0))) {
+            if (!segments.isEmpty()
+                    && ProcessorContractConstants.KEY_CONTRACTS.equals(
+                            segments.get(0))) {
                 contractPatches.add(AuthoredContractPatch.from(
                         exact,
                         Objects.requireNonNull(
@@ -221,7 +225,7 @@ public final class DocumentTransitionEvidence {
                 String beforeValueBlueId,
                 String afterValueBlueId) {
             this.operation = Objects.requireNonNull(operation, "operation");
-            this.path = requirePointer(path);
+            this.path = PointerUtils.assertValidRuntimePointer(path);
             this.authoredValueBlueId = optionalBlueId(
                     authoredValueBlueId, "authoredValueBlueId");
             this.beforeValueBlueId = optionalBlueId(
@@ -330,7 +334,7 @@ public final class DocumentTransitionEvidence {
                 String path,
                 String valueBlueId,
                 int requiringPatchIndex) {
-            this.path = requirePointer(path);
+            this.path = PointerUtils.assertValidRuntimePointer(path);
             this.valueBlueId = optionalBlueId(
                     Objects.requireNonNull(valueBlueId, "valueBlueId"),
                     "valueBlueId");
@@ -388,15 +392,6 @@ public final class DocumentTransitionEvidence {
         return value == null
                 ? null
                 : FrozenNode.fromResolvedNode(value).blueId();
-    }
-
-    private static String requirePointer(String value) {
-        String checked = Objects.requireNonNull(value, "path");
-        if (!checked.startsWith("/")) {
-            throw new IllegalArgumentException(
-                    "path must be an absolute JSON Pointer");
-        }
-        return checked;
     }
 
     private static <T> List<T> immutable(List<T> values, String label) {
