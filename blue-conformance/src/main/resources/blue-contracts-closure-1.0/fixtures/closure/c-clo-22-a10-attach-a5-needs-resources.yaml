@@ -141,10 +141,10 @@ input:
   directDeliverySnapshotIdentity: sha256:9d89e4507c246cc1e76c107567015b7974867da180a81b1f624749c62b7298c2
   occurrenceBindingSetIdentity: sha256:ad6b2db23e72cfb53126048c89e45f4890d5b5a2f730192d6b72e226fd0d91f9
   closureIdentity: sha256:ea72315ac7dc3faab30bbcf99b083319f200cce6f9765acddf0b92912997bbed
-  invocationIdentity: sha256:4ecdc122ba6eda5c053e19bc4bb5a0a1cadb63da9ac587f56870e1ed4d370d4c
+  invocationIdentity: sha256:edf259241cf7fc2f8be92e5bbd7fbe33a879d63b5786edae0288b3267ccad735
   environment:
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
-    contractsSpecificationIdentity: sha256:dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
@@ -235,6 +235,14 @@ expected:
   attemptOutcome: NeedsResources
   requiredBlueIds:
   - 78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA
+  resourceDemands:
+  - kind: EXACT_NODE
+    demandIdentity: sha256:8c1e312399e706565572986d131bdf829e57666285b6486fb931cfe9dd41920f
+    sourceDocumentId: blue-contracts/exact-node-provider
+    sourcePath: /
+    suppliedValueBlueId: 78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA
+    blueId: 78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA
+    logicalPath: /
 runtime:
   handlers:
     history-b/start:

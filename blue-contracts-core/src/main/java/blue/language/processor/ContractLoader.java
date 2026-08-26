@@ -91,6 +91,11 @@ final class ContractLoader {
         headers.gasSchedule(required);
     }
 
+    FrozenNode materializeVerifiedReference(FrozenNode reference) {
+        return contributions.materializeVerifiedReference(
+                Objects.requireNonNull(reference, "reference"));
+    }
+
     ContractBundle load(ResolvedSnapshot snapshot, String scopePath) {
         Objects.requireNonNull(snapshot, "snapshot");
         return load(
@@ -158,6 +163,37 @@ final class ContractLoader {
             FrozenNode selectedScopeNode,
             FrozenNode effectiveScopeNode,
             String scopePath,
+            Set<String> retainedContractKeys,
+            boolean includeProcessEmbedded) {
+        Set<String> retainedKeys = new LinkedHashSet<>(
+                Objects.requireNonNull(
+                        retainedContractKeys, "retainedContractKeys"));
+        if (includeProcessEmbedded) {
+            effectiveContracts.collectProcessEmbeddedKeys(
+                    selectedScopeNode, retainedKeys);
+            effectiveContracts.collectProcessEmbeddedKeys(
+                    effectiveScopeNode, retainedKeys);
+        }
+        Node selectedScope = effectiveContracts.filterScopeContracts(
+                selectedScopeNode, retainedKeys);
+        Node effectiveScope = effectiveContracts.filterScopeContracts(
+                effectiveScopeNode, retainedKeys);
+        FrozenNode frozenEffective = effectiveScope != null
+                ? FrozenNode.fromResolvedNode(effectiveScope)
+                : null;
+        return load(
+                selectedScope,
+                frozenEffective,
+                scopePath,
+                NoOpProcessingObserver.INSTANCE,
+                null,
+                null);
+    }
+
+    ContractBundle loadExternalClassification(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
             String channelKey,
             boolean includeProcessEmbedded,
             ProcessingObserver observer) {
@@ -203,19 +239,12 @@ final class ContractLoader {
             ProcessingObserver observer,
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason) {
-        Set<String> retainedKeys = new LinkedHashSet<>();
-        if (channelKey != null) {
-            retainedKeys.add(channelKey);
-        }
-        effectiveContracts.retainDeclaredClassificationDependencies(
-                retainedKeys,
-                Objects.requireNonNull(declaredDependencies, "declaredDependencies"));
-        if (includeProcessEmbedded) {
-            effectiveContracts.collectProcessEmbeddedKeys(
-                    selectedScopeNode, retainedKeys);
-            effectiveContracts.collectProcessEmbeddedKeys(
-                    effectiveScopeNode, retainedKeys);
-        }
+        Set<String> retainedKeys = externalClassificationContractKeys(
+                selectedScopeNode,
+                effectiveScopeNode,
+                channelKey,
+                includeProcessEmbedded,
+                declaredDependencies);
         Node selectedScope = effectiveContracts.filterScopeContracts(
                 selectedScopeNode, retainedKeys);
         Node effectiveScope = effectiveContracts.filterScopeContracts(
@@ -230,6 +259,29 @@ final class ContractLoader {
                 observer,
                 recognitionMeter,
                 recognitionReason);
+    }
+
+    Set<String> externalClassificationContractKeys(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ExternalChannelDependencySnapshot declaredDependencies) {
+        Set<String> retainedKeys = new LinkedHashSet<>();
+        if (channelKey != null) {
+            retainedKeys.add(channelKey);
+        }
+        effectiveContracts.retainDeclaredClassificationDependencies(
+                retainedKeys,
+                Objects.requireNonNull(
+                        declaredDependencies, "declaredDependencies"));
+        if (includeProcessEmbedded) {
+            effectiveContracts.collectProcessEmbeddedKeys(
+                    selectedScopeNode, retainedKeys);
+            effectiveContracts.collectProcessEmbeddedKeys(
+                    effectiveScopeNode, retainedKeys);
+        }
+        return retainedKeys;
     }
 
     ContractBundle load(

@@ -23,6 +23,7 @@ import blue.language.processor.ManagedCheckpointSettlementEntry;
 import blue.language.processor.ManagedCheckpointSettlementRequest;
 import blue.language.processor.ManagedCheckpointSettlement;
 import blue.language.processor.ManagedExternalDeliveryClassification;
+import blue.language.processor.ManagedProcessEmbeddedPath;
 import blue.language.processor.ManagedRootChannelOccurrence;
 import blue.language.processor.ManagedRootSubscriptionSurface;
 import blue.language.processor.ManagedSemanticGasBridge;
@@ -77,6 +78,12 @@ final class ManagedDocumentStepProcessor
 
     @Override
     public LocalDocumentStepResult process(DocumentStepInput input) {
+        return process(input, null);
+    }
+
+    LocalDocumentStepResult process(
+            DocumentStepInput input,
+            ManagedDocumentStepRoute selectedRoute) {
         DocumentStepInput admitted = Objects.requireNonNull(input, "input");
         ManagedDocumentSnapshot target = admitted.targetDocument();
         TentativeResolutionContext context = admitted.resolutionContext();
@@ -106,7 +113,7 @@ final class ManagedDocumentStepProcessor
                         "One tentative BlueId identifies different documents");
             }
         }
-        ManagedDocumentStepOutcome outcome = runtime.execute(
+        ManagedDocumentStepRequest request =
                 new ManagedDocumentStepRequest(
                         isolatedRoot,
                         target.initialized(),
@@ -129,7 +136,11 @@ final class ManagedDocumentStepProcessor
                                 "managed-document-step"),
                         new ManagedDocumentResolutionOverlay(
                                 exactNodes,
-                                context.targetManagedBlueIdsByPath())));
+                                context.targetManagedBlueIdsByPath()));
+        ManagedDocumentStepOutcome outcome = selectedRoute == null
+                ? runtime.execute(request)
+                : runtime.executeSelectedRoute(
+                        request, selectedRoute);
         return new LocalDocumentStepResult(
                 target.documentId(),
                 admitted.work().workIdentity(),
@@ -139,7 +150,16 @@ final class ManagedDocumentStepProcessor
                 outcome.orderedPatches(),
                 outcome.gasBefore(),
                 outcome.gasAfter(),
-                outcome.identityAffecting());
+                outcome.identityAffecting(),
+                DocumentTransitionEvidence.fromManagedStep(
+                        target.documentId(),
+                        admitted.work().workIdentity(),
+                        target.blueId(),
+                        outcome.beforeEffectiveTypeBlueId(),
+                        outcome.afterEffectiveTypeBlueId(),
+                        outcome.orderedPatches(),
+                        outcome.orderedPatchUpdates(),
+                        outcome.generatedGeneralizationWrites()));
     }
 
     private static ManagedDocumentWorkKind map(WorkKind kind) {
@@ -197,6 +217,20 @@ final class ManagedDocumentStepProcessor
             Map<String, String> expectedBlueIdsByPath) {
         runtime.validateManagedEmbeddedPaths(
                 exactDocument, expectedBlueIdsByPath);
+    }
+
+    List<ManagedProcessEmbeddedPath> projectManagedProcessEmbeddedSurface(
+            Node exactDocument) {
+        return runtime.projectManagedProcessEmbeddedSurface(exactDocument);
+    }
+
+    /**
+     * Performs an unmetered, read-only availability check for an exact
+     * reference needed during noncommitting demand discovery.
+     */
+    boolean isExactManagedReferenceAvailable(String expectedBlueId) {
+        return runtime.isExactManagedReferenceAvailable(
+                Objects.requireNonNull(expectedBlueId, "expectedBlueId"));
     }
 
     void requireExactManagedReference(String expectedBlueId) {

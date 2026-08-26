@@ -1,0 +1,74 @@
+schema: blue-contracts-fixture/1.0
+id: c-evo-09
+vectors:
+- C-EVO-09
+category: emb
+description: Removing the complete Process Embedded contract preserves the former child as passive content.
+operation: process
+input:
+  root:
+    child:
+      payload: retained
+    contracts:
+      initialized:
+        type:
+          blueId: Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB
+        document:
+          name: exact pre-initialization witness
+      embedded:
+        type:
+          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+        paths:
+        - /child
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: evolution
+        eventKey: evolution
+        accept: true
+        checkpointDomain: evolution-v1
+      removeEmbedded:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: remove
+            path: /contracts/embedded
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: evolution
+    id: EVO-REMOVE-EMBEDDED
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - evolution
+    - 9
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.contracts.embedded
+    op: absent
+  - actual: result.document.child.payload
+    op: equals
+    expected: retained

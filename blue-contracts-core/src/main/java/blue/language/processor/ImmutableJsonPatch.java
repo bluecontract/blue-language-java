@@ -28,6 +28,7 @@ final class ImmutableJsonPatch {
     private final FrozenNode resolvedValue;
     private final String valueBlueId;
     private final ProcessingObserver metrics;
+    private final boolean exactValueWrite;
 
     private ImmutableJsonPatch(JsonPatch.Op op,
                                String authoredPath,
@@ -36,6 +37,24 @@ final class ImmutableJsonPatch {
                                FrozenNode canonicalValue,
                                FrozenNode resolvedValue,
                                ProcessingObserver metrics) {
+        this(op,
+                authoredPath,
+                path,
+                authoredValue,
+                canonicalValue,
+                resolvedValue,
+                metrics,
+                false);
+    }
+
+    private ImmutableJsonPatch(JsonPatch.Op op,
+                               String authoredPath,
+                               ParsedJsonPointer path,
+                               Node authoredValue,
+                               FrozenNode canonicalValue,
+                               FrozenNode resolvedValue,
+                               ProcessingObserver metrics,
+                               boolean exactValueWrite) {
         this.op = Objects.requireNonNull(op, "op");
         this.authoredPath = Objects.requireNonNull(authoredPath, "authoredPath");
         this.path = Objects.requireNonNull(path, "path");
@@ -44,6 +63,7 @@ final class ImmutableJsonPatch {
         this.resolvedValue = resolvedValue;
         this.valueBlueId = op == JsonPatch.Op.REMOVE ? null : resolvedValue.blueId();
         this.metrics = metrics != null ? metrics : NoOpProcessingObserver.INSTANCE;
+        this.exactValueWrite = exactValueWrite;
     }
 
     static PreparationContext preparationContext(ProcessingObserver metrics) {
@@ -124,7 +144,56 @@ final class ImmutableJsonPatch {
                 authoredValue,
                 canonicalValue,
                 checked,
-                metrics);
+                metrics,
+                exactValueWrite);
+    }
+
+    ImmutableJsonPatch withCanonicalAndResolvedValues(
+            FrozenNode canonicalReplacement,
+            FrozenNode resolvedReplacement) {
+        if (op == JsonPatch.Op.REMOVE) {
+            return this;
+        }
+        FrozenNode canonical = Objects.requireNonNull(
+                canonicalReplacement, "canonical patch value");
+        FrozenNode resolved = Objects.requireNonNull(
+                resolvedReplacement, "resolved patch value");
+        if (!canonical.isStrictCanonical()) {
+            throw new IllegalArgumentException(
+                    "Canonical patch value must use canonical construction mode");
+        }
+        if (resolved.isStrictCanonical()) {
+            throw new IllegalArgumentException(
+                    "Resolved patch value must use resolved construction mode");
+        }
+        return new ImmutableJsonPatch(
+                op,
+                authoredPath,
+                path,
+                authoredValue,
+                canonical,
+                resolved,
+                metrics,
+                exactValueWrite);
+    }
+
+    ImmutableJsonPatch withExactValueWrite() {
+        if (op == JsonPatch.Op.REMOVE || exactValueWrite) {
+            return this;
+        }
+        return new ImmutableJsonPatch(
+                op,
+                authoredPath,
+                path,
+                authoredValue,
+                canonicalValue,
+                resolvedValue,
+                metrics,
+                true);
+    }
+
+    boolean exactValueWrite() {
+        return exactValueWrite;
     }
 
     FrozenNode valueFor(FrozenNode root) {

@@ -1,0 +1,56 @@
+{
+  "schema": "dynamic-contract-evolution-resume-integrity/1.0",
+  "createdAt": "2026-08-25T02:11:02Z",
+  "continuationPackage": {
+    "path": "/Users/piotr/Downloads/DYNAMIC_EVOLUTION_NEXT_ROUND.zip",
+    "sha256": "21f163cda5cbb6d9be21ce6e96587149cfc5ad0fbf8c7461046e8296ba0febaa",
+    "reviewSha256": "4662fd64c6135429d604f6cc947bacd4088e7340939c5e517b5aa1b84034eba0",
+    "promptSha256": "0220b2414c5e0bb082b0cfdb0b3f7b363ee4a9461eb15e0e2a28ed7fcf6418d2",
+    "checksumsVerified": true
+  },
+  "sourceArchive": {
+    "path": "/Users/piotr/data/myos-simple/recovery-artifacts/dynamic-contract-evolution-latest-source-20260825T013019Z.tar.gz",
+    "expectedSha256": "6b2b5e7568c27cb0f806bb1aba6c6f73b6c070503c0b87277ff86a437fb508d7",
+    "observedSha256": "6b2b5e7568c27cb0f806bb1aba6c6f73b6c070503c0b87277ff86a437fb508d7",
+    "verified": true
+  },
+  "projects": [
+    {
+      "project": "blue-language-java",
+      "worktree": "/Users/piotr/data/myos-simple/recovery-artifacts/dynamic-contract-evolution-resume-20260824/language-contract-evolution-resume",
+      "branch": "feat/dynamic-contract-evolution-resume",
+      "head": "d5484d870f30048009fdbcceb4365f56c235fb7f",
+      "acceptedBase": "03db5ee45f96698a45a3f5556dcc1ef6222d8e6f",
+      "workingTreeClean": false,
+      "trackedChangedPathCount": 119,
+      "untrackedFileCount": 87,
+      "archiveContentDifferenceCount": 0
+    },
+    {
+      "project": "blue-coordination-java",
+      "worktree": "/Users/piotr/data/myos-simple/recovery-artifacts/dynamic-contract-evolution-resume-20260824/coordination-occurrence-resolution-resume",
+      "branch": "feat/dynamic-contract-evolution-resume",
+      "head": "c6f9c80d0a33c6c209c7ba3d2b8bff89a223fc5f",
+      "acceptedBase": "c6f9c80d0a33c6c209c7ba3d2b8bff89a223fc5f",
+      "workingTreeClean": true,
+      "trackedChangedPathCount": 0,
+      "untrackedFileCount": 0,
+      "archiveContentDifferenceCount": 0
+    },
+    {
+      "project": "myos-mini",
+      "worktree": "/Users/piotr/data/myos-simple/recovery-artifacts/dynamic-contract-evolution-resume-20260824/myos-mini-dynamic-foundation-resume",
+      "branch": "feat/dynamic-contract-evolution-resume",
+      "head": "40ec648b355f3da7331ed89d5fc98152350bf536",
+      "acceptedBase": "40ec648b355f3da7331ed89d5fc98152350bf536",
+      "workingTreeClean": true,
+      "trackedChangedPathCount": 0,
+      "untrackedFileCount": 0,
+      "archiveContentDifferenceCount": 0
+    }
+  ],
+  "blueLanguageModelCoreMappingChanged": false,
+  "bexChanged": false,
+  "primaryUserWorktreeMutated": false,
+  "resumeExistingRecoveryWorktrees": true
+}

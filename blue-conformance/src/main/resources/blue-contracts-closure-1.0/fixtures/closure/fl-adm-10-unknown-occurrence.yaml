@@ -1,0 +1,199 @@
+schema: blue-contracts-closure-fixture/1.0
+id: fl-adm-10-unknown-occurrence
+vectors:
+- FL-ADM-10
+category: admission
+operation: admit-closure
+description: "Initialization creates a Process Embedded occurrence absent from the\
+  \ immutable admission snapshot, suspending noncommitting with authoritative typed\
+  \ occurrence-evidence demand and no legacy exact-node demand."
+releaseManifest: ../../release-manifest.yaml
+input:
+  graphGeneration: 1
+  cause:
+    kind: admission
+    causeIdentity: sha256:99838448738ad3e4cc8c0ed8b65bfdc49ac92698ccd1ada58e03e657dd0b741c
+    admissionKind: TOP_LEVEL_ADMISSION
+    label: fl-adm-10-unknown-occurrence
+    triggeringEventBlueId: null
+    parentTransitionIdentity: null
+    policyIdentity: sha256:bcea25edea8dea5e8b31271fba7ddccb3000756298991806d1a3b6879b8c9202
+  admissionCandidate: null
+  admissionCandidateIdentity: null
+  documents:
+    fl-adm-10-root:
+      documentId: fl-adm-10-root
+      blueId: CR3dR5p5CSQzkH8DEbebR7d6zSR5Bx4f3vKMSkyTB3t7
+      document:
+        name: Full lifecycle unknown initialization occurrence
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            collectionPaths:
+            - /children
+          lifecycle:
+            type:
+              blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
+            order: 0
+          installUnknown:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: lifecycle
+            event:
+              type:
+                blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C
+            order: 0
+        documentId: fl-adm-10-root
+        children: {}
+      initialized: false
+      terminated: false
+      publicRoot: true
+      epoch: 0
+      componentGeneration: 1
+  occurrences: []
+  components:
+  - componentIdentity: sha256:907a6e853fdddc78c43ba9df20e578bd19775ca2c2986064d3b583e463a6f544
+    componentStateIdentity: sha256:a5a7b3dd2184afbeff31d8aec74ab004b06015a50db1327c6ef3cc5c6b6cf848
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - fl-adm-10-root
+    orderedMemberBlueIds:
+    - CR3dR5p5CSQzkH8DEbebR7d6zSR5Bx4f3vKMSkyTB3t7
+  directDeliveries: []
+  publicRootDocumentIds:
+  - fl-adm-10-root
+  directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
+  occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
+  closureIdentity: sha256:153a7084614c59d619b81e4528604b7ccc1b94781d79deae06609101bb1ea8f1
+  invocationIdentity: sha256:f0ce00b8b2f704196abedf105cc0fb37315025961b1b35c88514142d7d6ebd97
+  gasPolicy:
+    policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
+    sharedLimit: 100000
+    localLimits: {}
+    label: release-default
+  environment:
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    managedDocumentIdentityPolicy:
+      identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+      label: nfc-document-lineage-v1
+    managedBindingPolicy:
+      identity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+      label: exact-document-lineage
+    exactNodeProviderDomain:
+      identity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+      label: fixture-exact-node-provider-v1
+    externalOrderPolicy:
+      identity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+      label: canonical-source-order-v1
+    portableLimitPolicy:
+      identity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+      label: blue-contracts-1.0-portable-limits
+      limits:
+      - name: closureExpansionsPerInvocation
+        value: 4096
+      - name: closureGraphChangesPerInvocation
+        value: 4096
+      - name: closureTentativeFinalizationsPerInvocation
+        value: 8192
+      - name: closureWorkOccurrencesPerInvocation
+        value: 8192
+      - name: contractKeyCodePoints
+        value: 256
+      - name: contractKeyUtf8Bytes
+        value: 1024
+      - name: cyclicCanonicalBytesPerComponent
+        value: 16777216
+      - name: cyclicEdgesPerComponent
+        value: 1024
+      - name: cyclicMembersPerComponent
+        value: 128
+      - name: directCanonicalIdentityInputBytes
+        value: 1048576
+      - name: directInlineIdentityTextCodePoints
+        value: 262144
+      - name: directListItemsMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectEntriesMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectKeyCodePoints
+        value: 4096
+      - name: effectiveContractsPerParticipatingScope
+        value: 8192
+      - name: embeddedDepth
+        value: 256
+      - name: eventsPerContractExecutionResult
+        value: 1024
+      - name: externalChannelsPerScope
+        value: 2048
+      - name: handlersBoundToOneDelivery
+        value: 4096
+      - name: internalEventOccurrencesPerInvocation
+        value: 8192
+      - name: managedDocumentsPerClosure
+        value: 4096
+      - name: nestedDocumentUpdateCascadeDepth
+        value: 256
+      - name: normalizedRuntimePointerUtf8Bytes
+        value: 4096
+      - name: participatingScopesPerEvent
+        value: 4096
+      - name: patchesPerContractExecutionResult
+        value: 1024
+      - name: preselectedExternalOccurrencesPerEvent
+        value: 1024
+      - name: processEmbeddedEdgesPerClosure
+        value: 16384
+      - name: processEmbeddedPathsPerScope
+        value: 4096
+      - name: rootEventsReturned
+        value: 4096
+      - name: runtimeChildLedgerCounterKinds
+        value: 256
+      - name: runtimePointerSegments
+        value: 256
+      - name: subscriptionKeysPerChannel
+        value: 256
+      - name: typeChainEdges
+        value: 256
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+runtime:
+  initializationHandlers:
+    fl-adm-10-root/installUnknown:
+      patches:
+      - op: add
+        path: /children/unknown
+        val:
+          documentId: fl-adm-10-unknown-child
+          name: Unknown child created during initialization
+  handlers: {}
+expected:
+  attemptOutcome: NeedsResources
+  requiredBlueIds: []
+  resourceDemands:
+  - kind: MANAGED_OCCURRENCE_EVIDENCE
+    demandIdentity: sha256:022c65e05122de8065faddd969054dba2e2f2577c80621764e46523c0f106816
+    sourceDocumentId: fl-adm-10-root
+    sourcePath: /children/unknown
+    suppliedValueBlueId: 4jyVXVHo5eHdmL3MzVC1rpCjgUoS6iJmFif1Y4uouUKc
+    logicalCauseIdentity: sha256:99838448738ad3e4cc8c0ed8b65bfdc49ac92698ccd1ada58e03e657dd0b741c
+    inputClosureIdentity: sha256:153a7084614c59d619b81e4528604b7ccc1b94781d79deae06609101bb1ea8f1
+    inputGraphGeneration: 1
+    processEmbeddedDeclarationIdentity: 2dccfmt6GUWH57cmbTb9fGR438G2UxUzKHR3capPaqjQ
+    demandOrdinal: 0
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds: []
+  expectedLoads: []
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

@@ -144,13 +144,22 @@ final class ExternalDeliveryResolution implements AutoCloseable {
         } else {
             selectedFrozen = FrozenNode.fromResolvedNode(selected);
         }
-        return contractLoader.load(
+        if (retainedChannelKeys == null) {
+            return contractLoader.load(
+                    selectedFrozen,
+                    FrozenNode.fromResolvedNode(effective),
+                    scopePath);
+        }
+        return contractLoader.loadExternalClassification(
                 selectedFrozen,
                 projectionBuilder.subscriptionProjection(
+                        selected,
                         effective,
                         retainedChannelKeys,
                         includeProcessEmbedded),
-                scopePath);
+                scopePath,
+                retainedChannelKeys,
+                includeProcessEmbedded);
     }
 
     @Override

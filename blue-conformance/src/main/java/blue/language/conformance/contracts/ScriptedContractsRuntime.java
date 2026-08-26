@@ -17,11 +17,14 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.model.NodeWireForm;
 import blue.language.codec.jackson.UncheckedObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,6 +61,8 @@ final class ScriptedContractsRuntime {
     private final Map<String, JsonNode> documentHandlerScripts =
             new LinkedHashMap<>();
     private final Set<String> documentHandlerPaths = new HashSet<>();
+    private final List<JsonNode> tentativeTranscript =
+            new ArrayList<JsonNode>();
     private boolean terminationIssued;
     private boolean nestedEnqueueStarted;
     private boolean cascadeMutationApplied;
@@ -123,6 +128,22 @@ final class ScriptedContractsRuntime {
      */
     public static ScriptedContractsRuntime empty() {
         return EMPTY;
+    }
+
+    /**
+     * Returns a detached, deterministic record of effects successfully handed
+     * to the ordinary processor context.
+     *
+     * <p>This is conformance-harness evidence only.  It deliberately remains
+     * package-private and is never copied into a closure attempt, observer
+     * evidence, or a released fixture's normative {@code expected} value.</p>
+     */
+    JsonNode tentativeTranscript() {
+        ArrayNode result = UncheckedObjectMapper.JSON_MAPPER.createArrayNode();
+        for (JsonNode entry : tentativeTranscript) {
+            result.add(entry.deepCopy());
+        }
+        return result;
     }
 
     /**
@@ -255,9 +276,6 @@ final class ScriptedContractsRuntime {
             return;
         }
         String key = context.contractKey();
-        if (Boolean.getBoolean("blue.contracts.debugHandlers")) {
-            System.err.println("fixture handler " + key);
-        }
         if ("_fixture_init_handler".equals(key)) {
             if (hasEventType(
                     context,
@@ -266,7 +284,7 @@ final class ScriptedContractsRuntime {
                         controls.get("initializationPatches"));
                 if (patches != null) {
                     for (JsonNode patch : patches) {
-                        context.applyPatch(toPatch(patch, context));
+                        applyPatch(context, toPatch(patch, context));
                     }
                 }
             }
@@ -277,14 +295,14 @@ final class ScriptedContractsRuntime {
                     controls.get("childEmissions"));
             if (emissions != null) {
                 for (JsonNode emission : emissions) {
-                    context.emitEvent(readNode(emission));
+                    emitEvent(context, readNode(emission));
                 }
             }
             return;
         }
         if (key != null
                 && key.startsWith("_fixture_forward_handler")) {
-            context.emitEvent(context.event());
+            emitEvent(context, context.event());
             return;
         }
         if ("_fixture_nested_handler".equals(key)) {
@@ -306,7 +324,7 @@ final class ScriptedContractsRuntime {
                     controls.get("nestedEnqueues"), "nestedEnqueues");
             nestedEnqueueStarted = true;
             if (count > 0L) {
-                context.emitEvent(nestedEvent(1L));
+                emitEvent(context, nestedEvent(1L));
             }
         }
     }
@@ -316,7 +334,7 @@ final class ScriptedContractsRuntime {
                 controls.get("nestedEnqueues"), "nestedEnqueues");
         long current = scalarLong(property(context.event(), "fixtureSequence"));
         if (current > 0L && current < limit) {
-            context.emitEvent(nestedEvent(current + 1L));
+            emitEvent(context, nestedEvent(current + 1L));
         }
     }
 
@@ -350,10 +368,10 @@ final class ScriptedContractsRuntime {
             return;
         }
         cascadeMutationApplied = true;
-        context.applyPatch(JsonPatch.replace(
+        applyPatch(context, JsonPatch.replace(
                 replaceScope, replacementScope(1L)));
         if (mutation.path("thenReaddSamePath").asBoolean(false)) {
-            context.applyPatch(JsonPatch.replace(
+            applyPatch(context, JsonPatch.replace(
                     replaceScope, replacementScope(2L)));
         }
     }
@@ -418,13 +436,13 @@ final class ScriptedContractsRuntime {
                 JsonNode patches = listItems(result.get(ContractsFixtureConstants.Field.PATCHES));
                 if (patches != null) {
                     for (JsonNode patch : patches) {
-                        context.applyPatch(toPatch(patch, context));
+                        applyPatch(context, toPatch(patch, context));
                     }
                 }
                 JsonNode events = listItems(result.get(ContractsFixtureConstants.Field.EVENTS));
                 if (events != null) {
                     for (JsonNode event : events) {
-                        context.emitEvent(
+                        emitEvent(context,
                                 expandConstructedText(readNode(event), ledger));
                     }
                 }
@@ -439,6 +457,57 @@ final class ScriptedContractsRuntime {
         if (fail != null) {
             context.throwFatal("Scripted Handler failed: " + fail);
         }
+    }
+
+    private void applyPatch(
+            ProcessorExecutionContext context,
+            JsonPatch patch) {
+        context.applyPatch(patch);
+        ObjectNode entry = attribution(context, "APPLY_PATCH");
+        ObjectNode encoded = entry.putObject("patch");
+        encoded.put(ContractsFixtureConstants.PatchField.OPERATION,
+                patch.getOp().name());
+        encoded.put("path", patch.getPath());
+        if (patch.getVal() != null) {
+            encoded.set(ContractsFixtureConstants.PatchField.VALUE,
+                    UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                            NodeWireForm.get(patch.getVal())));
+        }
+        tentativeTranscript.add(entry);
+    }
+
+    private void emitEvent(
+            ProcessorExecutionContext context,
+            Node event) {
+        context.emitEvent(event);
+        ObjectNode entry = attribution(context, "EMIT_EVENT");
+        entry.set(ContractsFixtureConstants.Field.EVENT,
+                UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                        NodeWireForm.get(event)));
+        tentativeTranscript.add(entry);
+    }
+
+    private static ObjectNode attribution(
+            ProcessorExecutionContext context,
+            String kind) {
+        ObjectNode entry = UncheckedObjectMapper.JSON_MAPPER.createObjectNode();
+        entry.put("kind", kind);
+        Node documentId = context.documentAt("/documentId");
+        String sourceDocumentId = scalarText(documentId);
+        if (sourceDocumentId == null) {
+            entry.putNull("sourceDocumentId");
+        } else {
+            entry.put("sourceDocumentId", sourceDocumentId);
+        }
+        entry.put(ContractsFixtureConstants.Field.SCOPE_PATH,
+                context.scopePath());
+        if (context.contractKey() == null) {
+            entry.putNull(ContractsFixtureConstants.Field.CONTRACT_KEY);
+        } else {
+            entry.put(ContractsFixtureConstants.Field.CONTRACT_KEY,
+                    context.contractKey());
+        }
+        return entry;
     }
 
     private void applyFirstTerminationRequest(ProcessorExecutionContext context) {

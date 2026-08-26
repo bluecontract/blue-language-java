@@ -1,0 +1,89 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: c-evo-21-retry-determinism
+scenario: C-EVO-21
+description: Repeating an unresolved attempt reproduces the same typed demand and actual tentative patch/event prefix, while repeating the resolved input reproduces the complete successful attempt byte for byte.
+operation: admit-closure
+events:
+  knownB:
+    documentId: c-evo-21-b
+    name: C-EVO 21 known B
+  initialized:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: contract-evolution
+    id: C-EVO-21-INITIALIZED
+documents:
+  c-evo-21-a:
+    publicRoot: true
+    document:
+      documentId: c-evo-21-a
+      name: C-EVO 21 dynamic A
+      phase: before
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/peer]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        installPeer:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+  c-evo-21-b:
+    publicRoot: false
+    document:
+      documentId: c-evo-21-b
+      name: C-EVO 21 known B
+occurrences: []
+runtime:
+  initializationHandlers:
+    c-evo-21-a/installPeer:
+      patches:
+      - {op: replace, path: /phase, val: initialized}
+      - {op: add, path: /peer, val: {$eventBlueId: knownB}}
+      events:
+      - {$eventValue: initialized}
+  handlers: {}
+gas:
+  sharedLimit: release-default
+cases:
+- suffix: missing-first
+  expect:
+    attemptOutcome: NeedsResources
+    resourceDemandKinds: [MANAGED_OCCURRENCE_EVIDENCE]
+    requiredExactCount: 0
+- suffix: missing-repeat
+  repeatOf: missing-first
+  expect:
+    attemptOutcome: NeedsResources
+    resourceDemandKinds: [MANAGED_OCCURRENCE_EVIDENCE]
+    requiredExactCount: 0
+  parityWith: missing-first
+  parityProjections: [attempt, harnessTranscript]
+- suffix: resolved-first
+  occurrences:
+  - sourceDocumentId: c-evo-21-a
+    sourcePath: /peer
+    activationGeneration: 1
+    targetDocumentId: c-evo-21-b
+    active: false
+- suffix: resolved-repeat
+  repeatOf: resolved-first
+  parityWith: resolved-first
+  parityProjections: [attempt, harnessTranscript]
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: c-evo-21-a, initialized: true, terminated: false}
+  - {documentId: c-evo-21-b, initialized: true, terminated: false}
+  pointers:
+  - {documentId: c-evo-21-a, pointer: /phase, value: initialized}
+  workContainsInOrder: [INITIALIZATION, LIFECYCLE]
+  publicEvents:
+  - {event: initialized, emitter: c-evo-21-a}
+  checkpointWrites: 0
+  commitCompanion: present

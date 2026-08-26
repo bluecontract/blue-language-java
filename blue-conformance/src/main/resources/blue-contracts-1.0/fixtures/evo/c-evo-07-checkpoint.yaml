@@ -1,0 +1,77 @@
+schema: blue-contracts-fixture/1.0
+id: c-evo-07-checkpoint
+vectors:
+- C-EVO-07
+category: prot
+description: Application mutation cannot change protected processor checkpoint state.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      checkpoint:
+        type:
+          blueId: 9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR
+        entries:
+          old:
+            domain: old-domain
+            subject: old-subject
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: evolution
+        eventKey: evolution
+        accept: true
+        checkpointDomain: evolution-v1
+      protectedAttempt:
+        type:
+          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /contracts
+            val: {}
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: evolution
+    id: C-EVO-07-CHECKPOINT
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - evolution
+    - 7
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: runtime-fatal
+  - actual: result.diagnostic.category
+    op: equals
+    expected: ProtectedProcessorStateMutation
+  - actual: result.document.value
+    op: equals
+    expected: 0
+  - actual: result.events
+    op: sequenceEquals
+    expected: []
+  - actual: result.document.contracts.checkpoint
+    op: present

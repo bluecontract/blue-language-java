@@ -119,6 +119,8 @@ $defs:
       generalizationCandidates:
         type: array
         items: {type: string}
+      generalizationSubtypeContracts:
+        $ref: '#/$defs/blueValue'
       initializationPatches:
         type: array
         items: {$ref: '#/$defs/blueValue'}

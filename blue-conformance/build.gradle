@@ -18,3 +18,23 @@ dependencies {
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
     implementation 'org.yaml:snakeyaml:2.0'
 }
+
+tasks.register('exportFullLifecycleFixtures', JavaExec) {
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'blue.language.conformance.contracts.FullLifecycleFixtureExporter'
+    outputs.upToDateWhen { false }
+    doFirst {
+        def requiredProperties = [
+                'fullLifecycleSourceRoot',
+                'fullLifecyclePackageRoot',
+                'fullLifecycleOutputRoot'
+        ]
+        def missing = requiredProperties.findAll { !project.hasProperty(it) }
+        if (!missing.isEmpty()) {
+            throw new GradleException(
+                    "Missing required full-lifecycle export properties: ${missing.join(', ')}")
+        }
+        args = requiredProperties.collect { project.property(it).toString() }
+    }
+}

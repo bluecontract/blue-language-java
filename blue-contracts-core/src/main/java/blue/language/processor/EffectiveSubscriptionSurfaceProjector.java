@@ -62,6 +62,57 @@ final class EffectiveSubscriptionSurfaceProjector {
             Set<String> changedPaths,
             SubscriptionSurfaceValidationContext validationContext,
             SubscriptionSurfaceProjector.EmbeddedMembership membership) {
+        return traverse(
+                root,
+                suppliedSnapshot,
+                schedule,
+                changedPaths,
+                validationContext,
+                membership,
+                null,
+                false,
+                true);
+    }
+
+    /**
+     * Captures every already-materialized effective contract bundle without
+     * evaluating External Channel subscription functions.
+     *
+     * <p>This is deliberately a complete traversal: contract-surface
+     * reconciliation compares the whole before and tentative surfaces, so an
+     * unchanged embedded branch must not disappear merely because changed
+     * subscription projection can prune it. An unchanged exact-reference
+     * child remains opaque and does not authorize a provider read.</p>
+     */
+    void captureComplete(
+            Node root,
+            ResolvedSnapshot suppliedSnapshot,
+            GasSchedule schedule,
+            SubscriptionSurfaceValidationContext validationContext,
+            SubscriptionSurfaceProjector.EmbeddedMembership membership,
+            ContractSurfaceCollector collector) {
+        traverse(
+                root,
+                suppliedSnapshot,
+                schedule,
+                rules.normalizeChanges(validationContext.changedPaths()),
+                validationContext,
+                membership,
+                Objects.requireNonNull(collector, "collector"),
+                true,
+                false);
+    }
+
+    private Map<String, SubscriptionDelta.Entry> traverse(
+            Node root,
+            ResolvedSnapshot suppliedSnapshot,
+            GasSchedule schedule,
+            Set<String> changedPaths,
+            SubscriptionSurfaceValidationContext validationContext,
+            SubscriptionSurfaceProjector.EmbeddedMembership membership,
+            ContractSurfaceCollector collector,
+            boolean completeTraversal,
+            boolean collectSubscriptions) {
         EffectiveResolution resolution =
                 new EffectiveResolution(root, suppliedSnapshot);
         ScopeView rootScope = resolution.scopeAt(JsonPointer.ROOT);
@@ -84,7 +135,10 @@ final class EffectiveSubscriptionSurfaceProjector {
                 changedPaths,
                 0,
                 validationContext,
-                membership);
+                membership,
+                collector,
+                completeTraversal,
+                collectSubscriptions);
         return result;
     }
 
@@ -100,7 +154,10 @@ final class EffectiveSubscriptionSurfaceProjector {
             Set<String> changedPaths,
             int depth,
             SubscriptionSurfaceValidationContext validationContext,
-            SubscriptionSurfaceProjector.EmbeddedMembership membership) {
+            SubscriptionSurfaceProjector.EmbeddedMembership membership,
+            ContractSurfaceCollector collector,
+            boolean completeTraversal,
+            boolean collectSubscriptions) {
         rules.requireLimit(
                 GasScheduleConstants.PortableLimit.EMBEDDED_DEPTH,
                 depth,
@@ -157,6 +214,9 @@ final class EffectiveSubscriptionSurfaceProjector {
                                     .EFFECTIVE_CONTRACTS_PER_SCOPE),
                     scopePath,
                     null);
+            if (collector != null) {
+                collector.record(scopePath, bundle);
+            }
 
             int externalCount = 0;
             List<String> embeddedRoutes = Collections.emptyList();
@@ -180,10 +240,11 @@ final class EffectiveSubscriptionSurfaceProjector {
                                             .EXTERNAL_CHANNELS_PER_SCOPE),
                             scopePath,
                             contract.key());
-                    if (rules.dependencyAffected(
+                    if (collectSubscriptions
+                            && (rules.dependencyAffected(
                             scopePath, contractPath, changedPaths)
                             || rules.sameScopeContractsAffected(
-                                    scopePath, changedPaths)) {
+                                    scopePath, changedPaths))) {
                         SubscriptionDelta.Entry descriptor = descriptor(
                                 bundle,
                                 contract,
@@ -241,14 +302,25 @@ final class EffectiveSubscriptionSurfaceProjector {
                 ImmutablePatchPlanner
                         .forMaterialized(resolution.root)
                         .validateProcessEmbeddedTraversalPath(targetScope);
-                if (!routeDependencyChanged
-                        && !rules.branchAffected(
-                                targetScope, changedPaths)) {
+                boolean targetAffected = routeDependencyChanged
+                        || rules.branchAffected(targetScope, changedPaths);
+                if (!completeTraversal
+                        && !targetAffected) {
                     continue;
                 }
                 ScopeView child = resolution.scopeAt(targetScope);
                 if (child == null || child.effective == null) {
                     // A declaration may reserve a future occurrence.
+                    continue;
+                }
+                if (completeTraversal
+                        && !targetAffected
+                        && child.effective.isReferenceOnly()) {
+                    // Complete capture includes every already-materialized
+                    // scope, but an unchanged exact child remains opaque. Its
+                    // provider body is outside this invocation's selected
+                    // closure and neither side can contribute a surface
+                    // delta for it.
                     continue;
                 }
                 if (child.effective.isReferenceOnly()
@@ -278,7 +350,10 @@ final class EffectiveSubscriptionSurfaceProjector {
                                 : changedPaths,
                         depth + 1,
                         validationContext,
-                        membership);
+                        membership,
+                        collector,
+                        completeTraversal,
+                        collectSubscriptions);
             }
         } finally {
             activeScopes.remove(identityNode);
@@ -463,7 +538,13 @@ final class EffectiveSubscriptionSurfaceProjector {
             this.snapshot = suppliedSnapshot != null
                     ? suppliedSnapshot
                     : snapshotManager != null
-                    ? snapshotManager.fromDocumentTransient(root.clone())
+                    ? ExecutableBodyPathCatalog
+                            .resolveCanonicalTransientIncludingTypeContracts(
+                                    snapshotManager,
+                                    FrozenNode.fromNode(root),
+                                    ExecutableBodyPathCatalog
+                                            .authoredNodePaths(root),
+                                    registry.executableBodyFieldsByType())
                     : null;
         }
 

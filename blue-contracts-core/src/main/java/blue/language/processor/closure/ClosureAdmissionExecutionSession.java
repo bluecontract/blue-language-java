@@ -11,6 +11,7 @@ import blue.language.processor.GasChargeContext;
 import blue.language.processor.ManagedCheckpointSettlementBatch;
 import blue.language.processor.ManagedDocumentStepContinuation;
 import blue.language.processor.ManagedDocumentStepRoute;
+import blue.language.processor.ManagedProcessEmbeddedPath;
 import blue.language.processor.ManagedRootChannelOccurrence;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -42,6 +43,13 @@ final class ClosureAdmissionExecutionSession
             new ComponentFinalizationKernel();
     private final ClosureFinalizationGasCharger finalizationGas =
             new ClosureFinalizationGasCharger();
+    private final ProcessEmbeddedSurfaceReconciler
+            processEmbeddedReconciler =
+            new ProcessEmbeddedSurfaceReconciler();
+    private final Set<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+            processEmbeddedRetirementFences =
+            new LinkedHashSet<
+                    ProcessEmbeddedSurfaceReconciler.OccurrencePath>();
     private final ManagedDocumentGraph inputGraph;
     private final Map<DocumentId, Long> inputGenerations =
             new LinkedHashMap<DocumentId, Long>();
@@ -64,6 +72,8 @@ final class ClosureAdmissionExecutionSession
             resultingChannelSurfaces =
             new LinkedHashMap<DocumentId,
                     List<ManagedRootChannelOccurrence>>();
+    private final List<DocumentTransitionEvidence> transitionEvidence =
+            new ArrayList<DocumentTransitionEvidence>();
 
     private AffectedClosureSnapshot currentSnapshot;
     private List<ManagedOccurrenceBinding> currentBindings;
@@ -113,6 +123,7 @@ final class ClosureAdmissionExecutionSession
 
     ClosureExecutionState execute() {
         requireAdmission();
+        requireAvailableProcessEmbeddedResources();
         chargeAdmission();
         captureSurfaces(inputChannelSurfaces);
         currentFinalization = verifyCurrentFinalization();
@@ -272,14 +283,16 @@ final class ClosureAdmissionExecutionSession
                 result.add(new PlannedWork(
                         initialization,
                         lifecycleEvent,
-                        initialization));
+                        initialization,
+                        null));
                 for (ManagedDocumentStepRoute route : lifecycle) {
                     result.add(new PlannedWork(
                             work(result.size(), WorkKind.LIFECYCLE,
                                     documentId, route.channelKey(),
                                     cause.causeIdentity()),
                             route.exactPayload(),
-                            initialization));
+                            initialization,
+                            route));
                 }
             }
         }
@@ -332,7 +345,8 @@ final class ClosureAdmissionExecutionSession
         LocalDocumentStepResult result;
         long stepStarted = recorder.beginManagedDocumentStep();
         try {
-            result = stepProcessor.process(step);
+            result = stepProcessor.process(
+                    step, planned.selectedRoute);
         } finally {
             try {
                 activeWork = null;
@@ -345,6 +359,16 @@ final class ClosureAdmissionExecutionSession
         if (!sameNode(expected, result.resultingBody())) {
             latestBodies.put(work.targetDocumentId(),
                     result.resultingBody());
+        }
+        ManagedDocumentSnapshot finalized = currentSnapshot.managedDocument(
+                result.documentId());
+        if (finalized == null) {
+            throw new IllegalStateException(
+                    "Transition target left the finalized admission closure");
+        }
+        if (result.transitionEvidence().isPresent()) {
+            transitionEvidence.add(result.transitionEvidence().get()
+                    .finalizedWith(finalized.blueId()));
         }
     }
 
@@ -463,8 +487,10 @@ final class ClosureAdmissionExecutionSession
     private void finalizeTentative(
             TentativeFinalization.Boundary boundary,
             ClosureWorkOccurrence owner) {
+        ProcessEmbeddedReclassification surfaceReclassification =
+                reconcileProcessEmbeddedSurfaces();
         List<ManagedOccurrenceBinding> reclassified =
-                reclassifyBindings();
+                surfaceReclassification.bindings;
         ManagedDocumentGraph before = ManagedDocumentGraph.fromBindings(
                 inputGraph.documentIds(), currentBindings);
         ManagedDocumentGraph after = ManagedDocumentGraph.fromBindings(
@@ -561,6 +587,8 @@ final class ClosureAdmissionExecutionSession
         }
         currentFinalization = finalized;
         currentSnapshot = snapshot(finalized);
+        processEmbeddedRetirementFences.addAll(
+                surfaceReclassification.retiredOccurrencePaths);
         if (activeWork != null) {
             finalizationsInActiveStep++;
         }
@@ -610,46 +638,108 @@ final class ClosureAdmissionExecutionSession
                 finalized.documents());
     }
 
-    private List<ManagedOccurrenceBinding> reclassifyBindings() {
-        ArrayList<ManagedOccurrenceBinding> result =
-                new ArrayList<ManagedOccurrenceBinding>();
-        for (ManagedOccurrenceBinding binding : currentBindings) {
-            Node value = NodePathEditor.getOrNull(
-                    latestBodies.get(binding.sourceDocumentId()),
-                    binding.sourcePath());
-            if (value == null) {
-                result.add(binding);
-                continue;
-            }
-            ManagedDocumentSnapshot target = currentSnapshot.managedDocument(
-                    binding.targetDocumentId());
-            if (!sameExactTarget(value, target)) {
-                if (binding.active()) {
-                    throw new IllegalArgumentException(
-                            "Active occurrence no longer identifies its managed target");
-                }
-                result.add(binding);
-                continue;
-            }
-            if (!binding.active()) {
-                LinkedHashMap<String, String> expected =
-                        new LinkedHashMap<String, String>();
-                expected.put(binding.sourcePath(), target.blueId());
-                stepProcessor.validateManagedEmbeddedPaths(
-                        latestBodies.get(binding.sourceDocumentId()),
-                        expected);
-            }
-            result.add(ManagedOccurrenceBinding.derived(
-                    binding.bindingPolicyIdentity(),
-                    binding.sourceDocumentId(),
-                    binding.sourceAddress(),
-                    binding.targetDocumentId(),
-                    target.blueId(),
-                    true,
-                    null));
+    /**
+     * Projects every current Root before replacing any occurrence evidence.
+     * All retirement fences remain tentative until finalization and its gas
+     * frame complete successfully.
+     */
+    private ProcessEmbeddedReclassification
+    reconcileProcessEmbeddedSurfaces() {
+        Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected =
+                projectProcessEmbeddedSurfaces();
+        requireAvailableProcessEmbeddedResources(projected, true);
+
+        ArrayList<DocumentId> sources =
+                new ArrayList<DocumentId>(latestBodies.keySet());
+        Collections.sort(sources);
+        List<ManagedDocumentSnapshot> currentDocuments =
+                currentSnapshot.managedDocuments();
+        ArrayList<ManagedOccurrenceBinding> working =
+                new ArrayList<ManagedOccurrenceBinding>(currentBindings);
+        Collections.sort(working);
+        LinkedHashSet<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+                retired =
+                new LinkedHashSet<
+                        ProcessEmbeddedSurfaceReconciler.OccurrencePath>();
+        LinkedHashSet<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+                fences =
+                new LinkedHashSet<
+                        ProcessEmbeddedSurfaceReconciler.OccurrencePath>(
+                        processEmbeddedRetirementFences);
+        for (DocumentId source : sources) {
+            ProcessEmbeddedSurfaceReconciler.Reconciliation result =
+                    processEmbeddedReconciler.reconcileProjected(
+                            source,
+                            latestBodies.get(source),
+                            projected.get(source),
+                            working,
+                            currentDocuments,
+                            fences);
+            working = new ArrayList<ManagedOccurrenceBinding>(
+                    result.bindings());
+            retired.addAll(result.retiredOccurrencePaths());
+            fences.addAll(result.retiredOccurrencePaths());
         }
-        Collections.sort(result);
+        return new ProcessEmbeddedReclassification(working, retired);
+    }
+
+    /**
+     * Suspends before admission work when the current effective Process
+     * Embedded surface requires exact external resources.
+     */
+    private void requireAvailableProcessEmbeddedResources() {
+        requireAvailableProcessEmbeddedResources(
+                projectProcessEmbeddedSurfaces(), false);
+    }
+
+    private void requireAvailableProcessEmbeddedResources(
+            Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected,
+            boolean verifyHistoricalExactReferences) {
+        List<ClosureResourceDemand> demands =
+                processEmbeddedReconciler.resourceDemands(
+                        latestBodies,
+                        projected,
+                        currentBindings,
+                        currentSnapshot.managedDocuments(),
+                        processEmbeddedDemandContext(
+                                verifyHistoricalExactReferences));
+        if (!demands.isEmpty()) {
+            throw new ClosureResourceDemandException(demands);
+        }
+    }
+
+    private Map<DocumentId, List<ManagedProcessEmbeddedPath>>
+    projectProcessEmbeddedSurfaces() {
+        ArrayList<DocumentId> sources =
+                new ArrayList<DocumentId>(latestBodies.keySet());
+        Collections.sort(sources);
+        LinkedHashMap<DocumentId, List<ManagedProcessEmbeddedPath>> result =
+                new LinkedHashMap<DocumentId,
+                        List<ManagedProcessEmbeddedPath>>();
+        for (DocumentId source : sources) {
+            result.put(
+                    source,
+                    stepProcessor.projectManagedProcessEmbeddedSurface(
+                            latestBodies.get(source)));
+        }
         return result;
+    }
+
+    private ProcessEmbeddedSurfaceReconciler.DemandContext
+    processEmbeddedDemandContext(boolean verifyHistoricalExactReferences) {
+        return new ProcessEmbeddedSurfaceReconciler.DemandContext(
+                input.cause().causeIdentity(),
+                input.snapshot().closureIdentity(),
+                input.snapshot().graphGeneration(),
+                new ProcessEmbeddedSurfaceReconciler
+                        .ExactReferenceAvailability() {
+                    @Override
+                    public boolean isAvailable(String blueId) {
+                        return stepProcessor
+                                .isExactManagedReferenceAvailable(blueId);
+                    }
+                },
+                verifyHistoricalExactReferences);
     }
 
     private void chargeTopologyChange(
@@ -832,7 +922,8 @@ final class ClosureAdmissionExecutionSession
                 resultingChannelSurfaces,
                 Collections.<ManagedCheckpointSettlementBatch.Mutation>
                         emptyList(),
-                Collections.<DocumentId>emptySet());
+                Collections.<DocumentId>emptySet(),
+                transitionEvidence);
     }
 
     private void captureSurfaces(
@@ -863,15 +954,6 @@ final class ClosureAdmissionExecutionSession
                         binding.sourcePath(), value.clone());
             }
         }
-    }
-
-    private static boolean sameExactTarget(
-            Node value,
-            ManagedDocumentSnapshot target) {
-        if (value.isReferenceOnly()) {
-            return value.getBlueId().equals(target.blueId());
-        }
-        return sameNode(value, target.document());
     }
 
     private boolean hasCyclicComponent(
@@ -1012,20 +1094,41 @@ final class ClosureAdmissionExecutionSession
         private final ClosureWorkOccurrence work;
         private final Node payload;
         private final ClosureWorkOccurrence finalizationOwner;
+        private final ManagedDocumentStepRoute selectedRoute;
 
         private PlannedWork(
                 ClosureWorkOccurrence work,
                 Node payload,
-                ClosureWorkOccurrence finalizationOwner) {
+                ClosureWorkOccurrence finalizationOwner,
+                ManagedDocumentStepRoute selectedRoute) {
             this.work = Objects.requireNonNull(work, "work");
             this.payload = Objects.requireNonNull(payload, "payload").clone();
             this.finalizationOwner = Objects.requireNonNull(
                     finalizationOwner, "finalizationOwner");
+            this.selectedRoute = selectedRoute;
             if (!this.work.targetDocumentId().equals(
                     this.finalizationOwner.targetDocumentId())) {
                 throw new IllegalArgumentException(
                         "Admission work and finalization owner target different documents");
             }
+        }
+    }
+
+    private static final class ProcessEmbeddedReclassification {
+        private final List<ManagedOccurrenceBinding> bindings;
+        private final Set<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+                retiredOccurrencePaths;
+
+        private ProcessEmbeddedReclassification(
+                List<ManagedOccurrenceBinding> bindings,
+                Set<ProcessEmbeddedSurfaceReconciler.OccurrencePath>
+                        retiredOccurrencePaths) {
+            this.bindings = Collections.unmodifiableList(
+                    new ArrayList<ManagedOccurrenceBinding>(bindings));
+            this.retiredOccurrencePaths = Collections.unmodifiableSet(
+                    new LinkedHashSet<
+                            ProcessEmbeddedSurfaceReconciler.OccurrencePath>(
+                            retiredOccurrencePaths));
         }
     }
 }

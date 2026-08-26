@@ -120,6 +120,34 @@ final class ProtectedStateGuardTest {
     }
 
     @Test
+    void shouldVerifyDirectHistoryMarkerCannotBeRemoved() {
+        // given
+        Node beforeNode = new Node().contracts(
+                new Node().properties(
+                        "initialized",
+                        new Node().properties(
+                                "document",
+                                new Node().blueId(
+                                        "11111111111111111111111111111111"))));
+        Node afterNode = new Node().contracts(new Node());
+
+        // when
+        ProcessorFailureException failure =
+                FailureCapture.captureFailure(
+                        () -> ProtectedStateGuard.verifyUnchanged(
+                                frozen(beforeNode),
+                                frozen(beforeNode),
+                                frozen(afterNode),
+                                frozen(afterNode)));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(
+                ProcessorErrorCategory.ProtectedProcessorStateMutation,
+                failure.errorCategory());
+    }
+
+    @Test
     void shouldVerifyResolvedOnlyHistoryStateIsNotProtectedBecauseMarkersAreDirect() {
         // given
         FrozenNode canonical = frozen(
@@ -190,7 +218,7 @@ final class ProtectedStateGuardTest {
     }
 
     @Test
-    void shouldVerifyProcessEmbeddedNonPathFieldCannotChange() {
+    void shouldVerifyWholeProcessEmbeddedContractMayChange() {
         // given
         FrozenNode before = frozen(rootWithEmbedded(
                 new Node().items(new Node().value("/one")),
@@ -200,20 +228,16 @@ final class ProtectedStateGuardTest {
                 new Node().value(8)));
 
         // when
-        ProcessorFailureException failure =
-                FailureCapture.captureFailure(
+        Throwable failure = FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         before, before, after, after));
 
         // then
-        assertNotNull(failure);
-        assertEquals(
-                ProcessorErrorCategory.ProtectedProcessorStateMutation,
-                failure.errorCategory());
+        assertNull(failure);
     }
 
     @Test
-    void shouldVerifyProcessEmbeddedEffectiveTypeCannotChange() {
+    void shouldLeaveProcessEmbeddedRoleValidationToContractSurface() {
         // given
         Node beforeNode = rootWithEmbedded(
                 new Node().items(new Node().value("/one")),
@@ -228,8 +252,7 @@ final class ProtectedStateGuardTest {
                         "22222222222222222222222222222222"));
 
         // when
-        ProcessorFailureException failure =
-                FailureCapture.captureFailure(
+        Throwable failure = FailureCapture.captureFailure(
                 () -> ProtectedStateGuard.verifyUnchanged(
                         frozen(beforeNode),
                         frozen(beforeNode),
@@ -237,10 +260,41 @@ final class ProtectedStateGuardTest {
                         frozen(afterNode)));
 
         // then
-        assertNotNull(failure);
-        assertEquals(
-                ProcessorErrorCategory.ProtectedProcessorStateMutation,
-                failure.errorCategory());
+        assertNull(failure);
+    }
+
+    @Test
+    void shouldVerifyApplicationContractMayBeAddedRemovedAndReplaced() {
+        // given
+        Node beforeNode = new Node().contracts(
+                new Node().properties(
+                        "workflow",
+                        new Node().properties(
+                                "revision", new Node().value(1))));
+        Node replacedNode = new Node().contracts(
+                new Node().properties(
+                        "workflow",
+                        new Node().properties(
+                                "revision", new Node().value(2))));
+        Node removedNode = new Node().contracts(new Node());
+
+        // when
+        Throwable replacementFailure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(beforeNode),
+                        frozen(beforeNode),
+                        frozen(replacedNode),
+                        frozen(replacedNode)));
+        Throwable removalFailure = FailureCapture.captureFailure(
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(replacedNode),
+                        frozen(replacedNode),
+                        frozen(removedNode),
+                        frozen(removedNode)));
+
+        // then
+        assertNull(replacementFailure);
+        assertNull(removalFailure);
     }
 
     @Test

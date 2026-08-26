@@ -1,0 +1,268 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-evo-20-canonical-demand-order
+vectors:
+- C-EVO-20
+category: admission
+operation: admit-closure
+description: "Mixed exact-node and occurrence-evidence demands are returned in canonical\
+  \ source-document and source-path order, never grouped by demand kind."
+releaseManifest: ../../release-manifest.yaml
+input:
+  graphGeneration: 1
+  cause:
+    kind: admission
+    causeIdentity: sha256:bee1c051245224e994ee50ceae8ed8f7a6e64378b32920f2a8dfe65d42fc0426
+    admissionKind: TOP_LEVEL_ADMISSION
+    label: c-evo-20-canonical-demand-order
+    triggeringEventBlueId: null
+    parentTransitionIdentity: null
+    policyIdentity: sha256:f65dede23ea16d9724250bfea8570545a504e60eb8f839af7be0e4be9d5df085
+  admissionCandidate: null
+  admissionCandidateIdentity: null
+  documents:
+    c-evo-20-a:
+      documentId: c-evo-20-a
+      blueId: 7UVXH6qr5dCAFvS26XftcCmXkbzhZoUFXouQoV8oNDtN
+      document:
+        name: C-EVO 20 mixed demands A
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /zUnknown
+            - /aKnown
+        documentId: c-evo-20-a
+        aKnown:
+          blueId: DAHcEhf6sfVt5h7zroHKA7bNG4L3f9LFQaebHKB33cbw
+        zUnknown:
+          blueId: 4p8NdN6PAkFpE6wEmd1nZcwyMBrZ3jsDqpFGZgK9MGeE
+      initialized: false
+      terminated: false
+      publicRoot: true
+      epoch: 0
+      componentGeneration: 1
+    c-evo-20-b:
+      documentId: c-evo-20-b
+      blueId: 83fxKN3BW4WzHZnxAdvKZYCR9FPyQ5U2xaeDch6cPy2e
+      document:
+        name: C-EVO 20 known B
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /peer
+        documentId: c-evo-20-b
+        peer:
+          blueId: 34SyZPuw5B8goDZNZ23BhtgoG5thFQariTt6afyPQLMQ
+      initialized: false
+      terminated: false
+      publicRoot: false
+      epoch: 0
+      componentGeneration: 1
+    c-evo-20-c:
+      documentId: c-evo-20-c
+      blueId: 34SyZPuw5B8goDZNZ23BhtgoG5thFQariTt6afyPQLMQ
+      document:
+        name: C-EVO 20 known C
+        documentId: c-evo-20-c
+      initialized: false
+      terminated: false
+      publicRoot: false
+      epoch: 0
+      componentGeneration: 1
+    c-evo-20-k:
+      documentId: c-evo-20-k
+      blueId: DAHcEhf6sfVt5h7zroHKA7bNG4L3f9LFQaebHKB33cbw
+      document:
+        name: C-EVO 20 known K
+        documentId: c-evo-20-k
+      initialized: false
+      terminated: false
+      publicRoot: false
+      epoch: 0
+      componentGeneration: 1
+  occurrences: []
+  components:
+  - componentIdentity: sha256:b961b8638d6f4d521c4bf0f8076f19fa6cef24bbfd30228575b3cbbb4170e314
+    componentStateIdentity: sha256:2b469e2c4fb8691c7cd06692821f2a4b6812e3023c6c7bbd32a0b42b209eb5df
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-20-a
+    orderedMemberBlueIds:
+    - 7UVXH6qr5dCAFvS26XftcCmXkbzhZoUFXouQoV8oNDtN
+  - componentIdentity: sha256:2a6858f7ea82be85517f9b85d8cbb9c1674c44d3b59ab3d7a383b5e8e0f6269f
+    componentStateIdentity: sha256:3541374cec3342565e447efd45ca0a08fbc9885db09287d465d49707c1226b32
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-20-b
+    orderedMemberBlueIds:
+    - 83fxKN3BW4WzHZnxAdvKZYCR9FPyQ5U2xaeDch6cPy2e
+  - componentIdentity: sha256:e4b0a40a4b7fa9c31e3f9c611d4d12f5a2cdaad77c5dceaf4f454b47f2a88800
+    componentStateIdentity: sha256:9e004f29d406940b0618dead3d519b9f8c3fd14fb64bf220cd3abd3bd2f08590
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-20-c
+    orderedMemberBlueIds:
+    - 34SyZPuw5B8goDZNZ23BhtgoG5thFQariTt6afyPQLMQ
+  - componentIdentity: sha256:4780b48682238e04e01914b395b8c359d628edaaf1074c0619febe88729e6c12
+    componentStateIdentity: sha256:b85c7f7e3453d694a5ef05d4cc43180820b4d6a46db427f67f6e8f16874c2b11
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-20-k
+    orderedMemberBlueIds:
+    - DAHcEhf6sfVt5h7zroHKA7bNG4L3f9LFQaebHKB33cbw
+  directDeliveries: []
+  publicRootDocumentIds:
+  - c-evo-20-a
+  directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
+  occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
+  closureIdentity: sha256:fff518a3bc5d1103f1c8a14a825859ead16966a0d69be3c7d7a29c0a39d903de
+  invocationIdentity: sha256:9551af744a22c4e7b9f3f7e465ab627d3ed840f070bf939973ede943c87bf5b0
+  gasPolicy:
+    policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
+    sharedLimit: 100000
+    localLimits: {}
+    label: release-default
+  environment:
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    managedDocumentIdentityPolicy:
+      identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+      label: nfc-document-lineage-v1
+    managedBindingPolicy:
+      identity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+      label: exact-document-lineage
+    exactNodeProviderDomain:
+      identity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+      label: fixture-exact-node-provider-v1
+    externalOrderPolicy:
+      identity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+      label: canonical-source-order-v1
+    portableLimitPolicy:
+      identity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+      label: blue-contracts-1.0-portable-limits
+      limits:
+      - name: closureExpansionsPerInvocation
+        value: 4096
+      - name: closureGraphChangesPerInvocation
+        value: 4096
+      - name: closureTentativeFinalizationsPerInvocation
+        value: 8192
+      - name: closureWorkOccurrencesPerInvocation
+        value: 8192
+      - name: contractKeyCodePoints
+        value: 256
+      - name: contractKeyUtf8Bytes
+        value: 1024
+      - name: cyclicCanonicalBytesPerComponent
+        value: 16777216
+      - name: cyclicEdgesPerComponent
+        value: 1024
+      - name: cyclicMembersPerComponent
+        value: 128
+      - name: directCanonicalIdentityInputBytes
+        value: 1048576
+      - name: directInlineIdentityTextCodePoints
+        value: 262144
+      - name: directListItemsMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectEntriesMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectKeyCodePoints
+        value: 4096
+      - name: effectiveContractsPerParticipatingScope
+        value: 8192
+      - name: embeddedDepth
+        value: 256
+      - name: eventsPerContractExecutionResult
+        value: 1024
+      - name: externalChannelsPerScope
+        value: 2048
+      - name: handlersBoundToOneDelivery
+        value: 4096
+      - name: internalEventOccurrencesPerInvocation
+        value: 8192
+      - name: managedDocumentsPerClosure
+        value: 4096
+      - name: nestedDocumentUpdateCascadeDepth
+        value: 256
+      - name: normalizedRuntimePointerUtf8Bytes
+        value: 4096
+      - name: participatingScopesPerEvent
+        value: 4096
+      - name: patchesPerContractExecutionResult
+        value: 1024
+      - name: preselectedExternalOccurrencesPerEvent
+        value: 1024
+      - name: processEmbeddedEdgesPerClosure
+        value: 16384
+      - name: processEmbeddedPathsPerScope
+        value: 4096
+      - name: rootEventsReturned
+        value: 4096
+      - name: runtimeChildLedgerCounterKinds
+        value: 256
+      - name: runtimePointerSegments
+        value: 256
+      - name: subscriptionKeysPerChannel
+        value: 256
+      - name: typeChainEdges
+        value: 256
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+runtime:
+  initializationHandlers: {}
+  handlers: {}
+expected:
+  attemptOutcome: NeedsResources
+  requiredBlueIds:
+  - 4p8NdN6PAkFpE6wEmd1nZcwyMBrZ3jsDqpFGZgK9MGeE
+  resourceDemands:
+  - kind: MANAGED_OCCURRENCE_EVIDENCE
+    demandIdentity: sha256:c200ed303f06aefe492f942788a002740a25514acd5f86a1ac9fc6893cc2b682
+    sourceDocumentId: c-evo-20-a
+    sourcePath: /aKnown
+    suppliedValueBlueId: DAHcEhf6sfVt5h7zroHKA7bNG4L3f9LFQaebHKB33cbw
+    logicalCauseIdentity: sha256:bee1c051245224e994ee50ceae8ed8f7a6e64378b32920f2a8dfe65d42fc0426
+    inputClosureIdentity: sha256:fff518a3bc5d1103f1c8a14a825859ead16966a0d69be3c7d7a29c0a39d903de
+    inputGraphGeneration: 1
+    processEmbeddedDeclarationIdentity: JArY3JgYmjV8LmssC2V2nWvK3fAcJM2WRpENT1bpBFoD
+    demandOrdinal: 0
+  - kind: EXACT_NODE
+    demandIdentity: sha256:d3b9320e242d00018a0bb194d9d8747803aeb2f6581678f8c0ea8a78aef863ea
+    sourceDocumentId: c-evo-20-a
+    sourcePath: /zUnknown
+    suppliedValueBlueId: 4p8NdN6PAkFpE6wEmd1nZcwyMBrZ3jsDqpFGZgK9MGeE
+    blueId: 4p8NdN6PAkFpE6wEmd1nZcwyMBrZ3jsDqpFGZgK9MGeE
+    logicalPath: /zUnknown
+  - kind: MANAGED_OCCURRENCE_EVIDENCE
+    demandIdentity: sha256:79e3cc64cba7f1e3aaa056f29aee258241d0faa39cf89d54313e6c2c314e0e01
+    sourceDocumentId: c-evo-20-b
+    sourcePath: /peer
+    suppliedValueBlueId: 34SyZPuw5B8goDZNZ23BhtgoG5thFQariTt6afyPQLMQ
+    logicalCauseIdentity: sha256:bee1c051245224e994ee50ceae8ed8f7a6e64378b32920f2a8dfe65d42fc0426
+    inputClosureIdentity: sha256:fff518a3bc5d1103f1c8a14a825859ead16966a0d69be3c7d7a29c0a39d903de
+    inputGraphGeneration: 1
+    processEmbeddedDeclarationIdentity: 6GLvxTgSnt3UyrZZa7VSN2pvqCnBZL5UjfyQK5AFx3h7
+    demandOrdinal: 0
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds:
+  - 4p8NdN6PAkFpE6wEmd1nZcwyMBrZ3jsDqpFGZgK9MGeE
+  expectedLoads:
+  - 4p8NdN6PAkFpE6wEmd1nZcwyMBrZ3jsDqpFGZgK9MGeE
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

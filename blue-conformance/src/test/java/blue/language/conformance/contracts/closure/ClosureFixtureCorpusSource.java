@@ -187,7 +187,7 @@ final class ClosureFixtureCorpusSource {
         List<ClosureFixtureInventory.Entry> result = verifyFixtureFiles(
                 root.resolve("fixtures"), fixtures);
         require(result.size() == ClosureFixtureInventory.CLOSURE_FIXTURE_COUNT,
-                "staged package does not contain exactly 67 closure fixtures");
+                "staged package does not contain exactly 93 closure fixtures");
 
         JsonNode specificationDocument = ClosureFixtureInventory.requiredObject(
                 release, "specificationDocument");
@@ -268,7 +268,7 @@ final class ClosureFixtureCorpusSource {
                                     "cyclicProofVerifierIdentity")),
                     entry.id() + " cyclic proof verifier identity mismatch");
         }
-        require(executableEnvironments == 49,
+        require(executableEnvironments == 62,
                 "staged executable closure fixture count mismatch");
         return result;
     }

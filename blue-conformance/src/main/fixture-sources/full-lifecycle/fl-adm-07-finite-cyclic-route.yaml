@@ -1,0 +1,108 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-07-finite-cyclic-route
+scenario: FL-ADM-07
+description: A two-member cyclic component initializes, routes ping from public A through private B and pong back to A, reaches quiescence, and publishes one atomic final component commit.
+operation: admit-closure
+events:
+  ping:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: full-lifecycle
+    id: FL-ADM-07-PING
+  pong:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: full-lifecycle
+    id: FL-ADM-07-PONG
+documents:
+  fl-adm-07-a:
+    publicRoot: true
+    document:
+      documentId: fl-adm-07-a
+      name: Full lifecycle finite cyclic A
+      b: {blueId: this#1}
+      finished: false
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/b]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        fromB:
+          type: {$registryBlueId: EmbeddedNodeChannel}
+          sourcePath: /b
+          event: {$eventBlueId: pong}
+          order: 0
+        emitPing:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+        finish:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: fromB
+          order: 0
+  fl-adm-07-b:
+    publicRoot: false
+    document:
+      documentId: fl-adm-07-b
+      name: Full lifecycle finite cyclic B
+      a: {blueId: this#0}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/a]
+        fromA:
+          type: {$registryBlueId: EmbeddedNodeChannel}
+          sourcePath: /a
+          event: {$eventBlueId: ping}
+          order: 0
+        emitPong:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: fromA
+          order: 0
+inputOrder: [fl-adm-07-a, fl-adm-07-b]
+occurrences:
+- sourceDocumentId: fl-adm-07-a
+  sourcePath: /b
+  activationGeneration: 1
+  targetDocumentId: fl-adm-07-b
+  active: true
+- sourceDocumentId: fl-adm-07-b
+  sourcePath: /a
+  activationGeneration: 1
+  targetDocumentId: fl-adm-07-a
+  active: true
+runtime:
+  initializationHandlers:
+    fl-adm-07-a/emitPing:
+      events:
+      - {$eventValue: ping}
+  handlers:
+    fl-adm-07-b/emitPong:
+      events:
+      - {$eventValue: pong}
+    fl-adm-07-a/finish:
+      patches:
+      - {op: replace, path: /finished, val: true}
+gas:
+  sharedLimit: release-default
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: fl-adm-07-a, initialized: true, terminated: false}
+  - {documentId: fl-adm-07-b, initialized: true, terminated: false}
+  pointers:
+  - {documentId: fl-adm-07-a, pointer: /finished, value: true}
+  workCounts:
+  - {kind: INITIALIZATION, count: 2}
+  - {kind: LIFECYCLE, count: 1}
+  - {kind: EMBEDDED_EVENT, count: 2}
+  publicEvents:
+  - {event: ping, emitter: fl-adm-07-a}
+  distinctEventOccurrenceIdentities: 2
+  checkpointWrites: 0
+  finalizationBoundariesExact: [WORK, WORK, INITIALIZATION_BATCH]
+  commitCompanion: present

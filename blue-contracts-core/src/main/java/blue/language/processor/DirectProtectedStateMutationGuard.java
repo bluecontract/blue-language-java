@@ -6,26 +6,25 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
-import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
- * Rejects direct application writes to processor-owned contract state.
+ * Rejects direct application writes to processor-protected transition state.
  *
- * <p>The guard runs against selected canonical state before patch planning.
+ * <p>The guard runs against current canonical state before patch planning.
  * {@link ProtectedStateGuard} remains the transaction-level comparison for
  * indirect or resolution-driven changes after a tentative mutation.</p>
  */
 final class DirectProtectedStateMutationGuard {
 
-    private static final Iterable<String> INLINE_TYPE_PROTECTED_KEYS =
+    private static final List<String> PROTECTED_CONTRACT_KEYS =
             Arrays.asList(
                     ProcessorContractConstants.KEY_INITIALIZED,
                     ProcessorContractConstants.KEY_TERMINATED,
                     ProcessorContractConstants.KEY_CHECKPOINT,
-                    ProcessorContractConstants.KEY_EMBEDDED,
                     ProcessorContractConstants.KEY_GENERALIZATION);
 
     private final DocumentProcessingRuntime runtime;
@@ -53,34 +52,15 @@ final class DirectProtectedStateMutationGuard {
             return;
         }
         for (String key
-                : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
-            String reservedPointer = ProcessorEngine.resolvePointer(
+                : PROTECTED_CONTRACT_KEYS) {
+            String protectedPointer = ProcessorEngine.resolvePointer(
                     normalizedScope,
                     ProcessorPointerConstants.relativeContractsEntry(key));
             if (!PointerUtils.descendantOrEqual(
-                    targetPath, reservedPointer)) {
+                    targetPath, protectedPointer)) {
                 continue;
             }
-            if (ProcessorContractConstants.KEY_EMBEDDED.equals(key)) {
-                String embeddedPathsPointer = ProcessorEngine.resolvePointer(
-                        normalizedScope,
-                        ProcessorPointerConstants.RELATIVE_EMBEDDED_PATHS);
-                String embeddedCollectionPathsPointer =
-                        ProcessorEngine.resolvePointer(
-                                normalizedScope,
-                                ProcessorPointerConstants
-                                        .RELATIVE_EMBEDDED_COLLECTION_PATHS);
-                if (PointerUtils.descendantOrEqual(
-                        targetPath, embeddedPathsPointer)
-                        || PointerUtils.descendantOrEqual(
-                        targetPath, embeddedCollectionPathsPointer)) {
-                    return;
-                }
-            }
-            throw protectedStateFailure(
-                    "Reserved key '" + key
-                            + "' is write-protected at "
-                            + reservedPointer);
+            throw directMutationFailure(key, protectedPointer);
         }
     }
 
@@ -101,7 +81,7 @@ final class DirectProtectedStateMutationGuard {
         FrozenNode frozenContracts = patch.frozenValue() != null
                 ? patch.frozenValue().getContracts()
                 : null;
-        for (String protectedKey : INLINE_TYPE_PROTECTED_KEYS) {
+        for (String protectedKey : PROTECTED_CONTRACT_KEYS) {
             if (contains(authoredContracts, protectedKey)
                     || contains(frozenContracts, protectedKey)) {
                 throw protectedStateFailure(
@@ -121,8 +101,8 @@ final class DirectProtectedStateMutationGuard {
             PatchInput patch) {
         if (patch.op() == JsonPatch.Op.REMOVE) {
             for (String key
-                    : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
-                if (selectedReserved(scopePath, key) != null) {
+                    : PROTECTED_CONTRACT_KEYS) {
+                if (canonicalProtected(scopePath, key) != null) {
                     throw replacementFailure(key);
                 }
             }
@@ -131,11 +111,8 @@ final class DirectProtectedStateMutationGuard {
         Node replacement = patch.mutableValue();
         FrozenNode frozenReplacement = patch.frozenValue();
         for (String key
-                : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
-            FrozenNode selected = selectedReserved(scopePath, key);
-            if (selected == null) {
-                continue;
-            }
+                : PROTECTED_CONTRACT_KEYS) {
+            FrozenNode selected = canonicalProtected(scopePath, key);
             boolean equal;
             if (patch.isFrozen()) {
                 FrozenNode proposed = frozenReplacement != null
@@ -147,7 +124,9 @@ final class DirectProtectedStateMutationGuard {
                         && replacement.getProperties() != null
                         ? replacement.getProperties().get(key)
                         : null;
-                equal = semanticallyEqual(selected.toNode(), proposed);
+                equal = semanticallyEqual(
+                        selected != null ? selected.toNode() : null,
+                        proposed);
             }
             if (!equal) {
                 throw replacementFailure(key);
@@ -155,8 +134,8 @@ final class DirectProtectedStateMutationGuard {
         }
     }
 
-    private FrozenNode selectedReserved(String scopePath, String key) {
-        return runtime.selectedFrozenAt(
+    private FrozenNode canonicalProtected(String scopePath, String key) {
+        return runtime.canonicalFrozenAt(
                 ProcessorEngine.resolvePointer(
                         scopePath,
                         ProcessorPointerConstants
@@ -179,23 +158,41 @@ final class DirectProtectedStateMutationGuard {
         if (left == null || right == null) {
             return left == right;
         }
-        return DirectBlueIdCalculator.calculateUncheckedBlueId(left.toNode())
-                .equals(DirectBlueIdCalculator.calculateUncheckedBlueId(
-                        right.toNode()));
+        return left.blueId().equals(right.blueId());
     }
 
     private boolean semanticallyEqual(Node left, Node right) {
         if (left == null || right == null) {
             return left == right;
         }
-        return DirectBlueIdCalculator.calculateUncheckedBlueId(left)
-                .equals(DirectBlueIdCalculator.calculateUncheckedBlueId(right));
+        return FrozenNode.fromNode(left).blueId()
+                .equals(FrozenNode.fromNode(right).blueId());
     }
 
     private ProcessorFailureException replacementFailure(String key) {
         return protectedStateFailure(
-                "Replacing /contracts must preserve reserved key '"
+                "Replacing /contracts must preserve protected key '"
                         + key + "'");
+    }
+
+    private ProcessorFailureException directMutationFailure(
+            String key,
+            String protectedPointer) {
+        if (ProcessorContractConstants.RESERVED_CONTRACT_KEYS
+                .contains(key)) {
+            return protectedStateFailure(
+                    "Reserved key '" + key
+                            + "' is write-protected at "
+                            + protectedPointer);
+        }
+        return protectedStateFailure(
+                "Effective contract '" + key
+                        + "' is frozen for this transition at "
+                        + protectedPointer);
+    }
+
+    static boolean isProcessorProtectedContractKey(String key) {
+        return PROTECTED_CONTRACT_KEYS.contains(key);
     }
 
     private ProcessorFailureException protectedStateFailure(

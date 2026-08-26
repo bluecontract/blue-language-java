@@ -5,6 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Schema;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
@@ -42,6 +43,14 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
             new Node().name("Trace Handler");
     private static final String TRACE_HANDLER_TYPE_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(TRACE_HANDLER_TYPE);
+    private static final Node REMOVE_HANDLER_TYPE =
+            new Node().name("Remove Required Operation Handler");
+    private static final String REMOVE_HANDLER_TYPE_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(REMOVE_HANDLER_TYPE);
+    private static final Node REQUIRED_OPERATION_TYPE =
+            new Node().name("Required Application Operation");
+    private static final String REQUIRED_OPERATION_TYPE_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(REQUIRED_OPERATION_TYPE);
     private static final ExternalOrderKey EVENT_ORDER =
             ExternalOrderKey.of(Arrays.asList(7, "source", 11));
 
@@ -209,6 +218,261 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                     diagnosticMessage(accepted));
             assertInvalid(rejected);
         }
+    }
+
+    @Test
+    void shouldInspectTypedSubscriptionHeadersWithoutValidatingSubtypeAsInstance() {
+        // given
+        Node nearestValidAncestor = new Node().name(
+                "Nearest Valid External Operation Ancestor");
+        String ancestorBlueId = DirectBlueIdCalculator.calculateBlueId(
+                nearestValidAncestor);
+        Node mostSpecific = new Node()
+                .name("Required External Operation Subtype")
+                .type(new Node().blueId(ancestorBlueId))
+                .contracts(new Node().properties(
+                        "requiredWorkflow",
+                        new Node().schema(new Schema().required(true))));
+        String mostSpecificBlueId = DirectBlueIdCalculator.calculateBlueId(
+                mostSpecific);
+
+        Node incoming = channel("incoming", 0, true);
+        Node root = rootWithChannels(incoming)
+                .type(new Node().blueId(mostSpecificBlueId));
+        root.getContracts()
+                .properties(
+                        "requiredWorkflow",
+                        new Node()
+                                .type(new Node().blueId(
+                                        REQUIRED_OPERATION_TYPE_BLUE_ID))
+                                .properties(
+                                        "operationId",
+                                        new Node().value(
+                                                "unrelated-operation"))
+                                .properties(
+                                        "channel",
+                                        new Node().value("incoming")))
+                .properties(
+                        "removeRequiredWorkflow",
+                        new Node()
+                                .type(new Node().blueId(
+                                        REMOVE_HANDLER_TYPE_BLUE_ID))
+                                .properties(
+                                        "channel",
+                                        new Node().value("incoming")))
+                .properties(
+                        "generalization",
+                        new Node()
+                                .type(new Node().blueId(
+                                        RuntimeBlueIds
+                                                .TYPE_GENERALIZATION_POLICY))
+                                .properties(
+                                        "defaultMode",
+                                        new Node().value(
+                                                "nearest-valid-ancestor")));
+        Node event = event("topic");
+        ExternalDeliveryPlan exactPlan = plan(
+                snapshot("/", "incoming", incoming, event));
+
+        Map<String, Node> providerNodes = new LinkedHashMap<>();
+        providerNodes.put(ancestorBlueId, nearestValidAncestor);
+        providerNodes.put(mostSpecificBlueId, mostSpecific);
+        providerNodes.put(CHANNEL_TYPE_BLUE_ID, CHANNEL_TYPE);
+        providerNodes.put(REMOVE_HANDLER_TYPE_BLUE_ID, REMOVE_HANDLER_TYPE);
+        providerNodes.put(
+                REQUIRED_OPERATION_TYPE_BLUE_ID, REQUIRED_OPERATION_TYPE);
+        NodeProvider provider = blueId -> {
+            Node supplied = providerNodes.get(blueId);
+            return supplied != null
+                    ? Collections.singletonList(supplied.clone())
+                    : null;
+        };
+        AtomicInteger removals = new AtomicInteger();
+        AtomicInteger operationExecutions = new AtomicInteger();
+
+        try (Blue language = new Blue(provider)) {
+            DocumentProcessor processor = DocumentProcessor.builder()
+                    .registerContractProcessor(
+                            CHANNEL_TYPE_BLUE_ID,
+                            CHANNEL_TYPE,
+                            new PlanChannelProcessor())
+                    .registerContractProcessor(
+                            REMOVE_HANDLER_TYPE_BLUE_ID,
+                            REMOVE_HANDLER_TYPE,
+                            new RemoveRequiredWorkflowProcessor(removals))
+                    .registerContractProcessor(
+                            REQUIRED_OPERATION_TYPE_BLUE_ID,
+                            REQUIRED_OPERATION_TYPE,
+                            new RequiredOperationProcessor(
+                                    operationExecutions))
+                    .matchingService(new ContractMatchingService(language))
+                    .conformanceEngine(language.conformanceEngine())
+                    .snapshotStore(
+                            language.getDocumentProcessor()
+                                    .snapshotManager())
+                    .deliveryPlanDeriver(
+                            (ignoredRoot, ignoredEvent) -> exactPlan)
+                    .build();
+
+            // when
+            DocumentProcessingResult result = processor.processDocument(
+                    root, event);
+
+            // then
+            assertEquals(
+                    ProcessorStatus.SUCCESS,
+                    result.status(),
+                    diagnosticMessage(result));
+            assertEquals(1, removals.get());
+            assertEquals(0, operationExecutions.get(),
+                    "the unrelated registered Operation is only preflighted");
+            assertFalse(result.document().getContracts().getProperties()
+                    .containsKey("requiredWorkflow"));
+            assertEquals(
+                    ancestorBlueId,
+                    result.document().getType().getBlueId(),
+                    "removal selects the nearest valid ancestor");
+        }
+    }
+
+    @Test
+    void shouldPreserveRequiredDirectOperationWhenSubtypeContributesChannel() {
+        // given
+        Node nearestValidAncestor = new Node().name(
+                "Nearest Valid Inherited Channel Ancestor");
+        String ancestorBlueId = DirectBlueIdCalculator.calculateBlueId(
+                nearestValidAncestor);
+        Node subtypeChannel = channel("subtypeChannel", 1, false);
+        subtypeChannel.getProperties().remove("key");
+        Node mostSpecific = new Node()
+                .name("Required Operation With Inherited Channel")
+                .type(new Node().blueId(ancestorBlueId))
+                .contracts(new Node()
+                        .properties(
+                                "requiredWorkflow",
+                                new Node().schema(
+                                        new Schema().required(true)))
+                        .properties("subtypeChannel", subtypeChannel));
+        String mostSpecificBlueId = DirectBlueIdCalculator.calculateBlueId(
+                mostSpecific);
+
+        Node incoming = channel("incoming", 0, true);
+        Node root = rootWithChannels(incoming)
+                .type(new Node().blueId(mostSpecificBlueId));
+        addRequiredOperationGeneralizationContracts(root);
+        Node event = event("topic");
+        ExternalDeliverySnapshot incomingOccurrence =
+                snapshot("/", "incoming", incoming, event);
+        ExternalDeliverySnapshot subtypeOccurrence =
+                snapshot("/", "subtypeChannel", subtypeChannel, event);
+        ExternalDeliveryPlan exactPlan = planWithActiveSurface(
+                new ExternalDeliverySnapshot[]{
+                        incomingOccurrence, subtypeOccurrence},
+                incomingOccurrence,
+                subtypeOccurrence);
+
+        Map<String, Node> providerNodes = requiredOperationProviderNodes(
+                ancestorBlueId,
+                nearestValidAncestor,
+                mostSpecificBlueId,
+                mostSpecific);
+        AtomicInteger removals = new AtomicInteger();
+        AtomicInteger operationExecutions = new AtomicInteger();
+        AtomicInteger directContractProviderFetches = new AtomicInteger();
+
+        // when
+        DocumentProcessingResult result = processRequiredOperationRemoval(
+                root,
+                event,
+                exactPlan,
+                providerNodes,
+                removals,
+                operationExecutions,
+                directContractProviderFetches);
+
+        // then
+        assertRequiredOperationGeneralized(
+                result,
+                ancestorBlueId,
+                removals,
+                operationExecutions,
+                directContractProviderFetches);
+    }
+
+    @Test
+    void shouldPreserveRequiredDirectOperationWhenSubtypeContributesEmbedded() {
+        // given
+        Node nearestValidAncestor = new Node().name(
+                "Nearest Valid Inherited Embedded Ancestor");
+        String ancestorBlueId = DirectBlueIdCalculator.calculateBlueId(
+                nearestValidAncestor);
+        Node embedded = new Node()
+                .type(new Node().blueId(RuntimeBlueIds.PROCESS_EMBEDDED))
+                .properties(
+                        "paths",
+                        new Node().items(Collections.singletonList(
+                                new Node().value("/child"))));
+        Node mostSpecific = new Node()
+                .name("Required Operation With Inherited Embedded")
+                .type(new Node().blueId(ancestorBlueId))
+                .contracts(new Node()
+                        .properties(
+                                "requiredWorkflow",
+                                new Node().schema(
+                                        new Schema().required(true)))
+                        .properties("embedded", embedded));
+        String mostSpecificBlueId = DirectBlueIdCalculator.calculateBlueId(
+                mostSpecific);
+
+        Node incoming = channel("incoming", 0, true);
+        Node childChannel = channel("childChannel", 0, false);
+        Node child = rootWithChannels(childChannel);
+        Node root = rootWithChannels(incoming)
+                .type(new Node().blueId(mostSpecificBlueId))
+                .properties("child", child);
+        addRequiredOperationGeneralizationContracts(root);
+        Node event = event("topic");
+        ExternalDeliverySnapshot incomingOccurrence =
+                snapshot("/", "incoming", incoming, event);
+        ExternalDeliverySnapshot childOccurrence =
+                snapshot("/child", "childChannel", childChannel, event);
+        ExternalDeliveryPlan exactPlan = planWithActiveSurface(
+                new ExternalDeliverySnapshot[]{
+                        childOccurrence, incomingOccurrence},
+                incomingOccurrence,
+                childOccurrence);
+
+        Map<String, Node> providerNodes = requiredOperationProviderNodes(
+                ancestorBlueId,
+                nearestValidAncestor,
+                mostSpecificBlueId,
+                mostSpecific);
+        AtomicInteger removals = new AtomicInteger();
+        AtomicInteger operationExecutions = new AtomicInteger();
+        AtomicInteger directContractProviderFetches = new AtomicInteger();
+
+        // when
+        DocumentProcessingResult result = processRequiredOperationRemoval(
+                root,
+                event,
+                exactPlan,
+                providerNodes,
+                removals,
+                operationExecutions,
+                directContractProviderFetches);
+
+        // then
+        assertRequiredOperationGeneralized(
+                result,
+                ancestorBlueId,
+                removals,
+                operationExecutions,
+                directContractProviderFetches);
+        assertEquals(
+                "topic",
+                result.document().getAsText(
+                        "/child/contracts/childChannel/subscriptionKey"),
+                "generalization keeps the former child as passive content");
     }
 
     @Test
@@ -1090,6 +1354,151 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         return builder.build();
     }
 
+    private static ExternalDeliveryPlan planWithActiveSurface(
+            ExternalDeliverySnapshot[] deliveries,
+            ExternalDeliverySnapshot... activeOccurrences) {
+        ExternalDeliveryPlan.Builder builder =
+                ExternalDeliveryPlan.builder()
+                        .revisions(7L, 7L)
+                        .eventOrderKey(EVENT_ORDER)
+                        .activeSubscriptionIntervals(
+                                Collections.<SubscriptionDelta.Entry>
+                                        emptyList())
+                        .exactRuntimeState();
+        for (ExternalDeliverySnapshot delivery : deliveries) {
+            builder.delivery(delivery);
+        }
+        for (ExternalDeliverySnapshot occurrence : activeOccurrences) {
+            builder.activeSubscriptionInterval(
+                    activeInterval(occurrence));
+        }
+        return builder.build();
+    }
+
+    private static void addRequiredOperationGeneralizationContracts(
+            Node root) {
+        root.getContracts()
+                .properties(
+                        "requiredWorkflow",
+                        new Node()
+                                .type(new Node().blueId(
+                                        REQUIRED_OPERATION_TYPE_BLUE_ID))
+                                .properties(
+                                        "operationId",
+                                        new Node().value(
+                                                "unrelated-operation"))
+                                .properties(
+                                        "channel",
+                                        new Node().value("incoming")))
+                .properties(
+                        "removeRequiredWorkflow",
+                        new Node()
+                                .type(new Node().blueId(
+                                        REMOVE_HANDLER_TYPE_BLUE_ID))
+                                .properties(
+                                        "channel",
+                                        new Node().value("incoming")))
+                .properties(
+                        "generalization",
+                        new Node()
+                                .type(new Node().blueId(
+                                        RuntimeBlueIds
+                                                .TYPE_GENERALIZATION_POLICY))
+                                .properties(
+                                        "defaultMode",
+                                        new Node().value(
+                                                "nearest-valid-ancestor")));
+    }
+
+    private static Map<String, Node> requiredOperationProviderNodes(
+            String ancestorBlueId,
+            Node ancestor,
+            String mostSpecificBlueId,
+            Node mostSpecific) {
+        Map<String, Node> providerNodes = new LinkedHashMap<>();
+        providerNodes.put(ancestorBlueId, ancestor);
+        providerNodes.put(mostSpecificBlueId, mostSpecific);
+        providerNodes.put(CHANNEL_TYPE_BLUE_ID, CHANNEL_TYPE);
+        providerNodes.put(REMOVE_HANDLER_TYPE_BLUE_ID, REMOVE_HANDLER_TYPE);
+        providerNodes.put(
+                REQUIRED_OPERATION_TYPE_BLUE_ID, REQUIRED_OPERATION_TYPE);
+        return providerNodes;
+    }
+
+    private static DocumentProcessingResult processRequiredOperationRemoval(
+            Node root,
+            Node event,
+            ExternalDeliveryPlan exactPlan,
+            Map<String, Node> providerNodes,
+            AtomicInteger removals,
+            AtomicInteger operationExecutions,
+            AtomicInteger directContractProviderFetches) {
+        String directRequiredContractBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        root.getContracts().getProperties().get(
+                                "requiredWorkflow"));
+        NodeProvider provider = blueId -> {
+            if (directRequiredContractBlueId.equals(blueId)) {
+                directContractProviderFetches.incrementAndGet();
+            }
+            Node supplied = providerNodes.get(blueId);
+            return supplied != null
+                    ? Collections.singletonList(supplied.clone())
+                    : null;
+        };
+        try (Blue language = new Blue(provider)) {
+            DocumentProcessor processor = DocumentProcessor.builder()
+                    .registerContractProcessor(
+                            CHANNEL_TYPE_BLUE_ID,
+                            CHANNEL_TYPE,
+                            new PlanChannelProcessor())
+                    .registerContractProcessor(
+                            REMOVE_HANDLER_TYPE_BLUE_ID,
+                            REMOVE_HANDLER_TYPE,
+                            new RemoveRequiredWorkflowProcessor(removals))
+                    .registerContractProcessor(
+                            REQUIRED_OPERATION_TYPE_BLUE_ID,
+                            REQUIRED_OPERATION_TYPE,
+                            new RequiredOperationProcessor(
+                                    operationExecutions))
+                    .matchingService(new ContractMatchingService(language))
+                    .conformanceEngine(language.conformanceEngine())
+                    .snapshotStore(
+                            language.getDocumentProcessor()
+                                    .snapshotManager())
+                    .deliveryPlanDeriver(
+                            (ignoredRoot, ignoredEvent) -> exactPlan)
+                    .build();
+            return processor.processDocument(root, event);
+        }
+    }
+
+    private static void assertRequiredOperationGeneralized(
+            DocumentProcessingResult result,
+            String ancestorBlueId,
+            AtomicInteger removals,
+            AtomicInteger operationExecutions,
+            AtomicInteger directContractProviderFetches) {
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                result.status(),
+                diagnosticMessage(result)
+                        + " (removals=" + removals.get()
+                        + ", unrelatedOperationExecutions="
+                        + operationExecutions.get() + ")");
+        assertEquals(1, removals.get());
+        assertEquals(0, operationExecutions.get(),
+                "the unrelated registered Operation is only preflighted");
+        assertEquals(0, directContractProviderFetches.get(),
+                "the opaque unselected contract is never provider-fetched");
+        assertFalse(result.document().getContracts().getProperties()
+                .containsKey("requiredWorkflow"));
+        assertEquals(
+                ancestorBlueId,
+                result.document().getType().getBlueId(),
+                "removal selects the nearest valid ancestor");
+    }
+
     private static SubscriptionDelta.Entry activeInterval(
             ExternalDeliverySnapshot occurrence) {
         return new SubscriptionDelta.Entry(
@@ -1392,6 +1801,87 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
 
     public static final class TraceHandler
             extends HandlerContract {
+    }
+
+    public static final class RemoveRequiredWorkflow
+            extends HandlerContract {
+    }
+
+    public static final class RequiredOperation
+            extends HandlerContract {
+        private String operationId;
+
+        public String getOperationId() {
+            return operationId;
+        }
+
+        public void setOperationId(String operationId) {
+            this.operationId = operationId;
+        }
+    }
+
+    private static final class RemoveRequiredWorkflowProcessor
+            implements HandlerProcessor<RemoveRequiredWorkflow> {
+        private final AtomicInteger executions;
+
+        private RemoveRequiredWorkflowProcessor(
+                AtomicInteger executions) {
+            this.executions = executions;
+        }
+
+        @Override
+        public Class<RemoveRequiredWorkflow> contractType() {
+            return RemoveRequiredWorkflow.class;
+        }
+
+        @Override
+        public boolean matches(
+                RemoveRequiredWorkflow contract,
+                HandlerMatchContext context) {
+            return true;
+        }
+
+        @Override
+        public void execute(
+                RemoveRequiredWorkflow contract,
+                ProcessorExecutionContext context) {
+            executions.incrementAndGet();
+            context.applyPatch(JsonPatch.remove(
+                    "/contracts/requiredWorkflow"));
+        }
+    }
+
+    private static final class RequiredOperationProcessor
+            implements HandlerProcessor<RequiredOperation> {
+        private final AtomicInteger executions;
+
+        private RequiredOperationProcessor(AtomicInteger executions) {
+            this.executions = executions;
+        }
+
+        @Override
+        public boolean isOperationRoute() {
+            return true;
+        }
+
+        @Override
+        public Class<RequiredOperation> contractType() {
+            return RequiredOperation.class;
+        }
+
+        @Override
+        public boolean matches(
+                RequiredOperation contract,
+                HandlerMatchContext context) {
+            return false;
+        }
+
+        @Override
+        public void execute(
+                RequiredOperation contract,
+                ProcessorExecutionContext context) {
+            executions.incrementAndGet();
+        }
     }
 
     private static final class TraceHandlerProcessor

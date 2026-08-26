@@ -1,0 +1,43 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-10-unknown-occurrence
+scenario: FL-ADM-10
+description: Initialization creates a Process Embedded occurrence absent from the immutable admission snapshot, suspending noncommitting with authoritative typed occurrence-evidence demand and no legacy exact-node demand.
+operation: admit-closure
+events: {}
+documents:
+  fl-adm-10-root:
+    publicRoot: true
+    document:
+      documentId: fl-adm-10-root
+      name: Full lifecycle unknown initialization occurrence
+      children: {}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          collectionPaths: [/children]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        installUnknown:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+occurrences: []
+runtime:
+  initializationHandlers:
+    fl-adm-10-root/installUnknown:
+      patches:
+      - op: add
+        path: /children/unknown
+        val:
+          documentId: fl-adm-10-unknown-child
+          name: Unknown child created during initialization
+  handlers: {}
+gas:
+  sharedLimit: release-default
+expect:
+  attemptOutcome: NeedsResources
+  resourceDemandKinds: [MANAGED_OCCURRENCE_EVIDENCE]
+  requiredExactCount: 0

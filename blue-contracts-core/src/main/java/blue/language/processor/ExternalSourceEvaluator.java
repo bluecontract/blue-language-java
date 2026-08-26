@@ -191,6 +191,7 @@ final class ExternalSourceEvaluator {
                 handlerChannelKey,
                 logicalDeliveryKey,
                 handlerChannel,
+                bundle,
                 frozenPayload,
                 carriedExactValues,
                 checkpoint.record,

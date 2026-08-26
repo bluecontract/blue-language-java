@@ -190,10 +190,10 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:fd4f71dc78c5300c88b3ad097b48742cefa46ad902984a4d4bed480f4eb06708
   closureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
-  invocationIdentity: sha256:1df17b6b98c79aed8e4635a6eb323583005a773bc1df7487a64c01dff9ed941c
+  invocationIdentity: sha256:22cd863e8588ba0f405bef71c77797b621ee18beec7e5638aff7bade8ae41753
   environment:
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
-    contractsSpecificationIdentity: sha256:dfb444962a5a17b3a6519e8d148c2bf4a975a921b1fcb1277710052caaecd930
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
@@ -283,7 +283,7 @@ input:
 expected:
   attemptOutcome: Complete
   status: invalid-processing-document
-  invocationIdentity: sha256:1df17b6b98c79aed8e4635a6eb323583005a773bc1df7487a64c01dff9ed941c
+  invocationIdentity: sha256:22cd863e8588ba0f405bef71c77797b621ee18beec7e5638aff7bade8ae41753
   inputClosureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
   outputClosureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
   atomic: true

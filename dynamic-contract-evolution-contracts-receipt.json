@@ -1,0 +1,350 @@
+{
+  "schema": "blue-language-java-dynamic-contract-evolution-contracts-receipt/1.1",
+  "status": "PASS",
+  "createdAt": "2026-08-25T15:33:10Z",
+  "branch": "feat/dynamic-contract-evolution-resume",
+  "acceptedBaseCommit": "03db5ee45f96698a45a3f5556dcc1ef6222d8e6f",
+  "semanticSourceUnderTestCommit": "a74dfb310f71073493803d7817b8b09ebfbed211",
+  "finalSemanticSourceUnderTestCommit": "5a57bb82180fa31e868cd13fe41933a67a532d62",
+  "sourceDateEpoch": "1787669428",
+  "receiptBinding": {
+    "expectedTestedParent": "a74dfb310f71073493803d7817b8b09ebfbed211",
+    "receiptCommitIsNotSemanticSourceUnderTest": true
+  },
+  "commitSequence": [
+    {
+      "commit": "d5484d870f30048009fdbcceb4365f56c235fb7f",
+      "subject": "docs(contracts): classify dynamic evolution recovery spike"
+    },
+    {
+      "commit": "15f23e65fabfb9942f712389f265ca31144e7516",
+      "subject": "feat(contracts): support deterministic application contract evolution"
+    },
+    {
+      "commit": "c98230a45ce59a673a7152c9aa49f9795b917e2c",
+      "subject": "feat(contracts): return typed noncommitting resource demands"
+    },
+    {
+      "commit": "1714cc7b6343619112caff5356f0b89363e20582",
+      "subject": "test(contracts): conform dynamic contract and graph evolution"
+    },
+    {
+      "commit": "37968eedc1d259ecf0c4274bd23125bc2f86f5c2",
+      "subject": "docs(contracts): specify dynamic contract and occurrence evolution"
+    },
+    {
+      "commit": "914bc4906208735eceeee4e9744f4e28896b2874",
+      "subject": "chore(release): rebind dynamic contract evolution evidence"
+    },
+    {
+      "commit": "a74dfb310f71073493803d7817b8b09ebfbed211",
+      "subject": "fix(release): validate lifecycle package evidence"
+    }
+  ],
+  "releaseGapAudit": {
+    "markdown": "DYNAMIC_CONTRACT_EVOLUTION_RELEASE_GAP_AUDIT.md",
+    "markdownSha256": "sha256:dee90eb347f67618c90fe741d721c66626d9b0346f8c8fecf14e6595106569c4",
+    "json": "dynamic-contract-evolution-release-gap-audit.json",
+    "jsonSha256": "sha256:8b93a0a119547e0205e66b7d8045abed6cf6eca28959abff1136751c22f628bf"
+  },
+  "identities": {
+    "contractsSpecification": "sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242",
+    "contractsFixtures": "sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79",
+    "contractsRelease": "sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3",
+    "portablePackage": "sha256:a55331488b488ab7236307711fc4e8390a63a897891e47c6ae424fe22b87b1ec",
+    "portablePackageZip": "sha256:11894c3580d1e5d5192f1e9bde758df76ff4f2966a8e793df0026dd083a17c6c",
+    "validationOutput": "sha256:08c0b1f777494968ed5649586316c68148f6c30e94e9d3b6d512ed0d1bbc9bce",
+    "packageManifest": "sha256:634d5c69e1d47cbfbdc32624803a39f1ccd2419587c18d3f5ba8717011fbf44f",
+    "packageChecksumManifest": "sha256:ad2629596df74e195fb5bf05342cf0fb7d538456a2fdfde123533716703f1b79",
+    "oraclePackage": "sha256:6c2ad2b484aa259e2b0a609172ac56882a0b1cb588209809cab979605b98af9d"
+  },
+  "portablePackage": {
+    "status": "PASS",
+    "generationA": {
+      "root": "/private/tmp/dce-contracts-final-reviewed-package-a.thIeIK/blue-contracts-and-processor-1.0",
+      "zip": "/private/tmp/dce-contracts-final-reviewed-package-a.thIeIK/blue-contracts-and-processor-1.0.zip"
+    },
+    "generationB": {
+      "root": "/private/tmp/dce-contracts-final-reviewed-package-b.iWuzRr/blue-contracts-and-processor-1.0",
+      "zip": "/private/tmp/dce-contracts-final-reviewed-package-b.iWuzRr/blue-contracts-and-processor-1.0.zip"
+    },
+    "treesByteEqual": true,
+    "zipsByteEqual": true,
+    "generationAUnzipDiffEmpty": true,
+    "completeTreeFileCount": 463,
+    "packageManifestFileCount": 460,
+    "checksumEntryCount": 461,
+    "allChecksumsPass": true,
+    "validation": {
+      "status": "PACKAGE_VALID",
+      "referenceStatus": "SEMANTIC_REFERENCE_VALID",
+      "implementationConformanceClaimed": false,
+      "ordinaryFixtures": 183,
+      "closureFixtures": 93,
+      "totalFixtures": 276,
+      "ordinaryVectors": 114,
+      "closureVectors": 54,
+      "vectors": 168,
+      "blueIdsChecked": 14489,
+      "directChannelsChecked": 36,
+      "documentIdsChecked": 410,
+      "occurrencesChecked": 768,
+      "oracleFiles": 42,
+      "oracleStages": 121,
+      "runtimeHandlersChecked": 125,
+      "managedRevisionSequenceFixtures": 5,
+      "removeReaddFixtures": 2,
+      "javaTemplateSourceFiles": 58
+    },
+    "componentEquality": {
+      "conformanceSubtreeFiles": 363,
+      "conformanceSubtreesAndTrackedResourcesEqual": true,
+      "toolFiles": 36,
+      "toolsEqualWorktree": true,
+      "specificationEqualWorktree": true,
+      "canonicalLegacySourceCommit": "5dc8096276652156e248c9c018a0850fcd8dbdbb",
+      "canonicalLegacySourceTree": "73601034296006576ca8cfae5a1f993cefda529e",
+      "canonicalLegacySourceClean": true,
+      "canonicalJavaTemplateSourceFiles": 58,
+      "canonicalPayloadFiles": 83
+    },
+    "pythonEvidence": {
+      "pyCompile": "PASS",
+      "validateNeedsResourcesDemandSelfCheck": "PASS",
+      "validateRollbackMarkerPrefixSelfCheck": "PASS",
+      "closureFixturesValidated": 93,
+      "closureFixtureFailures": 0,
+      "generatorAndClassifierTests": 30,
+      "generatorAndClassifierFailures": 0,
+      "testSuites": [
+        "test_classify_fixture_identity_delta",
+        "test_generate_contract_evolution_fixtures",
+        "test_regenerate_ordinary_fixture_package"
+      ]
+    },
+    "adversarialAudit": {
+      "forgedCauseRejected": true,
+      "forgedClosureRejected": true,
+      "forgedGenerationRejected": true,
+      "forgedValueRejected": true,
+      "forgedProviderRejected": true,
+      "presentNullRejected": true,
+      "demandOnlyMembershipRejected": true,
+      "clonedMarkerAndFullSpineRejected": true,
+      "laterSameDocumentFailureAfterEarlierMarkerAccepted": true,
+      "sequenceAware": true
+    },
+    "sourceArchive": {
+      "expectedSha256": "7be5116d8e7a64bccf471c11a93127d4924a36686e23bbbf634fc0713d6d33c9",
+      "provided": false,
+      "absenceBlocksValidation": false
+    }
+  },
+  "fixtureDelta": {
+    "markdown": "DYNAMIC_CONTRACT_EVOLUTION_FIXTURE_DELTA.md",
+    "markdownSha256": "sha256:68b272de2adaa5ded64a9806743f09428e19b3bf894064640170b2c90602531c",
+    "json": "dynamic-contract-evolution-fixture-delta.json",
+    "jsonSha256": "sha256:769cc7df68f47e8b717c4e81d870a3d45d555d78808d391b54f08376e2c19a30",
+    "baselineCommit": "03db5ee45f96698a45a3f5556dcc1ef6222d8e6f",
+    "baselineTree": "69716bc726117a8587b16ac0757b1a5468b80355",
+    "baselinePackage": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d",
+    "beforeFiles": 333,
+    "afterFiles": 363,
+    "changedFiles": 102,
+    "unexpectedFiles": 0,
+    "classifications": {
+      "actualSemanticStateResultChange": 43,
+      "fixtureByteOnlyFormatting": 0,
+      "invocationIdentityRebind": 63,
+      "specIdentityRebind": 65,
+      "unexpected": 0,
+      "workEventTraceIdentityRebind": 55
+    }
+  },
+  "focusedCoverage": {
+    "status": "PASS",
+    "expectedSuiteCount": 15,
+    "expectedTestCount": 67,
+    "suites": [
+      {"name": "ContractEvolutionClosureAcceptanceTest", "tests": 9, "status": "PASS"},
+      {"name": "ClosureResourceDemandTest", "tests": 10, "status": "PASS"},
+      {"name": "DifferentLineageRetargetReceiptTest", "tests": 3, "status": "PASS"},
+      {"name": "ManagedOccurrenceDemandDiscoveryTest", "tests": 9, "status": "PASS"},
+      {"name": "ProcessEmbeddedSurfaceReconcilerTest", "tests": 7, "status": "PASS"},
+      {"name": "ContractEvolutionFixtureFamilyTest", "tests": 5, "status": "PASS"},
+      {"name": "ContractsSoundnessGeneralizationFixtureTest", "tests": 3, "status": "PASS"},
+      {"name": "ApplicationContractOwnershipTest", "tests": 1, "status": "PASS"},
+      {"name": "ContractSurfaceProjectionIntegrationTest", "tests": 2, "status": "PASS"},
+      {"name": "ContractSurfaceReconcilerTest", "tests": 4, "status": "PASS"},
+      {"name": "DocumentProcessorContractSurfaceEvolutionTest", "tests": 2, "status": "PASS"},
+      {"name": "InheritedContractContributionEvolutionTest", "tests": 1, "status": "PASS"},
+      {"name": "ManagedProcessEmbeddedSurfaceProjectionTest", "tests": 3, "status": "PASS"},
+      {"name": "ProcessingResultCoordinatorContractSurfaceTest", "tests": 5, "status": "PASS"},
+      {"name": "ProcessorOwnedContractsReplacementTest", "tests": 3, "status": "PASS"}
+    ]
+  },
+  "gates": [
+    {"name": "focused C-EVO suites", "status": "PASS"},
+    {"name": "blue-contracts-core full tests", "task": ":blue-contracts-core:test", "tests": 294, "status": "PASS"},
+    {"name": "root processor tests", "task": ":test", "tests": 2423, "status": "PASS"},
+    {"name": "blue-conformance full tests", "task": ":blue-conformance:test", "tests": 161, "status": "PASS"},
+    {"name": "release conformance", "task": "releaseConformanceTest", "status": "PASS"},
+    {"name": "semantic API migration", "task": "verifySemanticApiMigration", "approvedIncompatibleChanges": 337, "additiveChanges": 482, "status": "PASS"},
+    {"name": "final API baseline", "task": "verifyFinalApiBaseline", "status": "PASS"},
+    {"name": "module API", "task": "moduleApiVerify", "status": "PASS"},
+    {"name": "module archives", "task": "moduleArchiveVerify", "status": "PASS"},
+    {"name": "documentation", "task": "documentationVerify", "status": "PASS"},
+    {"name": "published repository", "task": "verifyPublishedRepository", "status": "PASS"},
+    {"name": "published artifact smoke", "task": "publishedArtifactSmoke", "status": "PASS"},
+    {"name": "deterministic complete package regeneration", "status": "PASS"},
+    {"name": "exclusion-free clean build", "task": "clean build", "totalTests": 2950, "status": "PASS"},
+    {"name": "final quality", "task": "finalQualityVerify", "status": "PASS"},
+    {"name": "release candidate", "task": "rcVerify", "status": "PASS"},
+    {"name": "Java 8 bytecode", "expectedClassMajor": 52, "status": "PASS"},
+    {"name": "diff and clean status", "task": "git diff --check and git status --short", "status": "PASS"}
+  ],
+  "reportEvidence": [
+    {"path": "build/reports/final-quality/final-quality.json", "sha256": "sha256:6773d1ed2d19a191dd6c209663dfe06a30306d4f31ba6bf7d03d8c72e8405f01"},
+    {"path": "build/reports/final-quality/verification.json", "sha256": "sha256:ce9385d33d56ad116ace9640d6021051d8e7d45458f39f5eed2720a79aac512f"},
+    {"path": "build/reports/release-evidence/clean-build.json", "sha256": "sha256:4959883b4cf059670ead69cd444e936f698847a6f620e0b05171d21863d807fe"},
+    {"path": "build/reports/release-evidence/clean-build-verification.json", "sha256": "sha256:6db3443a8b18858ce5559843333e03949c47facc1e33d27992064ac0b64dce75"},
+    {"path": "build/reports/release-evidence/aggregate-release-receipt.json", "sha256": "sha256:75e7fe74eec6c11c1211f9b3eee0fdf2a7afe6dea645961663fce871a3b6baa1"},
+    {"path": "build/reports/release-evidence/aggregate-release-verification.json", "sha256": "sha256:2436f11a624987bc344a43fec91cc42acba1fdb41494a54a64aa0fa7f811c786"},
+    {"path": "build/reports/semantic-baseline/verification.json", "sha256": "sha256:e7347f85df9be4d65b5246ed3330e38f0c02656de26b2358ccc2689affae0a2c"},
+    {"path": "build/reports/published-repository/verification.json", "sha256": "sha256:9dd881d31e4fec7711f9e8d3bde341c457b280faf93932ff220c73bfa9d5742a"},
+    {"path": "build/reports/published-smoke/verification.json", "sha256": "sha256:306967b0e765271ef63599096e8b819bdd5bc5fff16a0cea4e1fdb14801e8cae"},
+    {"path": "blue-conformance/build/reports/conformance/release-conformance.json", "sha256": "sha256:b06ff17c3faf05968287d00fe6e83c35a06271aaf77352e3d8e689785d57461f"},
+    {"path": "build/reports/documentation/verification.json", "sha256": "sha256:764ec9512dcdbdb2b1adac4db3d59771197f83e2a77d7ad2428f623c95a82d3b"},
+    {"path": "build/reports/fragmented-processing/fragmented-processing.json", "sha256": "sha256:c2440b2a8454ec6489eff52317bcf5a225ec2df9f79006a982cbc450286edf16"},
+    {"path": "build/reports/fragmented-processing/verification.json", "sha256": "sha256:a22d5206f0f92b23933da19d0723d2a07efea26eb6722b4d198cd6e85986d49d"}
+  ],
+  "immutableStage": {
+    "status": "PASS",
+    "path": "/private/tmp/dce-contracts-stage-a74dfb3.3oI5E8/repository",
+    "schema": "blue-staged-dependency-repository/1.0",
+    "groupId": "blue.language",
+    "version": "3.1.0-rc.21",
+    "sourceCommit": "a74dfb310f71073493803d7817b8b09ebfbed211",
+    "contractsSpecificationIdentity": "sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242",
+    "contractsFixturePackageIdentity": "sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79",
+    "contractsReleaseIdentity": "sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3",
+    "coordinateCount": 7,
+    "artifactRecordCount": 28,
+    "repositoryFileCount": 58,
+    "repositoryTreeEvidenceSha256": "sha256:529184972aa44c3ceb78f497e6f1400bcba247f32f8f202aef4b2278145525c0",
+    "artifactManifestSha256": "sha256:454fbeec1767e73a2025d7435a512ad8da423e0f8de6afc8d28947257fe2cf47",
+    "artifactManifestSidecarSha256": "sha256:add318f32becf62f0eab57a3f36df17c848dce52532f87c828aae390c9f77f84",
+    "artifacts": [
+      {"artifactId": "blue-language-model", "pomSha256": "sha256:9e5ddd73eeaadb344320c4de22306a36da8f5fb18dc42bf97cb87bc40aef4d9f", "runtimeSha256": "sha256:ef55be8331147442b858474add4782489d993568effe30202a9c4a8b014d5bd8", "sourcesSha256": "sha256:84b48c13cff2594230a23cc248a7c00e7b2d0cb3b352cc90347039035ab472e6", "javadocSha256": "sha256:cff43f04d4d97f9231ded49ae3169511bc4ae36ee28131a1311d572e5b2d8d6f"},
+      {"artifactId": "blue-language-core", "pomSha256": "sha256:70d5dc01a717994ebab394f7ddf0bc4bd27a2f14b4ce17bd682af68fa9a035df", "runtimeSha256": "sha256:8d7167254a39132e7a494561ed966748918c138c08f0967ccc3e841edba0b1f0", "sourcesSha256": "sha256:74ad60632833c303f42b95e8c4122b4c4fd16f61b76c121c04c28786819f929d", "javadocSha256": "sha256:aa794193496e38f6db58f890ae702a65dd95772ba845e70ded3103b0780fb1db"},
+      {"artifactId": "blue-language-mapping", "pomSha256": "sha256:1ab4f9841a8a624fddb1431d8af42a0cfbc026bc03f79f7e252789b64e0052ca", "runtimeSha256": "sha256:d9141d5c611bde7eb6a21bce3dc4bc0df7d8167f013eeaef2a365dd0a6af329b", "sourcesSha256": "sha256:05ddbc700dd0635927ac6e8b2edb93e778d92c1312c3504539d6799c9e2079db", "javadocSha256": "sha256:08c550b903cc9ee27007d416745b024900d88e96f1bfb1e90af4176d95d02805"},
+      {"artifactId": "blue-language-ipfs", "pomSha256": "sha256:d39676b32ff05e41c9d1bf0ef657ad2904753a31b9f48512062632bdb8295118", "runtimeSha256": "sha256:bec7355f39a109c4fe6dfc5f9970232dc0a75cd8e5b4ab055abc311314d24c8e", "sourcesSha256": "sha256:a7fd62c141303410d1dba27904e6114afd3a9b997b44493be951b8d1c1a3eab9", "javadocSha256": "sha256:f5e2500f5752be9f9edd4ebb5c707f46d9feb7d29dca2820b94ad6f172d63527"},
+      {"artifactId": "blue-contracts-core", "pomSha256": "sha256:d2e51f49336dcb13fff4b6320e9a39a554e26fdcd3c6bf582efe078f3ea803c3", "runtimeSha256": "sha256:07128141b7c75dae09ea76e17ee7dfe8b7bec8d892531162a09ff8802bc877a6", "sourcesSha256": "sha256:bdefc4aca0e23aa416850ec010e04b197807724ee478e86d1d566be6709bf2e6", "javadocSha256": "sha256:d7dbfd96e08544547ccb7808d31afee16dd26c067b5bd5ce444e04d2309f7a92"},
+      {"artifactId": "blue-conformance", "pomSha256": "sha256:d74abd57a8069f56487ed97b530393da433a09fb8054673ed825592ef43c3558", "runtimeSha256": "sha256:8a3394cf38c738692f7c07dced3c92209b8c7bf19ab8d65f4d41fcc9ff0abf0c", "sourcesSha256": "sha256:c3711d5b4b22a011ce4fdce684fd96e7e6ca9ae924be9872442b325d4b8164b8", "javadocSha256": "sha256:9fd734e65e9951e6cacee8f680e178fee68f265546bad63f08a66c25cd2470b7"},
+      {"artifactId": "blue-language-java", "pomSha256": "sha256:5e7952150526e0102baebbe6558071bc1fd5009df83a847cc141f6df593b7b14", "runtimeSha256": "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0", "sourcesSha256": "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518", "javadocSha256": "sha256:309d390b1335d09b965aeb604389b6c2f882160241adf011ac835dee62ad4822"}
+    ],
+    "expectedJavaClassMajor": 52,
+    "javaClassMajorVerified": true,
+    "verifyPublishedRepository": "PASS",
+    "publishedArtifactSmoke": "PASS",
+    "byteIdenticalRepeatNoMutation": true,
+    "divergentOverwriteRejected": true,
+    "mavenLocalAllowed": false,
+    "remoteFallbackAllowed": false,
+    "repositoryIsolationVerified": true
+  },
+  "changedFiles": {
+    "manifests": [
+      "changed-files.sha256",
+      "dynamic-contract-evolution-changed-files.sha256"
+    ],
+    "aliasesByteEqual": true,
+    "manifestSha256": "sha256:1d7f5b3411399a3a395fbea947f14406292c8dfb54b8202477a7b94d642884e8",
+    "baselineCommit": "03db5ee45f96698a45a3f5556dcc1ef6222d8e6f",
+    "testedCommit": "a74dfb310f71073493803d7817b8b09ebfbed211",
+    "entryCount": 310,
+    "deletedFiles": 0,
+    "productionJavaFiles": 94,
+    "testJavaFiles": 39,
+    "frozenBlueLanguageProductionFiles": 0,
+    "hashSource": "exact tested-commit Git blobs",
+    "excludes": [
+      "DYNAMIC_CONTRACT_EVOLUTION_CONTRACTS_RECEIPT.md",
+      "dynamic-contract-evolution-contracts-receipt.json",
+      "changed-files.sha256",
+      "dynamic-contract-evolution-changed-files.sha256"
+    ]
+  },
+  "claims": {
+    "blueLanguageValueModelChanged": false,
+    "blueContractsProcessorChanged": true,
+    "bexChanged": false,
+    "coordinationChanged": false,
+    "myosChanged": false,
+    "applicationContractMutationSupported": true,
+    "wholeProcessEmbeddedMutationSupported": true,
+    "generalizationAfterContractMutationSupported": true,
+    "activeCrossLineageRebindSupported": true,
+    "typedResourceDemandsSupported": true,
+    "sameInvocationRemoveReaddSupported": false,
+    "implementationConformanceClaimed": true,
+    "releaseCheckpointComplete": true,
+    "phaseDAllowed": true,
+    "productionReady": false,
+    "published": false,
+    "deployed": false,
+    "mavenLocalUsedAsReleaseEvidence": false
+  },
+  "finalTransitionEvidenceCheckpoint": {
+    "status": "PASS",
+    "createdAt": "2026-08-25T21:33:52Z",
+    "sourceCommit": "5a57bb82180fa31e868cd13fe41933a67a532d62",
+    "commitSequence": [
+      {"commit": "f5a4698f90b0bf3d49c38ff8c34fa70934f9d895", "subject": "feat: expose managed transition evidence"},
+      {"commit": "5b938b8287ab90e19046a655debb07eb3a495448", "subject": "chore: approve transition evidence API"},
+      {"commit": "ace3e32c69591100cc50ad4f6d82d33fe835e05b", "subject": "docs: regenerate transition evidence references"},
+      {"commit": "5a57bb82180fa31e868cd13fe41933a67a532d62", "subject": "chore: close transition evidence release gates"}
+    ],
+    "typedDocumentTransitionEvidence": true,
+    "beforeAfterBlueIdAndEffectiveType": true,
+    "typedContractPatches": true,
+    "generatedGeneralizationWrites": true,
+    "rollbackEvidenceEmpty": true,
+    "blueLanguageValueModelCoreMappingChanged": false,
+    "cleanBuildTests": 2950,
+    "semanticApi": {"approvedIncompatibleChanges": 337, "additiveChanges": 487},
+    "immutableStage": {
+      "path": "/private/tmp/dce-contracts-final.GXg7oo/repository",
+      "schema": "blue-staged-dependency-repository/1.0",
+      "groupId": "blue.language",
+      "version": "3.1.0-rc.21",
+      "sourceCommit": "5a57bb82180fa31e868cd13fe41933a67a532d62",
+      "artifactManifestSha256": "sha256:6f719a206318a91f510da18f56ef34b863c95b062ef87a6784bef47737a09d52",
+      "artifactManifestSidecarSha256": "sha256:ff00db6d09be4a21338ee2401a78fc53e4b35d15009314570f9ad23883f7daa0",
+      "byteIdenticalRepeatNoMutation": true,
+      "mavenLocalAllowed": false,
+      "remoteFallbackAllowed": false
+    },
+    "reportEvidence": {
+      "finalQuality": "sha256:14277a737ab8df27240ea5772a7901c98a4856bdc44846842e16d7f26109bd6a",
+      "finalQualityVerification": "sha256:ce9385d33d56ad116ace9640d6021051d8e7d45458f39f5eed2720a79aac512f",
+      "cleanBuild": "sha256:04259455149001afb85532968454591d67e7bdcd124d3e797632d871b5b1eacf",
+      "cleanBuildVerification": "sha256:4ae26b97ba56abcd038540a8ac246801ea51703a7d9eb42f880617405612a5fe",
+      "aggregateReleaseReceipt": "sha256:3f29fa8b3cba72dd15c86dfcc335458a10b6e492d04b6c87817937603869775e",
+      "aggregateReleaseVerification": "sha256:8492264c15bdd39bbb3931a1f8be20ac3813ad1e6a3b42687ff256e73d8abe47",
+      "semanticBaselineVerification": "sha256:654a1cbd06701d15dba3cc9d43aee260afda4ed48ec259d0e713523d3a604f5d",
+      "publishedRepositoryVerification": "sha256:6ac5fe8b7c8e286419327b7f5b5100b0589088c99a55d954ae265c1185a49dc7",
+      "publishedSmokeVerification": "sha256:306967b0e765271ef63599096e8b819bdd5bc5fff16a0cea4e1fdb14801e8cae",
+      "releaseConformance": "sha256:b06ff17c3faf05968287d00fe6e83c35a06271aaf77352e3d8e689785d57461f",
+      "documentationVerification": "sha256:764ec9512dcdbdb2b1adac4db3d59771197f83e2a77d7ad2428f623c95a82d3b",
+      "fragmentedProcessing": "sha256:6c9d650c62370fc184d0f8e3df5e4916997cb8da4056ad8adbf967b6d3648b52",
+      "fragmentedProcessingVerification": "sha256:0c681455f08ca7a764fe83cec0db478d95e88ad2a7ba035b6957b8a4d0668115"
+    }
+  },
+  "outOfScope": [
+    "historical retained-epoch catch-up",
+    "Timeline import and completeness",
+    "Mandates",
+    "production multi-node durability"
+  ]
+}

@@ -163,6 +163,8 @@ public final class TentativeFinalization {
             WORK,
             /** Finalization after the complete initialization batch. */
             INITIALIZATION_BATCH,
+            /** Finalization after a quiescent terminated-marker write. */
+            TERMINATION_MARKER,
             /** Finalization after checkpoint settlement. */
             CHECKPOINT_SETTLEMENT
         }
@@ -196,6 +198,16 @@ public final class TentativeFinalization {
         }
 
         /**
+         * Creates a terminated-marker boundary.
+         *
+         * @param afterWorkOrdinal last accepted causal work before marker write
+         * @return closed terminated-marker branch
+         */
+        public static Boundary terminationMarker(long afterWorkOrdinal) {
+            return new TerminationMarkerBoundary(afterWorkOrdinal);
+        }
+
+        /**
          * Returns closed checkpoint-settlement branch.
          *
          * @return closed checkpoint-settlement branch
@@ -214,7 +226,7 @@ public final class TentativeFinalization {
         }
 
         /**
-         * Returns the causal work ordinal for the two work-bound branches.
+         * Returns the causal work ordinal for the work-bound branches.
          *
          * @return work ordinal, or {@code null} for checkpoint settlement
          */
@@ -236,6 +248,15 @@ public final class TentativeFinalization {
     public static final class InitializationBatchBoundary extends Boundary {
         private InitializationBatchBoundary(long afterWorkOrdinal) {
             super(Kind.INITIALIZATION_BATCH, Long.valueOf(
+                    ClosureValueSupport.requireSafeInteger(
+                            afterWorkOrdinal, "afterWorkOrdinal")));
+        }
+    }
+
+    /** Closed TERMINATION_MARKER branch. */
+    public static final class TerminationMarkerBoundary extends Boundary {
+        private TerminationMarkerBoundary(long afterWorkOrdinal) {
+            super(Kind.TERMINATION_MARKER, Long.valueOf(
                     ClosureValueSupport.requireSafeInteger(
                             afterWorkOrdinal, "afterWorkOrdinal")));
         }

@@ -417,6 +417,8 @@ final class ChannelRunner {
         private final String handlerChannelKey;
         private final String logicalDeliveryKey;
         private final ChannelMemberSnapshot handlerChannel;
+        private final ContractBundle dispatchBundle;
+        private final boolean initializationPendingAtDispatchFreeze;
         private final FrozenNode payload;
         private final List<ExactBlueValue> carriedExactValues;
         private final CheckpointManager.CheckpointRecord checkpoint;
@@ -430,6 +432,8 @@ final class ChannelRunner {
                 String handlerChannelKey,
                 String logicalDeliveryKey,
                 ChannelMemberSnapshot handlerChannel,
+                ContractBundle dispatchBundle,
+                boolean initializationPendingAtDispatchFreeze,
                 FrozenNode payload,
                 List<ExactBlueValue> carriedExactValues,
                 CheckpointManager.CheckpointRecord checkpoint,
@@ -443,6 +447,9 @@ final class ChannelRunner {
             this.handlerChannelKey = handlerChannelKey;
             this.logicalDeliveryKey = logicalDeliveryKey;
             this.handlerChannel = handlerChannel;
+            this.dispatchBundle = dispatchBundle;
+            this.initializationPendingAtDispatchFreeze =
+                    initializationPendingAtDispatchFreeze;
             this.payload = payload;
             this.carriedExactValues = carriedExactValues == null
                     ? Collections.<ExactBlueValue>emptyList()
@@ -486,6 +493,8 @@ final class ChannelRunner {
                     null,
                     null,
                     null,
+                    false,
+                    null,
                     null,
                     null,
                     null,
@@ -498,6 +507,7 @@ final class ChannelRunner {
                 String handlerChannelKey,
                 String logicalDeliveryKey,
                 ChannelMemberSnapshot handlerChannel,
+                ContractBundle dispatchBundle,
                 FrozenNode payload,
                 List<ExactBlueValue> carriedExactValues,
                 CheckpointManager.CheckpointRecord checkpoint,
@@ -514,6 +524,10 @@ final class ChannelRunner {
                             logicalDeliveryKey,
                             "logicalDeliveryKey"),
                     handlerChannel,
+                    Objects.requireNonNull(
+                            dispatchBundle,
+                            "dispatchBundle"),
+                    false,
                     payload,
                     carriedExactValues,
                     checkpoint,
@@ -547,6 +561,38 @@ final class ChannelRunner {
 
         ChannelMemberSnapshot handlerChannel() {
             return handlerChannel;
+        }
+
+        ContractBundle dispatchBundle() {
+            return dispatchBundle;
+        }
+
+        ExternalClassification withDispatchBundle(
+                ContractBundle frozenDispatchBundle,
+                boolean initializationPending) {
+            if (!acceptedNew()) {
+                return this;
+            }
+            return new ExternalClassification(
+                    state,
+                    scopePath,
+                    sourceChannelKey,
+                    handlerChannelKey,
+                    logicalDeliveryKey,
+                    handlerChannel,
+                    Objects.requireNonNull(
+                            frozenDispatchBundle,
+                            "frozenDispatchBundle"),
+                    initializationPending,
+                    payload,
+                    carriedExactValues,
+                    checkpoint,
+                    eventSignature,
+                    checkpointSubject);
+        }
+
+        boolean initializationPendingAtDispatchFreeze() {
+            return initializationPendingAtDispatchFreeze;
         }
 
         String payloadBlueId() {

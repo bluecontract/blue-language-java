@@ -196,7 +196,7 @@ final class ClosureAdmissionRejectionProcessorTest {
         Capture capture = new Capture();
         try (BlueClosureContracts contracts =
                      new BlueClosureContracts(owner, capture)) {
-            attempt = contracts.admitClosure(input);
+            attempt = contracts.admitClosureWithLifecycleQueue(input);
         }
         assertEquals(
                 input.admissionCandidate().kind(),

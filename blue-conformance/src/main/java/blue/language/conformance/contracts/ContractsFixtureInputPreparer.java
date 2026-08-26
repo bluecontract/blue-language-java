@@ -208,12 +208,26 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
         }
         ExternalOrderKey eventOrderKey =
                 externalOrderKey(feeder.path(ContractsFixtureConstants.Field.EVENT_ORDER_KEY));
+        ObjectNode retainedIntervalRoot = rootJson;
+        boolean includeUnhintedIntervals = !requiresExecutionEvidence;
+        if (generalization != null) {
+            /*
+             * Generalization fixtures may declare an effective Channel or
+             * Process Embedded contract only on their synthetic most-specific
+             * type.  The retained index represents that complete effective
+             * pre-transition surface, whereas delivery preselection remains
+             * bound to the authored delivery hints above.
+             */
+            retainedIntervalRoot = effectiveIntervalRoot(
+                    rootJson, generalization);
+            includeUnhintedIntervals = true;
+        }
         List<SubscriptionDelta.Entry> activeSubscriptionIntervals =
                 deriveActiveSubscriptionIntervals(
-                        rootJson,
+                        retainedIntervalRoot,
                         feeder.path(ContractsFixtureConstants.Field.DELIVERY_SNAPSHOT),
                         providerNodes,
-                        !requiresExecutionEvidence);
+                        includeUnhintedIntervals);
         VerifiedExecutionEvidence builtEvidence = null;
         ExternalDeliveryPlan builtPlan = null;
         if (requiresExecutionEvidence) {
@@ -308,6 +322,25 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
         } finally {
             canonicalizer.close();
         }
+    }
+
+    ObjectNode effectiveIntervalRoot(
+            ObjectNode sourceRoot,
+            FixtureGeneralization generalization) {
+        ObjectNode result = sourceRoot.deepCopy();
+        ObjectNode contracts = contractsObject(result);
+        ObjectNode inherited = generalization.subtypeContracts;
+        if (inherited == null) {
+            return result;
+        }
+        Iterator<Map.Entry<String, JsonNode>> fields = inherited.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fields.next();
+            if (!contracts.has(entry.getKey())) {
+                contracts.set(entry.getKey(), entry.getValue().deepCopy());
+            }
+        }
+        return result;
     }
 
     static void seedVariantCheckpoints(

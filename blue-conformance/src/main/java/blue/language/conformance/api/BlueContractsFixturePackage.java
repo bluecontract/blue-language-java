@@ -39,7 +39,7 @@ final class BlueContractsFixturePackage {
             16 * 1024 * 1024;
 
     static final String CONTRACTS_RELEASE_IDENTITY =
-            "sha256:7e6c3717bc28d21ebadec9f81725913e944bb3b9b70094531f19f10510a10e50";
+            "sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3";
     private static final String CONTRACTS_RELEASE_MANIFEST_RESOURCE =
             "blue-contracts-closure-1.0/release-manifest.yaml";
 
@@ -272,7 +272,9 @@ final class BlueContractsFixturePackage {
         requireCount(manifest, "ordinaryFixtureCount", behavior + gas);
         requireCount(manifest, "totalExecutableFixtureCount",
                 behavior + gas + closure);
-        requireCount(manifest, "vectorCount", 135);
+        requireCount(manifest, "vectorCount", 168);
+        requireCount(manifest, "ordinaryVectorCount", 114);
+        requireCount(manifest, "closureVectorCount", 54);
         if (behavior
                 != ConformanceReportConstants.FixtureCount
                         .CONTRACTS_ORDINARY_BEHAVIOR
@@ -283,8 +285,8 @@ final class BlueContractsFixturePackage {
                 != ConformanceReportConstants.FixtureCount
                         .CONTRACTS_CLOSURE) {
             throw new IllegalStateException(
-                    "Contracts fixture inventory must contain exactly 96 "
-                            + "ordinary behavior, 71 ordinary gas, and 67 "
+                    "Contracts fixture inventory must contain exactly 112 "
+                            + "ordinary behavior, 71 ordinary gas, and 93 "
                             + "closure fixtures");
         }
         if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
@@ -528,7 +530,7 @@ final class BlueContractsFixturePackage {
                 != BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT) {
             throw new IllegalStateException(
                     "Contracts executable inventory must contain exactly "
-                            + "96 ordinary behavior, 71 ordinary gas, and 67 "
+                            + "112 ordinary behavior, 71 ordinary gas, and 93 "
                             + "closure fixtures; found " + behavior
                             + " ordinary behavior, " + gas
                             + " ordinary gas, and " + closure + " closure");

@@ -1,0 +1,135 @@
+{
+  "schema": "blue-language-java-full-lifecycle-semantic-baseline-delta/1.0",
+  "semanticImplementationCommit": "3ea346d13dba31e65e32827972bcc501776fa49f",
+  "baselineRefreshCommit": "5357b87bc4b37d6f8306797b57341e2c5905b258",
+  "sourceDateEpoch": "1787567817",
+  "baselineBeforeSha256": "sha256:f537b8d712072163652aa2de8ad049d905f31a9a77ac4591990a5e6b5d8db61e",
+  "candidateSha256": "sha256:e75ad45f0721af593100a4db85ac16de4cc37ba799a8ca6ddef9fc8c6cd900d7",
+  "captureCount": 2,
+  "independentCandidatesByteEqual": true,
+  "changedFieldCount": 3,
+  "exactlyApprovedThreeFields": true,
+  "noSemanticBroadening": true,
+  "changes": [
+    {
+      "pointer": "/source/commit",
+      "oldValue": "2f7c3754d51dddbd17ff433026dc64e07f75451c",
+      "newValue": "3ea346d13dba31e65e32827972bcc501776fa49f",
+      "classification": "source provenance",
+      "reason": "Binds the characterization to the clean semantic-neutral full-lifecycle exporter decomposition commit."
+    },
+    {
+      "pointer": "/source/sourceInputIdentity",
+      "oldValue": "sha256:10cf588b8d6905b4019c094e109bde3d5cc15e439467ceaa748a95e37926327e",
+      "newValue": "sha256:313ced19ab3f8a32052f15931ae7d63fed705858af656934fdc676d7e8442aa7",
+      "classification": "source provenance",
+      "reason": "Binds the exact reviewed source closure at the semantic-neutral decomposition commit."
+    },
+    {
+      "pointer": "/artifacts/sourceRelease",
+      "oldValue": "sha256:17f59ef2877f80f77fd56f90b0a0bd1e43efb5b89bfbba1658a22054838ddf47",
+      "newValue": "sha256:522543f2851ad1405bcce6fabe48824b47ece771ed07b6b99452cba6a26d83b9",
+      "classification": "derived release artifact provenance",
+      "reason": "The source archive contains the reviewed exporter split and ownership-catalog update; executable artifacts and semantics are unchanged."
+    }
+  ],
+  "subsequentIntentionalSemanticDeltas": [
+    {
+      "round": "option-2-contract-evolution-resume",
+      "scenario": "FL-ADM-10",
+      "oldOutcome": "Complete",
+      "oldFailureKind": "SubscriptionSurfaceInvalid",
+      "newOutcome": "NeedsResources",
+      "resourceDemandKinds": [
+        "MANAGED_OCCURRENCE_EVIDENCE"
+      ],
+      "legacyRequiredBlueIds": [],
+      "noncommitting": true,
+      "reason": "The initialization patch creates a managed Process Embedded occurrence without supplied occurrence evidence. Authoritative typed resource discovery suspends before the later subscription-surface rejection and exposes no partial result, gas, trace, checkpoint, or public event."
+    }
+  ],
+  "unchangedProofs": [
+    {
+      "pointer": "/specifications/languageSha256",
+      "equal": true,
+      "value": "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d"
+    },
+    {
+      "pointer": "/specifications/contractsSha256",
+      "equal": true,
+      "value": "389746c3faddebde4a4958cce0037ce2ec3a64a67c854053f0f6fa209a105e18"
+    },
+    {
+      "pointer": "/release/contractsReleaseIdentity",
+      "equal": true,
+      "value": "sha256:5917b16adfde2ed6bb21bac74c40a1b44526d7c9ddb3faaaf5fbe8a13aae3b1c"
+    },
+    {
+      "pointer": "/release/packageIdentity",
+      "equal": true,
+      "value": "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6"
+    },
+    {
+      "pointer": "/packages/contractsFixtures",
+      "equal": true,
+      "value": "sha256:3bb21b5df6eb87b578e9647f11d094aff2cf45c56b3b7050f8d854147bdb3e3d"
+    },
+    {
+      "pointer": "/gas/fixtureCount",
+      "equal": true,
+      "value": 71
+    },
+    {
+      "pointer": "/gas/fixtures",
+      "equal": true,
+      "canonicalJsonSha256": "sha256:583a1346a55261d80accf1c806f4583f5c1b71c102a871ac33ccc81cdbed15a4"
+    },
+    {
+      "pointer": "/locality",
+      "equal": true,
+      "canonicalJsonSha256": "sha256:3282d9a5a3dfea279f6b95438dd555b901d32ff7d8dc840a58116c61da682f87"
+    },
+    {
+      "pointer": "/publicApi",
+      "equal": true,
+      "canonicalJsonSha256": "sha256:c0815bef82317013f9383717941a9ff3c041a63039eb2728bbd53c8209dda4fc"
+    },
+    {
+      "pointer": "/artifacts/jar",
+      "equal": true,
+      "value": "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0"
+    },
+    {
+      "pointer": "/artifacts/sourcesJar",
+      "equal": true,
+      "value": "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518"
+    },
+    {
+      "pointer": "/artifacts/javadocJar",
+      "equal": true,
+      "value": "sha256:7634fd796a8daabca094755f2bd0c47ec3e19768acd33d68ced010e93c788e7f"
+    },
+    {
+      "pointer": "/tests/all/tests",
+      "equal": true,
+      "value": 2381
+    },
+    {
+      "pointer": "/tests/all/failed",
+      "equal": true,
+      "value": 0
+    },
+    {
+      "pointer": "/tests/all/skipped",
+      "equal": true,
+      "value": 0
+    }
+  ],
+  "postRefreshVerificationLayer": {
+    "testedCommit": "5357b87bc4b37d6f8306797b57341e2c5905b258",
+    "semanticProvenanceCommit": "3ea346d13dba31e65e32827972bcc501776fa49f",
+    "currentSourceInputIdentity": "sha256:166ca281de37fcedc3788d5c3c6ad2b700dd622d1fcca52e92afb8d5dadb9a8b",
+    "currentSourceReleaseIdentity": "sha256:175c7844b050d5e06720b0c4da9c3b688f547472331b8a88b8b535409c434c42",
+    "semanticBaselineVerified": true
+  }
+}

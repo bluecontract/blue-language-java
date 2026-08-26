@@ -5,6 +5,7 @@ import blue.language.model.wire.JsonPointer;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Projects the exact read-only scope view used to classify one external
@@ -41,8 +42,15 @@ final class ExternalCandidateProjector {
                 execution.classificationSelectedAt(normalizedScope);
         FrozenNode resolved =
                 execution.classificationResolvedAt(normalizedScope);
+        Set<String> recognizedContractKeys = owner.contractLoader()
+                .externalClassificationContractKeys(
+                        selected,
+                        resolved,
+                        channelKey,
+                        includeProcessEmbedded,
+                        declaredDependencies);
         FrozenNode recognitionScope = runtime.contractRecognitionScope(
-                selected, resolved);
+                selected, resolved, recognizedContractKeys);
         if (!isParticipatingObject(normalizedScope, selected)
                 || !isParticipatingObject(
                 normalizedScope, recognitionScope)) {

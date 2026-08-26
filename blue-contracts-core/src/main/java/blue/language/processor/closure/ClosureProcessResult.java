@@ -39,6 +39,7 @@ public final class ClosureProcessResult {
     private final ClosureWorkOccurrence rejectedWorkOccurrence;
     private final ClosureCommitCompanion platformCommitCompanion;
     private final ProcessorDiagnostic diagnostic;
+    private final List<DocumentTransitionEvidence> documentTransitionEvidence;
 
     /**
      * Creates and semantically cross-validates one complete result.
@@ -182,6 +183,68 @@ public final class ClosureProcessResult {
                 platformCommitCompanion,
                 diagnostic,
                 reusableFinalization,
+                Collections.<DocumentTransitionEvidence>emptyList(),
+                Collections.<DocumentId>emptySet());
+    }
+
+    /**
+     * Processor construction hook carrying non-identity-bearing transition
+     * presentation evidence already captured by the managed runtime.
+     */
+    ClosureProcessResult(
+            AffectedClosureSnapshot inputSnapshot,
+            ProcessorStatus status,
+            String invocationIdentity,
+            String outputClosureIdentity,
+            long graphGeneration,
+            List<ResultingDocument> resultingDocuments,
+            List<ComponentSnapshot> resultingComponents,
+            List<ManagedOccurrenceBinding> occurrenceBindings,
+            String occurrenceBindingSetIdentity,
+            List<GraphChange> graphChanges,
+            String graphChangesIdentity,
+            List<SubscriptionDelta> subscriptionDeltas,
+            String subscriptionDeltasIdentity,
+            List<CheckpointWrite> checkpointWrites,
+            String checkpointWritesIdentity,
+            List<PublicEventOccurrence> publicEvents,
+            String publicEventsIdentity,
+            long totalGas,
+            List<GasTraceEntry> gasTrace,
+            String gasTraceIdentity,
+            RejectedCharge rejectedCharge,
+            ClosureWorkOccurrence rejectedWorkOccurrence,
+            ClosureCommitCompanion platformCommitCompanion,
+            ProcessorDiagnostic diagnostic,
+            ComponentFinalizationResult reusableFinalization,
+            List<DocumentTransitionEvidence> documentTransitionEvidence) {
+        this(
+                inputSnapshot,
+                status,
+                invocationIdentity,
+                outputClosureIdentity,
+                graphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindings,
+                occurrenceBindingSetIdentity,
+                graphChanges,
+                graphChangesIdentity,
+                subscriptionDeltas,
+                subscriptionDeltasIdentity,
+                checkpointWrites,
+                checkpointWritesIdentity,
+                publicEvents,
+                publicEventsIdentity,
+                totalGas,
+                gasTrace,
+                gasTraceIdentity,
+                rejectedCharge,
+                rejectedWorkOccurrence,
+                platformCommitCompanion,
+                diagnostic,
+                reusableFinalization,
+                documentTransitionEvidence,
                 Collections.<DocumentId>emptySet());
     }
 
@@ -242,6 +305,7 @@ public final class ClosureProcessResult {
                 platformCommitCompanion,
                 diagnostic,
                 null,
+                Collections.<DocumentTransitionEvidence>emptyList(),
                 candidateGasDocumentIds(rejectedAdmissionCandidate));
     }
 
@@ -271,6 +335,7 @@ public final class ClosureProcessResult {
             ClosureCommitCompanion platformCommitCompanion,
             ProcessorDiagnostic diagnostic,
             ComponentFinalizationResult reusableFinalization,
+            List<DocumentTransitionEvidence> documentTransitionEvidence,
             Set<DocumentId> supplementalGasDocumentIds) {
         AffectedClosureSnapshot input = Objects.requireNonNull(
                 inputSnapshot, "inputSnapshot");
@@ -313,6 +378,13 @@ public final class ClosureProcessResult {
         this.rejectedWorkOccurrence = rejectedWorkOccurrence;
         this.platformCommitCompanion = platformCommitCompanion;
         this.diagnostic = diagnostic;
+        this.documentTransitionEvidence = immutableList(
+                documentTransitionEvidence,
+                "documentTransitionEvidence");
+        if (!status.commits() && !this.documentTransitionEvidence.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Rollback results cannot expose transition presentation evidence");
+        }
         if (reusableFinalization != null && !status.commits()) {
             throw new IllegalArgumentException(
                     "Reusable finalization is valid only for a committing result");
@@ -624,6 +696,20 @@ public final class ClosureProcessResult {
      */
     public ProcessorDiagnostic diagnostic() {
         return diagnostic;
+    }
+
+    /**
+     * Returns immutable processor-owned transition presentation evidence.
+     *
+     * <p>This list is deliberately excluded from every invocation, state,
+     * effect, companion, closure, and result identity. Compatibility
+     * constructors return an empty list; only the genuine managed runtime may
+     * populate it.</p>
+     *
+     * @return exact document-step evidence in execution order
+     */
+    public List<DocumentTransitionEvidence> documentTransitionEvidence() {
+        return documentTransitionEvidence;
     }
 
     private void validateInputIdentity(AffectedClosureSnapshot input) {

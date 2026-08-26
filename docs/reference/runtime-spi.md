@@ -25,6 +25,7 @@ This registry contains public interface or abstract extension surfaces in provid
 | `blue.language.processor.ManagedCheckpointBatchCleanupContextFactory` | processor extension |
 | `blue.language.processor.ManagedCheckpointCleanupContextFactory` | processor extension |
 | `blue.language.processor.ManagedDocumentStepContinuation` | processor extension |
+| `blue.language.processor.NoncommittingExecutionException` | processor extension |
 | `blue.language.processor.ProcessingObserver` | observation |
 | `blue.language.processor.ProcessingSnapshotManager` | processor extension |
 | `blue.language.processor.SemanticGasMeter$IntegerOperation` | processor extension |
@@ -32,6 +33,7 @@ This registry contains public interface or abstract extension surfaces in provid
 | `blue.language.processor.closure.AdmissionCandidate` | processor extension |
 | `blue.language.processor.closure.ClosureExecutionObserver` | observation |
 | `blue.language.processor.closure.ClosureProcessor` | processor extension |
+| `blue.language.processor.closure.ClosureResourceDemand` | processor extension |
 | `blue.language.processor.closure.DocumentStepProcessor` | processor extension |
 | `blue.language.processor.closure.ProcessingCause` | processor extension |
 | `blue.language.processor.closure.RejectedCharge$ApplicableCap` | processor extension |
@@ -52,4 +54,4 @@ This registry contains public interface or abstract extension surfaces in provid
 | `blue.language.runtime.LanguageRuntimeAccess` | runtime |
 | `blue.language.runtime.WeightedLruCache$Weigher` | runtime |
 
-Total registered extension surfaces: **43**.
+Total registered extension surfaces: **45**.

@@ -1,0 +1,70 @@
+schema: blue-contracts-fixture/1.0
+id: c-evo-02
+vectors:
+- C-EVO-02
+category: disc
+description: A selected distinct Scripted Operation removes itself while its frozen current invocation completes exactly once.
+operation: process
+input:
+  root:
+    value: 0
+    contracts:
+      in:
+        type:
+          blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+        order: 0
+        subscriptionKey: evolution
+        eventKey: evolution
+        accept: true
+        checkpointDomain: evolution-v1
+      operation:
+        type:
+          blueId: FE68gr14jPkb9RfHbQH1tHGE4YALJbZvgC6CtdHwYheX
+        channel: in
+        order: 0
+        result:
+          patches:
+          - op: replace
+            path: /value
+            val: 2
+          - op: remove
+            path: /contracts/operation
+        operationId: EVO-SELF-REMOVE-OPERATION
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: evolution
+    id: EVO-SELF-REMOVE-OPERATION
+  feeder:
+    managedRootRevision: 1
+    indexedRootRevision: 1
+    eventOrderKey:
+    - 100
+    - evolution
+    - 2
+    deliverySnapshot:
+    - scopePath: /
+      channelKey: in
+      order: 0
+      activationStartExclusive:
+      - 0
+      - ''
+      - 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: result.document.value
+    op: equals
+    expected: 2
+  - actual: result.document.contracts.operation
+    op: absent
+  - actual: trace.handlerExecutionCount
+    op: equals
+    expected: 1

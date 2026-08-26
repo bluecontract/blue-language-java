@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-/** One closed ADD, REMOVE, or same-lineage REBIND graph receipt. */
+/** One closed ADD, REMOVE, or atomic REBIND graph receipt. */
 public final class GraphChange {
 
     /** Closed graph-change discriminator. */
@@ -13,7 +13,7 @@ public final class GraphChange {
         ADD,
         /** One active occurrence was removed. */
         REMOVE,
-        /** Existing occurrence lineage was rebound to exact successor state. */
+        /** An active occurrence was rebound within or across target lineages. */
         REBIND
     }
 
@@ -231,17 +231,30 @@ public final class GraphChange {
         if (changeKind != Kind.REBIND) {
             return;
         }
-        if (!before.occurrenceIdentity().equals(after.occurrenceIdentity())
-                || before.activationGeneration()
-                != after.activationGeneration()
-                || !before.targetDocumentId().equals(
-                        after.targetDocumentId())) {
-            throw new IllegalArgumentException(
-                    "REBIND must preserve occurrence lineage");
+        boolean sameOccurrence = before.occurrenceIdentity().equals(
+                after.occurrenceIdentity());
+        boolean sameTarget = before.targetDocumentId().equals(
+                after.targetDocumentId());
+        if (sameOccurrence) {
+            if (before.activationGeneration()
+                    != after.activationGeneration() || !sameTarget) {
+                throw new IllegalArgumentException(
+                        "Same-lineage REBIND must preserve occurrence generation and target lineage");
+            }
+            if (before.bindingIdentity().equals(after.bindingIdentity())
+                    && before.targetBlueId().equals(after.targetBlueId())) {
+                throw new IllegalArgumentException("REBIND cannot be a no-op");
+            }
+            return;
         }
-        if (before.bindingIdentity().equals(after.bindingIdentity())
-                && before.targetBlueId().equals(after.targetBlueId())) {
-            throw new IllegalArgumentException("REBIND cannot be a no-op");
+        if (sameTarget
+                || before.bindingIdentity().equals(after.bindingIdentity())
+                || before.activationGeneration()
+                == ClosureValueSupport.MAX_SAFE_INTEGER
+                || after.activationGeneration()
+                != before.activationGeneration() + 1L) {
+            throw new IllegalArgumentException(
+                    "Different-lineage REBIND must retarget with fresh occurrence and binding identities at the next activation generation");
         }
     }
 

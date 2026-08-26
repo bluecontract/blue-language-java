@@ -1,0 +1,241 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-evo-23-automatic-explicit-retry-parity-automatic-demand
+vectors:
+- C-EVO-23
+category: admission
+operation: admit-closure
+description: The automatically discovered occurrence-demand precursor resolves to
+  the same byte-identical input and complete result as an explicit resolved execution
+  lane.
+releaseManifest: ../../release-manifest.yaml
+input:
+  graphGeneration: 1
+  cause:
+    kind: admission
+    causeIdentity: sha256:0a206bedcf18a6c26524e9789f0a798a7bbd55ff3ae17104ec3efd324c2f2f6e
+    admissionKind: TOP_LEVEL_ADMISSION
+    label: c-evo-23-automatic-explicit-retry-parity
+    triggeringEventBlueId: null
+    parentTransitionIdentity: null
+    policyIdentity: sha256:f5c818d0f68f052c29e7776369f8b5000d2b671dc3c1d2088b07215045a84f4d
+  admissionCandidate: null
+  admissionCandidateIdentity: null
+  documents:
+    c-evo-23-a:
+      documentId: c-evo-23-a
+      blueId: DCQ6NKfdz3jUUnWrhvjn6CoDs82RzcLjaKYNXuJGiihy
+      document:
+        name: C-EVO 23 retry parity A
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /peer
+          lifecycle:
+            type:
+              blueId: 2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo
+            order: 0
+          readyChannel:
+            type:
+              blueId: DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf
+            event:
+              blueId: 6gXjf7h6DJ6xnFs5vXVaUoyFeNz8n6Bfy1TBELJrjzUB
+            order: 0
+          installPeer:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: lifecycle
+            event:
+              type:
+                blueId: Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C
+            order: 0
+          finish:
+            type:
+              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            channel: readyChannel
+            order: 0
+        documentId: c-evo-23-a
+        phase: before
+      initialized: false
+      terminated: false
+      publicRoot: true
+      epoch: 0
+      componentGeneration: 1
+    c-evo-23-b:
+      documentId: c-evo-23-b
+      blueId: 7h8KmPK4m3nqCYh9q2QFUzqwx22afeNoH1Yad7MuBj1s
+      document:
+        name: C-EVO 23 known B
+        documentId: c-evo-23-b
+      initialized: false
+      terminated: false
+      publicRoot: false
+      epoch: 0
+      componentGeneration: 1
+  occurrences: []
+  components:
+  - componentIdentity: sha256:dc03ded29cde01f8ee1817b32d91aa7deebe3299712beed3c423e87e7f6a8215
+    componentStateIdentity: sha256:ac58f846439293aa43581aa75cd443cd9b3e2df3892d86db8ccdf995c1eb3fba
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-23-a
+    orderedMemberBlueIds:
+    - DCQ6NKfdz3jUUnWrhvjn6CoDs82RzcLjaKYNXuJGiihy
+  - componentIdentity: sha256:0f4adbcb01559d36d32d367bf2e6bc952c398efd43d11f3ea217e824739144e4
+    componentStateIdentity: sha256:901fc78d5653447780f1b04852591f7c22729d8fd58a1e8cc879204ac5d8dec9
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-23-b
+    orderedMemberBlueIds:
+    - 7h8KmPK4m3nqCYh9q2QFUzqwx22afeNoH1Yad7MuBj1s
+  directDeliveries: []
+  publicRootDocumentIds:
+  - c-evo-23-a
+  directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
+  occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
+  closureIdentity: sha256:48f1224ba4a5d7a285fcafbe9dd387a85288cf3be5fe2ec9b35e8baddec053d5
+  invocationIdentity: sha256:23e418fc064a41cf6d6765d443b0befe5a9f5eade6022ccbb03f017cb5095988
+  gasPolicy:
+    policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
+    sharedLimit: 100000
+    localLimits: {}
+    label: release-default
+  environment:
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    managedDocumentIdentityPolicy:
+      identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+      label: nfc-document-lineage-v1
+    managedBindingPolicy:
+      identity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+      label: exact-document-lineage
+    exactNodeProviderDomain:
+      identity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+      label: fixture-exact-node-provider-v1
+    externalOrderPolicy:
+      identity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+      label: canonical-source-order-v1
+    portableLimitPolicy:
+      identity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+      label: blue-contracts-1.0-portable-limits
+      limits:
+      - name: closureExpansionsPerInvocation
+        value: 4096
+      - name: closureGraphChangesPerInvocation
+        value: 4096
+      - name: closureTentativeFinalizationsPerInvocation
+        value: 8192
+      - name: closureWorkOccurrencesPerInvocation
+        value: 8192
+      - name: contractKeyCodePoints
+        value: 256
+      - name: contractKeyUtf8Bytes
+        value: 1024
+      - name: cyclicCanonicalBytesPerComponent
+        value: 16777216
+      - name: cyclicEdgesPerComponent
+        value: 1024
+      - name: cyclicMembersPerComponent
+        value: 128
+      - name: directCanonicalIdentityInputBytes
+        value: 1048576
+      - name: directInlineIdentityTextCodePoints
+        value: 262144
+      - name: directListItemsMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectEntriesMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectKeyCodePoints
+        value: 4096
+      - name: effectiveContractsPerParticipatingScope
+        value: 8192
+      - name: embeddedDepth
+        value: 256
+      - name: eventsPerContractExecutionResult
+        value: 1024
+      - name: externalChannelsPerScope
+        value: 2048
+      - name: handlersBoundToOneDelivery
+        value: 4096
+      - name: internalEventOccurrencesPerInvocation
+        value: 8192
+      - name: managedDocumentsPerClosure
+        value: 4096
+      - name: nestedDocumentUpdateCascadeDepth
+        value: 256
+      - name: normalizedRuntimePointerUtf8Bytes
+        value: 4096
+      - name: participatingScopesPerEvent
+        value: 4096
+      - name: patchesPerContractExecutionResult
+        value: 1024
+      - name: preselectedExternalOccurrencesPerEvent
+        value: 1024
+      - name: processEmbeddedEdgesPerClosure
+        value: 16384
+      - name: processEmbeddedPathsPerScope
+        value: 4096
+      - name: rootEventsReturned
+        value: 4096
+      - name: runtimeChildLedgerCounterKinds
+        value: 256
+      - name: runtimePointerSegments
+        value: 256
+      - name: subscriptionKeysPerChannel
+        value: 256
+      - name: typeChainEdges
+        value: 256
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+runtime:
+  initializationHandlers:
+    c-evo-23-a/installPeer:
+      patches:
+      - op: replace
+        path: /phase
+        val: installed
+      - op: add
+        path: /peer
+        val:
+          blueId: 7h8KmPK4m3nqCYh9q2QFUzqwx22afeNoH1Yad7MuBj1s
+      events:
+      - type:
+          blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+        subscriptionKey: contract-evolution
+        id: C-EVO-23-READY
+  handlers:
+    c-evo-23-a/finish:
+      patches:
+      - op: replace
+        path: /phase
+        val: handled
+expected:
+  attemptOutcome: NeedsResources
+  requiredBlueIds: []
+  resourceDemands:
+  - kind: MANAGED_OCCURRENCE_EVIDENCE
+    demandIdentity: sha256:4f9da9f6f1c6bd2cefa2bca20e132907af40028fe624b163c7692683c0ecbda9
+    sourceDocumentId: c-evo-23-a
+    sourcePath: /peer
+    suppliedValueBlueId: 7h8KmPK4m3nqCYh9q2QFUzqwx22afeNoH1Yad7MuBj1s
+    logicalCauseIdentity: sha256:0a206bedcf18a6c26524e9789f0a798a7bbd55ff3ae17104ec3efd324c2f2f6e
+    inputClosureIdentity: sha256:48f1224ba4a5d7a285fcafbe9dd387a85288cf3be5fe2ec9b35e8baddec053d5
+    inputGraphGeneration: 1
+    processEmbeddedDeclarationIdentity: 6GLvxTgSnt3UyrZZa7VSN2pvqCnBZL5UjfyQK5AFx3h7
+    demandOrdinal: 0
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds: []
+  expectedLoads: []
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

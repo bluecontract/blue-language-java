@@ -227,6 +227,9 @@ final class PatchPlanningEngine {
                                   boolean initialResolutionComplete,
                                   boolean buildUpdates) {
         Objects.requireNonNull(patches, "patches");
+        TypeGeneralizationPolicyResolver.FrozenPolicy frozenGeneralizationPolicy =
+                TypeGeneralizationPolicyResolver.freeze(
+                        initialResolved, originScopePath);
         long planningStart = System.nanoTime();
         FrozenNode workingCanonical = initialCanonical;
         FrozenNode workingResolved = initialResolved;
@@ -235,9 +238,27 @@ final class PatchPlanningEngine {
         List<ImmutableJsonPatch> preparedPatches = new ArrayList<>(patches.size());
         for (ImmutableJsonPatch prepared : patches) {
             Objects.requireNonNull(prepared, "patch");
-            preparedPatches.add(prepared);
+            ImmutableJsonPatch authoredPrepared = prepared;
+            prepared = ProcessorOwnedContractsStatePreserver.preserve(
+                    originScopePath,
+                    prepared,
+                    workingCanonical,
+                    workingResolved);
+            boolean processorStatePreserved = prepared != authoredPrepared;
+            if (ProcessorOwnedContractsStatePreserver
+                    .requiresExactReplacement(
+                            originScopePath,
+                            prepared.op(),
+                            prepared.normalizedPath())) {
+                prepared = prepared.withExactValueWrite();
+            }
+            preparedPatches.add(processorStatePreserved
+                    ? selectedDocumentPatch(prepared)
+                    : prepared);
             ImmutablePatchPlanner canonicalPlanner = ImmutablePatchPlanner.forFrozen(workingCanonical);
-            ImmutablePatchPlanner.PatchPlan canonicalPlan = exactReplacement
+            boolean exactValueWrite = exactReplacement
+                    || prepared.exactValueWrite();
+            ImmutablePatchPlanner.PatchPlan canonicalPlan = exactValueWrite
                     ? canonicalPlanner.planWithExactReplacement(originScopePath, prepared)
                     : canonicalPlanner.plan(originScopePath, prepared);
             ImmutableJsonPatch resolvedPatch = resolveProcessorManagedValue(
@@ -246,10 +267,10 @@ final class PatchPlanningEngine {
             boolean objectMemberTarget = targetsObjectMember(
                     resolvedPlanner,
                     resolvedPatch.path());
-            ImmutablePatchPlanner.PatchPlan resolvedPlan = exactReplacement
+            ImmutablePatchPlanner.PatchPlan resolvedPlan = exactValueWrite
                     ? resolvedPlanner.planWithExactReplacement(originScopePath, resolvedPatch)
                     : resolvedPlanner.plan(originScopePath, resolvedPatch);
-            PatchImpact impact = impactAnalyzer.analyze(exactReplacement,
+            PatchImpact impact = impactAnalyzer.analyze(exactValueWrite,
                     workingCanonical,
                     workingResolved,
                     canonicalPlan,
@@ -277,8 +298,14 @@ final class PatchPlanningEngine {
         long patchPlanningNanos = System.nanoTime() - planningStart;
 
         long conformanceStart = System.nanoTime();
+        FrozenNode preConformanceCanonical = workingCanonical;
         FrozenNode preConformanceResolved = workingResolved;
-        ConformancePlan conformancePlan = planBatchConformance(workingCanonical, workingResolved, records);
+        ConformancePlanningResult conformancePlanning = planBatchConformance(
+                workingCanonical,
+                workingResolved,
+                records,
+                frozenGeneralizationPolicy);
+        ConformancePlan conformancePlan = conformancePlanning.plan();
         long conformanceNanos = System.nanoTime() - conformanceStart;
         FrozenNode finalCanonical = conformancePlan.canonicalRoot() != null
                 ? conformancePlan.canonicalRoot()
@@ -354,15 +381,14 @@ final class PatchPlanningEngine {
                     invocationEvidenceSnapshotManager,
                     openedScopePaths);
         }
-        boolean includeGeneratedUpdates = conformancePlannerOverride != null && conformancePlannerOverride.applies();
-
+        List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
+                conformancePlanning.metadataWrites();
         BatchPatchResult.UpdatePlan updatePlan = new BatchPatchResult.UpdatePlan(records,
+                preConformanceCanonical,
                 preConformanceResolved,
                 finalResolved,
-                conformancePlan.changedPaths(),
-                includeGeneratedUpdates);
-        List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
-                generalizationMetadataWrites(finalCanonical, finalResolved, conformancePlan.changedPaths());
+                metadataWrites,
+                true);
         long buildUpdatesNanos = 0L;
         List<DocumentUpdateData> updates = null;
         if (buildUpdates) {
@@ -381,6 +407,7 @@ final class PatchPlanningEngine {
                 conformanceNanos,
                 buildUpdatesNanos);
     }
+
 
     private boolean containsApplicationPatch(List<BatchPatchRecord> records) {
         for (BatchPatchRecord record : records) {
@@ -441,88 +468,21 @@ final class PatchPlanningEngine {
         return result;
     }
 
-    private List<BatchPatchResult.GeneralizationMetadataWrite> generalizationMetadataWrites(
-            FrozenNode finalCanonical,
-            FrozenNode finalResolved,
-            List<String> changedPaths) {
-        if (changedPaths == null || changedPaths.isEmpty()) {
-            return Collections.emptyList();
-        }
-        Set<String> uniquePaths = new LinkedHashSet<>(changedPaths);
-        List<BatchPatchResult.GeneralizationMetadataWrite> writes = new ArrayList<>();
-        for (String path : uniquePaths) {
-            if (!isGeneralizationMetadataPath(path)) {
-                continue;
-            }
-            FrozenNode value = readGeneralizationMetadata(finalCanonical, path);
-            if (value == null) {
-                FrozenNode resolvedValue = readGeneralizationMetadata(finalResolved, path);
-                if (resolvedValue != null && resolvedValue.getReferenceBlueId() != null) {
-                    value = FrozenNode.fromResolvedNode(new Node().blueId(resolvedValue.getReferenceBlueId()));
-                }
-            }
-            if (value != null) {
-                writes.add(new BatchPatchResult.GeneralizationMetadataWrite(path, value));
-            }
-        }
-        return writes;
-    }
-
-    private FrozenNode readGeneralizationMetadata(FrozenNode root, String path) {
-        List<String> segments = JsonPointer.split(path);
-        String field = segments.get(segments.size() - 1);
-        String parentPath = JsonPointer.toPointer(segments.subList(0, segments.size() - 1));
-        FrozenNode parent = ImmutablePatchPlanner.forFrozen(root).read(parentPath);
-        if (parent == null) {
-            return null;
-        }
-        if (BlueLanguageConstants.OBJECT_TYPE.equals(field)) {
-            return parent.getType();
-        }
-        if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)) {
-            return parent.getItemType();
-        }
-        if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)) {
-            return parent.getKeyType();
-        }
-        if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field)) {
-            return parent.getValueType();
-        }
-        return null;
-    }
-
-    private boolean isGeneralizationMetadataPath(String path) {
-        List<String> segments = JsonPointer.split(path);
-        if (segments.isEmpty()) {
-            return false;
-        }
-        String field = segments.get(segments.size() - 1);
-        return BlueLanguageConstants.OBJECT_TYPE.equals(field)
-                || BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)
-                || BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)
-                || BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field);
-    }
-
-    private ConformancePlan planBatchConformance(FrozenNode canonicalRoot,
-                                                 FrozenNode resolvedRoot,
-                                                 List<BatchPatchRecord> records) {
+    private ConformancePlanningResult planBatchConformance(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            List<BatchPatchRecord> records,
+            TypeGeneralizationPolicyResolver.FrozenPolicy
+                    frozenGeneralizationPolicy) {
         boolean hasOverride = conformancePlannerOverride != null && conformancePlannerOverride.applies();
         if (conformanceEngine == null && !hasOverride) {
-            return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
+            return ConformancePlanningResult.unchanged(
+                    canonicalRoot, resolvedRoot);
         }
         List<String> changedPaths = new ArrayList<>();
         List<ConformanceChangedPath> changedPathRecords = new ArrayList<>();
         for (BatchPatchRecord record : records) {
             if (record.processorManagedConformanceBypass()) {
-                continue;
-            }
-            /*
-             * /contracts mutations are governed by changed-closure Contract
-             * Recognition Resolution.  Running ordinary data-type
-             * generalization first can misclassify an unsupported runtime
-             * contract as a type-generalization failure.
-             */
-            if (isContractRecognitionChange(record)) {
                 continue;
             }
             if (record.impact().localResolutionProvenSafe()) {
@@ -534,86 +494,181 @@ final class PatchPlanningEngine {
             }
         }
         if (changedPaths.isEmpty()) {
-            return ConformancePlan.unchanged(canonicalRoot, resolvedRoot);
+            return ConformancePlanningResult.unchanged(
+                    canonicalRoot, resolvedRoot);
         }
         ProcessingObservations.record(metrics,
                 ProcessingMetricId.CONFORMANCE_PLANS, 1L);
+        ConformancePlan plan;
         if (hasOverride) {
-            ConformancePlan plan = conformancePlannerOverride.plan(canonicalRoot, resolvedRoot, changedPathRecords);
-            String originScope = originScopeForGeneratedUpdate(records);
-            TypeGeneralizationPolicyResolver.enforceScopeBoundary(originScope,
-                    plan.changedPaths());
-            TypeGeneralizationPolicyResolver.enforce(conformanceEngine, plan.root(), plan.changedPaths(), originScope);
-            return plan;
+            plan = conformancePlannerOverride.plan(
+                    canonicalRoot, resolvedRoot, changedPathRecords);
+        } else {
+            try {
+                plan = conformanceEngine
+                        .planGeneralizationPreservingPaths(
+                                canonicalRoot,
+                                resolvedRoot,
+                                changedPaths,
+                                preservedExecutableBodies(
+                                        canonicalRoot, resolvedRoot));
+            } catch (ProcessorFailureException ex) {
+                throw ex;
+            } catch (RuntimeException ex) {
+                throw new ProcessorFailureException(
+                        ProcessorErrorCategory.TypeGeneralizationFailure,
+                        "GeneralizationNoValidType: " + ex.getMessage(),
+                        ex);
+            }
         }
-        try {
-            Set<String> preservedBodies =
-                    new LinkedHashSet<>(
-                            DocumentProcessingRuntime
-                                    .executableBodyPaths(
-                                    /*
-                                     * Reference-only contracts maps and contract
-                                     * entries have no direct type header in the
-                                     * canonical lane. The effective lane has
-                                     * already resolved those headers while the
-                                     * executable subtree remains deferred, so it
-                                     * is the authoritative source for locating
-                                     * paths that conformance must not demand.
-                                     */
-                                    resolvedRoot,
-                                    openedScopePaths,
-                                    executableBodyFieldsByType));
-            if (invocationEvidenceSnapshotManager != null) {
-                Node canonicalDocument = canonicalRoot.toNode();
-                preservedBodies.addAll(
-                        strictPlatformInvocation
-                                ? ExecutableBodyPathCatalog
-                                        .fromNodeIncludingTypeContracts(
+        String originScope = originScopeForGeneratedUpdate(records);
+        TypeGeneralizationPolicyResolver.enforceScopeBoundary(
+                originScope, plan.changedPaths());
+        TypeGeneralizationPolicyResolver.enforce(
+                conformanceEngine,
+                plan.root(),
+                plan.changedPaths(),
+                originScope,
+                frozenGeneralizationPolicy,
+                changesApplicationContracts(records));
+        FrozenNode finalCanonical = plan.canonicalRoot() != null
+                ? plan.canonicalRoot()
+                : canonicalRoot;
+        List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
+                GeneralizationMetadataAttributor.attribute(
+                        finalCanonical,
+                        plan.root(),
+                        plan.changedPaths(),
+                        records,
+                        this::probeConformanceAtRecord);
+        return new ConformancePlanningResult(plan, metadataWrites);
+    }
+
+    private boolean changesApplicationContracts(
+            List<BatchPatchRecord> records) {
+        for (BatchPatchRecord record : records) {
+            if (record.processorManagedConformanceBypass()) {
+                continue;
+            }
+            String contractsPath = ProcessorEngine.resolvePointer(
+                    record.originScope(),
+                    ProcessorPointerConstants.RELATIVE_CONTRACTS);
+            String patchPath = PointerUtils.normalizePointer(record.path());
+            if (PointerUtils.descendantOrEqual(patchPath, contractsPath)) {
+                return true;
+            }
+            if (!PointerUtils.descendantOrEqual(contractsPath, patchPath)) {
+                continue;
+            }
+            List<String> patchSegments = JsonPointer.split(patchPath);
+            List<String> contractSegments = JsonPointer.split(contractsPath);
+            String relativeContracts = JsonPointer.toPointer(
+                    contractSegments.subList(
+                            patchSegments.size(),
+                            contractSegments.size()));
+            FrozenNode before = record.beforeAtPatchTime();
+            FrozenNode after = record.afterAtPatchTime();
+            FrozenNode beforeContracts = before != null
+                    ? before.at(relativeContracts)
+                    : null;
+            FrozenNode afterContracts = after != null
+                    ? after.at(relativeContracts)
+                    : null;
+            if (!sameIdentity(beforeContracts, afterContracts)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean sameIdentity(FrozenNode left, FrozenNode right) {
+        return left == null
+                ? right == null
+                : right != null && left.blueId().equals(right.blueId());
+    }
+
+    private ConformancePlan probeConformanceAtRecord(
+            BatchPatchRecord record) {
+        FrozenNode canonicalRoot = record.canonicalPlan().root();
+        FrozenNode resolvedRoot = record.resolvedPlan().root();
+        if (record.processorManagedConformanceBypass()
+                || record.impact().localResolutionProvenSafe()
+                || !hasTypedNodeBetweenOriginAndPath(
+                        resolvedRoot,
+                        record.originScope(),
+                        record.path())) {
+            return ConformancePlan.unchanged(
+                    canonicalRoot, resolvedRoot);
+        }
+        if (conformancePlannerOverride != null
+                && conformancePlannerOverride.applies()) {
+            return conformancePlannerOverride.plan(
+                    canonicalRoot,
+                    resolvedRoot,
+                    Collections.singletonList(
+                            new ConformanceChangedPath(
+                                    record.path(),
+                                    record.originScope())));
+        }
+        if (conformanceEngine == null) {
+            return ConformancePlan.unchanged(
+                    canonicalRoot, resolvedRoot);
+        }
+        return conformanceEngine.planGeneralizationPreservingPaths(
+                        canonicalRoot,
+                        resolvedRoot,
+                        Collections.singletonList(record.path()),
+                        preservedExecutableBodies(
+                                canonicalRoot, resolvedRoot));
+    }
+
+    private Set<String> preservedExecutableBodies(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot) {
+        Set<String> preservedBodies =
+                new LinkedHashSet<>(
+                        DocumentProcessingRuntime.executableBodyPaths(
+                                /*
+                                 * Reference-only contracts maps and contract
+                                 * entries have no direct type header in the
+                                 * canonical lane. The effective lane has
+                                 * already resolved those headers while the
+                                 * executable subtree remains deferred, so it
+                                 * is the authoritative source for locating
+                                 * paths that conformance must not demand.
+                                 */
+                                resolvedRoot,
+                                openedScopePaths,
+                                executableBodyFieldsByType));
+        if (invocationEvidenceSnapshotManager == null) {
+            return preservedBodies;
+        }
+        Node canonicalDocument = canonicalRoot.toNode();
+        preservedBodies.addAll(
+                strictPlatformInvocation
+                        ? ExecutableBodyPathCatalog
+                                .fromNodeIncludingTypeContracts(
                                         canonicalDocument,
                                         openedScopePaths,
                                         executableBodyFieldsByType,
                                         invocationEvidenceSnapshotManager)
-                                : ExecutableBodyPathCatalog
-                                        .fromNodeDirectContracts(
-                                                canonicalDocument,
-                                                openedScopePaths,
-                                                executableBodyFieldsByType,
-                                                invocationEvidenceSnapshotManager));
-                if (strictPlatformInvocation) {
-                    preservedBodies.addAll(
-                            ExecutableBodyPathCatalog
-                                    .ordinaryReferencePaths(
-                                            canonicalDocument,
-                                            openedScopePaths));
-                }
-            }
-            ConformancePlan plan =
-                    conformanceEngine
-                            .planGeneralizationPreservingPaths(
-                                    canonicalRoot,
-                                    resolvedRoot,
-                                    changedPaths,
-                                    preservedBodies);
-            String originScope = originScopeForGeneratedUpdate(records);
-            TypeGeneralizationPolicyResolver.enforceScopeBoundary(originScope,
-                    plan.changedPaths());
-            TypeGeneralizationPolicyResolver.enforce(conformanceEngine, plan.root(), plan.changedPaths(), originScope);
-            return plan;
-        } catch (ProcessorFailureException ex) {
-            throw ex;
-        } catch (RuntimeException ex) {
-            throw new ProcessorFailureException(ProcessorErrorCategory.TypeGeneralizationFailure,
-                    "GeneralizationNoValidType: " + ex.getMessage(),
-                    ex);
+                        : ExecutableBodyPathCatalog
+                                .fromNodeDirectContracts(
+                                        canonicalDocument,
+                                        openedScopePaths,
+                                        executableBodyFieldsByType,
+                                        invocationEvidenceSnapshotManager));
+        if (strictPlatformInvocation) {
+            preservedBodies.addAll(
+                    ExecutableBodyPathCatalog.ordinaryReferencePaths(
+                            canonicalDocument,
+                            openedScopePaths));
         }
-    }
-
-    private boolean isContractRecognitionChange(BatchPatchRecord record) {
-        String relative = PointerUtils.relativizePointer(
-                record.originScope(), record.path());
-        return PointerUtils.descendantOrEqual(
-                relative,
-                ProcessorPointerConstants.RELATIVE_CONTRACTS);
+        preservedBodies.addAll(
+                ExecutableBodyPathCatalog.processorStateReferencePaths(
+                        canonicalDocument,
+                        openedScopePaths));
+        return preservedBodies;
     }
 
     private boolean hasTypedNodeBetweenOriginAndPath(FrozenNode resolvedRoot, String originScope, String changedPath) {
@@ -673,5 +728,48 @@ final class PatchPlanningEngine {
         ResolvedSnapshot resolvedValue = authoritativeSnapshotManager.fromDocumentTransient(
                 patch.canonicalValue().toNode());
         return patch.withResolvedValue(resolvedValue.frozenResolvedRoot());
+    }
+
+    private ImmutableJsonPatch selectedDocumentPatch(
+            ImmutableJsonPatch plannedPatch) {
+        FrozenNode selectedValue = FrozenNode.authoredValueInModeOf(
+                plannedPatch.canonicalValue(),
+                plannedPatch.resolvedValue());
+        return plannedPatch.withResolvedValue(selectedValue);
+    }
+
+    private static final class ConformancePlanningResult {
+        private final ConformancePlan plan;
+        private final List<BatchPatchResult.GeneralizationMetadataWrite>
+                metadataWrites;
+
+        private ConformancePlanningResult(
+                ConformancePlan plan,
+                List<BatchPatchResult.GeneralizationMetadataWrite>
+                        metadataWrites) {
+            this.plan = Objects.requireNonNull(plan, "plan");
+            this.metadataWrites = Collections.unmodifiableList(
+                    new ArrayList<>(Objects.requireNonNull(
+                            metadataWrites, "metadataWrites")));
+        }
+
+        private static ConformancePlanningResult unchanged(
+                FrozenNode canonicalRoot,
+                FrozenNode resolvedRoot) {
+            return new ConformancePlanningResult(
+                    ConformancePlan.unchanged(
+                            canonicalRoot, resolvedRoot),
+                    Collections.<BatchPatchResult.GeneralizationMetadataWrite>
+                            emptyList());
+        }
+
+        private ConformancePlan plan() {
+            return plan;
+        }
+
+        private List<BatchPatchResult.GeneralizationMetadataWrite>
+        metadataWrites() {
+            return metadataWrites;
+        }
     }
 }

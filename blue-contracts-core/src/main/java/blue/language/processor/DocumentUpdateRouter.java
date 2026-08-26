@@ -1,7 +1,6 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
-import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
@@ -54,7 +53,8 @@ final class DocumentUpdateRouter {
 
     void route(String scopePath,
                ContractBundle bundle,
-               DocumentUpdateData update) {
+               DocumentUpdateData update,
+               FrozenDispatchContext dispatchContext) {
         if (update == null) {
             return;
         }
@@ -63,14 +63,16 @@ final class DocumentUpdateRouter {
          * replace or cut off its source. Object-path ancestors that were never
          * activated through Process Embedded are not receiving scopes.
          */
+        FrozenDispatchContext frozen = Objects.requireNonNull(
+                dispatchContext, "dispatchContext");
         List<String> receivingChain =
-                propagationChain.freezeReceivingChain(update);
+                frozenReceivingChain(update, frozen);
         recordUpdateTrace(receivingChain, update);
         cutoffTracker.recordEmbeddedReplacement(
                 scopePath, bundle, update);
 
         List<DocumentUpdateParticipant> participants = participants(
-                receivingChain, update);
+                receivingChain, update, frozen);
         runtime.chargeCascadeRouting(participants.size());
         for (DocumentUpdateParticipant participant : participants) {
             if (execution.shouldStopScopeWork(participant.scopePath)) {
@@ -96,6 +98,36 @@ final class DocumentUpdateRouter {
                 }
             }
         }
+    }
+
+    FrozenDispatchContext freezeCurrentDelivery(
+            String scopePath,
+            ContractBundle bundle) {
+        ContractBundle live = participation.bundle(scopePath);
+        return FrozenDispatchContext.capture(
+                participation,
+                scopePath,
+                live != null ? live : bundle);
+    }
+
+    private List<String> frozenReceivingChain(
+            DocumentUpdateData update,
+            FrozenDispatchContext dispatchContext) {
+        List<String> result = new ArrayList<String>();
+        String origin = ProcessorEngine.normalizeScope(update.originScope());
+        for (String candidate : update.recipientChain()) {
+            String normalized = ProcessorEngine.normalizeScope(candidate);
+            boolean endpoint = normalized.equals(origin)
+                    || blue.language.model.wire.JsonPointer.ROOT.equals(
+                    normalized);
+            if (!endpoint && !dispatchContext.participates(normalized)) {
+                continue;
+            }
+            if (!execution.shouldStopScopeWork(normalized)) {
+                result.add(normalized);
+            }
+        }
+        return java.util.Collections.unmodifiableList(result);
     }
 
     private void recordUpdateTrace(
@@ -127,15 +159,24 @@ final class DocumentUpdateRouter {
 
     private List<DocumentUpdateParticipant> participants(
             List<String> receivingChain,
-            DocumentUpdateData update) {
+            DocumentUpdateData update,
+            FrozenDispatchContext dispatchContext) {
         List<DocumentUpdateParticipant> participants = new ArrayList<>();
         for (String cascadeScope : receivingChain) {
             if (execution.shouldStopScopeWork(cascadeScope)) {
                 continue;
             }
-            ContractBundle targetBundle;
+            ContractBundle dispatchBundle =
+                    dispatchContext.bundle(cascadeScope);
+            if (dispatchBundle == null) {
+                continue;
+            }
             try {
-                targetBundle = frameFactory.refresh(cascadeScope);
+                /*
+                 * Refresh participation for later work, while current route
+                 * selection remains bound to the captured pre-patch bundle.
+                 */
+                frameFactory.refresh(cascadeScope);
             } catch (MustUnderstandFailureException exception) {
                 if (affectsEmbeddedSubscriptionSurface(
                         cascadeScope, update.path())) {
@@ -155,12 +196,9 @@ final class DocumentUpdateRouter {
                                 "Unsupported runtime contract"));
                 return participants;
             }
-            if (targetBundle == null) {
-                continue;
-            }
             List<ContractBundle.ChannelBinding> matching =
-                    matchingChannels(
-                            cascadeScope, targetBundle, update.path());
+                    dispatchContext.matchingDocumentUpdateChannels(
+                            cascadeScope, update.path());
             if (matching.isEmpty()) {
                 ProcessingObservations.record(
                         owner.observer(),
@@ -169,28 +207,9 @@ final class DocumentUpdateRouter {
                 continue;
             }
             participants.add(new DocumentUpdateParticipant(
-                    cascadeScope, targetBundle, matching));
+                    cascadeScope, dispatchBundle, matching));
         }
         return participants;
-    }
-
-    private List<ContractBundle.ChannelBinding> matchingChannels(
-            String scopePath,
-            ContractBundle bundle,
-            String updatePath) {
-        List<ContractBundle.ChannelBinding> matching = new ArrayList<>();
-        for (ContractBundle.ChannelBinding channel
-                : bundle.channelsOfType(DocumentUpdateChannel.class)) {
-            DocumentUpdateChannel documentUpdate =
-                    (DocumentUpdateChannel) channel.contract();
-            if (ProcessorEngine.matchesDocumentUpdate(
-                    scopePath,
-                    documentUpdate.getPath(),
-                    updatePath)) {
-                matching.add(channel);
-            }
-        }
-        return matching;
     }
 
     static boolean affectsEmbeddedSubscriptionSurface(

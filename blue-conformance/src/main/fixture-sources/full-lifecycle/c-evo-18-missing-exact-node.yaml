@@ -1,0 +1,30 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: c-evo-18-missing-exact-node
+scenario: C-EVO-18
+description: A Process Embedded pure reference whose exact target is absent suspends admission with one typed exact-node demand and no legacy occurrence projection.
+operation: admit-closure
+events:
+  missingB:
+    documentId: c-evo-18-b
+    name: C-EVO 18 unavailable B
+documents:
+  c-evo-18-a:
+    publicRoot: true
+    document:
+      documentId: c-evo-18-a
+      name: C-EVO 18 missing exact target A
+      peer: {$eventBlueId: missingB}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/peer]
+occurrences: []
+runtime:
+  initializationHandlers: {}
+  handlers: {}
+gas:
+  sharedLimit: release-default
+expect:
+  attemptOutcome: NeedsResources
+  resourceDemandKinds: [EXACT_NODE]
+  requiredExactCount: 1

@@ -2,8 +2,8 @@ fixturePackage: blue-contracts-conformance
 specificationVersion: '1.0'
 schemaVersion: blue-contracts-fixture/1.0
 registryPackageIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
-vectorCount: 100
-behaviorFixtureCount: 96
+vectorCount: 114
+behaviorFixtureCount: 112
 gasFixtureCount: 58
 files:
 - path: CONTROL-LANGUAGE.md
@@ -12,8 +12,8 @@ files:
   bytes: 12268
 - path: HARNESS.md
   role: support
-  sha256: ccfd2d7ace57a1ae1eb8c10e7392d1bb412ec8a7f771fe125d3d833d38fc9057
-  bytes: 8777
+  sha256: c9771a87e598b4d7364af33155a6c815b6c0bf1ae6c304d184f3c1743f9c35f6
+  bytes: 11617
 - path: README.md
   role: support
   sha256: 4350a3e9a3733be61a88cc888f783f06fc2c90ca803c4c28ede52c24a2c1cbe1
@@ -170,6 +170,70 @@ files:
   role: behavior-fixture
   sha256: 20bdd75d85ce9ed74377814dc65cc52e13bc10c7d5f9cb289b151a76f9831988
   bytes: 2555
+- path: evo/c-evo-01.yaml
+  role: behavior-fixture
+  sha256: aea20ce59d66e3faeedabdef5bbed8abd6d9abb936de11a30348648a67fffe3b
+  bytes: 1585
+- path: evo/c-evo-02.yaml
+  role: behavior-fixture
+  sha256: 5b345869fc8f360aa224b6cc7212b8173e1c08d0949e07681949eada5b08a74d
+  bytes: 1657
+- path: evo/c-evo-03.yaml
+  role: behavior-fixture
+  sha256: c3d4b7376fb5c445c53a4098293e30640bea7c09679bb3501cc99de33409d389
+  bytes: 2078
+- path: evo/c-evo-04.yaml
+  role: behavior-fixture
+  sha256: edcdaf83ea8ef4923c4f15fb9cddefc91d0e653ae82d2ef4e3552a1ac388e991
+  bytes: 2310
+- path: evo/c-evo-05.yaml
+  role: behavior-fixture
+  sha256: 40c813fa967d44c35bc3b7a79641ecae5da77f5dded8e1602f725fe490d99361
+  bytes: 2146
+- path: evo/c-evo-06.yaml
+  role: behavior-fixture
+  sha256: de12377c8e3f155590910f44a2768134904e5c5b740599c922f6b4442de4ff95
+  bytes: 2095
+- path: evo/c-evo-07-checkpoint.yaml
+  role: behavior-fixture
+  sha256: 893a3e8283c05463dada19cd0c67160d42bfb8180f0af34ba10928adae2cae2a
+  bytes: 1818
+- path: evo/c-evo-07-initialized.yaml
+  role: behavior-fixture
+  sha256: 0288528c29cdff6758b80ccad256899eb70f68ebca0c9ecf392d52fdc013a32a
+  bytes: 1794
+- path: evo/c-evo-07-terminated.yaml
+  role: behavior-fixture
+  sha256: 5e9f8f39d2ed6c5c962f61facaceede1317dbda9f50601806fb5533169daec95
+  bytes: 1758
+- path: evo/c-evo-08.yaml
+  role: behavior-fixture
+  sha256: 013796ef7327fccdc747cc8e3e7c9a738559b41d1bfbb416091cc59e4219b2a5
+  bytes: 2603
+- path: evo/c-evo-09.yaml
+  role: behavior-fixture
+  sha256: 1f8b39bb871e67b4e67bc8c7de036fd1636f587ee5fde4ea68c5685e343244e3
+  bytes: 1773
+- path: evo/c-evo-10.yaml
+  role: behavior-fixture
+  sha256: a7c975bb9e018437220076bc4440a1f4b89c19adee8a5a71b62c17892556a578
+  bytes: 1950
+- path: evo/c-evo-14.yaml
+  role: behavior-fixture
+  sha256: 9edc1bb1db852197fc3e4d4d588b94897898858c7426526335c4215cc48734e6
+  bytes: 2308
+- path: evo/c-evo-15.yaml
+  role: behavior-fixture
+  sha256: ed599935419e1bfd3d2a210fe3439a7ca721748db824eba01b1cf81a0b84c774
+  bytes: 2385
+- path: evo/c-evo-16.yaml
+  role: behavior-fixture
+  sha256: d21187b968ca578e685082ec3c14b1ef4cc25df47431fc7e27130569c1323b42
+  bytes: 3148
+- path: evo/c-evo-17.yaml
+  role: behavior-fixture
+  sha256: c8c024c1a45135b090780cd1819deaacf19c44680df63a86e08714e9f64db043
+  bytes: 2711
 - path: evt/c-evt-01.yaml
   role: behavior-fixture
   sha256: 6cc902cc4af35a11e757b1ca5684571ca3450cb7731c44f66ccb85b1d63c8148
@@ -284,8 +348,8 @@ files:
   bytes: 2697
 - path: fixture-schema.yaml
   role: support
-  sha256: 561d12ebac220bb7dc1c13e424de2cf34e7b8536f5a4108e3be4ef77ea94308e
-  bytes: 8767
+  sha256: 4bd6b411d54a6baa36e2f8ded244746a75aa0fed7bbd621f794898eeca20e922
+  bytes: 8839
 - path: gas-micro/composite-gas-exhaustion-prefix.yaml
   role: gas-fixture
   sha256: 0fdfc21412f68e622fb42f74d37f7f8df1d6a1f7c4a09fd74178b6c9dea9996c
@@ -568,8 +632,8 @@ files:
   bytes: 1458
 - path: projection-catalog.yaml
   role: support
-  sha256: 3f8a315495a3b46638b71e077a089d807181204c36cc1ebd9f7e9df0c25a595f
-  bytes: 20011
+  sha256: b694f958cf1d8718e87782ca06588cda5ba3feeabbf09165bb5a40a5e5747a6a
+  bytes: 22409
 - path: prot/c-prot-01.yaml
   role: behavior-fixture
   sha256: 81a3a77b7c8bd2a2d5bc93e97d8fc71a712485ddfb836fe06e02c744d78321cd
@@ -648,14 +712,14 @@ files:
   bytes: 1975
 - path: vector-coverage.yaml
   role: support
-  sha256: 11bd9bbfa84b0008b6340918dcea501c8da17995318750d9a232600be97db6b7
-  bytes: 7243
+  sha256: 4aced979f036b37223dadc4a60cdcd50dcb6cc73f3498fa3ebd545752fda1022
+  bytes: 7797
 packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
   lineEndings: LF
-packageIdentity: sha256:16392301655431695df6a7cc142a7e388e426c382bf4e3c5f06ddfafb8efecdc
+packageIdentity: sha256:adf4c1542c265d90c4a1181a8691d40e10f61fcc5510d30c55c0c50b8e2d522b
 gasSchedule: blue-contracts/gas/1.0
-gasManifestPackageIdentity: sha256:88c7bbe77d531c9e973cae13002c3464a2c14568833adf5d804d13b7b3d26af5
-gasManifestSha256: 1f4054b77fc7ef01a3e62f5b29d209e84f26e85148c91b03fe48da2c3579408f
+gasManifestPackageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
+gasManifestSha256: 54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8

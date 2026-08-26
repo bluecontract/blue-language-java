@@ -72,6 +72,7 @@ final class ClosedContractsFixtureValidator {
             ContractsFixtureConstants.Field.HANDLERS,
             "cascadeMutation", "childEmissions",
             "gasLimit", "gasLimitDuringTermination", "generalizationCandidates",
+            "generalizationSubtypeContracts",
             "initializationPatches", "nestedEnqueues", "rootForwardAll",
             "terminationRequests", "validCandidate");
     private static final Set<String> SCRIPTED_HANDLER = set(
@@ -465,6 +466,16 @@ final class ClosedContractsFixtureValidator {
         if (runtime.has("generalizationCandidates")) {
             requireTextArray(runtime.get("generalizationCandidates"),
                     "$.input.runtime.generalizationCandidates");
+        }
+        if (runtime.has("generalizationSubtypeContracts")) {
+            requireObject(
+                    runtime.get("generalizationSubtypeContracts"),
+                    "$.input.runtime.generalizationSubtypeContracts");
+            if (!runtime.has("generalizationCandidates")) {
+                fail(
+                        "$.input.runtime.generalizationSubtypeContracts",
+                        "requires generalizationCandidates");
+            }
         }
         if (runtime.has("initializationPatches")) {
             requireArray(runtime.get("initializationPatches"),

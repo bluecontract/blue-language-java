@@ -243,6 +243,28 @@ final class ClosureFinalizationGasCharger {
                         "changedCyclicComponents"));
     }
 
+    /** Admits exact cyclic components changed by a terminated-marker write. */
+    FinalizationFrame beginTerminationMarker(
+            ManagedDocumentStepProcessor meter,
+            ManagedDocumentGraph resultingGraph,
+            Map<DocumentId, Long> componentGenerations,
+            long afterWorkOrdinal,
+            long firstFinalizationOrdinal,
+            List<List<DocumentId>> changedCyclicComponents) {
+        long causalOrdinal = ClosureValueSupport.requireSafeInteger(
+                afterWorkOrdinal, "afterWorkOrdinal");
+        return beginFinalization(
+                meter,
+                resultingGraph,
+                componentGenerations,
+                null,
+                firstFinalizationOrdinal,
+                "termination-marker.after-work." + causalOrdinal,
+                Objects.requireNonNull(
+                        changedCyclicComponents,
+                        "changedCyclicComponents"));
+    }
+
     /** Admits checkpoint finalization with its exact global ordinal. */
     FinalizationFrame beginCheckpointSettlement(
             ManagedDocumentStepProcessor meter,
@@ -515,6 +537,29 @@ final class ClosureFinalizationGasCharger {
                 componentGeneration,
                 null,
                 "initialization-batch.acyclic-finalization",
+                establishedBlueIds,
+                existingBlueIds);
+    }
+
+    /** Charges one terminated-marker-owned changed acyclic Root. */
+    String chargeTerminationAcyclicChangedBody(
+            ManagedDocumentStepProcessor meter,
+            DocumentId documentId,
+            Node exactBody,
+            long componentGeneration,
+            long afterWorkOrdinal,
+            Set<String> establishedBlueIds,
+            Set<String> existingBlueIds) {
+        long causalOrdinal = ClosureValueSupport.requireSafeInteger(
+                afterWorkOrdinal, "afterWorkOrdinal");
+        return chargeAcyclicChangedBody(
+                meter,
+                documentId,
+                exactBody,
+                componentGeneration,
+                null,
+                "termination-marker.after-work." + causalOrdinal
+                        + ".acyclic-finalization",
                 establishedBlueIds,
                 existingBlueIds);
     }

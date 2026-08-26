@@ -473,7 +473,9 @@ SUPPORTED_PUBLIC_TYPES_BY_PACKAGE = {
         "IndexedDeliveryEvaluator",
         "IndexedDeliveryPreparation",
         "JfrProcessingObserver",
+        "ManagedProcessEmbeddedPath",
         "NoOpProcessingObserver",
+        "NoncommittingExecutionException",
         "ObservationKind",
         "PatchSource",
         "PlatformCommitCompanion",
@@ -513,6 +515,11 @@ SUPPORTED_PUBLIC_TYPES_BY_PACKAGE = {
         "SubscriptionSurfaceValidator",
         "VerifiedExecutionEvidence",
         "WorkingDocument",
+    },
+    "blue.language.processor.closure": {
+        "ClosureResourceDemand",
+        "ExactNodeDemand",
+        "ManagedOccurrenceEvidenceDemand",
     },
     "blue.language.processor.registry": {
         "RuntimeBlueIds",

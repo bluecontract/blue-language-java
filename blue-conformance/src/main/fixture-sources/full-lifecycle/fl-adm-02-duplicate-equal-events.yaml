@@ -1,0 +1,63 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-02-duplicate-equal-events
+scenario: FL-ADM-02
+description: One initialization emits the same exact event twice; both occurrences are delivered and published in canonical FIFO order with distinct occurrence identities.
+operation: admit-closure
+events:
+  duplicate:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: full-lifecycle
+    id: FL-ADM-02-DUPLICATE
+documents:
+  fl-adm-02-root:
+    publicRoot: true
+    document:
+      documentId: fl-adm-02-root
+      name: Full lifecycle duplicate equal events
+      contracts:
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        duplicateEvent:
+          type: {$registryBlueId: TriggeredEventChannel}
+          event: {$eventBlueId: duplicate}
+          order: 0
+        emitTwice:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+        receiveDuplicate:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: duplicateEvent
+          order: 0
+occurrences: []
+runtime:
+  initializationHandlers:
+    fl-adm-02-root/emitTwice:
+      events:
+      - {$eventValue: duplicate}
+      - {$eventValue: duplicate}
+  handlers:
+    fl-adm-02-root/receiveDuplicate: {}
+gas:
+  sharedLimit: release-default
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: fl-adm-02-root, initialized: true, terminated: false}
+  workCounts:
+  - {kind: INITIALIZATION, count: 1}
+  - {kind: LIFECYCLE, count: 1}
+  - {kind: TRIGGERED_EVENT, count: 2}
+  publicEvents:
+  - {event: duplicate, emitter: fl-adm-02-root}
+  - {event: duplicate, emitter: fl-adm-02-root}
+  distinctEventOccurrenceIdentities: 2
+  eventOccurrenceOrdinals: [0, 1]
+  deliverySourceOccurrenceOrdinals: [0, 1]
+  checkpointWrites: 0
+  commitCompanion: present

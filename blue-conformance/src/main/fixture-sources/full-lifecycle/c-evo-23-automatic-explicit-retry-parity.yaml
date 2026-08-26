@@ -1,0 +1,92 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: c-evo-23-automatic-explicit-retry-parity
+scenario: C-EVO-23
+description: The automatically discovered occurrence-demand precursor resolves to the same byte-identical input and complete result as an explicit resolved execution lane.
+operation: admit-closure
+events:
+  knownB:
+    documentId: c-evo-23-b
+    name: C-EVO 23 known B
+  ready:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: contract-evolution
+    id: C-EVO-23-READY
+documents:
+  c-evo-23-a:
+    publicRoot: true
+    document:
+      documentId: c-evo-23-a
+      name: C-EVO 23 retry parity A
+      phase: before
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/peer]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        readyChannel:
+          type: {$registryBlueId: TriggeredEventChannel}
+          event: {$eventBlueId: ready}
+          order: 0
+        installPeer:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+        finish:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: readyChannel
+          order: 0
+  c-evo-23-b:
+    publicRoot: false
+    document:
+      documentId: c-evo-23-b
+      name: C-EVO 23 known B
+occurrences: []
+runtime:
+  initializationHandlers:
+    c-evo-23-a/installPeer:
+      patches:
+      - {op: replace, path: /phase, val: installed}
+      - {op: add, path: /peer, val: {$eventBlueId: knownB}}
+      events:
+      - {$eventValue: ready}
+  handlers:
+    c-evo-23-a/finish:
+      patches:
+      - {op: replace, path: /phase, val: handled}
+gas:
+  sharedLimit: release-default
+cases:
+- suffix: automatic-demand
+  expect:
+    attemptOutcome: NeedsResources
+    resourceDemandKinds: [MANAGED_OCCURRENCE_EVIDENCE]
+    requiredExactCount: 0
+- suffix: automatic-resolved
+  occurrences:
+  - sourceDocumentId: c-evo-23-a
+    sourcePath: /peer
+    activationGeneration: 1
+    targetDocumentId: c-evo-23-b
+    active: false
+- suffix: explicit-resolved
+  repeatOf: automatic-resolved
+  parityWith: automatic-resolved
+  parityProjections: [invocationIdentity, attempt, harnessTranscript]
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: c-evo-23-a, initialized: true, terminated: false}
+  - {documentId: c-evo-23-b, initialized: true, terminated: false}
+  pointers:
+  - {documentId: c-evo-23-a, pointer: /phase, value: handled}
+  workContainsInOrder: [INITIALIZATION, LIFECYCLE, TRIGGERED_EVENT]
+  publicEvents:
+  - {event: ready, emitter: c-evo-23-a}
+  checkpointWrites: 0
+  commitCompanion: present

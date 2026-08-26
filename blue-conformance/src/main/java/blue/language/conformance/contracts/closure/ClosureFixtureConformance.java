@@ -1,6 +1,7 @@
 package blue.language.conformance.contracts.closure;
 
 import blue.language.conformance.api.BlueContractsConformanceReport;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ProcessorDiagnostic;
 import blue.language.processor.GasSchedule;
@@ -10,10 +11,13 @@ import blue.language.processor.closure.ClosureExecutionObserver;
 import blue.language.processor.closure.ClosureImplementationEvidence;
 import blue.language.processor.closure.ClosureInvocationInput;
 import blue.language.processor.closure.ClosureProcessResult;
+import blue.language.processor.closure.ClosureResourceDemand;
 import blue.language.processor.closure.ClosureWorkOccurrence;
 import blue.language.processor.closure.DocumentId;
 import blue.language.processor.closure.DocumentStepEvidence;
+import blue.language.processor.closure.ExactNodeDemand;
 import blue.language.processor.closure.GasTraceEntry;
+import blue.language.processor.closure.ManagedOccurrenceEvidenceDemand;
 import blue.language.processor.closure.TentativeFinalization;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -78,13 +82,47 @@ public final class ClosureFixtureConformance {
                      processor, capture)) {
             attempt = "process-closure".equals(inventory.operation())
                     ? contracts.processClosure(input)
-                    : contracts.admitClosure(input);
+                    : contracts.admitClosureWithLifecycleQueue(input);
         }
 
         ObjectNode expected = (ObjectNode) requiredObject(
                 fixture, "expected").deepCopy();
         attachExternalGasTrace(inventory.id(), expected);
         verifyAttempt(inventory.id(), expected, attempt, capture.evidence);
+    }
+
+    /**
+     * Parses one exact admission fixture without exposing the package-private
+     * closure inventory and parser types.
+     *
+     * <p>This boundary is used by the deterministic full-lifecycle source
+     * exporter. The supplied fixture is treated only as invocation input; an
+     * {@code expected} subtree, if present, is removed before parsing.</p>
+     *
+     * @param id fixture identifier
+     * @param path package-relative fixture path
+     * @param vectors normative vector identifiers
+     * @param fixture exact fixture envelope
+     * @return parsed admission input
+     */
+    public static ClosureInvocationInput parseAdmissionInput(
+            String id,
+            String path,
+            List<String> vectors,
+            JsonNode fixture) {
+        ObjectNode executionFixture = (ObjectNode) fixture.deepCopy();
+        executionFixture.remove("expected");
+        ClosureFixtureInventory.Entry entry =
+                new ClosureFixtureInventory.Entry(
+                        id,
+                        path,
+                        "admit-closure",
+                        vectors,
+                        "source-export",
+                        0L);
+        return new ClosureFixtureParser()
+                .parse(entry, executionFixture)
+                .admit();
     }
 
     private static void executeLimitMicro(String id, JsonNode fixture) {
@@ -160,6 +198,9 @@ public final class ClosureFixtureConformance {
             equal(id + ".requiredBlueIds",
                     textValues(requiredArray(expected, "requiredBlueIds")),
                     attempt.requiredExactBlueIds());
+            verifyResourceDemands(id,
+                    requiredArray(expected, "resourceDemands"),
+                    attempt.resourceDemands());
             require(attempt.processResult() == null,
                     id + " NeedsResources attempt exposed a result");
             require(attempt.totalGas() == null,
@@ -238,6 +279,66 @@ public final class ClosureFixtureConformance {
         verifyCommitCompanionIdentity(id, expected, result);
         verifyImplementationEvidence(
                 id, expected, result.invocationIdentity(), evidence);
+    }
+
+    private static void verifyResourceDemands(
+            String id,
+            JsonNode expected,
+            List<ClosureResourceDemand> actual) {
+        equal(id + ".resourceDemands.size",
+                Integer.valueOf(expected.size()),
+                Integer.valueOf(actual.size()));
+        for (int index = 0; index < actual.size(); index++) {
+            JsonNode item = expected.get(index);
+            ClosureResourceDemand value = actual.get(index);
+            String path = id + ".resourceDemands[" + index + "]";
+            equal(path + ".kind", requiredText(item, "kind"),
+                    value.kind().name());
+            equal(path + ".demandIdentity",
+                    requiredText(item, "demandIdentity"),
+                    value.demandIdentity());
+            equal(path + ".sourceDocumentId",
+                    requiredText(item, "sourceDocumentId"),
+                    value.sourceDocumentId().value());
+            equal(path + ".sourcePath",
+                    requiredText(item, "sourcePath"),
+                    value.sourcePath());
+            equal(path + ".suppliedValueBlueId",
+                    requiredText(item, "suppliedValueBlueId"),
+                    value.suppliedValueBlueId());
+            if (value instanceof ExactNodeDemand) {
+                ExactNodeDemand exact = (ExactNodeDemand) value;
+                equal(path + ".blueId", requiredText(
+                                item, BlueLanguageConstants.OBJECT_BLUE_ID),
+                        exact.blueId());
+                equal(path + ".logicalPath",
+                        requiredText(item, "logicalPath"),
+                        exact.logicalPath());
+                continue;
+            }
+            require(value instanceof ManagedOccurrenceEvidenceDemand,
+                    path + " has unsupported demand implementation "
+                            + value.getClass().getName());
+            ManagedOccurrenceEvidenceDemand occurrence =
+                    (ManagedOccurrenceEvidenceDemand) value;
+            equal(path + ".logicalCauseIdentity",
+                    requiredText(item, "logicalCauseIdentity"),
+                    occurrence.logicalCauseIdentity());
+            equal(path + ".inputClosureIdentity",
+                    requiredText(item, "inputClosureIdentity"),
+                    occurrence.inputClosureIdentity());
+            equal(path + ".inputGraphGeneration",
+                    Long.valueOf(requiredLong(
+                            item, "inputGraphGeneration")),
+                    Long.valueOf(occurrence.inputGraphGeneration()));
+            equal(path + ".processEmbeddedDeclarationIdentity",
+                    requiredText(item,
+                            "processEmbeddedDeclarationIdentity"),
+                    occurrence.processEmbeddedDeclarationIdentity());
+            equal(path + ".demandOrdinal",
+                    Long.valueOf(requiredLong(item, "demandOrdinal")),
+                    Long.valueOf(occurrence.demandOrdinal()));
+        }
     }
 
     static void verifyImplementationEvidence(

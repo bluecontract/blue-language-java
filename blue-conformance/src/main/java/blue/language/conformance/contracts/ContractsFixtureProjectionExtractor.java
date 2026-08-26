@@ -109,6 +109,16 @@ abstract class ContractsFixtureProjectionExtractor extends ContractsFixtureScrip
                         .put("commit.progressCommitted", result.commits())
                         .put("commit.progressWritten", result.commits())
                         .put("commit.casWorkPortableGas", 0L);
+        projectDirectContractIdentity(
+                projection,
+                "input.root.contracts.initialized.directBlueId",
+                input.root,
+                ProcessorContractConstants.KEY_INITIALIZED);
+        projectDirectContractIdentity(
+                projection,
+                "result.document.contracts.initialized.directBlueId",
+                result.document(),
+                ProcessorContractConstants.KEY_INITIALIZED);
         Node embedded = property(
                 result.document().getContracts(),
                 ProcessorContractConstants.KEY_EMBEDDED);
@@ -160,6 +170,20 @@ abstract class ContractsFixtureProjectionExtractor extends ContractsFixtureScrip
                             + result.totalGas());
         }
         return projection;
+    }
+
+    private static void projectDirectContractIdentity(
+            ContractsConformanceProjection projection,
+            String path,
+            Node document,
+            String contractKey) {
+        Node contract = property(
+                document != null ? document.getContracts() : null,
+                contractKey);
+        if (contract != null) {
+            projection.put(path,
+                    DirectBlueIdCalculator.calculateBlueId(contract));
+        }
     }
 
     List<Map<String, Object>> projectSubscriptionIntervals(

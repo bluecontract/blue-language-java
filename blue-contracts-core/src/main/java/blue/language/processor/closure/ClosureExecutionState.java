@@ -26,6 +26,7 @@ final class ClosureExecutionState {
     private final List<ManagedCheckpointSettlementBatch.Mutation>
             checkpointMutations;
     private final Set<DocumentId> epochAdvanceDocuments;
+    private final List<DocumentTransitionEvidence> transitionEvidence;
 
     ClosureExecutionState(
             AffectedClosureSnapshot tentativeSnapshot,
@@ -39,6 +40,31 @@ final class ClosureExecutionState {
             List<ManagedCheckpointSettlementBatch.Mutation>
                     checkpointMutations,
             Set<DocumentId> epochAdvanceDocuments) {
+        this(
+                tentativeSnapshot,
+                finalization,
+                publicEvents,
+                gasTrace,
+                inputChannelSurfaces,
+                resultingChannelSurfaces,
+                checkpointMutations,
+                epochAdvanceDocuments,
+                Collections.<DocumentTransitionEvidence>emptyList());
+    }
+
+    ClosureExecutionState(
+            AffectedClosureSnapshot tentativeSnapshot,
+            ComponentFinalizationResult finalization,
+            List<PublicEventOccurrence> publicEvents,
+            List<blue.language.processor.GasTraceEntry> gasTrace,
+            Map<DocumentId, List<ManagedRootChannelOccurrence>>
+                    inputChannelSurfaces,
+            Map<DocumentId, List<ManagedRootChannelOccurrence>>
+                    resultingChannelSurfaces,
+            List<ManagedCheckpointSettlementBatch.Mutation>
+                    checkpointMutations,
+            Set<DocumentId> epochAdvanceDocuments,
+            List<DocumentTransitionEvidence> transitionEvidence) {
         this.tentativeSnapshot = Objects.requireNonNull(
                 tentativeSnapshot, "tentativeSnapshot");
         this.finalization = finalization;
@@ -61,6 +87,11 @@ final class ClosureExecutionState {
                 new LinkedHashSet<DocumentId>(Objects.requireNonNull(
                         epochAdvanceDocuments,
                         "epochAdvanceDocuments")));
+        this.transitionEvidence = Collections.unmodifiableList(
+                new ArrayList<DocumentTransitionEvidence>(
+                        Objects.requireNonNull(
+                                transitionEvidence,
+                                "transitionEvidence")));
     }
 
     AffectedClosureSnapshot tentativeSnapshot() {
@@ -96,6 +127,10 @@ final class ClosureExecutionState {
 
     Set<DocumentId> epochAdvanceDocuments() {
         return epochAdvanceDocuments;
+    }
+
+    List<DocumentTransitionEvidence> transitionEvidence() {
+        return transitionEvidence;
     }
 
     private static <T> Map<DocumentId, List<T>> immutableNested(

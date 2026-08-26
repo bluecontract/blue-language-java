@@ -1,0 +1,72 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-05-graceful-termination
+scenario: FL-ADM-05
+description: Initialization requests graceful termination, the terminated lifecycle Handler runs, one marker commits, and cyclic finalization uses the exact termination-marker boundary.
+operation: admit-closure
+events: {}
+documents:
+  fl-adm-05-root:
+    publicRoot: true
+    document:
+      documentId: fl-adm-05-root
+      name: Full lifecycle graceful termination
+      observedTermination: false
+      self: {blueId: this#0}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/self]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        terminateOnInitialization:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+        observeTermination:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingTerminated}
+            cause: completed
+            reason: initialization
+          order: 1
+inputOrder: [fl-adm-05-root]
+occurrences:
+- sourceDocumentId: fl-adm-05-root
+  sourcePath: /self
+  activationGeneration: 1
+  targetDocumentId: fl-adm-05-root
+  active: true
+runtime:
+  initializationHandlers:
+    fl-adm-05-root/terminateOnInitialization:
+      termination: {cause: completed, reason: initialization}
+  handlers:
+    fl-adm-05-root/observeTermination:
+      patches:
+      - {op: replace, path: /observedTermination, val: true}
+gas:
+  sharedLimit: release-default
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: fl-adm-05-root, initialized: false, terminated: true}
+  pointers:
+  - {documentId: fl-adm-05-root, pointer: /observedTermination, value: true}
+  - {documentId: fl-adm-05-root, pointer: /contracts/terminated/cause, value: completed}
+  - {documentId: fl-adm-05-root, pointer: /contracts/terminated/reason, value: initialization}
+  absentPointers:
+  - {documentId: fl-adm-05-root, pointer: /contracts/initialized}
+  workCounts:
+  - {kind: INITIALIZATION, count: 1}
+  - {kind: LIFECYCLE, count: 2}
+  publicEvents: []
+  checkpointWrites: 0
+  terminationMarkerCount: 1
+  finalizationBoundariesExact: [WORK, WORK, TERMINATION_MARKER]
+  commitCompanion: present

@@ -1,0 +1,61 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-04-document-update-continuation
+scenario: FL-ADM-04
+description: An initialization patch creates a Document Update whose eligible Handler executes as the canonical immediate continuation.
+operation: admit-closure
+events: {}
+documents:
+  fl-adm-04-root:
+    publicRoot: true
+    document:
+      documentId: fl-adm-04-root
+      name: Full lifecycle Document Update continuation
+      source: before
+      handled: false
+      contracts:
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        sourceUpdates:
+          type: {$registryBlueId: DocumentUpdateChannel}
+          path: /source
+          order: 0
+        patchSource:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+        handleSourceUpdate:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: sourceUpdates
+          order: 0
+occurrences: []
+runtime:
+  initializationHandlers:
+    fl-adm-04-root/patchSource:
+      patches:
+      - {op: replace, path: /source, val: after}
+  handlers:
+    fl-adm-04-root/handleSourceUpdate:
+      patches:
+      - {op: replace, path: /handled, val: true}
+gas:
+  sharedLimit: release-default
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: fl-adm-04-root, initialized: true, terminated: false}
+  pointers:
+  - {documentId: fl-adm-04-root, pointer: /source, value: after}
+  - {documentId: fl-adm-04-root, pointer: /handled, value: true}
+  workCounts:
+  - {kind: INITIALIZATION, count: 1}
+  - {kind: LIFECYCLE, count: 1}
+  - {kind: DOCUMENT_UPDATE, count: 1}
+  workKindsExact: [INITIALIZATION, LIFECYCLE, DOCUMENT_UPDATE]
+  publicEvents: []
+  checkpointWrites: 0
+  commitCompanion: present

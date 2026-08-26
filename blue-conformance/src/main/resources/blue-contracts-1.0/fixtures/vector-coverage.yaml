@@ -57,11 +57,11 @@ vectors:
   C-EMB-08:
   - emb/c-emb-08.yaml
   C-EMB-09:
+  - emb/c-emb-09-cyclic-member.yaml
   - emb/c-emb-09-list-target.yaml
   - emb/c-emb-09-nonobject-member.yaml
   - emb/c-emb-09-reserved-field.yaml
   - emb/c-emb-09-wildcard.yaml
-  - emb/c-emb-09-cyclic-member.yaml
   C-EMB-10:
   - emb/c-emb-10.yaml
   C-EMB-11:
@@ -76,6 +76,36 @@ vectors:
   - emb/c-emb-15.yaml
   C-EMB-16:
   - emb/c-emb-16.yaml
+  C-EVO-01:
+  - evo/c-evo-01.yaml
+  C-EVO-02:
+  - evo/c-evo-02.yaml
+  C-EVO-03:
+  - evo/c-evo-03.yaml
+  C-EVO-04:
+  - evo/c-evo-04.yaml
+  C-EVO-05:
+  - evo/c-evo-05.yaml
+  C-EVO-06:
+  - evo/c-evo-06.yaml
+  C-EVO-07:
+  - evo/c-evo-07-checkpoint.yaml
+  - evo/c-evo-07-initialized.yaml
+  - evo/c-evo-07-terminated.yaml
+  C-EVO-08:
+  - evo/c-evo-08.yaml
+  C-EVO-09:
+  - evo/c-evo-09.yaml
+  C-EVO-10:
+  - evo/c-evo-10.yaml
+  C-EVO-14:
+  - evo/c-evo-14.yaml
+  C-EVO-15:
+  - evo/c-evo-15.yaml
+  C-EVO-16:
+  - evo/c-evo-16.yaml
+  C-EVO-17:
+  - evo/c-evo-17.yaml
   C-EVT-01:
   - evt/c-evt-01.yaml
   C-EVT-02:

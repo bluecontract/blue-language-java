@@ -1,0 +1,35 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: c-evo-19-missing-occurrence-evidence
+scenario: C-EVO-19
+description: An exact target already present in the closure but lacking its Process Embedded occurrence row suspends with one typed occurrence-evidence demand and an empty legacy exact-node list.
+operation: admit-closure
+events:
+  knownB:
+    documentId: c-evo-19-b
+    name: C-EVO 19 known B
+documents:
+  c-evo-19-a:
+    publicRoot: true
+    document:
+      documentId: c-evo-19-a
+      name: C-EVO 19 missing occurrence A
+      peer: {$eventBlueId: knownB}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/peer]
+  c-evo-19-b:
+    publicRoot: false
+    document:
+      documentId: c-evo-19-b
+      name: C-EVO 19 known B
+occurrences: []
+runtime:
+  initializationHandlers: {}
+  handlers: {}
+gas:
+  sharedLimit: release-default
+expect:
+  attemptOutcome: NeedsResources
+  resourceDemandKinds: [MANAGED_OCCURRENCE_EVIDENCE]
+  requiredExactCount: 0

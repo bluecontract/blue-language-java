@@ -15,6 +15,9 @@ entries:
 - path: commit.intermediateVisible
   type: boolean
   definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.newIntervals.0.channelKey
+  type: scalar-or-node
+  definition: Contract key of the first newly activated subscription interval.
 - path: commit.newIntervals.0.scopePath
   type: scalar-or-node
   definition: Concrete scope path of the first newly activated subscription interval.
@@ -33,6 +36,9 @@ entries:
 - path: commit.reason
   type: scalar-or-node
   definition: Revision-bound persistence decision for Root, outbox, index delta, or progress.
+- path: commit.retiredIntervals.0.channelKey
+  type: scalar-or-node
+  definition: Contract key of the first retired subscription interval.
 - path: commit.retiredIntervals.0.scopePath
   type: scalar-or-node
   definition: Concrete scope path of the first retired subscription interval.
@@ -75,6 +81,15 @@ entries:
 - path: input.root
   type: value
   definition: Exact fixture Root after deterministic builders and before processing.
+- path: input.root.contracts.initialized
+  type: value
+  definition: Exact protected initialization marker in the input Root.
+- path: input.root.contracts.initialized.directBlueId
+  type: scalar-or-node
+  definition: Direct BlueId of the protected input initialization marker.
+- path: input.root.contracts.initialized.document
+  type: value
+  definition: Exact pre-initialization witness document in the protected input marker; inline and pure-reference forms compare by canonical Blue identity.
 - path: manifest.counterCoverage.complete
   type: boolean
   definition: Bound package-manifest conformance projection.
@@ -111,6 +126,9 @@ entries:
 - path: result.document.child.generation
   type: scalar-or-node
   definition: Exact fixture child value after same-path replacement and re-add sequencing.
+- path: result.document.child.payload
+  type: value
+  definition: Passive child payload retained across Process Embedded surface evolution.
 - path: result.document.child.ran
   type: value
   definition: Whether the child Handler executed.
@@ -144,6 +162,9 @@ entries:
 - path: result.document.contracts.checkpoint.entries.target
   type: value
   definition: Checkpoint entry at the Handler target key; normally absent.
+- path: result.document.contracts.embedded
+  type: value
+  definition: Exact resulting Process Embedded contract, or absence after removal.
 - path: result.document.contracts.embedded.collectionPaths
   type: sequence-or-value
   definition: Exact resulting Process Embedded collectionPaths value.
@@ -156,18 +177,45 @@ entries:
 - path: result.document.contracts.initialized
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.initialized.directBlueId
+  type: scalar-or-node
+  definition: Direct BlueId of the protected resulting initialization marker.
 - path: result.document.contracts.initialized.document
   type: value
   definition: Exact pre-initialization scope document retained by the initialization marker.
+- path: result.document.contracts.in
+  type: value
+  definition: Exact input Channel contract, or absence after whole-surface replacement.
+- path: result.document.contracts.newOperation
+  type: value
+  definition: Scripted Operation introduced by the current transition for later entries.
+- path: result.document.contracts.next.subscriptionKey
+  type: scalar-or-node
+  definition: Subscription key on a Channel introduced by whole contracts replacement.
 - path: result.document.contracts.old
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.operation
+  type: value
+  definition: Distinct Scripted Operation contract, or absence after self-removal.
 - path: result.document.contracts.parentChannel.subscriptionKey
   type: scalar-or-node
   definition: Current explicit parent Channel subscription key.
+- path: result.document.contracts.replaceContracts
+  type: value
+  definition: Whole-contracts replacement Workflow, or absence after its transition.
+- path: result.document.contracts.requiredWorkflow
+  type: value
+  definition: Subtype-required Workflow, or absence after successful type widening.
+- path: result.document.contracts.terminated
+  type: value
+  definition: Exact protected termination marker, or absence after a rejected application write.
 - path: result.document.contracts.terminated.reason
   type: scalar-or-node
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.workflow
+  type: value
+  definition: Selected Workflow contract, or absence after self-removal.
 - path: result.document.cyclic.blueId
   definition: Opaque cyclic member identity preserved in the resulting Root.
 - path: result.document.executions

@@ -1,0 +1,91 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-06-order-representation
+scenario: FL-ADM-06
+description: Canonical multi-document initialization is invariant under document input order and under verified pure-reference versus inline representation of the same exact child.
+operation: admit-closure
+events: {}
+documents:
+  fl-adm-06-a:
+    publicRoot: true
+    document:
+      documentId: fl-adm-06-a
+      name: Full lifecycle canonical parent A
+      label: a
+      initializedBy: pending
+      child: {$documentBlueId: fl-adm-06-b}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/child]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        recordInitialization:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          order: 0
+  fl-adm-06-b:
+    publicRoot: false
+    document:
+      documentId: fl-adm-06-b
+      name: Full lifecycle canonical child B
+      label: b
+      initializedBy: pending
+      contracts:
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        recordInitialization:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          order: 0
+inputOrder: [fl-adm-06-a, fl-adm-06-b]
+occurrences:
+- sourceDocumentId: fl-adm-06-a
+  sourcePath: /child
+  activationGeneration: 1
+  targetDocumentId: fl-adm-06-b
+  active: true
+runtime:
+  initializationHandlers:
+    fl-adm-06-a/recordInitialization:
+      patches:
+      - {op: replace, path: /initializedBy, val: a}
+    fl-adm-06-b/recordInitialization:
+      patches:
+      - {op: replace, path: /initializedBy, val: b}
+  handlers: {}
+gas:
+  sharedLimit: release-default
+cases:
+- suffix: reference
+  inputOrder: [fl-adm-06-a, fl-adm-06-b]
+  representation: {documentId: fl-adm-06-a, path: /child, form: pure-reference}
+- suffix: reversed
+  inputOrder: [fl-adm-06-b, fl-adm-06-a]
+  representation: {documentId: fl-adm-06-a, path: /child, form: pure-reference}
+- suffix: inline
+  inputOrder: [fl-adm-06-a, fl-adm-06-b]
+  representation: {documentId: fl-adm-06-a, path: /child, form: inline}
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: fl-adm-06-a, initialized: true, terminated: false}
+  - {documentId: fl-adm-06-b, initialized: true, terminated: false}
+  pointers:
+  - {documentId: fl-adm-06-a, pointer: /initializedBy, value: a}
+  - {documentId: fl-adm-06-b, pointer: /initializedBy, value: b}
+  workCounts:
+  - {kind: INITIALIZATION, count: 2}
+  - {kind: LIFECYCLE, count: 2}
+  publicEvents: []
+  checkpointWrites: 0
+  commitCompanion: present
+  parityAcrossCases:
+  - invocationIdentity
+  - processResult
+  - gas
+  - workTrace
+  - finalizations

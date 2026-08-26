@@ -5,6 +5,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
+import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.merge.ResolvedSnapshot;
@@ -142,6 +143,79 @@ final class LogicalDeliveryRoutingTest {
             assertEquals(
                     Arrays.asList("source-a", "source-b"),
                     checkpointWrites(debug.trace()));
+        }
+    }
+
+    @Test
+    void shouldFreezeEveryAcceptedLogicalGroupBeforeAnEarlierGroupChangesRoutes() {
+        // given
+        Node event = event("topic", "event-frozen-groups");
+        try (Fixture fixture = new Fixture(event)) {
+            Node document = fixture.initialize(root(
+                    routingChannel(
+                            "source-one", 0, "topic", "domain-one",
+                            "target-one", "logical-one", "payload-one"),
+                    routingChannel(
+                            "source-two", 1, "topic", "domain-two",
+                            "target-two", "logical-two", "payload-two"),
+                    routingChannel(
+                            "target-one", 2, "other", "domain-target-one",
+                            "target-one", "target-one", "target-one"),
+                    routingChannel(
+                            "target-two", 3, "other", "domain-target-two",
+                            "target-two", "target-two", "target-two"),
+                    handler(
+                            "handler-one", "target-one",
+                            fixture.selectedBodyBlueId),
+                    handler(
+                            "handler-two", "target-two",
+                            fixture.selectedBodyBlueId)));
+            fixture.handlers.enableRouteEvolution();
+
+            // when
+            ProcessingDebugResult current = fixture.process(
+                    document,
+                    event,
+                    fixture.prepare(
+                            document, event, "source-one", "source-two"));
+
+            // then
+            assertEquals(ProcessorStatus.SUCCESS,
+                    current.processResult().status(),
+                    diagnostic(current.processResult()));
+            assertEquals(Arrays.asList("handler-one", "handler-two"),
+                    fixture.handlers.executedContracts());
+            Node currentContracts = current.processResult().document()
+                    .getContracts();
+            assertEquals("replacement-target-two",
+                    property(currentContracts, "target-two")
+                            .get("/payload"));
+            assertNull(property(currentContracts, "handler-two"));
+            assertNotNull(property(
+                    currentContracts, "replacement-handler-two"));
+            assertNotNull(property(currentContracts, "source-later"));
+            assertNotNull(property(currentContracts, "target-later"));
+            assertNotNull(property(currentContracts, "handler-later"));
+            assertTrue(hasCheckpoint(
+                    current.processResult().document(), "source-one"));
+            assertTrue(hasCheckpoint(
+                    current.processResult().document(), "source-two"));
+            assertFalse(hasCheckpoint(
+                    current.processResult().document(), "source-later"));
+
+            fixture.handlers.disableRouteEvolutionAndReset();
+            Node afterCurrent = current.processResult().document();
+            ProcessingDebugResult later = fixture.process(
+                    afterCurrent,
+                    event,
+                    fixture.prepare(afterCurrent, event, "source-later"));
+
+            assertEquals(ProcessorStatus.SUCCESS,
+                    later.processResult().status());
+            assertEquals(Collections.singletonList("handler-later"),
+                    fixture.handlers.executedContracts());
+            assertTrue(hasCheckpoint(
+                    later.processResult().document(), "source-later"));
         }
     }
 
@@ -1208,6 +1282,20 @@ final class LogicalDeliveryRoutingTest {
                         reference(bodyBlueId));
     }
 
+    private static Node contractValue(Node namedContract) {
+        Node result = namedContract.clone();
+        result.name(null);
+        return result;
+    }
+
+    private static String diagnostic(DocumentProcessingResult result) {
+        ProcessorDiagnostic diagnostic = result.diagnostic();
+        return diagnostic == null
+                ? null
+                : diagnostic.category() + ": " + diagnostic.message()
+                        + " " + diagnostic.details();
+    }
+
     private static Node headerProbe(String key) {
         return new Node()
                 .name(key)
@@ -1617,7 +1705,10 @@ final class LogicalDeliveryRoutingTest {
         private boolean fail;
         private boolean bodyMaterialized;
         private boolean bodyRequestedBeforeMatch;
+        private boolean routeEvolution;
         private final List<String> matchedChannels =
+                new ArrayList<>();
+        private final List<String> executedContracts =
                 new ArrayList<>();
 
         private LogicalHandlerProcessor(
@@ -1656,10 +1747,46 @@ final class LogicalDeliveryRoutingTest {
                 LogicalHandler contract,
                 ProcessorExecutionContext context) {
             executions++;
+            executedContracts.add(context.contractKey());
             bodyMaterialized =
                     contract.getBody() != null
                             && !contract.getBody()
                             .isReferenceOnly();
+            if (routeEvolution
+                    && "handler-one".equals(context.contractKey())) {
+                context.applyPatches(Arrays.asList(
+                        JsonPatch.replace(
+                                "/contracts/target-two",
+                                contractValue(routingChannel(
+                                        "target-two", 3, "other",
+                                        "domain-replacement-target-two",
+                                        "target-two", "target-two",
+                                        "replacement-target-two"))),
+                        JsonPatch.remove("/contracts/handler-two"),
+                        JsonPatch.add(
+                                "/contracts/replacement-handler-two",
+                                contractValue(handler(
+                                        "replacement-handler-two",
+                                        "target-two",
+                                        selectedBodyBlueId))),
+                        JsonPatch.add(
+                                "/contracts/source-later",
+                                contractValue(routingChannel(
+                                        "source-later", 4, "topic",
+                                        "domain-later", "target-later",
+                                        "logical-later", "payload-later"))),
+                        JsonPatch.add(
+                                "/contracts/target-later",
+                                contractValue(routingChannel(
+                                        "target-later", 5, "other",
+                                        "domain-target-later", "target-later",
+                                        "target-later", "target-later"))),
+                        JsonPatch.add(
+                                "/contracts/handler-later",
+                                contractValue(handler(
+                                        "handler-later", "target-later",
+                                        selectedBodyBlueId)))));
+            }
             if (fail) {
                 context.throwFatal(
                         "generic routed handler failure");
@@ -1674,6 +1801,20 @@ final class LogicalDeliveryRoutingTest {
             return Collections.unmodifiableList(
                     new ArrayList<>(
                             matchedChannels));
+        }
+
+        private List<String> executedContracts() {
+            return Collections.unmodifiableList(
+                    new ArrayList<>(executedContracts));
+        }
+
+        private void enableRouteEvolution() {
+            routeEvolution = true;
+        }
+
+        private void disableRouteEvolutionAndReset() {
+            routeEvolution = false;
+            reset();
         }
 
         private void setFailureEnabled(boolean fail) {
@@ -1694,6 +1835,7 @@ final class LogicalDeliveryRoutingTest {
             bodyMaterialized = false;
             bodyRequestedBeforeMatch = false;
             matchedChannels.clear();
+            executedContracts.clear();
         }
     }
 

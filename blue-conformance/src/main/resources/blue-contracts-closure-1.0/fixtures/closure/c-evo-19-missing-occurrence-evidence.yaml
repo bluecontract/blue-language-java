@@ -1,0 +1,200 @@
+schema: blue-contracts-closure-fixture/1.0
+id: c-evo-19-missing-occurrence-evidence
+vectors:
+- C-EVO-19
+category: admission
+operation: admit-closure
+description: An exact target already present in the closure but lacking its Process
+  Embedded occurrence row suspends with one typed occurrence-evidence demand and an
+  empty legacy exact-node list.
+releaseManifest: ../../release-manifest.yaml
+input:
+  graphGeneration: 1
+  cause:
+    kind: admission
+    causeIdentity: sha256:6bdf69777cfe076556f328fb6414c646aec5057fdcd6cc5709a9b2cd4d2decdc
+    admissionKind: TOP_LEVEL_ADMISSION
+    label: c-evo-19-missing-occurrence-evidence
+    triggeringEventBlueId: null
+    parentTransitionIdentity: null
+    policyIdentity: sha256:9c7a54a2facfdb15e60cd71058e54a873f0a2618509676ccbd4a0454bef31cee
+  admissionCandidate: null
+  admissionCandidateIdentity: null
+  documents:
+    c-evo-19-a:
+      documentId: c-evo-19-a
+      blueId: Ft3y4wLmkqauMHY9BmZn63e68rxUZqdE9MeDou6WsuKK
+      document:
+        name: C-EVO 19 missing occurrence A
+        contracts:
+          embedded:
+            type:
+              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+            paths:
+            - /peer
+        documentId: c-evo-19-a
+        peer:
+          blueId: 5KFjWc4btB8gy7VTMZeYjeU7wQWdrMLtCvorxQsUdc3s
+      initialized: false
+      terminated: false
+      publicRoot: true
+      epoch: 0
+      componentGeneration: 1
+    c-evo-19-b:
+      documentId: c-evo-19-b
+      blueId: 5KFjWc4btB8gy7VTMZeYjeU7wQWdrMLtCvorxQsUdc3s
+      document:
+        name: C-EVO 19 known B
+        documentId: c-evo-19-b
+      initialized: false
+      terminated: false
+      publicRoot: false
+      epoch: 0
+      componentGeneration: 1
+  occurrences: []
+  components:
+  - componentIdentity: sha256:7eef9b8efcf1d9c41da5c1db150514a197b01bdaa179342dc317283c333a1314
+    componentStateIdentity: sha256:722a6eb3bbfbe2ee308738d19b85f922cca2d4b1e3a69e0033671ebd184b9d95
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-19-a
+    orderedMemberBlueIds:
+    - Ft3y4wLmkqauMHY9BmZn63e68rxUZqdE9MeDou6WsuKK
+  - componentIdentity: sha256:727528689eb477f274ce6e99656c90a8590bacf6a6932fc41d9460f91a93bed8
+    componentStateIdentity: sha256:6a22513f15df2cb454c8783b53f2377775382639d104970bc283d9d129e53e32
+    componentGeneration: 1
+    kind: ACYCLIC
+    orderedMemberDocumentIds:
+    - c-evo-19-b
+    orderedMemberBlueIds:
+    - 5KFjWc4btB8gy7VTMZeYjeU7wQWdrMLtCvorxQsUdc3s
+  directDeliveries: []
+  publicRootDocumentIds:
+  - c-evo-19-a
+  directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
+  occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
+  closureIdentity: sha256:27fc0faf89193b8f03ff8798bd7a3bc6cddb9253c39cfb70667b155919d8ab43
+  invocationIdentity: sha256:b38f8fe10502700e05dfb12599fd3d58e8a6ee976bcfb13fba68f2aab21494a5
+  gasPolicy:
+    policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
+    sharedLimit: 100000
+    localLimits: {}
+    label: release-default
+  environment:
+    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
+    managedDocumentIdentityPolicy:
+      identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
+      label: nfc-document-lineage-v1
+    managedBindingPolicy:
+      identity: sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35
+      label: exact-document-lineage
+    exactNodeProviderDomain:
+      identity: sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec
+      label: fixture-exact-node-provider-v1
+    externalOrderPolicy:
+      identity: sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9
+      label: canonical-source-order-v1
+    portableLimitPolicy:
+      identity: sha256:fcd17a9a327082d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5
+      label: blue-contracts-1.0-portable-limits
+      limits:
+      - name: closureExpansionsPerInvocation
+        value: 4096
+      - name: closureGraphChangesPerInvocation
+        value: 4096
+      - name: closureTentativeFinalizationsPerInvocation
+        value: 8192
+      - name: closureWorkOccurrencesPerInvocation
+        value: 8192
+      - name: contractKeyCodePoints
+        value: 256
+      - name: contractKeyUtf8Bytes
+        value: 1024
+      - name: cyclicCanonicalBytesPerComponent
+        value: 16777216
+      - name: cyclicEdgesPerComponent
+        value: 1024
+      - name: cyclicMembersPerComponent
+        value: 128
+      - name: directCanonicalIdentityInputBytes
+        value: 1048576
+      - name: directInlineIdentityTextCodePoints
+        value: 262144
+      - name: directListItemsMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectEntriesMaterializedOrRebuilt
+        value: 16384
+      - name: directObjectKeyCodePoints
+        value: 4096
+      - name: effectiveContractsPerParticipatingScope
+        value: 8192
+      - name: embeddedDepth
+        value: 256
+      - name: eventsPerContractExecutionResult
+        value: 1024
+      - name: externalChannelsPerScope
+        value: 2048
+      - name: handlersBoundToOneDelivery
+        value: 4096
+      - name: internalEventOccurrencesPerInvocation
+        value: 8192
+      - name: managedDocumentsPerClosure
+        value: 4096
+      - name: nestedDocumentUpdateCascadeDepth
+        value: 256
+      - name: normalizedRuntimePointerUtf8Bytes
+        value: 4096
+      - name: participatingScopesPerEvent
+        value: 4096
+      - name: patchesPerContractExecutionResult
+        value: 1024
+      - name: preselectedExternalOccurrencesPerEvent
+        value: 1024
+      - name: processEmbeddedEdgesPerClosure
+        value: 16384
+      - name: processEmbeddedPathsPerScope
+        value: 4096
+      - name: rootEventsReturned
+        value: 4096
+      - name: runtimeChildLedgerCounterKinds
+        value: 256
+      - name: runtimePointerSegments
+        value: 256
+      - name: subscriptionKeysPerChannel
+        value: 256
+      - name: typeChainEdges
+        value: 256
+    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
+    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+runtime:
+  initializationHandlers: {}
+  handlers: {}
+expected:
+  attemptOutcome: NeedsResources
+  requiredBlueIds: []
+  resourceDemands:
+  - kind: MANAGED_OCCURRENCE_EVIDENCE
+    demandIdentity: sha256:714794a3e7fc16ebff2224d6e562671862994d17ae4207c7ff34f5e398ab158c
+    sourceDocumentId: c-evo-19-a
+    sourcePath: /peer
+    suppliedValueBlueId: 5KFjWc4btB8gy7VTMZeYjeU7wQWdrMLtCvorxQsUdc3s
+    logicalCauseIdentity: sha256:6bdf69777cfe076556f328fb6414c646aec5057fdcd6cc5709a9b2cd4d2decdc
+    inputClosureIdentity: sha256:27fc0faf89193b8f03ff8798bd7a3bc6cddb9253c39cfb70667b155919d8ab43
+    inputGraphGeneration: 1
+    processEmbeddedDeclarationIdentity: 6GLvxTgSnt3UyrZZa7VSN2pvqCnBZL5UjfyQK5AFx3h7
+    demandOrdinal: 0
+sharedLimitSource:
+  kind: RELEASE_DEFAULT
+provider:
+  nodes: {}
+  expectedRequiredBlueIds: []
+  expectedLoads: []
+locality:
+  unrelatedDocumentCount: 0
+  expectedUnrelatedDocumentsOpened: 0
+limit:
+  probe: null

@@ -174,6 +174,17 @@ final class PatchImpactAnalyzer {
         Decision decision;
         if (!exactReplacement) {
             decision = Decision.fallback(PatchImpact.FallbackReason.UNKNOWN);
+        } else if (contractsChange) {
+            /*
+             * Application-contract membership is an input to type
+             * conformance even when the local canonical and resolved
+             * contract entries happen to have the same structure.  In
+             * particular, removing a direct value can invalidate a schema
+             * contribution inherited from the containing node's type and
+             * therefore require type generalization.
+             */
+            decision = Decision.fallback(
+                    PatchImpact.FallbackReason.CONTRACTS_CHANGED);
         } else if (!legacyRequiresAuthoritative) {
             // Preserve rc.11's already-safe direct path for untyped/plain data.
             decision = Decision.local();

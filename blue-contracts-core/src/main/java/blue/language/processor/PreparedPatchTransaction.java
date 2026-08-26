@@ -73,6 +73,7 @@ class PreparedPatchTransaction implements AutoCloseable {
         PatchInput authoredPatch = patchAt(patchIndex);
         runtime.validateMutationPathWithoutResolution(authoredPatch);
         runtime.chargeSemanticIdentityWork(
+                originScope,
                 Collections.singletonList(authoredPatch));
         if (!counted) {
             runtime.counters().recordPreparedPatchSequence();

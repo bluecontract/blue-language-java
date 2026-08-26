@@ -128,9 +128,10 @@ a second cause, event, direct-delivery snapshot, execution policy, or
 environment value whose equality with the closed input would be ambiguous.
 
 Both closure operations return exactly the closed §2.5 union. `Complete`
-contains one `ClosureProcessResult`; `NeedsResources` contains only the sorted
-exact identities still required and is not a completed processor result. No
-closure API returns a bare `ClosureProcessResult` across the resource-acquisition
+contains one `ClosureProcessResult`; `NeedsResources` contains the canonical
+typed resources still required and is not a completed processor result. Its
+legacy exact-BlueId list is only a projection of exact-node demands. No closure
+API returns a bare `ClosureProcessResult` across the resource-acquisition
 boundary.
 
 `PROCESS` is the optimized one-document special case of the same laws. A conforming implementation MAY internally route an ordinary invocation through the closure engine, but existing ordinary result, gas, and fixture behavior MUST remain unchanged.
@@ -165,12 +166,33 @@ For `PROCESS_CLOSURE`:
 
 For `ADMIT_CLOSURE`:
 
-- there is no fabricated Timeline Entry or provider timestamp;
+- there is no external or fabricated Timeline Entry, provider timestamp, source
+  cursor, or checkpoint input;
 - `invocationInput.cause` is the one exact admission cause identifying the admitted closure and policy;
-- zero direct external deliveries are valid;
+- `invocationInput.directDeliveries` is the exact empty sequence; zero direct
+  external deliveries are required and valid;
 - it returns the same closed `ClosureAttemptResult` union as `PROCESS_CLOSURE`;
-- initialization, graph formation, cyclic finalization, gas, soundness, and rollback use the same rules as `PROCESS_CLOSURE`;
+- initialization, lifecycle, Document Update, application-event, termination,
+  graph-formation, and containing-reference work use the same canonical work
+  queue, event queue, immediate continuations, identity constructors, shared gas
+  ledger, soundness rules, and rollback boundary as `PROCESS_CLOSURE`;
+- admission never compares, creates, advances, cleans up, or commits a Timeline
+  checkpoint, and its `checkpointWrites` result sequence is empty;
+- every initialization-caused patch, event, termination, graph change, marker,
+  public event, and finalization is tentative and belongs to the one atomic
+  admission result;
 - each initializing managed document executes as its own isolated document step and cannot inspect the document or occurrence that caused its admission except through exact content or the explicitly available causal `$processingEvent` rules.
+
+The public Java entry point that claims this full-lifecycle operation is
+`admitClosureWithLifecycleQueue(ClosureInvocationInput)`. The existing
+`admitClosure(ClosureInvocationInput)` entry point is a bounded compatibility
+helper retaining its released low-level behavior. It is not a conforming
+substitute for `ADMIT_CLOSURE` when initialization causes Document Updates,
+application events, lifecycle termination, or further queued work. Both methods
+consume an input whose protocol operation is `ADMIT_CLOSURE`; the compatibility
+method does not define another protocol operation, model value, or identity
+domain, and the invocation constructor continues to hash the exact literal
+`admit-closure`.
 
 The closure snapshot, direct-delivery snapshot, occurrence bindings, proofs,
 admission cause, and managed-revision cause are verified platform evidence.
@@ -282,6 +304,8 @@ A conforming implementation MUST preserve all of these invariants:
 14. Checkpoints and lifecycle markers remain tentative and publish only with the
     successful closure. Initialized markers use the whole-component batch, and
     external checkpoints use the post-causal-closure settlement barrier.
+    `ADMIT_CLOSURE` never enters that checkpoint barrier and returns the exact
+    empty checkpoint-write sequence.
 15. Newly activated processable occurrences initialize deterministically before the introducing closure may commit, unless exact valid initialization evidence already exists.
 16. The introducing external event is never redelivered as a direct event to a newly activated occurrence.
 17. One closure invocation uses one exact finite default gas limit when no lower exact limit is bound. A document-authored or host-supplied limit may lower the available allowance but may not create another independent meter or silently raise the release maximum.
@@ -344,7 +368,7 @@ For an ordinary acyclic document, this reduces to the familiar deepest-first one
 | **Caused work** | One exact update, event, lifecycle, initialization, or containing-reference occurrence created by prior work. |
 | **Public Root** | A managed document whose explicit Root emissions appear in the returned public event stream. |
 | **Graph generation** | A committed monotonically increasing platform generation for the active occurrence set. Ordinary business-state changes do not increment it. |
-| **Activation generation** | A committed monotonically increasing lineage for one source-document/path occurrence; remove and later re-add starts a new generation. |
+| **Activation generation** | A committed monotonically increasing lineage for one source-document/path occurrence; retirement allocates the next generation for a later same-lineage re-add, and an active cross-lineage REBIND allocates the next generation immediately. |
 | **Component generation** | A committed generation for one component membership/edge partition. It changes only on formation, merge, split, or dissolution. |
 | **Quiescence** | No direct seed, immediate Document Update continuation, lifecycle work, or queued internal event remains for the closure. |
 
@@ -451,6 +475,9 @@ A conforming implementation MUST:
 - recognize the canonical core runtime BlueIds;
 - implement ordinary `PROCESS` and platform commit obligations;
 - implement `PROCESS_CLOSURE` and `ADMIT_CLOSURE` to claim cyclic/closure conformance;
+- implement normative `ADMIT_CLOSURE` through the full lifecycle queue exposed
+  by `admitClosureWithLifecycleQueue`; availability of only the bounded
+  compatibility `admitClosure` helper does not satisfy this requirement;
 - support every processor-managed type in Appendix A;
 - revalidate exact feeder, occurrence-binding, graph, and proof evidence;
 - implement every platform identity exactly from `conformance/contracts/identity-constructors.yaml`;
@@ -579,18 +606,28 @@ delivery recipient, or initialization trigger. It need not yet exist in the
 source Blue content or be covered by a current `Process Embedded` declaration.
 If its path is already present, that exact value MUST nevertheless establish
 `expectedTargetBlueId`; presence alone does not activate the row. When an exact
-mutation activates that path, the processor
-first verifies the inserted value and effective declaration against the row and
-changes that same row to `active: true`; it does not copy or synthesize a row
-from hidden state. Except for the exact inactive retirement successor derived
-from an active input row under §5.6, every prospective row that may be used by
-the invocation MUST already be present in the exact input snapshot. Deriving
-that successor allocates no target or binding evidence: it carries the same
-source path, target lineage, and binding policy at exactly the next generation.
-Contracts has no dynamic binding acquisition, ambient lookup, inferred
-lineage, or hidden staging map.
-A patch that introduces an otherwise valid embedded value without one exact
-matching input row fails deterministically.
+mutation activates that path, the processor first verifies the inserted value
+and effective declaration against the row and changes that same row to
+`active: true`; it does not copy or synthesize a row from hidden state.
+
+Except for the exact inactive retirement successor derived from an active input
+row under §5.6, reconciliation still consumes one exact prospective row. When
+the resulting effective surface contains a verified exact value but the closed
+attempt lacks that row, Contracts returns a typed
+`ManagedOccurrenceEvidenceDemand` under §2.5 before reconciliation or commit.
+The host may satisfy the demand only by constructing and verifying the exact
+prospective row and submitting a new closed invocation. Contracts performs no
+ambient lookup, inferred-lineage mutation, or hidden staging. The new invocation
+retains the same authoritative document heads and logical cause but recomputes
+the occurrence-binding-set, input-closure, and invocation identities. An
+equivalent explicitly supplied prospective row produces the byte-identical
+resolved invocation and execution.
+
+Deriving a retirement successor allocates no target or binding evidence: it
+carries the same source path, target lineage, and binding policy at exactly the
+next generation. A missing exact value required to determine the occurrence
+instead produces an `ExactNodeDemand`; it is never converted into field absence
+or an occurrence-evidence guess.
 
 `pendingHistoricalEpoch` is non-null only when the row's
 `expectedTargetBlueId` is an admitted historical exact state of the named
@@ -869,7 +906,11 @@ AdmissionCause {
 }
 ```
 
-Admission has no fabricated provider timestamp and permits zero direct external deliveries.
+Admission causality is exactly `AdmissionCause.causeIdentity`. Admission has no
+external or fabricated Timeline Entry, provider timestamp, source cursor, or
+checkpoint evidence and requires the recomputed empty direct-delivery snapshot.
+The optional triggering event and parent-transition identities above are exact
+policy-authorized causal evidence; neither is a Timeline Entry or timestamp.
 
 The two nullable Admission fields are always serialized. For
 `TOP_LEVEL_ADMISSION` both are normally JSON `null`; for a causally embedded or
@@ -1016,12 +1057,11 @@ A binding is valid only when:
 3. target evidence identifies `targetDocumentId` as that exact state or as an admitted historical state of that lineage;
 4. the occurrence and binding identities recompute exactly and do not conflict with another row for the same source/path/generation;
 5. `pendingHistoricalEpoch` is JSON `null` unless it exactly identifies the admitted historical target state being caught up under the rules above;
-6. the exact row is already in the invocation input before it may activate;
-   the inactive retirement successor deterministically derived under §5.6 is
-   output-only in the invocation that creates it and may activate only after it
-   is committed and supplied as input to a later invocation; the target is
-   available in the closure or its already named exact BlueId is returned by
-   the deterministic resource boundary before first target work.
+6. the exact row is present before reconciliation may activate it; a missing
+   prospective row or unavailable exact node produces the typed noncommitting
+   demand of §2.5; the inactive retirement successor deterministically derived
+   under §5.6 is output-only in the invocation that creates it and may activate
+   only after it is committed and supplied as input to a later invocation.
 
 Managed occurrence activation generations are positive safe integers. The
 managed Root scope generation is `0`; the first embedded occurrence reservation
@@ -1032,12 +1072,12 @@ exactly the preceding generation plus one with fresh occurrence and binding
 identities. That successor cannot reactivate in the invocation that creates it.
 After it is committed and supplied as an inactive input row to a later
 invocation, re-add activates it without another generation or
-occurrence-identity allocation. A different managed
-lineage cannot replace an active or reserved path in Contracts 1.0. Such a
-patch fails before mutation. A future specification may add an explicit atomic
-platform rebind operation with its own compare-and-swap evidence; none is
-defined here. Overflow fails closed; a generation is never reused after a
-successful retirement.
+occurrence-identity allocation. An inactive row remains bound to its reserved
+lineage. An active row may instead atomically rebind to another exact managed
+lineage under §5.6: the next generation and fresh occurrence/binding identities
+belong to the new target, and the old lineage retires in the same result.
+Overflow fails closed; a generation is never reused after a successful
+retirement or active cross-lineage rebind.
 
 Two different `DocumentId` values MAY currently have the same BlueId. One `DocumentId` MUST NOT simultaneously claim conflicting exact current states in one closure.
 
@@ -1081,14 +1121,102 @@ ClosureAttemptResult =
         result: ClosureProcessResult
     }
   | NeedsResources {
+        resourceDemands[]
         requiredBlueIds[]
     }
 ```
 
-`requiredBlueIds` is the duplicate-free list of exact required BlueIds sorted
-by canonical BlueId text. `NeedsResources` is not a completed processor result
-and has no status, gas trace, rejected-charge evidence, semantic state, or
-commit companion.
+`resourceDemands` is the authoritative non-empty, duplicate-free typed demand
+list. `ClosureResourceDemand` is a closed hierarchy with exactly these forms:
+
+```text
+ExactNodeDemand {
+    demandIdentity
+    sourceDocumentId
+    sourcePath
+    suppliedValueBlueId
+    blueId
+    logicalPath
+}
+
+ManagedOccurrenceEvidenceDemand {
+    demandIdentity
+    logicalCauseIdentity
+    inputClosureIdentity
+    inputGraphGeneration
+    sourceDocumentId
+    sourcePath
+    processEmbeddedDeclarationIdentity
+    suppliedValueBlueId
+    demandOrdinal
+    suppliedExactValue?
+}
+```
+
+An `ExactNodeDemand` requires one exact named Blue node before the attempt can
+continue. Its source document and logical path identify the demand site. A
+legacy provider-only exact-node demand that has no more specific site uses the
+reserved source `blue-contracts/exact-node-provider` and path `/`.
+
+A `ManagedOccurrenceEvidenceDemand` requires an exact prospective occurrence
+row for the named source/path, declaration contribution, supplied-value BlueId,
+logical cause, input closure, and input graph generation. It does not authorize
+Contracts to invent a `DocumentId`, binding policy, occurrence row, or target
+lineage. The host constructs and verifies that evidence outside deterministic
+execution, then submits it in a new closed invocation.
+
+When the tentative supplied occurrence value is a complete inline Blue value,
+the demand also carries `suppliedExactValue`. Contracts clones the value,
+validates its simple wire form, and verifies that its direct BlueId is exactly
+`suppliedValueBlueId`; every read returns a fresh defensive clone. A pure
+reference carries no inline value. Its exact content is acquired through the
+separate exact-node/provider boundary before the host can construct new-lineage
+evidence. `suppliedExactValue` is resource payload, not demand semantics: it is
+excluded from demand identity and ordering. If duplicate demands have the same
+identity, canonicalization deterministically retains the resource-bearing form
+regardless of discovery order.
+
+Every demand identity uses domain
+`blue-contracts-closure-resource-demand/1.0` over the closed nine-field value:
+
+```text
+{
+    kind,
+    logicalCauseIdentity,
+    inputClosureIdentity,
+    inputGraphGeneration,
+    sourceDocumentId,
+    sourcePath,
+    processEmbeddedDeclarationIdentity,
+    suppliedValueBlueId,
+    demandOrdinal
+}
+```
+
+For `EXACT_NODE`, the five occurrence-only fields
+`logicalCauseIdentity`, `inputClosureIdentity`, `inputGraphGeneration`,
+`processEmbeddedDeclarationIdentity`, and the occurrence-only
+`demandOrdinal` are explicit JSON `null`. For
+`MANAGED_OCCURRENCE_EVIDENCE`, every field is non-null and
+`demandOrdinal` is the deterministic zero-based ordinal of the concrete path in
+that Root's canonically projected Process Embedded surface.
+
+Demands sort by source `DocumentId`, normalized source path, supplied-value
+BlueId, canonical ordinal, and demand identity. Exact-node demands use zero as
+their sorting ordinal while retaining JSON `null` in their identity value.
+Demand kind is never an ordering prefix. The complete demand set is globally
+sorted and duplicate-free by `demandIdentity` after discovery over every
+resulting Root.
+
+`requiredBlueIds` is only the compatibility projection of `blueId` from
+`ExactNodeDemand`, duplicate-free and sorted by canonical BlueId text. It can be
+empty for an occurrence-evidence-only suspension and MUST NOT be interpreted as
+the authoritative demand set.
+
+`NeedsResources` is not a completed processor result and has no status, result,
+gas, gas trace, rejected-charge evidence, document/graph/subscription state,
+events, checkpoints, or commit companion. A suspension publishes none of the
+tentative semantic effects that preceded discovery.
 
 A completed closure invocation returns:
 
@@ -1233,6 +1361,13 @@ is the invocation-global emission ordinal used by
 `eventOccurrenceIdentity`; it may contain gaps in the public projection because
 non-public event occurrences are omitted. Both are required and independently
 revalidated.
+For `ADMIT_CLOSURE`, initialization and lifecycle effects use these same result
+fields. An event explicitly emitted by work at an admitted public Root appears
+once in `publicEvents`; a non-public member emission remains internal even when
+it causes a containing public Root to react. `checkpointWrites` is the exact
+empty sequence and `checkpointWritesIdentity` is the ordinary identity of that
+empty sequence. No Timeline entry, timestamp, source cursor, or checkpoint is an
+additional result field.
 A committing completed result MUST contain the exact
 `platformCommitCompanion`. A noncommitting completed result MUST omit it and
 MUST return the exact authoritative input documents, graph generation, component
@@ -1660,10 +1795,23 @@ when it is true. Each non-null domain value independently recomputes to the
 adjacent domain BlueId under §10.2; the value is therefore complete result
 evidence rather than an unattached label.
 Graph `changeKind` is the closed value `ADD`, `REMOVE`, or `REBIND`
-and agrees with its nullable sides. `REBIND` records same-lineage exact-state
-binding churn; it does not change the active edge set, increment graph
-generation, or consume `closureGraphChangesPerInvocation`. Subscription
-`operation` is the closed value
+and agrees with its nullable sides. `REBIND` always contains both complete
+sides and has exactly one of two shapes:
+
+1. A same-lineage exact-state rebind preserves target `DocumentId`, activation
+   generation, and `occurrenceIdentity`, changes the exact binding evidence,
+   does not change the active edge set or graph generation, and does not consume
+   `closureGraphChangesPerInvocation`.
+2. An active different-lineage rebind preserves source document, source path,
+   and binding policy, changes target `DocumentId`, uses exactly the preceding
+   activation generation plus one, and carries fresh occurrence and binding
+   identities. It retires the old active lineage and activates the new one in
+   one receipt. It changes the active edge set, advances graph generation, and
+   consumes one `closureGraphChangesPerInvocation` unit.
+
+A mixed shape is invalid: a preserved occurrence identity cannot change target
+lineage, and a fresh occurrence identity cannot retain the old target lineage.
+Subscription `operation` is the closed value
 `ADD`, `REMOVE`, or `REPLACE` and likewise agrees with its sides. Each
 `beforeSubscriptionIdentity` or `afterSubscriptionIdentity` is the exact
 `subscriptionIdentity` above; the delta constructor never hashes an opaque host
@@ -1701,7 +1849,7 @@ All invocation state is tentative until final success:
 - containing-reference changes;
 - gas trace.
 
-A committing `success` or successful admission returns and publishes the complete result atomically. Every deterministic failure, invalid proof, gas exhaustion, portable-limit failure, schema failure, or finalization failure discards all tentative state and public events.
+A committing `success` or successful admission returns and publishes the complete result atomically. Admission atomicity includes all initialization, lifecycle, termination, update, event, graph, marker, and finalization effects caused before quiescence. Every deterministic failure, invalid proof, gas exhaustion, portable-limit failure, unsupported graph expansion, schema failure, or finalization failure discards all tentative state and public events.
 
 Transient missing exact resources returns `NeedsResources` from an attempt API and commits no portable gas or semantic state.
 
@@ -1723,7 +1871,7 @@ Physical fetch count, cache hits, allocation, storage layout, batching, and temp
 
 A committing result is installed only through compare-and-swap against every exact input document state, graph generation, stable component identity, component-state identity, and current cyclic `MASTER` on which the result depends.
 
-The transaction MUST atomically persist:
+The transaction MUST atomically persist every applicable item below:
 
 ```text
 all resulting exact documents and public Root heads
@@ -1736,6 +1884,20 @@ graph changes and containing-reference updates
 terminal progress for the original cause
 commit companion and gas trace identity
 ```
+
+For every operation, including `ADMIT_CLOSURE`, `terminal progress for the
+original cause` is host-internal idempotency evidence keyed exclusively by the
+exact `causeIdentity`. The compare-and-swap dependency set fences installation
+but does not become part of that key. This terminal record is never Timeline
+position, source-occurrence progress, delivery progress, a Channel checkpoint,
+a checkpoint domain or subject, or lifecycle-marker state, and a platform MUST
+NOT derive or advance any such state from it.
+
+For `ADMIT_CLOSURE`, the checkpoint item is inapplicable: the committed
+`checkpointWrites` sequence is empty and the adapter MUST NOT create, advance,
+clean up, or otherwise mutate checkpoint state while installing the admission.
+All applicable initialization-caused items, including lifecycle markers and
+public Root outbox events, are nevertheless installed in the same transaction.
 
 `platformCommitCompanion` is not an opaque host object. Its exact constructor is:
 
@@ -2133,7 +2295,25 @@ contracts:
   <key>: <Contract>
 ```
 
-Contract entries are ordinary identity-bearing Blue content. Application contracts are obtained from the effective Language-resolved contracts map. Processor state at reserved keys is always direct state and is never inherited.
+Contract entries are ordinary identity-bearing Blue content. Application
+contracts are obtained from the effective Language-resolved contracts map.
+Ownership is exact:
+
+| Contract state | Owner | Application mutation |
+|---|---|---|
+| direct `initialized` marker | processor | forbidden |
+| direct `terminated` marker | processor | forbidden |
+| direct `checkpoint` state | processor | forbidden |
+| effective `generalization` policy | processor-protected policy | forbidden during the protected transition |
+| Workflow, Handler, Operation, External/Internal Channel, lifecycle, actor-policy, and other supported application roles | application | add, replace, or remove subject to ordinary validation |
+| complete `Process Embedded` declaration, including type, `paths`, `collectionPaths`, and any other declared field | application | add, replace, or remove subject to complete graph reconciliation |
+
+Direct processor state is never inherited. A whole `/contracts` replacement is
+permitted only when it supplies semantically identical evidence for every
+processor-protected entry that was present before the write and does not
+introduce a protected entry that was absent. The processor retains the
+canonical representation of an identity-equivalent protected value; every
+unprotected application entry follows the replacement normally.
 
 ### 4.2 Contract-map key grammar
 
@@ -2338,7 +2518,6 @@ The following state is processor-protected:
 direct initialized marker identity
 direct terminated marker identity
 direct checkpoint marker identity
-effective Process Embedded type and every non-path field
 effective Type Generalization Policy
 ```
 
@@ -2350,9 +2529,17 @@ EFFECTIVE_PROTECTED_STATE(before)
 EFFECTIVE_PROTECTED_STATE(after)
 ```
 
-MUST hold, except that an explicitly permitted patch to the declaration fields `contracts/embedded/paths` or `contracts/embedded/collectionPaths` may change only those declaration fields while preserving the exact Process Embedded type and every other effective field.
+MUST hold. There is no Process Embedded exception because no field of the
+Process Embedded application contract is processor-protected. Its complete
+declaration may be added, removed, or replaced, but the resulting effective
+surface MUST pass the all-Root demand preflight and complete occurrence/graph,
+component, subscription, type, schema, and limit reconciliation before commit.
 
-This comparison catches indirect changes caused by replacing `/type`, `/contracts`, or an ancestor of a protected contribution.
+This comparison catches indirect changes caused by replacing `/type`,
+`/contracts`, or an ancestor of a protected contribution. It does not freeze an
+application-owned contract merely because that contract changes dispatch,
+subscription, lifecycle, or graph behavior; those changes are governed by the
+frozen-current-delivery and post-write reconciliation rules.
 
 ### 4.11 Execution context
 
@@ -2530,32 +2717,44 @@ The initial affected closure contains:
 - every active containing document and ancestor component whose exact reference may change;
 - every scope required for initialization, lifecycle, update, event, checkpoint, validation, or public Root publication.
 
-A Handler patch, initialization result, or processor-managed write may add,
-remove, or rebind same-lineage `Process Embedded` content. After each such
-identity-affecting change, the processor MUST:
+A Handler patch, initialization result, generated type write, or
+processor-managed write may add, remove, replace, or otherwise change the
+complete application-owned `Process Embedded` contract and its exact content.
+After each such identity-affecting change, the processor MUST:
 
-1. derive the exact occurrence-row delta from resulting Blue content;
-2. verify exact managed occurrence binding evidence from an explicit matching
-   `active: false` row already present in the invocation input; never acquire,
-   infer, or stage target/binding evidence during Contracts execution. The row
-   need not be covered by the input's current declaration, but activation
-   requires the resulting exact value and effective declaration to cover it;
-3. expand the closure only to newly required targets and containers;
-4. preflight every newly expanded document, runtime type, proof, and limit before its first semantic work;
-5. recompute the affected strongly connected partition;
-6. preserve already completed direct work, tentative state, queues, event ordinals, gas trace, and invocation identity;
-7. continue under the new partition without replaying the external delivery.
+1. project the complete resulting effective Process Embedded surface for every
+   current Root, with Roots and concrete paths in canonical order;
+2. perform read-only typed demand discovery over all projected Roots and
+   globally sort and deduplicate the aggregate under §2.5;
+3. if the aggregate is nonempty, return `NeedsResources` and reconcile no Root,
+   occurrence row, retirement fence, graph edge, component, subscription, or
+   publication state;
+4. only when the aggregate is empty, reconcile every Root from exact resulting
+   Blue content and verified occurrence evidence, including one atomic active
+   cross-lineage `REBIND` when permitted by §5.6;
+5. expand the closure only to newly required exact targets and containers;
+6. preflight every newly expanded document, runtime type, proof, and limit
+   before its first semantic work;
+7. recompute the affected strongly connected partition;
+8. preserve already completed direct work, tentative state, queues, event
+   ordinals, and admitted gas when continuing a complete attempt; and
+9. continue under the new partition without replaying the external delivery.
+
+The all-Root demand preflight is an atomicity boundary. A demand in one Root
+prevents reconciliation of every other Root, including Roots whose evidence is
+already complete. Tentative application effects before this boundary may be
+reproduced on retry but are not published by the suspended attempt.
 
 Closure expansion may merge two existing cyclic components, create a new cycle from an acyclic region, split a component, or dissolve a cycle.
 
 An expansion that would join a separately executing closure or exceed a portable limit fails the entire invocation before new joined work begins.
 
-Replacing an active path with a value bound to a different managed
-`DocumentId` in the same invocation is unsupported and fails before graph
-repartition. The active row and a different-lineage inactive candidate cannot
-coexist in the one-row-per-source-path snapshot. Contracts 1.0 defines no
-different-lineage retarget operation; a BlueId alone never selects managed
-lineage.
+Replacing an active path may retarget it atomically to another uniquely
+established exact managed `DocumentId` already represented in the resulting
+closed evidence. The current active row supplies the source path and binding
+policy; the exact value and managed-document evidence select the new target.
+A BlueId alone never selects managed lineage. The transition is the active
+cross-lineage `REBIND` of §5.6, not a remove followed by an add.
 
 ### 5.6 Occurrence continuity
 
@@ -2593,26 +2792,41 @@ Changes to
 `pendingHistoricalEpoch` during deterministic catch-up likewise preserve
 `occurrenceIdentity` while exact rebinds update `bindingIdentity` as required.
 
-An active or inactive reserved path MUST NOT retarget to another managed
-`DocumentId`. The attempted invocation fails before mutation. The inactive
-successor remains bound to the same managed lineage and only that lineage may
-re-add. Contracts 1.0 defines no ambient or feeder-side mutation of the
-authoritative occurrence row outside an atomic closure result.
+An active path MAY retarget atomically to another managed `DocumentId` only
+when the resulting exact value identifies one unique managed document in the
+closed evidence and the binding policy is unchanged. This different-lineage
+`REBIND`:
+
+- retires the old active occurrence lineage;
+- uses exactly the old activation generation plus one;
+- creates fresh occurrence and binding identities for the new target lineage;
+- carries `pendingHistoricalEpoch: null`;
+- records one `REBIND` receipt with the complete old and new sides;
+- counts as an active-edge change and therefore advances graph generation; and
+- is subject to the invocation retirement fence, so the same source path cannot
+  retire or reactivate again in that invocation.
+
+An inactive prospective or retirement-successor row MUST NOT retarget. It
+remains bound to its reserved managed lineage and only that lineage may activate
+it in a later invocation. Contracts defines no ambient or feeder-side mutation
+of an authoritative row outside a new verified closed invocation.
 
 The activation generation changes when the active path is removed, allocating
-its inactive successor. Later-invocation activation/re-add of that committed
-same-lineage successor does not increment it again. An input-active path that
-is also active in the completed output therefore preserves its generation and
-occurrence identity; same-invocation remove-then-re-add is unsupported in
-Contracts 1.0. Failed or rolled-back changes do not advance it.
+its inactive successor, and when an active path performs a different-lineage
+`REBIND`, allocating the new active lineage. Later-invocation activation/re-add
+of a committed same-lineage successor does not increment it again. An
+input-active path that remains active against the same target lineage preserves
+its generation and occurrence identity; same-invocation remove-then-re-add is
+unsupported in Contracts 1.0. Failed or rolled-back changes do not advance it.
 
 Generation numbering is exact: the managed Root scope uses generation `0`; a
 first embedded occurrence reservation or activation uses generation `1`; and
 every successful retirement-successor allocation at that source path uses
 exactly the preceding generation plus one. Later-invocation activation or
 re-add of an existing same-lineage reservation does not increment it.
-Same-lineage BlueId changes,
-including managed-revision and cyclic-finalization churn, retain the generation.
+Same-lineage BlueId changes, including managed-revision and cyclic-finalization
+churn, retain the generation. An active different-lineage `REBIND` uses exactly
+the preceding generation plus one.
 Overflow beyond the portable safe-integer range fails closed.
 
 ### 5.7 Component and graph generations
@@ -2695,11 +2909,12 @@ A containing document does not directly patch strict descendants of a separately
 
 Within a cyclic closure, each member Handler still mutates only its own document. A member may influence another member through an explicit occurrence update or event caused by exact content changes.
 
-A whole occurrence may be added, removed, or replaced with another exact state
-of the same managed lineage through an allowed patch at its immediate source
-path. Exact binding evidence and graph reclassification are then required.
-Replacement by another managed lineage is unsupported in Contracts 1.0 and
-fails before mutation.
+A whole occurrence may be added, removed, replaced with another exact state of
+the same managed lineage, or actively rebound to another exact managed lineage
+through an allowed patch at its immediate source path. Exact binding evidence,
+the all-Root demand preflight, and graph reclassification are then required.
+An inactive reservation cannot be retargeted, and a remove-then-re-add sequence
+cannot evade the same-invocation retirement fence.
 
 ### 5.9 Frozen target sets, removal, and cut-off
 
@@ -2717,6 +2932,13 @@ eligible target lineage across same-lineage BlueId and cyclic-master churn, but
 observes the latest exact state of that lineage when it runs. A missing or
 conflicting historical binding fails closed; it is never treated as field
 absence or silently redirected.
+
+An active different-lineage `REBIND` does not redirect work frozen for the old
+`occurrenceIdentity`. That work remains bound to the old target lineage under
+the ordinary frozen-target rules; only work discovered after the atomic rebind
+may target the fresh occurrence lineage. Checkpoints, historical cursors,
+pending work, and cut-off state are never transferred from the retired
+occurrence to the new one.
 
 Removing an edge does not cancel work already created through that edge. New work created after removal uses the new graph.
 
@@ -2803,6 +3025,13 @@ Acceptance is immutable for the invocation and cannot read mutable business stat
 
 Every successful application patch, generated type-generalization write, or processor-managed containing-reference rewrite creates one immutable update occurrence after exact tentative finalization.
 
+This rule applies without exception to a patch returned by an initialization or
+termination lifecycle Handler. Such a patch crosses the same orchestrator-owned
+`afterPatch` continuation: tentative finalization and exact managed-reference
+synchronization complete first, authored and finalization-caused containing
+updates are classified against the latest finalized bodies, and all matching
+routes are accepted in canonical order before their immediate FIFO is drained.
+
 The occurrence freezes:
 
 ```text
@@ -2861,6 +3090,10 @@ For each event, the processor:
 6. appends the occurrence to the invocation FIFO.
 
 Equal event BlueIds emitted twice have different occurrence IDs and remain two deliveries.
+The allocation and queue rules are identical during admission initialization
+and termination lifecycle work. One emission is appended to the public
+projection at most once, at its creation boundary; delivering or observing that
+same occurrence never appends it again.
 
 ### 6.6 Triggered Event Channel
 
@@ -2911,6 +3144,11 @@ Every caused patch and complete immediate Document Update continuation finishes 
 
 The queue is drained only by the normative event-drain step. External, lifecycle, and update helpers enqueue but do not independently double-drain it.
 
+Normative `ADMIT_CLOSURE` uses this queue and the ordinary closure work queue;
+it does not run initialization events through a bounded side channel. Events
+emitted while handling one occurrence wait behind the complete delivery batch
+already accepted for that occurrence.
+
 ### 6.10 Processor-managed writes
 
 | Write | Creates Document Update? |
@@ -2958,12 +3196,15 @@ RUN.componentStateIdentities
 RUN.currentExactDocumentBlueIds
 RUN.currentCyclicProofs
 RUN.directSeedQueue
+RUN.workQueue
+RUN.admissionInitializationPlan
 RUN.updateContinuations
 RUN.eventQueue
 RUN.publicEvents
 RUN.completedDirectDeliveries
 RUN.initializedDocuments
 RUN.initializationBatches
+RUN.pendingTerminations
 RUN.terminatingDocuments
 RUN.terminatedDocuments
 RUN.checkpointWrites
@@ -3119,6 +3360,12 @@ compare or write no checkpoint, and perform no tentative component
 finalization. Once the first charge is admitted, all other deterministic
 verification follows the ordinary live-meter rules.
 
+For `ADMIT_CLOSURE`, Phase A also verifies the admission portable limits and all
+initial edge, component, cyclic-proof, and finalization evidence required before
+the first initialization seed. These are invocation-owned admission operations
+on the one shared meter; switching from bounded compatibility execution to the
+normative lifecycle queue does not omit or move them to another ledger.
+
 ### 7.3 Phase B — revalidate and classify direct deliveries
 
 For each frozen external snapshot in canonical order:
@@ -3153,7 +3400,8 @@ or failure of its subject policy cannot leave initialization or Handler work in
 the trace.
 
 `ADMIT_CLOSURE` and a managed-revision `PROCESS_CLOSURE` skip direct
-classification.
+classification. Admission also creates no checkpoint comparison or settlement
+candidate.
 
 ### 7.4 Phase C — initial closure and must-understand preflight
 
@@ -3180,6 +3428,23 @@ next work occurrence.
 There is no cyclic-specific Handler path. A work occurrence targeting a member
 of a cyclic component is executed by the same document-step processor as work
 targeting an acyclic document.
+
+For `ADMIT_CLOSURE`, Phase D first constructs one immutable initialization plan.
+It contains every managed document present in the input snapshot whose valid
+initialized marker is absent, including an admitted public Root with no active
+incoming managed occurrence. Components are ordered target-before-source using
+the canonical reverse topological condensation order; members within one
+component are ordered by `DocumentId`. Input map, list, provider, cache, and
+admission order cannot change the plan.
+
+Each planned document is seeded exactly once with
+`sourceOccurrenceIdentity = AdmissionCause.causeIdentity`. Its `INITIALIZATION`
+work, generated `LIFECYCLE` work, patches, Document Updates, application events,
+terminations, graph changes, containing-reference work, and finalizations all
+use the same normal work/event queues and shared invocation meter. The complete
+causal closure for the selected component reaches quiescence before its marker
+barrier and before the next component begins. A document already initialized in
+the input or by an earlier completed admission batch is not seeded again.
 
 For an external cause, every accepted direct seed is materialized as one `EXTERNAL_DELIVERY`
 `WorkOccurrence`, charged once for `closureWorkOccurrenceEnqueued`, enqueued,
@@ -3425,17 +3690,33 @@ This byte-limit form is identical for semantically equal inline and exact-refere
 
 When exact resulting content changes active occurrences:
 
-1. calculate the concrete occurrence delta from Blue content and binding evidence;
-2. activate a matching verified inactive row in place; for every removed active
-   occurrence allocate its exact inactive successor at generation plus one;
-   reject replacement of an active or reserved path by another target lineage;
-3. identify only components reachable through the changed region;
-4. recompute SCCs in that induced region;
-5. merge with unaffected partition entries;
-6. assign tentative graph/component generations under §5.7;
-7. preflight newly added members and exact proofs before their first work;
-8. preserve all completed direct deliveries, transition/event ordinals, queues, and gas;
-9. continue without replaying already applied work.
+1. project every current Root's complete resulting Process Embedded surface;
+2. discover and aggregate every exact-node and managed-occurrence-evidence
+   demand before reconciling any Root;
+3. return noncommitting `NeedsResources` when that aggregate is nonempty;
+4. otherwise calculate the concrete occurrence delta from exact Blue content
+   and verified binding evidence;
+5. activate a matching verified inactive row in place; for every removed active
+   occurrence allocate its exact inactive successor at generation plus one; and
+   for one permitted active different-lineage replacement emit the atomic
+   generation-plus-one `REBIND` of §5.6;
+6. identify only components reachable through the changed region;
+7. recompute SCCs in that induced region;
+8. merge with unaffected partition entries;
+9. assign tentative graph/component generations under §5.7;
+10. preflight newly added members and exact proofs before their first work;
+11. preserve all completed direct deliveries, transition/event ordinals,
+    queues, and admitted gas in a continuing complete attempt; and
+12. continue without replaying already applied work.
+
+During `ADMIT_CLOSURE`, the same rules apply before lifecycle work to the
+initial complete Root surfaces and after each tentative lifecycle-caused
+surface change. Initial missing exact content or occurrence evidence suspends
+before application code. A lifecycle-created occurrence may reach the
+post-mutation demand boundary after tentative work; suspension rolls that work
+back and publishes no completion evidence. A resolved retry supplies verified
+closed evidence and still uses the ordinary admission and reconciliation path;
+Contracts never fabricates a lineage or mutates a hidden relationship list.
 
 A dynamic change may transform:
 
@@ -3522,6 +3803,11 @@ A processable managed document initializes when:
 - `ADMIT_CLOSURE` admits it; or
 - a successful tentative patch introduces a new active processable occurrence.
 
+For `ADMIT_CLOSURE`, “admits it” includes every uninitialized managed document
+already present in the immutable input snapshot; an active incoming binding is
+not required. The initial plan is the canonical plan from §7.5, not a scan of
+documents reached opportunistically while work executes.
+
 A newly introduced occurrence does not receive the introducing external event directly.
 
 Initialization order is by reverse topological component order. Initialization
@@ -3531,14 +3817,17 @@ work by normalized `DocumentId`, then local initialization scope order.
 
 For one component initialization batch:
 
-1. verify every existing initialized marker and identify every active member
-   whose marker is missing;
+1. verify every existing initialized marker and identify every member selected
+   by the applicable initialization cause whose marker is missing; for the
+   initial `ADMIT_CLOSURE` plan this includes every such input member, while
+   patch-caused activation retains the ordinary active-member rule;
 2. before any such member's lifecycle work begins, freeze that member's exact
    pre-initialization BlueId and exact initialization-contract snapshot;
-3. for each missing member in canonical order, emit `Document Processing
-   Initiated`, invoke lifecycle handlers, and apply all patches, graph changes,
-   updates, events, and tentative identity finalizations under the ordinary
-   closure algorithm;
+3. for each missing member in canonical order, enqueue and dequeue its exact
+   `INITIALIZATION` work and generated `Document Processing Initiated`
+   `LIFECYCLE` work under the normal queue rules, invoke lifecycle handlers, and
+   apply all patches, graph changes, updates, events, terminations, and tentative
+   identity finalizations under the ordinary closure algorithm;
 4. drain all work caused by the batch to quiescence; if graph expansion or
    reclassification brings another missing active member into a current
    component required by the batch, freeze it before its lifecycle work and
@@ -3588,6 +3877,10 @@ the same boundary and remain ordered by their finalization ordinals.
 ### 7.11 Checkpoint settlement
 
 Every accepted raw external source occurrence retains its own exact checkpoint subject.
+
+This phase applies only to an externally caused processing invocation.
+`ADMIT_CLOSURE` never enters the settlement barrier, including for cleanup, and
+returns empty `checkpointWrites` plus the exact empty-sequence identity.
 
 Successful direct logical delivery records settlement eligibility, but does not
 write or stage a mutated checkpoint document at the delivery boundary. The
@@ -3674,6 +3967,12 @@ Before success, the processor MUST establish:
 - public events satisfy limits and are emitted only by declared public Roots;
 - checkpoint and marker writes are valid;
 - the canonical gas trace is within the exact bound.
+
+For `ADMIT_CLOSURE`, final soundness additionally requires that the canonical
+initialization plan is exhausted, every initialization-caused lifecycle/event/
+update/termination obligation is quiescent, no unknown managed occurrence was
+adopted, `checkpointWrites` is the exact empty sequence, and
+`checkpointWritesIdentity` is its recomputed empty-sequence identity.
 
 A charge owned by this invocation-wide final-soundness phase uses rejected-charge
 owner `INVOCATION`. A charge inside an explicitly identified tentative
@@ -3827,16 +4126,26 @@ After every patch and nested cascade, it checks whether an active scope root was
 A patch retaining the same exact child identity is a no-op for occurrence
 continuity. A whole-child replacement whose new exact BlueId still denotes the
 same verified target `DocumentId` lineage preserves `occurrenceIdentity` and
-activation generation and changes only `bindingIdentity`. Replacement by a
-different managed `DocumentId` lineage fails before mutation. Removal allocates
-the same-lineage inactive successor for later events, and a later same-lineage
-add emits `ADD`. It does not join the current external event.
+activation generation and changes only `bindingIdentity`. An active
+whole-child replacement that uniquely establishes another exact managed
+`DocumentId` lineage performs one generation-plus-one `REBIND` with a fresh
+occurrence identity. Removal instead allocates the same-lineage inactive
+successor for later events, and a later same-lineage add emits `ADD`. Neither a
+new active target nor a later add joins the current external direct-delivery
+snapshot.
 
 ### 8.9 Effective protected-state validation
 
-The processor computes `EFFECTIVE_PROTECTED_STATE` before and after every application patch or generated type write. Pointer nonintersection alone is insufficient.
+The processor computes `EFFECTIVE_PROTECTED_STATE` before and after every
+application patch or generated type write. Pointer nonintersection alone is
+insufficient. Any change to a direct initialized, terminated, or checkpoint
+value, or to the effective Type Generalization Policy, fails atomically with
+`ProtectedProcessorStateMutation`.
 
-If protected state changes outside the exact `Process Embedded.paths` exception, the invocation fails atomically with `ProtectedProcessorStateMutation`.
+The complete Process Embedded contract is application-owned rather than part
+of `EFFECTIVE_PROTECTED_STATE`. Its mutation proceeds only through the complete
+post-write all-Root demand, occurrence, graph, component, subscription, and
+soundness boundary.
 
 ### 8.10 Contract-changing patches
 
@@ -3846,7 +4155,7 @@ A patch affecting any of these MUST trigger changed-closure recognition before f
 /type
 /contracts
 an inherited type contribution
-contracts/embedded/paths
+any complete or partial Process Embedded declaration contribution
 another runtime-registered dispatch or subscription dependency
 ```
 
@@ -3967,15 +4276,32 @@ write and post-marker finalization belonging to that batch.
 
 ### 9.4 Initialization snapshot rule
 
-At batch entry, initialization freezes every then-missing member's exact
-pre-initialization document and initialization contract. A member added by
-dynamic expansion is frozen when it joins the batch and before its lifecycle
-work. Lifecycle execution does not receive ambient containing-document state;
+At entry to each selected component batch, initialization freezes every
+then-missing member's exact current pre-initialization document and
+initialization contract. ADMIT seeds the invocation-input inventory, but that
+seeding is not a global invocation-input-BlueId freeze: a member in a later
+component batch freezes the current state produced by any earlier component
+work in the same invocation. A member added by dynamic expansion is frozen when
+it joins the batch and before its lifecycle work. Lifecycle execution does not
+receive ambient containing-document state;
 ordinary later reads caused by lifecycle work still use the latest exact
 tentatively finalized state under §5.9. The initialized marker records the
 frozen pre-initialization document, not a later post-lifecycle state.
 
-When initialization introduces another managed occurrence, that target is admitted and initialized under the same closure before commit.
+When initialization activates a prospective managed occurrence already present
+in the closed invocation input, its already-present target is initialized under
+the same closure before commit when required. When initialization instead
+produces an exact effective occurrence without sufficient exact-node or
+prospective-row evidence, the attempt returns the canonical typed
+`NeedsResources` outcome. Demand discovery covers every resulting Root before
+any Root is reconciled. It publishes no marker, lifecycle effect, graph change,
+event, gas, or completion evidence. A resolved retry may expand the closed
+evidence and initialize the newly represented target through the ordinary
+admission path; it does not mutate the suspended attempt in place.
+
+Malformed, ambiguous, conflicting, or unverifiable supplied occurrence
+evidence remains `subscription-surface-invalid`; resource absence is not
+misclassified as invalid evidence.
 
 A document already initialized in the authoritative input or earlier in the same invocation is not initialized again.
 
@@ -3985,13 +4311,19 @@ A ContractExecutionResult may request graceful termination with a deterministic 
 
 The first request for a scope in one invocation wins. Later requests are ignored. A termination request is applied after that result's patches and emitted events have been recorded.
 
+The closure orchestrator records the accepted request as pending and owns its
+transition through pending, terminating, and terminated state. It uses the
+existing `LIFECYCLE` work kind and normal queue; it MUST NOT delegate admission
+termination to an independent document-runtime termination queue.
+
 ### 9.6 Termination algorithm
 
 For one active nonterminating scope:
 
 1. freeze the first termination request;
 2. mark the scope `terminating`;
-3. create and deliver Document Processing Terminated;
+3. create, enqueue, dequeue, and deliver `Document Processing Terminated` as
+   canonical `LIFECYCLE` work;
 4. apply lifecycle Handler results;
 5. call `DRAIN_INTERNAL_EVENTS` to quiescence; its ordinary-delivery predicate excludes scopes marked `terminating`, so no new local Triggered or Embedded Handler begins in that scope, while event occurrences emitted before or during termination continue to nonterminating frozen ancestors;
 6. re-check cut-off;
@@ -4004,6 +4336,15 @@ For one active nonterminating scope:
 The marker and its synchronous finalization create no Document Update or
 synthetic closure-work queue occurrence, but pay their ordinary marker,
 identity, component-finalization, and containing-spine charges.
+
+Let `N` be the ordinal of the last accepted causal work occurrence completed
+before step 7. If the termination drain creates no later work, `N` is the work
+whose Handler result made the accepted termination request. Every cyclic
+finalization caused by the marker Direct Write carries the closed conformance
+boundary `{ kind: TERMINATION_MARKER, afterWorkOrdinal: N }`. Marker and
+finalization charges occur after work `N` completes and before any later work.
+Several changed components from the same marker remain ordered by their
+invocation-global finalization ordinals and share this boundary.
 
 A scope may stop reacting while already-emitted descendant event occurrences continue to higher frozen ancestors.
 
@@ -4140,9 +4481,9 @@ After the external cause's final direct seed and complete queued causal closure
 drain, the processor crosses the single §7.11 settlement barrier. It batches
 every still-valid accepted-new raw-source write together with final cleanup,
 installs the direct marker mutations, and immediately exact-finalizes every
-changed component and containing spine. `ADMIT_CLOSURE` has no accepted external
-source writes; after its complete admission/initialization causal closure drains,
-the same barrier MAY contain only required cleanup.
+changed component and containing spine. `ADMIT_CLOSURE` does not enter this
+barrier at all: it performs neither accepted-source writes nor cleanup, and it
+does not mutate checkpoint state as a side effect of admission.
 
 Only a successful post-quiescence commit candidate crosses that barrier. A
 pre-barrier noncommitting classification or failure performs no checkpoint
@@ -4241,6 +4582,14 @@ When a changed node no longer conforms to its current effective type and policy 
 
 Candidate order is exact type-chain order. A processor MUST NOT search unrelated types or choose a more general type when a nearer valid ancestor exists.
 
+Generalization uses the unchanged Blue Language effective-resolution result.
+Contracts 1.0 does not add a rule that reveals an inherited Process Embedded
+declaration previously suppressed by a subtype. When a business transition
+requires Process Embedded to become active while generalizing, the same
+transition MUST add the exact complete application-owned Process Embedded
+contract directly. No Contracts-specific merge, list overlay, inherited
+resurrection, or Blue Language identity change is implied.
+
 ### 11.5 Generated write order
 
 A generated type write is applied immediately after the patch that required it and before that patch's Document Update is delivered.
@@ -4257,7 +4606,11 @@ Generated writes cannot specialize a node or invent a type not on the existing a
 
 ### 11.6 Changed contract closure
 
-When type or contract contributions change, the processor MUST resolve every affected effective contract type before commit. An unsupported External Channel, Process Embedded marker, Handler, lifecycle contract, or executable extension makes the new Root invalid for Contracts processing and rolls back the invocation.
+When type or contract contributions change, the processor MUST resolve every
+affected effective contract type before commit. An unsupported External
+Channel, Process Embedded application contract, Handler, lifecycle contract, or
+executable extension makes the new Root invalid for Contracts processing and
+rolls back the invocation.
 
 Executable bodies remain lazy; recognition does not execute them.
 
@@ -4317,6 +4670,18 @@ There is no separate zero-gas tentative preflight ledger and no portable `attemp
 
 Invalid or unavailable complete cyclic-set evidence, ambiguous member mapping, unsupported component runtime, and component limit violations fail before mutation. A failure after tentative member work rolls back the complete component and containing closure.
 
+For full-lifecycle `ADMIT_CLOSURE`, a failure after any number of tentative
+initialization steps returns the literal authoritative input closure. It
+publishes no initialized or terminated marker, graph/component change, public
+event, checkpoint, committed result sequence, or platform commit companion.
+An initialization-created managed occurrence lacking exact content or
+prospective occurrence evidence suspends with typed `NeedsResources`; it never
+produces partial publication or an implicit committed graph expansion. A
+malformed or conflicting supplied surface remains a deterministic
+`subscription-surface-invalid` failure. Retrying identical closed input and
+environment reproduces the same failure evidence or the same canonical demand
+set, as applicable.
+
 ### 12.4 Resource acquisition boundary
 
 Core `PROCESS` operates on verified exact-node evidence. Deterministic execution MUST NOT perform ambient network I/O.
@@ -4329,20 +4694,24 @@ for ordinary `PROCESS`:
 ```text
 PROCESS_ATTEMPT(root, event, verifiedEvidence)
     -> Complete(ProcessResult)
-     | NeedsResources(sortedExactBlueIds)
+     | NeedsResources(canonicallyOrderedTypedDemands,
+                      sortedExactBlueIdProjection)
 ```
 
 `NeedsResources` is a suspension, neither a `ProcessResult` nor a
 `ClosureProcessResult`:
 
 - it commits no Root, events, checkpoint, marker, progress, or portable gas;
-- `requiredBlueIds` contains only exact already-named missing nodes, sorted and
-  duplicate-free; it never contains an epoch range, history query, cursor,
-  receipt range, or discovery request;
+- `resourceDemands` is authoritative and may require either an exact named node
+  or exact managed-occurrence evidence; `requiredBlueIds` contains only the
+  sorted duplicate-free exact-node compatibility projection and may be empty;
+- neither demand form contains an epoch range, history query, cursor, receipt
+  range, or open-ended discovery request;
 - the host fetches and verifies those exact direct nodes outside deterministic execution;
-- a closure retry starts from the exact state-only input closure and exact
-  cause; an ordinary `PROCESS_ATTEMPT` retry starts from its exact input Root
-  and event;
+- a closure retry starts from unchanged authoritative document heads and the
+  same logical cause, then assembles the exact closed evidence required for
+  that retry; an ordinary `PROCESS_ATTEMPT` retry starts from its exact input
+  Root and event;
 - supplying additional exact resource evidence preserves the logical
   `invocationIdentity` only when the recomputed input closure, operation, cause,
   admission candidate, direct-delivery snapshot, execution policy, and
@@ -4352,12 +4721,23 @@ PROCESS_ATTEMPT(root, event, verifiedEvidence)
   harness/host evidence and are excluded from both `inputClosureIdentity` and
   `invocationIdentity`; changing only availability of a requested exact node
   therefore retries the identical normative invocation;
+- satisfying a managed-occurrence-evidence demand constructs a new closed
+  occurrence-evidence set. Authoritative document heads and the logical cause
+  remain unchanged, while `occurrenceBindingSetIdentity`,
+  `inputClosureIdentity`, and `invocationIdentity` are recomputed. An
+  automatically derived and an independently explicit byte-equal prospective
+  row MUST produce byte-equal resolved invocation input and execution;
+- before initial admission application code, and after every tentative
+  contract/content transition, demand discovery projects the complete
+  Process Embedded surface of every current Root and aggregates all demands
+  before reconciling any Root;
 - every managed revision is instead a new one-step invocation bound by its
   exact source receipt, managed-revision cause identity, containing-reference
   WorkOccurrence, gas trace, result, and commit evidence;
 - hidden cache state MUST NOT alter the demand set derived from the same closed
-  normative input. A harness MUST expose an availability change explicitly
-  rather than treating a warm cache as different semantics.
+  normative input. Repeated unresolved attempts are byte-deterministic. A
+  harness MUST expose an availability or evidence change explicitly rather
+  than treating a warm cache as different semantics.
 
 Provider transfer, direct-node verification, signatures, storage pages, and retry count are host work. Once an exact node is admitted, semantic inspection and new/changed identity work are charged normally and identically to inline content.
 
@@ -4444,7 +4824,13 @@ occurrence-binding set identity
 direct-delivery snapshot identity
 ```
 
-A progress-only result cannot be recorded after any dependency changed. A successful closure commits documents, public events, subscriptions, checkpoints, graph/component state, and progress together.
+A progress-only result cannot be recorded after any dependency changed. A
+successful closure commits documents, public events, subscriptions,
+checkpoints, graph/component state, and progress together. In this section,
+`progress` is exactly the host-internal terminal idempotency record keyed only
+by `causeIdentity` from §2.9. Its storage key contains no Timeline identity,
+source-occurrence identity, delivery identity, or checkpoint address, and
+recording it MUST NOT advance Timeline, source, or checkpoint progress.
 
 ### 12.10 External-event liveness
 
@@ -4475,6 +4861,13 @@ Every invocation MUST nevertheless bind one exact finite default maximum from th
 A host or document-specific policy MAY lower the maximum only when the lowered policy has an exact identity included in invocation and receipt evidence. It MUST NOT silently raise the release maximum.
 
 All work in one `PROCESS_CLOSURE` or `ADMIT_CLOSURE` invocation shares one meter. A member-local cap is a lower ceiling over that same ledger, not a new meter.
+
+Full-lifecycle admission retains every admission-specific initial edge,
+component, proof-verification, and finalization charge before its queued work.
+Initialization, lifecycle, update, event, termination-marker, containing-spine,
+and finalization work then debit that same ledger in normative execution order.
+The bounded compatibility helper's released trace is not a normative gas
+substitute for an invocation that requires this queued work.
 
 A charge is debited to a member-local ceiling exactly when its canonical trace context names that member's `documentId`. Global charges without a `documentId` debit only the shared ceiling. Per-document and per-member admission, partition, work, semantic-identity, and finalization units therefore use separate deterministic entries when local attribution differs; they MUST NOT be aggregated across different documents. A charge associated with several members is emitted as the canonical per-member units named by its counter rather than debiting an invisible second ledger.
 
@@ -5145,6 +5538,97 @@ C-E2E      end-to-end ordinary results
 - **C-CLO-34.** Every accepted closure work occurrence executes as one isolated managed-document step. The document-step trace matches the work trace one-for-one, uses the target document as the execution Root, exposes no ambient containing documents, and uses the same execution mode for acyclic and cyclic members.
 - **C-CLO-35.** Cross-invocation remove/re-add commits an inactive generation-plus-one successor, supplies that exact successor in the next invocation, activates it without another increment, never reuses the old occurrence/checkpoint lineage, and rejects same-invocation remove/re-add.
 
+#### 15.2.1 Full-lifecycle admission evidence
+
+An implementation claiming `ADMIT_CLOSURE` conformance MUST independently
+demonstrate all of the following through the explicit
+`admitClosureWithLifecycleQueue` entry point:
+
+1. Root initialization applies its patch.
+2. A Root initialization emission is one event occurrence and its local Handler reacts.
+3. Two equal initialization emissions remain two distinct occurrences and deliveries.
+4. A non-public member emission can cause its containing public Root to react without itself becoming public.
+5. A public Root initialization emission is public exactly once.
+6. An initialization patch produces and routes its Document Update.
+7. A valid initialization termination completes deterministically.
+8. Two documents initialize in canonical order independent of input order.
+9. A finite cyclic A/B initialization-event route reaches quiescence.
+10. An infinite cyclic route exhausts the shared gas ledger and rolls back completely.
+11. Failure after an earlier tentative initialization rolls back the whole closure.
+12. Inline and equivalent pure-reference inputs return the same result.
+13. Cold and warm exact-node availability return the same result, gas, and trace.
+14. Retry of identical evidence returns identical deterministic evidence.
+15. Admission creates no Timeline checkpoint.
+16. An initialization-created managed occurrence lacking exact prospective
+    evidence returns authoritative typed `NeedsResources` with no completed
+    result or partial publication; invalid supplied evidence remains
+    `subscription-surface-invalid`.
+17. The bounded behavior remains available only through the explicit legacy
+    `admitClosure` compatibility API and is not reported as the normative result.
+
+The portable `FL-ADM-01` through `FL-ADM-10` fixture family supplies thirteen
+executable cases for the full-lifecycle claims above.  Reversed-order and
+inline/reference cases are independent executions, and retry cases reuse the
+exact invocation input and compare the complete deterministic rejection
+evidence.  Claims 13 and 17 additionally have mandatory Java parity and
+architecture gates because node-cache temperature and public API source use are
+not portable fixture inputs.  Fixture oracles are generated from identity-free
+authored sources through the normative entry point; they are never copied from
+unit-test expected values or produced by a second semantic implementation.
+
+#### 15.2.2 Application contract-evolution evidence
+
+`C-EVO-*` is the normative release family for application contract-surface and
+managed-occurrence evolution. Ordinary vectors use the released `PROCESS`
+path; closure/admission vectors use the ordinary released closure path. No
+evolution-specific mutation engine, host shortcut, or fixture-only semantic
+oracle is permitted.
+
+| Vector | Normative proof |
+|---|---|
+| `C-EVO-01` | A selected Workflow removes itself after its frozen current delivery. |
+| `C-EVO-02` | A selected distinct Scripted Operation removes itself after its frozen invocation. |
+| `C-EVO-03` | A newly added Operation does not receive its creating entry. |
+| `C-EVO-04` | Channel removal and re-add retire the old interval and create fresh lineage. |
+| `C-EVO-05` | Required-Workflow removal selects the nearest valid ancestor. |
+| `C-EVO-06` | Frozen reject policy rolls the mutation back completely. |
+| `C-EVO-07` | Initialized, checkpoint, and terminated processor state is protected. |
+| `C-EVO-08` | Whole-Root/contracts replacement preserves the initialized marker and its exact identity. |
+| `C-EVO-09` | A complete Process Embedded declaration can be removed atomically. |
+| `C-EVO-10` | A former embedded child remains passive application content. |
+| `C-EVO-11` | Removing an edge dissolves a two-member cycle. |
+| `C-EVO-12` | Edge removal splits one component into two cycles. |
+| `C-EVO-13` | Closed prospective evidence permits reciprocal cycle formation. |
+| `C-EVO-14` | A generated type write retains exact causal attribution. |
+| `C-EVO-15` | Generalization removes a subtype-only Channel. |
+| `C-EVO-16` | Generalization removes a subtype-only Process Embedded declaration. |
+| `C-EVO-17` | A direct Process Embedded addition and generalization reconcile in one transition. |
+| `C-EVO-18` | Missing exact child content yields an exact-node demand. |
+| `C-EVO-19` | Known content without a frozen row yields an occurrence-evidence demand. |
+| `C-EVO-20` | Mixed demands use source order, never demand-kind grouping. |
+| `C-EVO-21` | Unchanged retries reproduce demands, tentative effect prefix, and completed evidence. |
+| `C-EVO-22` | Expanded occurrence evidence can reach metered work and still roll back completely on gas failure. |
+| `C-EVO-23` | Automatic-demand retry and explicit prospective evidence produce byte-equal resolved execution. |
+
+`C-EVO-11` through `C-EVO-13` MAY reuse the matching exact closure fixtures
+when the vector inventory records the alias; the required semantics do not
+change. The harness-owned `ScriptedOperation` is a distinct fixture subtype of
+Handler loaded beside, and excluded from, the frozen production runtime
+registry. It receives the ordinary frozen selection and execution context and
+may return only the declared ordinary `ContractExecutionResult`.
+
+The intentionally deferred inherited Process Embedded reveal scenario is
+absent from this family and is not a Contracts 1.0 conformance requirement.
+`C-EVO-16` proves removal of a subtype-only declaration; it does not require
+generalization to reveal an inherited declaration previously suppressed by the
+subtype.
+
+The canonical executable inventories contain 153 Language fixtures and 276
+Contracts fixtures, including 93 closure fixtures.  Existing
+`PROCESS_CLOSURE` business results remain frozen; specification, invocation,
+work, event, and trace identities may be mechanically rebound only when the
+identity-delta audit classifies them and reports zero unexpected changes.
+
 ### 15.3 Gas and execution fixtures
 
 Every named gas counter has one exact microfixture. Composite closure fixtures assert:
@@ -5185,10 +5669,11 @@ Every `tentativeFinalizations[]` receipt carries one closed `boundary` branch:
 ```text
 { kind: WORK, afterWorkOrdinal }
 { kind: INITIALIZATION_BATCH, afterWorkOrdinal }
+{ kind: TERMINATION_MARKER, afterWorkOrdinal }
 { kind: CHECKPOINT_SETTLEMENT }
 ```
 
-The two branches shown with `afterWorkOrdinal` require exactly that non-negative
+The three branches shown with `afterWorkOrdinal` require exactly that non-negative
 safe integer and the branch without it MUST NOT contain it. For `WORK`, the
 ordinal identifies the accepted `workTrace` occurrence immediately after which
 the ordinary work-caused finalization runs. For `INITIALIZATION_BATCH`, it
@@ -5200,6 +5685,13 @@ component. `CHECKPOINT_SETTLEMENT` has no `afterWorkOrdinal`: its position is
 proved instead by external-cause quiescence, the ordered checkpoint-write batch,
 and the immediately following settlement finalization under §7.11. A branch
 contains no field belonging only to another branch.
+
+For `TERMINATION_MARKER`, the ordinal is the `N` defined by §9.6: the last
+accepted causal work completed before the terminated-marker Direct Write. The
+marker and all immediately caused finalizations follow that occurrence. This
+branch remains distinct even when the termination request arose during an
+initialization batch; it MUST NOT be relabeled `INITIALIZATION_BATCH`, `WORK`, or
+`CHECKPOINT_SETTLEMENT`.
 
 Package validation, semantic fixture execution, and implementation conformance are distinct results:
 
@@ -5725,7 +6217,11 @@ checkpoint     Channel Event Checkpoint
 generalization Type Generalization Policy
 ```
 
-Processor marker types MUST appear only at their reserved keys. Application Contracts may not impersonate them elsewhere.
+`initialized`, `terminated`, and `checkpoint` are direct processor-owned state;
+the effective `generalization` policy is processor-protected. `embedded` names
+the conventional complete application-owned Process Embedded contract and is
+not a processor marker. Processor marker types MUST appear only at their
+reserved keys. Application Contracts may not impersonate them elsewhere.
 
 ---
 

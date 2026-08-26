@@ -205,10 +205,19 @@ final class BatchPatchResult {
     static final class GeneralizationMetadataWrite {
         private final String path;
         private final FrozenNode value;
+        private final int requiringPatchIndex;
 
-        GeneralizationMetadataWrite(String path, FrozenNode value) {
+        GeneralizationMetadataWrite(
+                String path,
+                FrozenNode value,
+                int requiringPatchIndex) {
             this.path = Objects.requireNonNull(path, "path");
             this.value = Objects.requireNonNull(value, BlueLanguageConstants.OBJECT_VALUE);
+            if (requiringPatchIndex < 0) {
+                throw new IllegalArgumentException(
+                        "requiringPatchIndex must be non-negative");
+            }
+            this.requiringPatchIndex = requiringPatchIndex;
         }
 
         String path() {
@@ -218,29 +227,38 @@ final class BatchPatchResult {
         FrozenNode value() {
             return value;
         }
+
+        int requiringPatchIndex() {
+            return requiringPatchIndex;
+        }
     }
 
     static final class UpdatePlan {
         private final List<BatchPatchRecord> records;
+        private final FrozenNode preConformanceCanonicalRoot;
         private final FrozenNode preConformanceResolvedRoot;
         private final FrozenNode finalResolvedRoot;
-        private final List<String> generatedPaths;
+        private final List<GeneralizationMetadataWrite> generatedWrites;
         private final boolean includeGeneratedUpdates;
         private final boolean[] laterOverlaps;
 
         UpdatePlan(List<BatchPatchRecord> records,
+                   FrozenNode preConformanceCanonicalRoot,
                    FrozenNode preConformanceResolvedRoot,
                    FrozenNode finalResolvedRoot,
-                   List<String> generatedPaths,
+                   List<GeneralizationMetadataWrite> generatedWrites,
                    boolean includeGeneratedUpdates) {
             this.records = Collections.unmodifiableList(new ArrayList<>(
                     Objects.requireNonNull(records, "records")));
+            this.preConformanceCanonicalRoot = Objects.requireNonNull(
+                    preConformanceCanonicalRoot,
+                    "preConformanceCanonicalRoot");
             this.preConformanceResolvedRoot = Objects.requireNonNull(preConformanceResolvedRoot,
                     "preConformanceResolvedRoot");
             this.finalResolvedRoot = Objects.requireNonNull(finalResolvedRoot, "finalResolvedRoot");
-            this.generatedPaths = generatedPaths == null
-                    ? Collections.<String>emptyList()
-                    : Collections.unmodifiableList(new ArrayList<>(generatedPaths));
+            this.generatedWrites = generatedWrites == null
+                    ? Collections.<GeneralizationMetadataWrite>emptyList()
+                    : Collections.unmodifiableList(new ArrayList<>(generatedWrites));
             this.includeGeneratedUpdates = includeGeneratedUpdates;
             this.laterOverlaps = computeLaterOverlaps(this.records);
         }
@@ -256,7 +274,13 @@ final class BatchPatchResult {
             List<DocumentUpdateData> built = new ArrayList<>();
             ImmutablePatchPlanner finalResolvedPlanner = ImmutablePatchPlanner.forFrozen(
                     Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
+            Map<Integer, List<GeneralizationMetadataWrite>> generatedBeforeUpdates =
+                    generatedWritesByRequiringRecord();
             for (int recordIndex = 0; recordIndex < records.size(); recordIndex++) {
+                appendGeneratedUpdates(
+                        built,
+                        generatedBeforeUpdates.get(recordIndex),
+                        materializationMetrics);
                 BatchPatchRecord record = records.get(recordIndex);
                 FrozenNode before = record.beforeAtPatchTime();
                 FrozenNode after = null;
@@ -273,22 +297,101 @@ final class BatchPatchResult {
                         record.cascadeScopes(),
                         materializationMetrics));
             }
-            if (includeGeneratedUpdates && !generatedPaths.isEmpty()) {
-                ImmutablePatchPlanner preConformancePlanner =
-                        ImmutablePatchPlanner.forFrozen(preConformanceResolvedRoot);
-                for (String path : generatedPaths) {
-                    FrozenNode before = preConformancePlanner.read(path);
-                    FrozenNode after = finalResolvedPlanner.read(path);
-                    built.add(new DocumentUpdateData(path,
-                            before,
-                            after,
-                            before == null ? JsonPatch.Op.ADD : JsonPatch.Op.REPLACE,
-                            originScopeForGeneratedUpdate(),
-                            Collections.singletonList(JsonPointer.ROOT),
-                            materializationMetrics));
+            appendGeneratedUpdates(
+                    built,
+                    generatedBeforeUpdates.get(records.size()),
+                    materializationMetrics);
+            return Collections.unmodifiableList(built);
+        }
+
+        private Map<Integer, List<GeneralizationMetadataWrite>>
+        generatedWritesByRequiringRecord() {
+            if (!includeGeneratedUpdates || generatedWrites.isEmpty()) {
+                return Collections.emptyMap();
+            }
+            Map<Integer, List<GeneralizationMetadataWrite>> grouped =
+                    new HashMap<>();
+            for (GeneralizationMetadataWrite write : generatedWrites) {
+                int recordIndex = write.requiringPatchIndex();
+                List<GeneralizationMetadataWrite> writes =
+                        grouped.get(recordIndex);
+                if (writes == null) {
+                    writes = new ArrayList<>();
+                    grouped.put(recordIndex, writes);
+                }
+                if (!containsPath(writes, write.path())) {
+                    writes.add(write);
                 }
             }
-            return Collections.unmodifiableList(built);
+            return grouped;
+        }
+
+        private boolean containsPath(
+                List<GeneralizationMetadataWrite> writes,
+                String path) {
+            for (GeneralizationMetadataWrite write : writes) {
+                if (write.path().equals(path)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void appendGeneratedUpdates(
+                List<DocumentUpdateData> target,
+                List<GeneralizationMetadataWrite> writes,
+                UpdateMaterializationMetrics materializationMetrics) {
+            if (writes == null || writes.isEmpty()) {
+                return;
+            }
+            for (GeneralizationMetadataWrite write : writes) {
+                String path = write.path();
+                FrozenNode before = readGeneralizationMetadata(
+                        preConformanceCanonicalRoot,
+                        path);
+                if (before == null) {
+                    before = readGeneralizationMetadata(
+                            preConformanceResolvedRoot,
+                            path);
+                }
+                target.add(new DocumentUpdateData(path,
+                        before,
+                        write.value(),
+                        before == null
+                                ? JsonPatch.Op.ADD
+                                : JsonPatch.Op.REPLACE,
+                        originScopeForGeneratedUpdate(),
+                        Collections.singletonList(JsonPointer.ROOT),
+                        materializationMetrics));
+            }
+        }
+
+        private FrozenNode readGeneralizationMetadata(
+                FrozenNode root,
+                String path) {
+            List<String> segments = JsonPointer.split(path);
+            if (segments.isEmpty()) {
+                return null;
+            }
+            String field = segments.get(segments.size() - 1);
+            FrozenNode parent = root.at(
+                    segments.subList(0, segments.size() - 1));
+            if (parent == null) {
+                return null;
+            }
+            if (BlueLanguageConstants.OBJECT_TYPE.equals(field)) {
+                return parent.getType();
+            }
+            if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)) {
+                return parent.getItemType();
+            }
+            if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)) {
+                return parent.getKeyType();
+            }
+            if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field)) {
+                return parent.getValueType();
+            }
+            return null;
         }
 
         /**

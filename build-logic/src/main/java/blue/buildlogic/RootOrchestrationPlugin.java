@@ -1,5 +1,6 @@
 package blue.buildlogic;
 
+import blue.buildlogic.tasks.AssembleImmutableStagedRepositoryTask;
 import blue.buildlogic.tasks.CompareArchiveReplicasTask;
 import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
 import blue.buildlogic.tasks.GenerateChecksumFileTask;
@@ -23,9 +24,11 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.file.ConfigurableFileTree;
+import org.gradle.api.file.Directory;
 import org.gradle.api.file.DuplicatesStrategy;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.Delete;
 import org.gradle.api.tasks.GradleBuild;
@@ -185,6 +188,44 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                     task.setDescription("Clears the invocation-owned staged Maven repository.");
                     task.delete(project.getLayout().getBuildDirectory().dir("staging-deploy"));
                 });
+        Provider<String> sourceCommit = project.getProviders()
+                .environmentVariable("GIT_COMMIT")
+                .orElse(project.getProviders().exec(spec -> {
+                    spec.setWorkingDir(project.getRootDir());
+                    spec.commandLine("git", "rev-parse", "--verify", "HEAD^{commit}");
+                }).getStandardOutput().getAsText().map(String::trim));
+        Provider<Directory> immutableRepository = project.getLayout().dir(
+                project.getProviders().gradleProperty("stagedDependencyRepository")
+                        .map(path -> project.file(path)))
+                .orElse(project.getLayout().getBuildDirectory()
+                        .dir("staged-dependency-repository"));
+        TaskProvider<AssembleImmutableStagedRepositoryTask> assembleRepository =
+                project.getTasks().register(
+                        BuildLogicConstants.TASK_ASSEMBLE_IMMUTABLE_STAGED_REPOSITORY,
+                        AssembleImmutableStagedRepositoryTask.class,
+                        task -> {
+                            task.setGroup(GROUP);
+                            task.setDescription(
+                                    "Exports exact publications into a non-overwriting repository.");
+                            task.dependsOn(stagePublications);
+                            task.getSourceRepository().set(project.getLayout()
+                                    .getBuildDirectory().dir("staging-deploy"));
+                            task.getOutputRepository().set(immutableRepository);
+                            task.getVersionValue().set(project.provider(
+                                    () -> project.getVersion().toString()));
+                            task.getExpectedArtifacts().set(PUBLISHED_MODULES);
+                            task.getSourceCommit().set(sourceCommit);
+                            task.getContractsSpecification().set(project.getLayout()
+                                    .getProjectDirectory().file(
+                                            "blue-contracts-core/src/main/resources/"
+                                                    + "specifications/blue-contracts-and-"
+                                                    + "processor-specification-1.0.md"));
+                            task.getContractsReleaseManifest().set(project.getLayout()
+                                    .getProjectDirectory().file(
+                                            "blue-conformance/src/main/resources/"
+                                                    + "blue-contracts-closure-1.0/"
+                                                    + "release-manifest.yaml"));
+                        });
         TaskProvider<VerifyPublishedRepositoryTask> publishedRepository =
                 project.getTasks().register(
                         BuildLogicConstants.TASK_VERIFY_PUBLISHED_REPOSITORY,
@@ -193,13 +234,21 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.setGroup(GROUP);
                             task.setDescription(
                                     "Verifies all staged coordinates, POMs, and Java 8 bytecode.");
-                            task.dependsOn(stagePublications);
-                            task.getRepositoryDirectory().set(project.getLayout()
-                                    .getBuildDirectory().dir("staging-deploy"));
+                            task.dependsOn(assembleRepository);
+                            task.getRepositoryDirectory().set(immutableRepository);
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
                             task.getExpectedArtifacts().set(PUBLISHED_MODULES);
                             task.getAllowedModuleEdges().set(ALLOWED_MODULE_EDGES);
+                            task.getSourceCommit().set(sourceCommit);
+                            task.getContractsSpecification().set(
+                                    assembleRepository.flatMap(
+                                            AssembleImmutableStagedRepositoryTask::
+                                                    getContractsSpecification));
+                            task.getContractsReleaseManifest().set(
+                                    assembleRepository.flatMap(
+                                            AssembleImmutableStagedRepositoryTask::
+                                                    getContractsReleaseManifest));
                             task.getReportFile().set(project.getLayout().getBuildDirectory()
                                     .file(BuildLogicConstants.REPORT_PUBLISHED_REPOSITORY));
                         });
@@ -213,16 +262,15 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                     task.setTasks(Collections.singletonList("cleanPublishedSmoke"));
                     task.getStartParameter().setRefreshDependencies(true);
                     task.getStartParameter().setProjectProperties(new TreeMapBuilder()
-                            .put("stagingRepository", project.getLayout().getBuildDirectory()
-                                    .dir("staging-deploy").get().getAsFile().getAbsolutePath())
+                            .put("stagingRepository", immutableRepository.get()
+                                    .getAsFile().getAbsolutePath())
                             .put("blueVersion", project.provider(
                                     () -> project.getVersion().toString()).get())
                             .put("smokeReport", project.getLayout().getBuildDirectory()
                                     .file("reports/published-smoke/verification.json")
                                     .get().getAsFile().getAbsolutePath())
                             .build());
-                    task.getInputs().dir(project.getLayout().getBuildDirectory()
-                            .dir("staging-deploy"));
+                    task.getInputs().dir(immutableRepository);
                     task.getInputs().property("blueVersion", project.provider(
                             () -> project.getVersion().toString()));
                     task.getOutputs().file(project.getLayout().getBuildDirectory()
@@ -273,6 +321,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 scriptShape,
                 publishedRepository,
                 publishedSmoke,
+                immutableRepository,
                 sourceRelease,
                 semanticEvidence));
 
@@ -541,6 +590,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             TaskProvider<VerifyBuildScriptShapeTask> scriptShape,
             TaskProvider<VerifyPublishedRepositoryTask> publishedRepository,
             TaskProvider<GradleBuild> publishedSmoke,
+            Provider<Directory> immutableRepository,
             SourceReleaseTasks sourceRelease,
             SemanticEvidenceOrchestration.Tasks semanticEvidence) {
         for (String name : PUBLISHED_MODULES) {
@@ -603,6 +653,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 scriptShape,
                 publishedRepository,
                 publishedSmoke,
+                immutableRepository,
                 sourceRelease,
                 semanticEvidence);
     }
@@ -618,6 +669,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             TaskProvider<VerifyBuildScriptShapeTask> scriptShape,
             TaskProvider<VerifyPublishedRepositoryTask> publishedRepository,
             TaskProvider<GradleBuild> publishedSmoke,
+            Provider<Directory> immutableRepository,
             SourceReleaseTasks sourceRelease,
             SemanticEvidenceOrchestration.Tasks semanticEvidence) {
         java.util.List<Object> api = new java.util.ArrayList<>();
@@ -638,9 +690,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 root.getTasks().named("memoryIntegrationTest"),
                 root.getTasks().named("cacheLifecycleTest"),
                 root.getTasks().named("fragmentedProcessingTest"));
-        ConfigurableFileTree artifacts = root.fileTree(
-                root.getLayout().getBuildDirectory().dir("staging-deploy"));
-        artifacts.include("**/*.jar", "**/*.pom", "**/*.module");
+        ConfigurableFileTree artifacts = root.fileTree(immutableRepository);
+        artifacts.include("**/*.jar", "**/*.pom", "**/*.sha256", "artifact-manifest.json");
         ConfigurableFileTree testEvidence = root.fileTree(root.getRootDir());
         testEvidence.include(
                 "build/test-results/**/*.xml",

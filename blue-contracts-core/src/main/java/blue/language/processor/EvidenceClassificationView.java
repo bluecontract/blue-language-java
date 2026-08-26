@@ -286,11 +286,17 @@ final class EvidenceClassificationView {
             }
         }
         Node projected = admittedProjectionRoot(selectedKeys);
-        pruneContracts(projected, JsonPointer.ROOT, selectedKeys);
+        Set<String> deferredDirectContractPaths = new LinkedHashSet<>();
+        pruneContracts(
+                projected,
+                JsonPointer.ROOT,
+                selectedKeys,
+                deferredDirectContractPaths);
         ProcessingSnapshotManager manager = owner.snapshotManager();
         if (manager != null) {
             Set<String> preservedPaths = new LinkedHashSet<>(
                     executableBodyPaths(selectedTypes));
+            preservedPaths.addAll(deferredDirectContractPaths);
             if (owner.strictPlatformInvocation()) {
                 collectInheritedColdContractPaths(
                         projected,
@@ -534,6 +540,18 @@ final class EvidenceClassificationView {
             Node node,
             String scopePath,
             Map<String, Set<String>> selectedKeys) {
+        pruneContracts(
+                node,
+                scopePath,
+                selectedKeys,
+                new LinkedHashSet<String>());
+    }
+
+    private void pruneContracts(
+            Node node,
+            String scopePath,
+            Map<String, Set<String>> selectedKeys,
+            Set<String> deferredDirectContractPaths) {
         if (node == null || node.isReferenceOnly()) {
             return;
         }
@@ -545,6 +563,7 @@ final class EvidenceClassificationView {
                 selectedKeys.keySet());
         boolean retainedType = RootExternalDeliveryEvidenceVerifier
                 .typeContributesToSubscriptionSurface(
+                        owner.contractLoader(),
                         owner.snapshotManager(),
                         node.getType(),
                         selected,
@@ -561,15 +580,34 @@ final class EvidenceClassificationView {
         }
         Node contracts = node.getContracts();
         if (contracts != null && contracts.getProperties() != null) {
-            contracts.getProperties().entrySet().removeIf(entry ->
-                    !selected.contains(entry.getKey())
-                            && !isProcessorStateKey(entry.getKey())
-                            && !(includeProcessEmbedded
-                            && (ProcessorContractConstants.KEY_EMBEDDED
-                            .equals(entry.getKey())
-                            || owner.contractLoader()
-                            .isProcessEmbeddedContract(
-                                    entry.getValue()))));
+            java.util.Iterator<Map.Entry<String, Node>> entries =
+                    contracts.getProperties().entrySet().iterator();
+            while (entries.hasNext()) {
+                Map.Entry<String, Node> entry = entries.next();
+                boolean retained = selected.contains(entry.getKey())
+                        || isProcessorStateKey(entry.getKey())
+                        || includeProcessEmbedded
+                        && (ProcessorContractConstants.KEY_EMBEDDED.equals(
+                        entry.getKey())
+                        || owner.contractLoader()
+                        .isProcessEmbeddedContract(entry.getValue()));
+                if (retained) {
+                    continue;
+                }
+                if (!retainedType) {
+                    entries.remove();
+                    continue;
+                }
+                entry.setValue(ExternalSubscriptionProjectionBuilder
+                        .exactReference(entry.getValue()));
+                deferredDirectContractPaths.add(
+                        PointerUtils.appendPointer(
+                                PointerUtils.appendPointer(
+                                        scopePath,
+                                        ProcessorContractConstants
+                                                .KEY_CONTRACTS),
+                                entry.getKey()));
+            }
             if (contracts.getProperties().isEmpty()) {
                 node.contracts(null);
             }
@@ -586,7 +624,8 @@ final class EvidenceClassificationView {
                 pruneContracts(
                         entry.getValue(),
                         childPath,
-                        selectedKeys);
+                        selectedKeys,
+                        deferredDirectContractPaths);
             }
         }
         if (node.getItems() != null) {
@@ -600,7 +639,8 @@ final class EvidenceClassificationView {
                 pruneContracts(
                         node.getItems().get(index),
                         childPath,
-                        selectedKeys);
+                        selectedKeys,
+                        deferredDirectContractPaths);
             }
         }
     }

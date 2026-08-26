@@ -111,7 +111,8 @@ final class ClosureSuccessResultAssembler {
                 null,
                 companion,
                 null,
-                execution.finalization());
+                execution.finalization(),
+                execution.transitionEvidence());
     }
 
     private static AffectedClosureSnapshot committedSnapshot(
@@ -199,6 +200,10 @@ final class ClosureSuccessResultAssembler {
                 input.occurrences());
         Map<String, ManagedOccurrenceBinding> after = byOccurrence(
                 output.occurrences());
+        Map<DocumentId, Map<String, ManagedOccurrenceBinding>>
+                activeBeforeByLocation = activeByLocation(
+                        input.occurrences());
+        Set<String> retargetedBefore = new HashSet<String>();
         ArrayList<GraphChangeDraft> additions =
                 new ArrayList<GraphChangeDraft>();
         ArrayList<GraphChangeDraft> removals =
@@ -210,7 +215,22 @@ final class ClosureSuccessResultAssembler {
                     current.occurrenceIdentity());
             if (current.active()
                     && (prior == null || !prior.active())) {
-                additions.add(GraphChangeDraft.add(current));
+                ManagedOccurrenceBinding retargeted = occurrenceAt(
+                        activeBeforeByLocation,
+                        current.sourceDocumentId(),
+                        current.sourcePath());
+                if (retargeted != null
+                        && !retargeted.occurrenceIdentity().equals(
+                                current.occurrenceIdentity())
+                        && !retargeted.targetDocumentId().equals(
+                                current.targetDocumentId())) {
+                    rebindings.add(GraphChangeDraft.rebind(
+                            retargeted, current));
+                    retargetedBefore.add(
+                            retargeted.occurrenceIdentity());
+                } else {
+                    additions.add(GraphChangeDraft.add(current));
+                }
             } else if (current.active() && prior != null && prior.active()
                     && !sameActiveSide(prior, current)) {
                 rebindings.add(GraphChangeDraft.rebind(prior, current));
@@ -220,6 +240,8 @@ final class ClosureSuccessResultAssembler {
             ManagedOccurrenceBinding current = after.get(
                     prior.occurrenceIdentity());
             if (prior.active()
+                    && !retargetedBefore.contains(
+                            prior.occurrenceIdentity())
                     && (current == null || !current.active())) {
                 removals.add(GraphChangeDraft.remove(prior));
             }
@@ -467,6 +489,35 @@ final class ClosureSuccessResultAssembler {
             result.put(value.occurrenceIdentity(), value);
         }
         return result;
+    }
+
+    private static Map<DocumentId, Map<String, ManagedOccurrenceBinding>>
+            activeByLocation(List<ManagedOccurrenceBinding> values) {
+        HashMap<DocumentId, Map<String, ManagedOccurrenceBinding>> result =
+                new HashMap<DocumentId,
+                        Map<String, ManagedOccurrenceBinding>>();
+        for (ManagedOccurrenceBinding value : values) {
+            if (!value.active()) {
+                continue;
+            }
+            Map<String, ManagedOccurrenceBinding> byPath = result.get(
+                    value.sourceDocumentId());
+            if (byPath == null) {
+                byPath = new HashMap<String, ManagedOccurrenceBinding>();
+                result.put(value.sourceDocumentId(), byPath);
+            }
+            byPath.put(value.sourcePath(), value);
+        }
+        return result;
+    }
+
+    private static ManagedOccurrenceBinding occurrenceAt(
+            Map<DocumentId, Map<String, ManagedOccurrenceBinding>> values,
+            DocumentId sourceDocumentId,
+            String sourcePath) {
+        Map<String, ManagedOccurrenceBinding> byPath = values.get(
+                sourceDocumentId);
+        return byPath == null ? null : byPath.get(sourcePath);
     }
 
     private static boolean sameActiveSide(

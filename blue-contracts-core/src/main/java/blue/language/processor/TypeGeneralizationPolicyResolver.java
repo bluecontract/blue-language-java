@@ -25,8 +25,7 @@ import java.util.Objects;
 final class TypeGeneralizationPolicyResolver {
 
     private static final String DEFAULT_MODE =
-            ProcessorContractConstants
-                    .GENERALIZATION_MODE_NEAREST_VALID_ANCESTOR;
+            ProcessorContractConstants.GENERALIZATION_MODE_REJECT;
 
     private TypeGeneralizationPolicyResolver() {
     }
@@ -53,29 +52,70 @@ final class TypeGeneralizationPolicyResolver {
     static void enforce(ConformanceEngine conformanceEngine,
                         FrozenNode finalResolvedRoot,
                         List<String> generatedPaths) {
-        enforce(conformanceEngine, finalResolvedRoot, generatedPaths, JsonPointer.ROOT);
+        enforce(conformanceEngine,
+                finalResolvedRoot,
+                generatedPaths,
+                JsonPointer.ROOT,
+                freeze(finalResolvedRoot, JsonPointer.ROOT),
+                true);
     }
 
     static void enforce(ConformanceEngine conformanceEngine,
                         FrozenNode finalResolvedRoot,
                         List<String> generatedPaths,
                         String originScope) {
-        if (conformanceEngine == null || finalResolvedRoot == null
-                || generatedPaths == null || generatedPaths.isEmpty()) {
-            return;
+        enforce(conformanceEngine,
+                finalResolvedRoot,
+                generatedPaths,
+                originScope,
+                freeze(finalResolvedRoot, originScope),
+                true);
+    }
+
+    static FrozenPolicy freeze(
+            FrozenNode prePatchResolvedRoot,
+            String originScope) {
+        if (prePatchResolvedRoot == null) {
+            return FrozenPolicy.absent(originScope);
         }
-        Node root = finalResolvedRoot.toNode();
+        Node root = prePatchResolvedRoot.toNode();
         String normalizedOrigin = PointerUtils.normalizeScope(originScope);
         Policy scopedPolicy = Policy.from(root, normalizedOrigin);
         Policy rootPolicy = JsonPointer.ROOT.equals(normalizedOrigin)
                 ? scopedPolicy
                 : Policy.from(root, JsonPointer.ROOT);
+        return new FrozenPolicy(scopedPolicy, rootPolicy);
+    }
+
+    static void enforce(ConformanceEngine conformanceEngine,
+                        FrozenNode finalResolvedRoot,
+                        List<String> generatedPaths,
+                        String originScope,
+                        FrozenPolicy frozenPolicy,
+                        boolean requireExplicitPolicy) {
+        if (finalResolvedRoot == null
+                || generatedPaths == null || generatedPaths.isEmpty()) {
+            return;
+        }
+        Node root = finalResolvedRoot.toNode();
+        FrozenPolicy policySnapshot = Objects.requireNonNull(
+                frozenPolicy, "frozenPolicy");
         for (String generatedPath : generatedPaths) {
             MetadataWrite write = MetadataWrite.from(generatedPath);
             if (write == null) {
                 continue;
             }
-            Policy policy = scopedPolicy.appliesTo(write.nodePath) ? scopedPolicy : rootPolicy;
+            Policy policy = policySnapshot.policyFor(write.nodePath);
+            if (!policy.present && !requireExplicitPolicy) {
+                /*
+                 * Contracts 1.0 introduced fail-closed policy admission for
+                 * application-contract evolution.  Ordinary value patches
+                 * that already used Language conformance widening remain a
+                 * compatibility lane when no policy exists.  An explicitly
+                 * configured policy still governs both lanes.
+                 */
+                continue;
+            }
             Rule rule = policy.ruleFor(write.nodePath);
             String mode = rule != null && rule.mode != null ? rule.mode : policy.defaultMode;
             if (ProcessorContractConstants
@@ -88,13 +128,42 @@ final class TypeGeneralizationPolicyResolver {
                 continue;
             }
             String generatedType = metadataBlueId(root, generatedPath);
-            boolean withinFloor = generatedType != null
+            boolean withinFloor = conformanceEngine != null
+                    && generatedType != null
                     && (Objects.equals(generatedType, floor)
                     || conformanceEngine.isSubtypeOf(generatedType, floor));
             if (!withinFloor) {
                 throw new ProcessorFailureException(ProcessorErrorCategory.TypeGeneralizationFailure,
                         "GeneralizationRejected: type generalization would cross policy floor");
             }
+        }
+    }
+
+    /** Immutable policy view captured before the requiring authored patch. */
+    static final class FrozenPolicy {
+        private final Policy scopedPolicy;
+        private final Policy rootPolicy;
+
+        private FrozenPolicy(Policy scopedPolicy, Policy rootPolicy) {
+            this.scopedPolicy = Objects.requireNonNull(
+                    scopedPolicy, "scopedPolicy");
+            this.rootPolicy = Objects.requireNonNull(
+                    rootPolicy, "rootPolicy");
+        }
+
+        private static FrozenPolicy absent(String originScope) {
+            String normalizedOrigin = PointerUtils.normalizeScope(originScope);
+            Policy scoped = Policy.absent(normalizedOrigin);
+            Policy root = JsonPointer.ROOT.equals(normalizedOrigin)
+                    ? scoped
+                    : Policy.absent(JsonPointer.ROOT);
+            return new FrozenPolicy(scoped, root);
+        }
+
+        private Policy policyFor(String pointer) {
+            return scopedPolicy.appliesTo(pointer)
+                    ? scopedPolicy
+                    : rootPolicy;
         }
     }
 
@@ -134,7 +203,7 @@ final class TypeGeneralizationPolicyResolver {
                     ProcessorPointerConstants.RELATIVE_GENERALIZATION);
             Node marker = nodeAt(root, markerPath);
             if (marker == null) {
-                return new Policy(false, normalizedScope, DEFAULT_MODE, java.util.Collections.emptyList());
+                return absent(normalizedScope);
             }
             String defaultMode = textField(
                     marker,
@@ -161,6 +230,13 @@ final class TypeGeneralizationPolicyResolver {
                 }
             }
             return new Policy(true, normalizedScope, defaultMode, rules);
+        }
+
+        private static Policy absent(String normalizedScope) {
+            return new Policy(false,
+                    PointerUtils.normalizeScope(normalizedScope),
+                    DEFAULT_MODE,
+                    java.util.Collections.<Rule>emptyList());
         }
 
         private boolean appliesTo(String pointer) {

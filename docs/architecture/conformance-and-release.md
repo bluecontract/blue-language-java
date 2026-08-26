@@ -8,7 +8,7 @@ compilation into one reproducible receipt.
 flowchart TD
     Clean["clean build with SOURCE_DATE_EPOCH"] --> Marker["clean-build evidence"]
     Marker --> Verify["releaseVerify / finalQualityVerify"]
-    Fixtures["153 Language + 234 Contracts fixtures"] --> Verify
+    Fixtures["153 Language + 276 Contracts fixtures"] --> Verify
     Tests["unit, integration, locality, gas traces"] --> Verify
     API["module API baselines + migration ledger"] --> Verify
     Archives["JAR/source replicas + source ZIP"] --> Verify
@@ -35,10 +35,35 @@ release ZIP is checked against an exact entry manifest and checksum.
 
 ## Published behavior
 
-Seven publications are staged into one invocation-owned Maven repository. A
-separate consumer build has no `includeBuild` or project substitution. It
-resolves module coordinates, enforces Java 8 bytecode and allowed POM edges,
-and exercises the aggregate and conformance entry points.
+Seven publications first enter a disposable invocation-owned Maven repository.
+The release lane then copies only each exact POM, runtime JAR, sources JAR and
+Javadoc JAR into a separate non-overwriting dependency repository. Every copied
+file has a SHA-256 companion. The root `artifact-manifest.json` binds those
+paths and hashes to the source commit, Contracts specification identity,
+Contracts fixture-package identity and Contracts release identity. The
+manifest deliberately excludes its own byte identity; the adjacent
+`artifact-manifest.json.sha256` and downstream receipts bind that value without
+self-reference.
+
+A separate consumer build has no `includeBuild`, project substitution or Maven
+Local. Gradle resolves the `blue.language` group exclusively from this sealed
+repository, with no remote fallback. It enforces Java 8 bytecode and allowed
+POM edges and exercises the aggregate and conformance entry points. The
+disposable publication task may delete only `build/staging-deploy`; it never
+deletes or overwrites the repository already handed to a downstream consumer.
+Create an explicit handoff repository with:
+
+```bash
+./gradlew assembleImmutableStagedRepository \
+  -PstagedDependencyRepository=/absolute/path/to/contracts-maven-repository
+```
+
+The destination must be outside `build/staging-deploy`. If it already exists,
+the task succeeds only when its complete file tree is byte-identical; otherwise
+it fails without changing the destination. A downstream build receives that
+absolute path and must not invoke the Contracts `clean`, publication or staging
+tasks. `publishedArtifactSmoke` applies the same repository property and proves
+that all `blue.language` coordinates resolve from the handoff repository only.
 
 ## Evidence is fail-closed
 

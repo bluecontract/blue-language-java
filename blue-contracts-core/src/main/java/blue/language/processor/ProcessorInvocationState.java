@@ -361,7 +361,14 @@ final class ProcessorInvocationState {
 
     void executeIsolatedManagedRootWork(
             ManagedDocumentStepRequest request) {
-        scopeExecutor.executeIsolatedManagedRootWork(request);
+        executeIsolatedManagedRootWork(request, null);
+    }
+
+    void executeIsolatedManagedRootWork(
+            ManagedDocumentStepRequest request,
+            ManagedDocumentStepRoute selectedRoute) {
+        scopeExecutor.executeIsolatedManagedRootWork(
+                request, selectedRoute);
     }
 
     /** Applies deterministic processor-owned cleanup before final validation. */
@@ -373,6 +380,10 @@ final class ProcessorInvocationState {
     /** Validates the committing subscription surface and freezes its delta. */
     void validateSubscriptionDelta() {
         resultCoordinator.validateSubscriptionDelta();
+    }
+
+    ContractSurfaceReconciliation contractSurfaceReconciliation() {
+        return resultCoordinator.contractSurfaceReconciliation();
     }
 
     ProcessingCheckpointTransaction checkpointTransaction() {

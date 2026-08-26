@@ -365,7 +365,7 @@ final class DefaultClosureProcessorTest {
     }
 
     @Test
-    void rejectsAnActivatedDraftWithAnUntrackedManagedOccurrence() {
+    void requestsEvidenceForAnActivatedUntrackedManagedOccurrence() {
         Node parent = managedDraftParentDocument();
         Node draft = managedDraftDocument(
                 DirectBlueIdCalculator.calculateBlueId(parent));
@@ -381,18 +381,24 @@ final class DefaultClosureProcessorTest {
                 attempt = contracts.processClosure(input);
             }
 
-            assertTrue(attempt.isComplete());
-            assertEquals(ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
-                    attempt.processResult().status());
-            assertFalse(attempt.processResult().commits());
-            assertEquals(
-                    ProcessorErrorCategory.SubscriptionSurfaceInvalid,
-                    attempt.processResult().diagnostic().category());
-            assertEquals(input.snapshot().closureIdentity(),
-                    attempt.processResult().outputClosureIdentity());
-            assertEquals(Collections.singletonList(
-                            WorkKind.EXTERNAL_DELIVERY),
-                    workKinds(capture.evidence.workTrace()));
+            assertEquals(ClosureAttemptResult.Kind.NEEDS_RESOURCES,
+                    attempt.kind());
+            assertFalse(attempt.isComplete());
+            assertNull(attempt.processResult());
+            assertNull(attempt.totalGas());
+            assertEquals(1, attempt.resourceDemands().size());
+            ClosureResourceDemand demand =
+                    attempt.resourceDemands().get(0);
+            assertTrue(demand
+                    instanceof ManagedOccurrenceEvidenceDemand);
+            assertEquals(ROOT, demand.sourceDocumentId());
+            assertEquals("/children/unexpected", demand.sourcePath());
+            assertNull(capture.evidence,
+                    "A resource demand must not publish completion evidence");
+            assertEquals(3, input.snapshot().occurrences().size());
+            assertNull(NodePathEditor.getOrNull(
+                    input.snapshot().managedDocument(ROOT).document(),
+                    "/children"));
         }
     }
 
@@ -885,6 +891,13 @@ final class DefaultClosureProcessorTest {
             assertEquals(
                     Arrays.asList(C34_Y_BLUE_ID, C34_X_BLUE_ID),
                     attempt.requiredExactBlueIds());
+            assertEquals(2, attempt.resourceDemands().size());
+            assertEquals(C34_Y_BLUE_ID,
+                    ((ExactNodeDemand) attempt.resourceDemands().get(0))
+                            .blueId());
+            assertEquals(C34_X_BLUE_ID,
+                    ((ExactNodeDemand) attempt.resourceDemands().get(1))
+                            .blueId());
         }
     }
 
@@ -944,6 +957,9 @@ final class DefaultClosureProcessorTest {
                     attempt.kind());
             assertEquals(Collections.singletonList(C34_X_BLUE_ID),
                     attempt.requiredExactBlueIds());
+            assertEquals(C34_X_BLUE_ID,
+                    ((ExactNodeDemand) attempt.resourceDemands().get(0))
+                            .blueId());
             assertNull(capture.evidence,
                     "A retryable provider suspension must not publish completion evidence");
         }

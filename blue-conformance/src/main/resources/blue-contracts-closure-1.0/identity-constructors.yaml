@@ -40,7 +40,7 @@ constructors:
       - targetDocumentId
       - bindingPolicyIdentity
       fieldRules:
-        activationGeneration: Positive safe integer. First embedded reservation/activation is 1; active removal allocates its same-lineage inactive successor at exactly the preceding generation plus 1; that successor is output-only until committed and supplied as a later invocation input, whose re-add preserves its generation and occurrence identity, while ordinary later exact-state rebind may change bindingIdentity. Same-invocation remove-then-re-add and different-lineage retarget are unsupported in Contracts 1.0. Root managed-scope generation 0 belongs to managedScopeKeyIdentity, not to an occurrence row.
+        activationGeneration: Positive safe integer. First embedded reservation/activation is 1. Active removal allocates its same-lineage inactive successor at exactly the preceding generation plus 1; that successor is output-only until committed and supplied as a later invocation input, whose re-add preserves its generation and occurrence identity. An inactive row cannot retarget. An active different-lineage REBIND retains source path and binding policy, changes target DocumentId, uses exactly the preceding generation plus 1, and carries a fresh occurrence identity; same-lineage exact-state REBIND preserves generation and occurrence identity while changing bindingIdentity. Same-invocation remove-then-re-add is unsupported. Root managed-scope generation 0 belongs to managedScopeKeyIdentity, not to an occurrence row.
   managedOccurrenceBindingIdentity:
     domain: blue-contracts-managed-occurrence/1.0
     stability: Changes whenever the exact expected target state changes.
@@ -65,7 +65,7 @@ constructors:
       - scopePath
       - activationGeneration
       fieldRules:
-        activationGeneration: Root managed scope path '/' uses 0 and only that Root scope may use 0. A first embedded managed occurrence reservation/activation uses 1; active removal allocates its same-lineage inactive successor at exactly the preceding generation plus 1; that successor is output-only until committed and supplied as a later invocation input, whose re-add preserves its generation and occurrence identity, while ordinary later exact-state rebind may change bindingIdentity. Same-invocation remove-then-re-add and different-lineage retarget are unsupported in Contracts 1.0.
+        activationGeneration: Root managed scope path '/' uses 0 and only that Root scope may use 0. A first embedded managed occurrence reservation/activation uses 1. Active removal allocates its same-lineage inactive successor at exactly the preceding generation plus 1; later committed re-add preserves that generation. An active different-lineage REBIND uses exactly the preceding generation plus 1 and a fresh occurrence identity, while a same-lineage exact-state REBIND preserves generation and occurrence identity. An inactive row cannot retarget, and same-invocation remove-then-re-add is unsupported.
   componentIdentity:
     domain: blue-contracts-component/1.0
     stability: Stable for one component kind, generation and ordered membership. Exact member state is bound separately by componentStateIdentity.
@@ -113,6 +113,32 @@ constructors:
     value:
       type: object
       fields: [label]
+  closureResourceDemandIdentity:
+    domain: blue-contracts-closure-resource-demand/1.0
+    stability: Exact identity of one noncommitting closure resource demand. Demand kind is identity evidence, never a canonical ordering prefix.
+    value:
+      type: object
+      fields:
+      - kind
+      - logicalCauseIdentity
+      - inputClosureIdentity
+      - inputGraphGeneration
+      - sourceDocumentId
+      - sourcePath
+      - processEmbeddedDeclarationIdentity
+      - suppliedValueBlueId
+      - demandOrdinal
+      fieldRules:
+        kind: One of EXACT_NODE or MANAGED_OCCURRENCE_EVIDENCE.
+        logicalCauseIdentity: Exact logical processing-cause identity for MANAGED_OCCURRENCE_EVIDENCE; JSON null for EXACT_NODE.
+        inputClosureIdentity: Exact unchanged input-closure identity for MANAGED_OCCURRENCE_EVIDENCE; JSON null for EXACT_NODE.
+        inputGraphGeneration: Unchanged non-negative safe input generation for MANAGED_OCCURRENCE_EVIDENCE; JSON null for EXACT_NODE.
+        sourceDocumentId: Exact source managed-document identity.
+        sourcePath: Normalized absolute logical source path. An attributed exact-node demand uses its actual demand site; only the legacy provider-only compatibility bridge uses sourceDocumentId 'blue-contracts/exact-node-provider' and path '/'.
+        processEmbeddedDeclarationIdentity: Exact Process Embedded declaration contribution BlueId for MANAGED_OCCURRENCE_EVIDENCE; JSON null for EXACT_NODE.
+        suppliedValueBlueId: Exact demanded or supplied value BlueId.
+        demandOrdinal: Deterministic non-negative same-boundary ordinal for MANAGED_OCCURRENCE_EVIDENCE; JSON null for EXACT_NODE.
+      order: Resource-demand arrays sort by sourceDocumentId, sourcePath, suppliedValueBlueId, canonical sorting ordinal, and demandIdentity as final tie-break. The sorting ordinal is 0 for EXACT_NODE while its identity-bearing demandOrdinal remains JSON null; MANAGED_OCCURRENCE_EVIDENCE uses its identity-bearing non-negative demandOrdinal. Kind is never an ordering prefix.
   externalOrderPolicyIdentity:
     domain: blue-contracts-external-order-policy/1.0
     value:
@@ -306,7 +332,7 @@ constructors:
       items:
         fields: [graphChangeOrdinal, changeKind, sourceDocumentId, sourcePath, beforeActivationGeneration, beforeOccurrenceIdentity, beforeBindingIdentity, beforeTargetDocumentId, beforeTargetBlueId, afterActivationGeneration, afterOccurrenceIdentity, afterBindingIdentity, afterTargetDocumentId, afterTargetBlueId]
         fieldRules:
-          changeKind: One of ADD, REMOVE or REBIND. Different-lineage retarget is unsupported in Contracts 1.0.
+          changeKind: One of ADD, REMOVE or REBIND. REBIND has both complete sides. Same-lineage REBIND preserves target DocumentId, activation generation and occurrenceIdentity while changing exact binding evidence. Active different-lineage REBIND preserves source path and binding policy, changes target DocumentId, uses exactly before generation plus 1 and fresh occurrence/binding identities, and advances the active graph generation. A mixed shape is invalid; an inactive row cannot retarget.
           beforeActivationGeneration: Exact value before the change; JSON null when the before side is absent.
           beforeOccurrenceIdentity: Exact value before the change; JSON null when the before side is absent.
           beforeBindingIdentity: Exact value before the change; JSON null when the before side is absent.

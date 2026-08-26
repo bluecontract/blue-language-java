@@ -15,11 +15,8 @@ import blue.language.provider.NodeProvider;
 import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifiedNodeProvider;
-import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
-import blue.language.processor.ConformanceChangedPath;
-import blue.language.processor.ConformancePlannerOverride;
 import blue.language.processor.ContractMatchingService;
 import blue.language.processor.CheckpointDomain;
 import blue.language.processor.DocumentProcessingResult;
@@ -376,6 +373,11 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
                         input.root, input.event, input.evidence);
             }
             bundle.provider.verifyPreparation();
+            if (bundle.generalization != null
+                    && debug.processResult().commits()) {
+                bundle.generalization.observe(
+                        debug.processResult().document());
+            }
             return new ProcessExecution(
                     debug.processResult(),
                     debug.trace(),
@@ -394,6 +396,8 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
                         input.checkpointSubjectOverride);
         MockHandlerProcessor handler =
                 new MockHandlerProcessor(scripted);
+        MockOperationProcessor operation =
+                new MockOperationProcessor(scripted);
 
         final Map<String, Node> providerNodes =
                 new LinkedHashMap<>(registry.nodesByBlueId);
@@ -471,14 +475,15 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
                 .registerContractProcessor(
                         MockTypeBlueIds.MOCK_HANDLER,
                         registry.require(MockTypeBlueIds.MOCK_HANDLER),
-                        handler);
+                        handler)
+                .registerContractProcessor(
+                        MockTypeBlueIds.MOCK_OPERATION,
+                        registry.require(MockTypeBlueIds.MOCK_OPERATION),
+                        operation);
         FixtureGeneralizationPlanner generalization =
                 input.generalization != null
                         ? input.generalization.newPlanner()
                         : null;
-        if (generalization != null) {
-            builder.conformancePlannerOverride(generalization);
-        }
         if (input.deliveryPlan != null) {
             builder.deliveryPlanDeriver((root, event) -> {
                 String rootBlueId = DirectBlueIdCalculator.calculateBlueId(root);

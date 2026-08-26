@@ -1,0 +1,113 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-08-infinite-cycle-gas-retry
+scenario: FL-ADM-08
+description: A two-member lifecycle route relays one exact loop event forever, exhausts shared gas atomically, and returns byte-identical rejection evidence when the same input is retried.
+operation: admit-closure
+events:
+  loop:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: full-lifecycle
+    id: FL-ADM-08-LOOP
+documents:
+  fl-adm-08-a:
+    publicRoot: true
+    document:
+      documentId: fl-adm-08-a
+      name: Full lifecycle looping cyclic A
+      b: {blueId: this#1}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/b]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        fromB:
+          type: {$registryBlueId: EmbeddedNodeChannel}
+          sourcePath: /b
+          event: {$eventBlueId: loop}
+          order: 0
+        seedLoop:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+        relayLoopA:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: fromB
+          order: 0
+  fl-adm-08-b:
+    publicRoot: false
+    document:
+      documentId: fl-adm-08-b
+      name: Full lifecycle looping cyclic B
+      a: {blueId: this#0}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/a]
+        fromA:
+          type: {$registryBlueId: EmbeddedNodeChannel}
+          sourcePath: /a
+          event: {$eventBlueId: loop}
+          order: 0
+        relayLoopB:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: fromA
+          order: 0
+inputOrder: [fl-adm-08-a, fl-adm-08-b]
+occurrences:
+- sourceDocumentId: fl-adm-08-a
+  sourcePath: /b
+  activationGeneration: 1
+  targetDocumentId: fl-adm-08-b
+  active: true
+- sourceDocumentId: fl-adm-08-b
+  sourcePath: /a
+  activationGeneration: 1
+  targetDocumentId: fl-adm-08-a
+  active: true
+runtime:
+  initializationHandlers:
+    fl-adm-08-a/seedLoop:
+      events:
+      - {$eventValue: loop}
+  handlers:
+    fl-adm-08-a/relayLoopA:
+      events:
+      - {$eventValue: loop}
+    fl-adm-08-b/relayLoopB:
+      events:
+      - {$eventValue: loop}
+gas:
+  sharedLimit: 20000
+cases:
+- suffix: first
+- suffix: retry
+  repeatOf: first
+expect:
+  status: gas-limit-exceeded
+  diagnosticCategory: GasLimitExceeded
+  atomic: true
+  rollbackToInput: true
+  documents:
+  - {documentId: fl-adm-08-a, initialized: false, terminated: false}
+  - {documentId: fl-adm-08-b, initialized: false, terminated: false}
+  absentPointers:
+  - {documentId: fl-adm-08-a, pointer: /contracts/initialized}
+  - {documentId: fl-adm-08-b, pointer: /contracts/initialized}
+  - {documentId: fl-adm-08-a, pointer: /contracts/terminated}
+  - {documentId: fl-adm-08-b, pointer: /contracts/terminated}
+  workContainsInOrder: [INITIALIZATION, LIFECYCLE, EMBEDDED_EVENT, EMBEDDED_EVENT]
+  publicEvents: []
+  checkpointWrites: 0
+  terminationMarkerCount: 0
+  commitCompanion: absent
+  parityAcrossCases:
+  - invocationIdentity
+  - processResult
+  - gas
+  - workTrace
+  - finalizations
+  - rejectionEvidence

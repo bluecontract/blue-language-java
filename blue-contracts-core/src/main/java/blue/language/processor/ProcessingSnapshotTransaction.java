@@ -77,6 +77,7 @@ final class ProcessingSnapshotTransaction {
         ResolvedSnapshot base = runtime.snapshot != null
                 ? runtime.snapshot
                 : snapshotFromDocument(rollback);
+        runtime.retainEntrySnapshot(base);
         return new PatchPlanningContext(
                 base,
                 ImmutablePatchPlanner.forSnapshot(base),
@@ -95,23 +96,22 @@ final class ProcessingSnapshotTransaction {
             BatchPatchResult result,
             boolean insertSharedSnapshot,
             ProcessingSnapshotManager commitManager) {
-        if (commitManager == null) {
-            Node next = result.resolvedRoot().toNode();
-            runtime.materializedView.replaceWith(next);
-            runtime.snapshot = null;
-            runtime.materializedViewStale = false;
-            markStateAdvanced(false);
-            return result.updates();
-        }
+        BatchPatchResult exactResult = Objects.requireNonNull(
+                result, "result");
         if (runtime.selectedDocumentBacked) {
-            Node tentativeSelected = tentativeSelectedRoot(result);
-            ResolvedSnapshot authoritative = snapshotFromDocument(
-                    tentativeSelected, true, commitManager);
+            Node tentativeSelected = tentativeSelectedRoot(exactResult);
+            ResolvedSnapshot authoritative = commitManager != null
+                    ? snapshotFromDocument(
+                            tentativeSelected, true, commitManager)
+                    : null;
             long buildUpdatesStart = System.nanoTime();
             List<DocumentUpdateData> updates;
             try {
-                updates = result.updatesAgainst(
-                        authoritative.frozenResolvedRoot(),
+                updates = exactResult.updatesAgainst(
+                        authoritative != null
+                                ? authoritative.frozenResolvedRoot()
+                                : FrozenNode.fromResolvedNode(
+                                        tentativeSelected),
                         runtime.updateMaterializationMetrics());
             } finally {
                 long nanos = System.nanoTime() - buildUpdatesStart;
@@ -120,23 +120,38 @@ final class ProcessingSnapshotTransaction {
                         ProcessingMetricId.BATCH_PATCH_BUILD_UPDATES_NANOS,
                         nanos);
             }
-            boolean published = insertSharedSnapshot
+            boolean published = commitManager != null
+                    && insertSharedSnapshot
                     && authoritative.isResolutionComplete();
-            ResolvedSnapshot committed = insertSharedSnapshot
-                    ? DocumentProcessingRuntime.cacheSnapshotIfComplete(
-                            commitManager, authoritative)
-                    : authoritative;
+            ResolvedSnapshot committed = authoritative == null
+                    ? null
+                    : insertSharedSnapshot
+                            ? DocumentProcessingRuntime
+                                    .cacheSnapshotIfComplete(
+                                            commitManager,
+                                            authoritative)
+                            : authoritative;
             runtime.materializedView.replaceWith(tentativeSelected);
             runtime.snapshot = committed;
             runtime.materializedViewStale = false;
             markStateAdvanced(published);
+            runtime.recordCommittedPatchEvidence(exactResult);
             return updates;
+        }
+        if (commitManager == null) {
+            Node next = exactResult.resolvedRoot().toNode();
+            runtime.materializedView.replaceWith(next);
+            runtime.snapshot = null;
+            runtime.materializedViewStale = false;
+            markStateAdvanced(false);
+            runtime.recordCommittedPatchEvidence(exactResult);
+            return exactResult.updates();
         }
         ResolvedSnapshot next =
                 DocumentProcessingRuntime.snapshotWithCompleteness(
-                        result.canonicalRoot(),
-                        result.resolvedRoot(),
-                        result.isResolutionComplete(),
+                        exactResult.canonicalRoot(),
+                        exactResult.resolvedRoot(),
+                        exactResult.isResolutionComplete(),
                         insertSharedSnapshot);
         boolean published = insertSharedSnapshot
                 && next.isResolutionComplete();
@@ -147,7 +162,8 @@ final class ProcessingSnapshotTransaction {
         runtime.snapshot = committed;
         commitMaterializedSnapshot(committed);
         markStateAdvanced(published);
-        return result.updates();
+        runtime.recordCommittedPatchEvidence(exactResult);
+        return exactResult.updates();
     }
 
     void commitMaterializedSnapshot(ResolvedSnapshot committed) {
@@ -205,6 +221,12 @@ final class ProcessingSnapshotTransaction {
                                 .ordinaryReferencePaths(
                                         document,
                                         runtime.evidenceScopePaths()));
+            }
+            if (!preservedPaths.isEmpty()) {
+                preservedPaths.addAll(
+                        ExecutableBodyPathCatalog
+                                .processorStateReferencePaths(
+                                        document, openedScopePaths));
             }
             preservedPaths.addAll(
                     ExecutableBodyPathCatalog
@@ -364,14 +386,18 @@ final class ProcessingSnapshotTransaction {
     private Node tentativeSelectedRoot(BatchPatchResult result) {
         FrozenNode tentative = FrozenNode.fromResolvedNode(
                 runtime.materializedView.copyRoot());
-        for (ImmutableJsonPatch patch : result.requestedPatches()) {
+        List<ImmutableJsonPatch> requestedPatches =
+                result.requestedPatches();
+        List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
+                result.generalizationMetadataWrites();
+        for (ImmutableJsonPatch patch : requestedPatches) {
             tentative = ImmutablePatchPlanner.forFrozen(tentative)
                     .plan(JsonPointer.ROOT, patch)
                     .root();
         }
         Node selected = tentative.toNode();
         for (BatchPatchResult.GeneralizationMetadataWrite write
-                : result.generalizationMetadataWrites()) {
+                : metadataWrites) {
             NodePathEditor.put(
                     selected, write.path(), write.value().toNode());
         }

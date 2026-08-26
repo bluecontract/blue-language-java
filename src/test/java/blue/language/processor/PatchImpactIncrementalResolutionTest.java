@@ -546,6 +546,47 @@ class PatchImpactIncrementalResolutionTest {
         assertEquals(1L, metrics.snapshot().counter("patchImpactValueOnly"));
     }
 
+    @Test
+    void shouldNeverTreatApplicationContractRemovalAsLocallySafeWhenStructuresMatch() {
+        // given
+        FrozenNode root = FrozenNode.fromResolvedNode(new Node()
+                .contracts(new Node().properties(
+                        "requiredWorkflow",
+                        new Node().properties(
+                                "operationId",
+                                new Node().value("not-selected")))));
+        ImmutableJsonPatch patch = ImmutableJsonPatch.from(
+                JsonPatch.remove("/contracts/requiredWorkflow"),
+                root,
+                root);
+        ImmutablePatchPlanner.PatchPlan canonicalPlan =
+                ImmutablePatchPlanner.forFrozen(root)
+                        .planWithExactReplacement("/", patch);
+        ImmutablePatchPlanner.PatchPlan resolvedPlan =
+                ImmutablePatchPlanner.forFrozen(root)
+                        .planWithExactReplacement("/", patch);
+
+        // when
+        PatchImpact impact = new PatchImpactAnalyzer(
+                null, null, null, NoOpProcessingObserver.INSTANCE)
+                .analyze(
+                        true,
+                        root,
+                        root,
+                        canonicalPlan,
+                        resolvedPlan,
+                        patch);
+
+        // then
+        assertEquals(
+                PatchImpact.Kind.CONTRACT_OR_PROCESSING_STRUCTURE,
+                impact.kind());
+        assertFalse(impact.localResolutionProvenSafe());
+        assertEquals(
+                PatchImpact.FallbackReason.CONTRACTS_CHANGED,
+                impact.fallbackReason());
+    }
+
     private static void assertSnapshotEquals(Blue blue,
                                              ResolvedSnapshot expected,
                                              ResolvedSnapshot actual) {

@@ -1,0 +1,49 @@
+schemaVersion: 1
+vectors:
+  - name: utf16-object-key-order
+    input:
+      "\uE000": bmp
+      "\U0001F600": supplementary
+    expectedCanonicalJson: '{"😀":"supplementary","":"bmp"}'
+
+  - name: unicode-normalization-is-preserved
+    input:
+      - "\u00E9"
+      - "e\u0301"
+    expectedCanonicalJson: '["é","é"]'
+
+  - name: control-character-escaping
+    inputCodePoints: [0, 8, 9, 10, 12, 13, 34, 92, 47]
+    expectedCanonicalJson: '"\u0000\b\t\n\f\r\"\\/"'
+
+  - name: safe-integer-boundaries
+    input: [-9007199254740991, 9007199254740991]
+    expectedCanonicalJson: '[-9007199254740991,9007199254740991]'
+
+  - name: positive-unsafe-integer
+    input: 9007199254740992
+    expectedError: IntegerDomainError
+
+  - name: negative-unsafe-integer
+    input: -9007199254740992
+    expectedError: IntegerDomainError
+
+  - name: ecmascript-float-boundaries
+    input: [-0.0, 1.0e-7, 1.0e-6, 1.0e+20, 1.0e+21, 333333333.33333329]
+    expectedCanonicalJson: '[0,1e-7,0.000001,100000000000000000000,1e+21,333333333.3333333]'
+
+  - name: nan-is-rejected
+    input: .nan
+    expectedError: FloatDomainError
+
+  - name: positive-infinity-is-rejected
+    input: .inf
+    expectedError: FloatDomainError
+
+  - name: lone-high-surrogate-is-rejected
+    inputUtf16CodeUnits: [55296]
+    expectedError: CanonicalizationError
+
+  - name: lone-low-surrogate-is-rejected
+    inputUtf16CodeUnits: [56320]
+    expectedError: CanonicalizationError

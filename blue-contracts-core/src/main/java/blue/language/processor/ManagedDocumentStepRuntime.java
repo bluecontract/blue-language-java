@@ -1,5 +1,8 @@
 package blue.language.processor;
 
+import blue.language.api.BlueOperationOutcome;
+import blue.language.api.BlueOperationResult;
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.model.DocumentUpdateChannel;
@@ -93,10 +96,34 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
      */
     public ManagedDocumentStepOutcome execute(
             ManagedDocumentStepRequest request) {
+        return execute(request, null);
+    }
+
+    /**
+     * Executes an already-selected managed route against the latest exact
+     * document while retaining its accepted pre-transition dispatch surface.
+     *
+     * @param request exact latest Root state and accepted work evidence
+     * @param selectedRoute exact pre-transition route capability
+     * @return pre-finalization local outcome
+     */
+    public ManagedDocumentStepOutcome executeSelectedRoute(
+            ManagedDocumentStepRequest request,
+            ManagedDocumentStepRoute selectedRoute) {
+        return execute(
+                request,
+                Objects.requireNonNull(
+                        selectedRoute, "selectedRoute"));
+    }
+
+    private ManagedDocumentStepOutcome execute(
+            ManagedDocumentStepRequest request,
+            ManagedDocumentStepRoute selectedRoute) {
         ManagedDocumentStepRequest admitted = Objects.requireNonNull(
                 request, "request");
         ensureOpen();
         Node document = admitted.exactDocument();
+        String beforeEffectiveTypeBlueId = effectiveTypeBlueId(document);
         validateTargetState(admitted, document);
         DocumentProcessingResult invalid =
                 ProcessingInputAdmission.validateDocument(document);
@@ -119,11 +146,15 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 : null;
         List<FrozenJsonPatch> orderedPatches =
                 new ArrayList<FrozenJsonPatch>();
+        List<DocumentUpdateOccurrence> orderedPatchUpdates =
+                new ArrayList<DocumentUpdateOccurrence>();
         List<Node> orderedEmittedEvents =
                 new ArrayList<Node>();
         ManagedDocumentStepContinuation stepContinuation =
                 collectingContinuation(
-                        orderedPatches, orderedEmittedEvents);
+                        orderedPatches,
+                        orderedPatchUpdates,
+                        orderedEmittedEvents);
         long gasBefore = sharedGasContext.meter().totalGas();
         ProcessorInvocationState execution = new ProcessorInvocationState(
                 owner,
@@ -141,7 +172,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                      sharedGasContext.withAttribution(
                              admitted.attribution())) {
             try {
-                execution.executeIsolatedManagedRootWork(admitted);
+                execution.executeIsolatedManagedRootWork(
+                        admitted, selectedRoute);
             } catch (RunTerminationException terminated) {
                 /* Ordinary Root termination is control flow; failure follows. */
             }
@@ -169,9 +201,24 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 runtime.document(),
                 orderedEmittedEvents,
                 orderedPatches,
+                orderedPatchUpdates,
+                beforeEffectiveTypeBlueId,
+                effectiveTypeBlueId(runtime.document()),
+                runtime.committedGeneralizationWrites(),
                 gasBefore,
                 gasAfter,
                 !runtime.changedPaths().isEmpty());
+    }
+
+    private static String effectiveTypeBlueId(Node document) {
+        Node type = Objects.requireNonNull(document, "document").getType();
+        if (type == null) {
+            return null;
+        }
+        return type.getBlueId() != null
+                ? BlueIds.requirePlainBlueId(
+                        type.getBlueId(), "/type/blueId")
+                : FrozenNode.fromResolvedNode(type).blueId();
     }
 
     /**
@@ -231,7 +278,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Node exactEvent) {
         ensureOpen();
         Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
-        ContractBundle bundle = classifyRootBundle(exactDocument);
+        ContractBundle bundle = classifyRootSurface(exactDocument).bundle();
         List<ManagedDocumentStepRoute> routes =
                 new ArrayList<ManagedDocumentStepRoute>();
         for (ContractBundle.ChannelBinding binding
@@ -245,7 +292,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                         ManagedDocumentWorkKind.TRIGGERED_EVENT,
                         binding.key(),
                         event,
-                        null));
+                        null,
+                        bundle));
             }
         }
         return Collections.unmodifiableList(routes);
@@ -265,7 +313,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Node exactEvent) {
         ensureOpen();
         Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
-        ContractBundle bundle = classifyRootBundle(exactDocument);
+        ContractBundle bundle = classifyRootSurface(exactDocument).bundle();
         List<ManagedDocumentStepRoute> routes =
                 new ArrayList<ManagedDocumentStepRoute>();
         for (ContractBundle.ChannelBinding binding
@@ -274,7 +322,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                     ManagedDocumentWorkKind.LIFECYCLE,
                     binding.key(),
                     event,
-                    null));
+                    null,
+                    bundle));
         }
         return Collections.unmodifiableList(routes);
     }
@@ -291,30 +340,9 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             Map<String, String> expectedBlueIdsByPath) {
         ensureOpen();
         long gasBefore = sharedGasContext.meter().totalGas();
-        Node document = Objects.requireNonNull(
-                exactDocument, "exactDocument").clone();
-        ProcessorMarkerStore.collapseInitializationDocuments(document);
-        DocumentProcessingRuntime view = new DocumentProcessingRuntime(
-                document,
-                owner.conformanceEngine(),
-                owner.conformancePlannerOverride(),
-                owner.snapshotManager(),
-                owner.observer(),
-                sharedGasContext,
-                owner.registry().executableBodyFieldsByType(),
-                owner.strictPlatformInvocation());
-        FrozenNode selected = view.selectedFrozenAt(JsonPointer.ROOT);
-        owner.contractLoader().preflightSelectedContractHeaders(selected);
-        FrozenNode resolved = view.resolvedFrozenAt(JsonPointer.ROOT);
-        FrozenNode recognition = view.contractRecognitionScope(
-                selected, resolved);
-        ContractBundle bundle = owner.contractLoader().load(
-                selected,
-                recognition,
-                JsonPointer.ROOT,
-                owner.observer(),
-                null,
-                null);
+        RootSurfaceView surface = classifyRootSurface(exactDocument);
+        FrozenNode resolved = surface.resolvedRoot();
+        ContractBundle bundle = surface.bundle();
         Map<String, String> expected = Objects.requireNonNull(
                 expectedBlueIdsByPath, "expectedBlueIdsByPath");
         if (!bundle.hasProcessEmbedded()) {
@@ -338,6 +366,134 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             throw new IllegalStateException(
                     "Managed declaration validation must not charge shared gas");
         }
+    }
+
+    /**
+     * Projects the complete concrete path surface of the effective Root
+     * Process Embedded declaration without executing application code.
+     *
+     * <p>Each concrete path retains the BlueId of the exact effective
+     * {@code paths} or {@code collectionPaths} field that contributed it.
+     * Direct managed references stay opaque, while collection containers are
+     * opened only far enough to derive their direct concrete member paths. No
+     * synthetic merged-contract identity is created.</p>
+     *
+     * @param exactDocument exact independently managed Root
+     * @return immutable, canonically sorted paths with declaration provenance
+     */
+    public List<ManagedProcessEmbeddedPath>
+    projectManagedProcessEmbeddedSurface(Node exactDocument) {
+        ensureOpen();
+        long gasBefore = sharedGasContext.meter().totalGas();
+        RootSurfaceView surface = classifyRootSurface(exactDocument);
+        ContractBundle bundle = surface.bundle();
+        if (!bundle.hasProcessEmbedded()) {
+            if (sharedGasContext.meter().totalGas() != gasBefore) {
+                throw new IllegalStateException(
+                        "Managed declaration projection must not charge shared gas");
+            }
+            return Collections.emptyList();
+        }
+
+        EmbeddedScopeDeclaration declaration =
+                bundle.embeddedScopeDeclaration();
+        EmbeddedScopePlanner planner = owner.snapshotManager() != null
+                ? new EmbeddedScopePlanner(
+                        owner.snapshotManager()
+                                ::materializeVerifiedExactReference)
+                : new EmbeddedScopePlanner();
+        EmbeddedScopePlan plan = planner.planForManagedReconciliation(
+                surface.resolvedRoot(),
+                JsonPointer.ROOT,
+                declaration.explicitPaths(),
+                declaration.collectionPaths(),
+                owner.gasSchedule());
+        EffectiveContractSnapshot embedded =
+                effectiveProcessEmbeddedSnapshot(bundle);
+        FrozenNode explicitContribution = embedded.headerFields().get(
+                ProcessorContractConstants.KEY_PATHS);
+        FrozenNode collectionContribution = embedded.headerFields().get(
+                ProcessorContractConstants.KEY_COLLECTION_PATHS);
+        List<ManagedProcessEmbeddedPath> projected =
+                new ArrayList<ManagedProcessEmbeddedPath>();
+        for (EmbeddedConcretePath concrete : plan.concretePaths()) {
+            FrozenNode contribution = concrete.origin()
+                    == EmbeddedPathOrigin.EXPLICIT
+                    ? explicitContribution
+                    : collectionContribution;
+            if (contribution == null) {
+                throw new IllegalStateException(
+                        "Effective Process Embedded path lacks exact declaration-field provenance: "
+                                + concrete.absolutePath());
+            }
+            projected.add(new ManagedProcessEmbeddedPath(
+                    concrete.absolutePath(), contribution.blueId()));
+        }
+        Collections.sort(projected);
+        if (sharedGasContext.meter().totalGas() != gasBefore) {
+            throw new IllegalStateException(
+                    "Managed declaration projection must not charge shared gas");
+        }
+        return Collections.unmodifiableList(projected);
+    }
+
+    /**
+     * Checks one exact managed reference without charging shared gas or
+     * executing application code.
+     *
+     * <p>Snapshot-native generations use their verified exact-materialization
+     * boundary. Compatibility generations configured with only a
+     * {@code NodeProvider} use the same verified provider path that loads
+     * exact contract contributions. Missing or temporarily unavailable
+     * content remains a retryable absence; invalid content fails closed.</p>
+     *
+     * @param expectedBlueId exact requested identity
+     * @return {@code true} only when verified canonical content is available
+     */
+    public boolean isExactManagedReferenceAvailable(String expectedBlueId) {
+        ensureOpen();
+        String blueId = Objects.requireNonNull(
+                expectedBlueId, "expectedBlueId");
+        FrozenNode reference = FrozenNode.fromNode(
+                new Node().blueId(blueId));
+        final FrozenNode materialized;
+        try {
+            ProcessingSnapshotManager manager = owner.snapshotManager();
+            materialized = manager != null
+                    ? manager.materializeVerifiedExactReference(reference)
+                    : owner.contractLoader()
+                            .materializeVerifiedReference(reference);
+        } catch (ExecutionEvidenceUnavailableException unavailable) {
+            return false;
+        } catch (MustUnderstandFailureException absent) {
+            return false;
+        } catch (InvalidExecutionEvidenceException invalid) {
+            throw invalidManagedReference(invalid.getMessage());
+        } catch (IllegalArgumentException invalid) {
+            throw invalidManagedReference(invalid.getMessage());
+        }
+        BlueOperationResult<FrozenNode> verified =
+                ProcessorRuntimeAccess.verifiedMaterialization(
+                        reference, materialized);
+        BlueOperationOutcome outcome = verified.outcome();
+        if (outcome == BlueOperationOutcome.ESTABLISHED) {
+            return true;
+        }
+        if (outcome == BlueOperationOutcome.ABSENT
+                || outcome == BlueOperationOutcome.INCOMPLETE) {
+            return false;
+        }
+        throw invalidManagedReference(verified.reason().orElse(
+                "Exact managed reference is invalid: " + blueId));
+    }
+
+    private InvalidExecutionEvidenceException invalidManagedReference(
+            String diagnostic) {
+        return new InvalidExecutionEvidenceException(
+                diagnostic != null && !diagnostic.isEmpty()
+                        ? diagnostic
+                        : "Exact managed reference is invalid",
+                ProcessorErrorCategory.InvalidProcessingDocument);
     }
 
     /**
@@ -383,8 +539,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 .properties(
                         ProcessorContractConstants.KEY_EVENT,
                         new Node().blueId(eventBlueId));
-        ContractBundle bundle = classifyRootBundle(
-                exactContainingDocument);
+        ContractBundle bundle = classifyRootSurface(
+                exactContainingDocument).bundle();
         List<ManagedDocumentStepRoute> routes =
                 new ArrayList<ManagedDocumentStepRoute>();
         for (ContractBundle.ChannelBinding binding
@@ -403,7 +559,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                         ManagedDocumentWorkKind.EMBEDDED_EVENT,
                         binding.key(),
                         wrapper,
-                        event));
+                        event,
+                        bundle));
             }
         }
         return Collections.unmodifiableList(routes);
@@ -423,7 +580,9 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         ensureOpen();
         DocumentUpdateOccurrence update = Objects.requireNonNull(
                 occurrence, "occurrence");
-        ContractBundle bundle = classifyRootBundle(exactDocument);
+        ContractBundle bundle = update.frozenRootDispatchBundle() != null
+                ? update.frozenRootDispatchBundle()
+                : classifyRootSurface(exactDocument).bundle();
         DocumentUpdateData data = new DocumentUpdateData(
                 update.path(),
                 update.before(),
@@ -447,7 +606,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                         ManagedDocumentWorkKind.DOCUMENT_UPDATE,
                         binding.key(),
                         payload,
-                        null));
+                        null,
+                        bundle));
             }
         }
         return Collections.unmodifiableList(routes);
@@ -722,7 +882,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         }
     }
 
-    private ContractBundle classifyRootBundle(Node exactDocument) {
+    private RootSurfaceView classifyRootSurface(Node exactDocument) {
         Node document = Objects.requireNonNull(
                 exactDocument, "exactDocument").clone();
         DocumentProcessingResult invalid =
@@ -764,11 +924,64 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
             throw new IllegalStateException(
                     "Route classification must not charge shared gas");
         }
-        return bundle;
+        return new RootSurfaceView(selected, resolved, bundle);
+    }
+
+    private EffectiveContractSnapshot effectiveProcessEmbeddedSnapshot(
+            ContractBundle bundle) {
+        EffectiveContractSnapshot found = null;
+        for (EffectiveContractSnapshot snapshot
+                : bundle.effectiveContractSnapshots()) {
+            if (!EffectiveContractSnapshotConstants.Role.PROCESS_EMBEDDED
+                    .equals(snapshot.role())) {
+                continue;
+            }
+            if (found != null) {
+                throw new IllegalStateException(
+                        "Effective Root contains multiple Process Embedded snapshots");
+            }
+            found = snapshot;
+        }
+        if (found == null) {
+            throw new IllegalStateException(
+                    "Effective Process Embedded declaration lacks its exact snapshot");
+        }
+        return found;
+    }
+
+    /** Immutable selected, resolved, and classified view of one exact Root. */
+    private static final class RootSurfaceView {
+        private final FrozenNode selectedRoot;
+        private final FrozenNode resolvedRoot;
+        private final ContractBundle bundle;
+
+        RootSurfaceView(
+                FrozenNode selectedRoot,
+                FrozenNode resolvedRoot,
+                ContractBundle bundle) {
+            this.selectedRoot = Objects.requireNonNull(
+                    selectedRoot, "selectedRoot");
+            this.resolvedRoot = Objects.requireNonNull(
+                    resolvedRoot, "resolvedRoot");
+            this.bundle = Objects.requireNonNull(bundle, "bundle");
+        }
+
+        FrozenNode selectedRoot() {
+            return selectedRoot;
+        }
+
+        FrozenNode resolvedRoot() {
+            return resolvedRoot;
+        }
+
+        ContractBundle bundle() {
+            return bundle;
+        }
     }
 
     private ManagedDocumentStepContinuation collectingContinuation(
             final List<FrozenJsonPatch> orderedPatches,
+            final List<DocumentUpdateOccurrence> orderedPatchUpdates,
             final List<Node> orderedEmittedEvents) {
         return new ManagedDocumentStepContinuation() {
             @Override
@@ -777,7 +990,13 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                     Node currentDocument,
                     FrozenJsonPatch patch,
                     List<DocumentUpdateOccurrence> updates) {
-                orderedPatches.add(Objects.requireNonNull(patch, "patch"));
+                FrozenJsonPatch exactPatch = Objects.requireNonNull(
+                        patch, "patch");
+                DocumentUpdateOccurrence authored = authoredPatchUpdate(
+                        patch,
+                        updates);
+                orderedPatches.add(exactPatch);
+                orderedPatchUpdates.add(authored);
                 continuation.afterPatch(
                         scopePath,
                         currentDocument,
@@ -809,6 +1028,25 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                         scopePath, cause, reason);
             }
         };
+    }
+
+    private static DocumentUpdateOccurrence authoredPatchUpdate(
+            FrozenJsonPatch patch,
+            List<DocumentUpdateOccurrence> updates) {
+        DocumentUpdateOccurrence matched = null;
+        for (DocumentUpdateOccurrence update : Objects.requireNonNull(
+                updates, "updates")) {
+            DocumentUpdateOccurrence exact = Objects.requireNonNull(
+                    update, "update");
+            if (exact.path().equals(patch.parsedPath().pointer())) {
+                matched = exact;
+            }
+        }
+        if (matched == null) {
+            throw new IllegalStateException(
+                    "Authored patch has no exact update transition");
+        }
+        return matched;
     }
 
     private static void validateTargetState(

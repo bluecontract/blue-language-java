@@ -171,4 +171,27 @@ public final class RootExternalDeliveryEvidenceVerifier
                         includeProcessEmbedded,
                         visited);
     }
+
+    static boolean typeContributesToSubscriptionSurface(
+            ContractLoader contractLoader,
+            ProcessingSnapshotManager snapshotManager,
+            Node declaredType,
+            Set<String> requestedChannelKeys,
+            boolean includeProcessEmbedded,
+            Set<String> visited) {
+        return contractLoader != null
+                ? ExternalSubscriptionProjectionBuilder
+                .typeContributesToSubscriptionSurface(
+                        contractLoader::materializeVerifiedReference,
+                        declaredType,
+                        requestedChannelKeys,
+                        includeProcessEmbedded,
+                        visited)
+                : typeContributesToSubscriptionSurface(
+                        snapshotManager,
+                        declaredType,
+                        requestedChannelKeys,
+                        includeProcessEmbedded,
+                        visited);
+    }
 }

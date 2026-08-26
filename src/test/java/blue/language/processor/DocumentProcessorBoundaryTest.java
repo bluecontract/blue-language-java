@@ -478,7 +478,7 @@ class DocumentProcessorBoundaryTest {
     }
 
     @Test
-    void shouldPreserveReservedEmbeddedMarkerWhenFrozenAndMutableContractsReplacementIsIdentical() {
+    void shouldAllowFrozenAndMutableWholeContractsReplacementForApplicationOwnedEmbedded() {
         // given
         Node embedded = new Node()
                 .type(new Node().blueId(

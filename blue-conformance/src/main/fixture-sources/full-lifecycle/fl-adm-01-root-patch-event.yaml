@@ -1,0 +1,68 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: fl-adm-01-root-patch-event
+scenario: FL-ADM-01
+description: A public Root patches ordinary state during initialization, emits one event, reacts locally, publishes the event once, and writes no external checkpoint.
+operation: admit-closure
+events:
+  initialized:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: full-lifecycle
+    id: FL-ADM-01-INITIALIZED
+documents:
+  fl-adm-01-root:
+    publicRoot: true
+    document:
+      documentId: fl-adm-01-root
+      name: Full lifecycle root patch and event
+      state: before
+      reaction: none
+      contracts:
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        initializedEvent:
+          type: {$registryBlueId: TriggeredEventChannel}
+          event: {$eventBlueId: initialized}
+          order: 0
+        initialize:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+        react:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: initializedEvent
+          order: 0
+occurrences: []
+runtime:
+  initializationHandlers:
+    fl-adm-01-root/initialize:
+      patches:
+      - {op: replace, path: /state, val: initialized}
+      events:
+      - {$eventValue: initialized}
+  handlers:
+    fl-adm-01-root/react:
+      patches:
+      - {op: replace, path: /reaction, val: handled}
+gas:
+  sharedLimit: release-default
+expect:
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: fl-adm-01-root, initialized: true, terminated: false}
+  pointers:
+  - {documentId: fl-adm-01-root, pointer: /state, value: initialized}
+  - {documentId: fl-adm-01-root, pointer: /reaction, value: handled}
+  workCounts:
+  - {kind: INITIALIZATION, count: 1}
+  - {kind: LIFECYCLE, count: 1}
+  - {kind: TRIGGERED_EVENT, count: 1}
+  publicEvents:
+  - {event: initialized, emitter: fl-adm-01-root}
+  distinctEventOccurrenceIdentities: 1
+  checkpointWrites: 0
+  commitCompanion: present

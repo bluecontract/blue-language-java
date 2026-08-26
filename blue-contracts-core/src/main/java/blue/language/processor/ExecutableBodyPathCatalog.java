@@ -165,6 +165,10 @@ final class ExecutableBodyPathCatalog {
                 openedScopePaths,
                 executableBodyFieldsByType,
                 checkedManager);
+        if (!preserved.isEmpty()) {
+            preserved.addAll(processorStateReferencePaths(
+                    document, openedScopePaths));
+        }
         preserved.addAll(opaqueCyclicMemberPaths(document));
         if (preserved.isEmpty()) {
             return checkedManager.fromDocumentTransient(document);
@@ -195,6 +199,10 @@ final class ExecutableBodyPathCatalog {
                 checkedManager);
         preserved.addAll(ordinaryReferencePaths(
                 document, openedScopePaths));
+        if (!preserved.isEmpty()) {
+            preserved.addAll(processorStateReferencePaths(
+                    document, openedScopePaths));
+        }
         preserved.addAll(opaqueCyclicMemberPaths(document));
         if (preserved.isEmpty()) {
             return checkedManager.fromDocumentTransient(document);
@@ -216,6 +224,22 @@ final class ExecutableBodyPathCatalog {
 
     static Set<String> ordinaryReferencePaths(Node document) {
         return ordinaryReferencePaths(document, null);
+    }
+
+    /**
+     * Finds exact processor-state witnesses that remain semantic references.
+     *
+     * <p>An initialized marker deliberately records its pre-initialization
+     * document as either verified content or an equivalent pure BlueId
+     * reference. Resolving that reference would reinterpret arbitrary document
+     * content through the marker field's required-node schema, so snapshot and
+     * conformance resolution keep the exact witness collapsed.</p>
+     */
+    static Set<String> processorStateReferencePaths(
+            Node document,
+            Iterable<String> openedScopePaths) {
+        return ProcessorStateReferencePathCatalog.find(
+                document, openedScopePaths);
     }
 
     /**

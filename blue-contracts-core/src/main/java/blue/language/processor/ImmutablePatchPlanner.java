@@ -62,7 +62,9 @@ final class ImmutablePatchPlanner {
     }
 
     PatchPlan plan(String originScopePath, ImmutableJsonPatch patch) {
-        return plan(originScopePath, patch, false);
+        return plan(originScopePath,
+                patch,
+                patch != null && patch.exactValueWrite());
     }
 
     PatchPlan planWithExactReplacement(String originScopePath, ImmutableJsonPatch patch) {
