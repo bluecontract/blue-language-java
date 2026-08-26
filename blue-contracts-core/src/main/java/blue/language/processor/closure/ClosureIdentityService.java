@@ -151,6 +151,10 @@ final class ClosureIdentityService {
                 "blue-contracts-transition-occurrence/1.0",
                 "invocationIdentity", "transitionOrdinal", "targetDocumentId",
                 "beforeBlueId", "causingWorkOccurrenceIdentity"),
+        MANAGED_TRANSITION_OCCURRENCE(
+                "blue-contracts-managed-transition-occurrence/1.0",
+                "sourceInvocationIdentity", "transitionOrdinal",
+                "documentId", "originalCauseIdentity"),
         EVENT_OCCURRENCE(
                 "blue-contracts-event-occurrence/1.0",
                 "invocationIdentity", "eventOccurrenceOrdinal", "eventBlueId"),
@@ -172,6 +176,16 @@ final class ClosureIdentityService {
         CHECKPOINT_WRITES("blue-contracts-checkpoint-writes/1.0"),
         SUBSCRIPTION_DELTAS("blue-contracts-subscription-deltas/1.0"),
         PUBLIC_EVENTS("blue-contracts-public-events/1.0"),
+        MANAGED_ROOT_EVENTS("blue-contracts-managed-root-events/1.0"),
+        MANAGED_DOCUMENT_TRANSITION_RECEIPT(
+                "blue-contracts-managed-document-transition-receipt/1.0",
+                "sourceInvocationIdentity", "transitionOrdinal",
+                "transitionOccurrenceIdentity", "documentId",
+                "originalCauseIdentity", "beforeBlueId", "afterBlueId",
+                "emittedRootEvents", "emittedRootEventsIdentity",
+                "admittedGas"),
+        MANAGED_DOCUMENT_TRANSITION_RECEIPTS(
+                "blue-contracts-managed-document-transition-receipts/1.0"),
         REJECTED_CHARGE(
                 "blue-contracts-rejected-charge/1.0",
                 "namespace", "counter", "quantity", "weight", "subtotal",
@@ -187,6 +201,25 @@ final class ClosureIdentityService {
                 "occurrenceBindingSetIdentity", "graphChangesIdentity",
                 "checkpointWritesIdentity", "subscriptionDeltasIdentity",
                 "publicEventsIdentity", "gasTraceIdentity",
+                "blueLanguageSpecificationIdentity",
+                "contractsSpecificationIdentity",
+                "managedDocumentIdentityPolicyIdentity",
+                "managedBindingPolicyIdentity",
+                "exactNodeProviderDomainIdentity",
+                "externalOrderPolicyIdentity", "runtimeRegistryIdentity",
+                "gasManifestIdentity", "portableLimitPolicyIdentity",
+                "cyclicFinalizerIdentity", "cyclicProofVerifierIdentity"),
+        PLATFORM_COMMIT_COMPANION_WITH_MANAGED_TRANSITIONS(
+                "blue-contracts-platform-commit-companion/1.1",
+                "invocationIdentity", "inputClosureIdentity",
+                "outputClosureIdentity", "expectedInputGraphGeneration",
+                "expectedInputDocuments", "expectedInputComponents",
+                "inputOccurrenceBindingSetIdentity", "outputGraphGeneration",
+                "resultingDocuments", "resultingComponents",
+                "occurrenceBindingSetIdentity", "graphChangesIdentity",
+                "checkpointWritesIdentity", "subscriptionDeltasIdentity",
+                "publicEventsIdentity", "gasTraceIdentity",
+                "managedTransitionReceiptsIdentity",
                 "blueLanguageSpecificationIdentity",
                 "contractsSpecificationIdentity",
                 "managedDocumentIdentityPolicyIdentity",
@@ -753,6 +786,85 @@ final class ClosureIdentityService {
         return identity(Constructor.EVENT_OCCURRENCE, value);
     }
 
+    /** Constructs one managed-document transition occurrence identity. */
+    String managedTransitionOccurrenceIdentity(
+            String sourceInvocationIdentity,
+            long transitionOrdinal,
+            DocumentId documentId,
+            String originalCauseIdentity) {
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("sourceInvocationIdentity", sourceInvocationIdentity);
+        value.put("transitionOrdinal", Long.valueOf(transitionOrdinal));
+        value.put("documentId", Objects.requireNonNull(
+                documentId, "documentId").value());
+        value.put("originalCauseIdentity", originalCauseIdentity);
+        return identity(Constructor.MANAGED_TRANSITION_OCCURRENCE, value);
+    }
+
+    /** Constructs the complete ordered managed Root-event identity. */
+    String managedRootEventsIdentity(
+            List<ManagedRootEventOccurrence> events) {
+        ArrayList<Object> values = new ArrayList<Object>();
+        for (ManagedRootEventOccurrence event : Objects.requireNonNull(
+                events, "events")) {
+            values.add(Objects.requireNonNull(
+                    event, "managed Root event").identityValue());
+        }
+        return identity(Constructor.MANAGED_ROOT_EVENTS, values);
+    }
+
+    /** Constructs one complete managed-document transition receipt identity. */
+    String managedDocumentTransitionReceiptIdentity(
+            String sourceInvocationIdentity,
+            long transitionOrdinal,
+            String transitionOccurrenceIdentity,
+            DocumentId documentId,
+            String originalCauseIdentity,
+            String beforeBlueId,
+            String afterBlueId,
+            List<ManagedRootEventOccurrence> emittedRootEvents,
+            String emittedRootEventsIdentity,
+            long admittedGas) {
+        ArrayList<Object> eventValues = new ArrayList<Object>();
+        for (ManagedRootEventOccurrence event : Objects.requireNonNull(
+                emittedRootEvents, "emittedRootEvents")) {
+            eventValues.add(Objects.requireNonNull(
+                    event, "managed Root event").identityValue());
+        }
+        String exactEventsIdentity = managedRootEventsIdentity(
+                emittedRootEvents);
+        requireClaim("emittedRootEventsIdentity",
+                emittedRootEventsIdentity, exactEventsIdentity);
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("sourceInvocationIdentity", sourceInvocationIdentity);
+        value.put("transitionOrdinal", Long.valueOf(transitionOrdinal));
+        value.put("transitionOccurrenceIdentity",
+                transitionOccurrenceIdentity);
+        value.put("documentId", Objects.requireNonNull(
+                documentId, "documentId").value());
+        value.put("originalCauseIdentity", originalCauseIdentity);
+        value.put("beforeBlueId", beforeBlueId);
+        value.put("afterBlueId", afterBlueId);
+        value.put("emittedRootEvents", eventValues);
+        value.put("emittedRootEventsIdentity", emittedRootEventsIdentity);
+        value.put("admittedGas", Long.valueOf(admittedGas));
+        return identity(Constructor.MANAGED_DOCUMENT_TRANSITION_RECEIPT,
+                value);
+    }
+
+    /** Constructs the ordered aggregate managed-transition receipt identity. */
+    String managedTransitionReceiptsIdentity(
+            List<ManagedDocumentTransitionReceipt> receipts) {
+        ArrayList<Object> values = new ArrayList<Object>();
+        for (ManagedDocumentTransitionReceipt receipt
+                : Objects.requireNonNull(receipts, "receipts")) {
+            values.add(Objects.requireNonNull(
+                    receipt, "managed transition receipt").identityValue());
+        }
+        return identity(Constructor.MANAGED_DOCUMENT_TRANSITION_RECEIPTS,
+                values);
+    }
+
     /** Constructs one queued work occurrence identity. */
     String workOccurrenceIdentity(
             String invocationIdentity,
@@ -893,6 +1005,10 @@ final class ClosureIdentityService {
             case TRANSITION_OCCURRENCE:
                 validateTransition(requireObject(value, OBJECT_VALUE));
                 return;
+            case MANAGED_TRANSITION_OCCURRENCE:
+                validateManagedTransitionOccurrence(
+                        requireObject(value, OBJECT_VALUE));
+                return;
             case EVENT_OCCURRENCE:
                 validateEventOccurrence(
                         requireObject(value, OBJECT_VALUE));
@@ -923,6 +1039,18 @@ final class ClosureIdentityService {
                 validateOrdinalArray(value, "publicEventOrdinal",
                         "public events");
                 return;
+            case MANAGED_ROOT_EVENTS:
+                validateOrdinalArray(value, "ordinal",
+                        "managed Root events");
+                return;
+            case MANAGED_DOCUMENT_TRANSITION_RECEIPT:
+                validateManagedTransitionReceipt(
+                        requireObject(value, OBJECT_VALUE));
+                return;
+            case MANAGED_DOCUMENT_TRANSITION_RECEIPTS:
+                validateOrdinalArray(value, "transitionOrdinal",
+                        "managed transition receipts");
+                return;
             case REJECTED_CHARGE:
                 validateRejectedCharge(requireObject(value, OBJECT_VALUE));
                 return;
@@ -934,6 +1062,7 @@ final class ClosureIdentityService {
                         requireObject(value, OBJECT_VALUE));
                 return;
             case PLATFORM_COMMIT_COMPANION:
+            case PLATFORM_COMMIT_COMPANION_WITH_MANAGED_TRANSITIONS:
                 // Their closed top-level field sets are enforced above.  The
                 // semantic verifier validates their closed nested unions and
                 // cross-identity references before this construction step.
@@ -1325,6 +1454,55 @@ final class ClosureIdentityService {
         requireNonEmptyText(value, "targetDocumentId");
         requireNonEmptyText(value, "beforeBlueId");
         requireSha256(value, "causingWorkOccurrenceIdentity", false);
+    }
+
+    private static void validateManagedTransitionOccurrence(
+            Map<String, Object> value) {
+        requireSha256(value, "sourceInvocationIdentity", false);
+        requireSafeInteger(value, "transitionOrdinal");
+        requireNonEmptyText(value, "documentId");
+        requireSha256(value, "originalCauseIdentity", false);
+    }
+
+    private static void validateManagedTransitionReceipt(
+            Map<String, Object> value) {
+        String invocation = requireSha256(
+                value, "sourceInvocationIdentity", false);
+        requireSafeInteger(value, "transitionOrdinal");
+        requireSha256(value, "transitionOccurrenceIdentity", false);
+        String documentId = requireNonEmptyText(value, "documentId");
+        requireSha256(value, "originalCauseIdentity", false);
+        requireNonEmptyText(value, "beforeBlueId");
+        requireNonEmptyText(value, "afterBlueId");
+        List<Object> events = requireArray(
+                value.get("emittedRootEvents"), "emittedRootEvents");
+        for (int index = 0; index < events.size(); index++) {
+            Map<String, Object> event = requireObject(
+                    events.get(index), "managed Root event");
+            requireExactFields(event, Arrays.asList(
+                    "ordinal", "occurrenceOrdinal", "sourceDocumentId",
+                    "occurrenceIdentity", "eventBlueId", "publicAtSource"));
+            if (requireSafeInteger(event, "ordinal") != index) {
+                throw new IllegalArgumentException(
+                        "managed Root event ordinals must be contiguous");
+            }
+            long occurrenceOrdinal = requireSafeInteger(
+                    event, "occurrenceOrdinal");
+            if (!documentId.equals(requireNonEmptyText(
+                    event, "sourceDocumentId"))) {
+                throw new IllegalArgumentException(
+                        "managed Root event belongs to another document");
+            }
+            String occurrenceIdentity = requireSha256(
+                    event, "occurrenceIdentity", false);
+            String eventBlueId = requireNonEmptyText(event, "eventBlueId");
+            requireBoolean(event, "publicAtSource");
+            requireClaim("occurrenceIdentity", occurrenceIdentity,
+                    INSTANCE.eventOccurrenceIdentity(
+                            invocation, occurrenceOrdinal, eventBlueId));
+        }
+        requireSha256(value, "emittedRootEventsIdentity", false);
+        requireSafeInteger(value, "admittedGas");
     }
 
     private static void validateEventOccurrence(Map<String, Object> value) {

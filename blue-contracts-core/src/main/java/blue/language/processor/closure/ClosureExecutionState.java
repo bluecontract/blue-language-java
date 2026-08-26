@@ -18,6 +18,7 @@ final class ClosureExecutionState {
     private final AffectedClosureSnapshot tentativeSnapshot;
     private final ComponentFinalizationResult finalization;
     private final List<PublicEventOccurrence> publicEvents;
+    private final List<ManagedRootEventOccurrence> managedRootEvents;
     private final List<blue.language.processor.GasTraceEntry> gasTrace;
     private final Map<DocumentId, List<ManagedRootChannelOccurrence>>
             inputChannelSurfaces;
@@ -49,7 +50,8 @@ final class ClosureExecutionState {
                 resultingChannelSurfaces,
                 checkpointMutations,
                 epochAdvanceDocuments,
-                Collections.<DocumentTransitionEvidence>emptyList());
+                Collections.<DocumentTransitionEvidence>emptyList(),
+                Collections.<ManagedRootEventOccurrence>emptyList());
     }
 
     ClosureExecutionState(
@@ -65,12 +67,44 @@ final class ClosureExecutionState {
                     checkpointMutations,
             Set<DocumentId> epochAdvanceDocuments,
             List<DocumentTransitionEvidence> transitionEvidence) {
+        this(
+                tentativeSnapshot,
+                finalization,
+                publicEvents,
+                gasTrace,
+                inputChannelSurfaces,
+                resultingChannelSurfaces,
+                checkpointMutations,
+                epochAdvanceDocuments,
+                transitionEvidence,
+                Collections.<ManagedRootEventOccurrence>emptyList());
+    }
+
+    ClosureExecutionState(
+            AffectedClosureSnapshot tentativeSnapshot,
+            ComponentFinalizationResult finalization,
+            List<PublicEventOccurrence> publicEvents,
+            List<blue.language.processor.GasTraceEntry> gasTrace,
+            Map<DocumentId, List<ManagedRootChannelOccurrence>>
+                    inputChannelSurfaces,
+            Map<DocumentId, List<ManagedRootChannelOccurrence>>
+                    resultingChannelSurfaces,
+            List<ManagedCheckpointSettlementBatch.Mutation>
+                    checkpointMutations,
+            Set<DocumentId> epochAdvanceDocuments,
+            List<DocumentTransitionEvidence> transitionEvidence,
+            List<ManagedRootEventOccurrence> managedRootEvents) {
         this.tentativeSnapshot = Objects.requireNonNull(
                 tentativeSnapshot, "tentativeSnapshot");
         this.finalization = finalization;
         this.publicEvents = Collections.unmodifiableList(
                 new ArrayList<PublicEventOccurrence>(Objects.requireNonNull(
                         publicEvents, "publicEvents")));
+        this.managedRootEvents = Collections.unmodifiableList(
+                new ArrayList<ManagedRootEventOccurrence>(
+                        Objects.requireNonNull(
+                                managedRootEvents,
+                                "managedRootEvents")));
         this.gasTrace = Collections.unmodifiableList(
                 new ArrayList<blue.language.processor.GasTraceEntry>(
                         Objects.requireNonNull(gasTrace, "gasTrace")));
@@ -104,6 +138,10 @@ final class ClosureExecutionState {
 
     List<PublicEventOccurrence> publicEvents() {
         return publicEvents;
+    }
+
+    List<ManagedRootEventOccurrence> managedRootEvents() {
+        return managedRootEvents;
     }
 
     List<blue.language.processor.GasTraceEntry> gasTrace() {

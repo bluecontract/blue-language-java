@@ -212,6 +212,48 @@ public final class ClosureEvidenceFactory {
     }
 
     /**
+     * Derives one managed-revision cause from a complete authenticated source
+     * transition receipt.  The source receipt identity transitively binds its
+     * ordered Root events into the cause and invocation identities.
+     *
+     * @param targetOccurrenceIdentity stable containing occurrence
+     * @param fromEpoch predecessor source revision cursor
+     * @param toEpoch successor source revision cursor
+     * @param afterDocument exact successor source document
+     * @param sourceTransitionReceipt complete Contracts source transition
+     * @return identity-derived complete managed-revision cause
+     */
+    public static ManagedRevisionCause managedRevisionCause(
+            String targetOccurrenceIdentity,
+            long fromEpoch,
+            long toEpoch,
+            Node afterDocument,
+            ManagedDocumentTransitionReceipt sourceTransitionReceipt) {
+        ManagedDocumentTransitionReceipt receipt = Objects.requireNonNull(
+                sourceTransitionReceipt, "sourceTransitionReceipt");
+        String causeIdentity = IDENTITIES.managedRevisionCauseIdentity(
+                targetOccurrenceIdentity,
+                receipt.documentId(),
+                fromEpoch,
+                toEpoch,
+                receipt.beforeBlueId(),
+                receipt.afterBlueId(),
+                receipt.originalCauseIdentity(),
+                receipt.transitionReceiptIdentity());
+        return new ManagedRevisionCause(
+                causeIdentity,
+                targetOccurrenceIdentity,
+                receipt.documentId(),
+                fromEpoch,
+                toEpoch,
+                receipt.beforeBlueId(),
+                receipt.afterBlueId(),
+                afterDocument,
+                receipt.originalCauseIdentity(),
+                receipt);
+    }
+
+    /**
      * Derives one acyclic singleton component state.
      *
      * @param document exact member record

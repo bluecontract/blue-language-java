@@ -154,16 +154,35 @@ final class ClosureInvocationVerifier {
                     revision.afterBlueId(),
                     DirectBlueIdCalculator.calculateBlueId(
                             revision.afterDocument()));
-            requireClaim(
-                    "sourceRevisionReceiptIdentity",
-                    revision.sourceRevisionReceiptIdentity(),
-                    IDENTITIES.sourceRevisionReceiptIdentity(
-                            revision.childDocumentId(),
-                            revision.fromEpoch(),
-                            revision.toEpoch(),
-                            revision.beforeBlueId(),
-                            revision.afterBlueId(),
-                            revision.originalSourceCauseIdentity()));
+            if (revision.sourceTransitionReceipt().isPresent()) {
+                ManagedDocumentTransitionReceipt receipt = revision
+                        .sourceTransitionReceipt().get();
+                requireClaim(
+                        "sourceRevisionReceiptIdentity",
+                        revision.sourceRevisionReceiptIdentity(),
+                        receipt.transitionReceiptIdentity());
+                if (!revision.childDocumentId().equals(receipt.documentId())
+                        || !revision.beforeBlueId().equals(
+                            receipt.beforeBlueId())
+                        || !revision.afterBlueId().equals(
+                            receipt.afterBlueId())
+                        || !revision.originalSourceCauseIdentity().equals(
+                            receipt.originalCauseIdentity())) {
+                    throw new IllegalArgumentException(
+                            "Complete source transition receipt disagrees with managed revision");
+                }
+            } else {
+                requireClaim(
+                        "sourceRevisionReceiptIdentity",
+                        revision.sourceRevisionReceiptIdentity(),
+                        IDENTITIES.sourceRevisionReceiptIdentity(
+                                revision.childDocumentId(),
+                                revision.fromEpoch(),
+                                revision.toEpoch(),
+                                revision.beforeBlueId(),
+                                revision.afterBlueId(),
+                                revision.originalSourceCauseIdentity()));
+            }
         }
         requireClaim(
                 "causeIdentity",

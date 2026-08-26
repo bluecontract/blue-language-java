@@ -113,6 +113,10 @@ final class ClosureExecutionSession
             new ArrayDeque<ActiveFrame>();
     private final List<PublicEventOccurrence> publicEvents =
             new ArrayList<PublicEventOccurrence>();
+    private final List<ManagedRootEventOccurrence> managedRootEvents =
+            new ArrayList<ManagedRootEventOccurrence>();
+    private final Map<DocumentId, Long> managedRootEventCounts =
+            new LinkedHashMap<DocumentId, Long>();
     private final Map<DocumentId, List<ManagedRootChannelOccurrence>>
             inputChannelSurfaces =
             new LinkedHashMap<DocumentId,
@@ -366,6 +370,41 @@ final class ClosureExecutionSession
                         null,
                         null));
         enqueueAlreadyAccepted(work, "work.0.seed-enqueue");
+        drainCausalWork();
+        deliverManagedRevisionEvents(cause);
+    }
+
+    private void deliverManagedRevisionEvents(
+            ManagedRevisionCause cause) {
+        if (!cause.sourceTransitionReceipt().isPresent()) {
+            return;
+        }
+        ManagedDocumentTransitionReceipt receipt = cause
+                .sourceTransitionReceipt().get();
+        ManagedOccurrenceBinding target = managedRevisionTarget(cause);
+        requireManagedRevisionEventTarget(cause, target);
+        for (ManagedRootEventOccurrence event
+                : receipt.emittedRootEvents()) {
+            eventQueue.addLast(new EmittedOccurrence(
+                    event.occurrenceOrdinal(),
+                    event.eventBlueId(),
+                    event.occurrenceIdentity(),
+                    event.sourceDocumentId(),
+                    event.exactEvent(),
+                    Collections.singletonList(target),
+                    null,
+                    true));
+            charge(
+                    "processor",
+                    "internalEventEnqueued",
+                    1L,
+                    documentContext(
+                            currentSnapshot.managedDocument(
+                                    target.sourceDocumentId()),
+                            null,
+                            "managed-revision.event."
+                                    + event.ordinal() + ".enqueue"));
+        }
         drainCausalWork();
     }
 
@@ -1477,6 +1516,18 @@ final class ClosureExecutionSession
                 input.invocationIdentity(), eventOrdinal, eventBlueId);
         ManagedDocumentSnapshot emitter = currentSnapshot.managedDocument(
                 frame.work.targetDocumentId());
+        Long count = managedRootEventCounts.get(emitter.documentId());
+        long receiptOrdinal = count == null ? 0L : count.longValue();
+        managedRootEventCounts.put(
+                emitter.documentId(), Long.valueOf(receiptOrdinal + 1L));
+        managedRootEvents.add(new ManagedRootEventOccurrence(
+                receiptOrdinal,
+                eventOrdinal,
+                emitter.documentId(),
+                occurrenceIdentity,
+                eventBlueId,
+                exactEvent,
+                emitter.publicRoot()));
         if (emitter.publicRoot()) {
             publicEvents.add(new PublicEventOccurrence(
                     publicEvents.size(),
@@ -1794,21 +1845,28 @@ final class ClosureExecutionSession
     private List<RouteTarget> classifyEventRoutes(
             EmittedOccurrence occurrence) {
         ArrayList<RouteTarget> routes = new ArrayList<RouteTarget>();
-        ManagedDocumentSnapshot source = requireEventDocument(
-                occurrence.sourceDocumentId,
-                "event source");
-        if (!unavailableForOrdinaryDelivery(source.documentId())) {
-            for (ManagedDocumentStepRoute route
-                    : stepProcessor.classifyTriggeredEventRoutes(
-                            source.document(), occurrence.event)) {
-                routes.add(new RouteTarget(
-                        source.documentId(), route));
+        if (!occurrence.imported) {
+            ManagedDocumentSnapshot source = requireEventDocument(
+                    occurrence.sourceDocumentId,
+                    "event source");
+            if (!unavailableForOrdinaryDelivery(source.documentId())) {
+                for (ManagedDocumentStepRoute route
+                        : stepProcessor.classifyTriggeredEventRoutes(
+                                source.document(), occurrence.event)) {
+                    routes.add(new RouteTarget(
+                            source.documentId(), route));
+                }
             }
         }
         for (ManagedOccurrenceBinding frozen
                 : occurrence.containingTargets) {
-            revalidateFrozenEventTarget(
-                    occurrence.sourceDocumentId, frozen);
+            if (occurrence.imported) {
+                requireManagedRevisionEventTarget(
+                        (ManagedRevisionCause) input.cause(), frozen);
+            } else {
+                revalidateFrozenEventTarget(
+                        occurrence.sourceDocumentId, frozen);
+            }
             ManagedDocumentSnapshot containing = requireEventDocument(
                     frozen.sourceDocumentId(),
                     "frozen containing target");
@@ -1827,6 +1885,56 @@ final class ClosureExecutionSession
             }
         }
         return Collections.unmodifiableList(routes);
+    }
+
+    private void requireManagedRevisionEventTarget(
+            ManagedRevisionCause revision,
+            ManagedOccurrenceBinding frozen) {
+        verifyFrozenEventBinding(frozen);
+        if (!frozen.occurrenceIdentity().equals(
+                    revision.targetOccurrenceIdentity())
+                || !frozen.targetDocumentId().equals(
+                    revision.childDocumentId())) {
+            throw eventBindingFailure(
+                    "Imported managed event targets another occurrence");
+        }
+        ManagedOccurrenceBinding current = null;
+        for (ManagedOccurrenceBinding candidate : currentBindings) {
+            if (candidate.occurrenceIdentity().equals(
+                    frozen.occurrenceIdentity())) {
+                if (current != null) {
+                    throw eventBindingFailure(
+                            "Imported managed event target is ambiguous");
+                }
+                current = candidate;
+            }
+        }
+        if (current == null) {
+            throw eventBindingFailure(
+                    "Imported managed event target left the closure");
+        }
+        verifyFrozenEventBinding(current);
+        if (!sameBindingLineage(frozen, current)
+                || !current.expectedTargetBlueId().equals(
+                    revision.afterBlueId())
+                || (!current.active()
+                    && (current.pendingHistoricalEpoch() == null
+                        || current.pendingHistoricalEpoch().longValue()
+                            != revision.toEpoch()))) {
+            throw eventBindingFailure(
+                    "Imported managed event target no longer proves the source transition");
+        }
+        ManagedDocumentSnapshot containing = requireEventDocument(
+                current.sourceDocumentId(),
+                "managed-revision containing target");
+        Node exact = NodePathEditor.getOrNull(
+                containing.document(), current.sourcePath());
+        if (exact == null
+                || !exact.isReferenceOnly()
+                || !revision.afterBlueId().equals(exact.getBlueId())) {
+            throw eventBindingFailure(
+                    "Imported managed event target path no longer contains the exact source state");
+        }
     }
 
     private boolean unavailableForOrdinaryDelivery(DocumentId documentId) {
@@ -3136,7 +3244,8 @@ final class ClosureExecutionSession
                 resultingChannelSurfaces,
                 checkpointMutations,
                 epochAdvanceDocuments,
-                transitionEvidence);
+                transitionEvidence,
+                managedRootEvents);
     }
 
     @Override
@@ -3339,6 +3448,7 @@ final class ClosureExecutionSession
         private final Node event;
         private final List<ManagedOccurrenceBinding> containingTargets;
         private final ActiveFrame capturedBy;
+        private final boolean imported;
 
         private EmittedOccurrence(
                 long ordinal,
@@ -3347,6 +3457,26 @@ final class ClosureExecutionSession
                 DocumentId sourceDocumentId,
                 Node event,
                 List<ManagedOccurrenceBinding> containingTargets) {
+            this(
+                    ordinal,
+                    eventBlueId,
+                    occurrenceIdentity,
+                    sourceDocumentId,
+                    event,
+                    containingTargets,
+                    activeFrame(),
+                    false);
+        }
+
+        private EmittedOccurrence(
+                long ordinal,
+                String eventBlueId,
+                String occurrenceIdentity,
+                DocumentId sourceDocumentId,
+                Node event,
+                List<ManagedOccurrenceBinding> containingTargets,
+                ActiveFrame capturedBy,
+                boolean imported) {
             this.ordinal = ordinal;
             this.eventBlueId = Objects.requireNonNull(
                     eventBlueId, "eventBlueId");
@@ -3360,8 +3490,10 @@ final class ClosureExecutionSession
                             Objects.requireNonNull(
                                     containingTargets,
                                     "containingTargets")));
-            this.capturedBy = activeFrame();
+            this.capturedBy = capturedBy;
+            this.imported = imported;
         }
+
     }
 
     private final class ActiveFrame {

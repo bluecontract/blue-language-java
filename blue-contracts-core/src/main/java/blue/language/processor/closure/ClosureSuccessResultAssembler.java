@@ -60,6 +60,15 @@ final class ClosureSuccessResultAssembler {
         List<GasTraceEntry> gasTrace =
                 ClosureResultAssemblySupport.gasTrace(
                         execution.gasTrace());
+        List<ManagedDocumentTransitionReceipt> managedTransitionReceipts =
+                ManagedTransitionReceiptAssembler.assemble(
+                        invocation,
+                        documents,
+                        execution.managedRootEvents(),
+                        gasTrace);
+        String managedTransitionReceiptsIdentity = IDENTITIES
+                .managedTransitionReceiptsIdentity(
+                        managedTransitionReceipts);
 
         String graphChangesIdentity = sequenceIdentity(
                 ClosureIdentityService.Constructor.GRAPH_CHANGES,
@@ -84,7 +93,8 @@ final class ClosureSuccessResultAssembler {
                 checkpointWritesIdentity,
                 subscriptionDeltasIdentity,
                 publicEventsIdentity,
-                gasTraceIdentity);
+                gasTraceIdentity,
+                managedTransitionReceiptsIdentity);
 
         return new ClosureProcessResult(
                 invocation.snapshot(),
@@ -112,7 +122,8 @@ final class ClosureSuccessResultAssembler {
                 companion,
                 null,
                 execution.finalization(),
-                execution.transitionEvidence());
+                execution.transitionEvidence(),
+                managedTransitionReceipts);
     }
 
     private static AffectedClosureSnapshot committedSnapshot(
@@ -413,7 +424,8 @@ final class ClosureSuccessResultAssembler {
             String checkpointWritesIdentity,
             String subscriptionDeltasIdentity,
             String publicEventsIdentity,
-            String gasTraceIdentity) {
+            String gasTraceIdentity,
+            String managedTransitionReceiptsIdentity) {
         ArrayList<ClosureCommitCompanion.InputDocument> inputDocuments =
                 new ArrayList<ClosureCommitCompanion.InputDocument>();
         for (ManagedDocumentSnapshot document
@@ -448,7 +460,7 @@ final class ClosureSuccessResultAssembler {
                             component.componentStateIdentity(),
                             component.cyclicProofIdentity()));
         }
-        return ClosureCommitCompanion.identified(
+        return ClosureCommitCompanion.identifiedWithManagedTransitions(
                 input.invocationIdentity(),
                 input.snapshot().closureIdentity(),
                 output.closureIdentity(),
@@ -465,6 +477,7 @@ final class ClosureSuccessResultAssembler {
                 subscriptionDeltasIdentity,
                 publicEventsIdentity,
                 gasTraceIdentity,
+                managedTransitionReceiptsIdentity,
                 input.environment());
     }
 

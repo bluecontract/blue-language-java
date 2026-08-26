@@ -3,6 +3,7 @@ package blue.language.processor.closure;
 import blue.language.model.Node;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /** Exact authenticated transition for one contiguous managed-document epoch. */
 public final class ManagedRevisionCause extends ProcessingCause {
@@ -16,6 +17,7 @@ public final class ManagedRevisionCause extends ProcessingCause {
     private final Node afterDocument;
     private final String originalSourceCauseIdentity;
     private final String sourceRevisionReceiptIdentity;
+    private final ManagedDocumentTransitionReceipt sourceTransitionReceipt;
 
     /**
      * Creates one contiguous authenticated managed revision.
@@ -42,6 +44,75 @@ public final class ManagedRevisionCause extends ProcessingCause {
             Node afterDocument,
             String originalSourceCauseIdentity,
             String sourceRevisionReceiptIdentity) {
+        this(
+                causeIdentity,
+                targetOccurrenceIdentity,
+                childDocumentId,
+                fromEpoch,
+                toEpoch,
+                beforeBlueId,
+                afterBlueId,
+                afterDocument,
+                originalSourceCauseIdentity,
+                sourceRevisionReceiptIdentity,
+                null);
+    }
+
+    /**
+     * Creates one contiguous managed revision authenticated by the complete
+     * source transition receipt whose events must be delivered.
+     *
+     * @param causeIdentity exact cause identity
+     * @param targetOccurrenceIdentity stable target occurrence identity
+     * @param childDocumentId revised child lineage
+     * @param fromEpoch exact predecessor revision cursor
+     * @param toEpoch exact successor revision cursor
+     * @param beforeBlueId exact predecessor BlueId
+     * @param afterBlueId exact successor BlueId
+     * @param afterDocument exact successor document
+     * @param originalSourceCauseIdentity originating cause identity
+     * @param sourceTransitionReceipt complete authenticated source transition
+     */
+    public ManagedRevisionCause(
+            String causeIdentity,
+            String targetOccurrenceIdentity,
+            DocumentId childDocumentId,
+            long fromEpoch,
+            long toEpoch,
+            String beforeBlueId,
+            String afterBlueId,
+            Node afterDocument,
+            String originalSourceCauseIdentity,
+            ManagedDocumentTransitionReceipt sourceTransitionReceipt) {
+        this(
+                causeIdentity,
+                targetOccurrenceIdentity,
+                childDocumentId,
+                fromEpoch,
+                toEpoch,
+                beforeBlueId,
+                afterBlueId,
+                afterDocument,
+                originalSourceCauseIdentity,
+                Objects.requireNonNull(
+                        sourceTransitionReceipt,
+                        "sourceTransitionReceipt")
+                        .transitionReceiptIdentity(),
+                sourceTransitionReceipt);
+    }
+
+    private ManagedRevisionCause(
+            String causeIdentity,
+            String targetOccurrenceIdentity,
+            DocumentId childDocumentId,
+            long fromEpoch,
+            long toEpoch,
+            String beforeBlueId,
+            String afterBlueId,
+            Node afterDocument,
+            String originalSourceCauseIdentity,
+            String sourceRevisionReceiptIdentity,
+            ManagedDocumentTransitionReceipt sourceTransitionReceipt) {
         super(causeIdentity);
         this.targetOccurrenceIdentity =
                 ClosureValueSupport.requireSha256Identity(
@@ -72,6 +143,10 @@ public final class ManagedRevisionCause extends ProcessingCause {
                 ClosureValueSupport.requireSha256Identity(
                         sourceRevisionReceiptIdentity,
                         "sourceRevisionReceiptIdentity");
+        this.sourceTransitionReceipt = sourceTransitionReceipt;
+        if (sourceTransitionReceipt != null) {
+            verifyTypedReceipt(sourceTransitionReceipt);
+        }
     }
 
     /**
@@ -163,5 +238,30 @@ public final class ManagedRevisionCause extends ProcessingCause {
      */
     public String sourceRevisionReceiptIdentity() {
         return sourceRevisionReceiptIdentity;
+    }
+
+    /**
+     * Returns the complete authenticated source transition when supplied.
+     * Legacy state-only causes return an empty value.
+     *
+     * @return optional complete source transition receipt
+     */
+    public Optional<ManagedDocumentTransitionReceipt>
+            sourceTransitionReceipt() {
+        return Optional.ofNullable(sourceTransitionReceipt);
+    }
+
+    private void verifyTypedReceipt(
+            ManagedDocumentTransitionReceipt receipt) {
+        if (!sourceRevisionReceiptIdentity.equals(
+                    receipt.transitionReceiptIdentity())
+                || !childDocumentId.equals(receipt.documentId())
+                || !beforeBlueId.equals(receipt.beforeBlueId())
+                || !afterBlueId.equals(receipt.afterBlueId())
+                || !originalSourceCauseIdentity.equals(
+                    receipt.originalCauseIdentity())) {
+            throw new IllegalArgumentException(
+                    "Complete source transition receipt disagrees with managed revision");
+        }
     }
 }
