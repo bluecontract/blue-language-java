@@ -862,6 +862,7 @@ ManagedRevisionCause {
     afterDocument
     originalSourceCauseIdentity
     sourceRevisionReceiptIdentity
+    sourceTransitionReceipt?       # complete receipt when source-event delivery is required
 }
 ```
 
@@ -878,11 +879,15 @@ is `beforeBlueId`.
 `originalSourceCauseIdentity` is the exact external or admission cause identity
 recorded by the authoritative source system for the child revision; it is audit
 evidence and is never replaced with the local catch-up invocation identity.
-`sourceRevisionReceiptIdentity` is the closed authenticated receipt constructor
-in §2.6. The receipt binds that original cause, both epochs, both exact states,
-and the child lineage, providing an unambiguous source-order receipt without an
-open or optional tuple. The managed-revision `causeIdentity` then binds the
-receipt to the one target occurrence being reconciled.
+For the compatibility state-only form, `sourceRevisionReceiptIdentity` is the
+closed authenticated receipt constructor in §2.6. The complete form instead
+carries `sourceTransitionReceipt`, and `sourceRevisionReceiptIdentity` MUST be
+that receipt's `transitionReceiptIdentity`. The complete receipt repeats and
+revalidates the child lineage, before/after BlueIds, and original source cause,
+and binds the ordered source Root-event occurrences. In either form the
+managed-revision `causeIdentity` binds the selected receipt identity to the one
+target occurrence being reconciled. A state-only compatibility cause carries no
+source events and cannot prove that omitted events were delivered.
 
 One `ManagedRevisionCause` is one `PROCESS_CLOSURE` invocation, seeds exactly
 one containing-reference update, and has its own admission, meter, gas trace,
@@ -1281,6 +1286,28 @@ ClosureProcessResult {
         event
     }
     publicEventsIdentity
+    managedTransitionReceipts[] {
+        transitionReceiptIdentity
+        sourceInvocationIdentity
+        transitionOrdinal
+        transitionOccurrenceIdentity
+        documentId
+        originalCauseIdentity
+        beforeBlueId
+        afterBlueId
+        emittedRootEvents[] {
+            ordinal
+            occurrenceOrdinal
+            sourceDocumentId
+            occurrenceIdentity
+            eventBlueId
+            exactEvent
+            publicAtSource
+        }
+        emittedRootEventsIdentity
+        admittedGas
+    }
+    managedTransitionReceiptsIdentity
     totalGas
     gasTrace[]
     gasTraceIdentity
@@ -1322,6 +1349,39 @@ Only explicit emissions from Root-scoped work targeting documents marked
 `publicRoot` appear in `publicEvents`. Internal member, descendant, and
 non-Root emissions remain causal work only, including an emission whose
 containing managed document is public.
+
+`managedTransitionReceipts` is the complete authenticated transition sequence
+for the genuine managed runtime. It contains one receipt, in resulting-document
+order, for every document whose exact BlueId changed or whose Root boundary
+emitted at least one application event. Therefore an event-only transition is
+present even when `beforeBlueId == afterBlueId`; an unchanged document with no
+Root event has no receipt. Each receipt's event `ordinal` is zero-based and
+contiguous within that document transition. `occurrenceOrdinal` is the original
+invocation-global event ordinal, so equal event bodies remain distinct ordered
+occurrences with distinct `occurrenceIdentity` values. `exactEvent` MUST
+independently establish `eventBlueId`. The event BlueId therefore binds the
+complete exact event value without embedding a second copy of that value in the
+platform identity constructor.
+
+The sequence is the event sequence emitted at the managed document's Root
+boundary. It includes a non-public managed Root and does not expose transient
+deep queue events that were not emitted at that Root. `publicAtSource` records
+whether that emitting Root was public at creation. Sorting all receipt events by
+`occurrenceOrdinal` and selecting `publicAtSource == true` MUST reproduce
+`publicEvents` exactly, including order and duplicates. Existing public-event
+projection semantics do not change.
+
+`admittedGas` partitions the complete admitted canonical gas trace whenever the
+result contains at least one transition receipt. A trace entry attributed to a
+receipt-bearing document belongs to that document's receipt. Every
+invocation-owned entry, and every entry attributed to a document that has no
+transition receipt, belongs to the first receipt in canonical result-document
+order. Consequently the sum of all receipt `admittedGas` values equals
+`totalGas`; no trace row is omitted or counted twice. The result receipt
+aggregate is authenticated by the commit companion. A compatibility result
+constructed through the older result surface may expose the canonical empty
+receipt list; it MUST NOT be interpreted as proof that complete Root-event
+evidence existed.
 
 The structured `applicableCap` is the closed branch `{ kind: SHARED }` for the
 shared closure ceiling or `{ kind: LOCAL, documentId: D }` for the local ceiling
@@ -1461,6 +1521,45 @@ managedRevisionCauseIdentity
         originalSourceCauseIdentity,
         sourceRevisionReceiptIdentity
     }
+
+managedTransitionOccurrenceIdentity
+    domain = "blue-contracts-managed-transition-occurrence/1.0"
+    value = {
+        sourceInvocationIdentity,
+        transitionOrdinal,
+        documentId,
+        originalCauseIdentity
+    }
+
+managedRootEventsIdentity
+    domain = "blue-contracts-managed-root-events/1.0"
+    value = [{
+        ordinal,
+        occurrenceOrdinal,
+        sourceDocumentId,
+        occurrenceIdentity,
+        eventBlueId,
+        publicAtSource
+    }, ...]
+
+managedDocumentTransitionReceiptIdentity
+    domain = "blue-contracts-managed-document-transition-receipt/1.0"
+    value = {
+        sourceInvocationIdentity,
+        transitionOrdinal,
+        transitionOccurrenceIdentity,
+        documentId,
+        originalCauseIdentity,
+        beforeBlueId,
+        afterBlueId,
+        emittedRootEvents,
+        emittedRootEventsIdentity,
+        admittedGas
+    }
+
+managedTransitionReceiptsIdentity
+    domain = "blue-contracts-managed-document-transition-receipts/1.0"
+    value = [{ transitionOrdinal, transitionReceiptIdentity }, ...]
 ```
 
 `sourceOrder` is the already normalized canonical external-order tuple and
@@ -1478,6 +1577,16 @@ receipt identity. `afterDocument` is required cause evidence and MUST establish
 already binds the complete semantic node. A receipt mismatch, a different
 original cause, a noncontiguous epoch, or a before/after state mismatch fails
 before processor-managed mutation.
+
+The four managed-transition constructors are separate from the compatibility
+source-revision constructor and contain no host-assigned revision number. The
+transition occurrence binds its source invocation, canonical result ordinal,
+document, and original cause. The receipt then binds that occurrence, exact
+before/after states, complete ordered Root-event values, their independently
+recomputed sequence identity, and its deterministic partition of the complete
+admitted invocation gas. Receipt aggregate order is canonical result-document
+order. No concatenated string, host-supplied digest, public-event subset, or
+deduplicated event set is an equivalent constructor.
 
 Admission-candidate evidence uses this exact closed constructor:
 
@@ -1846,10 +1955,11 @@ All invocation state is tentative until final success:
 - update and event occurrence queues;
 - subscription deltas;
 - public events;
+- complete managed-transition receipts;
 - containing-reference changes;
 - gas trace.
 
-A committing `success` or successful admission returns and publishes the complete result atomically. Admission atomicity includes all initialization, lifecycle, termination, update, event, graph, marker, and finalization effects caused before quiescence. Every deterministic failure, invalid proof, gas exhaustion, portable-limit failure, unsupported graph expansion, schema failure, or finalization failure discards all tentative state and public events.
+A committing `success` or successful admission returns and publishes the complete result atomically. Admission atomicity includes all initialization, lifecycle, termination, update, event, graph, marker, and finalization effects caused before quiescence. Every deterministic failure, invalid proof, gas exhaustion, portable-limit failure, unsupported graph expansion, schema failure, or finalization failure discards all tentative state, public events, and managed-transition receipts.
 
 Transient missing exact resources returns `NeedsResources` from an attempt API and commits no portable gas or semantic state.
 
@@ -1861,6 +1971,7 @@ For graph-equivalent ordinary Roots or closure snapshots under the same environm
 - the same final ordinary Root BlueId or closure document, component, and component-state identities;
 - the same final component partition and occurrence bindings;
 - the same public event occurrence identities and order;
+- the same managed-transition receipts, Root-event occurrences, and aggregate identity;
 - the same checkpoints and subscription deltas;
 - the same exact counter trace and total gas;
 - the same semantic provider demands.
@@ -1880,6 +1991,7 @@ managed occurrence bindings and activation generations
 checkpoints and lifecycle markers
 subscription deltas
 public Root outboxes
+complete managed-transition receipts and aggregate identity
 graph changes and containing-reference updates
 terminal progress for the original cause
 commit companion and gas trace identity
@@ -1899,7 +2011,8 @@ clean up, or otherwise mutate checkpoint state while installing the admission.
 All applicable initialization-caused items, including lifecycle markers and
 public Root outbox events, are nevertheless installed in the same transaction.
 
-`platformCommitCompanion` is not an opaque host object. Its exact constructor is:
+`platformCommitCompanion` is not an opaque host object. Its compatibility
+constructor is:
 
 ```text
 domain = "blue-contracts-platform-commit-companion/1.0"
@@ -1934,6 +2047,24 @@ value = {
 }
 ```
 
+Every genuine managed-runtime result uses the additive receipt-binding
+constructor:
+
+```text
+domain = "blue-contracts-platform-commit-companion/1.1"
+value = {
+    <all 1.0 fields through gasTraceIdentity>,
+    managedTransitionReceiptsIdentity,
+    <all 1.0 environment fields>
+}
+```
+
+The field position is normative: it follows `gasTraceIdentity` and precedes
+`blueLanguageSpecificationIdentity`. The identity is present even for the
+canonical empty receipt sequence. The 1.0 constructor remains accepted for
+backward-compatible result construction and cannot authenticate a non-empty
+managed-transition receipt sequence.
+
 `expectedInputDocuments` contains objects `{ documentId, blueId }` sorted
 by `documentId`. `expectedInputComponents` contains objects
 `{ componentIdentity, componentStateIdentity, componentGeneration, masterBlueId }`
@@ -1967,7 +2098,8 @@ graph, document heads, component states, and binding set are bound both by the
 explicit compare-and-swap fields and `inputClosureIdentity`; exact output
 document flags, epochs, component states, bindings, and public Roots are bound by
 `outputClosureIdentity`. Every result sequence is bound
-through its exact §2.6 sequence identity, including an empty sequence. The
+through its exact §2.6 sequence identity, including an empty sequence. The 1.1
+companion additionally binds `managedTransitionReceiptsIdentity`. The
 companion contains the compare-and-swap expectations necessary to prove that
 all effects were installed together; a schema MUST NOT replace any identity
 with a count, Boolean, stage name, or host object.
@@ -2867,7 +2999,10 @@ regardless of how many work occurrences or finalization boundaries changed it.
 This includes processor-owned exact-identity reconstruction of ordinary managed
 references, cyclic `MASTER#index` values, and containing spines. A work that
 emits an event but changes no document, and a no-op work, do not advance an
-epoch.
+epoch. The former nevertheless produces an event-only managed-transition
+receipt. That receipt intentionally contains no newly assigned revision number;
+an authoritative host may assign its own contiguous retained revision only when
+atomically storing the receipt and commit companion.
 
 There is one narrow finalizer-only exception. When the current work target is
 the source document of an inactive occurrence with non-null
@@ -3117,6 +3252,24 @@ event:
 The target managed document sees its own latest exact `$document`, including the latest tentatively finalized source member reference.
 
 Observation does not make the nested event public. The receiving public Root must explicitly emit an event for it to appear in the public result.
+
+For a managed-revision cause carrying a complete source transition receipt, the
+processor first verifies that receipt and advances the named inactive occurrence
+from `beforeBlueId` to `afterBlueId` through the ordinary containing-reference
+update. It then enqueues every receipt Root-event occurrence, in receipt order,
+through exactly that occurrence and classifies the normal Embedded Event routes
+against the latest tentative containing document. The imported occurrence keeps
+its source event BlueId, exact value, occurrence ordinal, and occurrence
+identity. Equal source events therefore cause equal-but-distinct deliveries.
+
+Imported source events do not run the source document's Triggered handlers,
+initialization, lifecycle work, Timeline work, or other local source processing.
+They are delivery evidence, not new source emissions. They are not appended to
+the current invocation's public result even when `publicAtSource` was true. Any
+new event explicitly emitted by a reacting containing public Root follows the
+ordinary application-event rules and may be public. The state update and all
+ordered deliveries share one invocation, gas ledger, cyclic/finalization path,
+and rollback boundary.
 
 ### 6.8 Lifecycle Event Channel
 
@@ -6382,13 +6535,18 @@ result, and atomic publication boundary.
 For acyclic embedded documents, physical storage by BlueId or a separate
 document-step evaluation does not authorize an early current-head commit.
 
-### D.2 Do not return child events
+### D.2 Do not publish child events
 
-Child emissions are internal unless Root explicitly emits.
+Child emissions are not public unless their own managed Root is declared public.
+Complete managed-transition receipts still retain every emission at that
+managed Root boundary so a later authenticated occurrence application can
+deliver it without reprocessing the source.
 
 ### D.3 Do not build a public effect log
 
-The event FIFO and update cascades are run state. They are not a semantic output.
+The transient event FIFO and update cascades are run state. The only added
+semantic event evidence is the authenticated per-document Root-boundary
+sequence in a managed-transition receipt; it is not a general queue trace.
 
 ### D.4 Do not rescan every embedded branch
 
