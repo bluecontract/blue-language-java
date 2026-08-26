@@ -10,8 +10,13 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
 import org.gradle.api.GradleException;
 
 /** Content hashing whose result is independent of filesystem enumeration order and host paths. */
@@ -50,22 +55,46 @@ public final class DeterministicHashing {
      * Creates an identity from normalized relative path/content-identity records sorted by path.
      */
     public static SourceSnapshot snapshot(Path root, Collection<Path> inputs) {
-        Path normalizedRoot = realPath(root, "snapshot root");
-        List<SourceSnapshot.Entry> entries = new ArrayList<>();
+        return snapshot(Collections.singletonMap("", root), inputs);
+    }
+
+    /**
+     * Creates an identity across declared roots whose stable logical prefixes replace host paths.
+     */
+    public static SourceSnapshot snapshot(
+            Map<String, Path> rootsByLogicalPrefix, Collection<Path> inputs) {
+        List<DeclaredRoot> roots = declaredRoots(rootsByLogicalPrefix);
+        Map<String, Path> inputByLogicalPath = new HashMap<>();
+        Map<String, SourceSnapshot.Entry> entryByLogicalPath = new TreeMap<>();
         for (Path input : inputs) {
             Path normalizedInput = realPath(input, "snapshot input");
             if (!Files.isRegularFile(normalizedInput)) {
                 continue;
             }
-            if (!normalizedInput.startsWith(normalizedRoot)) {
+            DeclaredRoot declaredRoot = rootFor(normalizedInput, roots);
+            if (declaredRoot == null) {
                 throw new GradleException(
                         "Snapshot input is outside its declared root: " + normalizedInput);
             }
-            String relativePath = normalizedRoot.relativize(normalizedInput).toString()
-                    .replace(input.getFileSystem().getSeparator(), "/");
-            entries.add(new SourceSnapshot.Entry(relativePath, sha256(normalizedInput)));
+            String relativePath = declaredRoot.path.relativize(normalizedInput).toString()
+                    .replace(normalizedInput.getFileSystem().getSeparator(), "/");
+            String logicalPath = declaredRoot.logicalPrefix.isEmpty()
+                    ? relativePath
+                    : declaredRoot.logicalPrefix + "/" + relativePath;
+            Path previous = inputByLogicalPath.putIfAbsent(logicalPath, normalizedInput);
+            if (previous != null) {
+                if (previous.equals(normalizedInput)) {
+                    continue;
+                }
+                throw new GradleException(
+                        "Snapshot inputs have the same logical path: " + logicalPath);
+            }
+            entryByLogicalPath.put(
+                    logicalPath,
+                    new SourceSnapshot.Entry(
+                            logicalPath, sha256(normalizedInput), size(normalizedInput)));
         }
-        entries.sort(Comparator.comparing(SourceSnapshot.Entry::getPath));
+        List<SourceSnapshot.Entry> entries = new ArrayList<>(entryByLogicalPath.values());
 
         MessageDigest digest = sha256Digest();
         for (SourceSnapshot.Entry entry : entries) {
@@ -73,6 +102,58 @@ public final class DeterministicHashing {
             digest.update(record.getBytes(StandardCharsets.UTF_8));
         }
         return new SourceSnapshot(identity(digest.digest()), entries);
+    }
+
+    private static List<DeclaredRoot> declaredRoots(Map<String, Path> rootsByLogicalPrefix) {
+        Objects.requireNonNull(rootsByLogicalPrefix, "rootsByLogicalPrefix");
+        if (rootsByLogicalPrefix.isEmpty()) {
+            throw new GradleException("At least one snapshot root must be declared");
+        }
+        List<DeclaredRoot> roots = new ArrayList<>();
+        Map<Path, String> prefixByRoot = new HashMap<>();
+        for (Map.Entry<String, Path> entry : rootsByLogicalPrefix.entrySet()) {
+            String logicalPrefix = logicalPrefix(entry.getKey());
+            Path root = realPath(
+                    Objects.requireNonNull(entry.getValue(), "snapshot root"), "snapshot root");
+            String previous = prefixByRoot.putIfAbsent(root, logicalPrefix);
+            if (previous != null) {
+                throw new GradleException(
+                        "Snapshot root is declared more than once: " + root);
+            }
+            roots.add(new DeclaredRoot(logicalPrefix, root));
+        }
+        roots.sort(Comparator.comparingInt((DeclaredRoot root) -> root.path.getNameCount())
+                .reversed()
+                .thenComparing(root -> root.logicalPrefix));
+        return roots;
+    }
+
+    private static DeclaredRoot rootFor(Path input, List<DeclaredRoot> roots) {
+        for (DeclaredRoot root : roots) {
+            if (input.startsWith(root.path)) {
+                return root;
+            }
+        }
+        return null;
+    }
+
+    private static String logicalPrefix(String value) {
+        String prefix = Objects.requireNonNull(value, "snapshot logical prefix");
+        if (prefix.isEmpty()) {
+            return prefix;
+        }
+        if (!prefix.matches("[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*")) {
+            throw new GradleException("Invalid snapshot logical prefix: " + prefix);
+        }
+        return prefix;
+    }
+
+    private static long size(Path file) {
+        try {
+            return Files.size(file);
+        } catch (IOException exception) {
+            throw new GradleException("Cannot read snapshot input size: " + file, exception);
+        }
     }
 
     private static Path realPath(Path path, String description) {
@@ -97,5 +178,16 @@ public final class DeterministicHashing {
             result.append(String.format("%02x", value & 0xff));
         }
         return result.toString();
+    }
+
+    private static final class DeclaredRoot {
+
+        private final String logicalPrefix;
+        private final Path path;
+
+        private DeclaredRoot(String logicalPrefix, Path path) {
+            this.logicalPrefix = logicalPrefix;
+            this.path = path;
+        }
     }
 }

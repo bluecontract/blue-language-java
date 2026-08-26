@@ -29,10 +29,16 @@ public final class SourceSnapshot {
 
         private final String path;
         private final String identity;
+        private final long size;
 
         public Entry(String path, String identity) {
+            this(path, identity, -1L);
+        }
+
+        public Entry(String path, String identity, long size) {
             this.path = Objects.requireNonNull(path, "path");
             this.identity = Objects.requireNonNull(identity, "identity");
+            this.size = size;
         }
 
         public String getPath() {
@@ -41,6 +47,10 @@ public final class SourceSnapshot {
 
         public String getIdentity() {
             return identity;
+        }
+
+        public long getSize() {
+            return size;
         }
     }
 }

@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -34,6 +35,8 @@ public final class AggregateReleaseReceipt {
     private static final String KEY_TESTS = "tests";
     private static final String KEY_VERIFIED = "verified";
     private static final String KEY_VERIFICATION = "verification";
+    private static final String STAGED_REPOSITORY_PREFIX =
+            "build/staged-dependency-repository";
 
     private AggregateReleaseReceipt() {}
 
@@ -47,9 +50,33 @@ public final class AggregateReleaseReceipt {
             String sourceCommit,
             String sourceDateEpoch,
             Map<String, String> metadata) {
+        return create(
+                root,
+                root,
+                artifacts,
+                testEvidence,
+                fixtureEvidence,
+                apiEvidence,
+                verificationEvidence,
+                sourceCommit,
+                sourceDateEpoch,
+                metadata);
+    }
+
+    public static String create(
+            Path root,
+            Path artifactRoot,
+            Collection<Path> artifacts,
+            Collection<Path> testEvidence,
+            Collection<Path> fixtureEvidence,
+            Collection<Path> apiEvidence,
+            Collection<Path> verificationEvidence,
+            String sourceCommit,
+            String sourceDateEpoch,
+            Map<String, String> metadata) {
         Map<String, Object> receipt = new TreeMap<>();
         receipt.put(KEY_API, group(root, apiEvidence));
-        receipt.put(KEY_ARTIFACTS, group(root, artifacts));
+        receipt.put(KEY_ARTIFACTS, artifactGroup(root, artifactRoot, artifacts));
         receipt.put(KEY_FIXTURES, group(root, fixtureEvidence));
         receipt.put(KEY_METADATA, new TreeMap<>(metadata));
         receipt.put(KEY_SCHEMA, SCHEMA);
@@ -80,13 +107,36 @@ public final class AggregateReleaseReceipt {
 
     private static Map<String, Object> group(Path root, Collection<Path> files) {
         SourceSnapshot snapshot = DeterministicHashing.snapshot(root, files);
-        Path normalizedRoot = realPath(root);
+        return group(snapshot);
+    }
+
+    private static Map<String, Object> artifactGroup(
+            Path root, Path artifactRoot, Collection<Path> files) {
+        Map<String, Path> roots = new LinkedHashMap<>();
+        roots.put("", root);
+        if (sameRoot(root, artifactRoot)) {
+            return group(DeterministicHashing.snapshot(roots, files));
+        }
+        roots.put(STAGED_REPOSITORY_PREFIX, artifactRoot);
+        return group(DeterministicHashing.snapshot(roots, files));
+    }
+
+    private static boolean sameRoot(Path first, Path second) {
+        try {
+            return first.toRealPath().equals(second.toRealPath());
+        } catch (IOException exception) {
+            throw new GradleException(
+                    "Cannot resolve aggregate receipt artifact roots", exception);
+        }
+    }
+
+    private static Map<String, Object> group(SourceSnapshot snapshot) {
         List<Map<String, Object>> entries = new ArrayList<>();
         for (SourceSnapshot.Entry entry : snapshot.getEntries()) {
             Map<String, Object> item = new TreeMap<>();
             item.put(KEY_IDENTITY, entry.getIdentity());
             item.put(KEY_PATH, entry.getPath());
-            item.put(KEY_SIZE, size(normalizedRoot.resolve(entry.getPath())));
+            item.put(KEY_SIZE, entry.getSize());
             entries.add(item);
         }
         Map<String, Object> group = new TreeMap<>();
@@ -94,22 +144,6 @@ public final class AggregateReleaseReceipt {
         group.put(KEY_FILES, entries);
         group.put(KEY_IDENTITY, snapshot.getIdentity());
         return group;
-    }
-
-    private static Path realPath(Path root) {
-        try {
-            return root.toRealPath();
-        } catch (IOException exception) {
-            throw new GradleException("Cannot resolve aggregate receipt root: " + root, exception);
-        }
-    }
-
-    private static long size(Path file) {
-        try {
-            return Files.size(file);
-        } catch (IOException exception) {
-            throw new GradleException("Cannot read aggregate receipt input size: " + file, exception);
-        }
     }
 
     private static String oneLine(String value, String description) {

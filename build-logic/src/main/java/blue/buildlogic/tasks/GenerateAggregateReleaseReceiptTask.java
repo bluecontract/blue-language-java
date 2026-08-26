@@ -32,10 +32,14 @@ public abstract class GenerateAggregateReleaseReceiptTask extends DefaultTask {
     public GenerateAggregateReleaseReceiptTask() {
         getSourceDateEpoch().convention("0");
         getMetadata().convention(Collections.emptyMap());
+        getArtifactRoot().convention(getReceiptRoot());
     }
 
     @Internal
     public abstract DirectoryProperty getReceiptRoot();
+
+    @Internal
+    public abstract DirectoryProperty getArtifactRoot();
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -73,6 +77,7 @@ public abstract class GenerateAggregateReleaseReceiptTask extends DefaultTask {
     public void generate() {
         String receipt = AggregateReleaseReceipt.create(
                 getReceiptRoot().get().getAsFile().toPath(),
+                getArtifactRoot().get().getAsFile().toPath(),
                 paths(getArtifacts()),
                 paths(getTestEvidence()),
                 paths(getFixtureEvidence()),
