@@ -50,7 +50,7 @@ final class ClosureConformanceHarnessTest {
                 Collections.singletonList("C-CLO-34"),
                 separateDocuments.vectors());
         assertEquals(
-                "06e4a29d01588e335b8edeb7248021004ec839abe10d9b9165bdf6be1151bcf1",
+                "f5f37b38a057fa2f16e579a2a859e6b6c995c3b79d88e7b709434201cbd89b9e",
                 separateDocuments.sha256());
         assertEquals(120198L, separateDocuments.bytes());
     }

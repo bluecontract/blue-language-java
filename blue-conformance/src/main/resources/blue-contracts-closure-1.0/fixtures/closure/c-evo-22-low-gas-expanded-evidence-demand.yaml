@@ -97,7 +97,7 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
   closureIdentity: sha256:cb1f3750051cbf9f9794f8c15552d5ebd5d037c31afa52d8623e04f0d517e305
-  invocationIdentity: sha256:019aaa43abdb9eb85d90739a8d230285287ed7cade0f471254bb4000466f9bfe
+  invocationIdentity: sha256:2cecdbd632a0abd85b15c38d1ccb0458632963667ca4b0d9884534e86eca528e
   gasPolicy:
     policyIdentity: sha256:82800ae4fc697a79fcfd4237ef5987d13f455fc0c5b79fea4e5490f53e4a54ad
     sharedLimit: 20000
@@ -105,7 +105,7 @@ input:
     label: c-evo-22-low-gas-expanded-evidence-shared-gas
   environment:
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
-    contractsSpecificationIdentity: sha256:f981106d0e59a42b0be0a8f06cc6364c9db4119c7e51ce0c7fcfd9f7c98b4056
+    contractsSpecificationIdentity: sha256:435a4bb9c63301006e115b51f291b94bba3c434a46c095244ed28deaacfbdbbc
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
