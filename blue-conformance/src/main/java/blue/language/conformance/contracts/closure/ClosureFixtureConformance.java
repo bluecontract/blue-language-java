@@ -114,13 +114,38 @@ public final class ClosureFixtureConformance {
             String path,
             List<String> vectors,
             JsonNode fixture) {
+        return parseInvocationInput(
+                id, path, "admit-closure", vectors, fixture);
+    }
+
+    /**
+     * Parses one exact process or admission fixture for a deterministic
+     * package-owned exporter.
+     *
+     * <p>The operation is authenticated against the fixture envelope before
+     * the package-private inventory and parser are used.  The expected subtree
+     * is removed before parsing.</p>
+     *
+     * @param id fixture identifier
+     * @param path package-relative fixture path
+     * @param operation {@code process-closure} or {@code admit-closure}
+     * @param vectors normative vector identifiers
+     * @param fixture exact fixture envelope
+     * @return parsed invocation input
+     */
+    public static ClosureInvocationInput parseInvocationInput(
+            String id,
+            String path,
+            String operation,
+            List<String> vectors,
+            JsonNode fixture) {
         ObjectNode executionFixture = (ObjectNode) fixture.deepCopy();
         executionFixture.remove("expected");
         ClosureFixtureInventory.Entry entry =
                 new ClosureFixtureInventory.Entry(
                         id,
                         path,
-                        "admit-closure",
+                        operation,
                         vectors,
                         "source-export",
                         0L);

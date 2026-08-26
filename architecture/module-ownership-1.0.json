@@ -85,7 +85,7 @@
   "inventory": {
     "productionSourceCount": 743,
     "productionResourceCount": 749,
-    "productionSourcePathIdentity": "sha256:147523070c7a96af486088d3f910bbf8b82a60a810d1d4e883ff9236063fb221",
+    "productionSourcePathIdentity": "sha256:6f7574a9ae61990fe69e6f4b207792c0e02b7ff7a93be85661f663af88bad2f5",
     "productionResourcePathIdentity": "sha256:8e70a74e54701ead9d8756d767c7289ca1ad99265bb5425270791bec940e5b12"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -434,6 +434,13 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ManagedTransitionReceiptFixtureExporter.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ManagedTransitionReceiptFixtureExporter.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/MockExternalChannel.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
@@ -529,13 +536,6 @@
       "currentPackage": "blue.language.conformance.contracts.closure",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureLimitMicroEvaluator.java",
-      "targetPackage": "blue.language.conformance.contracts.closure"
-    },
-    {
-      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ManagedTransitionReceiptFixtureExporter.java",
-      "currentPackage": "blue.language.conformance.contracts.closure",
-      "targetModule": ":blue-conformance",
-      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ManagedTransitionReceiptFixtureExporter.java",
       "targetPackage": "blue.language.conformance.contracts.closure"
     },
     {

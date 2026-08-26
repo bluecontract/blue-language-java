@@ -5,7 +5,7 @@
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
     "publicProductionTypeCount": 524,
-    "publicTypeIdentity": "sha256:4b37193821345f1c2b91da3d107b07fdf434ddd8a4eea02d9ca87dd7278f1ca4",
+    "publicTypeIdentity": "sha256:67ba9621051201adcafed3e4d2260c09a6316e51593e72ad2bfb96071c849249",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
       "internal-type-removed-from-public-surface": 259,
@@ -505,22 +505,22 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
-      "type": "blue.language.conformance.contracts.closure.ClosureFixtureConformance",
-      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureConformance.java",
+      "type": "blue.language.conformance.contracts.ManagedTransitionReceiptFixtureExporter",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ManagedTransitionReceiptFixtureExporter.java",
       "currentArtifact": "blue.language:blue-conformance",
       "targetModule": ":blue-conformance",
-      "targetType": "blue.language.conformance.contracts.closure.ClosureFixtureConformance",
+      "targetType": "blue.language.conformance.contracts.ManagedTransitionReceiptFixtureExporter",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
-      "type": "blue.language.conformance.contracts.closure.ManagedTransitionReceiptFixtureExporter",
-      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ManagedTransitionReceiptFixtureExporter.java",
+      "type": "blue.language.conformance.contracts.closure.ClosureFixtureConformance",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureConformance.java",
       "currentArtifact": "blue.language:blue-conformance",
       "targetModule": ":blue-conformance",
-      "targetType": "blue.language.conformance.contracts.closure.ManagedTransitionReceiptFixtureExporter",
+      "targetType": "blue.language.conformance.contracts.closure.ClosureFixtureConformance",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",

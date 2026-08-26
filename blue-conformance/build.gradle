@@ -42,7 +42,7 @@ tasks.register('exportFullLifecycleFixtures', JavaExec) {
 tasks.register('exportManagedTransitionReceiptFixtures', JavaExec) {
     dependsOn tasks.named('classes')
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = 'blue.language.conformance.contracts.closure.ManagedTransitionReceiptFixtureExporter'
+    mainClass = 'blue.language.conformance.contracts.ManagedTransitionReceiptFixtureExporter'
     outputs.upToDateWhen { false }
     doFirst {
         def requiredProperties = [

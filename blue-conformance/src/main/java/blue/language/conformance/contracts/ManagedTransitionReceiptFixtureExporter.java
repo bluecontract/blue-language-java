@@ -1,7 +1,7 @@
-package blue.language.conformance.contracts.closure;
+package blue.language.conformance.contracts;
 
 import blue.language.codec.jackson.UncheckedObjectMapper;
-import blue.language.conformance.contracts.ClosureFixtureRuntime;
+import blue.language.conformance.contracts.closure.ClosureFixtureConformance;
 import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.closure.BlueClosureContracts;
@@ -165,13 +165,9 @@ public final class ManagedTransitionReceiptFixtureExporter {
         List<String> vectors = textList(manifestEntry.get("vectors"));
         ObjectNode executionFixture = (ObjectNode) fixture.deepCopy();
         executionFixture.remove("expected");
-        ClosureFixtureInventory.Entry entry =
-                new ClosureFixtureInventory.Entry(
-                        id, path, operation, vectors,
-                        "candidate-export", 0L);
-        ClosureInvocationInput input = new ClosureFixtureParser()
-                .parse(entry, executionFixture)
-                .admit();
+        ClosureInvocationInput input =
+                ClosureFixtureConformance.parseInvocationInput(
+                        id, path, operation, vectors, executionFixture);
         ClosureAttemptResult attempt;
         try (ClosureFixtureRuntime runtime =
                      ClosureFixtureRuntime.fromFixture(
