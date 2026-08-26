@@ -458,7 +458,9 @@ final class ClosureExecutionSession
         }
         for (ManagedDocumentSnapshot document
                 : input.snapshot().managedDocuments()) {
-            if (document.terminated()) {
+            if (document.terminated()
+                    && !isRetainedManagedRevisionSource(
+                            document.documentId())) {
                 throw new ClosureCapabilityGapException(
                         "TERMINATED_MEMBER_POLICY_REQUIRED",
                         "Terminated members require lifecycle delivery policy");
@@ -474,6 +476,14 @@ final class ClosureExecutionSession
                                 + "prospective occurrence evidence");
             }
         }
+    }
+
+    private boolean isRetainedManagedRevisionSource(
+            DocumentId documentId) {
+        return executionMode == ExecutionMode.PROCESSING
+                && input.cause() instanceof ManagedRevisionCause
+                && ((ManagedRevisionCause) input.cause())
+                        .childDocumentId().equals(documentId);
     }
 
     private boolean isInactiveProspectiveTarget(DocumentId documentId) {

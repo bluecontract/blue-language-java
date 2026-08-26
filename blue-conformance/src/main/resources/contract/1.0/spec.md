@@ -3286,6 +3286,12 @@ ordinary application-event rules and may be public. The state update and all
 ordered deliveries share one invocation, gas ledger, cyclic/finalization path,
 and rollback boundary.
 
+A managed-revision snapshot MAY retain one exact terminated source member when
+and only when its `DocumentId` equals the cause `childDocumentId`. That member
+is immutable source-revision evidence: it remains unavailable for ordinary
+local delivery and is not reinitialized or reprocessed. Any other terminated
+member remains unsupported and the invocation fails closed before work begins.
+
 ### 6.8 Lifecycle Event Channel
 
 The processor emits:

@@ -326,12 +326,19 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
-    void completeManagedRevisionReceiptDeliversWithoutSourceReprocessingOrRepublish() {
+    void completeManagedRevisionReceiptRetainsTerminatedSourceWithoutLocalReprocessing() {
         ProbeProcessor probe = new ProbeProcessor();
         Node authoredChild = new Node()
                 .name("Retained source")
                 .properties("revision", new Node().value(
-                        BigInteger.ZERO));
+                        BigInteger.ZERO))
+                .contracts(new Node()
+                        .properties(
+                                "localSourceEvents",
+                                triggeredChannel(blueId(EVENT_CHILD)))
+                        .properties(
+                                "mustNotRun",
+                                handler("localSourceEvents")));
         String authoredChildBlueId = blueId(authoredChild);
         final Node childBefore = authoredChild.clone();
         installInitializedMarker(childBefore, authoredChildBlueId);
@@ -340,8 +347,11 @@ final class FullLifecycleAdmissionTest {
                 childAfter,
                 "/revision",
                 new Node().value(BigInteger.ONE));
+        installTerminatedMarker(
+                childAfter, "source-complete", "retained history");
         final String beforeBlueId = blueId(childBefore);
         String afterBlueId = blueId(childAfter);
+        final String retainedEventBlueId = blueId(EVENT_CHILD);
         NodeProvider retainedHistory = new NodeProvider() {
             @Override
             public List<Node> fetchByBlueId(String blueId) {
@@ -349,6 +359,8 @@ final class FullLifecycleAdmissionTest {
                         ? Collections.singletonList(childBefore.clone())
                         : afterBlueId.equals(blueId)
                         ? Collections.singletonList(childAfter.clone())
+                        : retainedEventBlueId.equals(blueId)
+                        ? Collections.singletonList(EVENT_CHILD.clone())
                         : Collections.<Node>emptyList();
             }
         };
@@ -381,10 +393,10 @@ final class FullLifecycleAdmissionTest {
                     Collections.singletonList(historical),
                     Collections.singletonList(A));
             AffectedClosureSnapshot snapshot = initializedSnapshot(
-                    base, 4L, 1L);
+                    base, 4L, 1L, B);
 
             String sourceInvocationIdentity = hash('c');
-            String sourceEventBlueId = blueId(EVENT_CHILD);
+            String sourceEventBlueId = retainedEventBlueId;
             ManagedRootEventOccurrence sourceEvent =
                     new ManagedRootEventOccurrence(
                             0L,
@@ -464,8 +476,10 @@ final class FullLifecycleAdmissionTest {
                             .getBlueId());
             assertEquals(snapshot.managedDocument(B).blueId(),
                     document(result, B).afterBlueId());
+            assertTrue(document(result, B).terminated());
             assertEquals(2, probe.executionCount,
-                    "Only the containing handler executes");
+                    "Only the containing handler executes; the terminated "
+                            + "source remains unavailable for local delivery");
             assertEquals(Arrays.asList("child", "child"),
                     probe.observedEventKinds);
             assertEquals(Arrays.asList(
@@ -489,6 +503,106 @@ final class FullLifecycleAdmissionTest {
                     "The authoritative source is not reprocessed");
             assertEquals(result.totalGas(),
                     managedTransitionGas(result));
+        }
+    }
+
+    @Test
+    void managedRevisionStillRejectsAnotherTerminatedMember() {
+        ProbeProcessor probe = new ProbeProcessor();
+        Node authoredChild = new Node()
+                .name("Live retained source")
+                .properties("revision", new Node().value(BigInteger.ZERO));
+        String authoredChildBlueId = blueId(authoredChild);
+        final Node childBefore = authoredChild.clone();
+        installInitializedMarker(childBefore, authoredChildBlueId);
+        final Node childAfter = childBefore.clone();
+        NodePathEditor.put(
+                childAfter,
+                "/revision",
+                new Node().value(BigInteger.ONE));
+        final String beforeBlueId = blueId(childBefore);
+        final String afterBlueId = blueId(childAfter);
+        NodeProvider retainedHistory = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                return beforeBlueId.equals(blueId)
+                        ? Collections.singletonList(childBefore.clone())
+                        : afterBlueId.equals(blueId)
+                        ? Collections.singletonList(childAfter.clone())
+                        : Collections.<Node>emptyList();
+            }
+        };
+        try (DocumentProcessor owner = owner(probe, retainedHistory)) {
+            ClosureEnvironment environment = environment(owner);
+            Node authoredParent = new Node()
+                    .name("Unrelated terminated containing member")
+                    .properties("child", new Node().blueId(beforeBlueId))
+                    .contracts(new Node()
+                            .properties("embedded", processEmbedded("/child")));
+            String authoredParentBlueId = blueId(authoredParent);
+            Node parent = authoredParent.clone();
+            installInitializedMarker(parent, authoredParentBlueId);
+            installTerminatedMarker(
+                    parent, "unrelated-complete", "must remain rejected");
+            ManagedOccurrenceBinding historical =
+                    ManagedOccurrenceBinding.derived(
+                            environment.managedBindingPolicyIdentity(),
+                            A,
+                            ScopeAddress.embedded("/child", 1L),
+                            B,
+                            beforeBlueId,
+                            false,
+                            Long.valueOf(0L));
+            AffectedClosureSnapshot base = finalizedSnapshot(
+                    bodies(A, parent, B, childAfter),
+                    Collections.singletonList(historical),
+                    Collections.singletonList(A));
+            AffectedClosureSnapshot snapshot = initializedSnapshot(
+                    base, 4L, 1L, A);
+            ManagedDocumentTransitionReceipt sourceReceipt =
+                    ManagedDocumentTransitionReceipt.identified(
+                            hash('a'),
+                            0L,
+                            B,
+                            hash('b'),
+                            beforeBlueId,
+                            afterBlueId,
+                            Collections.<ManagedRootEventOccurrence>emptyList(),
+                            3L);
+            ManagedRevisionCause cause = ClosureEvidenceFactory
+                    .managedRevisionCause(
+                            historical.occurrenceIdentity(),
+                            0L,
+                            1L,
+                            snapshot.managedDocument(B).document(),
+                            sourceReceipt);
+            ClosureInvocationInput input = ClosureEvidenceFactory
+                    .processClosure(
+                            snapshot,
+                            cause,
+                            Collections.<DirectLogicalDelivery>emptyList(),
+                            ClosureEvidenceFactory.executionPolicy(
+                                    GENEROUS_GAS,
+                                    Collections.<DocumentId, Long>emptyMap(),
+                                    "managed-revision-terminated-member-v1"),
+                            environment);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner)) {
+                attempt = contracts.processClosure(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            ClosureProcessResult result = attempt.processResult();
+            assertEquals(ProcessorStatus.CAPABILITY_FAILURE,
+                    result.status());
+            assertNotNull(result.diagnostic());
+            assertEquals(
+                    "TERMINATED_MEMBER_POLICY_REQUIRED",
+                    result.diagnostic().detail("closureCapability"));
+            assertTrue(result.managedTransitionReceipts().isEmpty());
+            assertEquals(0, probe.executionCount);
         }
     }
 
@@ -1726,6 +1840,15 @@ final class FullLifecycleAdmissionTest {
             AffectedClosureSnapshot source,
             long parentEpoch,
             long childEpoch) {
+        return initializedSnapshot(
+                source, parentEpoch, childEpoch, null);
+    }
+
+    private static AffectedClosureSnapshot initializedSnapshot(
+            AffectedClosureSnapshot source,
+            long parentEpoch,
+            long childEpoch,
+            DocumentId terminatedDocumentId) {
         ArrayList<ManagedDocumentSnapshot> documents =
                 new ArrayList<ManagedDocumentSnapshot>();
         for (ManagedDocumentSnapshot document
@@ -1735,7 +1858,9 @@ final class FullLifecycleAdmissionTest {
                     document.blueId(),
                     document.document(),
                     true,
-                    document.terminated(),
+                    document.terminated()
+                            || document.documentId().equals(
+                                    terminatedDocumentId),
                     document.publicRoot(),
                     A.equals(document.documentId())
                             ? parentEpoch : childEpoch,
