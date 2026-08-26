@@ -3,6 +3,7 @@ package blue.language.conformance.contracts.closure;
 import blue.language.codec.jackson.UncheckedObjectMapper;
 import blue.language.conformance.contracts.ClosureFixtureRuntime;
 import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.closure.BlueClosureContracts;
 import blue.language.processor.closure.ClosureAttemptResult;
 import blue.language.processor.closure.ClosureCommitCompanion;
@@ -108,7 +109,7 @@ public final class ManagedTransitionReceiptFixtureExporter {
                 "candidate fixture manifest has no files array");
 
         ObjectNode report = UncheckedObjectMapper.JSON_MAPPER.createObjectNode();
-        report.put("schema",
+        report.put(BlueLanguageConstants.OBJECT_SCHEMA,
                 "blue-contracts-managed-transition-receipt-fixture-export/1.0");
         ArrayNode entries = report.putArray("entries");
         Set<String> paths = new LinkedHashSet<String>();

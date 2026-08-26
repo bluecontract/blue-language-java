@@ -4,12 +4,12 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 521,
-    "publicTypeIdentity": "sha256:25a2c006034cfdaf60addf8d1ff86dd08cbb54a4ec8d00d6485141d1850d01f6",
+    "publicProductionTypeCount": 524,
+    "publicTypeIdentity": "sha256:4b37193821345f1c2b91da3d107b07fdf434ddd8a4eea02d9ca87dd7278f1ca4",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
-      "internal-type-removed-from-public-surface": 258,
-      "new-supported-api-spi": 63
+      "internal-type-removed-from-public-surface": 259,
+      "new-supported-api-spi": 65
     }
   },
   "allowedClassifications": [
@@ -510,6 +510,17 @@
       "currentArtifact": "blue.language:blue-conformance",
       "targetModule": ":blue-conformance",
       "targetType": "blue.language.conformance.contracts.closure.ClosureFixtureConformance",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.conformance.contracts.closure.ManagedTransitionReceiptFixtureExporter",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ManagedTransitionReceiptFixtureExporter.java",
+      "currentArtifact": "blue.language:blue-conformance",
+      "targetModule": ":blue-conformance",
+      "targetType": "blue.language.conformance.contracts.closure.ManagedTransitionReceiptFixtureExporter",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
@@ -4585,6 +4596,17 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.processor.closure.ManagedDocumentTransitionReceipt",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentTransitionReceipt.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedDocumentTransitionReceipt",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.closure.ManagedOccurrenceBinding",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceBinding.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -4616,6 +4638,17 @@
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedRootEventOccurrence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRootEventOccurrence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedRootEventOccurrence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.closure.ManagedScopeKey",

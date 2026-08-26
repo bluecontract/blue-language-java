@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 739,
+    "productionSourceCount": 743,
     "productionResourceCount": 749,
-    "productionSourcePathIdentity": "sha256:c8cd11b0f301e231f542b9e79ce2ec97b45d32b5cfe885c0703395107bca66e3",
+    "productionSourcePathIdentity": "sha256:147523070c7a96af486088d3f910bbf8b82a60a810d1d4e883ff9236063fb221",
     "productionResourcePathIdentity": "sha256:8e70a74e54701ead9d8756d767c7289ca1ad99265bb5425270791bec940e5b12"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -529,6 +529,13 @@
       "currentPackage": "blue.language.conformance.contracts.closure",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureLimitMicroEvaluator.java",
+      "targetPackage": "blue.language.conformance.contracts.closure"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ManagedTransitionReceiptFixtureExporter.java",
+      "currentPackage": "blue.language.conformance.contracts.closure",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ManagedTransitionReceiptFixtureExporter.java",
       "targetPackage": "blue.language.conformance.contracts.closure"
     },
     {
@@ -3052,6 +3059,13 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentTransitionReceipt.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentTransitionReceipt.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceBinding.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
@@ -3080,10 +3094,24 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRootEventOccurrence.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRootEventOccurrence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedScopeKey.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedScopeKey.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedTransitionReceiptAssembler.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedTransitionReceiptAssembler.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {
