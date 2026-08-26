@@ -33,7 +33,8 @@ public final class ManagedOccurrenceBinding
      * @param targetDocumentId selected managed target lineage
      * @param expectedTargetBlueId exact authored target state
      * @param active whether this row contributes a graph edge
-     * @param pendingHistoricalEpoch nullable historical catch-up cursor
+     * @param pendingHistoricalEpoch nullable historical catch-up cursor;
+     *     {@code -1} denotes the authored pre-initialization value
      */
     public ManagedOccurrenceBinding(
             String occurrenceIdentity,
@@ -66,7 +67,7 @@ public final class ManagedOccurrenceBinding
         this.active = active;
         this.pendingHistoricalEpoch = pendingHistoricalEpoch == null
                 ? null
-                : Long.valueOf(ClosureValueSupport.requireSafeInteger(
+                : Long.valueOf(ClosureValueSupport.requireManagedEpochCursor(
                         pendingHistoricalEpoch.longValue(),
                         "pendingHistoricalEpoch"));
         if (active && this.pendingHistoricalEpoch != null) {
@@ -89,7 +90,8 @@ public final class ManagedOccurrenceBinding
      * @param targetDocumentId selected managed target lineage
      * @param expectedTargetBlueId exact authored target state
      * @param active whether this row contributes a graph edge
-     * @param pendingHistoricalEpoch nullable historical catch-up cursor
+     * @param pendingHistoricalEpoch nullable historical catch-up cursor;
+     *     {@code -1} denotes the authored pre-initialization value
      * @return exact Contracts-owned occurrence row
      */
     public static ManagedOccurrenceBinding derived(
@@ -135,7 +137,8 @@ public final class ManagedOccurrenceBinding
      * @param targetDocumentId selected managed target lineage
      * @param expectedTargetBlueId exact authored target state
      * @param active whether this row contributes a graph edge
-     * @param pendingHistoricalEpoch nullable historical catch-up cursor
+     * @param pendingHistoricalEpoch nullable historical catch-up cursor;
+     *     {@code -1} denotes the authored pre-initialization value
      * @return verified Contracts-owned occurrence row
      */
     public static ManagedOccurrenceBinding verified(
@@ -273,7 +276,8 @@ public final class ManagedOccurrenceBinding
     /**
      * Returns the documented value.
      *
-     * @return nullable historical catch-up cursor
+     * @return nullable historical catch-up cursor, with {@code -1} denoting
+     *     the authored pre-initialization value
      */
     public Long pendingHistoricalEpoch() {
         return pendingHistoricalEpoch;

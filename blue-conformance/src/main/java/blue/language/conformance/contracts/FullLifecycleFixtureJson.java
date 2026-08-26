@@ -39,8 +39,10 @@ import blue.language.processor.closure.GasTraceEntry;
 import blue.language.processor.closure.GraphChange;
 import blue.language.processor.closure.ManagedDocumentGraph;
 import blue.language.processor.closure.ManagedDocumentSnapshot;
+import blue.language.processor.closure.ManagedDocumentTransitionReceipt;
 import blue.language.processor.closure.ManagedOccurrenceBinding;
 import blue.language.processor.closure.ManagedOccurrenceEvidenceDemand;
+import blue.language.processor.closure.ManagedRootEventOccurrence;
 import blue.language.processor.closure.PublicEventOccurrence;
 import blue.language.processor.closure.RejectedCharge;
 import blue.language.processor.closure.ResultingDocument;
@@ -191,6 +193,11 @@ final class FullLifecycleFixtureJson {
                 value.checkpointWritesIdentity());
         result.set("publicEvents", publicEvents(value.publicEvents()));
         result.put("publicEventsIdentity", value.publicEventsIdentity());
+        result.set("managedTransitionReceipts",
+                managedTransitionReceipts(
+                        value.managedTransitionReceipts()));
+        result.put("managedTransitionReceiptsIdentity",
+                value.managedTransitionReceiptsIdentity());
         result.put("rollbackToInput", value.rollbackToInput());
         result.put("totalGas", value.totalGas());
         result.set("gasTrace", gasTrace(value.gasTrace()));
@@ -659,6 +666,46 @@ final class FullLifecycleFixtureJson {
         return result;
     }
 
+    private static ArrayNode managedTransitionReceipts(
+            List<ManagedDocumentTransitionReceipt> values) {
+        ArrayNode result = JSON.arrayNode();
+        for (ManagedDocumentTransitionReceipt value : values) {
+            ObjectNode item = result.addObject();
+            item.put("transitionReceiptIdentity",
+                    value.transitionReceiptIdentity());
+            item.put("sourceInvocationIdentity",
+                    value.sourceInvocationIdentity());
+            item.put("transitionOrdinal", value.transitionOrdinal());
+            item.put("transitionOccurrenceIdentity",
+                    value.transitionOccurrenceIdentity());
+            item.put("documentId", value.documentId().value());
+            item.put("originalCauseIdentity",
+                    value.originalCauseIdentity());
+            item.put("beforeBlueId", value.beforeBlueId());
+            item.put("afterBlueId", value.afterBlueId());
+            ArrayNode events = item.putArray("emittedRootEvents");
+            for (ManagedRootEventOccurrence event
+                    : value.emittedRootEvents()) {
+                ObjectNode encoded = events.addObject();
+                encoded.put("ordinal", event.ordinal());
+                encoded.put("occurrenceOrdinal",
+                        event.occurrenceOrdinal());
+                encoded.put("sourceDocumentId",
+                        event.sourceDocumentId().value());
+                encoded.put("occurrenceIdentity",
+                        event.occurrenceIdentity());
+                encoded.put("eventBlueId", event.eventBlueId());
+                encoded.set("exactEvent", wire(event.exactEvent()));
+                encoded.put("publicAtSource",
+                        event.publicAtSource());
+            }
+            item.put("emittedRootEventsIdentity",
+                    value.emittedRootEventsIdentity());
+            item.put("admittedGas", value.admittedGas());
+        }
+        return result;
+    }
+
     private static ArrayNode gasTrace(List<GasTraceEntry> values) {
         ArrayNode result = JSON.arrayNode();
         for (GasTraceEntry value : values) {
@@ -795,6 +842,8 @@ final class FullLifecycleFixtureJson {
                 value.subscriptionDeltasIdentity());
         result.put("publicEventsIdentity", value.publicEventsIdentity());
         result.put("gasTraceIdentity", value.gasTraceIdentity());
+        result.put("managedTransitionReceiptsIdentity",
+                value.managedTransitionReceiptsIdentity());
         result.put("blueLanguageSpecificationIdentity",
                 value.blueLanguageSpecificationIdentity());
         result.put("contractsSpecificationIdentity",

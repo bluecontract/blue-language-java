@@ -38,3 +38,22 @@ tasks.register('exportFullLifecycleFixtures', JavaExec) {
         args = requiredProperties.collect { project.property(it).toString() }
     }
 }
+
+tasks.register('exportManagedTransitionReceiptFixtures', JavaExec) {
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'blue.language.conformance.contracts.closure.ManagedTransitionReceiptFixtureExporter'
+    outputs.upToDateWhen { false }
+    doFirst {
+        def requiredProperties = [
+                'managedTransitionReceiptPackageRoot',
+                'managedTransitionReceiptOutputReport'
+        ]
+        def missing = requiredProperties.findAll { !project.hasProperty(it) }
+        if (!missing.isEmpty()) {
+            throw new GradleException(
+                    "Missing required managed-transition receipt export properties: ${missing.join(', ')}")
+        }
+        args = requiredProperties.collect { project.property(it).toString() }
+    }
+}

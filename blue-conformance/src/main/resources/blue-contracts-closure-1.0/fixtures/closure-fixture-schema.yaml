@@ -99,10 +99,15 @@ $defs:
     - {$ref: '#/$defs/documentId'}
     - {type: 'null'}
   nonNegativeSafeInteger: {type: integer, minimum: 0, maximum: 9007199254740991}
+  managedEpochCursor: {type: integer, minimum: -1, maximum: 9007199254740991}
   positiveSafeInteger: {type: integer, minimum: 1, maximum: 9007199254740991}
   nullableNonNegativeSafeInteger:
     oneOf:
     - {$ref: '#/$defs/nonNegativeSafeInteger'}
+    - {type: 'null'}
+  nullableManagedEpochCursor:
+    oneOf:
+    - {$ref: '#/$defs/managedEpochCursor'}
     - {type: 'null'}
   nullablePositiveSafeInteger:
     oneOf:
@@ -240,7 +245,7 @@ $defs:
         description: Exact identity established equally by a pure reference, verified inline acyclic node, or verified materialized cyclic member with its complete owning proof; mixed blueId objects are invalid.
         $ref: '#/$defs/blueId'
       active: {type: boolean}
-      pendingHistoricalEpoch: {$ref: '#/$defs/nullableNonNegativeSafeInteger'}
+      pendingHistoricalEpoch: {$ref: '#/$defs/nullableManagedEpochCursor'}
     allOf:
     - if:
         properties:
@@ -336,10 +341,10 @@ $defs:
         causeIdentity: {$ref: '#/$defs/sha256Identity'}
         targetOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
         childDocumentId: {$ref: '#/$defs/documentId'}
-        fromEpoch: {$ref: '#/$defs/nonNegativeSafeInteger'}
+        fromEpoch: {$ref: '#/$defs/managedEpochCursor'}
         toEpoch:
           description: Exactly fromEpoch plus 1; enforced by the semantic fixture validator because JSON Schema cannot express cross-field arithmetic.
-          $ref: '#/$defs/positiveSafeInteger'
+          $ref: '#/$defs/nonNegativeSafeInteger'
         beforeBlueId: {$ref: '#/$defs/blueId'}
         afterBlueId: {$ref: '#/$defs/blueId'}
         afterDocument: {$ref: '#/$defs/blueValue'}
@@ -1041,10 +1046,40 @@ $defs:
       componentIdentity: {$ref: '#/$defs/sha256Identity'}
       componentStateIdentity: {$ref: '#/$defs/sha256Identity'}
       cyclicProofIdentity: {$ref: '#/$defs/nullableSha256Identity'}
+  managedRootEventOccurrence:
+    type: object
+    additionalProperties: false
+    required: [ordinal, occurrenceOrdinal, sourceDocumentId, occurrenceIdentity, eventBlueId, exactEvent, publicAtSource]
+    properties:
+      ordinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      occurrenceOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      sourceDocumentId: {$ref: '#/$defs/documentId'}
+      occurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+      eventBlueId: {$ref: '#/$defs/blueId'}
+      exactEvent: {$ref: '#/$defs/blueValue'}
+      publicAtSource: {type: boolean}
+  managedDocumentTransitionReceipt:
+    type: object
+    additionalProperties: false
+    required: [transitionReceiptIdentity, sourceInvocationIdentity, transitionOrdinal, transitionOccurrenceIdentity, documentId, originalCauseIdentity, beforeBlueId, afterBlueId, emittedRootEvents, emittedRootEventsIdentity, admittedGas]
+    properties:
+      transitionReceiptIdentity: {$ref: '#/$defs/sha256Identity'}
+      sourceInvocationIdentity: {$ref: '#/$defs/sha256Identity'}
+      transitionOrdinal: {$ref: '#/$defs/nonNegativeSafeInteger'}
+      transitionOccurrenceIdentity: {$ref: '#/$defs/sha256Identity'}
+      documentId: {$ref: '#/$defs/documentId'}
+      originalCauseIdentity: {$ref: '#/$defs/sha256Identity'}
+      beforeBlueId: {$ref: '#/$defs/blueId'}
+      afterBlueId: {$ref: '#/$defs/blueId'}
+      emittedRootEvents:
+        type: array
+        items: {$ref: '#/$defs/managedRootEventOccurrence'}
+      emittedRootEventsIdentity: {$ref: '#/$defs/sha256Identity'}
+      admittedGas: {$ref: '#/$defs/nonNegativeSafeInteger'}
   platformCommitCompanion:
     type: object
     additionalProperties: false
-    required: [companionIdentity, invocationIdentity, inputClosureIdentity, outputClosureIdentity, expectedInputGraphGeneration, expectedInputDocuments, expectedInputComponents, inputOccurrenceBindingSetIdentity, outputGraphGeneration, resultingDocuments, resultingComponents, occurrenceBindingSetIdentity, graphChangesIdentity, checkpointWritesIdentity, subscriptionDeltasIdentity, publicEventsIdentity, gasTraceIdentity, blueLanguageSpecificationIdentity, contractsSpecificationIdentity, managedDocumentIdentityPolicyIdentity, managedBindingPolicyIdentity, exactNodeProviderDomainIdentity, externalOrderPolicyIdentity, runtimeRegistryIdentity, gasManifestIdentity, portableLimitPolicyIdentity, cyclicFinalizerIdentity, cyclicProofVerifierIdentity]
+    required: [companionIdentity, invocationIdentity, inputClosureIdentity, outputClosureIdentity, expectedInputGraphGeneration, expectedInputDocuments, expectedInputComponents, inputOccurrenceBindingSetIdentity, outputGraphGeneration, resultingDocuments, resultingComponents, occurrenceBindingSetIdentity, graphChangesIdentity, checkpointWritesIdentity, subscriptionDeltasIdentity, publicEventsIdentity, gasTraceIdentity, managedTransitionReceiptsIdentity, blueLanguageSpecificationIdentity, contractsSpecificationIdentity, managedDocumentIdentityPolicyIdentity, managedBindingPolicyIdentity, exactNodeProviderDomainIdentity, externalOrderPolicyIdentity, runtimeRegistryIdentity, gasManifestIdentity, portableLimitPolicyIdentity, cyclicFinalizerIdentity, cyclicProofVerifierIdentity]
     properties:
       companionIdentity: {$ref: '#/$defs/sha256Identity'}
       invocationIdentity: {$ref: '#/$defs/sha256Identity'}
@@ -1076,6 +1111,7 @@ $defs:
       gasTraceIdentity:
         description: Identity of the admitted gas entries after removing only each diagnostic reason field.
         $ref: '#/$defs/sha256Identity'
+      managedTransitionReceiptsIdentity: {$ref: '#/$defs/sha256Identity'}
       blueLanguageSpecificationIdentity: {$ref: '#/$defs/sha256Identity'}
       contractsSpecificationIdentity: {$ref: '#/$defs/sha256Identity'}
       managedDocumentIdentityPolicyIdentity: {$ref: '#/$defs/sha256Identity'}
@@ -1090,7 +1126,7 @@ $defs:
   completeExpected:
     type: object
     additionalProperties: false
-    required: [attemptOutcome, status, invocationIdentity, inputClosureIdentity, outputClosureIdentity, atomic, workTrace, documentStepTrace, tentativeFinalizations, graphGeneration, resultingDocuments, resultingComponents, occurrenceBindings, occurrenceBindingSetIdentity, graphChanges, graphChangesIdentity, subscriptionDeltas, subscriptionDeltasIdentity, checkpointWrites, checkpointWritesIdentity, publicEvents, publicEventsIdentity, rollbackToInput, totalGas, gasTraceIdentity]
+    required: [attemptOutcome, status, invocationIdentity, inputClosureIdentity, outputClosureIdentity, atomic, workTrace, documentStepTrace, tentativeFinalizations, graphGeneration, resultingDocuments, resultingComponents, occurrenceBindings, occurrenceBindingSetIdentity, graphChanges, graphChangesIdentity, subscriptionDeltas, subscriptionDeltasIdentity, checkpointWrites, checkpointWritesIdentity, publicEvents, publicEventsIdentity, managedTransitionReceipts, managedTransitionReceiptsIdentity, rollbackToInput, totalGas, gasTraceIdentity]
     properties:
       attemptOutcome: {const: Complete}
       status: {enum: [success, no-match, stale, terminated, invalid-processing-document, capability-failure, runtime-fatal, gas-limit-exceeded, portable-limit-exceeded, subscription-surface-invalid]}
@@ -1117,6 +1153,10 @@ $defs:
       checkpointWritesIdentity: {$ref: '#/$defs/sha256Identity'}
       publicEvents: {type: array, items: {$ref: '#/$defs/publicEvent'}}
       publicEventsIdentity: {$ref: '#/$defs/sha256Identity'}
+      managedTransitionReceipts:
+        type: array
+        items: {$ref: '#/$defs/managedDocumentTransitionReceipt'}
+      managedTransitionReceiptsIdentity: {$ref: '#/$defs/sha256Identity'}
       rollbackToInput: {type: boolean}
       totalGas: {$ref: '#/$defs/nonNegativeSafeInteger'}
       gasTrace: {type: array, items: {$ref: '#/$defs/gasTraceEntry'}}
@@ -1144,6 +1184,7 @@ $defs:
         allOf:
         - properties:
             rollbackToInput: {const: true}
+            managedTransitionReceipts: {maxItems: 0}
         - not: {required: [platformCommitCompanion]}
     - if:
         properties:

@@ -631,11 +631,18 @@ or an occurrence-evidence guess.
 
 `pendingHistoricalEpoch` is non-null only when the row's
 `expectedTargetBlueId` is an admitted historical exact state of the named
-target lineage. It is the safe-integer epoch of that exact cursor state. Before
+target lineage. It is either the non-negative safe-integer epoch of that exact
+cursor state or exactly `-1` when the supplied state is the target's authored
+pre-initialization value. No other negative value is valid. Before
 the initial historical attachment the declared path may be absent. Once an
 external Handler writes the exact historical value, the path is present but the
 row MUST remain `active: false` while `pendingHistoricalEpoch` is non-null; this
 is the sole exception to immediate activation of a present verified path. The
+pending value may be represented either as a pure reference whose BlueId equals
+`expectedTargetBlueId` or as a complete inline acyclic value whose directly
+calculated BlueId equals `expectedTargetBlueId`. These two representations have
+identical pending semantics: neither substitutes the authoritative current
+target, activates the row, or contributes a graph edge. The
 processor does not apply a transition chain inside that external invocation.
 Instead, Coordination supplies one exact contiguous `ManagedRevisionCause`
 invocation at a time under §2.3. Each successful invocation rebinds that same
@@ -869,6 +876,9 @@ ManagedRevisionCause {
 This shape proves one already-authenticated child-lineage revision. `fromEpoch`,
 `toEpoch`, `beforeBlueId`, and `afterBlueId` describe exactly one contiguous
 step; `toEpoch` MUST equal `fromEpoch + 1` within the safe-integer range.
+`fromEpoch` is either a non-negative managed epoch or exactly `-1` for the
+authored pre-initialization cursor; `toEpoch` is always non-negative. Thus the
+only transition out of the sentinel is `-1 -> 0`.
 `afterDocument` MUST independently establish `afterBlueId`, and both BlueIds
 MUST denote `childDocumentId` under the selected managed-document identity
 policy. `targetOccurrenceIdentity` MUST name exactly one input row whose
@@ -1568,8 +1578,9 @@ retains tuple order. Serialized cause `kind` is the closed-union discriminator
 `admissionKind`. The two optional admission fields are always present in the
 constructor value and use JSON `null` when absent.
 
-For both revision constructors, `toEpoch` is exactly `fromEpoch + 1` and all
-integers are safe. The receipt is recomputed first from authenticated source
+For both revision constructors, `toEpoch` is exactly `fromEpoch + 1`;
+`fromEpoch` is exactly `-1` or a non-negative safe integer, and `toEpoch` is a
+non-negative safe integer. The receipt is recomputed first from authenticated source
 revision evidence. The managed cause repeats and revalidates its receipt fields,
 adds the one containing occurrence that will be changed, and hashes the exact
 receipt identity. `afterDocument` is required cause evidence and MUST establish
@@ -1686,8 +1697,9 @@ occurrenceBindingSetIdentity
     order = occurrenceIdentity, bindingIdentity
 ```
 
-`pendingHistoricalEpoch` is present in every item and is either JSON `null` or
-the safe integer governed by §2.2. Both active and inactive rows participate.
+`pendingHistoricalEpoch` is present in every item and is either JSON `null`,
+exactly `-1`, or the non-negative safe integer governed by §2.2. Both active
+and inactive rows participate.
 Consequently activating a prospective row, advancing or completing its
 historical catch-up, rebinding its expected exact target state, adding a row, or
 removing a row changes `occurrenceBindingSetIdentity`. Only a change to the set
@@ -2800,7 +2812,10 @@ row MUST become active at that mutation boundary; the processor MUST NOT delay
 activation while treating the resulting content as authoritative. The one
 closed exception is an inactive row with non-null `pendingHistoricalEpoch`: its
 exact historical cursor value may be present while the row remains inactive
-until the final managed-revision reconciliation in §7.5 clears the cursor.
+until the final managed-revision reconciliation in §7.5 clears the cursor. A
+pure reference to that cursor BlueId and a complete inline acyclic value whose
+direct BlueId is that cursor BlueId are equivalent representations at this
+pending boundary.
 
 ### 5.3 Concrete graph and component partition
 

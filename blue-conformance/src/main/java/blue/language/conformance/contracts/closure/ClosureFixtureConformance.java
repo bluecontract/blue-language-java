@@ -1,6 +1,8 @@
 package blue.language.conformance.contracts.closure;
 
+import blue.language.codec.jackson.UncheckedObjectMapper;
 import blue.language.conformance.api.BlueContractsConformanceReport;
+import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ProcessorDiagnostic;
@@ -18,6 +20,8 @@ import blue.language.processor.closure.DocumentStepEvidence;
 import blue.language.processor.closure.ExactNodeDemand;
 import blue.language.processor.closure.GasTraceEntry;
 import blue.language.processor.closure.ManagedOccurrenceEvidenceDemand;
+import blue.language.processor.closure.ManagedDocumentTransitionReceipt;
+import blue.language.processor.closure.ManagedRootEventOccurrence;
 import blue.language.processor.closure.TentativeFinalization;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -260,6 +264,7 @@ public final class ClosureFixtureConformance {
         equal(id + ".publicEventsIdentity",
                 requiredText(expected, "publicEventsIdentity"),
                 result.publicEventsIdentity());
+        verifyManagedTransitionReceipts(id, expected, result);
         equal(id + ".rollbackToInput",
                 Boolean.valueOf(requiredBoolean(expected, "rollbackToInput")),
                 Boolean.valueOf(result.rollbackToInput()));
@@ -596,6 +601,119 @@ public final class ClosureFixtureConformance {
             equal(id + ".platformCommitCompanion.companionIdentity",
                     requiredText(companion, "companionIdentity"),
                     result.platformCommitCompanion().companionIdentity());
+            equal(id + ".platformCommitCompanion"
+                            + ".managedTransitionReceiptsIdentity",
+                    requiredText(
+                            companion,
+                            "managedTransitionReceiptsIdentity"),
+                    result.platformCommitCompanion()
+                            .managedTransitionReceiptsIdentity());
+            require(result.platformCommitCompanion()
+                            .bindsManagedTransitionReceipts(),
+                    id + " commit companion lacks authenticated managed "
+                            + "transition receipt binding");
+        }
+    }
+
+    private static void verifyManagedTransitionReceipts(
+            String id,
+            JsonNode expected,
+            ClosureProcessResult result) {
+        JsonNode receipts = requiredArray(
+                expected, "managedTransitionReceipts");
+        List<ManagedDocumentTransitionReceipt> actual =
+                result.managedTransitionReceipts();
+        equal(id + ".managedTransitionReceipts.size",
+                Integer.valueOf(receipts.size()),
+                Integer.valueOf(actual.size()));
+        long admittedGas = 0L;
+        for (int index = 0; index < actual.size(); index++) {
+            JsonNode item = receipts.get(index);
+            ManagedDocumentTransitionReceipt value = actual.get(index);
+            String path = id + ".managedTransitionReceipts[" + index + "]";
+            equal(path + ".transitionReceiptIdentity",
+                    requiredText(item, "transitionReceiptIdentity"),
+                    value.transitionReceiptIdentity());
+            equal(path + ".sourceInvocationIdentity",
+                    requiredText(item, "sourceInvocationIdentity"),
+                    value.sourceInvocationIdentity());
+            equal(path + ".transitionOrdinal",
+                    Long.valueOf(requiredLong(item, "transitionOrdinal")),
+                    Long.valueOf(value.transitionOrdinal()));
+            equal(path + ".transitionOccurrenceIdentity",
+                    requiredText(item, "transitionOccurrenceIdentity"),
+                    value.transitionOccurrenceIdentity());
+            equal(path + ".documentId",
+                    requiredText(item, "documentId"),
+                    value.documentId().value());
+            equal(path + ".originalCauseIdentity",
+                    requiredText(item, "originalCauseIdentity"),
+                    value.originalCauseIdentity());
+            equal(path + ".beforeBlueId",
+                    requiredText(item, "beforeBlueId"),
+                    value.beforeBlueId());
+            equal(path + ".afterBlueId",
+                    requiredText(item, "afterBlueId"),
+                    value.afterBlueId());
+            JsonNode events = requiredArray(item, "emittedRootEvents");
+            equal(path + ".emittedRootEvents.size",
+                    Integer.valueOf(events.size()),
+                    Integer.valueOf(value.emittedRootEvents().size()));
+            for (int eventIndex = 0;
+                    eventIndex < value.emittedRootEvents().size();
+                    eventIndex++) {
+                JsonNode event = events.get(eventIndex);
+                ManagedRootEventOccurrence occurrence =
+                        value.emittedRootEvents().get(eventIndex);
+                String eventPath = path + ".emittedRootEvents["
+                        + eventIndex + "]";
+                equal(eventPath + ".ordinal",
+                        Long.valueOf(requiredLong(event, "ordinal")),
+                        Long.valueOf(occurrence.ordinal()));
+                equal(eventPath + ".occurrenceOrdinal",
+                        Long.valueOf(requiredLong(
+                                event, "occurrenceOrdinal")),
+                        Long.valueOf(occurrence.occurrenceOrdinal()));
+                equal(eventPath + ".sourceDocumentId",
+                        requiredText(event, "sourceDocumentId"),
+                        occurrence.sourceDocumentId().value());
+                equal(eventPath + ".occurrenceIdentity",
+                        requiredText(event, "occurrenceIdentity"),
+                        occurrence.occurrenceIdentity());
+                equal(eventPath + ".eventBlueId",
+                        requiredText(event, "eventBlueId"),
+                        occurrence.eventBlueId());
+                JsonNode exactEvent = event.get("exactEvent");
+                require(exactEvent != null,
+                        eventPath + ".exactEvent is required");
+                equal(eventPath + ".exactEvent",
+                        exactEvent,
+                        UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                                NodeWireForm.get(
+                                        occurrence.exactEvent(),
+                                        NodeWireForm.Strategy.SIMPLE)));
+                equal(eventPath + ".publicAtSource",
+                        Boolean.valueOf(requiredBoolean(
+                                event, "publicAtSource")),
+                        Boolean.valueOf(occurrence.publicAtSource()));
+            }
+            equal(path + ".emittedRootEventsIdentity",
+                    requiredText(item, "emittedRootEventsIdentity"),
+                    value.emittedRootEventsIdentity());
+            equal(path + ".admittedGas",
+                    Long.valueOf(requiredLong(item, "admittedGas")),
+                    Long.valueOf(value.admittedGas()));
+            admittedGas = Math.addExact(
+                    admittedGas, value.admittedGas());
+        }
+        equal(id + ".managedTransitionReceiptsIdentity",
+                requiredText(expected,
+                        "managedTransitionReceiptsIdentity"),
+                result.managedTransitionReceiptsIdentity());
+        if (!actual.isEmpty()) {
+            equal(id + ".managedTransitionReceipts.admittedGas",
+                    Long.valueOf(result.totalGas()),
+                    Long.valueOf(admittedGas));
         }
     }
 

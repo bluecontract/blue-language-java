@@ -163,10 +163,10 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:fd4f71dc78c5300c88b3ad097b48742cefa46ad902984a4d4bed480f4eb06708
   closureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
-  invocationIdentity: sha256:66130b12ae4da7818b20e63ae8291a4ad5f6166e1c3f44d61a6e710746a65928
+  invocationIdentity: sha256:542fcded9ac4802d7ee0613f7e0dea54e078fbc4aa5bcca37c52d210b6aa1aef
   environment:
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
-    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    contractsSpecificationIdentity: sha256:f981106d0e59a42b0be0a8f06cc6364c9db4119c7e51ce0c7fcfd9f7c98b4056
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
@@ -256,7 +256,7 @@ input:
 expected:
   attemptOutcome: Complete
   status: gas-limit-exceeded
-  invocationIdentity: sha256:66130b12ae4da7818b20e63ae8291a4ad5f6166e1c3f44d61a6e710746a65928
+  invocationIdentity: sha256:542fcded9ac4802d7ee0613f7e0dea54e078fbc4aa5bcca37c52d210b6aa1aef
   inputClosureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
   outputClosureIdentity: sha256:eef83fd0a55373bbaedb64039435a8081a0bbd0e35f053f292b1f08f82d1d339
   atomic: true
@@ -403,6 +403,8 @@ expected:
   checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
   publicEvents: []
   publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
+  managedTransitionReceipts: []
+  managedTransitionReceiptsIdentity: sha256:ec45572afd62b92aa1e51e054b7ca416dcf1d3ab90b4e515f19656482ed9bb67
   rollbackToInput: true
   totalGas: 0
   gasTraceIdentity: sha256:5b6d6ab0c98545f928f2f4fabbd36c2e150819fc76b78596a680b39189bbc6f0

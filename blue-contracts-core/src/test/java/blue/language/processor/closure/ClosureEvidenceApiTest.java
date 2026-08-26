@@ -108,8 +108,16 @@ final class ClosureEvidenceApiTest {
         ManagedOccurrenceBinding historical = binding(false, 2L);
         assertFalse(historical.active());
         assertEquals(Long.valueOf(2L), historical.pendingHistoricalEpoch());
+        ManagedOccurrenceBinding authoredInitial = binding(false, -1L);
+        assertFalse(authoredInitial.active());
+        assertEquals(Long.valueOf(-1L),
+                authoredInitial.pendingHistoricalEpoch());
         assertThrows(IllegalArgumentException.class,
                 () -> binding(true, 2L));
+        assertThrows(IllegalArgumentException.class,
+                () -> binding(true, -1L));
+        assertThrows(IllegalArgumentException.class,
+                () -> binding(false, -2L));
 
         List<ManagedDocumentSnapshot> reversed = Arrays.asList(
                 managed(B, "blue-b", false),
@@ -189,6 +197,22 @@ final class ClosureEvidenceApiTest {
                 hash('9'), policy(historical), environment(hash('2')));
         assertEquals(ProcessingCause.Kind.MANAGED_REVISION,
                 managed.cause().kind());
+
+        AffectedClosureSnapshot authoredInitial = snapshot(false, -1L);
+        ManagedRevisionCause epochZero = new ManagedRevisionCause(
+                hash('5'), hash('d'), B, -1L, 0L,
+                "blue-b-old", "blue-b", node("b-after"),
+                hash('6'), hash('7'));
+        ClosureInvocationInput initialCatchUp =
+                ClosureInvocationInput.processClosure(
+                        hash('8'), authoredInitial, epochZero,
+                        Collections.<DirectLogicalDelivery>emptyList(),
+                        hash('9'), policy(authoredInitial),
+                        environment(hash('2')));
+        assertEquals(-1L,
+                ((ManagedRevisionCause) initialCatchUp.cause()).fromEpoch());
+        assertEquals(0L,
+                ((ManagedRevisionCause) initialCatchUp.cause()).toEpoch());
         assertThrows(IllegalArgumentException.class,
                 () -> ClosureInvocationInput.processClosure(
                         hash('8'), historical, revision,

@@ -258,7 +258,7 @@ final class ClosureIdentityService {
     String identity(Constructor constructor, Object value) {
         Constructor selected = Objects.requireNonNull(
                 constructor, "constructor");
-        Object admitted = copyPortableValue(value, OBJECT_VALUE);
+        Object admitted = copyPortableValue(value, OBJECT_VALUE, selected);
         validateConstructor(selected, admitted);
         LinkedHashMap<String, Object> envelope = objectValue();
         envelope.put("domain", selected.domain);
@@ -889,7 +889,7 @@ final class ClosureIdentityService {
      */
     String checkpointDomainBlueId(Map<String, ?> checkpointDomain) {
         Object admitted = copyPortableValue(checkpointDomain,
-                "checkpointDomain");
+                "checkpointDomain", null);
         Map<String, Object> value = requireObject(admitted,
                 "checkpointDomain");
         Set<String> allowed = new HashSet<String>(Arrays.asList(
@@ -1295,7 +1295,7 @@ final class ClosureIdentityService {
             requireSha256(value, "sourceRevisionReceiptIdentity", false);
         }
         requireNonEmptyText(value, "childDocumentId");
-        long from = requireSafeInteger(value, "fromEpoch");
+        long from = requireManagedEpochCursor(value, "fromEpoch");
         long to = requireSafeInteger(value, "toEpoch");
         if (from == ClosureValueSupport.MAX_SAFE_INTEGER || to != from + 1L) {
             throw new IllegalArgumentException("toEpoch must equal fromEpoch + 1");
@@ -1361,7 +1361,8 @@ final class ClosureIdentityService {
             String binding = requireSha256(item, "bindingIdentity", false);
             requireBoolean(item, "active");
             if (item.get("pendingHistoricalEpoch") != null) {
-                requireSafeInteger(item, "pendingHistoricalEpoch");
+                requireManagedEpochCursor(
+                        item, "pendingHistoricalEpoch");
             }
             if (previousOccurrence != null) {
                 int order = ClosureValueSupport.comparePortableText(
@@ -1631,7 +1632,8 @@ final class ClosureIdentityService {
         }
     }
 
-    private static Object copyPortableValue(Object value, String field) {
+    private static Object copyPortableValue(
+            Object value, String field, Constructor constructor) {
         if (value == null || value instanceof Boolean) {
             return value;
         }
@@ -1642,15 +1644,22 @@ final class ClosureIdentityService {
         if (value instanceof Byte || value instanceof Short
                 || value instanceof Integer || value instanceof Long) {
             long integer = ((Number) value).longValue();
-            return Long.valueOf(ClosureValueSupport.requireSafeInteger(
-                    integer, field));
+            return Long.valueOf(allowsManagedEpochCursor(constructor, field)
+                    ? ClosureValueSupport.requireManagedEpochCursor(
+                            integer, field)
+                    : ClosureValueSupport.requireSafeInteger(integer, field));
         }
         if (value instanceof BigInteger) {
             BigInteger integer = (BigInteger) value;
-            if (integer.signum() < 0 || integer.compareTo(BigInteger.valueOf(
+            long minimum = allowsManagedEpochCursor(constructor, field)
+                    ? -1L : 0L;
+            if (integer.compareTo(BigInteger.valueOf(minimum)) < 0
+                    || integer.compareTo(BigInteger.valueOf(
                     ClosureValueSupport.MAX_SAFE_INTEGER)) > 0) {
                 throw new IllegalArgumentException(
-                        field + " must be a non-negative safe integer");
+                        field + (minimum == -1L
+                                ? " must be -1 or a non-negative safe integer"
+                                : " must be a non-negative safe integer"));
             }
             return Long.valueOf(integer.longValue());
         }
@@ -1659,7 +1668,7 @@ final class ClosureIdentityService {
             int index = 0;
             for (Object item : (List<?>) value) {
                 copy.add(copyPortableValue(item,
-                        field + "[" + index++ + "]"));
+                        field + "[" + index++ + "]", constructor));
             }
             return copy;
         }
@@ -1673,13 +1682,23 @@ final class ClosureIdentityService {
                 String key = ClosureValueSupport.requirePortableText(
                         (String) entry.getKey(), field + " key");
                 copy.put(key, copyPortableValue(entry.getValue(),
-                        field + "." + key));
+                        field + "." + key, constructor));
             }
             return copy;
         }
         throw new IllegalArgumentException(
                 field + " has unsupported identity value type: "
                         + value.getClass().getName());
+    }
+
+    private static boolean allowsManagedEpochCursor(
+            Constructor constructor, String field) {
+        if (constructor == Constructor.SOURCE_REVISION_RECEIPT
+                || constructor == Constructor.MANAGED_REVISION_CAUSE) {
+            return field.endsWith(".fromEpoch");
+        }
+        return constructor == Constructor.OCCURRENCE_BINDING_SET
+                && field.endsWith(".pendingHistoricalEpoch");
     }
 
     private static byte[] canonicalBytes(Object value) {
@@ -1779,6 +1798,17 @@ final class ClosureIdentityService {
                     field + " must be a JSON safe integer");
         }
         return ClosureValueSupport.requireSafeInteger(
+                ((Long) item).longValue(), field);
+    }
+
+    private static long requireManagedEpochCursor(
+            Map<String, Object> value, String field) {
+        Object item = value.get(field);
+        if (!(item instanceof Long)) {
+            throw new IllegalArgumentException(
+                    field + " must be a JSON managed epoch cursor");
+        }
+        return ClosureValueSupport.requireManagedEpochCursor(
                 ((Long) item).longValue(), field);
     }
 

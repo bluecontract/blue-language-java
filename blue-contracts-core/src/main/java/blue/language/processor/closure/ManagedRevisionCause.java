@@ -25,7 +25,8 @@ public final class ManagedRevisionCause extends ProcessingCause {
      * @param causeIdentity exact cause identity
      * @param targetOccurrenceIdentity stable target occurrence identity
      * @param childDocumentId revised child lineage
-     * @param fromEpoch exact predecessor epoch
+     * @param fromEpoch exact predecessor epoch; {@code -1} denotes the
+     *     authored pre-initialization value before epoch zero
      * @param toEpoch exact successor epoch
      * @param beforeBlueId exact predecessor BlueId
      * @param afterBlueId exact successor BlueId
@@ -65,7 +66,8 @@ public final class ManagedRevisionCause extends ProcessingCause {
      * @param causeIdentity exact cause identity
      * @param targetOccurrenceIdentity stable target occurrence identity
      * @param childDocumentId revised child lineage
-     * @param fromEpoch exact predecessor revision cursor
+     * @param fromEpoch exact predecessor revision cursor; {@code -1} denotes
+     *     the authored pre-initialization value before epoch zero
      * @param toEpoch exact successor revision cursor
      * @param beforeBlueId exact predecessor BlueId
      * @param afterBlueId exact successor BlueId
@@ -120,7 +122,7 @@ public final class ManagedRevisionCause extends ProcessingCause {
                         "targetOccurrenceIdentity");
         this.childDocumentId = Objects.requireNonNull(
                 childDocumentId, "childDocumentId");
-        this.fromEpoch = ClosureValueSupport.requireSafeInteger(
+        this.fromEpoch = ClosureValueSupport.requireManagedEpochCursor(
                 fromEpoch, "fromEpoch");
         this.toEpoch = ClosureValueSupport.requireSafeInteger(
                 toEpoch, "toEpoch");
@@ -180,7 +182,8 @@ public final class ManagedRevisionCause extends ProcessingCause {
     /**
      * Returns the documented value.
      *
-     * @return predecessor epoch
+     * @return predecessor epoch, with {@code -1} denoting the authored
+     *     pre-initialization value
      */
     public long fromEpoch() {
         return fromEpoch;

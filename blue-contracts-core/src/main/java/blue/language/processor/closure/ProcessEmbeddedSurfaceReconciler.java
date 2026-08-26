@@ -1,5 +1,6 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.processor.InvalidExecutionEvidenceException;
@@ -237,9 +238,7 @@ final class ProcessEmbeddedSurfaceReconciler {
             throw missingEffectiveValue(source, path);
         }
         if (binding.pendingHistoricalEpoch() != null) {
-            if (value.isReferenceOnly()
-                    && binding.expectedTargetBlueId().equals(
-                            value.getBlueId())) {
+            if (establishesPendingHistoricalValue(value, binding)) {
                 reconciled.add(binding);
                 return;
             }
@@ -299,6 +298,17 @@ final class ProcessEmbeddedSurfaceReconciler {
                 activated.add(replacement.occurrenceIdentity());
             }
         }
+    }
+
+    private static boolean establishesPendingHistoricalValue(
+            Node value,
+            ManagedOccurrenceBinding binding) {
+        String expected = binding.expectedTargetBlueId();
+        if (value.isReferenceOnly()) {
+            return expected.equals(value.getBlueId());
+        }
+        return expected.equals(
+                DirectBlueIdCalculator.calculateBlueId(value));
     }
 
     private static Map<DocumentId, ManagedDocumentSnapshot> documentsById(

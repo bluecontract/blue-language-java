@@ -163,6 +163,32 @@ def run_full_lifecycle_generator(
     )
 
 
+def run_managed_transition_receipt_rebind(
+    release_root: Path,
+    repository_root: Path,
+    environment: dict[str, str],
+) -> None:
+    """Bind generated closure expectations to executed Contracts receipts."""
+    adapter = release_root / "tools/rebind_managed_transition_receipts.py"
+    if not adapter.is_file():
+        raise RegenerationFailure(
+            "managed-transition receipt rebind adapter is missing from the "
+            "staged tool closure"
+        )
+    run(
+        [
+            sys.executable,
+            str(adapter),
+            "--package-root",
+            str(release_root / "conformance/contracts"),
+            "--repository-root",
+            str(repository_root),
+        ],
+        cwd=release_root.parent,
+        environment=environment,
+    )
+
+
 def run_contract_evolution_generator(
     release_root: Path,
     environment: dict[str, str],
@@ -207,6 +233,11 @@ def regenerate(
     run_full_lifecycle_generator(
         release_root,
         fixture_source_root,
+        repository_root,
+        environment,
+    )
+    run_managed_transition_receipt_rebind(
+        release_root,
         repository_root,
         environment,
     )
@@ -421,6 +452,11 @@ def validate_inputs(
             "blue-conformance/src/main/tools/"
             "generate_full_lifecycle_fixtures.py; refusing to fabricate "
             "expected identities or semantic output"
+        )
+    if not (TOOLS_ROOT / "rebind_managed_transition_receipts.py").is_file():
+        raise RegenerationFailure(
+            "managed-transition receipt rebind adapter is missing from "
+            "blue-conformance/src/main/tools/"
         )
 
 

@@ -195,6 +195,18 @@ final class ManagedTransitionReceiptTest {
                 cause.sourceRevisionReceiptIdentity());
         assertEquals(duplicate,
                 cause.sourceTransitionReceipt().get());
+
+        ManagedRevisionCause epochZero = ClosureEvidenceFactory
+                .managedRevisionCause(
+                        hash('e'), -1L, 0L, afterDocument, duplicate);
+        assertEquals(-1L, epochZero.fromEpoch());
+        assertEquals(0L, epochZero.toEpoch());
+        assertEquals(duplicate.transitionReceiptIdentity(),
+                epochZero.sourceRevisionReceiptIdentity());
+        assertThrows(IllegalArgumentException.class,
+                () -> ClosureEvidenceFactory.managedRevisionCause(
+                        hash('e'), -2L, -1L,
+                        afterDocument, duplicate));
     }
 
     private static ManagedRootEventOccurrence event(

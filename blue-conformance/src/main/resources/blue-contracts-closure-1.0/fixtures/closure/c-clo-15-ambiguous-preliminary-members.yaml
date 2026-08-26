@@ -67,10 +67,10 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
   closureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
-  invocationIdentity: sha256:1ace02d5d7cad8265cedbd1a219a425cde32d9be43653f4857666ab8c43b55df
+  invocationIdentity: sha256:40cd49df6db442c96960466dea09debf918bb9ad5bf34463ed47fdb52b6a07d9
   environment:
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
-    contractsSpecificationIdentity: sha256:8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242
+    contractsSpecificationIdentity: sha256:f981106d0e59a42b0be0a8f06cc6364c9db4119c7e51ce0c7fcfd9f7c98b4056
     runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
@@ -160,7 +160,7 @@ input:
 expected:
   attemptOutcome: Complete
   status: invalid-processing-document
-  invocationIdentity: sha256:1ace02d5d7cad8265cedbd1a219a425cde32d9be43653f4857666ab8c43b55df
+  invocationIdentity: sha256:40cd49df6db442c96960466dea09debf918bb9ad5bf34463ed47fdb52b6a07d9
   inputClosureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
   outputClosureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
   atomic: true
@@ -201,6 +201,8 @@ expected:
   checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
   publicEvents: []
   publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
+  managedTransitionReceipts: []
+  managedTransitionReceiptsIdentity: sha256:ec45572afd62b92aa1e51e054b7ca416dcf1d3ab90b4e515f19656482ed9bb67
   rollbackToInput: true
   totalGas: 181
   gasTraceIdentity: sha256:e83c2e9dd00038960571a949a558ffe1f809496f1151a74c9dae194b1a81a29e

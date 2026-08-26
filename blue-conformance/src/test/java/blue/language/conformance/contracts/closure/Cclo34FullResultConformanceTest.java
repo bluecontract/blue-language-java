@@ -20,7 +20,9 @@ import blue.language.processor.closure.DocumentId;
 import blue.language.processor.closure.DocumentStepEvidence;
 import blue.language.processor.closure.GasTraceEntry;
 import blue.language.processor.closure.GraphChange;
+import blue.language.processor.closure.ManagedDocumentTransitionReceipt;
 import blue.language.processor.closure.ManagedOccurrenceBinding;
+import blue.language.processor.closure.ManagedRootEventOccurrence;
 import blue.language.processor.closure.PublicEventOccurrence;
 import blue.language.processor.closure.RejectedCharge;
 import blue.language.processor.closure.ResultingDocument;
@@ -495,6 +497,13 @@ public final class Cclo34FullResultConformanceTest {
                 actual.publicEvents());
         assertEquals(requiredText(expected, "publicEventsIdentity"),
                 actual.publicEventsIdentity(), "publicEventsIdentity");
+        assertManagedTransitionReceipts(
+                requiredArray(expected, "managedTransitionReceipts"),
+                actual.managedTransitionReceipts());
+        assertEquals(requiredText(
+                        expected, "managedTransitionReceiptsIdentity"),
+                actual.managedTransitionReceiptsIdentity(),
+                "managedTransitionReceiptsIdentity");
         assertEquals(requiredBoolean(expected, "rollbackToInput"),
                 actual.rollbackToInput(), "rollbackToInput");
         assertSame(actual.platformCommitCompanion(),
@@ -1398,6 +1407,12 @@ public final class Cclo34FullResultConformanceTest {
                 actual.subscriptionDeltasIdentity());
         assertCompanionText(expected, "publicEventsIdentity",
                 actual.publicEventsIdentity());
+        assertCompanionText(
+                expected,
+                "managedTransitionReceiptsIdentity",
+                actual.managedTransitionReceiptsIdentity());
+        assertTrue(actual.bindsManagedTransitionReceipts(),
+                "platformCommitCompanion managed receipt binding");
         assertCompanionText(expected, "blueLanguageSpecificationIdentity",
                 actual.blueLanguageSpecificationIdentity());
         assertCompanionText(expected, "contractsSpecificationIdentity",
@@ -1434,6 +1449,79 @@ public final class Cclo34FullResultConformanceTest {
                 "result/companion graphGeneration");
         assertEquals(result.gasTraceIdentity(), actual.gasTraceIdentity(),
                 "result/companion gasTraceIdentity");
+        assertEquals(result.managedTransitionReceiptsIdentity(),
+                actual.managedTransitionReceiptsIdentity(),
+                "result/companion managedTransitionReceiptsIdentity");
+    }
+
+    private static void assertManagedTransitionReceipts(
+            JsonNode expected,
+            List<ManagedDocumentTransitionReceipt> actual) {
+        assertSize("managedTransitionReceipts", expected, actual);
+        for (int index = 0; index < actual.size(); index++) {
+            JsonNode item = expected.get(index);
+            ManagedDocumentTransitionReceipt value = actual.get(index);
+            String path = "managedTransitionReceipts[" + index + "]";
+            assertEquals(requiredText(item, "transitionReceiptIdentity"),
+                    value.transitionReceiptIdentity(),
+                    path + ".transitionReceiptIdentity");
+            assertEquals(requiredText(item, "sourceInvocationIdentity"),
+                    value.sourceInvocationIdentity(),
+                    path + ".sourceInvocationIdentity");
+            assertEquals(requiredLong(item, "transitionOrdinal"),
+                    value.transitionOrdinal(), path + ".transitionOrdinal");
+            assertEquals(requiredText(
+                            item, "transitionOccurrenceIdentity"),
+                    value.transitionOccurrenceIdentity(),
+                    path + ".transitionOccurrenceIdentity");
+            assertEquals(requiredText(item, "documentId"),
+                    value.documentId().value(), path + ".documentId");
+            assertEquals(requiredText(item, "originalCauseIdentity"),
+                    value.originalCauseIdentity(),
+                    path + ".originalCauseIdentity");
+            assertEquals(requiredText(item, "beforeBlueId"),
+                    value.beforeBlueId(), path + ".beforeBlueId");
+            assertEquals(requiredText(item, "afterBlueId"),
+                    value.afterBlueId(), path + ".afterBlueId");
+            JsonNode events = requiredArray(item, "emittedRootEvents");
+            assertSize(path + ".emittedRootEvents", events,
+                    value.emittedRootEvents());
+            for (int eventIndex = 0;
+                    eventIndex < value.emittedRootEvents().size();
+                    eventIndex++) {
+                JsonNode event = events.get(eventIndex);
+                ManagedRootEventOccurrence occurrence =
+                        value.emittedRootEvents().get(eventIndex);
+                String eventPath = path + ".emittedRootEvents["
+                        + eventIndex + "]";
+                assertEquals(requiredLong(event, "ordinal"),
+                        occurrence.ordinal(), eventPath + ".ordinal");
+                assertEquals(requiredLong(event, "occurrenceOrdinal"),
+                        occurrence.occurrenceOrdinal(),
+                        eventPath + ".occurrenceOrdinal");
+                assertEquals(requiredText(event, "sourceDocumentId"),
+                        occurrence.sourceDocumentId().value(),
+                        eventPath + ".sourceDocumentId");
+                assertEquals(requiredText(event, "occurrenceIdentity"),
+                        occurrence.occurrenceIdentity(),
+                        eventPath + ".occurrenceIdentity");
+                assertEquals(requiredText(event, "eventBlueId"),
+                        occurrence.eventBlueId(),
+                        eventPath + ".eventBlueId");
+                assertEquals(required(event, "exactEvent"),
+                        wire(occurrence.exactEvent()),
+                        eventPath + ".exactEvent");
+                assertEquals(requiredBoolean(event, "publicAtSource"),
+                        occurrence.publicAtSource(),
+                        eventPath + ".publicAtSource");
+            }
+            assertEquals(requiredText(
+                            item, "emittedRootEventsIdentity"),
+                    value.emittedRootEventsIdentity(),
+                    path + ".emittedRootEventsIdentity");
+            assertEquals(requiredLong(item, "admittedGas"),
+                    value.admittedGas(), path + ".admittedGas");
+        }
     }
 
     private static void assertOptionalCommitCompanion(
