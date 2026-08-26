@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "receiptType": "MANAGED_TRANSITION_RECEIPT_CONTRACTS_SOURCE_CHECKPOINT",
+  "status": "SOURCE_CHECKPOINT_PASS_RELEASE_REBIND_PENDING",
+  "createdAtUtc": "2026-08-26T19:31:09Z",
+  "branch": "feat/managed-epoch-receipts",
+  "worktree": "/private/tmp/blue-language-managed-epoch-rc22",
+  "published": false,
+  "deployed": false,
+  "mavenLocalUsed": false,
+  "publishedCoordinatesOverwritten": false,
+  "sourceCustody": {
+    "publishedBaselineCoordinate": "blue.language:blue-contracts-core:3.1.0-rc.22",
+    "publishedBaselineCommit": "cf8f4242b41e25d67606a5dfd58a7e5ba61f39bf",
+    "publishedBaselineTree": "7ed4106215c83dc8beed6220b166020ded8db2d5",
+    "publishedRuntimeJarSha256": "7c5abb3c87273f640dcc9754d43c1a6f5f1fcb85605ed496d35c2514304031d6",
+    "publishedSourcesJarSha256": "d678b8f462933bc1358f8439c09bf756d3bea6bba2ba5fa9aa13b5b0394c5477",
+    "publishedSourcesMatchBaselineCheckout": true,
+    "semanticSourceUnderTestCommit": "889a3fcae1f76d00c27248a7b9f1538b5c2cdd8e",
+    "semanticSourceUnderTestTree": "e8ede9c85f87bfa09e7e44828faa9de1d36b0f9c",
+    "semanticSourceCommittedAtUtc": "2026-08-26T19:30:23Z",
+    "receiptCommitIsNotSemanticSourceUnderTest": true
+  },
+  "commitSequence": [
+    {
+      "commit": "9ec3d11",
+      "subject": "feat(contracts): expose complete managed transition receipts"
+    },
+    {
+      "commit": "f4e0a8c",
+      "subject": "test(contracts): conform managed receipt and revision delivery"
+    },
+    {
+      "commit": "889a3fc",
+      "subject": "docs(contracts): specify managed transition receipts"
+    }
+  ],
+  "scope": {
+    "blueLanguageValueModelChanged": false,
+    "blueLanguageCoreChanged": false,
+    "blueLanguageMappingChanged": false,
+    "blueIdSemanticsChanged": false,
+    "bexChanged": false,
+    "repositorySemanticsChanged": false,
+    "contractsProcessorChanged": true,
+    "coordinationChanged": false,
+    "myosChanged": false,
+    "productionChangesConfinedToBlueContractsCore": true
+  },
+  "implementationClaims": {
+    "completeManagedTransitionReceiptsSupported": true,
+    "completeNonPublicRootEventsSupported": true,
+    "duplicateEventOccurrencesPreserved": true,
+    "eventOnlyTransitionsSupported": true,
+    "stateOnlyTransitionsSupported": true,
+    "statePlusEventTransitionsSupported": true,
+    "cyclicMemberReceiptsSupported": true,
+    "rollbackReturnsNoReceipts": true,
+    "runtimeFailureReturnsNoReceipts": true,
+    "commitCompanionBindsReceiptAggregate": true,
+    "managedRevisionVerifiesTypedSourceReceipt": true,
+    "managedRevisionDeliversThroughNamedOccurrence": true,
+    "sourceDocumentReprocessedDuringManagedRevision": false,
+    "sourceEventsRepublishedDuringManagedRevision": false,
+    "ordinaryParentReactionProcessingPreserved": true,
+    "publicEventApiCompatibilityPreserved": true,
+    "legacyStateOnlyManagedRevisionCompatibilityPreserved": true,
+    "java8Compatible": true
+  },
+  "identityDomains": {
+    "managedTransitionOccurrence": "blue-contracts-managed-transition-occurrence/1.0",
+    "managedRootEvents": "blue-contracts-managed-root-events/1.0",
+    "managedDocumentTransitionReceipt": "blue-contracts-managed-document-transition-receipt/1.0",
+    "managedDocumentTransitionReceipts": "blue-contracts-managed-document-transition-receipts/1.0",
+    "commitCompanionWithManagedTransitions": "blue-contracts-platform-commit-companion/1.1",
+    "legacyCommitCompanionRetained": "blue-contracts-platform-commit-companion/1.0"
+  },
+  "gasPartition": {
+    "receiptSequenceNonEmptyImpliesSumEqualsClosureTotalGas": true,
+    "matchingDocumentRowsRemainWithReceiptDocument": true,
+    "invocationOwnedRowsAssignedToFirstCanonicalReceipt": true,
+    "rowsForDocumentsWithoutReceiptsAssignedToFirstCanonicalReceipt": true,
+    "noTraceRowOmittedOrCountedTwice": true
+  },
+  "gates": [
+    {
+      "name": "focused receipt and lifecycle tests",
+      "task": ":blue-contracts-core:test --tests FullLifecycleAdmissionTest --tests ManagedTransitionReceiptTest",
+      "tests": 31,
+      "failures": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "blue-contracts-core full tests",
+      "task": ":blue-contracts-core:test",
+      "suites": 43,
+      "tests": 304,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "blue-contracts-core module check",
+      "task": ":blue-contracts-core:check",
+      "includes": [
+        "Javadocs with warnings as errors",
+        "public API inventory and additive baseline check",
+        "reproducible runtime, sources, and Javadoc archives",
+        "Java package-cycle verification",
+        "module tests"
+      ],
+      "status": "PASS"
+    },
+    {
+      "name": "Java 8 bytecode",
+      "class": "blue.language.processor.closure.ManagedDocumentTransitionReceipt",
+      "majorVersion": 52,
+      "status": "PASS"
+    },
+    {
+      "name": "git diff check",
+      "command": "git diff --check",
+      "status": "PASS"
+    },
+    {
+      "name": "blue-conformance full tests",
+      "task": ":blue-conformance:test",
+      "tests": 162,
+      "failures": 53,
+      "status": "FAIL_EXPECTED_STALE_RELEASE_EVIDENCE",
+      "observedCause": "Released closure fixtures still assert Contracts 1.0 platformCommitCompanion identities; genuine results now intentionally bind the managed-transition aggregate with the 1.1 constructor.",
+      "requiredFollowUp": "Rebind portable fixture/spec/constructor-registry evidence before the final Contracts release checkpoint."
+    },
+    {
+      "name": "release conformance and final RC gates",
+      "status": "PENDING_CONFORMANCE_REBIND_AND_IMMUTABLE_STAGE"
+    }
+  ],
+  "evidence": {
+    "contractsSpecificationSha256": "637c5e94aee20c1f8a5bfec4df0b37e8b4209c6455f430239f49664727f909e8",
+    "publicApiInventorySha256": "6176c288c89e2475b028da5afb356386962f1ecad88945538c09bd0750025313",
+    "provisionalBlueContractsCoreRc23JarSha256": "6198aa771910633656ce31c73d573522fb336ef594768b8d69a4a8149fdba3fd",
+    "provisionalJarJavaMajorVersion": 52,
+    "changedFilesManifest": "changed-files.sha256",
+    "changedFilesManifestEntries": 15,
+    "changedFilesManifestSha256": "a06e9949e1705e65e5e26be7d2007ac4fa4d3cf996d214c53260ddbe3f366a7e",
+    "changedFilesManifestVerified": true
+  },
+  "immutableStage": {
+    "status": "PENDING",
+    "expectedVersion": "3.1.0-rc.23",
+    "invocationOwned": true,
+    "immutable": true,
+    "mavenLocalForbidden": true,
+    "remoteFallbackForStagedBlueLanguageGroupForbidden": true,
+    "repositoryPath": null,
+    "artifactManifestSha256": null
+  },
+  "checkpoint": {
+    "phase1ImplementationComplete": true,
+    "phase1SourceCheckpointComplete": true,
+    "phase1FinalReleaseCheckpointComplete": false,
+    "pendingItems": [
+      "portable conformance evidence rebind",
+      "release conformance and final quality gates",
+      "immutable invocation-owned Maven stage receipt"
+    ]
+  }
+}
