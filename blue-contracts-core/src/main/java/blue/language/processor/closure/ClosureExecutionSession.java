@@ -2815,7 +2815,14 @@ final class ClosureExecutionSession
                 binding.sourcePath());
         ManagedDocumentSnapshot child = currentSnapshot.managedDocument(
                 revision.childDocumentId());
-        String installedBlueId = activateManagedRevision
+        // Imported receipt events may finalize their containing document
+        // after this occurrence has already reached the authoritative head.
+        // Those later boundaries must retain, rather than replay, activation.
+        boolean retainsCompletedActivation =
+                managedRevisionActivationCompleted && binding.active();
+        boolean caughtUp = activateManagedRevision
+                || retainsCompletedActivation;
+        String installedBlueId = caughtUp
                 ? child.blueId()
                 : revision.afterBlueId();
         if (value == null
@@ -2825,7 +2832,6 @@ final class ClosureExecutionSession
                     "Managed-revision patch did not install its exact "
                             + "historical successor reference");
         }
-        boolean caughtUp = activateManagedRevision;
         if (caughtUp && revision.toEpoch() != child.epoch()) {
             throw new IllegalStateException(
                     "Managed-revision activation precedes the authoritative "
