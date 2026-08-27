@@ -169,7 +169,7 @@ constructors:
         fromEpoch: Exact pending historical cursor before this source revision; either a non-negative safe integer or exactly -1 for the authored pre-initialization state.
         toEpoch: Exactly fromEpoch plus 1 and always a non-negative safe integer.
         beforeBlueId: Exact authenticated child state at fromEpoch.
-        afterBlueId: Exact authenticated child state at toEpoch; the ManagedRevisionCause afterDocument independently establishes this identity.
+        afterBlueId: Exact authenticated child state at toEpoch; ManagedRevisionCause establishes a plain identity directly from afterDocument or a cyclic MASTER#n identity from afterDocument plus its complete independently verified afterCyclicProof.
         originalSourceCauseIdentity: Exact externalCauseIdentity or admissionCauseIdentity recorded by the authoritative source revision; never the local catch-up invocation identity.
   managedTransitionOccurrenceIdentity:
     domain: blue-contracts-managed-transition-occurrence/1.0
@@ -218,6 +218,7 @@ constructors:
         targetOccurrenceIdentity: Exact inactive prospective occurrence whose targetDocumentId is childDocumentId and whose pendingHistoricalEpoch is fromEpoch.
         fromEpoch: Either a non-negative safe integer or exactly -1 for the authored pre-initialization state.
         toEpoch: Exactly fromEpoch plus 1 and always a non-negative safe integer.
+        afterBlueId: Exact authenticated successor. A complete cyclic proof is required exactly for MASTER#n and is witness evidence outside this constructor because the verified afterBlueId already binds the member.
         sourceRevisionReceiptIdentity: Recomputed sourceRevisionReceiptIdentity whose repeated child, epoch, state and original-source-cause fields exactly equal this cause.
   admissionCandidateIdentity:
     domain: blue-contracts-admission-candidate/1.0

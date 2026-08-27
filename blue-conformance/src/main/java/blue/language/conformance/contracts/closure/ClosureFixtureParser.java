@@ -427,7 +427,30 @@ final class ClosureFixtureParser {
                 ClosureFixtureInventory.requiredText(
                         cause, "originalSourceCauseIdentity"),
                 ClosureFixtureInventory.requiredText(
-                        cause, "sourceRevisionReceiptIdentity"));
+                        cause, "sourceRevisionReceiptIdentity"),
+                parseManagedRevisionCyclicProof(cause));
+    }
+
+    private static CyclicSetProof parseManagedRevisionCyclicProof(
+            JsonNode cause) {
+        JsonNode value = cause.get("afterCyclicProof");
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        if (!value.isObject()) {
+            throw new IllegalArgumentException(
+                    "afterCyclicProof must be an object");
+        }
+        ArrayList<Node> placeholders = new ArrayList<Node>();
+        for (JsonNode placeholder : ClosureFixtureInventory.requiredArray(
+                value, "declaredPlaceholderSet")) {
+            placeholders.add(node(placeholder));
+        }
+        if (placeholders.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "afterCyclicProof must contain at least one member");
+        }
+        return CyclicSetProof.fromDeclaredPlaceholderSet(placeholders);
     }
 
     private static List<DirectLogicalDelivery> parseDirectDeliveries(

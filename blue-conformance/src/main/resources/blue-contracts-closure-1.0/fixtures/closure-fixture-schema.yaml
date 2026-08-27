@@ -83,6 +83,16 @@ allOf:
           directDeliveries: {maxItems: 0}
 $defs:
   blueValue: {}
+  cyclicSetProof:
+    description: Complete ordered placeholder evidence for one cyclic set; the managed-revision verifier independently establishes the body, master BlueId, and member suffix.
+    type: object
+    additionalProperties: false
+    required: [declaredPlaceholderSet]
+    properties:
+      declaredPlaceholderSet:
+        type: array
+        minItems: 1
+        items: {$ref: '#/$defs/blueValue'}
   sha256Identity: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
   blueId: {type: string, pattern: '^[1-9A-HJ-NP-Za-km-z]+(?:#(?:0|[1-9][0-9]*))?$'}
   nullableSha256Identity:
@@ -348,8 +358,18 @@ $defs:
         beforeBlueId: {$ref: '#/$defs/blueId'}
         afterBlueId: {$ref: '#/$defs/blueId'}
         afterDocument: {$ref: '#/$defs/blueValue'}
+        afterCyclicProof: {$ref: '#/$defs/cyclicSetProof'}
         originalSourceCauseIdentity: {$ref: '#/$defs/sha256Identity'}
         sourceRevisionReceiptIdentity: {$ref: '#/$defs/sha256Identity'}
+      allOf:
+      - if:
+          properties:
+            afterBlueId: {pattern: '#(?:0|[1-9][0-9]*)$'}
+          required: [afterBlueId]
+        then:
+          required: [afterCyclicProof]
+        else:
+          not: {required: [afterCyclicProof]}
   candidateCyclicMember:
     type: object
     additionalProperties: false

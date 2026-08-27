@@ -867,6 +867,7 @@ ManagedRevisionCause {
     beforeBlueId
     afterBlueId
     afterDocument
+    afterCyclicProof?            # required exactly for a cyclic MASTER#n successor
     originalSourceCauseIdentity
     sourceRevisionReceiptIdentity
     sourceTransitionReceipt?       # complete receipt when source-event delivery is required
@@ -879,9 +880,20 @@ step; `toEpoch` MUST equal `fromEpoch + 1` within the safe-integer range.
 `fromEpoch` is either a non-negative managed epoch or exactly `-1` for the
 authored pre-initialization cursor; `toEpoch` is always non-negative. Thus the
 only transition out of the sentinel is `-1 -> 0`.
-`afterDocument` MUST independently establish `afterBlueId`, and both BlueIds
-MUST denote `childDocumentId` under the selected managed-document identity
-policy. `targetOccurrenceIdentity` MUST name exactly one input row whose
+For a plain successor, `afterDocument` MUST independently establish
+`afterBlueId` through ordinary direct BlueId calculation and
+`afterCyclicProof` MUST be absent. For a cyclic `MASTER#n` successor,
+`afterCyclicProof` MUST be one complete cyclic-set proof and MUST be present;
+ordinary direct hashing of the materialized member body is not equivalent.
+Contracts independently verifies that proof through the Blue Language cyclic
+provider boundary, recomputes its master and canonical member suffix, and
+requires the resolved exact member body to equal `afterDocument`. A missing,
+extra, incomplete, mismatched-master, out-of-range-suffix, or body-mismatched
+proof fails before mutation. The proof is immutable witness evidence and is
+not an additional cause-identity field: the authenticated `afterBlueId`
+already binds the verified cyclic member. In both forms the before/after
+BlueIds MUST denote `childDocumentId` under the selected managed-document
+identity policy. `targetOccurrenceIdentity` MUST name exactly one input row whose
 `targetDocumentId` is `childDocumentId`, whose `active` field is false, whose
 `pendingHistoricalEpoch` equals `fromEpoch`, and whose exact source-path value
 is `beforeBlueId`.
@@ -1584,8 +1596,11 @@ non-negative safe integer. The receipt is recomputed first from authenticated so
 revision evidence. The managed cause repeats and revalidates its receipt fields,
 adds the one containing occurrence that will be changed, and hashes the exact
 receipt identity. `afterDocument` is required cause evidence and MUST establish
-`afterBlueId`; it is not duplicated in either constructor because its BlueId
-already binds the complete semantic node. A receipt mismatch, a different
+`afterBlueId` by the ordinary direct path for a plain successor or by the
+complete independently verified cyclic proof for a `MASTER#n` successor. The
+proof is required exactly for the latter and is not duplicated in either
+identity constructor because the verified member BlueId already binds the
+complete semantic node. A receipt mismatch, a different
 original cause, a noncontiguous epoch, or a before/after state mismatch fails
 before processor-managed mutation.
 
@@ -3435,7 +3450,9 @@ For closure operations:
 12. Check terminated public/direct target state.
 13. For ManagedRevisionCause, additionally recompute the source revision
     receipt and managed-revision cause identities; prove one contiguous safe
-    epoch; establish afterDocument -> afterBlueId; verify the named inactive
+    epoch; establish afterDocument -> afterBlueId through ordinary direct
+    identity for a plain successor or an independently verified complete
+    cyclic proof for a `MASTER#n` successor; verify the named inactive
     occurrence, cursor, before path value, target lineage, and current
     authoritative target epoch; reject a stale, skipped, duplicated, future, or
     already-active step before mutation.
@@ -3647,7 +3664,13 @@ For a `ManagedRevisionCause`, Phase D instead performs exactly this sequence:
    establishing `afterBlueId` (normally the pure reference
    `{ blueId: afterBlueId }`). `afterDocument` is the complete cause evidence
    that independently establishes that identity; it need not be inlined at the
-   source path;
+   source path. A cyclic successor first retains the ordinary resolved-body
+   identity admission charge, then charges the proof's preliminary ZERO-member
+   identities, canonical stable ordering and comparisons, canonical members,
+   and master fold through the same Language formulas used by normal cyclic
+   finalization. This historical witness creates no tentative component,
+   component-finalization owner, `cyclicMemberFinalized` charge, or component
+   receipt;
 4. at that step's immediate after-patch reconciliation boundary, charge
    `containingReferenceUpdated`, update `expectedTargetBlueId`, recompute
    `bindingIdentity`, set `pendingHistoricalEpoch = toEpoch`, retain
@@ -3858,7 +3881,7 @@ The invocation-local established-exact-node ledger begins empty. A node becomes 
 
 For `cyclicCanonicalBytesPerComponent`, the measured byte sequence is the UTF-8 RFC 8785 encoding of a representation-normalized cyclic limit form. Begin with the final member order and canonical `this#n` remapping used by the unchanged Blue Language §15 calculation. Within each member, retain each internal `this#n` reference, every object/list container on a path to such a reference, and every complete direct literal member (`name`, `description`, or `value`). Replace each complete non-literal child subtree that is not on an internal-reference path with the pure exact reference `{ "blueId": CHILD }`, where `CHILD` is that subtree's ordinary exact BlueId. Canonically encode the resulting ordered member list.
 
-This byte-limit form is identical for semantically equal inline and exact-reference representations. It is a Contracts accounting projection only: it does not change the actual Blue Language cyclic input or identity result. Count it once per tentative cyclic-component finalization. Preliminary ZERO forms, final member suffix strings, materialized `MASTER#index` substitutions, proof serialization, and containing-document reconstruction are excluded. They remain subject to gas and other direct-node limits.
+This byte-limit form is identical for semantically equal inline and exact-reference representations. It is a Contracts accounting projection only: it does not change the actual Blue Language cyclic input or identity result. Count it once per tentative cyclic-component finalization. A historical cyclic successor supplied by `ManagedRevisionCause` is not a new component finalization, but its complete witness is measured once by this same projection before witness hashing or containing-reference work. Preliminary ZERO forms, final member suffix strings, materialized `MASTER#index` substitutions, proof serialization, and containing-document reconstruction are excluded from the byte measure. They remain subject to gas and other direct-node limits.
 
 ### 7.8 Dynamic graph reclassification
 
@@ -5582,7 +5605,7 @@ For each closure-specific limit, the conformance package contains: (a) an exact 
 
 Generated structural cases are normative input constructions, not trusted numeric assertions: the harness expands the declared generator and independently measures the resulting semantic structure. Counts are based on unique semantic occurrences after deterministic deduplication and before the disallowed work begins.
 
-For `cyclicCanonicalBytesPerComponent`, the measured bytes are exactly the ordered collapsed limit form defined in §7.7 and the gas manifest, independently of whether the collapsed or full canonical placeholder set is retained as complete proof. The byte limit is checked after canonical `this#n` remapping and before hashing or any temporary state becomes visible.
+For `cyclicCanonicalBytesPerComponent`, the measured bytes are exactly the ordered collapsed limit form defined in §7.7 and the gas manifest, independently of whether the collapsed or full canonical placeholder set is retained as complete proof. The byte limit is checked after canonical `this#n` remapping and before hashing or any temporary state becomes visible. The same check applies once to the complete historical proof carried for a cyclic managed-revision successor; that proof does not increment a tentative-finalization counter or create component ownership.
 
 A remove followed by add is two graph changes. One SCC merge or split result is one `componentPartitionChanged` charge but its constituent edge changes retain individual graph-change counts. Rejected work does not increment a counter whose charge was not admitted.
 
