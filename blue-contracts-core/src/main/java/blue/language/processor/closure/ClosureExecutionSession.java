@@ -979,8 +979,7 @@ final class ClosureExecutionSession
         if (shouldActivateManagedRevision(frame.work)) {
             ArrayList<FinalizationUpdate> combined =
                     new ArrayList<FinalizationUpdate>(generatedUpdates);
-            combined.addAll(activateManagedRevision(
-                    frame.work, admitted));
+            combined.addAll(activateManagedRevision(frame.work));
             generatedUpdates = Collections.unmodifiableList(combined);
         }
         synchronizeManagedReferences(
@@ -1476,8 +1475,7 @@ final class ClosureExecutionSession
     }
 
     private List<FinalizationUpdate> activateManagedRevision(
-            ClosureWorkOccurrence work,
-            Node runtimeDocument) {
+            ClosureWorkOccurrence work) {
         ManagedRevisionCause revision =
                 (ManagedRevisionCause) input.cause();
         ManagedOccurrenceBinding target = managedRevisionTarget(revision);
@@ -1485,6 +1483,9 @@ final class ClosureExecutionSession
                 revision.childDocumentId());
         Node authoritativeReference = new Node().blueId(child.blueId());
         Map<DocumentId, Node> beforeActivation = cloneBodies(latestBodies);
+        Node activatedSource = Objects.requireNonNull(
+                latestBodies.get(target.sourceDocumentId()),
+                "managed revision activation source").clone();
         charge(
                 "processor",
                 "containingReferenceUpdated",
@@ -1495,11 +1496,11 @@ final class ClosureExecutionSession
                         true,
                         "managed-revision.authoritative-reconciliation"));
         NodePathEditor.put(
-                runtimeDocument,
+                activatedSource,
                 target.sourcePath(),
                 authoritativeReference.clone());
         latestBodies.put(
-                target.sourceDocumentId(), runtimeDocument.clone());
+                target.sourceDocumentId(), activatedSource);
         activateManagedRevision = true;
         try {
             return finalizeTentative(
@@ -2613,11 +2614,12 @@ final class ClosureExecutionSession
 
         /*
          * Finalizer-owned changes normally advance the changed document's
-         * epoch.  The sole work-boundary exception is the authoritative
-         * target of an inactive historical row while the current source work
-         * reconciles that exact row.  Its containing/reference churn is
-         * representation-only evidence of the historical cursor advancing;
-         * the authoritative target head itself did not advance.
+         * epoch.  A managed-revision boundary may retain the authoritative
+         * source epoch only when the final body delta is completely explained
+         * below by active occurrence-reference re-encoding.  This applies
+         * while reconciling the selected historical row and, after activation,
+         * while delivering that source receipt's exact imported event.  Local
+         * source work and every unexplained finalizer change remain strict.
          */
         boolean reconcilesHistoricalRow = false;
         for (ManagedOccurrenceBinding binding
@@ -2645,7 +2647,11 @@ final class ClosureExecutionSession
                 break;
             }
         }
-        if (!reconcilesHistoricalRow) {
+        boolean deliversImportedSourceReceipt =
+                isImportedManagedRevisionSourceReceiptBoundary(
+                        documentId, owner);
+        if (!reconcilesHistoricalRow
+                && !deliversImportedSourceReceipt) {
             return true;
         }
 
@@ -2655,8 +2661,9 @@ final class ClosureExecutionSession
                 : bindingsBeforeFinalization) {
             if (!binding.active()
                     || !binding.sourceDocumentId().equals(documentId)
-                    || !binding.targetDocumentId().equals(
-                            owner.targetDocumentId())) {
+                    || (!deliversImportedSourceReceipt
+                            && !binding.targetDocumentId().equals(
+                                    owner.targetDocumentId()))) {
                 continue;
             }
             Node before = NodePathEditor.getOrNull(
@@ -2675,6 +2682,22 @@ final class ClosureExecutionSession
         }
         return !reencodedCurrentSource
                 || !sameNode(explained, finalizedBodies.get(documentId));
+    }
+
+    private boolean isImportedManagedRevisionSourceReceiptBoundary(
+            DocumentId documentId,
+            ClosureWorkOccurrence owner) {
+        if (!(input.cause() instanceof ManagedRevisionCause)
+                || !managedRevisionActivationCompleted
+                || importedManagedEventDeliveryDepth <= 0
+                || owner.kind() != WorkKind.EMBEDDED_EVENT) {
+            return false;
+        }
+        ManagedRevisionCause revision =
+                (ManagedRevisionCause) input.cause();
+        return documentId.equals(revision.childDocumentId())
+                && !documentId.equals(owner.targetDocumentId())
+                && isExactManagedRevisionReceiptEvent(owner, revision);
     }
 
     private void drainDocumentUpdateRoutes(

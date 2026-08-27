@@ -46,6 +46,7 @@ final class FullLifecycleAdmissionTest {
 
     private static final DocumentId A = new DocumentId("a");
     private static final DocumentId B = new DocumentId("b");
+    private static final DocumentId C = new DocumentId("c");
 
     private static final Node HANDLER_TYPE =
             new Node().name("Full lifecycle admission test Handler");
@@ -667,6 +668,17 @@ final class FullLifecycleAdmissionTest {
                     scenario.receiptAfterBlueId,
                     document(result, B).afterBlueId(),
                     "the fixture must exercise a same-epoch representation");
+            assertEquals(
+                    scenario.input.snapshot().managedDocument(B).epoch(),
+                    document(result, B).epoch(),
+                    "an imported receipt event may re-encode the retained "
+                            + "source's cyclic reference without creating "
+                            + "another source epoch");
+            assertEquals(
+                    scenario.input.snapshot().managedDocument(A).epoch() + 1L,
+                    document(result, A).epoch(),
+                    "the directly processed containing document remains "
+                            + "strictly epoch-advancing");
             assertEquals(Boolean.TRUE,
                     document(result, A).document().get("/observed"));
             assertTrue(result.resultingComponents().stream()
@@ -680,6 +692,84 @@ final class FullLifecycleAdmissionTest {
                     .findFirst().orElseThrow(AssertionError::new);
             assertTrue(activated.active());
             assertNull(activated.pendingHistoricalEpoch());
+        }
+    }
+
+    @Test
+    void managedRevisionActivationPreservesFinalizedCyclicSideReferences() {
+        ProbeProcessor probe = new ProbeProcessor();
+        final Map<String, Node> exactNodes =
+                new LinkedHashMap<String, Node>();
+        NodeProvider retainedHistory = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                Node found = exactNodes.get(blueId);
+                return found == null
+                        ? Collections.<Node>emptyList()
+                        : Collections.singletonList(found.clone());
+            }
+        };
+        try (DocumentProcessor owner = owner(probe, retainedHistory)) {
+            ClosureInvocationInput input =
+                    managedCyclicSideActivationScenario(owner, exactNodes);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner)) {
+                attempt = contracts.processClosure(input);
+            }
+
+            assertEquals(ClosureAttemptResult.Kind.COMPLETE, attempt.kind());
+            assertTrue(attempt.resourceDemands().isEmpty());
+            assertTrue(attempt.requiredExactBlueIds().isEmpty());
+            ClosureProcessResult result = attempt.processResult();
+            assertSuccess(result);
+
+            ResultingDocument parent = document(result, A);
+            ResultingDocument peer = document(result, B);
+            ResultingDocument source = document(result, C);
+            assertNotEquals(
+                    input.snapshot().managedDocument(A).blueId(),
+                    parent.afterBlueId(),
+                    "the source replacement must re-finalize the parent "
+                            + "cycle member before activation");
+            assertNotEquals(
+                    input.snapshot().managedDocument(B).blueId(),
+                    peer.afterBlueId(),
+                    "the source replacement must re-finalize the peer "
+                            + "cycle member before activation");
+            assertEquals(peer.afterBlueId(), NodePathEditor.getOrNull(
+                    parent.document(), "/peer").getBlueId());
+            assertEquals(parent.afterBlueId(), NodePathEditor.getOrNull(
+                    peer.document(), "/parent").getBlueId());
+            assertEquals(source.afterBlueId(), NodePathEditor.getOrNull(
+                    parent.document(), "/source").getBlueId());
+            assertTrue(result.occurrenceBindings().stream()
+                    .anyMatch(binding -> binding.active()
+                            && binding.sourceDocumentId().equals(A)
+                            && binding.sourcePath().equals("/peer")
+                            && binding.targetDocumentId().equals(B)));
+            assertTrue(result.occurrenceBindings().stream()
+                    .anyMatch(binding -> binding.active()
+                            && binding.sourceDocumentId().equals(B)
+                            && binding.sourcePath().equals("/parent")
+                            && binding.targetDocumentId().equals(A)));
+            assertTrue(result.occurrenceBindings().stream()
+                    .anyMatch(binding -> binding.active()
+                            && binding.sourceDocumentId().equals(A)
+                            && binding.sourcePath().equals("/source")
+                            && binding.targetDocumentId().equals(C)
+                            && binding.pendingHistoricalEpoch() == null));
+            assertTrue(result.resultingComponents().stream()
+                    .anyMatch(component -> component.kind()
+                            == ComponentKind.CYCLIC
+                            && component.orderedMemberDocumentIds()
+                                    .equals(Arrays.asList(A, B))));
+            ManagedDocumentSnapshot retainedSource =
+                    input.snapshot().managedDocument(C);
+            assertEquals(retainedSource.blueId(), source.afterBlueId());
+            assertEquals(retainedSource.epoch(), source.epoch());
+            assertNodeEquals(retainedSource.document(), source.document());
         }
     }
 
@@ -2395,6 +2485,139 @@ final class FullLifecycleAdmissionTest {
                 input, receiptAfterBlueId);
     }
 
+    private static ClosureInvocationInput
+    managedCyclicSideActivationScenario(
+            DocumentProcessor owner,
+            Map<String, Node> exactNodes) {
+        ClosureEnvironment environment = environment(owner);
+
+        Node authoredSource = new Node()
+                .name("Retained side-cycle source")
+                .properties("revision", new Node().value(BigInteger.ZERO));
+        String authoredSourceBlueId = blueId(authoredSource);
+        Node sourceBefore = authoredSource.clone();
+        installInitializedMarker(sourceBefore, authoredSourceBlueId);
+        String sourceBeforeBlueId = blueId(sourceBefore);
+        Node sourceAfter = sourceBefore.clone();
+        NodePathEditor.put(
+                sourceAfter,
+                "/revision",
+                new Node().value(BigInteger.ONE));
+        String sourceAfterBlueId = blueId(sourceAfter);
+
+        Node parentPlaceholder = new Node()
+                .name("Managed activation cycle parent")
+                .properties("peer", new Node().blueId("this#1"))
+                .properties(
+                        "source", new Node().blueId(sourceBeforeBlueId))
+                .contracts(new Node().properties(
+                        "embedded", processEmbedded("/peer", "/source")));
+        Node peerPlaceholder = new Node()
+                .name("Managed activation cycle peer")
+                .properties("parent", new Node().blueId("this#0"))
+                .contracts(new Node().properties(
+                        "embedded", processEmbedded("/parent")));
+        CyclicSetFinalization authoredCycle =
+                new CircularSetIdentityCalculator().finalizeCyclicSet(
+                        Arrays.asList(parentPlaceholder, peerPlaceholder));
+        List<String> authoredCycleIds = canonicalBlueIds(authoredCycle);
+        Node authoredParent = authoredCycle.membersInInputOrder().get(0)
+                .canonicalMemberBody();
+        Node authoredPeer = authoredCycle.membersInInputOrder().get(1)
+                .canonicalMemberBody();
+        materializeThis(authoredParent, authoredCycleIds);
+        materializeThis(authoredPeer, authoredCycleIds);
+        String authoredParentBlueId = authoredCycle
+                .membersInInputOrder().get(0).finalBlueId();
+        String authoredPeerBlueId = authoredCycle
+                .membersInInputOrder().get(1).finalBlueId();
+        Node parent = authoredParent.clone();
+        Node peer = authoredPeer.clone();
+        installInitializedMarker(parent, authoredParentBlueId);
+        installInitializedMarker(peer, authoredPeerBlueId);
+
+        ManagedOccurrenceBinding peerBinding =
+                ManagedOccurrenceBinding.derived(
+                        environment.managedBindingPolicyIdentity(),
+                        A,
+                        ScopeAddress.embedded("/peer", 1L),
+                        B,
+                        NodePathEditor.getOrNull(
+                                parent, "/peer").getBlueId(),
+                        true,
+                        null);
+        ManagedOccurrenceBinding parentBinding =
+                ManagedOccurrenceBinding.derived(
+                        environment.managedBindingPolicyIdentity(),
+                        B,
+                        ScopeAddress.embedded("/parent", 1L),
+                        A,
+                        NodePathEditor.getOrNull(
+                                peer, "/parent").getBlueId(),
+                        true,
+                        null);
+        ManagedOccurrenceBinding historicalSource =
+                ManagedOccurrenceBinding.derived(
+                        environment.managedBindingPolicyIdentity(),
+                        A,
+                        ScopeAddress.embedded("/source", 1L),
+                        C,
+                        sourceBeforeBlueId,
+                        false,
+                        Long.valueOf(0L));
+        AffectedClosureSnapshot snapshot = initializedSnapshot(
+                finalizedSnapshot(
+                        bodies(
+                                A, parent,
+                                B, peer,
+                                C, sourceAfter),
+                        Arrays.asList(
+                                peerBinding,
+                                parentBinding,
+                                historicalSource),
+                        Collections.singletonList(A)),
+                4L,
+                1L);
+
+        ManagedDocumentTransitionReceipt sourceReceipt =
+                ManagedDocumentTransitionReceipt.identified(
+                        hash('e'),
+                        0L,
+                        C,
+                        hash('f'),
+                        sourceBeforeBlueId,
+                        sourceAfterBlueId,
+                        Collections.<ManagedRootEventOccurrence>emptyList(),
+                        7L);
+        ManagedRevisionCause cause = ClosureEvidenceFactory
+                .managedRevisionCause(
+                        historicalSource.occurrenceIdentity(),
+                        0L,
+                        1L,
+                        snapshot.managedDocument(C).document(),
+                        sourceReceipt);
+        ClosureInvocationInput input = ClosureEvidenceFactory
+                .processClosure(
+                        snapshot,
+                        cause,
+                        Collections.<DirectLogicalDelivery>emptyList(),
+                        ClosureEvidenceFactory.executionPolicy(
+                                GENEROUS_GAS,
+                                Collections.<DocumentId, Long>emptyMap(),
+                                "managed-cyclic-side-activation-v1"),
+                        environment);
+
+        exactNodes.put(authoredSourceBlueId, authoredSource.clone());
+        exactNodes.put(sourceBeforeBlueId, sourceBefore.clone());
+        exactNodes.put(sourceAfterBlueId, sourceAfter.clone());
+        exactNodes.put(authoredParentBlueId, authoredParent.clone());
+        exactNodes.put(authoredPeerBlueId, authoredPeer.clone());
+        // The input A/B members are intentionally closure-owned only.  If
+        // activation restores either pre-finalization side reference, exact
+        // resource preflight must expose that stale replay as a demand.
+        return input;
+    }
+
     private static CyclicFixture twoMemberCycle(
             ClosureEnvironment environment,
             Node placeholderA,
@@ -2545,6 +2768,19 @@ final class FullLifecycleAdmissionTest {
                 new LinkedHashMap<DocumentId, Node>();
         result.put(firstId, first);
         result.put(secondId, second);
+        return result;
+    }
+
+    private static LinkedHashMap<DocumentId, Node> bodies(
+            DocumentId firstId,
+            Node first,
+            DocumentId secondId,
+            Node second,
+            DocumentId thirdId,
+            Node third) {
+        LinkedHashMap<DocumentId, Node> result = bodies(
+                firstId, first, secondId, second);
+        result.put(thirdId, third);
         return result;
     }
 
