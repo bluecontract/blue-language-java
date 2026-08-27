@@ -214,7 +214,7 @@ final class ContractRefreshService {
                             "Duplicate Channel Event Checkpoint markers detected in same contracts map");
                 }
                 checkpointDeclared = true;
-                restoreExactCheckpointSubjects(
+                restoreExactCheckpointEntries(
                         (ChannelEventCheckpoint) marker,
                         selectedNode);
             }
@@ -224,30 +224,50 @@ final class ContractRefreshService {
         return new RuntimeMarkers(markers, markerNodes, checkpointDeclared);
     }
 
-    private void restoreExactCheckpointSubjects(
+    static void restoreExactCheckpointEntries(
             ChannelEventCheckpoint checkpoint,
             Node selectedCheckpoint) {
+        Map<String, CheckpointEntry> restored = new LinkedHashMap<>();
         Node selectedEntries = selectedCheckpoint != null
                 && selectedCheckpoint.getProperties() != null
                 ? selectedCheckpoint.getProperties().get(
                         ProcessorContractConstants.KEY_ENTRIES)
                 : null;
-        if (selectedEntries == null || selectedEntries.getProperties() == null) {
-            return;
-        }
-        for (Map.Entry<String, Node> selectedEntry
-                : selectedEntries.getProperties().entrySet()) {
-            CheckpointEntry checkpointEntry = checkpoint.entry(selectedEntry.getKey());
-            Node entryNode = selectedEntry.getValue();
-            Node exactSubject = entryNode != null
-                    && entryNode.getProperties() != null
-                    ? entryNode.getProperties().get(
-                            ProcessorContractConstants.KEY_SUBJECT)
-                    : null;
-            if (checkpointEntry != null && exactSubject != null) {
-                checkpointEntry.subject(exactSubject);
+        if (selectedEntries != null
+                && selectedEntries.getProperties() != null) {
+            for (Map.Entry<String, Node> selectedEntry
+                    : selectedEntries.getProperties().entrySet()) {
+                Node entryNode = selectedEntry.getValue();
+                Map<String, Node> entryProperties = entryNode != null
+                        ? entryNode.getProperties() : null;
+                Node exactDomain = entryProperties != null
+                        ? entryProperties.get(
+                                ProcessorContractConstants.KEY_DOMAIN)
+                        : null;
+                Node exactSubject = entryProperties != null
+                        ? entryProperties.get(
+                                ProcessorContractConstants.KEY_SUBJECT)
+                        : null;
+                CheckpointEntry effectiveEntry = exactDomain == null
+                        || exactSubject == null
+                        ? checkpoint.entry(selectedEntry.getKey())
+                        : null;
+                restored.put(
+                        selectedEntry.getKey(),
+                        new CheckpointEntry()
+                                .domain(exactDomain != null
+                                        ? exactDomain
+                                        : effectiveEntry != null
+                                                ? effectiveEntry.getDomain()
+                                                : null)
+                                .subject(exactSubject != null
+                                        ? exactSubject
+                                        : effectiveEntry != null
+                                                ? effectiveEntry.getSubject()
+                                                : null));
             }
         }
+        checkpoint.entries(restored);
     }
 
     interface StructuralBundleLoader {
