@@ -636,6 +636,262 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void managedRevisionEventAcceptsAuthenticatedSameEpochComponentRebind() {
+        ProbeProcessor probe = new ProbeProcessor();
+        final Map<String, Node> exactNodes =
+                new LinkedHashMap<String, Node>();
+        NodeProvider retainedHistory = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                Node found = exactNodes.get(blueId);
+                return found == null
+                        ? Collections.<Node>emptyList()
+                        : Collections.singletonList(found.clone());
+            }
+        };
+        try (DocumentProcessor owner = owner(probe, retainedHistory)) {
+            ManagedComponentRebindScenario scenario =
+                    managedComponentRebindScenario(
+                            owner, exactNodes, true);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner)) {
+                attempt = contracts.processClosure(scenario.input);
+            }
+
+            assertTrue(attempt.isComplete());
+            ClosureProcessResult result = attempt.processResult();
+            assertSuccess(result);
+            assertNotEquals(
+                    scenario.receiptAfterBlueId,
+                    document(result, B).afterBlueId(),
+                    "the fixture must exercise a same-epoch representation");
+            assertEquals(Boolean.TRUE,
+                    document(result, A).document().get("/observed"));
+            assertTrue(result.resultingComponents().stream()
+                    .anyMatch(component -> component.kind()
+                            == ComponentKind.CYCLIC
+                            && component.orderedMemberDocumentIds()
+                                    .equals(Arrays.asList(A, B))));
+            ManagedOccurrenceBinding activated = result
+                    .occurrenceBindings().stream()
+                    .filter(binding -> binding.sourceDocumentId().equals(A))
+                    .findFirst().orElseThrow(AssertionError::new);
+            assertTrue(activated.active());
+            assertNull(activated.pendingHistoricalEpoch());
+        }
+    }
+
+    @Test
+    void managedRevisionEventRejectsUnprovenSameEpochComponentRebind() {
+        ProbeProcessor probe = new ProbeProcessor();
+        final Map<String, Node> exactNodes =
+                new LinkedHashMap<String, Node>();
+        NodeProvider retainedHistory = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                Node found = exactNodes.get(blueId);
+                return found == null
+                        ? Collections.<Node>emptyList()
+                        : Collections.singletonList(found.clone());
+            }
+        };
+        try (DocumentProcessor owner = owner(probe, retainedHistory)) {
+            ManagedComponentRebindScenario scenario =
+                    managedComponentRebindScenario(
+                            owner, exactNodes, false);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner)) {
+                attempt = contracts.processClosure(scenario.input);
+            }
+
+            assertTrue(attempt.isComplete());
+            ClosureProcessResult result = attempt.processResult();
+            assertEquals(ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                    result.status());
+            assertEquals(ProcessorErrorCategory.ManagedOccurrenceBindingMissing,
+                    result.diagnostic().category());
+            assertEquals(
+                    "Imported managed event target no longer proves the source transition",
+                    result.diagnostic().message());
+            assertEquals(0, probe.executionCount,
+                    "unproven source content must fail before event delivery");
+        }
+    }
+
+    @Test
+    void managedRevisionReceiptEventMayRetireItsActivatedOccurrence() {
+        assertManagedRevisionReceiptEventRetirement(false);
+        assertManagedRevisionReceiptEventRetirement(true);
+    }
+
+    private static void assertManagedRevisionReceiptEventRetirement(
+            boolean intermediateEpoch) {
+        ProbeProcessor probe = new ProbeProcessor();
+        Node authoredChild = new Node()
+                .name("Self-retiring retained source")
+                .properties("revision", new Node().value(BigInteger.ZERO));
+        String authoredChildBlueId = blueId(authoredChild);
+        final Node childBefore = authoredChild.clone();
+        installInitializedMarker(childBefore, authoredChildBlueId);
+        final Node childAfter = childBefore.clone();
+        NodePathEditor.put(
+                childAfter,
+                "/revision",
+                new Node().value(BigInteger.ONE));
+        final Node childHead = childAfter.clone();
+        if (intermediateEpoch) {
+            NodePathEditor.put(
+                    childHead,
+                    "/revision",
+                    new Node().value(BigInteger.valueOf(2L)));
+        }
+        final String beforeBlueId = blueId(childBefore);
+        final String afterBlueId = blueId(childAfter);
+        final String headBlueId = blueId(childHead);
+        final String eventBlueId = blueId(EVENT_CHILD);
+        NodeProvider retainedHistory = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                return beforeBlueId.equals(blueId)
+                        ? Collections.singletonList(childBefore.clone())
+                        : afterBlueId.equals(blueId)
+                        ? Collections.singletonList(childAfter.clone())
+                        : headBlueId.equals(blueId)
+                        ? Collections.singletonList(childHead.clone())
+                        : eventBlueId.equals(blueId)
+                        ? Collections.singletonList(EVENT_CHILD.clone())
+                        : Collections.<Node>emptyList();
+            }
+        };
+        try (DocumentProcessor owner = owner(probe, retainedHistory)) {
+            ClosureEnvironment environment = environment(owner);
+            Node authoredParent = new Node()
+                    .name("Self-retiring retained consumer")
+                    .properties("child", new Node().blueId(beforeBlueId))
+                    .properties(
+                            "deliveries", new Node().value(BigInteger.ZERO))
+                    .contracts(new Node()
+                            .properties("embedded", processEmbedded("/child"))
+                            .properties("fromChild", embeddedChannel("/child"))
+                            .properties(
+                                    "catchUpDetach",
+                                    handler("fromChild")));
+            String authoredParentBlueId = blueId(authoredParent);
+            Node parent = authoredParent.clone();
+            installInitializedMarker(parent, authoredParentBlueId);
+            ManagedOccurrenceBinding historical =
+                    ManagedOccurrenceBinding.derived(
+                            environment.managedBindingPolicyIdentity(),
+                            A,
+                            ScopeAddress.embedded("/child", 1L),
+                            B,
+                            beforeBlueId,
+                            false,
+                            Long.valueOf(0L));
+            AffectedClosureSnapshot snapshot = initializedSnapshot(
+                    finalizedSnapshot(
+                            bodies(A, parent, B, childHead),
+                            Collections.singletonList(historical),
+                            Collections.singletonList(A)),
+                    4L,
+                    intermediateEpoch ? 2L : 1L);
+
+            String sourceInvocationIdentity = hash('6');
+            ManagedRootEventOccurrence sourceEvent =
+                    new ManagedRootEventOccurrence(
+                            0L,
+                            0L,
+                            B,
+                            ClosureIdentityService.INSTANCE
+                                    .eventOccurrenceIdentity(
+                                            sourceInvocationIdentity,
+                                            0L,
+                                            eventBlueId),
+                            eventBlueId,
+                            EVENT_CHILD,
+                            false);
+            ManagedRootEventOccurrence duplicateSourceEvent =
+                    new ManagedRootEventOccurrence(
+                            1L,
+                            1L,
+                            B,
+                            ClosureIdentityService.INSTANCE
+                                    .eventOccurrenceIdentity(
+                                            sourceInvocationIdentity,
+                                            1L,
+                                            eventBlueId),
+                            eventBlueId,
+                            EVENT_CHILD,
+                            false);
+            ManagedDocumentTransitionReceipt sourceReceipt =
+                    ManagedDocumentTransitionReceipt.identified(
+                            sourceInvocationIdentity,
+                            0L,
+                            B,
+                            hash('9'),
+                            beforeBlueId,
+                            afterBlueId,
+                            Arrays.asList(sourceEvent, duplicateSourceEvent),
+                            5L);
+            ManagedRevisionCause cause = ClosureEvidenceFactory
+                    .managedRevisionCause(
+                            historical.occurrenceIdentity(),
+                            0L,
+                            1L,
+                            childAfter,
+                            sourceReceipt);
+            ClosureInvocationInput input = ClosureEvidenceFactory
+                    .processClosure(
+                            snapshot,
+                            cause,
+                            Collections.<DirectLogicalDelivery>emptyList(),
+                            ClosureEvidenceFactory.executionPolicy(
+                                    GENEROUS_GAS,
+                                    Collections.<DocumentId, Long>emptyMap(),
+                                    intermediateEpoch
+                                            ? "managed-intermediate-receipt-event-retirement-v1"
+                                            : "managed-final-receipt-event-retirement-v1"),
+                            environment);
+
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner)) {
+                attempt = contracts.processClosure(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            ClosureProcessResult result = attempt.processResult();
+            assertSuccess(result);
+            assertNull(NodePathEditor.getOrNull(
+                    document(result, A).document(), "/child"));
+            assertEquals(BigInteger.valueOf(2L),
+                    document(result, A).document().get("/deliveries"));
+            assertFalse(result.occurrenceBindings().stream()
+                    .anyMatch(binding -> binding.occurrenceIdentity().equals(
+                            historical.occurrenceIdentity())));
+            ManagedOccurrenceBinding retired = result
+                    .occurrenceBindings().stream()
+                    .filter(binding -> binding.sourceDocumentId().equals(A)
+                            && binding.sourcePath().equals("/child"))
+                    .findFirst().orElseThrow(AssertionError::new);
+            assertFalse(retired.active());
+            assertNull(retired.pendingHistoricalEpoch());
+            assertEquals(2L, retired.activationGeneration());
+            assertEquals(snapshot.managedDocument(B).blueId(),
+                    retired.expectedTargetBlueId());
+            assertFalse(result.occurrenceBindings().stream()
+                    .anyMatch(binding -> binding.active()
+                            && binding.sourceDocumentId().equals(A)
+                            && binding.targetDocumentId().equals(B)));
+            assertEquals(2, probe.executionCount);
+        }
+    }
+
+    @Test
     void managedRevisionStillRejectsAnotherTerminatedMember() {
         ProbeProcessor probe = new ProbeProcessor();
         Node authoredChild = new Node()
@@ -2003,6 +2259,142 @@ final class FullLifecycleAdmissionTest {
                 source.publicRootDocumentIds());
     }
 
+    private static ManagedComponentRebindScenario
+    managedComponentRebindScenario(
+            DocumentProcessor owner,
+            Map<String, Node> exactNodes,
+            boolean matchingSourceRepresentation) {
+        ClosureEnvironment environment = environment(owner);
+
+        Node authoredSource = new Node()
+                .name("Same-epoch retained source")
+                .properties("revision", new Node().value(BigInteger.ZERO))
+                .contracts(new Node()
+                        .properties("embedded", processEmbedded("/parent")));
+        String authoredSourceBlueId = blueId(authoredSource);
+        Node sourceBefore = authoredSource.clone();
+        installInitializedMarker(sourceBefore, authoredSourceBlueId);
+        String sourceBeforeBlueId = blueId(sourceBefore);
+
+        Node authoredParent = new Node()
+                .name("Same-epoch retained consumer")
+                .properties(
+                        "child", new Node().blueId(sourceBeforeBlueId))
+                .properties("state", new Node().value("before"))
+                .properties("observed", new Node().value(Boolean.FALSE))
+                .contracts(new Node()
+                        .properties("embedded", processEmbedded("/child"))
+                        .properties("fromChild", embeddedChannel("/child"))
+                        .properties("catchUpReact", handler("fromChild")));
+        String authoredParentBlueId = blueId(authoredParent);
+        Node parentBefore = authoredParent.clone();
+        installInitializedMarker(parentBefore, authoredParentBlueId);
+        String parentBeforeBlueId = blueId(parentBefore);
+        Node currentParent = parentBefore.clone();
+        NodePathEditor.put(
+                currentParent,
+                "/state",
+                new Node().value("current"));
+
+        Node receiptAfter = sourceBefore.clone();
+        NodePathEditor.put(
+                receiptAfter,
+                "/revision",
+                new Node().value(BigInteger.ONE));
+        NodePathEditor.put(
+                receiptAfter,
+                "/parent",
+                new Node().blueId(parentBeforeBlueId));
+        String receiptAfterBlueId = blueId(receiptAfter);
+        Node currentSource = receiptAfter.clone();
+        if (!matchingSourceRepresentation) {
+            NodePathEditor.put(
+                    currentSource,
+                    "/revision",
+                    new Node().value(BigInteger.valueOf(2L)));
+        }
+
+        ManagedOccurrenceBinding historical =
+                ManagedOccurrenceBinding.derived(
+                        environment.managedBindingPolicyIdentity(),
+                        A,
+                        ScopeAddress.embedded("/child", 1L),
+                        B,
+                        sourceBeforeBlueId,
+                        false,
+                        Long.valueOf(0L));
+        ManagedOccurrenceBinding reverse =
+                ManagedOccurrenceBinding.derived(
+                        environment.managedBindingPolicyIdentity(),
+                        B,
+                        ScopeAddress.embedded("/parent", 1L),
+                        A,
+                        parentBeforeBlueId,
+                        true,
+                        null);
+        AffectedClosureSnapshot snapshot = initializedSnapshot(
+                finalizedSnapshot(
+                        bodies(A, currentParent, B, currentSource),
+                        Arrays.asList(historical, reverse),
+                        Collections.singletonList(A)),
+                4L,
+                1L);
+
+        String sourceInvocationIdentity = hash('4');
+        String eventBlueId = blueId(EVENT_CHILD);
+        ManagedRootEventOccurrence sourceEvent =
+                new ManagedRootEventOccurrence(
+                        0L,
+                        0L,
+                        B,
+                        ClosureIdentityService.INSTANCE
+                                .eventOccurrenceIdentity(
+                                        sourceInvocationIdentity,
+                                        0L,
+                                        eventBlueId),
+                        eventBlueId,
+                        EVENT_CHILD,
+                        false);
+        ManagedDocumentTransitionReceipt sourceReceipt =
+                ManagedDocumentTransitionReceipt.identified(
+                        sourceInvocationIdentity,
+                        0L,
+                        B,
+                        hash('5'),
+                        sourceBeforeBlueId,
+                        receiptAfterBlueId,
+                        Collections.singletonList(sourceEvent),
+                        5L);
+        ManagedRevisionCause cause = ClosureEvidenceFactory
+                .managedRevisionCause(
+                        historical.occurrenceIdentity(),
+                        0L,
+                        1L,
+                        receiptAfter,
+                        sourceReceipt);
+        ClosureInvocationInput input = ClosureEvidenceFactory
+                .processClosure(
+                        snapshot,
+                        cause,
+                        Collections.<DirectLogicalDelivery>emptyList(),
+                        ClosureEvidenceFactory.executionPolicy(
+                                GENEROUS_GAS,
+                                Collections.<DocumentId, Long>emptyMap(),
+                                "managed-same-epoch-component-rebind-v1"),
+                        environment);
+
+        exactNodes.put(sourceBeforeBlueId, sourceBefore.clone());
+        exactNodes.put(receiptAfterBlueId, receiptAfter.clone());
+        exactNodes.put(parentBeforeBlueId, parentBefore.clone());
+        exactNodes.put(eventBlueId, EVENT_CHILD.clone());
+        for (ManagedDocumentSnapshot document
+                : snapshot.managedDocuments()) {
+            exactNodes.put(document.blueId(), document.document());
+        }
+        return new ManagedComponentRebindScenario(
+                input, receiptAfterBlueId);
+    }
+
     private static CyclicFixture twoMemberCycle(
             ClosureEnvironment environment,
             Node placeholderA,
@@ -2737,6 +3129,17 @@ final class FullLifecycleAdmissionTest {
             } else if ("catchUpEmitOnly".equals(key)) {
                 observedEventKinds.add(occurrenceKind(context));
                 context.emitEvent(EVENT_PUBLIC.clone());
+            } else if ("catchUpDetach".equals(key)) {
+                observedEventKinds.add(occurrenceKind(context));
+                if (context.documentAt("/child") != null) {
+                    context.applyPatch(JsonPatch.remove("/child"));
+                }
+                BigInteger deliveries = (BigInteger) context.documentAt(
+                        "/deliveries").getValue();
+                context.applyPatch(JsonPatch.replace(
+                        "/deliveries",
+                        new Node().value(
+                                deliveries.add(BigInteger.ONE))));
             } else if ("publicEmit".equals(key)) {
                 if (initiated(context)) {
                     context.emitEvent(EVENT_PUBLIC.clone());
@@ -2893,6 +3296,18 @@ final class FullLifecycleAdmissionTest {
 
         private CyclicFixture(AffectedClosureSnapshot snapshot) {
             this.snapshot = snapshot;
+        }
+    }
+
+    private static final class ManagedComponentRebindScenario {
+        private final ClosureInvocationInput input;
+        private final String receiptAfterBlueId;
+
+        private ManagedComponentRebindScenario(
+                ClosureInvocationInput input,
+                String receiptAfterBlueId) {
+            this.input = input;
+            this.receiptAfterBlueId = receiptAfterBlueId;
         }
     }
 
