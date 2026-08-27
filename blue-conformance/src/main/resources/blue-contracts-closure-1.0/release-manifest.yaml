@@ -4,7 +4,7 @@ specificationVersion: '1.0'
 status: final-normative-implementation-target
 specificationDocument:
   path: ../../specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: 435a4bb9c63301006e115b51f291b94bba3c434a46c095244ed28deaacfbdbbc
+  sha256: 0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
 languageDependency:
   specification: Blue Language Specification 1.0
   referencePath: ../../reference/blue-language-specification-1.0.md
@@ -57,11 +57,11 @@ gasManifest:
   numericWeightsStatus: frozen for Blue Contracts and Processor Specification 1.0
 identityConstructors:
   path: identity-constructors.yaml
-  sha256: fc9b2566b1c829157787b8147283cadc4ed081fcd5c49d7b99b9784f3784e37e
+  sha256: f7eb196a46ff2176f245342a27ffb76ec2c90c3502612191cd5425230ac947dc
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:6030839a94f98161dc35dee7665ed2a87d8b109710235990b695ccf2834094c8
+  packageIdentity: sha256:afaceefb48845495259962dea7202105c90c7396b7dee0aef483fb00b0438b52
   vectorCount: 168
   fixtureCount: 276
 oraclePackage:
@@ -93,4 +93,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:0ebc325de03279aa580c6149f1d13a3ce4910918b3b285b241557ee811f2ebbe
+releaseIdentity: sha256:977a5e7fa05c09363bb4ba16ce9fed765e306e7040c5229e405ccbbebe2dabfc

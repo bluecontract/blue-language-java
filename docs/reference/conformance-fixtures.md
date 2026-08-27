@@ -21,15 +21,15 @@ Package identity: `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af7504
 | `languageFixtures` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` |
 | `contractsRegistry` | `sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1` |
 | `contractsGas` | `sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a` |
-| `contractsFixtures` | `sha256:6030839a94f98161dc35dee7665ed2a87d8b109710235990b695ccf2834094c8` |
-| `contractsRelease` | `sha256:0ebc325de03279aa580c6149f1d13a3ce4910918b3b285b241557ee811f2ebbe` |
+| `contractsFixtures` | `sha256:afaceefb48845495259962dea7202105c90c7396b7dee0aef483fb00b0438b52` |
+| `contractsRelease` | `sha256:977a5e7fa05c09363bb4ba16ce9fed765e306e7040c5229e405ccbbebe2dabfc` |
 
 ## Specification hashes
 
 | Specification | SHA-256 |
 | --- | --- |
 | `languageSha256` | `01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d` |
-| `contractsSha256` | `435a4bb9c63301006e115b51f291b94bba3c434a46c095244ed28deaacfbdbbc` |
+| `contractsSha256` | `0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc` |
 
 ## Category coverage
 
