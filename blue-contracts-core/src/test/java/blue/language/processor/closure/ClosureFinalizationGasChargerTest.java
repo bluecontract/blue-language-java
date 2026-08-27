@@ -5,6 +5,7 @@ import blue.language.processor.DocumentProcessor;
 import blue.language.processor.GasLimitExceededException;
 import blue.language.processor.GasTraceEntry;
 import blue.language.processor.PortableLimitExceededException;
+import blue.language.provider.CyclicSetProof;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -30,6 +31,47 @@ final class ClosureFinalizationGasChargerTest {
     private static final DocumentId B = new DocumentId("simple-b");
     private static final DocumentId C = new DocumentId("simple-c");
     private static final DocumentId D = new DocumentId("simple-d");
+
+    @Test
+    void chargesResolvedBodyAndHistoricalCyclicProofWithoutFakeComponent() {
+        ClosureFinalizationGasCharger charger =
+                new ClosureFinalizationGasCharger();
+        Set<String> established = new LinkedHashSet<String>();
+        CyclicSetProof proof = CyclicSetProof.fromDeclaredPlaceholderSet(
+                Arrays.asList(simpleAPlaceholder(), simpleBPlaceholder()));
+
+        try (DocumentProcessor owner = DocumentProcessor.builder().build();
+             ManagedDocumentStepProcessor meter =
+                     new ManagedDocumentStepProcessor(owner)) {
+            String admitted = charger.chargeManagedRevisionAfterDocument(
+                    meter,
+                    A,
+                    MASTER + "#0",
+                    bodies().get(A),
+                    proof,
+                    ClosureValueSupport.MAX_SAFE_INTEGER,
+                    established,
+                    Collections.<String>emptySet());
+
+            assertEquals(MASTER + "#0", admitted);
+            assertTrue(!established.isEmpty());
+            List<GasTraceEntry> trace = meter.processorGasTrace();
+            assertTrue(trace.stream().anyMatch(entry -> entry.reason().startsWith(
+                    "admission.managed-revision.after-document.")));
+            assertTrue(trace.stream().anyMatch(entry -> entry.reason().equals(
+                    "admission.managed-revision.after-document.cyclic-proof.master.node-established")));
+            assertTrue(trace.stream().noneMatch(entry ->
+                    "tentativeComponentFinalization".equals(
+                            entry.counter())));
+            assertTrue(trace.stream().noneMatch(entry ->
+                    "cyclicMemberFinalized".equals(entry.counter())));
+            for (GasTraceEntry entry : trace) {
+                assertEquals(A.value(), entry.documentId());
+                assertEquals(null, entry.componentGeneration());
+                assertEquals(null, entry.workOccurrenceId());
+            }
+        }
+    }
 
     @Test
     void chargesBoundaryLanguageTraceAndMembersOnOneSharedLedger() {
@@ -520,6 +562,28 @@ final class ClosureFinalizationGasChargerTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
+    }
+
+    private static Node simpleAPlaceholder() {
+        return new Node().properties(
+                "documentId", reference(
+                        "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
+                "memberIdentity", reference(
+                        "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
+                "b", reference("this#1"),
+                "contracts", reference(
+                        "AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ"));
+    }
+
+    private static Node simpleBPlaceholder() {
+        return new Node().properties(
+                "documentId", reference(
+                        "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
+                "memberIdentity", reference(
+                        "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
+                "a", reference("this#0"),
+                "contracts", reference(
+                        "F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz"));
     }
 
     private static String hash(char digit) {

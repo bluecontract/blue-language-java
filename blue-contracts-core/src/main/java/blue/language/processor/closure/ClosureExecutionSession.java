@@ -349,7 +349,10 @@ final class ClosureExecutionSession
                 .chargeManagedRevisionAfterDocument(
                 stepProcessor,
                 cause.childDocumentId(),
+                cause.afterBlueId(),
                 cause.afterDocument(),
+                cause.afterCyclicProof().orElse(null),
+                cyclicCanonicalBytesLimit(),
                 establishedBlueIds,
                 existingBlueIds);
         if (!cause.afterBlueId().equals(afterBlueId)) {

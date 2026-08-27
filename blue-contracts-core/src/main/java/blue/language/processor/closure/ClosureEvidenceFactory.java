@@ -186,6 +186,44 @@ public final class ClosureEvidenceFactory {
             String afterBlueId,
             Node afterDocument,
             String originalSourceCauseIdentity) {
+        return managedRevisionCause(
+                targetOccurrenceIdentity,
+                childDocumentId,
+                fromEpoch,
+                toEpoch,
+                beforeBlueId,
+                afterBlueId,
+                afterDocument,
+                originalSourceCauseIdentity,
+                null);
+    }
+
+    /**
+     * Derives one authenticated child-revision cause with complete cyclic
+     * successor evidence when required.
+     *
+     * @param targetOccurrenceIdentity stable containing occurrence
+     * @param childDocumentId revised child lineage
+     * @param fromEpoch predecessor child epoch
+     * @param toEpoch successor child epoch
+     * @param beforeBlueId predecessor child BlueId
+     * @param afterBlueId successor child BlueId
+     * @param afterDocument exact successor child document
+     * @param originalSourceCauseIdentity original external/admission cause
+     * @param afterCyclicProof complete successor cyclic-set proof, or
+     *     {@code null} exactly for an ordinary successor
+     * @return identity-derived source receipt and managed-revision cause
+     */
+    public static ManagedRevisionCause managedRevisionCause(
+            String targetOccurrenceIdentity,
+            DocumentId childDocumentId,
+            long fromEpoch,
+            long toEpoch,
+            String beforeBlueId,
+            String afterBlueId,
+            Node afterDocument,
+            String originalSourceCauseIdentity,
+            CyclicSetProof afterCyclicProof) {
         String receiptIdentity = IDENTITIES.sourceRevisionReceiptIdentity(
                 childDocumentId, fromEpoch, toEpoch,
                 beforeBlueId, afterBlueId, originalSourceCauseIdentity);
@@ -208,7 +246,8 @@ public final class ClosureEvidenceFactory {
                 afterBlueId,
                 afterDocument,
                 originalSourceCauseIdentity,
-                receiptIdentity);
+                receiptIdentity,
+                afterCyclicProof);
     }
 
     /**
@@ -229,6 +268,35 @@ public final class ClosureEvidenceFactory {
             long toEpoch,
             Node afterDocument,
             ManagedDocumentTransitionReceipt sourceTransitionReceipt) {
+        return managedRevisionCause(
+                targetOccurrenceIdentity,
+                fromEpoch,
+                toEpoch,
+                afterDocument,
+                sourceTransitionReceipt,
+                null);
+    }
+
+    /**
+     * Derives one typed-receipt managed revision with complete cyclic
+     * successor evidence when required.
+     *
+     * @param targetOccurrenceIdentity stable containing occurrence
+     * @param fromEpoch predecessor source revision cursor
+     * @param toEpoch successor source revision cursor
+     * @param afterDocument exact successor source document
+     * @param sourceTransitionReceipt complete Contracts source transition
+     * @param afterCyclicProof complete successor cyclic-set proof, or
+     *     {@code null} exactly for an ordinary successor
+     * @return identity-derived complete managed-revision cause
+     */
+    public static ManagedRevisionCause managedRevisionCause(
+            String targetOccurrenceIdentity,
+            long fromEpoch,
+            long toEpoch,
+            Node afterDocument,
+            ManagedDocumentTransitionReceipt sourceTransitionReceipt,
+            CyclicSetProof afterCyclicProof) {
         ManagedDocumentTransitionReceipt receipt = Objects.requireNonNull(
                 sourceTransitionReceipt, "sourceTransitionReceipt");
         String causeIdentity = IDENTITIES.managedRevisionCauseIdentity(
@@ -250,7 +318,8 @@ public final class ClosureEvidenceFactory {
                 receipt.afterBlueId(),
                 afterDocument,
                 receipt.originalCauseIdentity(),
-                receipt);
+                receipt,
+                afterCyclicProof);
     }
 
     /**

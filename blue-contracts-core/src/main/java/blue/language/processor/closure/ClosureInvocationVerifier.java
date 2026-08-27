@@ -5,10 +5,12 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.provider.CyclicSetProof;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /** Authoritative Phase-A identity and admission-evidence verifier. */
@@ -149,11 +151,20 @@ final class ClosureInvocationVerifier {
                     DirectBlueIdCalculator.calculateBlueId(external.event()));
         } else if (selected instanceof ManagedRevisionCause) {
             ManagedRevisionCause revision = (ManagedRevisionCause) selected;
-            requireClaim(
-                    "afterBlueId",
-                    revision.afterBlueId(),
-                    DirectBlueIdCalculator.calculateBlueId(
-                            revision.afterDocument()));
+            Optional<CyclicSetProof> cyclicProof =
+                    revision.afterCyclicProof();
+            if (cyclicProof.isPresent()) {
+                ManagedRevisionCyclicEvidenceVerifier.verify(
+                        revision.afterBlueId(),
+                        revision.afterDocument(),
+                        cyclicProof.get());
+            } else {
+                requireClaim(
+                        "afterBlueId",
+                        revision.afterBlueId(),
+                        DirectBlueIdCalculator.calculateBlueId(
+                                revision.afterDocument()));
+            }
             if (revision.sourceTransitionReceipt().isPresent()) {
                 ManagedDocumentTransitionReceipt receipt = revision
                         .sourceTransitionReceipt().get();
