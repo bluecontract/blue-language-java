@@ -1,8 +1,81 @@
-# Managed transition receipt Contracts source checkpoint
+# Managed transition receipt Contracts checkpoint and cyclic-proof addendum
 
 Created: 2026-08-26T19:31:09Z
+Updated: 2026-08-27T06:09:01Z
 
-## Outcome
+## Current cyclic managed-revision proof checkpoint
+
+**IMPLEMENTATION, PORTABLE PACKAGE, API, AND DOCUMENTATION PASS; FRESH
+IMMUTABLE STAGE PENDING.** Starting from commit
+`fc9c59bcf45ae63b00fb3021f1be85373dd4282b` (tree
+`5b91db327946299717c6f5b739bb129d30a6b08b`), Contracts now accepts a
+managed-revision successor whose exact state is a cyclic member
+`MASTER#index`. The additive invocation evidence is one defensive complete
+`CyclicSetProof`; it is required exactly for a cyclic successor and forbidden
+for an ordinary successor. Old constructors and their identities are
+unchanged.
+
+The verifier independently authenticates the proof through a verifying
+cyclic-aware provider, recomputes the body, master, and suffix, and requires
+the resolved member body to equal `afterDocument`. Admission retains the
+ordinary resolved-body charge and additionally meters the historical proof
+with the same preliminary/canonical/master identity formulas. It creates no
+tentative component, component owner, component receipt, or
+`cyclicMemberFinalized` charge.
+
+This addendum describes a dirty, uncommitted review candidate. It deliberately
+does not assign a new source commit/tree or claim a fresh rc.23 artifact. The
+previous invocation-owned rc.23 stage at
+`/private/tmp/managed-receipts-rc23-jdk21.YtFqVK/repository` (manifest SHA-256
+`f49c4333ad0e3d6f795872bc6dd705d2e0e54dd05dc2516a2e7c663a8af20a95`)
+is valid predecessor evidence for commit `fc9c59b`, but is superseded for this
+new seam. A fresh immutable non-overwriting stage remains required.
+
+### Cyclic-proof evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused Contracts tests | PASS — 16 tests, 0 failed/skipped |
+| Proof-aware conformance/facade + release-identity tests | PASS — 5 tests, 0 failed/skipped |
+| Generated-pin report test | PASS — 8 tests, 0 failed/skipped |
+| Schema validation of derived valid/missing/extra-proof envelopes | PASS — 3 tests |
+| Release conformance | PASS — 429/429, 0 failed/skipped |
+| API baseline / semantic migration | PASS — 5 additive descriptors; distribution total 4,750 |
+| Javadocs and generated references | PASS |
+| `git diff --check` | PASS |
+
+The proof-bearing conformance test derives its envelope from the released
+packaged `C-CLO-23` cyclic managed-transition evidence, recomputes cause and
+invocation identities, and executes through the public facade. It freezes
+total gas `477`, historical proof-admission gas `53`, and `17` proof trace
+entries; missing proof and tampered proof/body/master/suffix fail. A separate
+Draft 2020-12 schema test proves the same derived cyclic envelope valid and
+the missing-proof and acyclic-extra-proof variants invalid. No claim is made
+that this derived envelope is an additional manifest fixture.
+
+### Deterministic portable package and generated pins
+
+Two independent 363-file candidate packages are byte-identical. Their ordered
+file-inventory digest is
+`3060fe1a82821e795758284067e52a80a0f52b6b04c13ea382b0088b6b178244`.
+The checked-in generator then published and revalidated that exact package.
+
+| Binding | Old | New |
+| --- | --- | --- |
+| Contracts specification SHA-256 | `435a4bb9c63301006e115b51f291b94bba3c434a46c095244ed28deaacfbdbbc` | `0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc` |
+| Fixture package identity | `sha256:6030839a94f98161dc35dee7665ed2a87d8b109710235990b695ccf2834094c8` | `sha256:afaceefb48845495259962dea7202105c90c7396b7dee0aef483fb00b0438b52` |
+| Contracts release identity | `sha256:0ebc325de03279aa580c6149f1d13a3ce4910918b3b285b241557ee811f2ebbe` | `sha256:977a5e7fa05c09363bb4ba16ce9fed765e306e7040c5229e405ccbbebe2dabfc` |
+
+Candidate A/B release-manifest SHA-256 is
+`f84eaeec67a23a50c71e15cdfe32d72e5fdbd3c14c6d5a9ef201afdb6f6a06f3`;
+fixture-manifest SHA-256 is
+`fac5bf5a73953c60e26af7ad03b80bb391e52dddef35c203e70a007bc156217c`.
+Exactly the four previously authorized Java pin files were mechanically
+rebound. Fixture counts, business outcomes, work/event ordering, and the gas
+schedule did not change. `changed-files.sha256` was intentionally not
+regenerated in this addendum.
+
+## Historical source checkpoint (superseded by the addendum above)
 
 **SOURCE CHECKPOINT PASS; RELEASE REBIND PENDING.** The additive Contracts
 processor implementation, focused coverage, normative source specification,
@@ -145,11 +218,12 @@ phase1ImplementationComplete = true
 phase1FinalReleaseCheckpointComplete = false
 ```
 
-## Pending immutable stage
+## Pending fresh immutable stage
 
-The expected next coordinate is `3.1.0-rc.23`, subject to the invocation-owned
-stage proving that it is unused. The final addendum must record the immutable
-repository path, complete artifact manifest and checksum, remote-fallback
-rejection, Maven Local non-use, packaged-artifact smoke, and the post-rebind
-release gates. Those values are deliberately `null`/pending in the JSON receipt
-until independently observed.
+The coordinate remains `3.1.0-rc.23`; no coordinate was published or
+overwritten. Root must commit the reviewed candidate, run the complete clean
+JDK 17/JDK 21/release gates, and create a new invocation-owned immutable stage
+whose manifest binds that exact commit. The final receipt must record its
+repository path, complete artifact manifest/checksum, remote-fallback
+rejection, Maven Local non-use, and packaged-artifact smoke. Those current-seam
+values remain deliberately `null`/pending in the JSON receipt until observed.

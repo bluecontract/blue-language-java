@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "receiptType": "MANAGED_TRANSITION_RECEIPT_CONTRACTS_SOURCE_CHECKPOINT",
-  "status": "SOURCE_CHECKPOINT_PASS_RELEASE_REBIND_PENDING",
+  "receiptType": "MANAGED_TRANSITION_RECEIPT_CONTRACTS_CHECKPOINT_WITH_CYCLIC_PROOF_ADDENDUM",
+  "status": "CYCLIC_MANAGED_REVISION_PROOF_VERIFIED_FRESH_STAGE_PENDING",
   "createdAtUtc": "2026-08-26T19:31:09Z",
+  "updatedAtUtc": "2026-08-27T06:09:01Z",
   "branch": "feat/managed-epoch-receipts",
   "worktree": "/private/tmp/blue-language-managed-epoch-rc22",
   "published": false,
@@ -21,6 +22,115 @@
     "semanticSourceCommittedAtUtc": "2026-08-26T19:30:23Z",
     "receiptCommitIsNotSemanticSourceUnderTest": true
   },
+  "currentCyclicManagedRevisionProofSource": {
+    "baseCommit": "fc9c59bcf45ae63b00fb3021f1be85373dd4282b",
+    "baseTree": "5b91db327946299717c6f5b739bb129d30a6b08b",
+    "branch": "feat/managed-epoch-receipts",
+    "workingTreeCommitted": false,
+    "currentSemanticCommitAssigned": false,
+    "freshImmutableArtifactBuilt": false
+  },
+  "cyclicManagedRevisionProofClaims": {
+    "optionalDefensiveCyclicSetProofAccessor": true,
+    "proofRequiredExactlyForCyclicAfterBlueId": true,
+    "legacyConstructorsPreserved": true,
+    "legacyCauseIdentitiesPreserved": true,
+    "acyclicDirectHashPathUnchanged": true,
+    "bodyMasterAndSuffixIndependentlyVerified": true,
+    "verifierUsesInvocationOwnedVerifyingNodeProvider": true,
+    "ordinaryResolvedBodyAdmissionGasPreserved": true,
+    "historicalProofIdentityWorkMetered": true,
+    "historicalProofCreatesTentativeComponent": false,
+    "historicalProofCreatesComponentReceipt": false,
+    "historicalProofChargesCyclicMemberFinalized": false,
+    "blueLanguageValueOrIdentitySemanticsChanged": false
+  },
+  "deterministicCyclicProofPackage": {
+    "generator": "blue-conformance/src/main/tools/regenerate_package.py",
+    "fixtureSourceRoot": "blue-conformance/src/main/fixture-sources/full-lifecycle",
+    "candidateA": "/private/tmp/contracts-cyclic-package-a.gvXYZf",
+    "candidateB": "/private/tmp/contracts-cyclic-package-b.vKeVDB",
+    "filesPerCandidate": 363,
+    "byteIdentical": true,
+    "orderedFileInventorySha256": "3060fe1a82821e795758284067e52a80a0f52b6b04c13ea382b0088b6b178244",
+    "releaseManifestSha256": "f84eaeec67a23a50c71e15cdfe32d72e5fdbd3c14c6d5a9ef201afdb6f6a06f3",
+    "fixtureManifestSha256": "fac5bf5a73953c60e26af7ad03b80bb391e52dddef35c203e70a007bc156217c",
+    "contractsSpecificationSha256": "0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc",
+    "identityConstructorsSha256": "f7eb196a46ff2176f245342a27ffb76ec2c90c3502612191cd5425230ac947dc",
+    "closureFixtureSchemaSha256": "85ed426bad645d8b98f6a46ca34dd5ee4c25ff683e6036d4566be2dd1b629a6f",
+    "fixturePackageIdentity": "sha256:afaceefb48845495259962dea7202105c90c7396b7dee0aef483fb00b0438b52",
+    "contractsReleaseIdentity": "sha256:977a5e7fa05c09363bb4ba16ce9fed765e306e7040c5229e405ccbbebe2dabfc",
+    "publishedAndRevalidatedByGenerator": true,
+    "fixtureCountChanged": false,
+    "fixtureBusinessOutcomeChanged": false,
+    "gasScheduleChanged": false,
+    "authorizedPinFilesChanged": [
+      "blue-conformance/src/main/java/blue/language/conformance/api/BlueContractsConformanceReport.java",
+      "blue-conformance/src/main/java/blue/language/conformance/api/BlueContractsFixturePackage.java",
+      "blue-conformance/src/main/java/blue/language/conformance/contracts/closure/ClosureFixtureInventory.java",
+      "src/test/java/blue/language/conformance/contracts/BlueContractsConformanceReportTest.java"
+    ],
+    "changedFilesSha256Regenerated": false
+  },
+  "cyclicProofGenerationEnvironment": {
+    "python": "/private/tmp/contracts-cyclic-python-venv/bin/python",
+    "pythonVersion": "3.11.6",
+    "pyyamlVersion": "6.0.2",
+    "pyyamlRecordSha256": "fc3f995567291cb459c10703b3a25590c8836a82956f22057994e2f77deb5b1a",
+    "jsonschemaVersion": "4.25.1",
+    "jsonschemaRecordSha256": "1eaacec63ad63155b627af5a99544c424e076b36cc676742c329ba06464e1262"
+  },
+  "cyclicProofCurrentGates": [
+    {
+      "name": "focused Contracts cyclic evidence, gas, factory, and receipt tests",
+      "tests": 16,
+      "failures": 0,
+      "skipped": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "proof-aware conformance facade and Contracts release identity tests",
+      "tests": 5,
+      "failures": 0,
+      "skipped": 0,
+      "status": "PASS",
+      "exactTotalGas": 477,
+      "exactProofAdmissionGas": 53,
+      "exactProofAdmissionTraceEntries": 17
+    },
+    {
+      "name": "managed-revision cyclic fixture schema validation",
+      "tests": 3,
+      "failures": 0,
+      "status": "PASS",
+      "packagedFixtureAdded": false,
+      "portableEvidenceBasis": "Derived proof-bearing envelope plus released packaged C-CLO-23 cyclic transition evidence"
+    },
+    {
+      "name": "generated Contracts report pin verification",
+      "tests": 8,
+      "failures": 0,
+      "skipped": 0,
+      "status": "PASS"
+    },
+    {
+      "name": "release conformance",
+      "tests": 429,
+      "failures": 0,
+      "skipped": 0,
+      "reportSha256": "64e87563b89bf1b79f649d12c91af058dfc43f10e76ed723b7a792c2500dacce",
+      "status": "PASS"
+    },
+    {
+      "name": "API baseline, semantic migration, Javadocs, and generated references",
+      "newPublicDescriptors": 5,
+      "distributionApiEntries": 4750,
+      "publicApiInventorySha256": "b54271c2d7f7fe4f1ef8e9a3d4cd7e83811a7e0db4409b7ccecf0cdea8347d5a",
+      "publicApiReferenceSha256": "e58411e0e17494390230369b640f84a77a0e2d5e32e05e39d55d5356a384025f",
+      "conformanceReferenceSha256": "1fbc5813d81f797ffa3ee3b881b969c95c746b7d8966da88ea084789449b2507",
+      "status": "PASS"
+    }
+  ],
   "commitSequence": [
     {
       "commit": "9ec3d11",
@@ -82,7 +192,7 @@
     "rowsForDocumentsWithoutReceiptsAssignedToFirstCanonicalReceipt": true,
     "noTraceRowOmittedOrCountedTwice": true
   },
-  "gates": [
+  "historicalSourceCheckpointGates": [
     {
       "name": "focused receipt and lifecycle tests",
       "task": ":blue-contracts-core:test --tests FullLifecycleAdmissionTest --tests ManagedTransitionReceiptTest",
@@ -137,7 +247,7 @@
       "status": "PENDING_CONFORMANCE_REBIND_AND_IMMUTABLE_STAGE"
     }
   ],
-  "evidence": {
+  "historicalSourceCheckpointEvidence": {
     "contractsSpecificationSha256": "637c5e94aee20c1f8a5bfec4df0b37e8b4209c6455f430239f49664727f909e8",
     "publicApiInventorySha256": "6176c288c89e2475b028da5afb356386962f1ecad88945538c09bd0750025313",
     "provisionalBlueContractsCoreRc23JarSha256": "6198aa771910633656ce31c73d573522fb336ef594768b8d69a4a8149fdba3fd",
@@ -147,7 +257,7 @@
     "changedFilesManifestSha256": "a06e9949e1705e65e5e26be7d2007ac4fa4d3cf996d214c53260ddbe3f366a7e",
     "changedFilesManifestVerified": true
   },
-  "immutableStage": {
+  "historicalCheckpointImmutableStageExpectation": {
     "status": "PENDING",
     "expectedVersion": "3.1.0-rc.23",
     "invocationOwned": true,
@@ -157,7 +267,7 @@
     "repositoryPath": null,
     "artifactManifestSha256": null
   },
-  "checkpoint": {
+  "historicalCheckpoint": {
     "phase1ImplementationComplete": true,
     "phase1SourceCheckpointComplete": true,
     "phase1FinalReleaseCheckpointComplete": false,
