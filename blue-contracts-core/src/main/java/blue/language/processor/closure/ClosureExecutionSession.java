@@ -617,12 +617,26 @@ final class ClosureExecutionSession
     }
 
     private void settleCheckpointBarrier() {
+        Set<DocumentId> processedDocuments = new LinkedHashSet<DocumentId>();
+        for (DocumentTransitionEvidence transition : transitionEvidence) {
+            processedDocuments.add(transition.documentId());
+        }
         final Map<String, ManagedDocumentSnapshot> documentsByScopeIdentity =
                 new LinkedHashMap<String, ManagedDocumentSnapshot>();
         List<ManagedCheckpointSettlementRequest> requests =
                 new ArrayList<ManagedCheckpointSettlementRequest>();
         for (ManagedDocumentSnapshot document
                 : currentSnapshot.managedDocuments()) {
+            if (!processedDocuments.contains(document.documentId())) {
+                // Cohort membership is not source work. An untouched source
+                // may intentionally retain a checkpoint frozen before its
+                // last Channel-catalog change; another Root's operation must
+                // not clean that immutable source state. Cyclic reference
+                // re-encoding alone is also not owned work. Every actual
+                // managed step, including a no-op, records transition evidence
+                // and still receives settlement here.
+                continue;
+            }
             String targetManagedScopeIdentity = IDENTITIES
                     .managedScopeKeyIdentity(
                             ManagedScopeKey.root(document.documentId()));
