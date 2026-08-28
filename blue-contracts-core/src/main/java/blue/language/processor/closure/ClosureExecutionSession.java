@@ -86,6 +86,12 @@ final class ClosureExecutionSession
             new LinkedHashSet<List<DocumentId>>();
     private final Set<DocumentId> epochAdvanceDocuments =
             new LinkedHashSet<DocumentId>();
+    private final Map<String, ManagedOccurrenceEvidenceResolution>
+            managedOccurrenceResolutions =
+                    new LinkedHashMap<String,
+                            ManagedOccurrenceEvidenceResolution>();
+    private final Set<String> consumedManagedOccurrenceResolutions =
+            new LinkedHashSet<String>();
     private final Set<DocumentId> initializedDocuments =
             new LinkedHashSet<DocumentId>();
     private final Set<DocumentId> initializationStartedDocuments =
@@ -162,6 +168,21 @@ final class ClosureExecutionSession
             ClosureInvocationInput input,
             ClosureExecutionRecorder recorder,
             ExecutionMode executionMode) {
+        this(
+                owner,
+                input,
+                recorder,
+                executionMode,
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
+    }
+
+    ClosureExecutionSession(
+            DocumentProcessor owner,
+            ClosureInvocationInput input,
+            ClosureExecutionRecorder recorder,
+            ExecutionMode executionMode,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
         this.input = Objects.requireNonNull(input, "input");
         this.executionMode = Objects.requireNonNull(
                 executionMode, "executionMode");
@@ -192,6 +213,17 @@ final class ClosureExecutionSession
                 Objects.requireNonNull(owner, "owner"),
                 input.executionPolicy(),
                 this);
+        for (ManagedOccurrenceEvidenceResolution resolution
+                : Objects.requireNonNull(resolutions, "resolutions")) {
+            ManagedOccurrenceEvidenceResolution selected =
+                    Objects.requireNonNull(
+                            resolution, "managed occurrence resolution");
+            if (managedOccurrenceResolutions.put(
+                    selected.demand().demandIdentity(), selected) != null) {
+                throw new IllegalArgumentException(
+                        "Duplicate managed-occurrence resolution demand");
+            }
+        }
     }
 
     /** Executes one supported affected-closure lane. */
@@ -229,6 +261,7 @@ final class ClosureExecutionSession
             settleCheckpointBarrier();
         }
         captureChannelSurfaces(resultingChannelSurfaces);
+        requireEveryManagedOccurrenceResolutionConsumed();
         return state();
     }
 
@@ -3006,8 +3039,104 @@ final class ClosureExecutionSession
                         currentSnapshot.managedDocuments(),
                         processEmbeddedDemandContext(
                                 verifyHistoricalExactReferences));
-        if (!demands.isEmpty()) {
-            throw new ClosureResourceDemandException(demands);
+        if (demands.isEmpty()) {
+            return;
+        }
+        ArrayList<ManagedOccurrenceEvidenceResolution> selected =
+                new ArrayList<ManagedOccurrenceEvidenceResolution>();
+        for (ClosureResourceDemand demand : demands) {
+            ManagedOccurrenceEvidenceResolution resolution =
+                    demand instanceof ManagedOccurrenceEvidenceDemand
+                            ? managedOccurrenceResolutions.get(
+                                    demand.demandIdentity())
+                            : null;
+            if (resolution == null) {
+                throw new ClosureResourceDemandException(demands);
+            }
+            selected.add(resolution);
+        }
+        applyManagedOccurrenceResolutions(selected);
+        List<ClosureResourceDemand> remaining =
+                processEmbeddedReconciler.resourceDemands(
+                        latestBodies,
+                        projected,
+                        currentBindings,
+                        currentSnapshot.managedDocuments(),
+                        processEmbeddedDemandContext(
+                                verifyHistoricalExactReferences));
+        if (!remaining.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Exact managed-occurrence resolutions did not close "
+                            + "their demand boundary");
+        }
+    }
+
+    private void applyManagedOccurrenceResolutions(
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
+        ArrayList<ManagedOccurrenceBinding> replacement =
+                new ArrayList<ManagedOccurrenceBinding>(currentBindings);
+        LinkedHashSet<String> consumed = new LinkedHashSet<String>();
+        for (ManagedOccurrenceEvidenceResolution resolution : resolutions) {
+            ManagedOccurrenceEvidenceDemand demand = resolution.demand();
+            int match = -1;
+            for (int index = 0; index < replacement.size(); index++) {
+                ManagedOccurrenceBinding row = replacement.get(index);
+                if (row.sourceDocumentId().equals(
+                                demand.sourceDocumentId())
+                        && row.sourcePath().equals(demand.sourcePath())) {
+                    if (match >= 0) {
+                        throw new IllegalStateException(
+                                "Managed occurrence resolution source is "
+                                        + "ambiguous");
+                    }
+                    match = index;
+                }
+            }
+            if (match < 0) {
+                throw new IllegalArgumentException(
+                        "Managed occurrence resolution has no current source "
+                                + "row");
+            }
+            ManagedOccurrenceBinding before = replacement.get(match);
+            if (!before.active()
+                    || before.targetDocumentId().equals(
+                            resolution.targetDocumentId())
+                    || currentSnapshot.managedDocument(
+                            resolution.targetDocumentId()) == null
+                    || before.activationGeneration()
+                            == ClosureValueSupport.MAX_SAFE_INTEGER) {
+                throw new IllegalArgumentException(
+                        "Managed occurrence resolution is not an active "
+                                + "different-lineage historical retarget");
+            }
+            ManagedOccurrenceBinding after =
+                    ManagedOccurrenceBinding.derived(
+                            before.bindingPolicyIdentity(),
+                            before.sourceDocumentId(),
+                            ScopeAddress.embedded(
+                                    before.sourcePath(),
+                                    before.activationGeneration() + 1L),
+                            resolution.targetDocumentId(),
+                            demand.suppliedValueBlueId(),
+                            false,
+                            Long.valueOf(
+                                    resolution.pendingHistoricalEpoch()));
+            replacement.set(match, after);
+            consumed.add(demand.demandIdentity());
+        }
+        Collections.sort(replacement);
+        currentBindings = replacement;
+        consumedManagedOccurrenceResolutions.addAll(consumed);
+    }
+
+    private void requireEveryManagedOccurrenceResolutionConsumed() {
+        if (managedOccurrenceResolutions.size()
+                != consumedManagedOccurrenceResolutions.size()
+                || !consumedManagedOccurrenceResolutions.containsAll(
+                        managedOccurrenceResolutions.keySet())) {
+            throw new IllegalArgumentException(
+                    "Process retry contains unused managed-occurrence "
+                            + "resolution evidence");
         }
     }
 

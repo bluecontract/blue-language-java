@@ -127,6 +127,15 @@ final class ClosureIdentityService {
                 "inputGraphGeneration", "sourceDocumentId", "sourcePath",
                 "processEmbeddedDeclarationIdentity",
                 "suppliedValueBlueId", "demandOrdinal"),
+        MANAGED_OCCURRENCE_RESOLUTION(
+                "blue-contracts-managed-occurrence-resolution/1.0",
+                "demandIdentity", "targetDocumentId",
+                "pendingHistoricalEpoch"),
+        MANAGED_OCCURRENCE_RESOLUTION_SET(
+                "blue-contracts-managed-occurrence-resolution-set/1.0"),
+        PROCESS_RETRY_INVOCATION(
+                "blue-contracts-process-retry-invocation/1.0",
+                "baseInvocationIdentity", "resolutionSetIdentity"),
         AFFECTED_CLOSURE(
                 "blue-contracts-affected-closure/1.0",
                 "graphGeneration", "documents",
@@ -734,6 +743,58 @@ final class ClosureIdentityService {
         return identity(Constructor.CLOSURE_RESOURCE_DEMAND, value);
     }
 
+    /** Constructs one exact managed-occurrence resolution identity. */
+    String managedOccurrenceResolutionIdentity(
+            String demandIdentity,
+            DocumentId targetDocumentId,
+            long pendingHistoricalEpoch) {
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("demandIdentity", demandIdentity);
+        value.put("targetDocumentId", Objects.requireNonNull(
+                targetDocumentId, "targetDocumentId").value());
+        value.put("pendingHistoricalEpoch", Long.valueOf(
+                pendingHistoricalEpoch));
+        return identity(Constructor.MANAGED_OCCURRENCE_RESOLUTION, value);
+    }
+
+    /** Constructs the canonical exact resolution-set identity. */
+    String managedOccurrenceResolutionSetIdentity(
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
+        ArrayList<ManagedOccurrenceEvidenceResolution> ordered =
+                new ArrayList<ManagedOccurrenceEvidenceResolution>(
+                        Objects.requireNonNull(resolutions, "resolutions"));
+        Collections.sort(ordered);
+        ArrayList<Object> identities = new ArrayList<Object>();
+        Set<String> demands = new HashSet<String>();
+        for (ManagedOccurrenceEvidenceResolution resolution : ordered) {
+            ManagedOccurrenceEvidenceResolution selected =
+                    Objects.requireNonNull(
+                            resolution, "managed occurrence resolution");
+            String demand = selected.demand().demandIdentity();
+            if (!demands.add(demand)) {
+                throw new IllegalArgumentException(
+                        "Managed occurrence resolutions repeat a demand");
+            }
+            identities.add(selected.resolutionIdentity());
+        }
+        if (identities.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "A managed occurrence resolution set cannot be empty");
+        }
+        return identity(
+                Constructor.MANAGED_OCCURRENCE_RESOLUTION_SET, identities);
+    }
+
+    /** Constructs one deterministic resolution-bound retry identity. */
+    String closureProcessRetryIdentity(
+            String baseInvocationIdentity,
+            String resolutionSetIdentity) {
+        LinkedHashMap<String, Object> value = objectValue();
+        value.put("baseInvocationIdentity", baseInvocationIdentity);
+        value.put("resolutionSetIdentity", resolutionSetIdentity);
+        return identity(Constructor.PROCESS_RETRY_INVOCATION, value);
+    }
+
     /** Reconstructs durable affected-closure identity from typed state. */
     String affectedClosureIdentity(AffectedClosureSnapshot snapshot) {
         AffectedClosureSnapshot selected = Objects.requireNonNull(
@@ -994,6 +1055,18 @@ final class ClosureIdentityService {
                 return;
             case CLOSURE_RESOURCE_DEMAND:
                 validateClosureResourceDemand(
+                        requireObject(value, OBJECT_VALUE));
+                return;
+            case MANAGED_OCCURRENCE_RESOLUTION:
+                validateManagedOccurrenceResolution(
+                        requireObject(value, OBJECT_VALUE));
+                return;
+            case MANAGED_OCCURRENCE_RESOLUTION_SET:
+                validateIdentityArray(
+                        value, "managed occurrence resolutions", true);
+                return;
+            case PROCESS_RETRY_INVOCATION:
+                validateProcessRetryInvocation(
                         requireObject(value, OBJECT_VALUE));
                 return;
             case AFFECTED_CLOSURE:
@@ -1413,6 +1486,19 @@ final class ClosureIdentityService {
         requireSafeInteger(value, "demandOrdinal");
     }
 
+    private static void validateManagedOccurrenceResolution(
+            Map<String, Object> value) {
+        requireSha256(value, "demandIdentity", false);
+        requireNonEmptyText(value, "targetDocumentId");
+        requireManagedEpochCursor(value, "pendingHistoricalEpoch");
+    }
+
+    private static void validateProcessRetryInvocation(
+            Map<String, Object> value) {
+        requireSha256(value, "baseInvocationIdentity", false);
+        requireSha256(value, "resolutionSetIdentity", false);
+    }
+
     private static void validateClosure(Map<String, Object> value) {
         requireSafeInteger(value, "graphGeneration");
         validateDocuments(value.get("documents"));
@@ -1696,6 +1782,9 @@ final class ClosureIdentityService {
         if (constructor == Constructor.SOURCE_REVISION_RECEIPT
                 || constructor == Constructor.MANAGED_REVISION_CAUSE) {
             return field.endsWith(".fromEpoch");
+        }
+        if (constructor == Constructor.MANAGED_OCCURRENCE_RESOLUTION) {
+            return field.endsWith(".pendingHistoricalEpoch");
         }
         return constructor == Constructor.OCCURRENCE_BINDING_SET
                 && field.endsWith(".pendingHistoricalEpoch");

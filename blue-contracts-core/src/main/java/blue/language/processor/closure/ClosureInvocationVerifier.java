@@ -77,6 +77,59 @@ final class ClosureInvocationVerifier {
                 candidate == null ? null : candidate.kind());
     }
 
+    /** Verifies one additive demand-bound processing retry. */
+    static Verification verifyRetry(ClosureProcessRetryInput retry) {
+        ClosureProcessRetryInput selected = Objects.requireNonNull(
+                retry, "retry");
+        ClosureInvocationInput base = selected.baseInvocation();
+        Verification verified = verify(base);
+        for (ManagedOccurrenceEvidenceResolution resolution
+                : selected.resolutions()) {
+            ManagedOccurrenceEvidenceDemand demand = resolution.demand();
+            if (!demand.logicalCauseIdentity().equals(
+                            base.cause().causeIdentity())
+                    || !demand.inputClosureIdentity().equals(
+                            base.snapshot().closureIdentity())
+                    || demand.inputGraphGeneration()
+                            != base.snapshot().graphGeneration()) {
+                throw new IllegalArgumentException(
+                        "Managed-occurrence resolution belongs to another "
+                                + "base invocation");
+            }
+            ManagedDocumentSnapshot source = base.snapshot()
+                    .managedDocument(demand.sourceDocumentId());
+            ManagedDocumentSnapshot target = base.snapshot()
+                    .managedDocument(resolution.targetDocumentId());
+            if (source == null || target == null) {
+                throw new IllegalArgumentException(
+                        "Managed-occurrence resolution endpoint is outside "
+                                + "the base closure");
+            }
+            ManagedOccurrenceBinding active = null;
+            for (ManagedOccurrenceBinding binding
+                    : base.snapshot().occurrences()) {
+                if (binding.sourceDocumentId().equals(
+                                demand.sourceDocumentId())
+                        && binding.sourcePath().equals(
+                                demand.sourcePath())) {
+                    active = binding;
+                    break;
+                }
+            }
+            if (active == null || !active.active()
+                    || active.targetDocumentId().equals(
+                            resolution.targetDocumentId())) {
+                throw new IllegalArgumentException(
+                        "A managed-occurrence process retry requires an "
+                                + "active different-lineage source row");
+            }
+        }
+        return new Verification(
+                selected.retryInvocationIdentity(),
+                verified.candidateDisposition(),
+                verified.candidateKind());
+    }
+
     private static void verifyEnvironment(ClosureEnvironment environment) {
         requireLabeledEnvironmentIdentity(
                 "managedDocumentIdentityPolicyIdentity",

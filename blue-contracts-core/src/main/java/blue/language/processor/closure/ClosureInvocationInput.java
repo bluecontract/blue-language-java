@@ -251,6 +251,21 @@ public final class ClosureInvocationInput {
         return environment;
     }
 
+    /** Internal execution view owned by a verified resolution-bound retry. */
+    ClosureInvocationInput withInvocationIdentity(String selectedIdentity) {
+        return new ClosureInvocationInput(
+                operation,
+                selectedIdentity,
+                snapshot,
+                cause,
+                admissionCandidate,
+                admissionCandidateIdentity,
+                directDeliveries,
+                directDeliverySnapshotIdentity,
+                executionPolicy,
+                environment);
+    }
+
     private void validateOperationShape() {
         if (operation == Operation.ADMIT_CLOSURE) {
             if (cause.kind() != ProcessingCause.Kind.ADMISSION

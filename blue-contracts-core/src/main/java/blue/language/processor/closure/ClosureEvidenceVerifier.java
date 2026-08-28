@@ -66,7 +66,9 @@ final class ClosureEvidenceVerifier {
                 publicEvents,
                 gasTrace,
                 reusableFinalization,
-                Collections.<DocumentId>emptySet());
+                Collections.<DocumentId>emptySet(),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
     }
 
     /**
@@ -84,10 +86,38 @@ final class ClosureEvidenceVerifier {
             List<GasTraceEntry> gasTrace,
             ComponentFinalizationResult reusableFinalization,
             Set<DocumentId> supplementalGasDocumentIds) {
+        verifyTransition(
+                input,
+                output,
+                resultingDocuments,
+                graphChanges,
+                subscriptionDeltas,
+                checkpointWrites,
+                publicEvents,
+                gasTrace,
+                reusableFinalization,
+                supplementalGasDocumentIds,
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
+    }
+
+    /** Verifies a transition with exact resolution-bound retry evidence. */
+    static void verifyTransition(
+            AffectedClosureSnapshot input,
+            AffectedClosureSnapshot output,
+            List<ResultingDocument> resultingDocuments,
+            List<GraphChange> graphChanges,
+            List<SubscriptionDelta> subscriptionDeltas,
+            List<CheckpointWrite> checkpointWrites,
+            List<PublicEventOccurrence> publicEvents,
+            List<GasTraceEntry> gasTrace,
+            ComponentFinalizationResult reusableFinalization,
+            Set<DocumentId> supplementalGasDocumentIds,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
         requireDocumentContinuity(input, output, resultingDocuments);
         verifyFinalizedState(input, output, reusableFinalization);
         verifyMarkers(output);
-        verifyGraphChanges(input, output, graphChanges);
+        verifyGraphChanges(input, output, graphChanges, resolutions);
         verifyGraphGeneration(input, output);
         verifyPublicEventOrder(publicEvents);
         verifyGasDocumentContexts(
@@ -471,7 +501,8 @@ final class ClosureEvidenceVerifier {
     private static void verifyGraphChanges(
             AffectedClosureSnapshot input,
             AffectedClosureSnapshot output,
-            List<GraphChange> changes) {
+            List<GraphChange> changes,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
         Map<String, ManagedOccurrenceBinding> beforeRows =
                 occurrencesById(input.occurrences());
         Map<String, ManagedOccurrenceBinding> afterRows =
@@ -507,7 +538,8 @@ final class ClosureEvidenceVerifier {
                     throw new IllegalArgumentException(
                             "Graph REMOVE before side is not authoritative");
                 }
-                requireRetirementSuccessor(lineage, output);
+                requireRetirementSuccessor(
+                        lineage, input, output, resolutions);
                 active.remove(selected.occurrenceIdentity());
             } else {
                 verifyRebind(change, beforeRows, afterRows, active);
@@ -595,10 +627,17 @@ final class ClosureEvidenceVerifier {
 
     private static void requireRetirementSuccessor(
             ManagedOccurrenceBinding removed,
-            AffectedClosureSnapshot output) {
+            AffectedClosureSnapshot input,
+            AffectedClosureSnapshot output,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
         ManagedOccurrenceBinding successor = occurrenceAt(
                 output.occurrences(), removed.sourceDocumentId(),
                 removed.sourcePath());
+        if (successor != null
+                && historicalRetargetSuccessor(
+                        removed, successor, input, resolutions)) {
+            return;
+        }
         if (successor == null || successor.active()
                 || successor.activationGeneration()
                 != nextGeneration(removed.activationGeneration())
@@ -615,6 +654,46 @@ final class ClosureEvidenceVerifier {
             throw new IllegalArgumentException(
                     "Retirement successor does not bind the current target state");
         }
+    }
+
+    private static boolean historicalRetargetSuccessor(
+            ManagedOccurrenceBinding removed,
+            ManagedOccurrenceBinding successor,
+            AffectedClosureSnapshot input,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
+        if (successor.active()
+                || successor.pendingHistoricalEpoch() == null
+                || successor.activationGeneration()
+                        != nextGeneration(removed.activationGeneration())
+                || !removed.sourceDocumentId().equals(
+                        successor.sourceDocumentId())
+                || !removed.sourcePath().equals(successor.sourcePath())
+                || !removed.bindingPolicyIdentity().equals(
+                        successor.bindingPolicyIdentity())
+                || removed.targetDocumentId().equals(
+                        successor.targetDocumentId())) {
+            return false;
+        }
+        for (ManagedOccurrenceEvidenceResolution resolution
+                : Objects.requireNonNull(resolutions, "resolutions")) {
+            ManagedOccurrenceEvidenceDemand demand = resolution.demand();
+            if (demand.inputClosureIdentity().equals(
+                            input.closureIdentity())
+                    && demand.inputGraphGeneration()
+                            == input.graphGeneration()
+                    && demand.sourceDocumentId().equals(
+                            removed.sourceDocumentId())
+                    && demand.sourcePath().equals(removed.sourcePath())
+                    && resolution.targetDocumentId().equals(
+                            successor.targetDocumentId())
+                    && resolution.pendingHistoricalEpoch()
+                            == successor.pendingHistoricalEpoch().longValue()
+                    && demand.suppliedValueBlueId().equals(
+                            successor.expectedTargetBlueId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static long nextGeneration(long generation) {

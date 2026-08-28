@@ -95,6 +95,30 @@ public final class BlueClosureContracts
     }
 
     /**
+     * Reconstructs and retries one processing invocation with exact
+     * demand-bound managed-occurrence resolutions.
+     *
+     * <p>The base invocation is reverified and reexecuted from its immutable
+     * input. Resolutions are consumed only at their exact deterministic
+     * post-patch demand boundary. The retry owns a distinct invocation
+     * identity and does not retain an in-memory execution continuation.</p>
+     *
+     * @param input exact resolution-bound retry input
+     * @return complete result or a further exact-resource suspension
+     */
+    public synchronized ClosureAttemptResult processClosureRetry(
+            final ClosureProcessRetryInput input) {
+        ensureOpen();
+        return owner.withCapturedConfiguration(
+                new Supplier<ClosureAttemptResult>() {
+                    @Override
+                    public ClosureAttemptResult get() {
+                        return processor.processClosureRetry(input);
+                    }
+                });
+    }
+
+    /**
      * Admits one verified closure candidate through the legacy bounded
      * compatibility lane against a captured ordinary runtime revision.
      *

@@ -190,7 +190,9 @@ public final class ClosureProcessResult {
                 Collections.<DocumentTransitionEvidence>emptyList(),
                 Collections.<ManagedDocumentTransitionReceipt>emptyList(),
                 false,
-                Collections.<DocumentId>emptySet());
+                Collections.<DocumentId>emptySet(),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
     }
 
     /**
@@ -253,7 +255,9 @@ public final class ClosureProcessResult {
                 documentTransitionEvidence,
                 Collections.<ManagedDocumentTransitionReceipt>emptyList(),
                 false,
-                Collections.<DocumentId>emptySet());
+                Collections.<DocumentId>emptySet(),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
     }
 
     /**
@@ -318,7 +322,73 @@ public final class ClosureProcessResult {
                 documentTransitionEvidence,
                 managedTransitionReceipts,
                 true,
-                Collections.<DocumentId>emptySet());
+                Collections.<DocumentId>emptySet(),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
+    }
+
+    /** Processor hook for one verified resolution-bound retry result. */
+    ClosureProcessResult(
+            AffectedClosureSnapshot inputSnapshot,
+            ProcessorStatus status,
+            String invocationIdentity,
+            String outputClosureIdentity,
+            long graphGeneration,
+            List<ResultingDocument> resultingDocuments,
+            List<ComponentSnapshot> resultingComponents,
+            List<ManagedOccurrenceBinding> occurrenceBindings,
+            String occurrenceBindingSetIdentity,
+            List<GraphChange> graphChanges,
+            String graphChangesIdentity,
+            List<SubscriptionDelta> subscriptionDeltas,
+            String subscriptionDeltasIdentity,
+            List<CheckpointWrite> checkpointWrites,
+            String checkpointWritesIdentity,
+            List<PublicEventOccurrence> publicEvents,
+            String publicEventsIdentity,
+            long totalGas,
+            List<GasTraceEntry> gasTrace,
+            String gasTraceIdentity,
+            RejectedCharge rejectedCharge,
+            ClosureWorkOccurrence rejectedWorkOccurrence,
+            ClosureCommitCompanion platformCommitCompanion,
+            ProcessorDiagnostic diagnostic,
+            ComponentFinalizationResult reusableFinalization,
+            List<DocumentTransitionEvidence> documentTransitionEvidence,
+            List<ManagedDocumentTransitionReceipt>
+                    managedTransitionReceipts,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
+        this(
+                inputSnapshot,
+                status,
+                invocationIdentity,
+                outputClosureIdentity,
+                graphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindings,
+                occurrenceBindingSetIdentity,
+                graphChanges,
+                graphChangesIdentity,
+                subscriptionDeltas,
+                subscriptionDeltasIdentity,
+                checkpointWrites,
+                checkpointWritesIdentity,
+                publicEvents,
+                publicEventsIdentity,
+                totalGas,
+                gasTrace,
+                gasTraceIdentity,
+                rejectedCharge,
+                rejectedWorkOccurrence,
+                platformCommitCompanion,
+                diagnostic,
+                reusableFinalization,
+                documentTransitionEvidence,
+                managedTransitionReceipts,
+                true,
+                Collections.<DocumentId>emptySet(),
+                resolutions);
     }
 
     /**
@@ -381,7 +451,9 @@ public final class ClosureProcessResult {
                 Collections.<DocumentTransitionEvidence>emptyList(),
                 Collections.<ManagedDocumentTransitionReceipt>emptyList(),
                 false,
-                candidateGasDocumentIds(rejectedAdmissionCandidate));
+                candidateGasDocumentIds(rejectedAdmissionCandidate),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
     }
 
     private ClosureProcessResult(
@@ -413,7 +485,9 @@ public final class ClosureProcessResult {
             List<DocumentTransitionEvidence> documentTransitionEvidence,
             List<ManagedDocumentTransitionReceipt> managedTransitionReceipts,
             boolean managedTransitionReceiptSurfacePresent,
-            Set<DocumentId> supplementalGasDocumentIds) {
+            Set<DocumentId> supplementalGasDocumentIds,
+            List<ManagedOccurrenceEvidenceResolution>
+                    managedOccurrenceResolutions) {
         AffectedClosureSnapshot input = Objects.requireNonNull(
                 inputSnapshot, "inputSnapshot");
         this.status = Objects.requireNonNull(status, "status");
@@ -502,7 +576,8 @@ public final class ClosureProcessResult {
                 this.publicEvents,
                 this.gasTrace,
                 reusableFinalization,
-                supplementalGasDocuments);
+                supplementalGasDocuments,
+                managedOccurrenceResolutions);
         if (platformCommitCompanion != null) {
             validateCompanion(input, platformCommitCompanion);
         }

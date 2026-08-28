@@ -30,6 +30,17 @@ final class ClosureSuccessResultAssembler {
     static ClosureProcessResult assemble(
             ClosureInvocationInput input,
             ClosureExecutionState state) {
+        return assemble(
+                input,
+                state,
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
+    }
+
+    static ClosureProcessResult assemble(
+            ClosureInvocationInput input,
+            ClosureExecutionState state,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
         ClosureInvocationInput invocation = Objects.requireNonNull(
                 input, "input");
         ClosureExecutionState execution = Objects.requireNonNull(
@@ -123,7 +134,8 @@ final class ClosureSuccessResultAssembler {
                 null,
                 execution.finalization(),
                 execution.transitionEvidence(),
-                managedTransitionReceipts);
+                managedTransitionReceipts,
+                Objects.requireNonNull(resolutions, "resolutions"));
     }
 
     private static AffectedClosureSnapshot committedSnapshot(
