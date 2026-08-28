@@ -116,7 +116,8 @@ final class ClosureInvocationVerifier {
                     break;
                 }
             }
-            if (active == null || !active.active()
+            if (active == null || !(active.active()
+                    || isVerifiedManagedReceiptEventSource(base, active))
                     || active.targetDocumentId().equals(
                             resolution.targetDocumentId())) {
                 throw new IllegalArgumentException(
@@ -128,6 +129,28 @@ final class ClosureInvocationVerifier {
                 selected.retryInvocationIdentity(),
                 verified.candidateDisposition(),
                 verified.candidateKind());
+    }
+
+    private static boolean isVerifiedManagedReceiptEventSource(
+            ClosureInvocationInput base,
+            ManagedOccurrenceBinding binding) {
+        if (!(base.cause() instanceof ManagedRevisionCause)
+                || binding.active()
+                || binding.pendingHistoricalEpoch() == null) {
+            return false;
+        }
+        ManagedRevisionCause revision = (ManagedRevisionCause) base.cause();
+        // verify(base) has already authenticated the complete immutable
+        // receipt and its ordered Root-event identities. The retry cannot
+        // substitute another occurrence, generation, source, or before state.
+        // Runtime consumption still requires this exact demand to arise from
+        // the authenticated imported event before any resolution is applied.
+        return revision.sourceTransitionReceipt().isPresent()
+                && !revision.sourceTransitionReceipt().get().emittedRootEvents().isEmpty()
+                && binding.occurrenceIdentity().equals(revision.targetOccurrenceIdentity())
+                && binding.targetDocumentId().equals(revision.childDocumentId())
+                && binding.pendingHistoricalEpoch().longValue() == revision.fromEpoch()
+                && binding.expectedTargetBlueId().equals(revision.beforeBlueId());
     }
 
     private static void verifyEnvironment(ClosureEnvironment environment) {

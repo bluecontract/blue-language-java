@@ -1174,8 +1174,24 @@ final class FullLifecycleAdmissionTest {
         assertManagedRevisionReceiptEventRetirement(true);
     }
 
+    @Test
+    void managedRevisionFinalReceiptEventMayRetargetToExactHistoricalLineage() {
+        assertManagedRevisionReceiptEventRetirement(false, true);
+    }
+
+    @Test
+    void managedRevisionIntermediateReceiptEventMayRetargetToExactHistoricalLineage() {
+        assertManagedRevisionReceiptEventRetirement(true, true);
+    }
+
     private static void assertManagedRevisionReceiptEventRetirement(
             boolean intermediateEpoch) {
+        assertManagedRevisionReceiptEventRetirement(intermediateEpoch, false);
+    }
+
+    private static void assertManagedRevisionReceiptEventRetirement(
+            boolean intermediateEpoch,
+            boolean retarget) {
         ProbeProcessor probe = new ProbeProcessor();
         Node authoredChild = new Node()
                 .name("Self-retiring retained source")
@@ -1199,6 +1215,16 @@ final class FullLifecycleAdmissionTest {
         final String afterBlueId = blueId(childAfter);
         final String headBlueId = blueId(childHead);
         final String eventBlueId = blueId(EVENT_CHILD);
+        Node authoredReplacement = new Node()
+                .name("Existing historical retarget source")
+                .properties("revision", new Node().value(BigInteger.ZERO));
+        final Node replacementOne = authoredReplacement.clone();
+        installInitializedMarker(replacementOne, blueId(authoredReplacement));
+        NodePathEditor.put(replacementOne, "/revision", new Node().value(BigInteger.ONE));
+        final Node replacementHead = replacementOne.clone();
+        NodePathEditor.put(replacementHead, "/revision", new Node().value(BigInteger.valueOf(3L)));
+        final String replacementOneId = blueId(replacementOne);
+        final String replacementHeadId = blueId(replacementHead);
         NodeProvider retainedHistory = new NodeProvider() {
             @Override
             public List<Node> fetchByBlueId(String blueId) {
@@ -1210,6 +1236,10 @@ final class FullLifecycleAdmissionTest {
                         ? Collections.singletonList(childHead.clone())
                         : eventBlueId.equals(blueId)
                         ? Collections.singletonList(EVENT_CHILD.clone())
+                        : replacementOneId.equals(blueId)
+                        ? Collections.singletonList(replacementOne.clone())
+                        : replacementHeadId.equals(blueId)
+                        ? Collections.singletonList(replacementHead.clone())
                         : Collections.<Node>emptyList();
             }
         };
@@ -1224,8 +1254,11 @@ final class FullLifecycleAdmissionTest {
                             .properties("embedded", processEmbedded("/child"))
                             .properties("fromChild", embeddedChannel("/child"))
                             .properties(
-                                    "catchUpDetach",
+                                    retarget ? "catchUpRetarget" : "catchUpDetach",
                                     handler("fromChild")));
+            if (retarget) {
+                authoredParent.properties("candidate", replacementOne.clone());
+            }
             String authoredParentBlueId = blueId(authoredParent);
             Node parent = authoredParent.clone();
             installInitializedMarker(parent, authoredParentBlueId);
@@ -1240,11 +1273,25 @@ final class FullLifecycleAdmissionTest {
                             Long.valueOf(0L));
             AffectedClosureSnapshot snapshot = initializedSnapshot(
                     finalizedSnapshot(
-                            bodies(A, parent, B, childHead),
+                            retarget ? bodies(A, parent, B, childHead, C, replacementHead)
+                                    : bodies(A, parent, B, childHead),
                             Collections.singletonList(historical),
                             Collections.singletonList(A)),
                     4L,
                     intermediateEpoch ? 2L : 1L);
+            if (retarget) {
+                List<ManagedDocumentSnapshot> snapshots = new ArrayList<>();
+                for (ManagedDocumentSnapshot member : snapshot.managedDocuments()) {
+                    snapshots.add(new ManagedDocumentSnapshot(member.documentId(),
+                            member.blueId(), member.document(), member.initialized(),
+                            member.terminated(), member.publicRoot(),
+                            C.equals(member.documentId()) ? 3L : member.epoch(),
+                            member.componentGeneration()));
+                }
+                snapshot = ClosureEvidenceFactory.affectedClosure(
+                        snapshot.graphGeneration(), snapshots, snapshot.occurrences(),
+                        snapshot.components(), snapshot.publicRootDocumentIds());
+            }
 
             String sourceInvocationIdentity = hash('6');
             ManagedRootEventOccurrence sourceEvent =
@@ -1281,7 +1328,8 @@ final class FullLifecycleAdmissionTest {
                             hash('9'),
                             beforeBlueId,
                             afterBlueId,
-                            Arrays.asList(sourceEvent, duplicateSourceEvent),
+                            retarget ? Collections.singletonList(sourceEvent)
+                                    : Arrays.asList(sourceEvent, duplicateSourceEvent),
                             5L);
             ManagedRevisionCause cause = ClosureEvidenceFactory
                     .managedRevisionCause(
@@ -1304,14 +1352,121 @@ final class FullLifecycleAdmissionTest {
                             environment);
 
             ClosureAttemptResult attempt;
+            List<ClosureImplementationEvidence> observed = new ArrayList<>();
             try (BlueClosureContracts contracts =
-                         new BlueClosureContracts(owner)) {
+                         new BlueClosureContracts(owner, observed::add)) {
                 attempt = contracts.processClosure(input);
+                if (retarget) {
+                    assertFalse(attempt.isComplete(), attempt.isComplete()
+                            ? attempt.processResult().diagnostic().message()
+                            : "exact historical C must first require its own evidence");
+                    assertEquals(1, attempt.resourceDemands().size());
+                    ManagedOccurrenceEvidenceDemand demand =
+                            (ManagedOccurrenceEvidenceDemand) attempt.resourceDemands().get(0);
+                    assertEquals(A, demand.sourceDocumentId());
+                    assertEquals("/child", demand.sourcePath());
+                    assertEquals(replacementOneId, demand.suppliedValueBlueId());
+                    assertEquals(beforeBlueId, NodePathEditor.getOrNull(
+                            input.snapshot().managedDocument(A).document(), "/child")
+                            .getBlueId());
+                    assertEquals(BigInteger.ZERO,
+                            input.snapshot().managedDocument(A).document().get("/deliveries"));
+                    ManagedOccurrenceEvidenceResolution invalid =
+                            ManagedOccurrenceEvidenceResolution.derived(demand, B, 1L);
+                    int executionsBeforeInvalidEvidence = probe.executionCount;
+                    assertThrows(IllegalArgumentException.class,
+                            () -> contracts.processClosureRetry(ClosureProcessRetryInput.derived(
+                                    input, Collections.singletonList(invalid))));
+                    ManagedOccurrenceEvidenceDemand wrongPath =
+                            ManagedOccurrenceEvidenceDemand.derived(
+                                    demand.logicalCauseIdentity(), demand.inputClosureIdentity(),
+                                    demand.inputGraphGeneration(), A, "/wrong-child",
+                                    demand.processEmbeddedDeclarationIdentity(),
+                                    demand.suppliedValueBlueId(), demand.demandOrdinal());
+                    ManagedOccurrenceEvidenceDemand wrongCause =
+                            ManagedOccurrenceEvidenceDemand.derived(
+                                    hash('e'), demand.inputClosureIdentity(),
+                                    demand.inputGraphGeneration(), A, "/child",
+                                    demand.processEmbeddedDeclarationIdentity(),
+                                    demand.suppliedValueBlueId(), demand.demandOrdinal());
+                    ManagedOccurrenceEvidenceDemand wrongGeneration =
+                            ManagedOccurrenceEvidenceDemand.derived(
+                                    demand.logicalCauseIdentity(), demand.inputClosureIdentity(),
+                                    demand.inputGraphGeneration() + 1L, A, "/child",
+                                    demand.processEmbeddedDeclarationIdentity(),
+                                    demand.suppliedValueBlueId(), demand.demandOrdinal());
+                    for (ManagedOccurrenceEvidenceDemand invalidDemand
+                            : Arrays.asList(wrongPath, wrongCause, wrongGeneration)) {
+                        ManagedOccurrenceEvidenceResolution invalidResolution =
+                                ManagedOccurrenceEvidenceResolution.derived(invalidDemand, C, 1L);
+                        assertThrows(IllegalArgumentException.class,
+                                () -> contracts.processClosureRetry(ClosureProcessRetryInput.derived(
+                                        input, Collections.singletonList(invalidResolution))));
+                    }
+                    ManagedRevisionCause unverifiedEvents = ClosureEvidenceFactory.managedRevisionCause(
+                            historical.occurrenceIdentity(), B, 0L, 1L,
+                            beforeBlueId, afterBlueId, childAfter, sourceReceipt.originalCauseIdentity());
+                    ClosureInvocationInput unverifiedInput = ClosureEvidenceFactory.processClosure(
+                            input.snapshot(), unverifiedEvents,
+                            Collections.<DirectLogicalDelivery>emptyList(), input.executionPolicy(), environment);
+                    ManagedOccurrenceEvidenceDemand unverifiedDemand = ManagedOccurrenceEvidenceDemand.derived(
+                            unverifiedEvents.causeIdentity(), unverifiedInput.snapshot().closureIdentity(),
+                            unverifiedInput.snapshot().graphGeneration(), A, "/child",
+                            demand.processEmbeddedDeclarationIdentity(), replacementOneId, 0L);
+                    assertThrows(IllegalArgumentException.class,
+                            () -> contracts.processClosureRetry(ClosureProcessRetryInput.derived(
+                                    unverifiedInput, Collections.singletonList(
+                                            ManagedOccurrenceEvidenceResolution.derived(unverifiedDemand, C, 1L)))));
+                    assertEquals(executionsBeforeInvalidEvidence, probe.executionCount,
+                            "unverified or foreign retarget evidence must fail before Root work");
+                    ManagedOccurrenceEvidenceResolution exact =
+                            ManagedOccurrenceEvidenceResolution.derived(demand, C, 1L);
+                    ManagedOccurrenceEvidenceDemand unusedDemand = ManagedOccurrenceEvidenceDemand.derived(
+                            demand.logicalCauseIdentity(), demand.inputClosureIdentity(),
+                            demand.inputGraphGeneration(), A, "/child",
+                            demand.processEmbeddedDeclarationIdentity(), replacementHeadId, 0L);
+                    IllegalArgumentException unused = assertThrows(IllegalArgumentException.class,
+                            () -> contracts.processClosureRetry(ClosureProcessRetryInput.derived(
+                                    input, Arrays.asList(exact,
+                                            ManagedOccurrenceEvidenceResolution.derived(unusedDemand, C, 3L)))));
+                    assertTrue(unused.getMessage().contains("unused"));
+                    assertEquals(BigInteger.ZERO,
+                            input.snapshot().managedDocument(A).document().get("/deliveries"));
+                    attempt = contracts.processClosureRetry(ClosureProcessRetryInput.derived(
+                            input, Collections.singletonList(exact)));
+                }
             }
 
             assertTrue(attempt.isComplete());
             ClosureProcessResult result = attempt.processResult();
             assertSuccess(result);
+            if (retarget) {
+                ManagedOccurrenceBinding replacement = result.occurrenceBindings().stream()
+                        .filter(row -> row.sourceDocumentId().equals(A)
+                                && row.sourcePath().equals("/child"))
+                        .findFirst().orElseThrow(AssertionError::new);
+                assertEquals(C, replacement.targetDocumentId());
+                assertEquals(2L, replacement.activationGeneration());
+                assertFalse(replacement.active());
+                assertEquals(Long.valueOf(1L), replacement.pendingHistoricalEpoch());
+                assertEquals(replacementOneId, replacement.expectedTargetBlueId());
+                assertNotEquals(historical.occurrenceIdentity(), replacement.occurrenceIdentity());
+                assertEquals(BigInteger.ONE, document(result, A).document().get("/deliveries"));
+                assertEquals(snapshot.managedDocument(B).blueId(), document(result, B).afterBlueId());
+                assertEquals(snapshot.managedDocument(C).blueId(), document(result, C).afterBlueId());
+                assertEquals(3, probe.executionCount,
+                        "suspended, unused-evidence, and committed event attempts; no source execution");
+                assertTrue(probe.initializationOrder.isEmpty());
+                assertFalse(observed.isEmpty());
+                assertTrue(observed.get(observed.size() - 1).documentStepTrace().stream()
+                        .allMatch(step -> step.targetDocumentId().equals(A)),
+                        "only the consumer Root may execute; retained B/C are immutable inputs");
+                System.out.println("MANAGED_RECEIPT_RETARGET intermediate=" + intermediateEpoch
+                        + " C1=" + replacementOneId + " C3=" + replacementHeadId
+                        + " generation=" + replacement.activationGeneration()
+                        + " pendingEpoch=" + replacement.pendingHistoricalEpoch());
+                return;
+            }
             assertNull(NodePathEditor.getOrNull(
                     document(result, A).document(), "/child"));
             assertEquals(BigInteger.valueOf(2L),
@@ -3892,6 +4047,14 @@ final class FullLifecycleAdmissionTest {
                         "/deliveries",
                         new Node().value(
                                 deliveries.add(BigInteger.ONE))));
+            } else if ("catchUpRetarget".equals(key)) {
+                observedEventKinds.add(occurrenceKind(context));
+                context.applyPatch(JsonPatch.replace(
+                        "/child", context.documentAt("/candidate").clone()));
+                BigInteger deliveries = (BigInteger) context.documentAt(
+                        "/deliveries").getValue();
+                context.applyPatch(JsonPatch.replace("/deliveries",
+                        new Node().value(deliveries.add(BigInteger.ONE))));
             } else if ("publicEmit".equals(key)) {
                 if (initiated(context)) {
                     context.emitEvent(EVENT_PUBLIC.clone());

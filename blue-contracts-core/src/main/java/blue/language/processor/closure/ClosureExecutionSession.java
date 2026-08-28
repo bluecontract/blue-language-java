@@ -2881,6 +2881,7 @@ final class ClosureExecutionSession
                 instanceof ManagedRevisionCause
                 ? (ManagedRevisionCause) input.cause()
                 : null;
+        boolean receiptEventReclassification = false;
         for (ManagedOccurrenceBinding binding : currentBindings) {
             if (revision != null
                     && binding.occurrenceIdentity().equals(
@@ -2892,8 +2893,9 @@ final class ClosureExecutionSession
                     // Preserve or invocation-locally activate the exact row
                     // just long enough for the ordinary surface reconciler
                     // below to classify its removal and allocate the next
-                    // inactive generation.
+                    // inactive generation, including an exact retarget.
                     working.add(receiptEventRetirement);
+                    receiptEventReclassification = true;
                 } else {
                     working.add(reconcileManagedRevision(
                             binding, revision));
@@ -2903,6 +2905,21 @@ final class ClosureExecutionSession
             }
         }
         Collections.sort(working);
+        if (receiptEventReclassification) {
+            // Historical rows are not ordinarily active candidates. Only the
+            // authenticated receipt-event boundary above can expose one to
+            // the same demand/resolution preflight as an ordinary retarget.
+            // Do not publish this invocation-local activation or make it the
+            // before graph used for finalization and topology accounting.
+            List<ManagedOccurrenceBinding> before = currentBindings;
+            currentBindings = working;
+            try {
+                requireAvailableProcessEmbeddedResources(projected, true);
+                working = new ArrayList<ManagedOccurrenceBinding>(currentBindings);
+            } finally {
+                currentBindings = before;
+            }
+        }
 
         LinkedHashSet<String> activated =
                 new LinkedHashSet<String>();
@@ -2951,15 +2968,22 @@ final class ClosureExecutionSession
             return null;
         }
         Node containing = latestBodies.get(binding.sourceDocumentId());
-        if (containing == null
-                || NodePathEditor.getOrNull(
-                        containing, binding.sourcePath()) != null) {
+        if (containing == null) {
             return null;
         }
 
         ManagedDocumentSnapshot child = currentSnapshot.managedDocument(
                 revision.childDocumentId());
         if (child == null) {
+            return null;
+        }
+        Node value = NodePathEditor.getOrNull(containing, binding.sourcePath());
+        String installedBlueId = managedRevisionActivationCompleted && binding.active()
+                ? child.blueId() : revision.afterBlueId();
+        if (value != null && value.isReferenceOnly()
+                && installedBlueId.equals(value.getBlueId())) {
+            // Unchanged successor references still take the strict managed
+            // revision reconciliation path; this lane owns event changes only.
             return null;
         }
         if (managedRevisionActivationCompleted
