@@ -617,6 +617,9 @@ public final class SemanticOutputBoundary {
         if (node.getMergePolicy() != null) count++;
         if (node.getPreviousBlueId() != null) count++;
         if (node.getPosition() != null) count++;
+        count += CanonicalIdentityGasProjection
+                .inferredScalarTypeMember(
+                        node.getValue(), node.getType() != null);
         return count;
     }
 

@@ -329,6 +329,9 @@ final class MutationGasCharger {
         if (node.getContracts() != null) members++;
         if (node.getBlue() != null) members++;
         if (node.getMergePolicy() != null) members++;
+        members += CanonicalIdentityGasProjection
+                .inferredScalarTypeMember(
+                        node.getValue(), node.getType() != null);
         return members;
     }
 
@@ -346,6 +349,9 @@ final class MutationGasCharger {
         if (node.getContracts() != null) members++;
         if (node.getBlue() != null) members++;
         if (node.getMergePolicy() != null) members++;
+        members += CanonicalIdentityGasProjection
+                .inferredScalarTypeMember(
+                        node.getValue(), node.getType() != null);
         return members;
     }
 }
