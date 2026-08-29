@@ -107,6 +107,43 @@ final class ReferenceTransparentExecutionTest {
     }
 
     @Test
+    void closureOwnedManagedPathDoesNotDemandTentativeCyclicIdentity() {
+        String tentativeMember =
+                "CSiCujDGBpsnLkp2PCcPy4cUthgutTvu6C17Euxd47dK#1";
+        CountingProvider provider = new CountingProvider()
+                .unavailable(tentativeMember, "not yet published");
+        Node root = new Node().name("managed host")
+                .properties("peer", new Node().blueId(tentativeMember));
+
+        BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+        try (LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager base =
+                    new LanguageProcessingSnapshotManager(scope);
+            ResolvedSnapshot snapshot =
+                    base.fromDocumentTransientPreservingPaths(
+                            root, Collections.singleton("/peer"));
+            ManagedDocumentResolutionOverlay overlay =
+                    new ManagedDocumentResolutionOverlay(
+                            Collections.<String, Node>emptyMap(),
+                            Collections.singletonMap(
+                                    "/peer", tentativeMember));
+            ManagedDocumentOverlaySnapshotManager managed =
+                    new ManagedDocumentOverlaySnapshotManager(base, overlay);
+            DocumentProcessingRuntime runtime =
+                    new DocumentProcessingRuntime(snapshot, null, managed);
+
+            assertTrue(runtime.resolvedNodeAt("/peer").isReferenceOnly());
+            assertNull(runtime.resolvedNodeAt("/peer/value"));
+            assertEquals(0, provider.reads(tentativeMember));
+        } finally {
+            language.close();
+        }
+    }
+
+    @Test
     void unavailableReadAndPatchRemainTypedRetryableAndAtomic() {
         Node counter = counter(7);
         String counterBlueId = blueId(counter);

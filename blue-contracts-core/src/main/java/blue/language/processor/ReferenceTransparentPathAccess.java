@@ -61,14 +61,19 @@ final class ReferenceTransparentPathAccess {
         FrozenNode resolved = Objects.requireNonNull(
                 resolvedRoot, "resolvedRoot");
 
+        String currentPointer = JsonPointer.ROOT;
         NodePair current = openIfRequired(
-                new NodePair(canonical, resolved), READ_PURPOSE);
+                new NodePair(canonical, resolved),
+                READ_PURPOSE,
+                currentPointer);
         for (String segment : JsonPointer.split(normalized)) {
             current = child(current, segment);
             if (current == null) {
                 return null;
             }
-            current = openIfRequired(current, READ_PURPOSE);
+            currentPointer = JsonPointer.append(currentPointer, segment);
+            current = openIfRequired(
+                    current, READ_PURPOSE, currentPointer);
         }
         return current.resolved != null
                 ? current.resolved
@@ -101,6 +106,9 @@ final class ReferenceTransparentPathAccess {
                     break;
                 }
                 if (!ancestor.isReferenceOnly()) {
+                    continue;
+                }
+                if (isOpaqueManagedPath(prefix)) {
                     continue;
                 }
                 if (BlueIds.hasCyclicMemberSeparator(
@@ -262,7 +270,10 @@ final class ReferenceTransparentPathAccess {
                 : null;
     }
 
-    private NodePair openIfRequired(NodePair current, String purpose) {
+    private NodePair openIfRequired(
+            NodePair current,
+            String purpose,
+            String absolutePointer) {
         if (current.resolved != null
                 && !current.resolved.isReferenceOnly()) {
             return current;
@@ -277,8 +288,17 @@ final class ReferenceTransparentPathAccess {
         if (reference == null || manager == null) {
             return current;
         }
+        if (isOpaqueManagedPath(absolutePointer)) {
+            return current;
+        }
         ExactView exact = exactView(reference, purpose);
         return new NodePair(exact.canonical, exact.resolved);
+    }
+
+    private boolean isOpaqueManagedPath(String absolutePointer) {
+        return manager instanceof ManagedDocumentOverlaySnapshotManager
+                && ((ManagedDocumentOverlaySnapshotManager) manager)
+                        .isOpaqueManagedPath(absolutePointer);
     }
 
     private ExactView exactView(FrozenNode reference, String purpose) {

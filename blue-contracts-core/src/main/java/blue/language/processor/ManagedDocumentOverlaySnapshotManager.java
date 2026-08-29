@@ -94,6 +94,13 @@ final class ManagedDocumentOverlaySnapshotManager
                 : delegate.materializeVerifiedExactReference(checked);
     }
 
+    /** Whether one selected Root path remains owned by closure processing. */
+    boolean isOpaqueManagedPath(String absolutePointer) {
+        return opaqueManagedPaths.contains(
+                blue.language.processor.util.PointerUtils.normalizePointer(
+                        absolutePointer));
+    }
+
     @Override
     public ProcessingSnapshotManager transientSequence() {
         return new ManagedDocumentOverlaySnapshotManager(
