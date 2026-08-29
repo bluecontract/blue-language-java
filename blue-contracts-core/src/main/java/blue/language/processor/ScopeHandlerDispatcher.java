@@ -291,6 +291,7 @@ final class ScopeHandlerDispatcher {
         } catch (GasLimitExceededException
                  | PortableLimitExceededException
                  | SubscriptionSurfaceInvalidException
+                 | ExecutionEvidenceUnavailableException
                  | InvalidExecutionEvidenceException
                  | DocumentStepRuntimeGapException exception) {
             throw exception;

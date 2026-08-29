@@ -399,6 +399,27 @@ final class ReferenceTransparentExecutionTest {
     }
 
     @Test
+    void handlerEvidenceMissSuspendsAtomicallyInsteadOfFailingRuntime() {
+        Node counter = counter(7);
+        String counterBlueId = blueId(counter);
+        Node root = lifecycleExecutableRoot(
+                new Node().blueId(counterBlueId));
+        CountingProvider provider = new CountingProvider()
+                .unavailable(counterBlueId, "counter store offline");
+        Object before = NodeWireForm.get(root);
+
+        try (ProcessingFixture fixture = processor(provider)) {
+            ExecutionEvidenceUnavailableException suspended = assertThrows(
+                    ExecutionEvidenceUnavailableException.class,
+                    () -> fixture.processor.initializeDocument(root));
+            assertEquals(Collections.singletonList(counterBlueId),
+                    suspended.requiredExactBlueIds());
+            assertEquals(before, NodeWireForm.get(root));
+            assertEquals(1, provider.reads(counterBlueId));
+        }
+    }
+
+    @Test
     void handlerPatchThroughReferenceMatchesInlineResultAndGas() {
         assertHandlerPatchParity(false);
     }
@@ -794,6 +815,7 @@ final class ReferenceTransparentExecutionTest {
             context.applyPatch(JsonPatch.replace(
                     "/counterValue/value",
                     new Node().value(BigInteger.valueOf(9))));
+            context.documentAt("/counterValue/value");
         }
     }
 
