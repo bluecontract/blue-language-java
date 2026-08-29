@@ -823,6 +823,10 @@ final class DocumentProcessingRuntime {
         snapshotTransaction.commitMaterializedSnapshot(committed); }
     void syncMaterializedView() {
         snapshotTransaction.syncMaterializedView(); }
+    void synchronizeSelectedDocumentAfterContinuation(
+            FrozenNode selectedBeforeContinuation) {
+        snapshotTransaction.synchronizeSelectedDocumentAfterContinuation(
+                selectedBeforeContinuation); }
     ResolvedSnapshot snapshotFromDocument(Node document) {
         return snapshotTransaction.snapshotFromDocument(document); }
     ProcessingSnapshotManager currentSnapshotManager() {

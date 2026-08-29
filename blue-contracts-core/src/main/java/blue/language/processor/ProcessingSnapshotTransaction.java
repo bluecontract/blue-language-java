@@ -182,6 +182,34 @@ final class ProcessingSnapshotTransaction {
         }
     }
 
+    /**
+     * Promotes a successful managed-step continuation rewrite into the same
+     * invocation snapshot used to plan and charge the next authored patch.
+     */
+    void synchronizeSelectedDocumentAfterContinuation(
+            FrozenNode selectedBeforeContinuation) {
+        if (!runtime.selectedDocumentBacked) {
+            return;
+        }
+        FrozenNode before = Objects.requireNonNull(
+                selectedBeforeContinuation,
+                "selectedBeforeContinuation");
+        FrozenNode after = FrozenNode.fromResolvedNode(
+                runtime.materializedView.copyRoot());
+        if (before.blueId().equals(after.blueId())
+                && before.sameResolvedStructure(after)) {
+            return;
+        }
+
+        ProcessingSnapshotManager manager = currentManager();
+        runtime.snapshot = manager != null
+                ? snapshotFromDocument(
+                        runtime.materializedView.copyRoot(), true, manager)
+                : null;
+        runtime.materializedViewStale = false;
+        markStateAdvanced(false);
+    }
+
     ResolvedSnapshot snapshotFromDocument(Node document) {
         return snapshotFromDocument(document, false);
     }

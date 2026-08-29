@@ -110,6 +110,9 @@ final class ClosureExecutionSession
             new ArrayDeque<PendingTermination>();
     private final Map<DocumentId, Node> latestBodies =
             new LinkedHashMap<DocumentId, Node>();
+    private final Map<DocumentId, Set<String>>
+            finalizedBlueIdsByDocument =
+            new LinkedHashMap<DocumentId, Set<String>>();
     private final ClosureWorkQueue workQueue = new ClosureWorkQueue();
     private final Map<String, PendingWork> pendingByIdentity =
             new HashMap<String, PendingWork>();
@@ -198,6 +201,8 @@ final class ClosureExecutionSession
                 : currentSnapshot.managedDocuments()) {
             documentIds.add(document.documentId());
             latestBodies.put(document.documentId(), document.document());
+            recordFinalizedBlueId(
+                    document.documentId(), document.blueId());
             inputComponentGenerations.put(
                     document.documentId(),
                     Long.valueOf(document.componentGeneration()));
@@ -2515,6 +2520,7 @@ final class ClosureExecutionSession
                 });
         chargeChangedAcyclicComponents(
                 finalized, boundary, owner);
+        recordFinalizedBlueIds(finalized);
         currentBindings = new ArrayList<ManagedOccurrenceBinding>(
                 finalized.finalizedGraph().bindings());
         latestBodies.clear();
@@ -2868,7 +2874,10 @@ final class ClosureExecutionSession
     reconcileProcessEmbeddedSurfaces(ClosureWorkOccurrence owner) {
         Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected =
                 projectProcessEmbeddedSurfaces();
-        requireAvailableProcessEmbeddedResources(projected, true);
+        ProcessEmbeddedSurfaceReconciler.DemandContext demandContext =
+                processEmbeddedDemandContext(true);
+        requireAvailableProcessEmbeddedResources(
+                projected, demandContext);
 
         ArrayList<DocumentId> sources =
                 new ArrayList<DocumentId>(latestBodies.keySet());
@@ -2914,7 +2923,8 @@ final class ClosureExecutionSession
             List<ManagedOccurrenceBinding> before = currentBindings;
             currentBindings = working;
             try {
-                requireAvailableProcessEmbeddedResources(projected, true);
+                requireAvailableProcessEmbeddedResources(
+                        projected, demandContext);
                 working = new ArrayList<ManagedOccurrenceBinding>(currentBindings);
             } finally {
                 currentBindings = before;
@@ -2934,13 +2944,16 @@ final class ClosureExecutionSession
                         processEmbeddedRetirementFences);
         for (DocumentId source : sources) {
             ProcessEmbeddedSurfaceReconciler.Reconciliation result =
-                    processEmbeddedReconciler.reconcileProjected(
+                    processEmbeddedReconciler
+                            .reconcileProjectedAfterDemandAggregation(
                             source,
                             latestBodies.get(source),
                             projected.get(source),
                             working,
                             currentDocuments,
-                            fences);
+                            fences,
+                            demandContext
+                                    .priorFinalizedReferenceAvailability());
             working = new ArrayList<ManagedOccurrenceBinding>(
                     result.bindings());
             activated.addAll(
@@ -3055,14 +3068,22 @@ final class ClosureExecutionSession
     private void requireAvailableProcessEmbeddedResources(
             Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected,
             boolean verifyHistoricalExactReferences) {
+        requireAvailableProcessEmbeddedResources(
+                projected,
+                processEmbeddedDemandContext(
+                        verifyHistoricalExactReferences));
+    }
+
+    private void requireAvailableProcessEmbeddedResources(
+            Map<DocumentId, List<ManagedProcessEmbeddedPath>> projected,
+            ProcessEmbeddedSurfaceReconciler.DemandContext demandContext) {
         List<ClosureResourceDemand> demands =
                 processEmbeddedReconciler.resourceDemands(
                         latestBodies,
                         projected,
                         currentBindings,
                         currentSnapshot.managedDocuments(),
-                        processEmbeddedDemandContext(
-                                verifyHistoricalExactReferences));
+                        demandContext);
         if (demands.isEmpty()) {
             return;
         }
@@ -3086,8 +3107,7 @@ final class ClosureExecutionSession
                         projected,
                         currentBindings,
                         currentSnapshot.managedDocuments(),
-                        processEmbeddedDemandContext(
-                                verifyHistoricalExactReferences));
+                        demandContext);
         if (!remaining.isEmpty()) {
             throw new IllegalArgumentException(
                     "Exact managed-occurrence resolutions did not close "
@@ -3195,7 +3215,49 @@ final class ClosureExecutionSession
                                 .isExactManagedReferenceAvailable(blueId);
                     }
                 },
+                priorFinalizedReferenceAvailabilitySnapshot(),
                 verifyHistoricalExactReferences);
+    }
+
+    private ProcessEmbeddedSurfaceReconciler
+            .PriorFinalizedReferenceAvailability
+    priorFinalizedReferenceAvailabilitySnapshot() {
+        final Map<DocumentId, Set<String>> exact =
+                new LinkedHashMap<DocumentId, Set<String>>();
+        for (Map.Entry<DocumentId, Set<String>> entry
+                : finalizedBlueIdsByDocument.entrySet()) {
+            exact.put(entry.getKey(), Collections.unmodifiableSet(
+                    new LinkedHashSet<String>(entry.getValue())));
+        }
+        return new ProcessEmbeddedSurfaceReconciler
+                .PriorFinalizedReferenceAvailability() {
+            @Override
+            public boolean isAvailable(
+                    DocumentId documentId, String blueId) {
+                Set<String> finalized = exact.get(documentId);
+                return finalized != null && finalized.contains(blueId);
+            }
+        };
+    }
+
+    private void recordFinalizedBlueIds(
+            ComponentFinalizationResult finalized) {
+        for (FinalizedDocumentEvidence document
+                : finalized.documents().values()) {
+            recordFinalizedBlueId(
+                    document.documentId(), document.blueId());
+        }
+    }
+
+    private void recordFinalizedBlueId(
+            DocumentId documentId, String blueId) {
+        Set<String> finalized = finalizedBlueIdsByDocument.get(documentId);
+        if (finalized == null) {
+            finalized = new LinkedHashSet<String>();
+            finalizedBlueIdsByDocument.put(documentId, finalized);
+        }
+        finalized.add(ClosureValueSupport.requireBlueId(
+                blueId, "finalizedBlueId"));
     }
 
     private ComponentFinalizationResult rebindInactiveProspectiveRows(

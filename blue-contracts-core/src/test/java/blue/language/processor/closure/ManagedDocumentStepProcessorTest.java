@@ -152,6 +152,24 @@ final class ManagedDocumentStepProcessorTest {
     }
 
     @Test
+    void rebasesNextPatchAfterClosureContinuationMutatesItsAncestor() {
+        AffectedClosureSnapshot state = acyclicContainingState();
+        try (Fixture fixture = new Fixture(
+                Action.PATCH_THROUGH_CONTINUATION, true)) {
+            LocalDocumentStepResult result = fixture.stepper.process(input(
+                    state, B, WorkKind.TRIGGERED_EVENT, "trigger", "patch"));
+
+            assertEquals(Arrays.asList(false, true),
+                    fixture.hook.synchronizedAncestorVisibleAtPatch);
+            assertEquals(Boolean.TRUE, result.resultingBody()
+                    .getNode("/first/closureSynchronized")
+                    .getValue());
+            assertEquals("B-second", result.resultingBody()
+                    .getAsText("/first/second"));
+        }
+    }
+
+    @Test
     void transfersApplicationEventsBeforeAnyLocalFifoOrPublicClassification() {
         AffectedClosureSnapshot state = acyclicContainingState();
         try (Fixture fixture = new Fixture(Action.EMIT)) {
@@ -670,6 +688,7 @@ final class ManagedDocumentStepProcessorTest {
     enum Action {
         OBSERVE,
         PATCH,
+        PATCH_THROUGH_CONTINUATION,
         EMIT,
         TERMINATE
     }
@@ -720,6 +739,16 @@ final class ManagedDocumentStepProcessorTest {
                                 new Node().value(label + "-first")),
                         JsonPatch.add(
                                 "/second",
+                                new Node().value(label + "-second"))));
+            } else if (action == Action.PATCH_THROUGH_CONTINUATION) {
+                context.applyPatches(Arrays.asList(
+                        JsonPatch.add(
+                                "/first",
+                                new Node().properties(
+                                        "beforeContinuation",
+                                        new Node().value(true))),
+                        JsonPatch.add(
+                                "/first/second",
                                 new Node().value(label + "-second"))));
             } else if (action == Action.EMIT) {
                 context.emitEvent(new Node().properties(
@@ -802,6 +831,9 @@ final class ManagedDocumentStepProcessorTest {
                 new ArrayList<Boolean>();
         private final List<Boolean> secondVisibleAtPatch =
                 new ArrayList<Boolean>();
+        private final List<Boolean>
+                synchronizedAncestorVisibleAtPatch =
+                new ArrayList<Boolean>();
         private final List<Integer> updateCounts = new ArrayList<Integer>();
         private final List<String> patchScopes =
                 new ArrayList<String>();
@@ -809,6 +841,13 @@ final class ManagedDocumentStepProcessorTest {
                 new ArrayList<EventCapture>();
         private final List<DocumentUpdateOccurrence> updates =
                 new ArrayList<DocumentUpdateOccurrence>();
+        private final boolean synchronizeFirstAfterItsPatch;
+
+        private CapturingContinuation(
+                boolean synchronizeFirstAfterItsPatch) {
+            this.synchronizeFirstAfterItsPatch =
+                    synchronizeFirstAfterItsPatch;
+        }
 
         @Override
         public void afterPatch(
@@ -817,15 +856,30 @@ final class ManagedDocumentStepProcessorTest {
                 FrozenJsonPatch patch,
                 List<DocumentUpdateOccurrence> updates) {
             patchPaths.add(patch.getPath());
-            firstVisibleAtPatch.add(Boolean.valueOf(
-                    currentDocument.getProperties().containsKey("first")));
+            boolean firstVisible =
+                    currentDocument.getProperties().containsKey("first");
+            firstVisibleAtPatch.add(Boolean.valueOf(firstVisible));
             secondVisibleAtPatch.add(Boolean.valueOf(
                     currentDocument.getProperties().containsKey("second")));
+            Node first = currentDocument.getProperties().get("first");
+            synchronizedAncestorVisibleAtPatch.add(Boolean.valueOf(
+                    first != null
+                            && first.getProperties() != null
+                            && first.getProperties().containsKey(
+                                    "closureSynchronized")));
             updateCounts.add(Integer.valueOf(updates.size()));
             this.updates.addAll(updates);
             patchScopes.add(scopePath);
             assertEquals("/", scopePath);
             assertNotNull(currentDocument);
+            if (synchronizeFirstAfterItsPatch
+                    && "/first".equals(patch.getPath())) {
+                currentDocument.getProperties().put(
+                        "first",
+                        new Node().properties(
+                                "closureSynchronized",
+                                new Node().value(true)));
+            }
         }
 
         @Override
@@ -875,6 +929,12 @@ final class ManagedDocumentStepProcessorTest {
         private final ManagedDocumentStepProcessor stepper;
 
         private Fixture(Action action) {
+            this(action, false);
+        }
+
+        private Fixture(
+                Action action,
+                boolean synchronizeFirstAfterItsPatch) {
             this.probe = new ProbeProcessor(action);
             ContractProcessorRegistry registry =
                     ContractProcessorRegistryBuilder.create()
@@ -890,7 +950,8 @@ final class ManagedDocumentStepProcessorTest {
             this.owner = DocumentProcessor.builder()
                     .runtimeRegistry(registry)
                     .build();
-            this.hook = new CapturingContinuation();
+            this.hook = new CapturingContinuation(
+                    synchronizeFirstAfterItsPatch);
             this.stepper = new ManagedDocumentStepProcessor(
                     owner, hook);
         }

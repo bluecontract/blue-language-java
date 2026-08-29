@@ -313,6 +313,76 @@ final class ManagedOccurrenceDemandDiscoveryTest {
     }
 
     @Test
+    void priorFinalizedReferencePreservesOnlyItsProvenActiveLineage() {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot target = document(B, "target-head");
+        String priorTargetBlueId = blueId(
+                new Node().name("prior finalized target state"));
+        Node resulting = source.document().properties(
+                "peer", new Node().blueId(priorTargetBlueId));
+        ManagedOccurrenceBinding active = binding(
+                A, "/peer", 3L, target, true);
+        List<ManagedProcessEmbeddedPath> surface =
+                Collections.singletonList(path("/peer"));
+        List<ManagedDocumentSnapshot> documents = Arrays.asList(
+                source, target);
+        ProcessEmbeddedSurfaceReconciler.DemandContext sameLineage =
+                contextWithPriorFinalizedReference(
+                        B, priorTargetBlueId, false);
+
+        assertTrue(reconciler.resourceDemands(
+                A,
+                resulting,
+                surface,
+                Collections.singletonList(active),
+                documents,
+                sameLineage).isEmpty());
+        ProcessEmbeddedSurfaceReconciler.Reconciliation reconciled =
+                reconciler.reconcileProjected(
+                        A,
+                        resulting,
+                        surface,
+                        Collections.singletonList(active),
+                        documents,
+                        Collections.<ProcessEmbeddedSurfaceReconciler
+                                .OccurrencePath>emptySet(),
+                        sameLineage);
+        assertEquals(1, reconciled.bindings().size());
+        ManagedOccurrenceBinding retained = reconciled.bindings().get(0);
+        assertEquals(active.occurrenceIdentity(),
+                retained.occurrenceIdentity());
+        assertEquals(active.bindingIdentity(), retained.bindingIdentity());
+        assertEquals(active.targetDocumentId(), retained.targetDocumentId());
+        assertEquals(active.activationGeneration(),
+                retained.activationGeneration());
+        assertTrue(reconciled.transitions().isEmpty());
+
+        List<ClosureResourceDemand> wrongLineage =
+                reconciler.resourceDemands(
+                        A,
+                        resulting,
+                        surface,
+                        Collections.singletonList(active),
+                        documents,
+                        contextWithPriorFinalizedReference(
+                                C, priorTargetBlueId, false));
+        assertEquals(1, wrongLineage.size());
+        assertTrue(wrongLineage.get(0) instanceof ExactNodeDemand);
+
+        List<ClosureResourceDemand> providerOnly =
+                reconciler.resourceDemands(
+                        A,
+                        resulting,
+                        surface,
+                        Collections.singletonList(active),
+                        documents,
+                        context(true));
+        assertEquals(1, providerOnly.size());
+        assertTrue(providerOnly.get(0)
+                instanceof ManagedOccurrenceEvidenceDemand);
+    }
+
+    @Test
     void finalDiscoveryPhysicallyVerifiesAnExactHistoricalReference() {
         ManagedDocumentSnapshot source = document(A, "source-a");
         ManagedDocumentSnapshot currentTarget = document(B, "target-head");
@@ -437,6 +507,34 @@ final class ManagedOccurrenceDemandDiscoveryTest {
                             requestedBlueIds.add(blueId);
                         }
                         return exactAvailable;
+                    }
+                },
+                verifyHistoricalExactReferences);
+    }
+
+    private static ProcessEmbeddedSurfaceReconciler.DemandContext
+    contextWithPriorFinalizedReference(
+            final DocumentId documentId,
+            final String exactBlueId,
+            boolean verifyHistoricalExactReferences) {
+        return new ProcessEmbeddedSurfaceReconciler.DemandContext(
+                CAUSE,
+                CLOSURE,
+                7L,
+                new ProcessEmbeddedSurfaceReconciler
+                        .ExactReferenceAvailability() {
+                    @Override
+                    public boolean isAvailable(String blueId) {
+                        return false;
+                    }
+                },
+                new ProcessEmbeddedSurfaceReconciler
+                        .PriorFinalizedReferenceAvailability() {
+                    @Override
+                    public boolean isAvailable(
+                            DocumentId candidate, String blueId) {
+                        return documentId.equals(candidate)
+                                && exactBlueId.equals(blueId);
                     }
                 },
                 verifyHistoricalExactReferences);
