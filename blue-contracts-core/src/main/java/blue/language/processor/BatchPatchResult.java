@@ -130,6 +130,18 @@ final class BatchPatchResult {
         return resolvedRoot;
     }
 
+    /**
+     * Returns the exact authored candidate after requested patches and before
+     * conformance-owned metadata is applied. Selected-document publication
+     * must start here: replaying the patches against an earlier collapsed
+     * representation cannot patch through a pure-reference ancestor.
+     */
+    FrozenNode selectedCanonicalRoot() {
+        return updatePlan != null
+                ? updatePlan.preConformanceCanonicalRoot
+                : canonicalRoot;
+    }
+
     List<DocumentUpdateData> updates() {
         return updates != null ? updates : updatePlan.build(null);
     }

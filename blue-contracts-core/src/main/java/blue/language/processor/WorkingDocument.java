@@ -61,6 +61,8 @@ public final class WorkingDocument implements AutoCloseable {
     private final Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans;
     private final boolean strictPlatformInvocation;
     private ProcessingSnapshotManager workingSequenceManager;
+    private ReferenceTransparentPathAccess transparentPathAccess;
+    private ProcessingSnapshotManager transparentPathManager;
     private ResolvedSnapshot snapshot;
     private boolean resolutionComplete;
     private boolean closed;
@@ -231,8 +233,11 @@ public final class WorkingDocument implements AutoCloseable {
      * @return immutable resolved node, or {@code null}
      */
     public FrozenNode resolvedAt(String absolutePointer) {
-        return ImmutablePatchPlanner.forFrozen(resolvedRoot)
-                .read(PointerUtils.normalizePointer(absolutePointer));
+        return transparentPathAccess(workingSequenceManager())
+                .resolvedAt(
+                        canonicalRoot,
+                        resolvedRoot,
+                        PointerUtils.normalizePointer(absolutePointer));
     }
 
     /**
@@ -403,6 +408,19 @@ public final class WorkingDocument implements AutoCloseable {
             workingSequenceManager = snapshotManager.transientSequence();
         }
         return workingSequenceManager;
+    }
+
+    private ReferenceTransparentPathAccess transparentPathAccess(
+            ProcessingSnapshotManager manager) {
+        if (transparentPathAccess == null
+                || transparentPathManager != manager) {
+            transparentPathManager = manager;
+            transparentPathAccess = new ReferenceTransparentPathAccess(
+                    manager,
+                    strictPlatformInvocation,
+                    executableBodyFieldsByType);
+        }
+        return transparentPathAccess;
     }
 
     /**

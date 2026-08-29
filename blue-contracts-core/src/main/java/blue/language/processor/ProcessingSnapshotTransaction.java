@@ -384,18 +384,9 @@ final class ProcessingSnapshotTransaction {
     }
 
     private Node tentativeSelectedRoot(BatchPatchResult result) {
-        FrozenNode tentative = FrozenNode.fromResolvedNode(
-                runtime.materializedView.copyRoot());
-        List<ImmutableJsonPatch> requestedPatches =
-                result.requestedPatches();
+        Node selected = result.selectedCanonicalRoot().toNode();
         List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
                 result.generalizationMetadataWrites();
-        for (ImmutableJsonPatch patch : requestedPatches) {
-            tentative = ImmutablePatchPlanner.forFrozen(tentative)
-                    .plan(JsonPointer.ROOT, patch)
-                    .root();
-        }
-        Node selected = tentative.toNode();
         for (BatchPatchResult.GeneralizationMetadataWrite write
                 : metadataWrites) {
             NodePathEditor.put(
