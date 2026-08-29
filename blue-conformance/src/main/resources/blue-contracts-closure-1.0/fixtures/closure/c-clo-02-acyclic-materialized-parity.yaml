@@ -850,7 +850,7 @@ expected:
       id: X
   publicEventsIdentity: sha256:1d2c533e2bb8d7d3731fcd31e67d82b5ff2201946f7baab9d7bb3c0629ef2983
   managedTransitionReceipts:
-  - transitionReceiptIdentity: sha256:3ad65635e6aef0e02731808aee117df55cef27a675ebdd2bb2ffd9de8c7a7476
+  - transitionReceiptIdentity: sha256:634162d9cbd186a5f948787393578e59c0efd0ab8a6840d6b2f66e0283792934
     sourceInvocationIdentity: sha256:fbfeb45abd6b9b9d7f6e91b9460de864a4936b17e7228dfd05b5fa4036976881
     transitionOrdinal: 0
     transitionOccurrenceIdentity: sha256:3125315a2470dfe2b304794ccd2a3ed5bd5aa29373b3ed1ac26ab6c157bbfb25
@@ -871,8 +871,8 @@ expected:
         id: X
       publicAtSource: true
     emittedRootEventsIdentity: sha256:d09d6301440e3a9a5f9cd1f63589e2fd8bf1bda87dc11d75661726ffea96fc8f
-    admittedGas: 1104
-  - transitionReceiptIdentity: sha256:a38a3333a096eff1bf85c4869862a25a64c1c153e82161ab242771b83475632a
+    admittedGas: 1106
+  - transitionReceiptIdentity: sha256:53d0c727e1f4b9e50390e5bb077b5385f89cf1f685cec15f6ef79ffc28c320ec
     sourceInvocationIdentity: sha256:fbfeb45abd6b9b9d7f6e91b9460de864a4936b17e7228dfd05b5fa4036976881
     transitionOrdinal: 1
     transitionOccurrenceIdentity: sha256:235ba729ca2bfc80aca9be0e03500b278791445274dd7b920069ae85156bd532
@@ -893,11 +893,11 @@ expected:
         id: Y
       publicAtSource: false
     emittedRootEventsIdentity: sha256:4d8a1bc162b47f42038d840beaa6b80777d934540c4940ffd7d5102ff429deec
-    admittedGas: 305
-  managedTransitionReceiptsIdentity: sha256:b7332a21147411c7f183437d9f1d09e774c779247b3a41024f5471d8cf773324
+    admittedGas: 306
+  managedTransitionReceiptsIdentity: sha256:325573b055fde7cefe6c116fa2eb3374a635b8fd5207f417c4f15e941930f002
   rollbackToInput: false
-  totalGas: 1409
-  gasTraceIdentity: sha256:cdd7a1a33759c6b0c2421da3315e8fd8d3414d38b6d9f9c0274f5c59f998b901
+  totalGas: 1412
+  gasTraceIdentity: sha256:be30e1525e651368b07035b59b7bebc49666c9bc6e768066d58abedcddb2f3db
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -1919,9 +1919,9 @@ expected:
   - sequence: 81
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: a
     scopePath: /
     activationGeneration: 0
@@ -2435,9 +2435,9 @@ expected:
   - sequence: 120
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: b
     scopePath: /
     activationGeneration: 0
@@ -2960,9 +2960,9 @@ expected:
   - sequence: 160
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: a
     scopePath: /
     activationGeneration: 0
@@ -3697,7 +3697,7 @@ expected:
     documentId: b
     reason: checkpoint-settlement.checkpoint-settlement-0.member-finalized.1
   platformCommitCompanion:
-    companionIdentity: sha256:e7b14a38d4eeae4eb980ada47bb10f6b49f8797a6787b97ed1edb6ab9cc12b89
+    companionIdentity: sha256:65b0f1769a015d7359a18d68b06c6fee31d0ef98221f93c133b4e1f209cd00d4
     invocationIdentity: sha256:fbfeb45abd6b9b9d7f6e91b9460de864a4936b17e7228dfd05b5fa4036976881
     inputClosureIdentity: sha256:ed4ac428e31d3960b96bb4d26d816e77247942b7438404a79fb27cba3d67726d
     outputClosureIdentity: sha256:48ccfd25194138a7cb786940dce3cb416bf491f8cd9beab4a027771bdca5a644
@@ -3734,8 +3734,8 @@ expected:
     checkpointWritesIdentity: sha256:21e1560e48ff9e0c2052bf9b9b86a7e8544267c92489f66214a0f45231943d69
     subscriptionDeltasIdentity: sha256:5a1769ca94371e6a0efa912f6bde17cfecaa9201fd3ae9ecef4fa34a37373061
     publicEventsIdentity: sha256:1d2c533e2bb8d7d3731fcd31e67d82b5ff2201946f7baab9d7bb3c0629ef2983
-    gasTraceIdentity: sha256:cdd7a1a33759c6b0c2421da3315e8fd8d3414d38b6d9f9c0274f5c59f998b901
-    managedTransitionReceiptsIdentity: sha256:b7332a21147411c7f183437d9f1d09e774c779247b3a41024f5471d8cf773324
+    gasTraceIdentity: sha256:be30e1525e651368b07035b59b7bebc49666c9bc6e768066d58abedcddb2f3db
+    managedTransitionReceiptsIdentity: sha256:325573b055fde7cefe6c116fa2eb3374a635b8fd5207f417c4f15e941930f002
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
     contractsSpecificationIdentity: sha256:0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
     managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac

@@ -501,7 +501,7 @@ expected:
       id: C-EVO-23-READY
   publicEventsIdentity: sha256:5b02a39349d82c93e63a3ee495e8071dc882fd4d15d006a2be82d4d096dcf183
   managedTransitionReceipts:
-  - transitionReceiptIdentity: sha256:218a5357bc8c1b1b0c8a7a8170e6081daf4fb16733242380f21155721678970f
+  - transitionReceiptIdentity: sha256:2eac21d6584236db803ce939ded6c5ce85aa8f1d13e91ffe2864f137f02f0c59
     sourceInvocationIdentity: sha256:7cee925da2f1bf0b5e5fbd7a1ff15efa9b4f9586e9425b18d6607ef5633f55ed
     transitionOrdinal: 0
     transitionOccurrenceIdentity: sha256:7935db5033d022210080653cbd3365adb401ed0543c80285d44438228c8da21f
@@ -522,7 +522,7 @@ expected:
         id: C-EVO-23-READY
       publicAtSource: true
     emittedRootEventsIdentity: sha256:4841ec44812c5e21cbefad3de1ecea20e4399a34ff35b960088cd0eabc3a6223
-    admittedGas: 1701
+    admittedGas: 1703
   - transitionReceiptIdentity: sha256:a00a99d8c18e6097bf4430a61069f68b670203ce9c4d65d9a013abf98d52be49
     sourceInvocationIdentity: sha256:7cee925da2f1bf0b5e5fbd7a1ff15efa9b4f9586e9425b18d6607ef5633f55ed
     transitionOrdinal: 1
@@ -534,9 +534,9 @@ expected:
     emittedRootEvents: []
     emittedRootEventsIdentity: sha256:55dcb59a5fedea089fc3a0deff7cc48a50404e52cf4c4579c5ff30a32af496eb
     admittedGas: 1086
-  managedTransitionReceiptsIdentity: sha256:32532c5eeca4decc13df742cf0bf3afe2cd137eddb81162ef97a367319aae9ae
+  managedTransitionReceiptsIdentity: sha256:c0320e992af37812fc354f2a2d273efa4e84b12c184616304c1aa69dbc4cca11
   rollbackToInput: false
-  totalGas: 2787
+  totalGas: 2789
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -968,9 +968,9 @@ expected:
   - sequence: 35
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: c-evo-23-a
     scopePath: /
     activationGeneration: 0
@@ -1540,9 +1540,9 @@ expected:
   - sequence: 78
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: c-evo-23-a
     scopePath: /
     activationGeneration: 0
@@ -2106,9 +2106,9 @@ expected:
     documentId: c-evo-23-a
     componentGeneration: 1
     reason: initialization-batch.acyclic-finalization.direct-hash
-  gasTraceIdentity: sha256:1c1f75ad30ebb4388684aadda1270cf77d3cebd405bb796c5a2391f71bd2c988
+  gasTraceIdentity: sha256:a8eaabaa8d2f566b487a7b538752657e3ef07a3030d42ed90473b67bab33c6bd
   platformCommitCompanion:
-    companionIdentity: sha256:179211f804f5f3075661142eec45f01355d54e1981395bceea5aee83c6a3f4a2
+    companionIdentity: sha256:64586d730b89a715182525c6a2438c2a07a3b58f7436cabb53770f886f199417
     invocationIdentity: sha256:7cee925da2f1bf0b5e5fbd7a1ff15efa9b4f9586e9425b18d6607ef5633f55ed
     inputClosureIdentity: sha256:27205946cba0dab6c83da05cdd62cd51f755d04fb97fe666408a01b2a44abb2a
     outputClosureIdentity: sha256:8f2dfd12675fe356973d8cb8739541e4b7b58982e9fba901d000ef47fd96bc61
@@ -2148,8 +2148,8 @@ expected:
     checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
     subscriptionDeltasIdentity: sha256:e14f44efb98820bcd9b4da6174df317c11cdd14470d49ec178fd963384054c4c
     publicEventsIdentity: sha256:5b02a39349d82c93e63a3ee495e8071dc882fd4d15d006a2be82d4d096dcf183
-    gasTraceIdentity: sha256:1c1f75ad30ebb4388684aadda1270cf77d3cebd405bb796c5a2391f71bd2c988
-    managedTransitionReceiptsIdentity: sha256:32532c5eeca4decc13df742cf0bf3afe2cd137eddb81162ef97a367319aae9ae
+    gasTraceIdentity: sha256:a8eaabaa8d2f566b487a7b538752657e3ef07a3030d42ed90473b67bab33c6bd
+    managedTransitionReceiptsIdentity: sha256:c0320e992af37812fc354f2a2d273efa4e84b12c184616304c1aa69dbc4cca11
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
     contractsSpecificationIdentity: sha256:0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
     managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac

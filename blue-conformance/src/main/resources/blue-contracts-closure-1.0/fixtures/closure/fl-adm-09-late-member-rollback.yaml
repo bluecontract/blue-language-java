@@ -386,7 +386,7 @@ expected:
   managedTransitionReceipts: []
   managedTransitionReceiptsIdentity: sha256:ec45572afd62b92aa1e51e054b7ca416dcf1d3ab90b4e515f19656482ed9bb67
   rollbackToInput: true
-  totalGas: 2596
+  totalGas: 2597
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -700,9 +700,9 @@ expected:
   - sequence: 27
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: fl-adm-09-a
     scopePath: /
     activationGeneration: 0
@@ -1349,7 +1349,7 @@ expected:
     contractKey: failLater
     workOccurrenceId: sha256:fdd6e15f67c7b3c8039116ca379ed455d4a98802b5109e3f7ff503d733de748d
     reason: handler-call
-  gasTraceIdentity: sha256:774a339ca700df64cf18a679dbf04dcac1bb365ed6136238a31074b9d2d35b7c
+  gasTraceIdentity: sha256:b9c5b65a722473f802e34eedaa3fbb35dbcc2438cf319f3cfa1fce709dd6eba0
 sharedLimitSource:
   kind: RELEASE_DEFAULT
 provider:

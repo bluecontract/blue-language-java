@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 final class MutationGasChargerTest {
 
     @Test
-    void chargesUntypedAndExplicitlyTypedScalarPatchesIdentically() {
+    void shouldChargeUntypedAndExplicitlyTypedScalarPatchesIdentically() {
         for (ScalarCase scalar : scalarCases()) {
             // given
             Node untyped = new Node().value(scalar.value);
@@ -39,9 +39,11 @@ final class MutationGasChargerTest {
                                         "scalar", untyped.clone())));
             }
 
-            // when / then
+            // when
             GasMeter expected = chargeMutable(
                     untyped, prior, resulting);
+
+            // then
             assertSameTrace(
                     scalar.label + " explicitly typed mutable",
                     expected,

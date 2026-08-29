@@ -4,12 +4,12 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 524,
-    "publicTypeIdentity": "sha256:67ba9621051201adcafed3e4d2260c09a6316e51593e72ad2bfb96071c849249",
+    "publicProductionTypeCount": 526,
+    "publicTypeIdentity": "sha256:9fbe2aac00dcc3cb11a41342ad053dabe62490a96901487bdc9bc9f9a6c7cc0e",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
       "internal-type-removed-from-public-surface": 259,
-      "new-supported-api-spi": 65
+      "new-supported-api-spi": 67
     }
   },
   "allowedClassifications": [
@@ -4264,6 +4264,17 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.processor.closure.ClosureProcessRetryInput",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessRetryInput.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ClosureProcessRetryInput",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
       "type": "blue.language.processor.closure.ClosureProcessor",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ClosureProcessor.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -4623,6 +4634,17 @@
       "currentArtifact": "blue.language:blue-contracts-core",
       "targetModule": ":blue-contracts-core",
       "targetType": "blue.language.processor.closure.ManagedOccurrenceEvidenceDemand",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedOccurrenceEvidenceResolution",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceEvidenceResolution.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedOccurrenceEvidenceResolution",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "new-supported-api-spi",

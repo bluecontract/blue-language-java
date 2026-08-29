@@ -13,6 +13,39 @@ import refine_closure_fixtures
 
 class PatchResultIdentityTest(unittest.TestCase):
 
+    def test_untyped_scalar_charges_inferred_type_member(self) -> None:
+        initial = {}
+        patches = [
+            {
+                "op": "add",
+                "path": "/scalar",
+                "val": "value",
+            },
+        ]
+        expected_document, expected_trace, expected_total = (
+            reference_scenarios.derive_direct_patch_result_identity_trace(
+                initial, patches
+            )
+        )
+
+        actual = GasReferenceTrace()
+        actual_document = refine_closure_fixtures._charge_direct_patch_result(
+            initial,
+            patches[0],
+            actual,
+            context={"logicalPath": "/scalar"},
+        )
+
+        self.assertEqual(expected_document, actual_document)
+        self.assertEqual(expected_trace, actual.entries)
+        self.assertEqual(expected_total, actual.total)
+        member_quantities = [
+            entry["quantity"]
+            for entry in actual.entries
+            if entry["counter"] == "objectMemberRebuilt"
+        ]
+        self.assertEqual([2, 1], member_quantities)
+
     def test_add_replace_remove_charge_sequential_result_ancestors(self) -> None:
         initial = {
             "container": {

@@ -925,6 +925,16 @@
         "public/protected class added: blue.language.processor.closure.ManagedDocumentTransitionReceipt",
         "public/protected class added: blue.language.processor.closure.ManagedRootEventOccurrence"
       ]
+    },
+    {
+      "id": "phase-retained-managed-occurrence-retry-evidence",
+      "requirement": "checkpoint-settlement-handoff",
+      "rationale": "Approve exactly the two additive immutable Contracts evidence carriers required to retain verified managed-occurrence resolutions across a noncommitting closure retry. The retry input preserves invocation identity and accepted evidence without ambient I/O, source reprocessing, or changes to Blue Language identity semantics.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "public/protected class added: blue.language.processor.closure.ClosureProcessRetryInput",
+        "public/protected class added: blue.language.processor.closure.ManagedOccurrenceEvidenceResolution"
+      ]
     }
   ]
 }

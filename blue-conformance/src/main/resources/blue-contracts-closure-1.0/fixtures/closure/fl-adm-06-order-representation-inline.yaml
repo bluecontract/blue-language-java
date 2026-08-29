@@ -492,7 +492,7 @@ expected:
   publicEvents: []
   publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
   managedTransitionReceipts:
-  - transitionReceiptIdentity: sha256:01e5e44ec7de83b73976c8042acfe62e6c4b84bee9799ff5a0998ab52a81ad5f
+  - transitionReceiptIdentity: sha256:5987cff17adfa4643c33d0f7adb70e37a81fced729a37a52a10592681642a32a
     sourceInvocationIdentity: sha256:1cf28eddf2ef77ce5af9b249eafeaa76495fd4edbb4c3904b60e60cf56b805ad
     transitionOrdinal: 0
     transitionOccurrenceIdentity: sha256:4cc6d171f37809298b3f06c0e2f47d7f872e8b9bc3beb871975bd7d9bca34f40
@@ -502,8 +502,8 @@ expected:
     afterBlueId: 4tWxgvSizSGjcb14XznmnxkJ6VVvRMPCvwKHgcA2qsS1
     emittedRootEvents: []
     emittedRootEventsIdentity: sha256:55dcb59a5fedea089fc3a0deff7cc48a50404e52cf4c4579c5ff30a32af496eb
-    admittedGas: 1474
-  - transitionReceiptIdentity: sha256:8d4ba951f720fe512b09c94ea49c2eaedee450da45619b5e18bac5fa88b16888
+    admittedGas: 1475
+  - transitionReceiptIdentity: sha256:b22728206872a54287b0cd9189711d7371c6d11089118ff9af190670c39ea37b
     sourceInvocationIdentity: sha256:1cf28eddf2ef77ce5af9b249eafeaa76495fd4edbb4c3904b60e60cf56b805ad
     transitionOrdinal: 1
     transitionOccurrenceIdentity: sha256:342b8c81ef4a2ce519fef5d3e082bca6137f6b8d4915947027fb3cf4fa072525
@@ -513,10 +513,10 @@ expected:
     afterBlueId: CV89yVXesb36N1cL7aTDcBLxTXXBCHFLvjEYnN3NjAHG
     emittedRootEvents: []
     emittedRootEventsIdentity: sha256:55dcb59a5fedea089fc3a0deff7cc48a50404e52cf4c4579c5ff30a32af496eb
-    admittedGas: 1268
-  managedTransitionReceiptsIdentity: sha256:4d2092856cedbc64afc693e2cad0a325dd2d3c947b8e80b056aabd3cf30a1254
+    admittedGas: 1269
+  managedTransitionReceiptsIdentity: sha256:3193b99e579ebe9c656e534918d99c52d6afde871035fc5241ab88033e8a9f8a
   rollbackToInput: false
-  totalGas: 2742
+  totalGas: 2744
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -830,9 +830,9 @@ expected:
   - sequence: 27
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: fl-adm-06-b
     scopePath: /
     activationGeneration: 0
@@ -1496,9 +1496,9 @@ expected:
   - sequence: 84
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: fl-adm-06-a
     scopePath: /
     activationGeneration: 0
@@ -1772,9 +1772,9 @@ expected:
     documentId: fl-adm-06-a
     componentGeneration: 1
     reason: initialization-batch.acyclic-finalization.direct-hash
-  gasTraceIdentity: sha256:34da59498c38ec86511d6abf3701c121dade44f28d77b8c8000349e0cc4f27aa
+  gasTraceIdentity: sha256:8cc2493eb7c81f5110ea0adeadd30a04be68d4ca1386114ca40dc0f83a3e97d1
   platformCommitCompanion:
-    companionIdentity: sha256:0b2b32937e5eda56dc31841490458c7d7572b6904874e1f0c9b27e9fa3f47329
+    companionIdentity: sha256:e42e10551b9d620214645c74cb735ae5143fee5e99de5775a74ca33584a3c57a
     invocationIdentity: sha256:1cf28eddf2ef77ce5af9b249eafeaa76495fd4edbb4c3904b60e60cf56b805ad
     inputClosureIdentity: sha256:3047267789a34f1f50c81598e8d5b77ef492cca30a0f0bea7f3ac60dbe7a307e
     outputClosureIdentity: sha256:89927ec9b92801c66317c3f499019c06e9a5da85d5f777ddcda827b8c2486e11
@@ -1814,8 +1814,8 @@ expected:
     checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
     subscriptionDeltasIdentity: sha256:dc85b29c2c2d9a47333167314ac06a9e919510b2b6948beff24421fe215a535e
     publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
-    gasTraceIdentity: sha256:34da59498c38ec86511d6abf3701c121dade44f28d77b8c8000349e0cc4f27aa
-    managedTransitionReceiptsIdentity: sha256:4d2092856cedbc64afc693e2cad0a325dd2d3c947b8e80b056aabd3cf30a1254
+    gasTraceIdentity: sha256:8cc2493eb7c81f5110ea0adeadd30a04be68d4ca1386114ca40dc0f83a3e97d1
+    managedTransitionReceiptsIdentity: sha256:3193b99e579ebe9c656e534918d99c52d6afde871035fc5241ab88033e8a9f8a
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
     contractsSpecificationIdentity: sha256:0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
     managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac

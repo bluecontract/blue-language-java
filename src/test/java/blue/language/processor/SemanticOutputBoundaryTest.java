@@ -649,12 +649,14 @@ final class SemanticOutputBoundaryTest {
                     null,
                     GasSchedule.contracts10().maxProcessGas());
 
-            // when / then
+            // when
             for (long limit = 0L;
                  limit <= full.totalGas;
                  limit++) {
                 AdmissionAttempt untypedAttempt =
                         attemptAdmission(untyped, null, limit);
+
+                // then
                 assertSameAttempt(
                         untypedAttempt,
                         attemptAdmission(
@@ -675,12 +677,16 @@ final class SemanticOutputBoundaryTest {
 
     @Test
     void shouldApplyInferredTypeToDirectObjectPortableLimit() {
+        // given
         Node untyped = new Node().value("bounded scalar");
         FrozenNode exact = FrozenNode.fromNode(untyped.clone());
         GasSchedule schedule = GasScheduleTestFixtures.withPortableLimit(
                 GasScheduleConstants.PortableLimit.DIRECT_OBJECT_ENTRIES,
                 1L);
 
+        // when
+
+        // then
         assertDirectObjectLimit(
                 schedule,
                 untyped,

@@ -33,7 +33,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
 | `blue.language.processor` | 125 | present |
-| `blue.language.processor.closure` | 59 | present |
+| `blue.language.processor.closure` | 61 | present |
 | `blue.language.processor.model` | 18 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -414,6 +414,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.closure.ClosureImplementationEvidence`
 - `blue.language.processor.closure.ClosureInvocationInput`
 - `blue.language.processor.closure.ClosureProcessResult`
+- `blue.language.processor.closure.ClosureProcessRetryInput`
 - `blue.language.processor.closure.ClosureProcessor`
 - `blue.language.processor.closure.ClosureResourceDemand`
 - `blue.language.processor.closure.ClosureWorkOccurrence`
@@ -443,6 +444,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.closure.ManagedDocumentTransitionReceipt`
 - `blue.language.processor.closure.ManagedOccurrenceBinding`
 - `blue.language.processor.closure.ManagedOccurrenceEvidenceDemand`
+- `blue.language.processor.closure.ManagedOccurrenceEvidenceResolution`
 - `blue.language.processor.closure.ManagedRevisionCause`
 - `blue.language.processor.closure.ManagedRootEventOccurrence`
 - `blue.language.processor.closure.ManagedScopeKey`

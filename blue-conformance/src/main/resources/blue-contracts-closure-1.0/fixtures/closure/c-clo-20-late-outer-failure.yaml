@@ -715,8 +715,8 @@ expected:
   managedTransitionReceipts: []
   managedTransitionReceiptsIdentity: sha256:ec45572afd62b92aa1e51e054b7ca416dcf1d3ab90b4e515f19656482ed9bb67
   rollbackToInput: true
-  totalGas: 830
-  gasTraceIdentity: sha256:bdce77a2584255f7ef53becfc9f3261c9a049cd51af145a436c0f91daf17713b
+  totalGas: 831
+  gasTraceIdentity: sha256:aa8a7435ab0586a9843b1cf74c9bdd16d33121cba6e6e98fe09d46bc953f0408
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -1698,9 +1698,9 @@ expected:
   - sequence: 80
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: outer
     scopePath: /
     activationGeneration: 0

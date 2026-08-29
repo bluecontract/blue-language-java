@@ -699,7 +699,7 @@ expected:
       id: FL-ADM-07-PING
   publicEventsIdentity: sha256:697c191200b9888700a692bf88801a802d3c9a541fd2e5cfc1c8e2c6b55922c7
   managedTransitionReceipts:
-  - transitionReceiptIdentity: sha256:cf420e1e86c106af2c49a296f12e1f82d8d6fa2d838c1304418629544ba3ba0e
+  - transitionReceiptIdentity: sha256:d2d642ef17853396bf749ec24fe83f728f6435c19f25993744828085220124e9
     sourceInvocationIdentity: sha256:e3b02f6a5f478a0baf86883076e8cf9df1889baed5cef752fbeedab83c3c90ba
     transitionOrdinal: 0
     transitionOccurrenceIdentity: sha256:2cd3ec2e63512784b460379f31110c1a1a9f98f25cd21680487a719927ab7df4
@@ -720,7 +720,7 @@ expected:
         id: FL-ADM-07-PING
       publicAtSource: true
     emittedRootEventsIdentity: sha256:deb03b84567c0e96a76d69f3340414946894ca78bd56fa6b056103b332d27111
-    admittedGas: 1758
+    admittedGas: 1759
   - transitionReceiptIdentity: sha256:6c3d1a2a1028bd53cdae33009727bd97beadb29f463c8acb06cb8502e1701512
     sourceInvocationIdentity: sha256:e3b02f6a5f478a0baf86883076e8cf9df1889baed5cef752fbeedab83c3c90ba
     transitionOrdinal: 1
@@ -743,9 +743,9 @@ expected:
       publicAtSource: false
     emittedRootEventsIdentity: sha256:672481b8727d23348f7d1a9e66ebb1fd44ff34ebde242780561ccf57ebb7c7e3
     admittedGas: 1298
-  managedTransitionReceiptsIdentity: sha256:5e1916d2f3c49d55bd31ae560027d8bb643149de159e0670b169f1241ff05937
+  managedTransitionReceiptsIdentity: sha256:c36c2e3fa2e5525932339e0cb5153da2db7936168e1c073e0127248d50d25883
   rollbackToInput: false
-  totalGas: 3056
+  totalGas: 3057
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -1934,9 +1934,9 @@ expected:
   - sequence: 100
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: fl-adm-07-a
     scopePath: /
     activationGeneration: 0
@@ -2721,9 +2721,9 @@ expected:
     documentId: fl-adm-07-a
     componentGeneration: 1
     reason: initialization-batch.member-finalized.1
-  gasTraceIdentity: sha256:3c081689252c09f8a657df0fde879fa2180d1c56d3d6c372d68210b78f6851d0
+  gasTraceIdentity: sha256:44e5c56c0236938203cb34ad4a3d158ff507ce4f5556812f9be728298027d5bb
   platformCommitCompanion:
-    companionIdentity: sha256:3333ee25da44f498846bdbb754ea5371f7b28eed7a4488e20de0560a3a917020
+    companionIdentity: sha256:19209822938cb1384579f3e7885809d195cdb6b67719f995f9f6b2a05681130b
     invocationIdentity: sha256:e3b02f6a5f478a0baf86883076e8cf9df1889baed5cef752fbeedab83c3c90ba
     inputClosureIdentity: sha256:4e97cb9c45bc30ddae17d421dfd41275fc4b2d2a77fb58c112847f0af968f241
     outputClosureIdentity: sha256:e6ee620080dc9aeaf72d28396baedbc177d5042cff160adc2e323eb4ea4ab291
@@ -2756,8 +2756,8 @@ expected:
     checkpointWritesIdentity: sha256:09de4549d31dbe1b24de972d50b2dac287e76fc202f91a97dd663c3d1fb53250
     subscriptionDeltasIdentity: sha256:1b5a0c21af3c110965bbb496cc3ff4ee241bab65ca025cf7fd8e510efc306b1a
     publicEventsIdentity: sha256:697c191200b9888700a692bf88801a802d3c9a541fd2e5cfc1c8e2c6b55922c7
-    gasTraceIdentity: sha256:3c081689252c09f8a657df0fde879fa2180d1c56d3d6c372d68210b78f6851d0
-    managedTransitionReceiptsIdentity: sha256:5e1916d2f3c49d55bd31ae560027d8bb643149de159e0670b169f1241ff05937
+    gasTraceIdentity: sha256:44e5c56c0236938203cb34ad4a3d158ff507ce4f5556812f9be728298027d5bb
+    managedTransitionReceiptsIdentity: sha256:c36c2e3fa2e5525932339e0cb5153da2db7936168e1c073e0127248d50d25883
     blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
     contractsSpecificationIdentity: sha256:0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
     managedDocumentIdentityPolicyIdentity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac

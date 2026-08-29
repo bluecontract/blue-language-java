@@ -249,16 +249,12 @@ def _charge_direct_identity_node(
     component finalizer must still establish the same values in its own exact
     canonical representation.
     """
-    raw_scalar = isinstance(value, (str, int, float, bool))
     facts = direct_identity_facts(value, allow_cyclic_placeholders=True)
     if facts.pure_reference:
         return
-    # Mutable Node scalar types are inferred by NodeToBlueIdInput: the raw
-    # Node has one direct ``value`` member even though its canonical identity
-    # helper map also contains the inferred ``type`` contribution.
-    direct_member_count = (
-        1 if raw_scalar else facts.direct_member_count
-    )
+    # Gas follows the canonical identity helper map, including the inferred
+    # ``type`` contribution of an untyped scalar.
+    direct_member_count = facts.direct_member_count
     canonical_facts = facts
     if isinstance(value, dict):
         # Empty object-valued properties are empty Nodes. The strict Language

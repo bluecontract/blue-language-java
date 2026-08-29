@@ -2512,7 +2512,7 @@ expected:
     sourceOccurrenceIdentity: sha256:dfe37554dc72a79f6c669fb5b4d7016cf6126051eb59af8a1b9f6a5955b2a6b9
     workIdentity: sha256:e5f0a95daf7585bd27b85428ce2f3b381538c294bdbace1b095d030d1d21dd5f
   rejectedCharge:
-    rejectedChargeIdentity: sha256:2871e6a1221eb50bbfa1583512d67c8f407c021b07a184aa745065dda365ac10
+    rejectedChargeIdentity: sha256:2b881a7feb00176e3e55cd611d30c47fa81bbfcd7e636d9f226f3641bae31e5f
     namespace: processor
     counter: handlerCandidateTested
     quantity: 1
@@ -2520,7 +2520,7 @@ expected:
     subtotal: 5
     applicableCap:
       kind: SHARED
-    remainingBeforeCharge: 2
+    remainingBeforeCharge: 1
     owner:
       kind: WORK
       workOccurrenceIdentity: sha256:e5f0a95daf7585bd27b85428ce2f3b381538c294bdbace1b095d030d1d21dd5f
@@ -2625,7 +2625,7 @@ expected:
   managedTransitionReceipts: []
   managedTransitionReceiptsIdentity: sha256:ec45572afd62b92aa1e51e054b7ca416dcf1d3ab90b4e515f19656482ed9bb67
   rollbackToInput: true
-  totalGas: 19998
+  totalGas: 19999
   gasTrace:
   - sequence: 0
     namespace: processor
@@ -3057,9 +3057,9 @@ expected:
   - sequence: 35
     namespace: semantic
     counter: objectMemberRebuilt
-    quantity: 1
+    quantity: 2
     weight: 1
-    subtotal: 1
+    subtotal: 2
     documentId: c-evo-22-a
     scopePath: /
     activationGeneration: 0
@@ -34266,7 +34266,7 @@ expected:
     contractKey: loopChannel
     workOccurrenceId: sha256:e5f0a95daf7585bd27b85428ce2f3b381538c294bdbace1b095d030d1d21dd5f
     reason: triggered-event
-  gasTraceIdentity: sha256:1702c552ba0913b674d231a6b34d9172e7ecd952941a6441cfbde380493f5d22
+  gasTraceIdentity: sha256:3f3430cb221b109b4e171b2461cee6e7dd5d3e3a14bee28e8d24614864b199ac
 sharedLimitSource:
   kind: FIXTURE_OVERRIDE
   sharedLimit: 20000
