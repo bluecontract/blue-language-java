@@ -470,7 +470,7 @@ final class PatchPlanningEngine {
                         openedScopePaths,
                         executableBodyFieldsByType);
         return new PatchBase(
-                snapshot.frozenCanonicalRoot(),
+                expanded,
                 snapshot.frozenResolvedRoot(),
                 snapshot.isResolutionComplete());
     }

@@ -301,9 +301,17 @@ final class ReferenceTransparentPathAccess {
                         exact,
                         Collections.singleton(JsonPointer.ROOT),
                         executableBodyFieldsByType);
+        FrozenNode canonical = resolved.frozenCanonicalRoot();
+        // Source normalization supplies the inline gas representation only
+        // while it remains the same exact value. Typed overlays such as a
+        // FINOS Money body may normalize to a different direct identity; in
+        // that case patching must start from the provider-verified body.
+        if (!BlueIds.hasCyclicMemberSeparator(blueId)
+                && !blueId.equals(canonical.blueId())) {
+            canonical = exact;
+        }
         ExactView view = new ExactView(
-                resolved.frozenCanonicalRoot(),
-                resolved.frozenResolvedRoot());
+                canonical, resolved.frozenResolvedRoot());
         exactViewsByBlueId.put(blueId, view);
         return view;
     }

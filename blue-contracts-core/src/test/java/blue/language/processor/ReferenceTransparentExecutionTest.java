@@ -20,6 +20,7 @@ import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
@@ -234,6 +235,65 @@ final class ReferenceTransparentExecutionTest {
             assertEquals(BigInteger.valueOf(9),
                     referenced.runtime.resolvedFrozenAt(
                             "/counterValue/value").getValue());
+        }
+    }
+
+    @Test
+    void patchThroughNestedTypedExactReferenceUsesVerifiedAuthoredBody() {
+        Node currencyType = new Node().name("Currency type")
+                .properties("val", new Node()
+                        .description("Declared currency")
+                        .type(new Node().blueId(
+                                blue.language.model.wire.BlueLanguageConstants
+                                        .TEXT_TYPE_BLUE_ID)));
+        String currencyTypeBlueId = blueId(currencyType);
+        Node unitType = new Node().name("Unit type")
+                .properties("currency", new Node().type(
+                        new Node().blueId(currencyTypeBlueId)));
+        String unitTypeBlueId = blueId(unitType);
+        Node moneyType = new Node().name("Money type")
+                .properties("unit", new Node().type(
+                        new Node().blueId(unitTypeBlueId)))
+                .properties("val", new Node().type(new Node().blueId(
+                        blue.language.model.wire.BlueLanguageConstants
+                                .DOUBLE_TYPE_BLUE_ID)));
+        String moneyTypeBlueId = blueId(moneyType);
+        Node money = new Node()
+                .type(new Node().blueId(moneyTypeBlueId))
+                .properties("unit", new Node()
+                        .type(new Node().blueId(unitTypeBlueId))
+                        .properties("currency", new Node()
+                                .type(new Node().blueId(currencyTypeBlueId))
+                                .properties("val", new Node().value("USD"))))
+                .properties("val", new Node().value(
+                        new BigDecimal("1000000.25")));
+        String moneyBlueId = blueId(money);
+        CountingProvider provider = new CountingProvider()
+                .found(money)
+                .found(moneyType)
+                .found(unitType)
+                .found(currencyType);
+
+        try (Fixture referenced = new Fixture(
+                provider, rootReference(moneyBlueId, null));
+             Fixture inline = new Fixture(provider, rootInline(money))) {
+            JsonPatch patch = JsonPatch.replace(
+                    "/counterValue/val",
+                    new Node().value(new BigDecimal("1250000.00")));
+            referenced.runtime.applyPatch("/", patch);
+            inline.runtime.applyPatch("/", patch);
+
+            assertEquals(NodeWireForm.get(
+                            inline.runtime.canonicalRootWithoutResolution()
+                                    .toNode()),
+                    NodeWireForm.get(referenced.runtime
+                            .canonicalRootWithoutResolution().toNode()));
+            assertEquals(inline.runtime.totalGas(),
+                    referenced.runtime.totalGas());
+            assertEquals(new BigDecimal("1250000.0"),
+                    referenced.runtime.resolvedFrozenAt(
+                            "/counterValue/val").getValue());
+            assertEquals(1, provider.reads(moneyBlueId));
         }
     }
 
