@@ -88,7 +88,9 @@ final class ProcessingDocumentView {
                     runtime.currentSnapshotManager();
             if (selected != null
                     && manager != null
-                    && (selected.isReferenceOnly()
+                    && ((selected.isReferenceOnly()
+                            && !isOpaqueManagedPath(
+                                    manager, normalized))
                     || requiresDeferredScopeResolution(
                             normalized, current, selected))) {
                 return resolvedDeferredScope(
@@ -134,8 +136,17 @@ final class ProcessingDocumentView {
         }
         ProcessingSnapshotManager manager = runtime.currentSnapshotManager();
         return manager != null
+                && !isOpaqueManagedPath(manager, normalized)
                 ? exactReferencedScope(normalized, selected, manager)
                 : selected;
+    }
+
+    private static boolean isOpaqueManagedPath(
+            ProcessingSnapshotManager manager,
+            String normalizedPath) {
+        return manager instanceof ManagedDocumentOverlaySnapshotManager
+                && ((ManagedDocumentOverlaySnapshotManager) manager)
+                        .isOpaqueManagedPath(normalizedPath);
     }
 
     /**

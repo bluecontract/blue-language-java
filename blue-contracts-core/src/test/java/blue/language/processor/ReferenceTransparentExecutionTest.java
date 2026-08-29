@@ -137,6 +137,8 @@ final class ReferenceTransparentExecutionTest {
 
             assertTrue(runtime.resolvedNodeAt("/peer").isReferenceOnly());
             assertNull(runtime.resolvedNodeAt("/peer/value"));
+            assertTrue(runtime.resolvedFrozenAt("/peer").isReferenceOnly());
+            assertTrue(runtime.selectedFrozenAt("/peer").isReferenceOnly());
             assertEquals(0, provider.reads(tentativeMember));
         } finally {
             language.close();
