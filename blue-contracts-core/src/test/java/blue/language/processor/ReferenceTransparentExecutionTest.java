@@ -107,41 +107,265 @@ final class ReferenceTransparentExecutionTest {
     }
 
     @Test
-    void closureOwnedManagedPathDoesNotDemandTentativeCyclicIdentity() {
-        String tentativeMember =
-                "CSiCujDGBpsnLkp2PCcPy4cUthgutTvu6C17Euxd47dK#1";
+    void shouldKeepUnusedManagedReferenceCompactAndLazy() {
+        // given
+        Node child = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(7)));
+        String childBlueId = blueId(child);
         CountingProvider provider = new CountingProvider()
-                .unavailable(tentativeMember, "not yet published");
-        Node root = new Node().name("managed host")
-                .properties("peer", new Node().blueId(tentativeMember));
+                .unavailable(childBlueId, "must stay invocation-local");
+        ManagedDocumentResolutionOverlay overlay = managedOverlay(
+                Collections.<String, Node>emptyMap(), childBlueId);
 
-        BlueLanguage language = BlueLanguage.builder()
-                .nodeProvider(provider)
-                .build();
-        try (LanguageProcessing.Scope scope =
-                     language.processing().openScope()) {
-            LanguageProcessingSnapshotManager base =
-                    new LanguageProcessingSnapshotManager(scope);
-            ResolvedSnapshot snapshot =
-                    base.fromDocumentTransientPreservingPaths(
-                            root, Collections.singleton("/peer"));
-            ManagedDocumentResolutionOverlay overlay =
-                    new ManagedDocumentResolutionOverlay(
-                            Collections.<String, Node>emptyMap(),
-                            Collections.singletonMap(
-                                    "/peer", tentativeMember));
-            ManagedDocumentOverlaySnapshotManager managed =
-                    new ManagedDocumentOverlaySnapshotManager(base, overlay);
-            DocumentProcessingRuntime runtime =
-                    new DocumentProcessingRuntime(snapshot, null, managed);
+        try (ManagedFixture fixture = new ManagedFixture(
+                provider, managedRoot(childBlueId), overlay)) {
+            // when
+            FrozenNode unrelated = fixture.runtime.resolvedFrozenAt("/name");
 
-            assertTrue(runtime.resolvedNodeAt("/peer").isReferenceOnly());
-            assertNull(runtime.resolvedNodeAt("/peer/value"));
-            assertTrue(runtime.resolvedFrozenAt("/peer").isReferenceOnly());
-            assertTrue(runtime.selectedFrozenAt("/peer").isReferenceOnly());
-            assertEquals(0, provider.reads(tentativeMember));
-        } finally {
-            language.close();
+            // then
+            assertEquals("managed host", unrelated.getValue());
+            assertTrue(fixture.runtime.canonicalFrozenAt(
+                    "/peer").isReferenceOnly());
+            assertTrue(fixture.runtime.selectedFrozenAt(
+                    "/peer").isReferenceOnly());
+            assertEquals(0, provider.reads(childBlueId));
+        }
+    }
+
+    @Test
+    void shouldReadManagedReferenceThroughMatchingPathAndBlueIdEvidence() {
+        // given
+        Node child = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(7)));
+        String childBlueId = blueId(child);
+        CountingProvider provider = new CountingProvider()
+                .unavailable(childBlueId, "ambient provider must stay cold");
+        ManagedDocumentResolutionOverlay overlay = managedOverlay(
+                Collections.singletonMap(childBlueId, child), childBlueId);
+
+        try (ManagedFixture fixture = new ManagedFixture(
+                provider, managedRoot(childBlueId), overlay)) {
+            // when
+            FrozenNode value = fixture.runtime.resolvedFrozenAt(
+                    "/peer/count");
+
+            // then
+            assertEquals(BigInteger.valueOf(7), value.getValue());
+            assertEquals(BigInteger.valueOf(7), fixture.runtime
+                    .resolvedNodeAt("/peer/count").getValue());
+            assertTrue(fixture.runtime.canonicalFrozenAt(
+                    "/peer").isReferenceOnly());
+            assertTrue(fixture.runtime.selectedFrozenAt(
+                    "/peer").isReferenceOnly());
+            assertEquals(0, provider.reads(childBlueId));
+        }
+    }
+
+    @Test
+    void shouldReportMissingManagedReadEvidenceWithoutDelegateIo() {
+        // given
+        Node child = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(7)));
+        String childBlueId = blueId(child);
+        CountingProvider provider = new CountingProvider().found(child);
+        ManagedDocumentResolutionOverlay overlay = managedOverlay(
+                Collections.<String, Node>emptyMap(), childBlueId);
+
+        try (ManagedFixture fixture = new ManagedFixture(
+                provider, managedRoot(childBlueId), overlay)) {
+            // when
+            ExecutionEvidenceUnavailableException failure = assertThrows(
+                    ExecutionEvidenceUnavailableException.class,
+                    () -> fixture.runtime.resolvedFrozenAt(
+                            "/peer/count"));
+
+            // then
+            assertEquals(Collections.singletonList(childBlueId),
+                    failure.requiredExactBlueIds());
+            assertEquals(0, provider.reads(childBlueId));
+        }
+    }
+
+    @Test
+    void shouldRejectManagedReadPathBlueIdMismatchWithoutDelegateIo() {
+        // given
+        Node expected = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(7)));
+        Node actual = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(8)));
+        String expectedBlueId = blueId(expected);
+        String actualBlueId = blueId(actual);
+        CountingProvider provider = new CountingProvider().found(actual);
+        ManagedDocumentResolutionOverlay overlay = managedOverlay(
+                Collections.singletonMap(expectedBlueId, expected),
+                expectedBlueId);
+
+        try (ManagedFixture fixture = new ManagedFixture(
+                provider, managedRoot(actualBlueId), overlay)) {
+            // when
+            InvalidExecutionEvidenceException failure = assertThrows(
+                    InvalidExecutionEvidenceException.class,
+                    () -> fixture.runtime.resolvedFrozenAt(
+                            "/peer/count"));
+
+            // then
+            assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
+                    failure.errorCategory());
+            assertTrue(failure.getMessage().contains("expected "
+                    + expectedBlueId + " but found " + actualBlueId));
+            assertEquals(0, provider.reads(actualBlueId));
+        }
+    }
+
+    @Test
+    void shouldRejectWrongManagedBodyUnderMatchingBlueIdWithoutDelegateIo() {
+        // given
+        Node expected = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(7)));
+        Node wrong = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(8)));
+        String expectedBlueId = blueId(expected);
+        String wrongBlueId = blueId(wrong);
+        CountingProvider provider = new CountingProvider().found(expected);
+        ManagedDocumentResolutionOverlay overlay = managedOverlay(
+                Collections.singletonMap(expectedBlueId, wrong),
+                expectedBlueId);
+
+        try (ManagedFixture fixture = new ManagedFixture(
+                provider, managedRoot(expectedBlueId), overlay)) {
+            // when
+            InvalidExecutionEvidenceException failure = assertThrows(
+                    InvalidExecutionEvidenceException.class,
+                    () -> fixture.runtime.resolvedFrozenAt(
+                            "/peer/count"));
+
+            // then
+            assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
+                    failure.errorCategory());
+            assertTrue(failure.getMessage().contains(
+                    "but calculated " + wrongBlueId));
+            assertEquals(0, provider.reads(expectedBlueId));
+        }
+    }
+
+    @Test
+    void shouldRejectManagedEvidenceReplayedAtAnotherOccurrencePath() {
+        // given
+        Node admitted = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(7)));
+        Node other = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(9)));
+        String admittedBlueId = blueId(admitted);
+        String otherBlueId = blueId(other);
+        Node root = managedRoot(admittedBlueId).properties(
+                "other", new Node().blueId(admittedBlueId));
+        LinkedHashMap<String, String> expectedByPath =
+                new LinkedHashMap<String, String>();
+        expectedByPath.put("/other", otherBlueId);
+        expectedByPath.put("/peer", admittedBlueId);
+        ManagedDocumentResolutionOverlay overlay =
+                new ManagedDocumentResolutionOverlay(
+                        Collections.singletonMap(
+                                admittedBlueId, admitted),
+                        expectedByPath);
+        CountingProvider provider = new CountingProvider()
+                .found(admitted)
+                .found(other);
+
+        try (ManagedFixture fixture = new ManagedFixture(
+                provider, root, overlay)) {
+            // when
+            FrozenNode admittedValue = fixture.runtime.resolvedFrozenAt(
+                    "/peer/count");
+            InvalidExecutionEvidenceException failure = assertThrows(
+                    InvalidExecutionEvidenceException.class,
+                    () -> fixture.runtime.resolvedFrozenAt(
+                            "/other/count"));
+
+            // then
+            assertEquals(BigInteger.valueOf(7),
+                    admittedValue.getValue());
+            assertEquals(ProcessorErrorCategory.InvalidProcessingDocument,
+                    failure.errorCategory());
+            assertTrue(failure.getMessage().contains("at /other"));
+            assertEquals(0, provider.reads(admittedBlueId));
+            assertEquals(0, provider.reads(otherBlueId));
+        }
+    }
+
+    @Test
+    void shouldKeepManagedPatchThroughForbiddenAndAtomic() {
+        // given
+        Node child = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(7)));
+        String childBlueId = blueId(child);
+        CountingProvider provider = new CountingProvider().found(child);
+        ManagedDocumentResolutionOverlay overlay = managedOverlay(
+                Collections.singletonMap(childBlueId, child), childBlueId);
+
+        try (ManagedFixture fixture = new ManagedFixture(
+                provider, managedRoot(childBlueId), overlay)) {
+            Object before = NodeWireForm.get(fixture.runtime
+                    .canonicalRootWithoutResolution().toNode());
+
+            // when
+            assertThrows(IllegalArgumentException.class,
+                    () -> fixture.runtime.applyPatch(
+                            "/",
+                            JsonPatch.replace(
+                                    "/peer/count",
+                                    new Node().value(
+                                            BigInteger.valueOf(9)))));
+
+            // then
+            assertEquals(before, NodeWireForm.get(fixture.runtime
+                    .canonicalRootWithoutResolution().toNode()));
+            assertEquals(0L, fixture.runtime.totalGas());
+            assertEquals(0, provider.reads(childBlueId));
+        }
+    }
+
+    @Test
+    void shouldMatchInlineManagedReadResultAndGas() {
+        // given
+        Node child = new Node().properties(
+                "count", new Node().value(BigInteger.valueOf(7)));
+        String childBlueId = blueId(child);
+        CountingProvider provider = new CountingProvider();
+        ManagedDocumentResolutionOverlay overlay = managedOverlay(
+                Collections.singletonMap(childBlueId, child), childBlueId);
+        Node inlineRoot = managedRoot(childBlueId)
+                .properties("peer", child.clone());
+
+        try (ManagedFixture referenced = new ManagedFixture(
+                provider, managedRoot(childBlueId), overlay);
+             Fixture inline = new Fixture(provider, inlineRoot)) {
+            BigInteger referencedValue = (BigInteger) referenced.runtime
+                    .resolvedFrozenAt("/peer/count").getValue();
+            BigInteger inlineValue = (BigInteger) inline.runtime
+                    .resolvedFrozenAt("/peer/count").getValue();
+            JsonPatch referencedPatch = JsonPatch.replace(
+                    "/observed", new Node().value(referencedValue));
+            JsonPatch inlinePatch = JsonPatch.replace(
+                    "/observed", new Node().value(inlineValue));
+
+            // when
+            referenced.runtime.applyPatch("/", referencedPatch);
+            inline.runtime.applyPatch("/", inlinePatch);
+
+            // then
+            assertEquals(inline.runtime.resolvedFrozenAt(
+                            "/observed").getValue(),
+                    referenced.runtime.resolvedFrozenAt(
+                            "/observed").getValue());
+            assertEquals(inline.runtime.canonicalRootWithoutResolution()
+                            .blueId(),
+                    referenced.runtime.canonicalRootWithoutResolution()
+                            .blueId());
+            assertEquals(inline.runtime.totalGas(),
+                    referenced.runtime.totalGas());
+            assertTrue(referenced.runtime.canonicalFrozenAt(
+                    "/peer").isReferenceOnly());
         }
     }
 
@@ -785,6 +1009,22 @@ final class ReferenceTransparentExecutionTest {
         return root;
     }
 
+    private static Node managedRoot(String childBlueId) {
+        return new Node().name("managed host")
+                .properties("peer", new Node().blueId(childBlueId))
+                .properties(
+                        "observed",
+                        new Node().value(BigInteger.ZERO));
+    }
+
+    private static ManagedDocumentResolutionOverlay managedOverlay(
+            Map<String, Node> exactNodes,
+            String expectedBlueId) {
+        return new ManagedDocumentResolutionOverlay(
+                exactNodes,
+                Collections.singletonMap("/peer", expectedBlueId));
+    }
+
     private static Node counter(long value) {
         return new Node().value(BigInteger.valueOf(value));
     }
@@ -1097,6 +1337,37 @@ final class ReferenceTransparentExecutionTest {
                     manager.fromDocumentTransient(root);
             runtime = new DocumentProcessingRuntime(
                     snapshot, null, manager);
+        }
+
+        @Override
+        public void close() {
+            scope.close();
+            language.close();
+        }
+    }
+
+    private static final class ManagedFixture implements AutoCloseable {
+        private final BlueLanguage language;
+        private final LanguageProcessing.Scope scope;
+        private final DocumentProcessingRuntime runtime;
+
+        private ManagedFixture(
+                NodeProvider provider,
+                Node root,
+                ManagedDocumentResolutionOverlay overlay) {
+            language = BlueLanguage.builder()
+                    .nodeProvider(provider)
+                    .build();
+            scope = language.processing().openScope();
+            LanguageProcessingSnapshotManager base =
+                    new LanguageProcessingSnapshotManager(scope);
+            ResolvedSnapshot snapshot =
+                    base.fromDocumentTransientPreservingPaths(
+                            root, overlay.opaqueManagedPaths());
+            ManagedDocumentOverlaySnapshotManager managed =
+                    new ManagedDocumentOverlaySnapshotManager(base, overlay);
+            runtime = new DocumentProcessingRuntime(
+                    snapshot, null, managed);
         }
 
         @Override

@@ -38,6 +38,8 @@ final class ReferenceTransparentPathAccess {
     private final Map<String, List<String>> executableBodyFieldsByType;
     private final Map<String, ExactView> exactViewsByBlueId =
             new LinkedHashMap<String, ExactView>();
+    private final Map<String, ExactView> managedExactViewsByBlueId =
+            new LinkedHashMap<String, ExactView>();
 
     ReferenceTransparentPathAccess(
             ProcessingSnapshotManager manager,
@@ -289,7 +291,10 @@ final class ReferenceTransparentPathAccess {
             return current;
         }
         if (isOpaqueManagedPath(absolutePointer)) {
-            return current;
+            ExactView managed = managedExactView(
+                    reference, absolutePointer);
+            return new NodePair(
+                    managed.canonical, managed.resolved);
         }
         ExactView exact = exactView(reference, purpose);
         return new NodePair(exact.canonical, exact.resolved);
@@ -309,6 +314,32 @@ final class ReferenceTransparentPathAccess {
         }
         FrozenNode exact = ExecutableBodyPathCatalog.materializeVerifiedExact(
                 manager, reference, purpose);
+        ExactView view = resolveExactView(reference, exact);
+        exactViewsByBlueId.put(blueId, view);
+        return view;
+    }
+
+    private ExactView managedExactView(
+            FrozenNode reference,
+            String absolutePointer) {
+        ManagedDocumentOverlaySnapshotManager managed =
+                (ManagedDocumentOverlaySnapshotManager) manager;
+        FrozenNode exact = managed.materializeVerifiedManagedRead(
+                absolutePointer, reference);
+        String blueId = reference.getReferenceBlueId();
+        ExactView cached = managedExactViewsByBlueId.get(blueId);
+        if (cached != null) {
+            return cached;
+        }
+        ExactView view = resolveExactView(reference, exact);
+        managedExactViewsByBlueId.put(blueId, view);
+        return view;
+    }
+
+    private ExactView resolveExactView(
+            FrozenNode reference,
+            FrozenNode exact) {
+        String blueId = reference.getReferenceBlueId();
         ResolvedSnapshot resolved = strictPlatformInvocation
                 ? DocumentProcessingRuntime
                         .resolveCanonicalTransientIncludingTypeContracts(
@@ -330,10 +361,8 @@ final class ReferenceTransparentPathAccess {
                 && !blueId.equals(canonical.blueId())) {
             canonical = exact;
         }
-        ExactView view = new ExactView(
+        return new ExactView(
                 canonical, resolved.frozenResolvedRoot());
-        exactViewsByBlueId.put(blueId, view);
-        return view;
     }
 
     private static final class NodePair {

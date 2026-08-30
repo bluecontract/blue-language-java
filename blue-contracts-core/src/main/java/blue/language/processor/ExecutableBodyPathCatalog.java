@@ -281,8 +281,17 @@ final class ExecutableBodyPathCatalog {
             ProcessingSnapshotManager manager,
             FrozenNode reference,
             String purpose) {
-        FrozenNode materialized = manager.materializeVerifiedExactReference(
-                reference);
+        return validateMaterializedExact(
+                reference,
+                manager.materializeVerifiedExactReference(reference),
+                purpose);
+    }
+
+    /** Validates already-acquired invocation-local exact content. */
+    static FrozenNode validateMaterializedExact(
+            FrozenNode reference,
+            FrozenNode materialized,
+            String purpose) {
         if (materialized == null) {
             throw new InvalidExecutionEvidenceException(
                     purpose + " provider returned no content for "

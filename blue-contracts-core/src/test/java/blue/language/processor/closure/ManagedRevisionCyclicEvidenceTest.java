@@ -120,6 +120,40 @@ final class ManagedRevisionCyclicEvidenceTest {
     }
 
     @Test
+    void shouldRejectInvalidCyclicProofAtManagedInvocationAdmission() {
+        // given
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            Fixture fixture = fixture(owner);
+            List<Node> tamperedMembers = new ArrayList<Node>(
+                    proof().declaredPlaceholderSet());
+            tamperedMembers.get(0).properties(
+                    "tampered", new Node().value(Boolean.TRUE));
+            ManagedRevisionCause invalidCause = cause(
+                    fixture,
+                    fixture.receipt,
+                    bodyA(),
+                    CyclicSetProof.fromDeclaredPlaceholderSet(
+                            tamperedMembers));
+            ClosureInvocationInput invalidInput =
+                    ClosureEvidenceFactory.processClosure(
+                            fixture.input.snapshot(),
+                            invalidCause,
+                            fixture.input.directDeliveries(),
+                            fixture.input.executionPolicy(),
+                            fixture.input.environment());
+
+            // when
+            IllegalArgumentException failure = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> ClosureInvocationVerifier.verify(invalidInput));
+
+            // then
+            assertTrue(failure.getMessage() != null
+                    && !failure.getMessage().isEmpty());
+        }
+    }
+
+    @Test
     void legacyAcyclicCauseRetainsEstablishedIdentityAndHasNoProof() {
         Node before = new Node().name("legacy before");
         Node after = new Node().name("legacy after");
