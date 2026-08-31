@@ -82,7 +82,13 @@ public final class ClosureProcessRetryInput {
         }
     }
 
-    /** Derives one canonical retry input from an unordered resolution list. */
+    /**
+     * Derives one canonical retry input from an unordered resolution list.
+     *
+     * @param baseInvocation exact previously suspended processing invocation
+     * @param resolutions non-empty demand resolutions in any order
+     * @return verified retry input with resolutions in canonical order
+     */
     public static ClosureProcessRetryInput derived(
             ClosureInvocationInput baseInvocation,
             List<ManagedOccurrenceEvidenceResolution> resolutions) {
@@ -101,22 +107,38 @@ public final class ClosureProcessRetryInput {
                 ordered);
     }
 
-    /** Returns the distinct deterministic retry invocation identity. */
+    /**
+     * Returns the distinct deterministic retry invocation identity.
+     *
+     * @return exact retry invocation identity
+     */
     public String retryInvocationIdentity() {
         return retryInvocationIdentity;
     }
 
-    /** Returns the unchanged independently verifiable base invocation. */
+    /**
+     * Returns the unchanged independently verifiable base invocation.
+     *
+     * @return exact base invocation
+     */
     public ClosureInvocationInput baseInvocation() {
         return baseInvocation;
     }
 
-    /** Returns the immutable canonical exact resolution sequence. */
+    /**
+     * Returns the immutable canonical exact resolution sequence.
+     *
+     * @return canonical demand-resolution sequence
+     */
     public List<ManagedOccurrenceEvidenceResolution> resolutions() {
         return resolutions;
     }
 
-    /** Returns the exact ordered resolution-set identity. */
+    /**
+     * Returns the exact ordered resolution-set identity.
+     *
+     * @return exact resolution-set identity
+     */
     public String resolutionSetIdentity() {
         return resolutionSetIdentity;
     }

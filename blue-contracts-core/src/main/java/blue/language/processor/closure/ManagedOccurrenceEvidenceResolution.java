@@ -55,7 +55,15 @@ public final class ManagedOccurrenceEvidenceResolution
         }
     }
 
-    /** Derives one exact managed-occurrence resolution. */
+    /**
+     * Derives one exact managed-occurrence resolution.
+     *
+     * @param demand exact demand returned by a prior noncommitting attempt
+     * @param targetDocumentId selected durable target lineage
+     * @param pendingHistoricalEpoch selected historical epoch; {@code -1}
+     *     denotes the authored pre-initialization value
+     * @return verified resolution of the exact demand
+     */
     public static ManagedOccurrenceEvidenceResolution derived(
             ManagedOccurrenceEvidenceDemand demand,
             DocumentId targetDocumentId,
@@ -74,22 +82,38 @@ public final class ManagedOccurrenceEvidenceResolution
                 epoch);
     }
 
-    /** Returns the exact resolution identity. */
+    /**
+     * Returns the exact resolution identity.
+     *
+     * @return exact resolution identity
+     */
     public String resolutionIdentity() {
         return resolutionIdentity;
     }
 
-    /** Returns the exact demand resolved by this value. */
+    /**
+     * Returns the exact demand resolved by this value.
+     *
+     * @return exact resolved demand
+     */
     public ManagedOccurrenceEvidenceDemand demand() {
         return demand;
     }
 
-    /** Returns the selected durable target lineage. */
+    /**
+     * Returns the selected durable target lineage.
+     *
+     * @return selected target document identity
+     */
     public DocumentId targetDocumentId() {
         return targetDocumentId;
     }
 
-    /** Returns the selected historical source epoch. */
+    /**
+     * Returns the selected historical source epoch.
+     *
+     * @return selected epoch, or {@code -1} for the authored initial value
+     */
     public long pendingHistoricalEpoch() {
         return pendingHistoricalEpoch;
     }
