@@ -2,6 +2,17 @@
 
 ### Feat
 
+- expose authenticated, duplicate-preserving managed-transition receipts for
+  every changed or event-only managed Root, including exact before/after
+  identities, ordered Root-event occurrences, deterministic gas partitioning,
+  and commit-companion binding
+- accept receipt-backed retained managed revisions with occurrence-specific
+  event replay, terminal source epochs, and verified cyclic `MASTER#index`
+  successors without reinitializing or reprocessing the source document
+- execute lazily through verified pure references with copy-on-write patches
+  for ordinary references and exact resolution-bound closure retries; an active
+  managed reference is readable only through invocation-local evidence bound
+  to its occurrence path and BlueId
 - bind the corrected 128-fixture Language 1.0 and 140-fixture Contracts 1.0
   conformance packages and add a strict machine-readable release gate
 - add the generic cyclic-set member mutation guard before provider demand
@@ -37,6 +48,9 @@
 
 ### Compatibility
 
+- retain legacy state-only managed-revision inputs, receipt-free result
+  accessors, and the Contracts 1.0 commit-companion constructor; Blue
+  value/model/core/mapping, BlueId, BEX, and repository semantics are unchanged
 - remove deprecated pre-1.0 aliases, routed-delivery carriers, trusted provider
   behavior, ambiguous reverse APIs, and fatal-termination compatibility paths
 - retain the released `NodeProviderWrapper.unverified(...)` and
@@ -55,6 +69,18 @@
 
 ### Fix
 
+- preserve authenticated managed event targets, activation state, occurrence
+  continuity, and pending-event retargeting across retained managed-epoch
+  application
+- settle or clean checkpoints only for the actual consuming or removed owner,
+  never merely because a retained document participates in another closure;
+  failed processing remains atomic
+- retain exact occurrence evidence and typed resource suspension across
+  noncommitting retries and Handler boundaries
+- preserve typed exact bodies, opaque managed-scope views, and finalized
+  reference continuity while executing or patching through references
+- canonicalize inferred-type identity gas projections so equivalent inline and
+  reference forms retain portable gas parity
 - pass all corrected Contracts fixtures without an expected-failure whitelist
 - preserve whole-invocation rollback and zero provider demand when rejecting
   traversal below a cyclic-set member reference
@@ -69,6 +95,17 @@
 - bound transient trusted reference retention and report its real eviction/rejection counters
 - merge an admitted named runtime child ledger before rollbackable handler
   effects so its gas and ordered trace survive a later runtime-fatal rollback
+
+### RC limitations
+
+- Contracts performs no Timeline/history acquisition or ambient I/O; hosts
+  supply exact bodies, occurrence bindings, transition receipts, and cyclic
+  proof for one contiguous managed transition per invocation
+- affected-closure processing remains Root-scope only, and managed occurrence
+  paths remain mutation-opaque even when verified evidence permits reads
+- mutation below cyclic member references and list-backed/wildcard Process
+  Embedded collections remain unsupported; stable-key object collections are
+  the supported dynamic collection profile
 
 ## v2.0.0 (2026-05-13)
 
