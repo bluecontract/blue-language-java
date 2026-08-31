@@ -914,6 +914,27 @@
         "public/protected class added: blue.language.conformance.contracts.FullLifecycleFixtureExporter",
         "public/protected class added: blue.language.processor.closure.TentativeFinalization$TerminationMarkerBoundary"
       ]
+    },
+    {
+      "id": "phase-managed-transition-receipts",
+      "requirement": "CODEX_RETAINED_MANAGED_EPOCH_CATCH_UP_ROUND.md",
+      "rationale": "Approve exactly the additive immutable Contracts receipt API and deterministic conformance exporter required for Coordination to consume duplicate-preserving managed Root transitions without reinitializing or reprocessing the source document. These additions expose committed transition evidence only and do not change Blue Language values, identity calculation, BEX, or Repository semantics.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "public/protected class added: blue.language.conformance.contracts.ManagedTransitionReceiptFixtureExporter",
+        "public/protected class added: blue.language.processor.closure.ManagedDocumentTransitionReceipt",
+        "public/protected class added: blue.language.processor.closure.ManagedRootEventOccurrence"
+      ]
+    },
+    {
+      "id": "phase-retained-managed-occurrence-retry-evidence",
+      "requirement": "checkpoint-settlement-handoff",
+      "rationale": "Approve exactly the two additive immutable Contracts evidence carriers required to retain verified managed-occurrence resolutions across a noncommitting closure retry. The retry input preserves invocation identity and accepted evidence without ambient I/O, source reprocessing, or changes to Blue Language identity semantics.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "public/protected class added: blue.language.processor.closure.ClosureProcessRetryInput",
+        "public/protected class added: blue.language.processor.closure.ManagedOccurrenceEvidenceResolution"
+      ]
     }
   ]
 }

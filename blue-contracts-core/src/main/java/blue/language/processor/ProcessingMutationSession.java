@@ -202,12 +202,14 @@ final class ProcessingMutationSession {
     void chargeSemanticIdentityWork(
             String originScopePath,
             List<PatchInput> patches) {
+        MutationGasProjection projection = preflightCanonicalRoots(
+                patches,
+                !runtime.selectedDocumentBacked,
+                originScopePath);
         gasCharger.charge(
                 patches,
-                preflightCanonicalRoots(
-                        patches,
-                        !runtime.selectedDocumentBacked,
-                        originScopePath));
+                projection.priorCanonicalRoots,
+                projection.resultingCanonicalRoots);
     }
 
     void validateMutationPathWithoutResolution(PatchInput patch) {
@@ -266,12 +268,15 @@ final class ProcessingMutationSession {
                     1L);
         }
         try {
-            List<FrozenNode> projectedCanonicalRoots =
+            MutationGasProjection gasProjection =
                     preflightPatchInputsWithoutResolution(
                             originScopePath, patches);
             PatchPlanningContext planning =
                     runtime.planningContext(runtime.materializedView.root());
-            gasCharger.charge(patches, projectedCanonicalRoots);
+            gasCharger.charge(
+                    patches,
+                    gasProjection.priorCanonicalRoots,
+                    gasProjection.resultingCanonicalRoots);
             BatchPatchTransaction transaction =
                     BatchPatchTransaction.fromInputs(
                             originScopePath,
@@ -294,9 +299,16 @@ final class ProcessingMutationSession {
         }
     }
 
-    private List<FrozenNode> preflightPatchInputsWithoutResolution(
+    private MutationGasProjection preflightPatchInputsWithoutResolution(
             String originScopePath,
             List<PatchInput> patches) {
+        ProcessingSnapshotManager evidenceManager =
+                runtime.currentSnapshotManager();
+        ReferenceTransparentPathAccess pathAccess =
+                new ReferenceTransparentPathAccess(
+                        evidenceManager,
+                        runtime.strictPlatformInvocation,
+                        runtime.executableBodyFieldsByType);
         FrozenNode workingCanonical =
                 runtime.canonicalRootWithoutResolution();
         FrozenNode workingResolved =
@@ -317,20 +329,21 @@ final class ProcessingMutationSession {
              */
         }
         boolean defaultExactReplacement = !runtime.selectedDocumentBacked;
-        List<FrozenNode> projectedCanonicalRoots =
+        List<FrozenNode> priorCanonicalRoots =
+                new ArrayList<FrozenNode>(patches.size());
+        List<FrozenNode> resultingCanonicalRoots =
                 new ArrayList<FrozenNode>(patches.size());
         for (PatchInput input : patches) {
             if (input == null) {
-                projectedCanonicalRoots.add(
-                        canProjectStrictIdentity
-                                ? workingIdentityCanonical
-                                : workingCanonical);
+                FrozenNode unchanged = canProjectStrictIdentity
+                        ? workingIdentityCanonical
+                        : workingCanonical;
+                priorCanonicalRoots.add(unchanged);
+                resultingCanonicalRoots.add(unchanged);
                 continue;
             }
             ImmutablePatchPlanner canonicalPlanner =
                     ImmutablePatchPlanner.forFrozen(workingCanonical);
-            ImmutablePatchPlanner resolvedPlanner =
-                    ImmutablePatchPlanner.forFrozen(workingResolved);
             ParsedJsonPointer path =
                     ParsedJsonPointer.parse(input.authoredPath());
             boolean exactReplacement = defaultExactReplacement
@@ -340,12 +353,35 @@ final class ProcessingMutationSession {
                                     input.op(),
                                     path.pointer());
             canonicalPlanner.validateMutationPath(path);
+            FrozenNode expandedCanonical = pathAccess
+                    .materializePatchAncestors(
+                            workingCanonical,
+                            Collections.singletonList(path.pointer()));
+            if (expandedCanonical != workingCanonical) {
+                ResolvedSnapshot expanded = resolvePreflightCanonical(
+                        evidenceManager, expandedCanonical);
+                workingCanonical = expanded.frozenCanonicalRoot();
+                workingResolved = expanded.frozenResolvedRoot();
+                canonicalPlanner = ImmutablePatchPlanner.forFrozen(
+                        workingCanonical);
+            }
+            ImmutablePatchPlanner resolvedPlanner =
+                    ImmutablePatchPlanner.forFrozen(workingResolved);
             if (!path.isRoot()
                     && resolvedPlanner.read(path.parent()) == null) {
                 throw new IllegalStateException(
                         "Final parent does not exist for patch path: "
                                 + path.pointer());
             }
+            if (canProjectStrictIdentity) {
+                workingIdentityCanonical = pathAccess
+                        .materializePatchAncestors(
+                                workingIdentityCanonical,
+                                Collections.singletonList(path.pointer()));
+            }
+            FrozenNode priorCanonical = canProjectStrictIdentity
+                    ? workingIdentityCanonical
+                    : workingCanonical;
             workingCanonical = canonicalPlanner.applyMutationPreflight(
                     input.op(),
                     path,
@@ -356,6 +392,7 @@ final class ProcessingMutationSession {
                     path,
                     preflightValue(input, workingResolved),
                     exactReplacement);
+            FrozenNode resultingCanonical;
             if (canProjectStrictIdentity) {
                 ImmutablePatchPlanner identityPlanner =
                         ImmutablePatchPlanner.forFrozen(
@@ -365,25 +402,37 @@ final class ProcessingMutationSession {
                         path,
                         preflightValue(input, workingIdentityCanonical),
                         exactReplacement);
-                projectedCanonicalRoots.add(workingIdentityCanonical);
+                resultingCanonical = workingIdentityCanonical;
             } else {
-                projectedCanonicalRoots.add(workingCanonical);
+                resultingCanonical = workingCanonical;
             }
+            priorCanonicalRoots.add(priorCanonical);
+            resultingCanonicalRoots.add(resultingCanonical);
         }
-        return Collections.unmodifiableList(projectedCanonicalRoots);
+        return new MutationGasProjection(
+                priorCanonicalRoots,
+                resultingCanonicalRoots);
     }
 
-    private List<FrozenNode> preflightCanonicalRoots(
+    private MutationGasProjection preflightCanonicalRoots(
             List<PatchInput> patches,
             boolean defaultExactReplacement,
             String originScopePath) {
+        ReferenceTransparentPathAccess pathAccess =
+                new ReferenceTransparentPathAccess(
+                        runtime.currentSnapshotManager(),
+                        runtime.strictPlatformInvocation,
+                        runtime.executableBodyFieldsByType);
         FrozenNode workingCanonical =
                 runtime.identityChargeCanonicalRoot();
-        List<FrozenNode> projectedCanonicalRoots =
+        List<FrozenNode> priorCanonicalRoots =
+                new ArrayList<FrozenNode>(patches.size());
+        List<FrozenNode> resultingCanonicalRoots =
                 new ArrayList<FrozenNode>(patches.size());
         for (PatchInput input : patches) {
             if (input == null) {
-                projectedCanonicalRoots.add(workingCanonical);
+                priorCanonicalRoots.add(workingCanonical);
+                resultingCanonicalRoots.add(workingCanonical);
                 continue;
             }
             ImmutablePatchPlanner planner =
@@ -396,14 +445,57 @@ final class ProcessingMutationSession {
                                     originScopePath,
                                     input.op(),
                                     path.pointer());
+            planner.validateMutationPath(path);
+            workingCanonical = pathAccess.materializePatchAncestors(
+                    workingCanonical,
+                    Collections.singletonList(path.pointer()));
+            priorCanonicalRoots.add(workingCanonical);
+            planner = ImmutablePatchPlanner.forFrozen(workingCanonical);
             workingCanonical = planner.applyMutationPreflight(
                     input.op(),
                     path,
                     preflightValue(input, workingCanonical),
                     exactReplacement);
-            projectedCanonicalRoots.add(workingCanonical);
+            resultingCanonicalRoots.add(workingCanonical);
         }
-        return Collections.unmodifiableList(projectedCanonicalRoots);
+        return new MutationGasProjection(
+                priorCanonicalRoots,
+                resultingCanonicalRoots);
+    }
+
+    private static final class MutationGasProjection {
+        private final List<FrozenNode> priorCanonicalRoots;
+        private final List<FrozenNode> resultingCanonicalRoots;
+
+        private MutationGasProjection(
+                List<FrozenNode> priorCanonicalRoots,
+                List<FrozenNode> resultingCanonicalRoots) {
+            this.priorCanonicalRoots = Collections.unmodifiableList(
+                    new ArrayList<FrozenNode>(priorCanonicalRoots));
+            this.resultingCanonicalRoots = Collections.unmodifiableList(
+                    new ArrayList<FrozenNode>(resultingCanonicalRoots));
+        }
+    }
+
+    private ResolvedSnapshot resolvePreflightCanonical(
+            ProcessingSnapshotManager manager,
+            FrozenNode canonicalRoot) {
+        if (manager == null) {
+            throw new IllegalStateException(
+                    "Reference ancestor requires a processing snapshot manager");
+        }
+        return runtime.strictPlatformInvocation
+                ? DocumentProcessingRuntime
+                        .resolveCanonicalTransientIncludingTypeContracts(
+                                manager,
+                                canonicalRoot,
+                                runtime.scopes().keySet(),
+                                runtime.executableBodyFieldsByType)
+                : DocumentProcessingRuntime.resolveCanonicalTransient(
+                        manager,
+                        canonicalRoot,
+                        runtime.scopes().keySet(),
+                        runtime.executableBodyFieldsByType);
     }
 
     private MutationProjection preflightProcessorWrite(PatchInput input) {

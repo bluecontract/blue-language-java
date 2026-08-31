@@ -3,6 +3,7 @@ package blue.language.processor.closure;
 import blue.language.identity.BlueIdInputNormalizer;
 import blue.language.identity.BlueIds;
 import blue.language.identity.CanonicalJsonValueWriter;
+import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.identity.CyclicMemberFinalization;
 import blue.language.identity.CyclicSetFinalization;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -13,6 +14,7 @@ import blue.language.model.Schema;
 import blue.language.processor.GasChargeContext;
 import blue.language.processor.ManagedSemanticGasBridge;
 import blue.language.processor.util.NodeCanonicalizer;
+import blue.language.provider.CyclicSetProof;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -377,6 +379,191 @@ final class ClosureFinalizationGasCharger {
                 Objects.requireNonNull(existingBlueIds, "existingBlueIds"),
                 attribution,
                 reason);
+    }
+
+    /**
+     * Charges one retained successor and, for a cyclic member, its complete
+     * historical proof through the ordinary Language identity formulas.
+     *
+     * <p>This is admission evidence rather than a new graph component.  The
+     * resolved body always pays the established after-document charge.  A
+     * cyclic proof additionally pays preliminary member, canonical member,
+     * stable-sort, and master-fold identity work without emitting component
+     * finalization ownership or receipts.</p>
+     */
+    String chargeManagedRevisionAfterDocument(
+            ManagedDocumentStepProcessor meter,
+            DocumentId childDocumentId,
+            String expectedAfterBlueId,
+            Node afterDocument,
+            CyclicSetProof afterCyclicProof,
+            long cyclicCanonicalBytesLimit,
+            Set<String> establishedBlueIds,
+            Set<String> existingBlueIds) {
+        String expected = ClosureValueSupport.requireBlueId(
+                expectedAfterBlueId, "expectedAfterBlueId");
+        boolean cyclicAfter = BlueIds.hasCyclicMemberSeparator(expected);
+        if (cyclicAfter) {
+            BlueIds.requireBlueIdOrCyclicMember(
+                    expected, "expectedAfterBlueId");
+        }
+        if (cyclicAfter != (afterCyclicProof != null)) {
+            throw new IllegalArgumentException(
+                    "A cyclic successor requires exactly one complete cyclic-set proof");
+        }
+        if (afterCyclicProof == null) {
+            return chargeManagedRevisionAfterDocument(
+                    meter,
+                    childDocumentId,
+                    afterDocument,
+                    establishedBlueIds,
+                    existingBlueIds);
+        }
+        CyclicSetProof proof = CyclicSetProof.fromDeclaredPlaceholderSet(
+                afterCyclicProof.declaredPlaceholderSet());
+        ManagedRevisionCyclicEvidenceVerifier.verify(
+                expected, afterDocument, proof);
+        long limit = ClosureValueSupport.requireSafeInteger(
+                cyclicCanonicalBytesLimit,
+                "cyclicCanonicalBytesLimit");
+        long canonicalBytes = new CyclicCanonicalLimitProjection()
+                .canonicalBytesForProof(proof.declaredPlaceholderSet());
+        if (canonicalBytes > limit) {
+            throw ClosureAdmissionPortableLimits.exceeded(
+                    "cyclicCanonicalBytesPerComponent",
+                    canonicalBytes,
+                    limit);
+        }
+        CyclicSetFinalization finalization =
+                CircularSetIdentityCalculator
+                        .calculateCircularSetFinalization(
+                                proof.declaredPlaceholderSet());
+        if (!BlueIds.cyclicSetMasterBlueId(expected).equals(
+                finalization.masterBlueId())) {
+            throw new IllegalArgumentException(
+                    "Historical cyclic proof calculates another master BlueId");
+        }
+
+        chargeManagedRevisionAfterDocument(
+                meter,
+                childDocumentId,
+                afterDocument,
+                establishedBlueIds,
+                existingBlueIds);
+        chargeManagedRevisionCyclicProof(
+                Objects.requireNonNull(meter, "meter"),
+                Objects.requireNonNull(childDocumentId, "childDocumentId"),
+                finalization,
+                Objects.requireNonNull(
+                        establishedBlueIds, "establishedBlueIds"),
+                Objects.requireNonNull(existingBlueIds, "existingBlueIds"));
+        return expected;
+    }
+
+    private void chargeManagedRevisionCyclicProof(
+            ManagedDocumentStepProcessor meter,
+            DocumentId childDocumentId,
+            CyclicSetFinalization finalization,
+            Set<String> established,
+            Set<String> existing) {
+        String prefix =
+                "admission.managed-revision.after-document.cyclic-proof";
+        GasChargeContext base = GasChargeContext.closure(
+                childDocumentId.value(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                prefix);
+        ArrayList<SortMember> preliminary = new ArrayList<SortMember>();
+        for (CyclicMemberFinalization member
+                : finalization.membersInInputOrder()) {
+            Node zeroed = zeroed(member.canonicalMemberBody());
+            Object projected = normalizer.normalizeCanonicalInput(
+                    NodeToBlueIdInput
+                            .getAllowingCyclicPlaceholders(zeroed));
+            byte[] canonicalInput = CanonicalJsonValueWriter.write(projected);
+            if (!Arrays.equals(
+                    canonicalInput,
+                    member.preliminaryCanonicalInputBytes())) {
+                throw new IllegalStateException(
+                        "Historical ZERO-form input differs from Language evidence");
+            }
+            String reason = prefix + ".preliminary."
+                    + member.inputIndex();
+            String preliminaryBlueId = establishExactNode(
+                    zeroed,
+                    projected,
+                    meter,
+                    established,
+                    existing,
+                    withReason(base, reason),
+                    reason);
+            if (!member.preliminaryBlueId().equals(preliminaryBlueId)) {
+                throw new IllegalStateException(
+                        "Metered historical preliminary identity differs from Language evidence");
+            }
+            preliminary.add(new SortMember(
+                    member,
+                    preliminaryBlueId,
+                    new String(canonicalInput, StandardCharsets.UTF_8)));
+        }
+
+        List<SortMember> sorted = stableSortHistorical(
+                preliminary, meter, base, prefix);
+        List<CyclicMemberFinalization> canonicalMembers =
+                finalization.membersInCanonicalOrder();
+        for (int index = 0; index < sorted.size(); index++) {
+            if (sorted.get(index).member != canonicalMembers.get(index)) {
+                throw new IllegalStateException(
+                        "Metered historical preliminary order differs from Language evidence");
+            }
+        }
+
+        ArrayList<Object> masterElements = new ArrayList<Object>();
+        for (CyclicMemberFinalization member : canonicalMembers) {
+            Node canonicalBody = member.canonicalMemberBody();
+            Object projected = normalizer.normalizeCanonicalInput(
+                    NodeToBlueIdInput.getAllowingCyclicPlaceholders(
+                            canonicalBody));
+            String reason = prefix + ".canonical-member."
+                    + member.canonicalIndex();
+            establishExactNode(
+                    canonicalBody,
+                    projected,
+                    meter,
+                    established,
+                    existing,
+                    withReason(base, reason),
+                    reason);
+            masterElements.add(normalizer.normalizeCanonicalInput(
+                    NodeToBlueIdInput
+                            .getListElementAllowingCyclicPlaceholders(
+                                    canonicalBody,
+                                    member.canonicalIndex())));
+        }
+        Object masterInput = normalizer.normalizeCanonicalInput(
+                masterElements);
+        if (!Arrays.equals(
+                CanonicalJsonValueWriter.write(masterInput),
+                finalization.canonicalIdentityInputBytes())) {
+            throw new IllegalStateException(
+                    "Historical master input differs from Language evidence");
+        }
+        String masterReason = prefix + ".master";
+        String master = establishExactValue(
+                masterInput,
+                meter,
+                established,
+                existing,
+                withReason(base, masterReason),
+                masterReason);
+        if (!finalization.masterBlueId().equals(master)) {
+            throw new IllegalStateException(
+                    "Metered historical master identity differs from Language evidence");
+        }
     }
 
     /**
@@ -867,6 +1054,82 @@ final class ClosureFinalizationGasCharger {
                 new ArrayList<SortMember>(source));
     }
 
+    private List<SortMember> stableSortHistorical(
+            List<SortMember> input,
+            ManagedDocumentStepProcessor meter,
+            GasChargeContext base,
+            String prefix) {
+        if (input.size() < 2) {
+            return Collections.unmodifiableList(
+                    new ArrayList<SortMember>(input));
+        }
+        ArrayList<SortMember> source = new ArrayList<SortMember>(input);
+        ArrayList<SortMember> target = new ArrayList<SortMember>(
+                Collections.nCopies(input.size(), (SortMember) null));
+        long comparisonOrdinal = 0L;
+        for (int width = 1;
+                width < source.size();
+                width = width > source.size() / 2
+                        ? source.size() : width * 2) {
+            for (int start = 0;
+                    start < source.size();
+                    start += width * 2) {
+                int middle = Math.min(start + width, source.size());
+                int end = Math.min(start + width * 2, source.size());
+                int left = start;
+                int right = middle;
+                int output = start;
+                while (left < middle && right < end) {
+                    SortMember leftMember = source.get(left);
+                    SortMember rightMember = source.get(right);
+                    long ordinal = comparisonOrdinal++;
+                    meter.semanticGas(withReason(
+                            base,
+                            prefix + ".preliminary-sort." + ordinal))
+                            .sortComparisons(1L);
+                    int compared = compareHistoricalToken(
+                            leftMember.preliminaryBlueId,
+                            rightMember.preliminaryBlueId,
+                            meter,
+                            base,
+                            prefix + ".preliminary-compare." + ordinal,
+                            prefix + ".preliminary-text." + ordinal);
+                    if (compared == 0) {
+                        compared = compareHistoricalToken(
+                                leftMember.canonicalInput,
+                                rightMember.canonicalInput,
+                                meter,
+                                base,
+                                prefix + ".preliminary-canonical-compare."
+                                        + ordinal,
+                                prefix + ".preliminary-canonical-text."
+                                        + ordinal);
+                    }
+                    if (compared == 0) {
+                        throw new IllegalArgumentException(
+                                "Indistinguishable historical cyclic proof members");
+                    }
+                    if (compared <= 0) {
+                        target.set(output++, source.get(left++));
+                    } else {
+                        target.set(output++, source.get(right++));
+                    }
+                }
+                while (left < middle) {
+                    target.set(output++, source.get(left++));
+                }
+                while (right < end) {
+                    target.set(output++, source.get(right++));
+                }
+            }
+            ArrayList<SortMember> swap = source;
+            source = target;
+            target = swap;
+        }
+        return Collections.unmodifiableList(
+                new ArrayList<SortMember>(source));
+    }
+
     private int compareToken(
             String left,
             String right,
@@ -885,6 +1148,23 @@ final class ClosureFinalizationGasCharger {
                 component,
                 frame.owner,
                 textReason)).textOperandsExamined(
+                        comparison.codePointsRead,
+                        2L);
+        return comparison.result;
+    }
+
+    private int compareHistoricalToken(
+            String left,
+            String right,
+            ManagedDocumentStepProcessor meter,
+            GasChargeContext base,
+            String comparisonReason,
+            String textReason) {
+        TextComparison comparison = compareCodePoints(left, right);
+        meter.semanticGas(withReason(base, comparisonReason))
+                .scalarComparisons(1L);
+        meter.semanticGas(withReason(base, textReason))
+                .textOperandsExamined(
                         comparison.codePointsRead,
                         2L);
         return comparison.result;

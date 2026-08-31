@@ -1016,11 +1016,10 @@ def _reference_charge_direct_node(
     recurse: bool,
 ) -> None:
     """Independently derive Language direct-node identity work."""
-    raw_scalar = isinstance(value, (str, int, float, bool))
     facts = direct_identity_facts(value, allow_cyclic_placeholders=True)
     if facts.pure_reference:
         return
-    direct_member_count = 1 if raw_scalar else facts.direct_member_count
+    direct_member_count = facts.direct_member_count
     canonical_facts = facts
     if isinstance(value, dict):
         identity_value = {

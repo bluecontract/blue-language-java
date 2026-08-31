@@ -20,7 +20,7 @@ final class CheckpointManagerTest {
     private static final long EXPECTED_MARKER_WRITES = 1L;
     private static final long EXPECTED_CHECKPOINT_WRITES = 1L;
     private static final long EXPECTED_IDENTITY_NODES = 10L;
-    private static final long EXPECTED_REBUILT_MEMBERS = 12L;
+    private static final long EXPECTED_REBUILT_MEMBERS = 13L;
     private static final long EXPECTED_DIRECT_HASH_BLOCKS = 21L;
 
     @Test
@@ -129,7 +129,7 @@ final class CheckpointManagerTest {
                         GasScheduleConstants.SemanticCounter
                                 .DIRECT_IDENTITY_HASH_BLOCK));
         assertEquals(expectedGas, runtime.totalGas(),
-                "checkpoint gas is 40 processor gas plus 43 identity gas");
+                "checkpoint gas is 40 processor gas plus 44 identity gas");
         assertEquals(subjectBlueId, record.lastEventSignature);
     }
 

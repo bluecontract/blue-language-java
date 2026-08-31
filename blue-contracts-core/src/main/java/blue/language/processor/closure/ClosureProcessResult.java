@@ -40,6 +40,10 @@ public final class ClosureProcessResult {
     private final ClosureCommitCompanion platformCommitCompanion;
     private final ProcessorDiagnostic diagnostic;
     private final List<DocumentTransitionEvidence> documentTransitionEvidence;
+    private final List<ManagedDocumentTransitionReceipt>
+            managedTransitionReceipts;
+    private final String managedTransitionReceiptsIdentity;
+    private final boolean managedTransitionReceiptSurfacePresent;
 
     /**
      * Creates and semantically cross-validates one complete result.
@@ -184,7 +188,11 @@ public final class ClosureProcessResult {
                 diagnostic,
                 reusableFinalization,
                 Collections.<DocumentTransitionEvidence>emptyList(),
-                Collections.<DocumentId>emptySet());
+                Collections.<ManagedDocumentTransitionReceipt>emptyList(),
+                false,
+                Collections.<DocumentId>emptySet(),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
     }
 
     /**
@@ -245,7 +253,142 @@ public final class ClosureProcessResult {
                 diagnostic,
                 reusableFinalization,
                 documentTransitionEvidence,
-                Collections.<DocumentId>emptySet());
+                Collections.<ManagedDocumentTransitionReceipt>emptyList(),
+                false,
+                Collections.<DocumentId>emptySet(),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
+    }
+
+    /**
+     * Genuine processor construction hook carrying complete authenticated
+     * managed-transition receipts in addition to presentation evidence.
+     */
+    ClosureProcessResult(
+            AffectedClosureSnapshot inputSnapshot,
+            ProcessorStatus status,
+            String invocationIdentity,
+            String outputClosureIdentity,
+            long graphGeneration,
+            List<ResultingDocument> resultingDocuments,
+            List<ComponentSnapshot> resultingComponents,
+            List<ManagedOccurrenceBinding> occurrenceBindings,
+            String occurrenceBindingSetIdentity,
+            List<GraphChange> graphChanges,
+            String graphChangesIdentity,
+            List<SubscriptionDelta> subscriptionDeltas,
+            String subscriptionDeltasIdentity,
+            List<CheckpointWrite> checkpointWrites,
+            String checkpointWritesIdentity,
+            List<PublicEventOccurrence> publicEvents,
+            String publicEventsIdentity,
+            long totalGas,
+            List<GasTraceEntry> gasTrace,
+            String gasTraceIdentity,
+            RejectedCharge rejectedCharge,
+            ClosureWorkOccurrence rejectedWorkOccurrence,
+            ClosureCommitCompanion platformCommitCompanion,
+            ProcessorDiagnostic diagnostic,
+            ComponentFinalizationResult reusableFinalization,
+            List<DocumentTransitionEvidence> documentTransitionEvidence,
+            List<ManagedDocumentTransitionReceipt>
+                    managedTransitionReceipts) {
+        this(
+                inputSnapshot,
+                status,
+                invocationIdentity,
+                outputClosureIdentity,
+                graphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindings,
+                occurrenceBindingSetIdentity,
+                graphChanges,
+                graphChangesIdentity,
+                subscriptionDeltas,
+                subscriptionDeltasIdentity,
+                checkpointWrites,
+                checkpointWritesIdentity,
+                publicEvents,
+                publicEventsIdentity,
+                totalGas,
+                gasTrace,
+                gasTraceIdentity,
+                rejectedCharge,
+                rejectedWorkOccurrence,
+                platformCommitCompanion,
+                diagnostic,
+                reusableFinalization,
+                documentTransitionEvidence,
+                managedTransitionReceipts,
+                true,
+                Collections.<DocumentId>emptySet(),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
+    }
+
+    /** Processor hook for one verified resolution-bound retry result. */
+    ClosureProcessResult(
+            AffectedClosureSnapshot inputSnapshot,
+            ProcessorStatus status,
+            String invocationIdentity,
+            String outputClosureIdentity,
+            long graphGeneration,
+            List<ResultingDocument> resultingDocuments,
+            List<ComponentSnapshot> resultingComponents,
+            List<ManagedOccurrenceBinding> occurrenceBindings,
+            String occurrenceBindingSetIdentity,
+            List<GraphChange> graphChanges,
+            String graphChangesIdentity,
+            List<SubscriptionDelta> subscriptionDeltas,
+            String subscriptionDeltasIdentity,
+            List<CheckpointWrite> checkpointWrites,
+            String checkpointWritesIdentity,
+            List<PublicEventOccurrence> publicEvents,
+            String publicEventsIdentity,
+            long totalGas,
+            List<GasTraceEntry> gasTrace,
+            String gasTraceIdentity,
+            RejectedCharge rejectedCharge,
+            ClosureWorkOccurrence rejectedWorkOccurrence,
+            ClosureCommitCompanion platformCommitCompanion,
+            ProcessorDiagnostic diagnostic,
+            ComponentFinalizationResult reusableFinalization,
+            List<DocumentTransitionEvidence> documentTransitionEvidence,
+            List<ManagedDocumentTransitionReceipt>
+                    managedTransitionReceipts,
+            List<ManagedOccurrenceEvidenceResolution> resolutions) {
+        this(
+                inputSnapshot,
+                status,
+                invocationIdentity,
+                outputClosureIdentity,
+                graphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindings,
+                occurrenceBindingSetIdentity,
+                graphChanges,
+                graphChangesIdentity,
+                subscriptionDeltas,
+                subscriptionDeltasIdentity,
+                checkpointWrites,
+                checkpointWritesIdentity,
+                publicEvents,
+                publicEventsIdentity,
+                totalGas,
+                gasTrace,
+                gasTraceIdentity,
+                rejectedCharge,
+                rejectedWorkOccurrence,
+                platformCommitCompanion,
+                diagnostic,
+                reusableFinalization,
+                documentTransitionEvidence,
+                managedTransitionReceipts,
+                true,
+                Collections.<DocumentId>emptySet(),
+                resolutions);
     }
 
     /**
@@ -306,7 +449,11 @@ public final class ClosureProcessResult {
                 diagnostic,
                 null,
                 Collections.<DocumentTransitionEvidence>emptyList(),
-                candidateGasDocumentIds(rejectedAdmissionCandidate));
+                Collections.<ManagedDocumentTransitionReceipt>emptyList(),
+                false,
+                candidateGasDocumentIds(rejectedAdmissionCandidate),
+                Collections.<ManagedOccurrenceEvidenceResolution>
+                        emptyList());
     }
 
     private ClosureProcessResult(
@@ -336,7 +483,11 @@ public final class ClosureProcessResult {
             ProcessorDiagnostic diagnostic,
             ComponentFinalizationResult reusableFinalization,
             List<DocumentTransitionEvidence> documentTransitionEvidence,
-            Set<DocumentId> supplementalGasDocumentIds) {
+            List<ManagedDocumentTransitionReceipt> managedTransitionReceipts,
+            boolean managedTransitionReceiptSurfacePresent,
+            Set<DocumentId> supplementalGasDocumentIds,
+            List<ManagedOccurrenceEvidenceResolution>
+                    managedOccurrenceResolutions) {
         AffectedClosureSnapshot input = Objects.requireNonNull(
                 inputSnapshot, "inputSnapshot");
         this.status = Objects.requireNonNull(status, "status");
@@ -381,9 +532,21 @@ public final class ClosureProcessResult {
         this.documentTransitionEvidence = immutableList(
                 documentTransitionEvidence,
                 "documentTransitionEvidence");
+        this.managedTransitionReceipts = immutableList(
+                managedTransitionReceipts,
+                "managedTransitionReceipts");
+        this.managedTransitionReceiptsIdentity = ClosureIdentityService
+                .INSTANCE.managedTransitionReceiptsIdentity(
+                        this.managedTransitionReceipts);
+        this.managedTransitionReceiptSurfacePresent =
+                managedTransitionReceiptSurfacePresent;
         if (!status.commits() && !this.documentTransitionEvidence.isEmpty()) {
             throw new IllegalArgumentException(
                     "Rollback results cannot expose transition presentation evidence");
+        }
+        if (!status.commits() && !this.managedTransitionReceipts.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Rollback results cannot expose managed-transition receipts");
         }
         if (reusableFinalization != null && !status.commits()) {
             throw new IllegalArgumentException(
@@ -400,6 +563,7 @@ public final class ClosureProcessResult {
         ClosureEvidenceVerifier.verifySnapshot(input);
         validateCanonicalEvidence();
         AffectedClosureSnapshot output = validateResultSnapshot();
+        validateManagedTransitionReceipts();
         validateStatusAndRollback(input);
         validateRejectedCharge();
         ClosureEvidenceVerifier.verifyTransition(
@@ -412,7 +576,8 @@ public final class ClosureProcessResult {
                 this.publicEvents,
                 this.gasTrace,
                 reusableFinalization,
-                supplementalGasDocuments);
+                supplementalGasDocuments,
+                managedOccurrenceResolutions);
         if (platformCommitCompanion != null) {
             validateCompanion(input, platformCommitCompanion);
         }
@@ -712,6 +877,27 @@ public final class ClosureProcessResult {
         return documentTransitionEvidence;
     }
 
+    /**
+     * Returns complete authenticated managed-document transition receipts.
+     * Rollback results and legacy compatibility constructions return an empty
+     * list.
+     *
+     * @return immutable canonical managed-transition receipt sequence
+     */
+    public List<ManagedDocumentTransitionReceipt>
+            managedTransitionReceipts() {
+        return managedTransitionReceipts;
+    }
+
+    /**
+     * Returns the exact ordered managed-transition receipt aggregate identity.
+     *
+     * @return exact aggregate receipt identity
+     */
+    public String managedTransitionReceiptsIdentity() {
+        return managedTransitionReceiptsIdentity;
+    }
+
     private void validateInputIdentity(AffectedClosureSnapshot input) {
         String computed = ClosureIdentityService.INSTANCE
                 .affectedClosureIdentity(input);
@@ -800,6 +986,168 @@ public final class ClosureProcessResult {
             throw new IllegalArgumentException(
                     "totalGas does not equal admitted gas trace");
         }
+    }
+
+    private void validateManagedTransitionReceipts() {
+        if (!managedTransitionReceiptSurfacePresent) {
+            // Compatibility results constructed through the Contracts 1.0
+            // surface did not carry complete non-public Root events.
+            return;
+        }
+        if (platformCommitCompanion == null
+                || !platformCommitCompanion
+                        .bindsManagedTransitionReceipts()) {
+            throw new IllegalArgumentException(
+                    "Complete managed-transition receipts require companion binding");
+        }
+        if (!status.commits()) {
+            throw new IllegalArgumentException(
+                    "Rollback cannot bind managed-transition receipts");
+        }
+        Map<DocumentId, ResultingDocument> documents =
+                new HashMap<DocumentId, ResultingDocument>();
+        for (ResultingDocument document : resultingDocuments) {
+            documents.put(document.documentId(), document);
+        }
+        Map<DocumentId, Long> gasByDocument =
+                admittedGasByManagedTransitionReceipt();
+        Set<DocumentId> transitioned = new HashSet<DocumentId>();
+        ArrayList<ManagedRootEventOccurrence> allEvents =
+                new ArrayList<ManagedRootEventOccurrence>();
+        DocumentId previousDocumentId = null;
+        for (int index = 0;
+                index < managedTransitionReceipts.size(); index++) {
+            ManagedDocumentTransitionReceipt receipt =
+                    managedTransitionReceipts.get(index);
+            if (receipt.transitionOrdinal() != index
+                    || !invocationIdentity.equals(
+                        receipt.sourceInvocationIdentity())) {
+                throw new IllegalArgumentException(
+                        "Managed-transition receipt occurrence disagrees with result");
+            }
+            if (previousDocumentId != null
+                    && previousDocumentId.compareTo(
+                        receipt.documentId()) >= 0) {
+                throw new IllegalArgumentException(
+                        "Managed-transition receipts are not in canonical document order");
+            }
+            previousDocumentId = receipt.documentId();
+            if (!transitioned.add(receipt.documentId())) {
+                throw new IllegalArgumentException(
+                        "Managed-transition receipt document is duplicated");
+            }
+            ResultingDocument document = documents.get(
+                    receipt.documentId());
+            if (document == null
+                    || !document.beforeBlueId().equals(
+                        receipt.beforeBlueId())
+                    || !document.afterBlueId().equals(
+                        receipt.afterBlueId())) {
+                throw new IllegalArgumentException(
+                        "Managed-transition receipt disagrees with resulting document");
+            }
+            Long admittedGas = gasByDocument.get(receipt.documentId());
+            long exactGas = admittedGas == null
+                    ? 0L : admittedGas.longValue();
+            if (receipt.admittedGas() != exactGas) {
+                throw new IllegalArgumentException(
+                        "Managed-transition receipt gas disagrees with the admitted trace");
+            }
+            for (ManagedRootEventOccurrence event
+                    : receipt.emittedRootEvents()) {
+                if (event.publicAtSource() != document.publicRoot()) {
+                    throw new IllegalArgumentException(
+                            "Managed Root event public status disagrees with its source document");
+                }
+                allEvents.add(event);
+            }
+        }
+        for (ResultingDocument document : resultingDocuments) {
+            if (!document.beforeBlueId().equals(document.afterBlueId())
+                    && !transitioned.contains(document.documentId())) {
+                throw new IllegalArgumentException(
+                        "Changed managed document has no complete transition receipt");
+            }
+        }
+        Collections.sort(allEvents,
+                new java.util.Comparator<ManagedRootEventOccurrence>() {
+                    @Override
+                    public int compare(
+                            ManagedRootEventOccurrence left,
+                            ManagedRootEventOccurrence right) {
+                        return Long.compare(
+                                left.occurrenceOrdinal(),
+                                right.occurrenceOrdinal());
+                    }
+                });
+        long previousOccurrenceOrdinal = -1L;
+        ArrayList<ManagedRootEventOccurrence> publicRootEvents =
+                new ArrayList<ManagedRootEventOccurrence>();
+        for (ManagedRootEventOccurrence event : allEvents) {
+            if (event.occurrenceOrdinal() <= previousOccurrenceOrdinal) {
+                throw new IllegalArgumentException(
+                        "Managed Root event occurrence ordinals are duplicated or unordered");
+            }
+            previousOccurrenceOrdinal = event.occurrenceOrdinal();
+            if (event.publicAtSource()) {
+                publicRootEvents.add(event);
+            }
+        }
+        if (publicRootEvents.size() != publicEvents.size()) {
+            throw new IllegalArgumentException(
+                    "Public event sequence is not the complete-receipt public subset");
+        }
+        for (int index = 0; index < publicEvents.size(); index++) {
+            PublicEventOccurrence publicEvent = publicEvents.get(index);
+            ManagedRootEventOccurrence complete = publicRootEvents.get(index);
+            if (publicEvent.publicEventOrdinal() != index
+                    || publicEvent.eventOccurrenceOrdinal()
+                        != complete.occurrenceOrdinal()
+                    || !publicEvent.publicRootDocumentId().equals(
+                        complete.sourceDocumentId())
+                    || !publicEvent.eventOccurrenceIdentity().equals(
+                        complete.occurrenceIdentity())
+                    || !publicEvent.eventBlueId().equals(
+                        complete.eventBlueId())) {
+                throw new IllegalArgumentException(
+                        "Public event does not match the complete-receipt subset");
+            }
+        }
+    }
+
+    private Map<DocumentId, Long>
+            admittedGasByManagedTransitionReceipt() {
+        java.util.LinkedHashMap<DocumentId, Long> result =
+                new java.util.LinkedHashMap<DocumentId, Long>();
+        for (ManagedDocumentTransitionReceipt receipt
+                : managedTransitionReceipts) {
+            result.put(receipt.documentId(), Long.valueOf(0L));
+        }
+        if (result.isEmpty()) {
+            return result;
+        }
+        DocumentId residualOwner = managedTransitionReceipts.get(0)
+                .documentId();
+        for (GasTraceEntry entry : gasTrace) {
+            DocumentId owner = entry.documentId();
+            if (owner == null || !result.containsKey(owner)) {
+                owner = residualOwner;
+            }
+            Long current = result.get(owner);
+            long total;
+            try {
+                total = Math.addExact(
+                        current == null ? 0L : current.longValue(),
+                        entry.subtotal());
+            } catch (ArithmeticException overflow) {
+                throw new IllegalArgumentException(
+                        "Managed-transition gas attribution overflow", overflow);
+            }
+            ClosureValueSupport.requireSafeInteger(
+                    total, "managed-transition admitted gas");
+            result.put(owner, Long.valueOf(total));
+        }
+        return result;
     }
 
     private AffectedClosureSnapshot validateResultSnapshot() {
@@ -971,7 +1319,10 @@ public final class ClosureProcessResult {
                         companion.subscriptionDeltasIdentity())
                 || !publicEventsIdentity.equals(
                         companion.publicEventsIdentity())
-                || !gasTraceIdentity.equals(companion.gasTraceIdentity())) {
+                || !gasTraceIdentity.equals(companion.gasTraceIdentity())
+                || (managedTransitionReceiptSurfacePresent
+                    && !managedTransitionReceiptsIdentity.equals(
+                        companion.managedTransitionReceiptsIdentity()))) {
             throw new IllegalArgumentException(
                     "Commit companion disagrees with result identities");
         }

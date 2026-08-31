@@ -8,6 +8,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -20,7 +21,7 @@ final class ManagedDocumentOverlaySnapshotManager
 
     private final ProcessingSnapshotManager delegate;
     private final Map<String, FrozenNode> exactNodesByBlueId;
-    private final Set<String> opaqueManagedPaths;
+    private final Map<String, String> expectedManagedBlueIdsByPath;
 
     ManagedDocumentOverlaySnapshotManager(
             ProcessingSnapshotManager delegate,
@@ -34,34 +35,35 @@ final class ManagedDocumentOverlaySnapshotManager
                 : admitted.exactNodesByBlueId().entrySet()) {
             nodes.put(entry.getKey(), FrozenNode.fromNode(entry.getValue()));
         }
-        this.exactNodesByBlueId = nodes;
-        this.opaqueManagedPaths = new LinkedHashSet<String>(
-                admitted.opaqueManagedPaths());
+        this.exactNodesByBlueId = Collections.unmodifiableMap(nodes);
+        this.expectedManagedBlueIdsByPath =
+                Collections.unmodifiableMap(new LinkedHashMap<String, String>(
+                        admitted.expectedManagedBlueIdsByPath()));
     }
 
     private ManagedDocumentOverlaySnapshotManager(
             ProcessingSnapshotManager delegate,
             Map<String, FrozenNode> exactNodesByBlueId,
-            Set<String> opaqueManagedPaths) {
+            Map<String, String> expectedManagedBlueIdsByPath) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
         this.exactNodesByBlueId = exactNodesByBlueId;
-        this.opaqueManagedPaths = opaqueManagedPaths;
+        this.expectedManagedBlueIdsByPath = expectedManagedBlueIdsByPath;
     }
 
     @Override
     public ResolvedSnapshot fromDocument(Node document) {
-        return opaqueManagedPaths.isEmpty()
+        return expectedManagedBlueIdsByPath.isEmpty()
                 ? delegate.fromDocument(document)
                 : delegate.fromDocumentPreservingPaths(
-                        document, opaqueManagedPaths);
+                        document, expectedManagedBlueIdsByPath.keySet());
     }
 
     @Override
     public ResolvedSnapshot fromDocumentTransient(Node document) {
-        return opaqueManagedPaths.isEmpty()
+        return expectedManagedBlueIdsByPath.isEmpty()
                 ? delegate.fromDocumentTransient(document)
                 : delegate.fromDocumentTransientPreservingPaths(
-                        document, opaqueManagedPaths);
+                        document, expectedManagedBlueIdsByPath.keySet());
     }
 
     @Override
@@ -94,12 +96,72 @@ final class ManagedDocumentOverlaySnapshotManager
                 : delegate.materializeVerifiedExactReference(checked);
     }
 
+    /** Whether one selected Root path remains owned by closure processing. */
+    boolean isOpaqueManagedPath(String absolutePointer) {
+        return expectedManagedBlueIdsByPath.containsKey(
+                blue.language.processor.util.PointerUtils.normalizePointer(
+                        absolutePointer));
+    }
+
+    /**
+     * Opens one managed occurrence only through its exact invocation-local
+     * path and identity binding.
+     *
+     * <p>This method deliberately never falls through to {@link #delegate}.
+     * A missing overlay value must suspend the owning invocation rather than
+     * acquire ambient content that was not admitted for this occurrence.</p>
+     */
+    FrozenNode materializeVerifiedManagedRead(
+            String absolutePointer,
+            FrozenNode reference) {
+        String normalized =
+                blue.language.processor.util.PointerUtils.normalizePointer(
+                        absolutePointer);
+        String expectedBlueId = expectedManagedBlueIdsByPath.get(normalized);
+        if (expectedBlueId == null) {
+            throw new InvalidExecutionEvidenceException(
+                    "Managed read path has no invocation-local occurrence "
+                            + "binding: " + normalized,
+                    ProcessorErrorCategory.InvalidProcessingDocument);
+        }
+        FrozenNode checked = Objects.requireNonNull(reference, "reference");
+        if (!checked.isReferenceOnly()) {
+            throw new InvalidExecutionEvidenceException(
+                    "Managed read path is not a compact exact reference: "
+                            + normalized,
+                    ProcessorErrorCategory.InvalidProcessingDocument);
+        }
+        String actualBlueId = checked.getReferenceBlueId();
+        if (!expectedBlueId.equals(actualBlueId)) {
+            throw new InvalidExecutionEvidenceException(
+                    "Managed read reference disagrees with invocation-local "
+                            + "occurrence evidence at " + normalized
+                            + ": expected " + expectedBlueId
+                            + " but found " + actualBlueId,
+                    ProcessorErrorCategory.InvalidProcessingDocument);
+        }
+        FrozenNode exact = exactNodesByBlueId.get(expectedBlueId);
+        if (exact == null) {
+            throw new ExecutionEvidenceUnavailableException(
+                    "Managed read requires invocation-local exact content for "
+                            + expectedBlueId + " at " + normalized,
+                    Collections.singletonList(expectedBlueId));
+        }
+        try {
+            return ExecutableBodyPathCatalog.validateMaterializedExact(
+                    checked, exact, "Managed reference read");
+        } catch (ProcessorFailureException mismatch) {
+            throw new InvalidExecutionEvidenceException(
+                    mismatch.getMessage(), mismatch.errorCategory());
+        }
+    }
+
     @Override
     public ProcessingSnapshotManager transientSequence() {
         return new ManagedDocumentOverlaySnapshotManager(
                 delegate.transientSequence(),
                 exactNodesByBlueId,
-                opaqueManagedPaths);
+                expectedManagedBlueIdsByPath);
     }
 
     @Override
@@ -107,7 +169,7 @@ final class ManagedDocumentOverlaySnapshotManager
         return new ManagedDocumentOverlaySnapshotManager(
                 delegate.forkTransientSequence(),
                 exactNodesByBlueId,
-                opaqueManagedPaths);
+                expectedManagedBlueIdsByPath);
     }
 
     @Override
@@ -161,7 +223,7 @@ final class ManagedDocumentOverlaySnapshotManager
         if (supplied != null) {
             result.addAll(supplied);
         }
-        result.addAll(opaqueManagedPaths);
+        result.addAll(expectedManagedBlueIdsByPath.keySet());
         return result;
     }
 }

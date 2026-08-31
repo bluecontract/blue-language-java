@@ -46,7 +46,7 @@ final class PhaseFourModuleOwnershipArchitectureTest {
     private static final String MODULE_EXAMPLES = ":examples";
     private static final String MODULE_BUILD_LOGIC = ":build-logic";
 
-    private static final int EXPECTED_PRODUCTION_SOURCES = 739;
+    private static final int EXPECTED_PRODUCTION_SOURCES = 748;
     private static final int EXPECTED_PRODUCTION_RESOURCES = 749;
     private static final int ROOT_BUILD_MAX_LINES = 200;
     private static final int MODULE_BUILD_MAX_LINES = 150;

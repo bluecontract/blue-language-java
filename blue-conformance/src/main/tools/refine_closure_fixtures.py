@@ -249,16 +249,12 @@ def _charge_direct_identity_node(
     component finalizer must still establish the same values in its own exact
     canonical representation.
     """
-    raw_scalar = isinstance(value, (str, int, float, bool))
     facts = direct_identity_facts(value, allow_cyclic_placeholders=True)
     if facts.pure_reference:
         return
-    # Mutable Node scalar types are inferred by NodeToBlueIdInput: the raw
-    # Node has one direct ``value`` member even though its canonical identity
-    # helper map also contains the inferred ``type`` contribution.
-    direct_member_count = (
-        1 if raw_scalar else facts.direct_member_count
-    )
+    # Gas follows the canonical identity helper map, including the inferred
+    # ``type`` contribution of an untyped scalar.
+    direct_member_count = facts.direct_member_count
     canonical_facts = facts
     if isinstance(value, dict):
         # Empty object-valued properties are empty Nodes. The strict Language
@@ -7600,6 +7596,14 @@ def bind_exact_fixture_identities() -> None:
 
         trace = trace_entries(old_expected)
         trace_identity = gas_trace_identity(trace)
+        # The deterministic Java receipt exporter replaces this closed empty
+        # compatibility projection after executing the complete candidate.
+        # Keeping the intermediate package structurally complete lets every
+        # other identity/specification rebind remain deterministic without
+        # duplicating managed-runtime receipt semantics in Python.
+        managed_transition_receipts_identity = g.sha_id(
+            "blue-contracts-managed-document-transition-receipts/1.0", []
+        )
         resulting_components = deepcopy(final_components)
         for component in resulting_components:
             component.pop("oracleStage", None)
@@ -7639,6 +7643,10 @@ def bind_exact_fixture_identities() -> None:
             "checkpointWritesIdentity": checkpoint_writes_identity,
             "publicEvents": public_events,
             "publicEventsIdentity": public_events_identity,
+            "managedTransitionReceipts": [],
+            "managedTransitionReceiptsIdentity": (
+                managed_transition_receipts_identity
+            ),
             "rollbackToInput": bool(
                 old_expected.get(
                     "rollbackToInput", old_expected["status"] != "success"
@@ -7746,6 +7754,9 @@ def bind_exact_fixture_identities() -> None:
                 "subscriptionDeltasIdentity": subscription_deltas_identity,
                 "publicEventsIdentity": public_events_identity,
                 "gasTraceIdentity": trace_identity,
+                "managedTransitionReceiptsIdentity": (
+                    managed_transition_receipts_identity
+                ),
                 "blueLanguageSpecificationIdentity": environment[
                     "blueLanguageSpecificationIdentity"
                 ],
@@ -7776,7 +7787,7 @@ def bind_exact_fixture_identities() -> None:
             }
             complete_result["platformCommitCompanion"] = {
                 "companionIdentity": g.sha_id(
-                    "blue-contracts-platform-commit-companion/1.0",
+                    "blue-contracts-platform-commit-companion/1.1",
                     companion_basis,
                 ),
                 **companion_basis,

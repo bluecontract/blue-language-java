@@ -1,5 +1,6 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.processor.InvalidExecutionEvidenceException;
@@ -97,13 +98,39 @@ final class ProcessEmbeddedSurfaceReconciler {
         if (!demands.isEmpty()) {
             throw new ClosureResourceDemandException(demands);
         }
-        return reconcileProjected(
+        return reconcileProjectedInternal(
                 sourceDocumentId,
                 resultingSource,
                 effectiveSurface,
                 currentBindings,
                 currentDocuments,
-                invocationRetirementFences);
+                invocationRetirementFences,
+                demandContext.priorFinalizedReferenceAvailability());
+    }
+
+    /**
+     * Reconciles one source after the caller has atomically aggregated and
+     * closed demands for every projected Root.
+     */
+    Reconciliation reconcileProjectedAfterDemandAggregation(
+            DocumentId sourceDocumentId,
+            Node resultingSource,
+            List<ManagedProcessEmbeddedPath> effectiveSurface,
+            List<ManagedOccurrenceBinding> currentBindings,
+            List<ManagedDocumentSnapshot> currentDocuments,
+            Set<OccurrencePath> invocationRetirementFences,
+            PriorFinalizedReferenceAvailability
+                    priorFinalizedReferenceAvailability) {
+        return reconcileProjectedInternal(
+                sourceDocumentId,
+                resultingSource,
+                effectiveSurface,
+                currentBindings,
+                currentDocuments,
+                invocationRetirementFences,
+                Objects.requireNonNull(
+                        priorFinalizedReferenceAvailability,
+                        "priorFinalizedReferenceAvailability"));
     }
 
     /**
@@ -119,6 +146,25 @@ final class ProcessEmbeddedSurfaceReconciler {
             List<ManagedOccurrenceBinding> currentBindings,
             List<ManagedDocumentSnapshot> currentDocuments,
             Set<OccurrencePath> invocationRetirementFences) {
+        return reconcileProjectedInternal(
+                sourceDocumentId,
+                resultingSource,
+                effectiveSurface,
+                currentBindings,
+                currentDocuments,
+                invocationRetirementFences,
+                PriorFinalizedReferenceAvailability.NONE);
+    }
+
+    private Reconciliation reconcileProjectedInternal(
+            DocumentId sourceDocumentId,
+            Node resultingSource,
+            List<ManagedProcessEmbeddedPath> effectiveSurface,
+            List<ManagedOccurrenceBinding> currentBindings,
+            List<ManagedDocumentSnapshot> currentDocuments,
+            Set<OccurrencePath> invocationRetirementFences,
+            PriorFinalizedReferenceAvailability
+                    priorFinalizedReferenceAvailability) {
         DocumentId source = Objects.requireNonNull(
                 sourceDocumentId, "sourceDocumentId");
         Node document = Objects.requireNonNull(
@@ -162,7 +208,8 @@ final class ProcessEmbeddedSurfaceReconciler {
                     reconciled,
                     transitions,
                     activated,
-                    retired);
+                    retired,
+                    priorFinalizedReferenceAvailability);
         }
         Collections.sort(reconciled);
         Collections.sort(transitions);
@@ -215,7 +262,9 @@ final class ProcessEmbeddedSurfaceReconciler {
             List<ManagedOccurrenceBinding> reconciled,
             List<OccurrenceTransition> transitions,
             Set<String> activated,
-            Set<OccurrencePath> retired) {
+            Set<OccurrencePath> retired,
+            PriorFinalizedReferenceAvailability
+                    priorFinalizedReferenceAvailability) {
         String path = binding.sourcePath();
         OccurrencePath occurrencePath = new OccurrencePath(source, path);
         if (!declared.containsKey(path)) {
@@ -237,9 +286,7 @@ final class ProcessEmbeddedSurfaceReconciler {
             throw missingEffectiveValue(source, path);
         }
         if (binding.pendingHistoricalEpoch() != null) {
-            if (value.isReferenceOnly()
-                    && binding.expectedTargetBlueId().equals(
-                            value.getBlueId())) {
+            if (establishesPendingHistoricalValue(value, binding)) {
                 reconciled.add(binding);
                 return;
             }
@@ -252,6 +299,13 @@ final class ProcessEmbeddedSurfaceReconciler {
         ManagedDocumentSnapshot exact = binding.active()
                 ? exactTarget(value, binding, documents)
                 : documents.get(binding.targetDocumentId());
+        if (exact == null
+                && binding.active()
+                && value.isReferenceOnly()
+                && priorFinalizedReferenceAvailability.isAvailable(
+                        binding.targetDocumentId(), value.getBlueId())) {
+            exact = documents.get(binding.targetDocumentId());
+        }
         if (exact == null) {
             throw new ClosureCapabilityGapException(
                     "NEW_OCCURRENCE_ADMISSION_REQUIRED",
@@ -299,6 +353,17 @@ final class ProcessEmbeddedSurfaceReconciler {
                 activated.add(replacement.occurrenceIdentity());
             }
         }
+    }
+
+    private static boolean establishesPendingHistoricalValue(
+            Node value,
+            ManagedOccurrenceBinding binding) {
+        String expected = binding.expectedTargetBlueId();
+        if (value.isReferenceOnly()) {
+            return expected.equals(value.getBlueId());
+        }
+        return expected.equals(
+                DirectBlueIdCalculator.calculateBlueId(value));
     }
 
     private static Map<DocumentId, ManagedDocumentSnapshot> documentsById(
@@ -446,12 +511,28 @@ final class ProcessEmbeddedSurfaceReconciler {
         boolean isAvailable(String blueId);
     }
 
+    /** Invocation-local proof that one exact identity belongs to one lineage. */
+    interface PriorFinalizedReferenceAvailability {
+        PriorFinalizedReferenceAvailability NONE =
+                new PriorFinalizedReferenceAvailability() {
+                    @Override
+                    public boolean isAvailable(
+                            DocumentId documentId, String blueId) {
+                        return false;
+                    }
+                };
+
+        boolean isAvailable(DocumentId documentId, String blueId);
+    }
+
     /** Frozen identity and lookup context for one demand-discovery boundary. */
     static final class DemandContext {
         private final String logicalCauseIdentity;
         private final String inputClosureIdentity;
         private final long inputGraphGeneration;
         private final ExactReferenceAvailability exactReferenceAvailability;
+        private final PriorFinalizedReferenceAvailability
+                priorFinalizedReferenceAvailability;
         private final boolean verifyHistoricalExactReferences;
 
         DemandContext(
@@ -463,6 +544,7 @@ final class ProcessEmbeddedSurfaceReconciler {
                     inputClosureIdentity,
                     inputGraphGeneration,
                     exactReferenceAvailability,
+                    PriorFinalizedReferenceAvailability.NONE,
                     false);
         }
 
@@ -471,6 +553,22 @@ final class ProcessEmbeddedSurfaceReconciler {
                 String inputClosureIdentity,
                 long inputGraphGeneration,
                 ExactReferenceAvailability exactReferenceAvailability,
+                boolean verifyHistoricalExactReferences) {
+            this(logicalCauseIdentity,
+                    inputClosureIdentity,
+                    inputGraphGeneration,
+                    exactReferenceAvailability,
+                    PriorFinalizedReferenceAvailability.NONE,
+                    verifyHistoricalExactReferences);
+        }
+
+        DemandContext(
+                String logicalCauseIdentity,
+                String inputClosureIdentity,
+                long inputGraphGeneration,
+                ExactReferenceAvailability exactReferenceAvailability,
+                PriorFinalizedReferenceAvailability
+                        priorFinalizedReferenceAvailability,
                 boolean verifyHistoricalExactReferences) {
             this.logicalCauseIdentity =
                     ClosureValueSupport.requireSha256Identity(
@@ -487,6 +585,10 @@ final class ProcessEmbeddedSurfaceReconciler {
             this.exactReferenceAvailability = Objects.requireNonNull(
                     exactReferenceAvailability,
                     "exactReferenceAvailability");
+            this.priorFinalizedReferenceAvailability =
+                    Objects.requireNonNull(
+                            priorFinalizedReferenceAvailability,
+                            "priorFinalizedReferenceAvailability");
             this.verifyHistoricalExactReferences =
                     verifyHistoricalExactReferences;
         }
@@ -505,6 +607,11 @@ final class ProcessEmbeddedSurfaceReconciler {
 
         ExactReferenceAvailability exactReferenceAvailability() {
             return exactReferenceAvailability;
+        }
+
+        PriorFinalizedReferenceAvailability
+        priorFinalizedReferenceAvailability() {
+            return priorFinalizedReferenceAvailability;
         }
 
         boolean verifyHistoricalExactReferences() {

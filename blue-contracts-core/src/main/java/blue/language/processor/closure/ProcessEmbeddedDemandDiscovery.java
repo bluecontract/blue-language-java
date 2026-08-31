@@ -100,7 +100,12 @@ final class ProcessEmbeddedDemandDiscovery {
                     continue;
                 }
                 if (!binding.active()
-                        || exactTarget(supplied, binding, documents) != null) {
+                        || exactTarget(supplied, binding, documents) != null
+                        || supplied.isReferenceOnly()
+                        && context.priorFinalizedReferenceAvailability()
+                                .isAvailable(
+                                        binding.targetDocumentId(),
+                                        supplied.getBlueId())) {
                     ordinal++;
                     continue;
                 }

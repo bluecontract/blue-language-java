@@ -10,7 +10,7 @@ algorithm:
     value: <constructor value object or array>
   representation: 'sha256:<64 lowercase hexadecimal digits>'
   absentValues: Fields listed by a constructor are always present. A nullable field is encoded as JSON null; it is never omitted.
-  integers: Non-negative JSON integers in the inclusive range 0..9007199254740991, with no alternate text representation. This range is the exact interoperable integer domain for every numeric constructor field.
+  integers: JSON integers in the inclusive range 0..9007199254740991, with no alternate text representation, except that fromEpoch and pendingHistoricalEpoch may be exactly -1 for the authored pre-initialization cursor. No other negative constructor field is valid.
   text:
     normalization: NFC before construction
     comparison: Unicode scalar-value sequence
@@ -166,11 +166,49 @@ constructors:
       type: object
       fields: [childDocumentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId, originalSourceCauseIdentity]
       fieldRules:
-        fromEpoch: Exact pending historical cursor before this source revision.
-        toEpoch: Exactly fromEpoch plus 1 within the safe-integer range.
+        fromEpoch: Exact pending historical cursor before this source revision; either a non-negative safe integer or exactly -1 for the authored pre-initialization state.
+        toEpoch: Exactly fromEpoch plus 1 and always a non-negative safe integer.
         beforeBlueId: Exact authenticated child state at fromEpoch.
-        afterBlueId: Exact authenticated child state at toEpoch; the ManagedRevisionCause afterDocument independently establishes this identity.
+        afterBlueId: Exact authenticated child state at toEpoch; ManagedRevisionCause establishes a plain identity directly from afterDocument or a cyclic MASTER#n identity from afterDocument plus its complete independently verified afterCyclicProof.
         originalSourceCauseIdentity: Exact externalCauseIdentity or admissionCauseIdentity recorded by the authoritative source revision; never the local catch-up invocation identity.
+  managedTransitionOccurrenceIdentity:
+    domain: blue-contracts-managed-transition-occurrence/1.0
+    value:
+      type: object
+      fields: [sourceInvocationIdentity, transitionOrdinal, documentId, originalCauseIdentity]
+      fieldRules:
+        transitionOrdinal: Zero-based contiguous ordinal in the managed transition receipt sequence.
+        originalCauseIdentity: Exact authenticated source cause identity for the transition.
+  managedRootEventsIdentity:
+    domain: blue-contracts-managed-root-events/1.0
+    value:
+      type: array
+      order: ordinal ascending without gaps; occurrenceOrdinal strictly increasing
+      items:
+        fields: [ordinal, occurrenceOrdinal, sourceDocumentId, occurrenceIdentity, eventBlueId, publicAtSource]
+        fieldRules:
+          ordinal: Zero-based receipt-local ordinal preserving order and duplicates.
+          occurrenceOrdinal: Original invocation-global event occurrence ordinal.
+          occurrenceIdentity: Exact eventOccurrenceIdentity for source invocation, occurrenceOrdinal and eventBlueId.
+          eventBlueId: Exact direct BlueId of the separately retained complete exact event value.
+          publicAtSource: Whether the emitting managed Root was public at source creation.
+  managedDocumentTransitionReceiptIdentity:
+    domain: blue-contracts-managed-document-transition-receipt/1.0
+    value:
+      type: object
+      fields: [sourceInvocationIdentity, transitionOrdinal, transitionOccurrenceIdentity, documentId, originalCauseIdentity, beforeBlueId, afterBlueId, emittedRootEvents, emittedRootEventsIdentity, admittedGas]
+      fieldRules:
+        transitionOccurrenceIdentity: Recomputed managedTransitionOccurrenceIdentity for this source invocation, ordinal, document and original cause.
+        emittedRootEvents: Complete ordered managed Root-event occurrence objects in managedRootEventsIdentity form.
+        emittedRootEventsIdentity: Recomputed managedRootEventsIdentity for emittedRootEvents.
+        admittedGas: Exact non-negative partition of the invocation's admitted canonical gas trace.
+  managedTransitionReceiptsIdentity:
+    domain: blue-contracts-managed-document-transition-receipts/1.0
+    value:
+      type: array
+      order: transitionOrdinal ascending without gaps
+      items:
+        fields: [transitionOrdinal, transitionReceiptIdentity]
   managedRevisionCauseIdentity:
     domain: blue-contracts-managed-revision-cause/1.0
     value:
@@ -178,7 +216,9 @@ constructors:
       fields: [targetOccurrenceIdentity, childDocumentId, fromEpoch, toEpoch, beforeBlueId, afterBlueId, originalSourceCauseIdentity, sourceRevisionReceiptIdentity]
       fieldRules:
         targetOccurrenceIdentity: Exact inactive prospective occurrence whose targetDocumentId is childDocumentId and whose pendingHistoricalEpoch is fromEpoch.
-        toEpoch: Exactly fromEpoch plus 1 within the safe-integer range.
+        fromEpoch: Either a non-negative safe integer or exactly -1 for the authored pre-initialization state.
+        toEpoch: Exactly fromEpoch plus 1 and always a non-negative safe integer.
+        afterBlueId: Exact authenticated successor. A complete cyclic proof is required exactly for MASTER#n and is witness evidence outside this constructor because the verified afterBlueId already binds the member.
         sourceRevisionReceiptIdentity: Recomputed sourceRevisionReceiptIdentity whose repeated child, epoch, state and original-source-cause fields exactly equal this cause.
   admissionCandidateIdentity:
     domain: blue-contracts-admission-candidate/1.0
@@ -224,7 +264,7 @@ constructors:
       items:
         fields: [occurrenceIdentity, bindingIdentity, active, pendingHistoricalEpoch]
         fieldRules:
-          pendingHistoricalEpoch: Exact admitted historical epoch still being caught up when applicable; otherwise JSON null.
+          pendingHistoricalEpoch: Exact admitted historical cursor still being caught up, either exactly -1 for authored pre-initialization or a non-negative safe integer; otherwise JSON null.
       order: occurrenceIdentity, bindingIdentity
   closureIdentity:
     domain: blue-contracts-affected-closure/1.0
@@ -407,7 +447,7 @@ constructors:
           logicalPath: Exact semantic charge attribution when present; like every present optional field above, it is identity-bearing and is not a diagnostic source-file path.
       order: Exact admitted sequence order; sequence starts at zero and is contiguous.
   platformCommitCompanionIdentity:
-    domain: blue-contracts-platform-commit-companion/1.0
+    domain: blue-contracts-platform-commit-companion/1.1
     value:
       type: object
       fields:
@@ -427,6 +467,7 @@ constructors:
       - subscriptionDeltasIdentity
       - publicEventsIdentity
       - gasTraceIdentity
+      - managedTransitionReceiptsIdentity
       - blueLanguageSpecificationIdentity
       - contractsSpecificationIdentity
       - managedDocumentIdentityPolicyIdentity
@@ -446,6 +487,7 @@ constructors:
         blueLanguageSpecificationIdentity: SHA-256 of the exact Blue Language specification bytes, represented as sha256:<64 lowercase hexadecimal digits>.
         contractsSpecificationIdentity: SHA-256 of the exact Blue Contracts specification bytes, represented as sha256:<64 lowercase hexadecimal digits>.
         gasManifestIdentity: SHA-256 of the exact normative gas-manifest bytes, represented as sha256:<64 lowercase hexadecimal digits>.
+        managedTransitionReceiptsIdentity: Exact managedTransitionReceiptsIdentity authenticated by the committing result. The canonical empty sequence is still bound when no managed transition receipt exists.
 compatibility:
   languageIdentityAlgorithmsChanged: false
-  note: Except for the explicitly marked checkpointDomainBlueId exact-value recipe, these constructors are Contracts platform-evidence identities. The checkpoint recipe invokes the unchanged Blue Language direct-BlueId algorithm; nothing here alters that algorithm or cyclic MASTER#index syntax.
+  note: Except for the explicitly marked checkpointDomainBlueId exact-value recipe, these constructors are Contracts platform-evidence identities. The checkpoint recipe invokes the unchanged Blue Language direct-BlueId algorithm; nothing here alters that algorithm or cyclic MASTER#index syntax. The additive platform commit companion 1.1 constructor binds managedTransitionReceiptsIdentity; the 1.0 constructor remains readable only as compatibility evidence and cannot authenticate complete managed-transition receipts.

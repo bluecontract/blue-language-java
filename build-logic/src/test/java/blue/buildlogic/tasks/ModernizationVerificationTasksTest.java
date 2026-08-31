@@ -136,15 +136,20 @@ final class ModernizationVerificationTasksTest {
     void shouldGenerateAndVerifyAggregateReceiptUntilAnInputChanges() throws Exception {
         // given
         Project project = project("receipt-project");
-        Path artifact = write("receipt-project/build/libs/blue.jar", "first");
+        Path artifactRoot = Files.createDirectories(
+                temporaryDirectory.resolve("receipt-project-external-stage"));
+        Path artifact = Files.writeString(
+                artifactRoot.resolve("blue.jar"), "first", StandardCharsets.UTF_8);
         GenerateAggregateReleaseReceiptTask generate = project.getTasks().register(
                 "generateReceipt", GenerateAggregateReleaseReceiptTask.class).get();
         configureReceiptInputs(generate, project, artifact);
+        generate.getArtifactRoot().fileValue(artifactRoot.toFile());
         generate.getOutputFile().set(project.getLayout().getBuildDirectory().file("receipt.json"));
         generate.generate();
         VerifyAggregateReleaseReceiptTask verify = project.getTasks().register(
                 "verifyReceipt", VerifyAggregateReleaseReceiptTask.class).get();
         configureReceiptInputs(verify, project, artifact);
+        verify.getArtifactRoot().fileValue(artifactRoot.toFile());
         verify.getReceiptFile().set(generate.getOutputFile());
         verify.getVerificationReportFile().set(
                 project.getLayout().getBuildDirectory().file("receipt-verification.json"));

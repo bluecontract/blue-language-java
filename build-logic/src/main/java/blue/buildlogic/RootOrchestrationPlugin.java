@@ -720,6 +720,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 task.dependsOn(root.getTasks().named("generateReleaseEvidence")));
 
         generateReceipt.configure(task -> {
+            task.getArtifactRoot().set(immutableRepository);
             task.getArtifacts().setFrom(artifacts);
             task.getArtifacts().from(
                     sourceRelease.primary.flatMap(Zip::getArchiveFile),
@@ -748,6 +749,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             task.dependsOn(tests);
         });
         verifyReceipt.configure(task -> {
+            task.getArtifactRoot().set(immutableRepository);
             task.getArtifacts().setFrom(artifacts);
             task.getArtifacts().from(
                     sourceRelease.primary.flatMap(Zip::getArchiveFile),

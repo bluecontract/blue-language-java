@@ -406,6 +406,60 @@ final class ProcessEmbeddedSurfaceReconcilerTest {
                 wrong.errorCategory());
     }
 
+    @Test
+    void shouldPreservePendingHistoricalReferenceAndInlineExactValue() {
+        ManagedDocumentSnapshot source = document(A, "source-a");
+        ManagedDocumentSnapshot current = document(B, "current-b");
+        Node historical = new Node().name("authored-b");
+        String historicalBlueId =
+                DirectBlueIdCalculator.calculateBlueId(historical);
+        ManagedOccurrenceBinding pending = ManagedOccurrenceBinding.derived(
+                POLICY,
+                A,
+                ScopeAddress.embedded("/peer", 1L),
+                B,
+                historicalBlueId,
+                false,
+                Long.valueOf(-1L));
+
+        for (Node value : Arrays.asList(
+                new Node().blueId(historicalBlueId),
+                historical.clone())) {
+            ProcessEmbeddedSurfaceReconciler.Reconciliation result =
+                    reconciler.reconcileProjected(
+                            A,
+                            source.document().properties("peer", value),
+                            Collections.singletonList(path("/peer")),
+                            Collections.singletonList(pending),
+                            Arrays.asList(source, current),
+                            noFences());
+            ManagedOccurrenceBinding retained = only(
+                    result.bindings(), A, "/peer");
+            assertEquals(pending.occurrenceIdentity(),
+                    retained.occurrenceIdentity());
+            assertEquals(pending.bindingIdentity(),
+                    retained.bindingIdentity());
+            assertFalse(retained.active());
+            assertEquals(Long.valueOf(-1L),
+                    retained.pendingHistoricalEpoch());
+            assertTrue(result.transitions().isEmpty());
+            assertTrue(result.activatedOccurrenceIdentities().isEmpty());
+        }
+
+        ClosureCapabilityGapException mismatch = captureFailure(
+                () -> reconciler.reconcileProjected(
+                        A,
+                        source.document().properties(
+                                "peer", new Node().name("wrong-b")),
+                        Collections.singletonList(path("/peer")),
+                        Collections.singletonList(pending),
+                        Arrays.asList(source, current),
+                        noFences()));
+        assertNotNull(mismatch);
+        assertEquals("NEW_OCCURRENCE_ADMISSION_REQUIRED",
+                mismatch.code());
+    }
+
     private static ManagedDocumentSnapshot document(
             DocumentId id,
             String name) {

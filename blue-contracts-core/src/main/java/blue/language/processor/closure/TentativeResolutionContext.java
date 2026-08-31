@@ -34,6 +34,7 @@ public final class TentativeResolutionContext {
     private final Map<DocumentId, String> currentBlueIds;
     private final Map<DocumentId, Node> currentDocuments;
     private final Map<String, String> targetManagedBlueIdsByPath;
+    private final Map<String, Node> managedReadExactNodesByBlueId;
     private final String exactNodeProviderDomainIdentity;
     private final String occurrenceBindingSetIdentity;
 
@@ -49,6 +50,7 @@ public final class TentativeResolutionContext {
             Map<DocumentId, String> currentBlueIds,
             Map<DocumentId, Node> currentDocuments,
             Map<String, String> targetManagedBlueIdsByPath,
+            Map<String, Node> managedReadExactNodesByBlueId,
             String exactNodeProviderDomainIdentity,
             String occurrenceBindingSetIdentity) {
         this.closureIdentity = ClosureValueSupport.requireSha256Identity(
@@ -75,6 +77,8 @@ public final class TentativeResolutionContext {
                 currentDocuments, this.currentBlueIds);
         this.targetManagedBlueIdsByPath = immutableManagedPaths(
                 targetManagedBlueIdsByPath);
+        this.managedReadExactNodesByBlueId = immutableExactNodes(
+                managedReadExactNodesByBlueId);
         if (!this.targetBeforeBlueId.equals(
                 this.currentBlueIds.get(this.targetDocumentId))) {
             throw new IllegalArgumentException(
@@ -171,6 +175,25 @@ public final class TentativeResolutionContext {
                         "Managed Root has duplicate current occurrence paths");
             }
         }
+        LinkedHashMap<String, Node> managedReadExactNodes =
+                new LinkedHashMap<String, Node>();
+        if (invocation.cause() instanceof ManagedRevisionCause) {
+            ManagedRevisionCause revision =
+                    (ManagedRevisionCause) invocation.cause();
+            for (ManagedOccurrenceBinding binding : forwardBindings) {
+                if (binding.occurrenceIdentity().equals(
+                            revision.targetOccurrenceIdentity())
+                        && binding.targetDocumentId().equals(
+                                revision.childDocumentId())
+                        && binding.expectedTargetBlueId().equals(
+                                revision.afterBlueId())) {
+                    managedReadExactNodes.put(
+                            revision.afterBlueId(),
+                            revision.afterDocument());
+                    break;
+                }
+            }
+        }
         return new TentativeResolutionContext(
                 tentativeState.closureIdentity(),
                 invocation.invocationIdentity(),
@@ -183,6 +206,7 @@ public final class TentativeResolutionContext {
                 current,
                 documents,
                 canonicalForwardPaths,
+                managedReadExactNodes,
                 invocation.environment().exactNodeProviderDomainIdentity(),
                 tentativeState.occurrenceBindingSetIdentity());
     }
@@ -269,6 +293,17 @@ public final class TentativeResolutionContext {
         return targetManagedBlueIdsByPath;
     }
 
+    /** Returns defensive invocation-local historical managed-read bodies. */
+    Map<String, Node> managedReadExactNodesByBlueId() {
+        LinkedHashMap<String, Node> copy =
+                new LinkedHashMap<String, Node>();
+        for (Map.Entry<String, Node> entry
+                : managedReadExactNodesByBlueId.entrySet()) {
+            copy.put(entry.getKey(), entry.getValue().clone());
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
     /** Returns the selected provider-domain identity.
      * @return identity */
     public String exactNodeProviderDomainIdentity() {
@@ -344,6 +379,20 @@ public final class TentativeResolutionContext {
             copy.put(value, ClosureValueSupport.requireBlueId(
                     entry.getValue(), "target managed BlueId"));
             previous = value;
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private static Map<String, Node> immutableExactNodes(
+            Map<String, Node> values) {
+        LinkedHashMap<String, Node> copy =
+                new LinkedHashMap<String, Node>();
+        for (Map.Entry<String, Node> entry : Objects.requireNonNull(
+                values, "managedReadExactNodesByBlueId").entrySet()) {
+            String blueId = ClosureValueSupport.requireBlueId(
+                    entry.getKey(), "managed read exact BlueId");
+            copy.put(blueId, Objects.requireNonNull(
+                    entry.getValue(), "managed read exact node").clone());
         }
         return Collections.unmodifiableMap(copy);
     }

@@ -140,6 +140,132 @@ final class DifferentLineageRetargetReceiptTest {
         }
     }
 
+    @Test
+    void acceptsHistoricalDifferentLineageRetargetOnlyWithExactResolution() {
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureEnvironment environment = environment(owner);
+            Scenario scenario = historicalScenario(
+                    environment.managedBindingPolicyIdentity());
+            ClosureInvocationInput input = invocation(
+                    scenario.input.snapshot, environment);
+            ManagedOccurrenceEvidenceDemand demand =
+                    historicalDemand(input, scenario.after.expectedTargetBlueId());
+            ManagedOccurrenceEvidenceResolution resolution =
+                    ManagedOccurrenceEvidenceResolution.derived(
+                            demand, C, -1L);
+
+            ClosureProcessResult result = ClosureSuccessResultAssembler
+                    .assemble(
+                            input,
+                            executionState(scenario.output),
+                            Collections.singletonList(resolution));
+
+            assertEquals(8L, result.graphGeneration());
+            assertEquals(1, result.graphChanges().size());
+            assertEquals(GraphChange.Kind.REMOVE,
+                    result.graphChanges().get(0).changeKind());
+            assertEquals(scenario.before.occurrenceIdentity(),
+                    result.graphChanges().get(0).before()
+                            .occurrenceIdentity());
+            assertEquals(1, result.occurrenceBindings().size());
+            ManagedOccurrenceBinding retained =
+                    result.occurrenceBindings().get(0);
+            assertEquals(C, retained.targetDocumentId());
+            assertEquals(5L, retained.activationGeneration());
+            assertEquals(Long.valueOf(-1L),
+                    retained.pendingHistoricalEpoch());
+            assertEquals(scenario.after.occurrenceIdentity(),
+                    retained.occurrenceIdentity());
+        }
+    }
+
+    @Test
+    void rejectsHistoricalDifferentLineageRetargetWithoutExactResolution() {
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureEnvironment environment = environment(owner);
+            Scenario scenario = historicalScenario(
+                    environment.managedBindingPolicyIdentity());
+            ClosureInvocationInput input = invocation(
+                    scenario.input.snapshot, environment);
+
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> ClosureSuccessResultAssembler.assemble(
+                            input, executionState(scenario.output)));
+
+            ManagedOccurrenceEvidenceDemand wrongDemand = historicalDemand(
+                    input, scenario.before.expectedTargetBlueId());
+            ManagedOccurrenceEvidenceResolution wrongResolution =
+                    ManagedOccurrenceEvidenceResolution.derived(
+                            wrongDemand, C, -1L);
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> ClosureSuccessResultAssembler.assemble(
+                            input,
+                            executionState(scenario.output),
+                            Collections.singletonList(wrongResolution)));
+        }
+    }
+
+    @Test
+    void retryIdentityIsDeterministicAndBoundToTheSuspendedInvocation() {
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureEnvironment environment = environment(owner);
+            Scenario scenario = historicalScenario(
+                    environment.managedBindingPolicyIdentity());
+            ClosureInvocationInput input = invocation(
+                    scenario.input.snapshot, environment);
+            ManagedOccurrenceEvidenceResolution resolution =
+                    ManagedOccurrenceEvidenceResolution.derived(
+                            historicalDemand(
+                                    input,
+                                    scenario.after.expectedTargetBlueId()),
+                            C,
+                            -1L);
+
+            ClosureProcessRetryInput first = ClosureProcessRetryInput.derived(
+                    input, Collections.singletonList(resolution));
+            ClosureProcessRetryInput reconstructed =
+                    ClosureProcessRetryInput.derived(
+                            input, Collections.singletonList(resolution));
+
+            assertEquals(first.retryInvocationIdentity(),
+                    reconstructed.retryInvocationIdentity());
+            assertEquals(first.resolutionSetIdentity(),
+                    reconstructed.resolutionSetIdentity());
+            assertNotEquals(input.invocationIdentity(),
+                    first.retryInvocationIdentity());
+            assertEquals(first.retryInvocationIdentity(),
+                    ClosureInvocationVerifier.verifyRetry(first)
+                            .invocationIdentity());
+            assertThrows(UnsupportedOperationException.class,
+                    () -> first.resolutions().clear());
+
+            ManagedOccurrenceEvidenceDemand foreignDemand =
+                    ManagedOccurrenceEvidenceDemand.derived(
+                            input.cause().causeIdentity(),
+                            hash('f'),
+                            input.snapshot().graphGeneration(),
+                            A,
+                            PATH,
+                            blueId(new Node().name(
+                                    "process-embedded declaration")),
+                            scenario.after.expectedTargetBlueId(),
+                            0L);
+            ClosureProcessRetryInput foreign =
+                    ClosureProcessRetryInput.derived(
+                            input,
+                            Collections.singletonList(
+                                    ManagedOccurrenceEvidenceResolution
+                                            .derived(
+                                                    foreignDemand,
+                                                    C,
+                                                    -1L)));
+            assertThrows(IllegalArgumentException.class,
+                    () -> ClosureInvocationVerifier.verifyRetry(foreign));
+        }
+    }
+
     private static Scenario scenario(String afterBindingPolicyIdentity) {
         Node oldTarget = new Node().name("Old target");
         Node newTarget = new Node().name("New target");
@@ -198,6 +324,79 @@ final class DifferentLineageRetargetReceiptTest {
                 Collections.singletonList(after),
                 outputGenerations);
         return new Scenario(input, output, before, after);
+    }
+
+    private static Scenario historicalScenario(
+            String afterBindingPolicyIdentity) {
+        Node oldTarget = new Node().name("Old target");
+        Node historicalTarget = new Node().name("Authored target");
+        Node currentTarget = new Node().name("Current target");
+        String oldBlueId = blueId(oldTarget);
+        String historicalBlueId = blueId(historicalTarget);
+        ManagedOccurrenceBinding before = ManagedOccurrenceBinding.derived(
+                bindingPolicyIdentity(),
+                A,
+                ScopeAddress.embedded(PATH, 4L),
+                B,
+                oldBlueId,
+                true,
+                null);
+        ManagedOccurrenceBinding after = ManagedOccurrenceBinding.derived(
+                afterBindingPolicyIdentity,
+                A,
+                ScopeAddress.embedded(PATH, 5L),
+                C,
+                historicalBlueId,
+                false,
+                Long.valueOf(-1L));
+
+        SnapshotEvidence input = finalizedSnapshot(
+                7L,
+                bodies(
+                        new Node()
+                                .name("Retarget source")
+                                .properties("peer", new Node().blueId(oldBlueId)),
+                        oldTarget,
+                        currentTarget),
+                Collections.singletonList(before),
+                generations());
+
+        ManagedDocumentGraph outputGraph = ManagedDocumentGraph.fromBindings(
+                Arrays.asList(A, B, C), Collections.singletonList(after));
+        Map<DocumentId, Long> outputGenerations =
+                ComponentGenerationTransition.assign(
+                        ManagedDocumentGraph.fromBindings(
+                                Arrays.asList(A, B, C),
+                                Collections.singletonList(before)),
+                        componentGenerations(input.snapshot),
+                        outputGraph);
+        SnapshotEvidence output = finalizedSnapshot(
+                8L,
+                bodies(
+                        new Node()
+                                .name("Retarget source")
+                                .properties(
+                                        "peer",
+                                        new Node().blueId(historicalBlueId)),
+                        oldTarget,
+                        currentTarget),
+                Collections.singletonList(after),
+                outputGenerations);
+        return new Scenario(input, output, before, after);
+    }
+
+    private static ManagedOccurrenceEvidenceDemand historicalDemand(
+            ClosureInvocationInput input,
+            String suppliedBlueId) {
+        return ManagedOccurrenceEvidenceDemand.derived(
+                input.cause().causeIdentity(),
+                input.snapshot().closureIdentity(),
+                input.snapshot().graphGeneration(),
+                A,
+                PATH,
+                blueId(new Node().name("process-embedded declaration")),
+                suppliedBlueId,
+                0L);
     }
 
     private static SnapshotEvidence finalizedSnapshot(

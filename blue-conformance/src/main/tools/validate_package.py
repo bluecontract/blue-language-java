@@ -8240,6 +8240,9 @@ def validate_commit_companion(
         "subscriptionDeltasIdentity": expected["subscriptionDeltasIdentity"],
         "publicEventsIdentity": expected["publicEventsIdentity"],
         "gasTraceIdentity": expected["gasTraceIdentity"],
+        "managedTransitionReceiptsIdentity": expected[
+            "managedTransitionReceiptsIdentity"
+        ],
         "blueLanguageSpecificationIdentity": environment[
             "blueLanguageSpecificationIdentity"
         ],
@@ -8269,12 +8272,201 @@ def validate_commit_companion(
     require(
         companion == {
             "companionIdentity": domain_identity(
-                "blue-contracts-platform-commit-companion/1.0", basis
+                "blue-contracts-platform-commit-companion/1.1", basis
             ),
             **basis,
         },
         f"platform commit companion mismatch in {path.name}",
     )
+
+
+def validate_managed_transition_receipts(
+    path: Path,
+    fixture_input: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    receipts = expected["managedTransitionReceipts"]
+    require(
+        isinstance(receipts, list),
+        f"managed-transition receipts are not an array in {path.name}",
+    )
+    resulting_by_document = {
+        item["documentId"]: item for item in expected["resultingDocuments"]
+    }
+    receipt_documents: list[str] = []
+    aggregate_basis: list[dict[str, Any]] = []
+    public_from_receipts: list[dict[str, Any]] = []
+    admitted_gas = 0
+    for ordinal, receipt in enumerate(receipts):
+        require(
+            receipt["transitionOrdinal"] == ordinal,
+            f"managed-transition receipt ordinals are not contiguous in {path.name}",
+        )
+        document_id = receipt["documentId"]
+        require(
+            document_id in resulting_by_document
+            and document_id not in receipt_documents,
+            f"managed-transition receipt names an unknown or duplicate document "
+            f"in {path.name}: {document_id}",
+        )
+        receipt_documents.append(document_id)
+        result_document = resulting_by_document[document_id]
+        require(
+            receipt["sourceInvocationIdentity"]
+            == expected["invocationIdentity"]
+            and receipt["originalCauseIdentity"]
+            == fixture_input["cause"]["causeIdentity"]
+            and receipt["beforeBlueId"] == result_document["beforeBlueId"]
+            and receipt["afterBlueId"] == result_document["afterBlueId"],
+            f"managed-transition receipt source/state mismatch in {path.name}: "
+            f"{document_id}",
+        )
+        occurrence_identity = domain_identity(
+            "blue-contracts-managed-transition-occurrence/1.0",
+            {
+                "sourceInvocationIdentity": receipt[
+                    "sourceInvocationIdentity"
+                ],
+                "transitionOrdinal": ordinal,
+                "documentId": document_id,
+                "originalCauseIdentity": receipt[
+                    "originalCauseIdentity"
+                ],
+            },
+        )
+        require(
+            receipt["transitionOccurrenceIdentity"] == occurrence_identity,
+            f"managed-transition occurrence identity mismatch in {path.name}: "
+            f"{ordinal}",
+        )
+        events_basis: list[dict[str, Any]] = []
+        previous_occurrence = -1
+        for event_ordinal, event in enumerate(receipt["emittedRootEvents"]):
+            require(
+                event["ordinal"] == event_ordinal
+                and event["sourceDocumentId"] == document_id
+                and event["occurrenceOrdinal"] > previous_occurrence,
+                f"managed Root event order/source mismatch in {path.name}: "
+                f"{ordinal}/{event_ordinal}",
+            )
+            previous_occurrence = event["occurrenceOrdinal"]
+            require(
+                direct_blue_id(event["exactEvent"]) == event["eventBlueId"],
+                f"managed Root event BlueId mismatch in {path.name}: "
+                f"{ordinal}/{event_ordinal}",
+            )
+            require(
+                event["occurrenceIdentity"]
+                == domain_identity(
+                    "blue-contracts-event-occurrence/1.0",
+                    {
+                        "invocationIdentity": expected[
+                            "invocationIdentity"
+                        ],
+                        "eventOccurrenceOrdinal": event[
+                            "occurrenceOrdinal"
+                        ],
+                        "eventBlueId": event["eventBlueId"],
+                    },
+                ),
+                f"managed Root event occurrence identity mismatch in "
+                f"{path.name}: {ordinal}/{event_ordinal}",
+            )
+            event_basis = {
+                key: event[key]
+                for key in (
+                    "ordinal",
+                    "occurrenceOrdinal",
+                    "sourceDocumentId",
+                    "occurrenceIdentity",
+                    "eventBlueId",
+                    "publicAtSource",
+                )
+            }
+            events_basis.append(event_basis)
+            if event["publicAtSource"]:
+                public_from_receipts.append(event)
+        events_identity = domain_identity(
+            "blue-contracts-managed-root-events/1.0", events_basis
+        )
+        require(
+            receipt["emittedRootEventsIdentity"] == events_identity,
+            f"managed Root event aggregate mismatch in {path.name}: {ordinal}",
+        )
+        receipt_basis = {
+            "sourceInvocationIdentity": receipt[
+                "sourceInvocationIdentity"
+            ],
+            "transitionOrdinal": ordinal,
+            "transitionOccurrenceIdentity": occurrence_identity,
+            "documentId": document_id,
+            "originalCauseIdentity": receipt["originalCauseIdentity"],
+            "beforeBlueId": receipt["beforeBlueId"],
+            "afterBlueId": receipt["afterBlueId"],
+            "emittedRootEvents": events_basis,
+            "emittedRootEventsIdentity": events_identity,
+            "admittedGas": receipt["admittedGas"],
+        }
+        require(
+            receipt["transitionReceiptIdentity"]
+            == domain_identity(
+                "blue-contracts-managed-document-transition-receipt/1.0",
+                receipt_basis,
+            ),
+            f"managed-transition receipt identity mismatch in {path.name}: "
+            f"{ordinal}",
+        )
+        require(
+            receipt["beforeBlueId"] != receipt["afterBlueId"]
+            or len(receipt["emittedRootEvents"]) > 0,
+            f"managed-transition receipt has neither state nor event change "
+            f"in {path.name}: {ordinal}",
+        )
+        admitted_gas += receipt["admittedGas"]
+        aggregate_basis.append(
+            {
+                "transitionOrdinal": ordinal,
+                "transitionReceiptIdentity": receipt[
+                    "transitionReceiptIdentity"
+                ],
+            }
+        )
+    require(
+        receipt_documents == sorted(receipt_documents),
+        f"managed-transition receipts are not in canonical document order in "
+        f"{path.name}",
+    )
+    require(
+        expected["managedTransitionReceiptsIdentity"]
+        == domain_identity(
+            "blue-contracts-managed-document-transition-receipts/1.0",
+            aggregate_basis,
+        ),
+        f"managed-transition receipt aggregate mismatch in {path.name}",
+    )
+    if receipts:
+        require(
+            admitted_gas == expected["totalGas"],
+            f"managed-transition receipt gas partition mismatch in {path.name}",
+        )
+    expected_public = expected["publicEvents"]
+    require(
+        len(public_from_receipts) == len(expected_public),
+        f"managed-transition receipt public subset size mismatch in {path.name}",
+    )
+    for ordinal, (event, public) in enumerate(
+        zip(public_from_receipts, expected_public, strict=True)
+    ):
+        require(
+            event["occurrenceOrdinal"] == public["eventOccurrenceOrdinal"]
+            and event["sourceDocumentId"] == public["publicRootDocumentId"]
+            and event["occurrenceIdentity"]
+            == public["eventOccurrenceIdentity"]
+            and event["eventBlueId"] == public["eventBlueId"]
+            and event["exactEvent"] == public["event"],
+            f"managed-transition receipt public subset mismatch in {path.name}: "
+            f"{ordinal}",
+        )
 
 
 def validate_closure_fixture(path: Path) -> dict[str, int]:
@@ -8764,6 +8956,7 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
         == domain_identity("blue-contracts-public-events/1.0", public_event_basis),
         f"public-events identity mismatch in {path.name}",
     )
+    validate_managed_transition_receipts(path, fixture_input, expected)
 
     valid_work_ids = validate_work_trace(
         path, fixture_input, expected, ordered_direct, invocation_identity
@@ -8845,7 +9038,8 @@ def validate_closure_fixture(path: Path) -> dict[str, int]:
             expected["graphChanges"] == []
             and expected["subscriptionDeltas"] == []
             and expected["checkpointWrites"] == []
-            and expected["publicEvents"] == [],
+            and expected["publicEvents"] == []
+            and expected["managedTransitionReceipts"] == [],
             f"rollback result contains committed side effects in {path.name}",
         )
 

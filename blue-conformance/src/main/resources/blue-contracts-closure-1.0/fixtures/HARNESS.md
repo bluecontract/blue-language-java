@@ -85,6 +85,18 @@ construct a historical queued work kind. A sequential A5→A10 campaign is six
 commits after the initial missing-resource attempt: the external A5 attachment,
 then five separately metered/committed one-step revision invocations.
 
+Every complete affected-closure expectation includes the exact ordered
+`managedTransitionReceipts` result and its
+`managedTransitionReceiptsIdentity`. Each receipt binds one changed managed
+Root, or one unchanged Root that emitted application events, to the complete
+ordered Root-boundary event sequence, exact event values, original occurrence
+identities, and its admitted gas partition. The sequence includes non-public
+managed Roots and preserves duplicate equal events. A rollback expectation has
+an empty receipt list. A committing `platformCommitCompanion` uses the additive
+1.1 constructor and repeats the exact aggregate identity. These fields are
+exported by executing the normative Java Contracts runtime; the Python package
+refiner does not reconstruct receipt semantics.
+
 ## 4. Fixture controls
 
 `CONTROL-LANGUAGE.md` defines every builder, provider, runtime, feeder, and variant control. Important constraints are:

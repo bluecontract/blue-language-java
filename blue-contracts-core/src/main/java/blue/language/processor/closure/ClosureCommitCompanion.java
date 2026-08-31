@@ -14,9 +14,9 @@ import java.util.Set;
 /**
  * Exact non-semantic compare-and-swap companion for atomic closure publication.
  *
- * <p>All 27 fields in the normative companion constructor are exposed
- * directly; {@code companionIdentity} is the independently verified 28th
- * serialized field.</p>
+ * <p>The original Contracts 1.0 constructor remains byte-for-byte compatible.
+ * A Contracts 1.1 companion additionally binds the complete managed-transition
+ * receipt aggregate.</p>
  */
 public final class ClosureCommitCompanion {
 
@@ -37,6 +37,8 @@ public final class ClosureCommitCompanion {
     private final String subscriptionDeltasIdentity;
     private final String publicEventsIdentity;
     private final String gasTraceIdentity;
+    private final String managedTransitionReceiptsIdentity;
+    private final boolean managedTransitionBindingPresent;
     private final ClosureEnvironment environment;
 
     /**
@@ -80,6 +82,117 @@ public final class ClosureCommitCompanion {
             String publicEventsIdentity,
             String gasTraceIdentity,
             ClosureEnvironment environment) {
+        this(
+                companionIdentity,
+                invocationIdentity,
+                inputClosureIdentity,
+                outputClosureIdentity,
+                expectedInputGraphGeneration,
+                expectedInputDocuments,
+                expectedInputComponents,
+                inputOccurrenceBindingSetIdentity,
+                outputGraphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindingSetIdentity,
+                graphChangesIdentity,
+                checkpointWritesIdentity,
+                subscriptionDeltasIdentity,
+                publicEventsIdentity,
+                gasTraceIdentity,
+                emptyManagedTransitionReceiptsIdentity(),
+                false,
+                environment);
+    }
+
+    /**
+     * Creates and independently verifies a companion which authenticates the
+     * complete managed-transition receipt aggregate.
+     *
+     * @param companionIdentity asserted exact companion identity
+     * @param invocationIdentity exact invocation identity
+     * @param inputClosureIdentity expected input closure identity
+     * @param outputClosureIdentity staged output closure identity
+     * @param expectedInputGraphGeneration compare-and-swap graph generation
+     * @param expectedInputDocuments canonical input document expectations
+     * @param expectedInputComponents canonical input component expectations
+     * @param inputOccurrenceBindingSetIdentity input row-set expectation
+     * @param outputGraphGeneration staged output graph generation
+     * @param resultingDocuments complete canonical resulting document identities
+     * @param resultingComponents complete staged component identities
+     * @param occurrenceBindingSetIdentity staged complete row-set identity
+     * @param graphChangesIdentity exact graph-change sequence identity
+     * @param checkpointWritesIdentity exact checkpoint sequence identity
+     * @param subscriptionDeltasIdentity exact subscription sequence identity
+     * @param publicEventsIdentity exact public-event sequence identity
+     * @param gasTraceIdentity exact admitted gas-trace identity
+     * @param managedTransitionReceiptsIdentity exact ordered receipt aggregate
+     * @param environment complete environment identity snapshot
+     */
+    public ClosureCommitCompanion(
+            String companionIdentity,
+            String invocationIdentity,
+            String inputClosureIdentity,
+            String outputClosureIdentity,
+            long expectedInputGraphGeneration,
+            List<InputDocument> expectedInputDocuments,
+            List<InputComponent> expectedInputComponents,
+            String inputOccurrenceBindingSetIdentity,
+            long outputGraphGeneration,
+            List<DocumentDelta> resultingDocuments,
+            List<ResultComponent> resultingComponents,
+            String occurrenceBindingSetIdentity,
+            String graphChangesIdentity,
+            String checkpointWritesIdentity,
+            String subscriptionDeltasIdentity,
+            String publicEventsIdentity,
+            String gasTraceIdentity,
+            String managedTransitionReceiptsIdentity,
+            ClosureEnvironment environment) {
+        this(
+                companionIdentity,
+                invocationIdentity,
+                inputClosureIdentity,
+                outputClosureIdentity,
+                expectedInputGraphGeneration,
+                expectedInputDocuments,
+                expectedInputComponents,
+                inputOccurrenceBindingSetIdentity,
+                outputGraphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindingSetIdentity,
+                graphChangesIdentity,
+                checkpointWritesIdentity,
+                subscriptionDeltasIdentity,
+                publicEventsIdentity,
+                gasTraceIdentity,
+                managedTransitionReceiptsIdentity,
+                true,
+                environment);
+    }
+
+    private ClosureCommitCompanion(
+            String companionIdentity,
+            String invocationIdentity,
+            String inputClosureIdentity,
+            String outputClosureIdentity,
+            long expectedInputGraphGeneration,
+            List<InputDocument> expectedInputDocuments,
+            List<InputComponent> expectedInputComponents,
+            String inputOccurrenceBindingSetIdentity,
+            long outputGraphGeneration,
+            List<DocumentDelta> resultingDocuments,
+            List<ResultComponent> resultingComponents,
+            String occurrenceBindingSetIdentity,
+            String graphChangesIdentity,
+            String checkpointWritesIdentity,
+            String subscriptionDeltasIdentity,
+            String publicEventsIdentity,
+            String gasTraceIdentity,
+            String managedTransitionReceiptsIdentity,
+            boolean managedTransitionBindingPresent,
+            ClosureEnvironment environment) {
         this.invocationIdentity = identity(
                 invocationIdentity, "invocationIdentity");
         this.inputClosureIdentity = identity(
@@ -116,10 +229,19 @@ public final class ClosureCommitCompanion {
                 publicEventsIdentity, "publicEventsIdentity");
         this.gasTraceIdentity = identity(
                 gasTraceIdentity, "gasTraceIdentity");
+        this.managedTransitionReceiptsIdentity = identity(
+                managedTransitionReceiptsIdentity,
+                "managedTransitionReceiptsIdentity");
+        this.managedTransitionBindingPresent =
+                managedTransitionBindingPresent;
         this.environment = Objects.requireNonNull(environment, "environment");
         String asserted = identity(companionIdentity, "companionIdentity");
         String computed = ClosureIdentityService.INSTANCE.identity(
-                ClosureIdentityService.Constructor.PLATFORM_COMMIT_COMPANION,
+                managedTransitionBindingPresent
+                        ? ClosureIdentityService.Constructor
+                                .PLATFORM_COMMIT_COMPANION_WITH_MANAGED_TRANSITIONS
+                        : ClosureIdentityService.Constructor
+                                .PLATFORM_COMMIT_COMPANION,
                 identityConstructorValue());
         if (!asserted.equals(computed)) {
             throw new IllegalArgumentException(
@@ -146,6 +268,90 @@ public final class ClosureCommitCompanion {
             String subscriptionDeltasIdentity,
             String publicEventsIdentity,
             String gasTraceIdentity,
+            ClosureEnvironment environment) {
+        return identified(
+                invocationIdentity,
+                inputClosureIdentity,
+                outputClosureIdentity,
+                expectedInputGraphGeneration,
+                expectedInputDocuments,
+                expectedInputComponents,
+                inputOccurrenceBindingSetIdentity,
+                outputGraphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindingSetIdentity,
+                graphChangesIdentity,
+                checkpointWritesIdentity,
+                subscriptionDeltasIdentity,
+                publicEventsIdentity,
+                gasTraceIdentity,
+                emptyManagedTransitionReceiptsIdentity(),
+                false,
+                environment);
+    }
+
+    /** Constructs a companion binding complete managed-transition receipts. */
+    static ClosureCommitCompanion identifiedWithManagedTransitions(
+            String invocationIdentity,
+            String inputClosureIdentity,
+            String outputClosureIdentity,
+            long expectedInputGraphGeneration,
+            List<InputDocument> expectedInputDocuments,
+            List<InputComponent> expectedInputComponents,
+            String inputOccurrenceBindingSetIdentity,
+            long outputGraphGeneration,
+            List<DocumentDelta> resultingDocuments,
+            List<ResultComponent> resultingComponents,
+            String occurrenceBindingSetIdentity,
+            String graphChangesIdentity,
+            String checkpointWritesIdentity,
+            String subscriptionDeltasIdentity,
+            String publicEventsIdentity,
+            String gasTraceIdentity,
+            String managedTransitionReceiptsIdentity,
+            ClosureEnvironment environment) {
+        return identified(
+                invocationIdentity,
+                inputClosureIdentity,
+                outputClosureIdentity,
+                expectedInputGraphGeneration,
+                expectedInputDocuments,
+                expectedInputComponents,
+                inputOccurrenceBindingSetIdentity,
+                outputGraphGeneration,
+                resultingDocuments,
+                resultingComponents,
+                occurrenceBindingSetIdentity,
+                graphChangesIdentity,
+                checkpointWritesIdentity,
+                subscriptionDeltasIdentity,
+                publicEventsIdentity,
+                gasTraceIdentity,
+                managedTransitionReceiptsIdentity,
+                true,
+                environment);
+    }
+
+    private static ClosureCommitCompanion identified(
+            String invocationIdentity,
+            String inputClosureIdentity,
+            String outputClosureIdentity,
+            long expectedInputGraphGeneration,
+            List<InputDocument> expectedInputDocuments,
+            List<InputComponent> expectedInputComponents,
+            String inputOccurrenceBindingSetIdentity,
+            long outputGraphGeneration,
+            List<DocumentDelta> resultingDocuments,
+            List<ResultComponent> resultingComponents,
+            String occurrenceBindingSetIdentity,
+            String graphChangesIdentity,
+            String checkpointWritesIdentity,
+            String subscriptionDeltasIdentity,
+            String publicEventsIdentity,
+            String gasTraceIdentity,
+            String managedTransitionReceiptsIdentity,
+            boolean managedTransitionBindingPresent,
             ClosureEnvironment environment) {
         ClosureEnvironment exactEnvironment = Objects.requireNonNull(
                 environment, "environment");
@@ -176,6 +382,10 @@ public final class ClosureCommitCompanion {
                 subscriptionDeltasIdentity);
         value.put("publicEventsIdentity", publicEventsIdentity);
         value.put("gasTraceIdentity", gasTraceIdentity);
+        if (managedTransitionBindingPresent) {
+            value.put("managedTransitionReceiptsIdentity",
+                    managedTransitionReceiptsIdentity);
+        }
         value.put("blueLanguageSpecificationIdentity",
                 exactEnvironment.blueLanguageSpecificationIdentity());
         value.put("contractsSpecificationIdentity",
@@ -199,28 +409,43 @@ public final class ClosureCommitCompanion {
         value.put("cyclicProofVerifierIdentity",
                 exactEnvironment.cyclicProofVerifierIdentity());
         String identity = ClosureIdentityService.INSTANCE.identity(
-                ClosureIdentityService.Constructor
-                        .PLATFORM_COMMIT_COMPANION,
+                managedTransitionBindingPresent
+                        ? ClosureIdentityService.Constructor
+                                .PLATFORM_COMMIT_COMPANION_WITH_MANAGED_TRANSITIONS
+                        : ClosureIdentityService.Constructor
+                                .PLATFORM_COMMIT_COMPANION,
                 value);
+        if (managedTransitionBindingPresent) {
+            return new ClosureCommitCompanion(
+                    identity,
+                    invocationIdentity,
+                    inputClosureIdentity,
+                    outputClosureIdentity,
+                    expectedInputGraphGeneration,
+                    expectedInputDocuments,
+                    expectedInputComponents,
+                    inputOccurrenceBindingSetIdentity,
+                    outputGraphGeneration,
+                    resultingDocuments,
+                    resultingComponents,
+                    occurrenceBindingSetIdentity,
+                    graphChangesIdentity,
+                    checkpointWritesIdentity,
+                    subscriptionDeltasIdentity,
+                    publicEventsIdentity,
+                    gasTraceIdentity,
+                    managedTransitionReceiptsIdentity,
+                    exactEnvironment);
+        }
         return new ClosureCommitCompanion(
-                identity,
-                invocationIdentity,
-                inputClosureIdentity,
-                outputClosureIdentity,
-                expectedInputGraphGeneration,
-                expectedInputDocuments,
-                expectedInputComponents,
-                inputOccurrenceBindingSetIdentity,
-                outputGraphGeneration,
-                resultingDocuments,
-                resultingComponents,
-                occurrenceBindingSetIdentity,
-                graphChangesIdentity,
-                checkpointWritesIdentity,
-                subscriptionDeltasIdentity,
-                publicEventsIdentity,
-                gasTraceIdentity,
-                exactEnvironment);
+                identity, invocationIdentity, inputClosureIdentity,
+                outputClosureIdentity, expectedInputGraphGeneration,
+                expectedInputDocuments, expectedInputComponents,
+                inputOccurrenceBindingSetIdentity, outputGraphGeneration,
+                resultingDocuments, resultingComponents,
+                occurrenceBindingSetIdentity, graphChangesIdentity,
+                checkpointWritesIdentity, subscriptionDeltasIdentity,
+                publicEventsIdentity, gasTraceIdentity, exactEnvironment);
     }
 
     /**
@@ -386,6 +611,25 @@ public final class ClosureCommitCompanion {
     }
 
     /**
+     * Returns the exact ordered managed-transition receipt aggregate.
+     * Legacy 1.0 companions return the canonical empty aggregate identity.
+     *
+     * @return exact managed-transition receipt aggregate identity
+     */
+    public String managedTransitionReceiptsIdentity() {
+        return managedTransitionReceiptsIdentity;
+    }
+
+    /**
+     * Returns whether this companion uses the authenticated 1.1 binding.
+     *
+     * @return whether this companion uses the authenticated 1.1 binding
+     */
+    public boolean bindsManagedTransitionReceipts() {
+        return managedTransitionBindingPresent;
+    }
+
+    /**
      * Returns selected Language specification identity.
      *
      * @return selected Language specification identity
@@ -511,6 +755,10 @@ public final class ClosureCommitCompanion {
         value.put("subscriptionDeltasIdentity", subscriptionDeltasIdentity);
         value.put("publicEventsIdentity", publicEventsIdentity);
         value.put("gasTraceIdentity", gasTraceIdentity);
+        if (managedTransitionBindingPresent) {
+            value.put("managedTransitionReceiptsIdentity",
+                    managedTransitionReceiptsIdentity);
+        }
         value.put("blueLanguageSpecificationIdentity",
                 blueLanguageSpecificationIdentity());
         value.put("contractsSpecificationIdentity",
@@ -531,6 +779,12 @@ public final class ClosureCommitCompanion {
         value.put("cyclicProofVerifierIdentity",
                 cyclicProofVerifierIdentity());
         return value;
+    }
+
+    private static String emptyManagedTransitionReceiptsIdentity() {
+        return ClosureIdentityService.INSTANCE
+                .managedTransitionReceiptsIdentity(
+                        Collections.<ManagedDocumentTransitionReceipt>emptyList());
     }
 
     private static String identity(String value, String field) {

@@ -5,10 +5,12 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.provider.CyclicSetProof;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /** Authoritative Phase-A identity and admission-evidence verifier. */
@@ -73,6 +75,82 @@ final class ClosureInvocationVerifier {
         return new Verification(
                 selected.invocationIdentity(), disposition,
                 candidate == null ? null : candidate.kind());
+    }
+
+    /** Verifies one additive demand-bound processing retry. */
+    static Verification verifyRetry(ClosureProcessRetryInput retry) {
+        ClosureProcessRetryInput selected = Objects.requireNonNull(
+                retry, "retry");
+        ClosureInvocationInput base = selected.baseInvocation();
+        Verification verified = verify(base);
+        for (ManagedOccurrenceEvidenceResolution resolution
+                : selected.resolutions()) {
+            ManagedOccurrenceEvidenceDemand demand = resolution.demand();
+            if (!demand.logicalCauseIdentity().equals(
+                            base.cause().causeIdentity())
+                    || !demand.inputClosureIdentity().equals(
+                            base.snapshot().closureIdentity())
+                    || demand.inputGraphGeneration()
+                            != base.snapshot().graphGeneration()) {
+                throw new IllegalArgumentException(
+                        "Managed-occurrence resolution belongs to another "
+                                + "base invocation");
+            }
+            ManagedDocumentSnapshot source = base.snapshot()
+                    .managedDocument(demand.sourceDocumentId());
+            ManagedDocumentSnapshot target = base.snapshot()
+                    .managedDocument(resolution.targetDocumentId());
+            if (source == null || target == null) {
+                throw new IllegalArgumentException(
+                        "Managed-occurrence resolution endpoint is outside "
+                                + "the base closure");
+            }
+            ManagedOccurrenceBinding active = null;
+            for (ManagedOccurrenceBinding binding
+                    : base.snapshot().occurrences()) {
+                if (binding.sourceDocumentId().equals(
+                                demand.sourceDocumentId())
+                        && binding.sourcePath().equals(
+                                demand.sourcePath())) {
+                    active = binding;
+                    break;
+                }
+            }
+            if (active == null || !(active.active()
+                    || isVerifiedManagedReceiptEventSource(base, active))
+                    || active.targetDocumentId().equals(
+                            resolution.targetDocumentId())) {
+                throw new IllegalArgumentException(
+                        "A managed-occurrence process retry requires an "
+                                + "active different-lineage source row");
+            }
+        }
+        return new Verification(
+                selected.retryInvocationIdentity(),
+                verified.candidateDisposition(),
+                verified.candidateKind());
+    }
+
+    private static boolean isVerifiedManagedReceiptEventSource(
+            ClosureInvocationInput base,
+            ManagedOccurrenceBinding binding) {
+        if (!(base.cause() instanceof ManagedRevisionCause)
+                || binding.active()
+                || binding.pendingHistoricalEpoch() == null) {
+            return false;
+        }
+        ManagedRevisionCause revision = (ManagedRevisionCause) base.cause();
+        // verify(base) has already authenticated the complete immutable
+        // receipt and its ordered Root-event identities. The retry cannot
+        // substitute another occurrence, generation, source, or before state.
+        // Runtime consumption still requires this exact demand to arise from
+        // the authenticated imported event before any resolution is applied.
+        return revision.sourceTransitionReceipt().isPresent()
+                && !revision.sourceTransitionReceipt().get().emittedRootEvents().isEmpty()
+                && binding.occurrenceIdentity().equals(revision.targetOccurrenceIdentity())
+                && binding.targetDocumentId().equals(revision.childDocumentId())
+                && binding.pendingHistoricalEpoch().longValue() == revision.fromEpoch()
+                && binding.expectedTargetBlueId().equals(revision.beforeBlueId());
     }
 
     private static void verifyEnvironment(ClosureEnvironment environment) {
@@ -149,21 +227,49 @@ final class ClosureInvocationVerifier {
                     DirectBlueIdCalculator.calculateBlueId(external.event()));
         } else if (selected instanceof ManagedRevisionCause) {
             ManagedRevisionCause revision = (ManagedRevisionCause) selected;
-            requireClaim(
-                    "afterBlueId",
-                    revision.afterBlueId(),
-                    DirectBlueIdCalculator.calculateBlueId(
-                            revision.afterDocument()));
-            requireClaim(
-                    "sourceRevisionReceiptIdentity",
-                    revision.sourceRevisionReceiptIdentity(),
-                    IDENTITIES.sourceRevisionReceiptIdentity(
-                            revision.childDocumentId(),
-                            revision.fromEpoch(),
-                            revision.toEpoch(),
-                            revision.beforeBlueId(),
-                            revision.afterBlueId(),
-                            revision.originalSourceCauseIdentity()));
+            Optional<CyclicSetProof> cyclicProof =
+                    revision.afterCyclicProof();
+            if (cyclicProof.isPresent()) {
+                ManagedRevisionCyclicEvidenceVerifier.verify(
+                        revision.afterBlueId(),
+                        revision.afterDocument(),
+                        cyclicProof.get());
+            } else {
+                requireClaim(
+                        "afterBlueId",
+                        revision.afterBlueId(),
+                        DirectBlueIdCalculator.calculateBlueId(
+                                revision.afterDocument()));
+            }
+            if (revision.sourceTransitionReceipt().isPresent()) {
+                ManagedDocumentTransitionReceipt receipt = revision
+                        .sourceTransitionReceipt().get();
+                requireClaim(
+                        "sourceRevisionReceiptIdentity",
+                        revision.sourceRevisionReceiptIdentity(),
+                        receipt.transitionReceiptIdentity());
+                if (!revision.childDocumentId().equals(receipt.documentId())
+                        || !revision.beforeBlueId().equals(
+                            receipt.beforeBlueId())
+                        || !revision.afterBlueId().equals(
+                            receipt.afterBlueId())
+                        || !revision.originalSourceCauseIdentity().equals(
+                            receipt.originalCauseIdentity())) {
+                    throw new IllegalArgumentException(
+                            "Complete source transition receipt disagrees with managed revision");
+                }
+            } else {
+                requireClaim(
+                        "sourceRevisionReceiptIdentity",
+                        revision.sourceRevisionReceiptIdentity(),
+                        IDENTITIES.sourceRevisionReceiptIdentity(
+                                revision.childDocumentId(),
+                                revision.fromEpoch(),
+                                revision.toEpoch(),
+                                revision.beforeBlueId(),
+                                revision.afterBlueId(),
+                                revision.originalSourceCauseIdentity()));
+            }
         }
         requireClaim(
                 "causeIdentity",

@@ -2,9 +2,10 @@ package blue.language.processor.closure;
 
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.processor.BlueContracts;
+import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
-import blue.language.processor.ChannelProcessor;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentStepRuntimeGapException;
 import blue.language.processor.DocumentUpdateOccurrence;
@@ -19,8 +20,13 @@ import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.CyclicSetProof;
+import blue.language.provider.NodeProvider;
+import blue.language.provider.SequentialNodeProvider;
+import blue.language.runtime.BlueLanguage;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
@@ -97,6 +103,80 @@ final class ManagedDocumentStepProcessorTest {
     }
 
     @Test
+    void shouldReadHistoricalManagedSuccessorFromVerifiedCauseEvidence() {
+        // given
+        Node beforeChild = initializedDocument("B-before");
+        Node historicalChild = initializedDocument("B-historical");
+        Node currentChild = initializedDocument("B-current");
+        String beforeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                beforeChild);
+        String historicalBlueId = DirectBlueIdCalculator.calculateBlueId(
+                historicalChild);
+        AffectedClosureSnapshot invocationState = historicalContainingState(
+                beforeBlueId, 3L, currentChild);
+        AffectedClosureSnapshot tentativeState = historicalContainingState(
+                historicalBlueId, 4L, currentChild);
+        ManagedOccurrenceBinding occurrence =
+                invocationState.occurrences().get(0);
+        ManagedRevisionCause cause = ClosureEvidenceFactory
+                .managedRevisionCause(
+                        occurrence.occurrenceIdentity(),
+                        B,
+                        3L,
+                        4L,
+                        beforeBlueId,
+                        historicalBlueId,
+                        historicalChild,
+                        hash('6'));
+        ClosureInvocationInput invocation = invocation(
+                invocationState, cause);
+        Node payload = new Node().properties(
+                "kind", new Node().value("historical-read"));
+        ClosureWorkOccurrence work = new ClosureWorkOccurrence(
+                0L,
+                WorkKind.TRIGGERED_EVENT,
+                A,
+                "trigger",
+                DirectBlueIdCalculator.calculateBlueId(payload),
+                Long.valueOf(0L),
+                hash('7'),
+                hash('8'),
+                hash('9'));
+        TentativeResolutionContext resolutionContext =
+                TentativeResolutionContext.from(
+                        invocation, tentativeState, A);
+        assertEquals(historicalBlueId,
+                resolutionContext.targetManagedBlueIdsByPath()
+                        .get("/managedChild"));
+        assertEquals(historicalBlueId,
+                DirectBlueIdCalculator.calculateBlueId(
+                        resolutionContext.managedReadExactNodesByBlueId()
+                                .get(historicalBlueId)));
+        DocumentStepInput input = new DocumentStepInput(
+                0L,
+                work,
+                tentativeState.managedDocument(A),
+                payload,
+                resolutionContext);
+
+        try (Fixture fixture = new Fixture(Action.READ_MANAGED)) {
+            // when
+            LocalDocumentStepResult result = fixture.stepper.process(input);
+
+            // then
+            assertEquals(Collections.singletonList("A"),
+                    fixture.probe.labels());
+            assertEquals(Collections.singletonList("B-historical"),
+                    fixture.probe.managedChildLabels);
+            assertEquals(historicalBlueId, result.resultingBody()
+                    .getNode("/managedChild").getBlueId());
+            assertTrue(result.resultingBody()
+                    .getNode("/managedChild").isReferenceOnly());
+            assertTrue(result.gasAfter() > result.gasBefore());
+        }
+    }
+
+    @Test
     void usesTheSameAdapterFunctionAndContextShapeForCyclicAndAcyclicMembers() {
         AffectedClosureSnapshot acyclic = acyclicContainingState();
         AffectedClosureSnapshot cyclic = cyclicState();
@@ -148,6 +228,24 @@ final class ManagedDocumentStepProcessorTest {
             for (Method method : LocalDocumentStepResult.class.getMethods()) {
                 assertFalse(method.getName().equals("afterBlueId"));
             }
+        }
+    }
+
+    @Test
+    void rebasesNextPatchAfterClosureContinuationMutatesItsAncestor() {
+        AffectedClosureSnapshot state = acyclicContainingState();
+        try (Fixture fixture = new Fixture(
+                Action.PATCH_THROUGH_CONTINUATION, true)) {
+            LocalDocumentStepResult result = fixture.stepper.process(input(
+                    state, B, WorkKind.TRIGGERED_EVENT, "trigger", "patch"));
+
+            assertEquals(Arrays.asList(false, true),
+                    fixture.hook.synchronizedAncestorVisibleAtPatch);
+            assertEquals(Boolean.TRUE, result.resultingBody()
+                    .getNode("/first/closureSynchronized")
+                    .getValue());
+            assertEquals("B-second", result.resultingBody()
+                    .getAsText("/first/second"));
         }
     }
 
@@ -475,6 +573,59 @@ final class ManagedDocumentStepProcessorTest {
                 Collections.singletonList(A));
     }
 
+    private static AffectedClosureSnapshot historicalContainingState(
+            String installedBlueId,
+            long pendingHistoricalEpoch,
+            Node currentChild) {
+        Node preA = baseDocument("A")
+                .properties(
+                        "managedChild",
+                        new Node().blueId(installedBlueId));
+        preA.getContracts().properties(
+                "embedded",
+                typed(RuntimeBlueIds.PROCESS_EMBEDDED)
+                        .properties(
+                                "paths",
+                                new Node().items(
+                                        new Node().value(
+                                                "/managedChild"))));
+        Node documentA = markInitialized(preA);
+        Node documentB = currentChild.clone();
+        String blueA = DirectBlueIdCalculator.calculateBlueId(documentA);
+        String blueB = DirectBlueIdCalculator.calculateBlueId(documentB);
+        ManagedDocumentSnapshot managedA = new ManagedDocumentSnapshot(
+                A, blueA, documentA, true, false, true, 0L, 1L);
+        ManagedDocumentSnapshot managedB = new ManagedDocumentSnapshot(
+                B, blueB, documentB, true, false, false, 8L, 1L);
+        ManagedOccurrenceBinding occurrence =
+                ManagedOccurrenceBinding.derived(
+                        hash('3'),
+                        A,
+                        ScopeAddress.embedded("/managedChild", 1L),
+                        B,
+                        installedBlueId,
+                        false,
+                        Long.valueOf(pendingHistoricalEpoch));
+        ComponentSnapshot componentB = new ComponentSnapshot(
+                hash('1'), hash('2'), 1L, ComponentKind.ACYCLIC,
+                Collections.singletonList(B),
+                Collections.singletonList(blueB),
+                null, null, null);
+        ComponentSnapshot componentA = new ComponentSnapshot(
+                hash('3'), hash('4'), 1L, ComponentKind.ACYCLIC,
+                Collections.singletonList(A),
+                Collections.singletonList(blueA),
+                null, null, null);
+        return new AffectedClosureSnapshot(
+                hash('0'),
+                1L,
+                Arrays.asList(managedA, managedB),
+                Collections.singletonList(occurrence),
+                hash('e'),
+                Arrays.asList(componentA, componentB),
+                Collections.singletonList(A));
+    }
+
     private static AffectedClosureSnapshot cyclicState() {
         Node documentA = initializedDocument("A");
         Node documentB = initializedDocument("B");
@@ -625,6 +776,13 @@ final class ManagedDocumentStepProcessorTest {
                 ExternalOrderKey.of(Arrays.asList(
                         1L, "timeline", 1L)),
                 orderPolicy);
+        return invocation(state, cause);
+    }
+
+    private static ClosureInvocationInput invocation(
+            AffectedClosureSnapshot state,
+            ProcessingCause cause) {
+        String orderPolicy = hash('a');
         return ClosureInvocationInput.processClosure(
                 hash('c'),
                 state,
@@ -669,7 +827,9 @@ final class ManagedDocumentStepProcessorTest {
 
     enum Action {
         OBSERVE,
+        READ_MANAGED,
         PATCH,
+        PATCH_THROUGH_CONTINUATION,
         EMIT,
         TERMINATE
     }
@@ -689,6 +849,8 @@ final class ManagedDocumentStepProcessorTest {
                 new ArrayList<Node>();
         private final List<Node> occurrenceEvents =
                 new ArrayList<Node>();
+        private final List<String> managedChildLabels =
+                new ArrayList<String>();
 
         private ProbeProcessor(Action action) {
             this.action = action;
@@ -713,13 +875,29 @@ final class ManagedDocumentStepProcessorTest {
                     context.documentAt("/managedChild") != null,
                     context.documentAt("/ambientParent") != null,
                     context.hasProcessEvent()));
-            if (action == Action.PATCH) {
+            if (action == Action.READ_MANAGED) {
+                Node managedLabel = context.documentAt(
+                        "/managedChild/label");
+                managedChildLabels.add(managedLabel == null
+                        ? "<missing>"
+                        : managedLabel.getValue().toString());
+            } else if (action == Action.PATCH) {
                 context.applyPatches(Arrays.asList(
                         JsonPatch.add(
                                 "/first",
                                 new Node().value(label + "-first")),
                         JsonPatch.add(
                                 "/second",
+                                new Node().value(label + "-second"))));
+            } else if (action == Action.PATCH_THROUGH_CONTINUATION) {
+                context.applyPatches(Arrays.asList(
+                        JsonPatch.add(
+                                "/first",
+                                new Node().properties(
+                                        "beforeContinuation",
+                                        new Node().value(true))),
+                        JsonPatch.add(
+                                "/first/second",
                                 new Node().value(label + "-second"))));
             } else if (action == Action.EMIT) {
                 context.emitEvent(new Node().properties(
@@ -802,6 +980,9 @@ final class ManagedDocumentStepProcessorTest {
                 new ArrayList<Boolean>();
         private final List<Boolean> secondVisibleAtPatch =
                 new ArrayList<Boolean>();
+        private final List<Boolean>
+                synchronizedAncestorVisibleAtPatch =
+                new ArrayList<Boolean>();
         private final List<Integer> updateCounts = new ArrayList<Integer>();
         private final List<String> patchScopes =
                 new ArrayList<String>();
@@ -809,6 +990,13 @@ final class ManagedDocumentStepProcessorTest {
                 new ArrayList<EventCapture>();
         private final List<DocumentUpdateOccurrence> updates =
                 new ArrayList<DocumentUpdateOccurrence>();
+        private final boolean synchronizeFirstAfterItsPatch;
+
+        private CapturingContinuation(
+                boolean synchronizeFirstAfterItsPatch) {
+            this.synchronizeFirstAfterItsPatch =
+                    synchronizeFirstAfterItsPatch;
+        }
 
         @Override
         public void afterPatch(
@@ -817,15 +1005,30 @@ final class ManagedDocumentStepProcessorTest {
                 FrozenJsonPatch patch,
                 List<DocumentUpdateOccurrence> updates) {
             patchPaths.add(patch.getPath());
-            firstVisibleAtPatch.add(Boolean.valueOf(
-                    currentDocument.getProperties().containsKey("first")));
+            boolean firstVisible =
+                    currentDocument.getProperties().containsKey("first");
+            firstVisibleAtPatch.add(Boolean.valueOf(firstVisible));
             secondVisibleAtPatch.add(Boolean.valueOf(
                     currentDocument.getProperties().containsKey("second")));
+            Node first = currentDocument.getProperties().get("first");
+            synchronizedAncestorVisibleAtPatch.add(Boolean.valueOf(
+                    first != null
+                            && first.getProperties() != null
+                            && first.getProperties().containsKey(
+                                    "closureSynchronized")));
             updateCounts.add(Integer.valueOf(updates.size()));
             this.updates.addAll(updates);
             patchScopes.add(scopePath);
             assertEquals("/", scopePath);
             assertNotNull(currentDocument);
+            if (synchronizeFirstAfterItsPatch
+                    && "/first".equals(patch.getPath())) {
+                currentDocument.getProperties().put(
+                        "first",
+                        new Node().properties(
+                                "closureSynchronized",
+                                new Node().value(true)));
+            }
         }
 
         @Override
@@ -870,11 +1073,19 @@ final class ManagedDocumentStepProcessorTest {
 
     private static final class Fixture implements AutoCloseable {
         private final ProbeProcessor probe;
+        private final BlueLanguage language;
+        private final BlueContracts backingContracts;
         private final DocumentProcessor owner;
         private final CapturingContinuation hook;
         private final ManagedDocumentStepProcessor stepper;
 
         private Fixture(Action action) {
+            this(action, false);
+        }
+
+        private Fixture(
+                Action action,
+                boolean synchronizeFirstAfterItsPatch) {
             this.probe = new ProbeProcessor(action);
             ContractProcessorRegistry registry =
                     ContractProcessorRegistryBuilder.create()
@@ -887,10 +1098,33 @@ final class ManagedDocumentStepProcessorTest {
                                     PROBE_TYPE,
                                     probe)
                             .build();
-            this.owner = DocumentProcessor.builder()
-                    .runtimeRegistry(registry)
-                    .build();
-            this.hook = new CapturingContinuation();
+            if (action == Action.READ_MANAGED) {
+                NodeProvider provider = new SequentialNodeProvider(
+                        new BasicNodeProvider(Arrays.asList(
+                                PROBE_TYPE, EXTERNAL_TYPE)),
+                        BlueRuntimeTypeRegistry.getDefault().asProvider());
+                this.language = BlueLanguage.builder()
+                        .nodeProvider(provider)
+                        .build();
+                this.backingContracts = BlueContracts.builder(
+                                language.processing())
+                        .runtimeRegistry(registry)
+                        .build();
+                this.owner = DocumentProcessor.builder()
+                        .runtimeRegistry(registry)
+                        .runtimeRegistryIdentity(
+                                registry.generationIdentity())
+                        .runtimeAccess(backingContracts.runtimeAccess())
+                        .build();
+            } else {
+                this.language = null;
+                this.backingContracts = null;
+                this.owner = DocumentProcessor.builder()
+                        .runtimeRegistry(registry)
+                        .build();
+            }
+            this.hook = new CapturingContinuation(
+                    synchronizeFirstAfterItsPatch);
             this.stepper = new ManagedDocumentStepProcessor(
                     owner, hook);
         }
@@ -899,6 +1133,12 @@ final class ManagedDocumentStepProcessorTest {
         public void close() {
             stepper.close();
             owner.close();
+            if (backingContracts != null) {
+                backingContracts.close();
+            }
+            if (language != null) {
+                language.close();
+            }
         }
     }
 

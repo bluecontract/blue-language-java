@@ -126,6 +126,9 @@ final class ScopeExecutor {
                                     FrozenJsonPatch patch,
                                     List<DocumentUpdateData> updates,
                                     FrozenDispatchContext dispatchContext) {
+                                FrozenNode selectedBeforeContinuation =
+                                        FrozenNode.fromResolvedNode(
+                                                runtime.document().clone());
                                 continuationHook.afterPatch(
                                         scopePath,
                                         runtime.document(),
@@ -133,6 +136,8 @@ final class ScopeExecutor {
                                         updateOccurrences(
                                                 updates,
                                                 dispatchContext));
+                                runtime.synchronizeSelectedDocumentAfterContinuation(
+                                        selectedBeforeContinuation);
                             }
                         });
     }

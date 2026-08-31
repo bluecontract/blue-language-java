@@ -30,6 +30,14 @@ final class ClosureValueSupport {
         return value;
     }
 
+    static long requireManagedEpochCursor(long value, String field) {
+        if (value < -1L || value > MAX_SAFE_INTEGER) {
+            throw new IllegalArgumentException(
+                    field + " must be -1 or a non-negative safe integer");
+        }
+        return value;
+    }
+
     static String requirePortableText(String value, String field) {
         String text = Objects.requireNonNull(value, field);
         if (!Normalizer.isNormalized(text, Normalizer.Form.NFC)) {

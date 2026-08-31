@@ -353,7 +353,7 @@ def validate_fixture(fixture, gas_entries, specification_identity, label)
     companion_value = deep_copy(companion)
     companion_claim = companion_value.delete("companionIdentity")
     companion_identity = identity(
-      "blue-contracts-platform-commit-companion/1.0",
+      "blue-contracts-platform-commit-companion/1.1",
       companion_value
     )
     assert_equal(companion_identity, companion_claim, "#{label} companion")
@@ -483,7 +483,7 @@ def build_replacements(old_fixture, new_specification_identity, old_gas_entries)
       )
     end
     new_companion = identity(
-      "blue-contracts-platform-commit-companion/1.0",
+      "blue-contracts-platform-commit-companion/1.1",
       new_companion_value
     )
     replacements[old_companion] = new_companion

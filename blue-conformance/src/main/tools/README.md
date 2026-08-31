@@ -24,6 +24,13 @@ generator before manifest rebinding. An optional `--fixture-source-root DIR`
 requests the identity-free `FL-ADM` and `C-EVO-18..23` source pass; that mode
 invokes the checked-in normative Java exporter and fails closed if the bridge
 fails or returns anything other than the complete twenty-six-file inventory.
+After the ordinary and optional full-lifecycle passes, every regeneration also
+invokes the checked-in managed-transition receipt exporter against the
+disposable candidate. It executes all seventy-five non-limit closure fixtures,
+requires the exact ninety-three-file inventory (including eighteen limit
+microfixtures), and rebinds only the sixty-six complete-result receipt surfaces
+and fifty committing companion identities. Receipt bodies, gas partitions, and
+the 1.1 companion binding are never reconstructed in Python.
 
 The Python pipeline uses Python 3, PyYAML, and (for full package validation)
 `jsonschema`. It does not import or execute tools from an external checkout and

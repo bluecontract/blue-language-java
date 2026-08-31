@@ -631,11 +631,18 @@ or an occurrence-evidence guess.
 
 `pendingHistoricalEpoch` is non-null only when the row's
 `expectedTargetBlueId` is an admitted historical exact state of the named
-target lineage. It is the safe-integer epoch of that exact cursor state. Before
+target lineage. It is either the non-negative safe-integer epoch of that exact
+cursor state or exactly `-1` when the supplied state is the target's authored
+pre-initialization value. No other negative value is valid. Before
 the initial historical attachment the declared path may be absent. Once an
 external Handler writes the exact historical value, the path is present but the
 row MUST remain `active: false` while `pendingHistoricalEpoch` is non-null; this
 is the sole exception to immediate activation of a present verified path. The
+pending value may be represented either as a pure reference whose BlueId equals
+`expectedTargetBlueId` or as a complete inline acyclic value whose directly
+calculated BlueId equals `expectedTargetBlueId`. These two representations have
+identical pending semantics: neither substitutes the authoritative current
+target, activates the row, or contributes a graph edge. The
 processor does not apply a transition chain inside that external invocation.
 Instead, Coordination supplies one exact contiguous `ManagedRevisionCause`
 invocation at a time under §2.3. Each successful invocation rebinds that same
@@ -860,17 +867,33 @@ ManagedRevisionCause {
     beforeBlueId
     afterBlueId
     afterDocument
+    afterCyclicProof?            # required exactly for a cyclic MASTER#n successor
     originalSourceCauseIdentity
     sourceRevisionReceiptIdentity
+    sourceTransitionReceipt?       # complete receipt when source-event delivery is required
 }
 ```
 
 This shape proves one already-authenticated child-lineage revision. `fromEpoch`,
 `toEpoch`, `beforeBlueId`, and `afterBlueId` describe exactly one contiguous
 step; `toEpoch` MUST equal `fromEpoch + 1` within the safe-integer range.
-`afterDocument` MUST independently establish `afterBlueId`, and both BlueIds
-MUST denote `childDocumentId` under the selected managed-document identity
-policy. `targetOccurrenceIdentity` MUST name exactly one input row whose
+`fromEpoch` is either a non-negative managed epoch or exactly `-1` for the
+authored pre-initialization cursor; `toEpoch` is always non-negative. Thus the
+only transition out of the sentinel is `-1 -> 0`.
+For a plain successor, `afterDocument` MUST independently establish
+`afterBlueId` through ordinary direct BlueId calculation and
+`afterCyclicProof` MUST be absent. For a cyclic `MASTER#n` successor,
+`afterCyclicProof` MUST be one complete cyclic-set proof and MUST be present;
+ordinary direct hashing of the materialized member body is not equivalent.
+Contracts independently verifies that proof through the Blue Language cyclic
+provider boundary, recomputes its master and canonical member suffix, and
+requires the resolved exact member body to equal `afterDocument`. A missing,
+extra, incomplete, mismatched-master, out-of-range-suffix, or body-mismatched
+proof fails before mutation. The proof is immutable witness evidence and is
+not an additional cause-identity field: the authenticated `afterBlueId`
+already binds the verified cyclic member. In both forms the before/after
+BlueIds MUST denote `childDocumentId` under the selected managed-document
+identity policy. `targetOccurrenceIdentity` MUST name exactly one input row whose
 `targetDocumentId` is `childDocumentId`, whose `active` field is false, whose
 `pendingHistoricalEpoch` equals `fromEpoch`, and whose exact source-path value
 is `beforeBlueId`.
@@ -878,11 +901,15 @@ is `beforeBlueId`.
 `originalSourceCauseIdentity` is the exact external or admission cause identity
 recorded by the authoritative source system for the child revision; it is audit
 evidence and is never replaced with the local catch-up invocation identity.
-`sourceRevisionReceiptIdentity` is the closed authenticated receipt constructor
-in §2.6. The receipt binds that original cause, both epochs, both exact states,
-and the child lineage, providing an unambiguous source-order receipt without an
-open or optional tuple. The managed-revision `causeIdentity` then binds the
-receipt to the one target occurrence being reconciled.
+For the compatibility state-only form, `sourceRevisionReceiptIdentity` is the
+closed authenticated receipt constructor in §2.6. The complete form instead
+carries `sourceTransitionReceipt`, and `sourceRevisionReceiptIdentity` MUST be
+that receipt's `transitionReceiptIdentity`. The complete receipt repeats and
+revalidates the child lineage, before/after BlueIds, and original source cause,
+and binds the ordered source Root-event occurrences. In either form the
+managed-revision `causeIdentity` binds the selected receipt identity to the one
+target occurrence being reconciled. A state-only compatibility cause carries no
+source events and cannot prove that omitted events were delivered.
 
 One `ManagedRevisionCause` is one `PROCESS_CLOSURE` invocation, seeds exactly
 one containing-reference update, and has its own admission, meter, gas trace,
@@ -1281,6 +1308,28 @@ ClosureProcessResult {
         event
     }
     publicEventsIdentity
+    managedTransitionReceipts[] {
+        transitionReceiptIdentity
+        sourceInvocationIdentity
+        transitionOrdinal
+        transitionOccurrenceIdentity
+        documentId
+        originalCauseIdentity
+        beforeBlueId
+        afterBlueId
+        emittedRootEvents[] {
+            ordinal
+            occurrenceOrdinal
+            sourceDocumentId
+            occurrenceIdentity
+            eventBlueId
+            exactEvent
+            publicAtSource
+        }
+        emittedRootEventsIdentity
+        admittedGas
+    }
+    managedTransitionReceiptsIdentity
     totalGas
     gasTrace[]
     gasTraceIdentity
@@ -1322,6 +1371,39 @@ Only explicit emissions from Root-scoped work targeting documents marked
 `publicRoot` appear in `publicEvents`. Internal member, descendant, and
 non-Root emissions remain causal work only, including an emission whose
 containing managed document is public.
+
+`managedTransitionReceipts` is the complete authenticated transition sequence
+for the genuine managed runtime. It contains one receipt, in resulting-document
+order, for every document whose exact BlueId changed or whose Root boundary
+emitted at least one application event. Therefore an event-only transition is
+present even when `beforeBlueId == afterBlueId`; an unchanged document with no
+Root event has no receipt. Each receipt's event `ordinal` is zero-based and
+contiguous within that document transition. `occurrenceOrdinal` is the original
+invocation-global event ordinal, so equal event bodies remain distinct ordered
+occurrences with distinct `occurrenceIdentity` values. `exactEvent` MUST
+independently establish `eventBlueId`. The event BlueId therefore binds the
+complete exact event value without embedding a second copy of that value in the
+platform identity constructor.
+
+The sequence is the event sequence emitted at the managed document's Root
+boundary. It includes a non-public managed Root and does not expose transient
+deep queue events that were not emitted at that Root. `publicAtSource` records
+whether that emitting Root was public at creation. Sorting all receipt events by
+`occurrenceOrdinal` and selecting `publicAtSource == true` MUST reproduce
+`publicEvents` exactly, including order and duplicates. Existing public-event
+projection semantics do not change.
+
+`admittedGas` partitions the complete admitted canonical gas trace whenever the
+result contains at least one transition receipt. A trace entry attributed to a
+receipt-bearing document belongs to that document's receipt. Every
+invocation-owned entry, and every entry attributed to a document that has no
+transition receipt, belongs to the first receipt in canonical result-document
+order. Consequently the sum of all receipt `admittedGas` values equals
+`totalGas`; no trace row is omitted or counted twice. The result receipt
+aggregate is authenticated by the commit companion. A compatibility result
+constructed through the older result surface may expose the canonical empty
+receipt list; it MUST NOT be interpreted as proof that complete Root-event
+evidence existed.
 
 The structured `applicableCap` is the closed branch `{ kind: SHARED }` for the
 shared closure ceiling or `{ kind: LOCAL, documentId: D }` for the local ceiling
@@ -1461,6 +1543,45 @@ managedRevisionCauseIdentity
         originalSourceCauseIdentity,
         sourceRevisionReceiptIdentity
     }
+
+managedTransitionOccurrenceIdentity
+    domain = "blue-contracts-managed-transition-occurrence/1.0"
+    value = {
+        sourceInvocationIdentity,
+        transitionOrdinal,
+        documentId,
+        originalCauseIdentity
+    }
+
+managedRootEventsIdentity
+    domain = "blue-contracts-managed-root-events/1.0"
+    value = [{
+        ordinal,
+        occurrenceOrdinal,
+        sourceDocumentId,
+        occurrenceIdentity,
+        eventBlueId,
+        publicAtSource
+    }, ...]
+
+managedDocumentTransitionReceiptIdentity
+    domain = "blue-contracts-managed-document-transition-receipt/1.0"
+    value = {
+        sourceInvocationIdentity,
+        transitionOrdinal,
+        transitionOccurrenceIdentity,
+        documentId,
+        originalCauseIdentity,
+        beforeBlueId,
+        afterBlueId,
+        emittedRootEvents,
+        emittedRootEventsIdentity,
+        admittedGas
+    }
+
+managedTransitionReceiptsIdentity
+    domain = "blue-contracts-managed-document-transition-receipts/1.0"
+    value = [{ transitionOrdinal, transitionReceiptIdentity }, ...]
 ```
 
 `sourceOrder` is the already normalized canonical external-order tuple and
@@ -1469,15 +1590,29 @@ retains tuple order. Serialized cause `kind` is the closed-union discriminator
 `admissionKind`. The two optional admission fields are always present in the
 constructor value and use JSON `null` when absent.
 
-For both revision constructors, `toEpoch` is exactly `fromEpoch + 1` and all
-integers are safe. The receipt is recomputed first from authenticated source
+For both revision constructors, `toEpoch` is exactly `fromEpoch + 1`;
+`fromEpoch` is exactly `-1` or a non-negative safe integer, and `toEpoch` is a
+non-negative safe integer. The receipt is recomputed first from authenticated source
 revision evidence. The managed cause repeats and revalidates its receipt fields,
 adds the one containing occurrence that will be changed, and hashes the exact
 receipt identity. `afterDocument` is required cause evidence and MUST establish
-`afterBlueId`; it is not duplicated in either constructor because its BlueId
-already binds the complete semantic node. A receipt mismatch, a different
+`afterBlueId` by the ordinary direct path for a plain successor or by the
+complete independently verified cyclic proof for a `MASTER#n` successor. The
+proof is required exactly for the latter and is not duplicated in either
+identity constructor because the verified member BlueId already binds the
+complete semantic node. A receipt mismatch, a different
 original cause, a noncontiguous epoch, or a before/after state mismatch fails
 before processor-managed mutation.
+
+The four managed-transition constructors are separate from the compatibility
+source-revision constructor and contain no host-assigned revision number. The
+transition occurrence binds its source invocation, canonical result ordinal,
+document, and original cause. The receipt then binds that occurrence, exact
+before/after states, complete ordered Root-event values, their independently
+recomputed sequence identity, and its deterministic partition of the complete
+admitted invocation gas. Receipt aggregate order is canonical result-document
+order. No concatenated string, host-supplied digest, public-event subset, or
+deduplicated event set is an equivalent constructor.
 
 Admission-candidate evidence uses this exact closed constructor:
 
@@ -1577,8 +1712,9 @@ occurrenceBindingSetIdentity
     order = occurrenceIdentity, bindingIdentity
 ```
 
-`pendingHistoricalEpoch` is present in every item and is either JSON `null` or
-the safe integer governed by §2.2. Both active and inactive rows participate.
+`pendingHistoricalEpoch` is present in every item and is either JSON `null`,
+exactly `-1`, or the non-negative safe integer governed by §2.2. Both active
+and inactive rows participate.
 Consequently activating a prospective row, advancing or completing its
 historical catch-up, rebinding its expected exact target state, adding a row, or
 removing a row changes `occurrenceBindingSetIdentity`. Only a change to the set
@@ -1846,10 +1982,11 @@ All invocation state is tentative until final success:
 - update and event occurrence queues;
 - subscription deltas;
 - public events;
+- complete managed-transition receipts;
 - containing-reference changes;
 - gas trace.
 
-A committing `success` or successful admission returns and publishes the complete result atomically. Admission atomicity includes all initialization, lifecycle, termination, update, event, graph, marker, and finalization effects caused before quiescence. Every deterministic failure, invalid proof, gas exhaustion, portable-limit failure, unsupported graph expansion, schema failure, or finalization failure discards all tentative state and public events.
+A committing `success` or successful admission returns and publishes the complete result atomically. Admission atomicity includes all initialization, lifecycle, termination, update, event, graph, marker, and finalization effects caused before quiescence. Every deterministic failure, invalid proof, gas exhaustion, portable-limit failure, unsupported graph expansion, schema failure, or finalization failure discards all tentative state, public events, and managed-transition receipts.
 
 Transient missing exact resources returns `NeedsResources` from an attempt API and commits no portable gas or semantic state.
 
@@ -1861,6 +1998,7 @@ For graph-equivalent ordinary Roots or closure snapshots under the same environm
 - the same final ordinary Root BlueId or closure document, component, and component-state identities;
 - the same final component partition and occurrence bindings;
 - the same public event occurrence identities and order;
+- the same managed-transition receipts, Root-event occurrences, and aggregate identity;
 - the same checkpoints and subscription deltas;
 - the same exact counter trace and total gas;
 - the same semantic provider demands.
@@ -1880,6 +2018,7 @@ managed occurrence bindings and activation generations
 checkpoints and lifecycle markers
 subscription deltas
 public Root outboxes
+complete managed-transition receipts and aggregate identity
 graph changes and containing-reference updates
 terminal progress for the original cause
 commit companion and gas trace identity
@@ -1899,7 +2038,8 @@ clean up, or otherwise mutate checkpoint state while installing the admission.
 All applicable initialization-caused items, including lifecycle markers and
 public Root outbox events, are nevertheless installed in the same transaction.
 
-`platformCommitCompanion` is not an opaque host object. Its exact constructor is:
+`platformCommitCompanion` is not an opaque host object. Its compatibility
+constructor is:
 
 ```text
 domain = "blue-contracts-platform-commit-companion/1.0"
@@ -1934,6 +2074,24 @@ value = {
 }
 ```
 
+Every genuine managed-runtime result uses the additive receipt-binding
+constructor:
+
+```text
+domain = "blue-contracts-platform-commit-companion/1.1"
+value = {
+    <all 1.0 fields through gasTraceIdentity>,
+    managedTransitionReceiptsIdentity,
+    <all 1.0 environment fields>
+}
+```
+
+The field position is normative: it follows `gasTraceIdentity` and precedes
+`blueLanguageSpecificationIdentity`. The identity is present even for the
+canonical empty receipt sequence. The 1.0 constructor remains accepted for
+backward-compatible result construction and cannot authenticate a non-empty
+managed-transition receipt sequence.
+
 `expectedInputDocuments` contains objects `{ documentId, blueId }` sorted
 by `documentId`. `expectedInputComponents` contains objects
 `{ componentIdentity, componentStateIdentity, componentGeneration, masterBlueId }`
@@ -1967,7 +2125,8 @@ graph, document heads, component states, and binding set are bound both by the
 explicit compare-and-swap fields and `inputClosureIdentity`; exact output
 document flags, epochs, component states, bindings, and public Roots are bound by
 `outputClosureIdentity`. Every result sequence is bound
-through its exact §2.6 sequence identity, including an empty sequence. The
+through its exact §2.6 sequence identity, including an empty sequence. The 1.1
+companion additionally binds `managedTransitionReceiptsIdentity`. The
 companion contains the compare-and-swap expectations necessary to prove that
 all effects were installed together; a schema MUST NOT replace any identity
 with a count, Boolean, stage name, or host object.
@@ -2668,7 +2827,10 @@ row MUST become active at that mutation boundary; the processor MUST NOT delay
 activation while treating the resulting content as authoritative. The one
 closed exception is an inactive row with non-null `pendingHistoricalEpoch`: its
 exact historical cursor value may be present while the row remains inactive
-until the final managed-revision reconciliation in §7.5 clears the cursor.
+until the final managed-revision reconciliation in §7.5 clears the cursor. A
+pure reference to that cursor BlueId and a complete inline acyclic value whose
+direct BlueId is that cursor BlueId are equivalent representations at this
+pending boundary.
 
 ### 5.3 Concrete graph and component partition
 
@@ -2867,7 +3029,10 @@ regardless of how many work occurrences or finalization boundaries changed it.
 This includes processor-owned exact-identity reconstruction of ordinary managed
 references, cyclic `MASTER#index` values, and containing spines. A work that
 emits an event but changes no document, and a no-op work, do not advance an
-epoch.
+epoch. The former nevertheless produces an event-only managed-transition
+receipt. That receipt intentionally contains no newly assigned revision number;
+an authoritative host may assign its own contiguous retained revision only when
+atomically storing the receipt and commit companion.
 
 There is one narrow finalizer-only exception. When the current work target is
 the source document of an inactive occurrence with non-null
@@ -3118,6 +3283,30 @@ The target managed document sees its own latest exact `$document`, including the
 
 Observation does not make the nested event public. The receiving public Root must explicitly emit an event for it to appear in the public result.
 
+For a managed-revision cause carrying a complete source transition receipt, the
+processor first verifies that receipt and advances the named inactive occurrence
+from `beforeBlueId` to `afterBlueId` through the ordinary containing-reference
+update. It then enqueues every receipt Root-event occurrence, in receipt order,
+through exactly that occurrence and classifies the normal Embedded Event routes
+against the latest tentative containing document. The imported occurrence keeps
+its source event BlueId, exact value, occurrence ordinal, and occurrence
+identity. Equal source events therefore cause equal-but-distinct deliveries.
+
+Imported source events do not run the source document's Triggered handlers,
+initialization, lifecycle work, Timeline work, or other local source processing.
+They are delivery evidence, not new source emissions. They are not appended to
+the current invocation's public result even when `publicAtSource` was true. Any
+new event explicitly emitted by a reacting containing public Root follows the
+ordinary application-event rules and may be public. The state update and all
+ordered deliveries share one invocation, gas ledger, cyclic/finalization path,
+and rollback boundary.
+
+A managed-revision snapshot MAY retain one exact terminated source member when
+and only when its `DocumentId` equals the cause `childDocumentId`. That member
+is immutable source-revision evidence: it remains unavailable for ordinary
+local delivery and is not reinitialized or reprocessed. Any other terminated
+member remains unsupported and the invocation fails closed before work begins.
+
 ### 6.8 Lifecycle Event Channel
 
 The processor emits:
@@ -3261,7 +3450,9 @@ For closure operations:
 12. Check terminated public/direct target state.
 13. For ManagedRevisionCause, additionally recompute the source revision
     receipt and managed-revision cause identities; prove one contiguous safe
-    epoch; establish afterDocument -> afterBlueId; verify the named inactive
+    epoch; establish afterDocument -> afterBlueId through ordinary direct
+    identity for a plain successor or an independently verified complete
+    cyclic proof for a `MASTER#n` successor; verify the named inactive
     occurrence, cursor, before path value, target lineage, and current
     authoritative target epoch; reject a stale, skipped, duplicated, future, or
     already-active step before mutation.
@@ -3473,7 +3664,13 @@ For a `ManagedRevisionCause`, Phase D instead performs exactly this sequence:
    establishing `afterBlueId` (normally the pure reference
    `{ blueId: afterBlueId }`). `afterDocument` is the complete cause evidence
    that independently establishes that identity; it need not be inlined at the
-   source path;
+   source path. A cyclic successor first retains the ordinary resolved-body
+   identity admission charge, then charges the proof's preliminary ZERO-member
+   identities, canonical stable ordering and comparisons, canonical members,
+   and master fold through the same Language formulas used by normal cyclic
+   finalization. This historical witness creates no tentative component,
+   component-finalization owner, `cyclicMemberFinalized` charge, or component
+   receipt;
 4. at that step's immediate after-patch reconciliation boundary, charge
    `containingReferenceUpdated`, update `expectedTargetBlueId`, recompute
    `bindingIdentity`, set `pendingHistoricalEpoch = toEpoch`, retain
@@ -3684,7 +3881,7 @@ The invocation-local established-exact-node ledger begins empty. A node becomes 
 
 For `cyclicCanonicalBytesPerComponent`, the measured byte sequence is the UTF-8 RFC 8785 encoding of a representation-normalized cyclic limit form. Begin with the final member order and canonical `this#n` remapping used by the unchanged Blue Language §15 calculation. Within each member, retain each internal `this#n` reference, every object/list container on a path to such a reference, and every complete direct literal member (`name`, `description`, or `value`). Replace each complete non-literal child subtree that is not on an internal-reference path with the pure exact reference `{ "blueId": CHILD }`, where `CHILD` is that subtree's ordinary exact BlueId. Canonically encode the resulting ordered member list.
 
-This byte-limit form is identical for semantically equal inline and exact-reference representations. It is a Contracts accounting projection only: it does not change the actual Blue Language cyclic input or identity result. Count it once per tentative cyclic-component finalization. Preliminary ZERO forms, final member suffix strings, materialized `MASTER#index` substitutions, proof serialization, and containing-document reconstruction are excluded. They remain subject to gas and other direct-node limits.
+This byte-limit form is identical for semantically equal inline and exact-reference representations. It is a Contracts accounting projection only: it does not change the actual Blue Language cyclic input or identity result. Count it once per tentative cyclic-component finalization. A historical cyclic successor supplied by `ManagedRevisionCause` is not a new component finalization, but its complete witness is measured once by this same projection before witness hashing or containing-reference work. Preliminary ZERO forms, final member suffix strings, materialized `MASTER#index` substitutions, proof serialization, and containing-document reconstruction are excluded from the byte measure. They remain subject to gas and other direct-node limits.
 
 ### 7.8 Dynamic graph reclassification
 
@@ -5408,7 +5605,7 @@ For each closure-specific limit, the conformance package contains: (a) an exact 
 
 Generated structural cases are normative input constructions, not trusted numeric assertions: the harness expands the declared generator and independently measures the resulting semantic structure. Counts are based on unique semantic occurrences after deterministic deduplication and before the disallowed work begins.
 
-For `cyclicCanonicalBytesPerComponent`, the measured bytes are exactly the ordered collapsed limit form defined in §7.7 and the gas manifest, independently of whether the collapsed or full canonical placeholder set is retained as complete proof. The byte limit is checked after canonical `this#n` remapping and before hashing or any temporary state becomes visible.
+For `cyclicCanonicalBytesPerComponent`, the measured bytes are exactly the ordered collapsed limit form defined in §7.7 and the gas manifest, independently of whether the collapsed or full canonical placeholder set is retained as complete proof. The byte limit is checked after canonical `this#n` remapping and before hashing or any temporary state becomes visible. The same check applies once to the complete historical proof carried for a cyclic managed-revision successor; that proof does not increment a tentative-finalization counter or create component ownership.
 
 A remove followed by add is two graph changes. One SCC merge or split result is one `componentPartitionChanged` charge but its constituent edge changes retain individual graph-change counts. Rejected work does not increment a counter whose charge was not admitted.
 
@@ -6382,13 +6579,18 @@ result, and atomic publication boundary.
 For acyclic embedded documents, physical storage by BlueId or a separate
 document-step evaluation does not authorize an early current-head commit.
 
-### D.2 Do not return child events
+### D.2 Do not publish child events
 
-Child emissions are internal unless Root explicitly emits.
+Child emissions are not public unless their own managed Root is declared public.
+Complete managed-transition receipts still retain every emission at that
+managed Root boundary so a later authenticated occurrence application can
+deliver it without reprocessing the source.
 
 ### D.3 Do not build a public effect log
 
-The event FIFO and update cascades are run state. They are not a semantic output.
+The transient event FIFO and update cascades are run state. The only added
+semantic event evidence is the authenticated per-document Root-boundary
+sequence in a managed-transition receipt; it is not a general queue trace.
 
 ### D.4 Do not rescan every embedded branch
 

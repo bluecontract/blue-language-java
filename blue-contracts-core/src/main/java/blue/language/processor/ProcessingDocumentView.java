@@ -29,6 +29,8 @@ final class ProcessingDocumentView {
             new LinkedHashMap<>();
     private final Map<String, FrozenNode> resolvedDeferredScopes =
             new LinkedHashMap<>();
+    private ReferenceTransparentPathAccess transparentPathAccess;
+    private ProcessingSnapshotManager transparentPathManager;
     private long exactReferencedScopesVersion = Long.MIN_VALUE;
 
     ProcessingDocumentView(DocumentProcessingRuntime runtime) {
@@ -66,9 +68,15 @@ final class ProcessingDocumentView {
     Node resolvedNodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
-        return current != null
-                ? current.resolvedNodeAt(normalized)
-                : runtime.materializedView.nodeAt(normalized);
+        if (current != null) {
+            FrozenNode transparent = transparentPathAccess()
+                    .resolvedAt(
+                            current.frozenCanonicalRoot(),
+                            current.frozenResolvedRoot(),
+                            normalized);
+            return transparent != null ? transparent.toNode() : null;
+        }
+        return runtime.materializedView.nodeAt(normalized);
     }
 
     FrozenNode resolvedFrozenAt(String path) {
@@ -80,11 +88,21 @@ final class ProcessingDocumentView {
                     runtime.currentSnapshotManager();
             if (selected != null
                     && manager != null
-                    && (selected.isReferenceOnly()
+                    && ((selected.isReferenceOnly()
+                            && !isOpaqueManagedPath(
+                                    manager, normalized))
                     || requiresDeferredScopeResolution(
                             normalized, current, selected))) {
                 return resolvedDeferredScope(
                         normalized, selected, manager);
+            }
+            FrozenNode transparent = transparentPathAccess()
+                    .resolvedAt(
+                            current.frozenCanonicalRoot(),
+                            current.frozenResolvedRoot(),
+                            normalized);
+            if (transparent != null) {
+                return transparent;
             }
             return current.resolvedAt(normalized);
         }
@@ -118,8 +136,17 @@ final class ProcessingDocumentView {
         }
         ProcessingSnapshotManager manager = runtime.currentSnapshotManager();
         return manager != null
+                && !isOpaqueManagedPath(manager, normalized)
                 ? exactReferencedScope(normalized, selected, manager)
                 : selected;
+    }
+
+    private static boolean isOpaqueManagedPath(
+            ProcessingSnapshotManager manager,
+            String normalizedPath) {
+        return manager instanceof ManagedDocumentOverlaySnapshotManager
+                && ((ManagedDocumentOverlaySnapshotManager) manager)
+                        .isOpaqueManagedPath(normalizedPath);
     }
 
     /**
@@ -226,9 +253,30 @@ final class ProcessingDocumentView {
 
     Node nodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
-        return runtime.snapshot != null
-                ? runtime.snapshot.resolvedNodeAt(normalized)
-                : runtime.materializedView.nodeAt(normalized);
+        ResolvedSnapshot current = snapshot();
+        if (current != null) {
+            FrozenNode transparent = transparentPathAccess()
+                    .resolvedAt(
+                            current.frozenCanonicalRoot(),
+                            current.frozenResolvedRoot(),
+                            normalized);
+            return transparent != null ? transparent.toNode() : null;
+        }
+        return runtime.materializedView.nodeAt(normalized);
+    }
+
+    private ReferenceTransparentPathAccess transparentPathAccess() {
+        ProcessingSnapshotManager manager =
+                runtime.currentSnapshotManager();
+        if (transparentPathAccess == null
+                || transparentPathManager != manager) {
+            transparentPathManager = manager;
+            transparentPathAccess = new ReferenceTransparentPathAccess(
+                    manager,
+                    runtime.strictPlatformInvocation,
+                    runtime.executableBodyFieldsByType);
+        }
+        return transparentPathAccess;
     }
 
     boolean contains(String path) {

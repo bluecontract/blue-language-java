@@ -12,6 +12,7 @@ import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -625,6 +628,77 @@ final class SemanticOutputBoundaryTest {
                     referenceAttempts.get(index),
                     "gas limit " + index);
         }
+    }
+
+    @Test
+    void shouldChargeUntypedTypedAndReferenceScalarFormsIdentically() {
+        for (ScalarCase scalar : scalarCases()) {
+            // given
+            Node untyped = new Node().value(scalar.value);
+            Node explicitlyTyped = new Node()
+                    .type(new Node().blueId(scalar.typeBlueId))
+                    .value(scalar.value);
+            FrozenNode exact =
+                    FrozenNode.fromNode(untyped.clone());
+            Node reference =
+                    new Node().blueId(exact.blueId());
+            ProcessingSnapshotManager manager =
+                    new FixedSnapshotManager(exact);
+            AdmissionAttempt full = attemptAdmission(
+                    untyped,
+                    null,
+                    GasSchedule.contracts10().maxProcessGas());
+
+            // when
+            for (long limit = 0L;
+                 limit <= full.totalGas;
+                 limit++) {
+                AdmissionAttempt untypedAttempt =
+                        attemptAdmission(untyped, null, limit);
+
+                // then
+                assertSameAttempt(
+                        untypedAttempt,
+                        attemptAdmission(
+                                explicitlyTyped, null, limit),
+                        scalar.label
+                                + " explicit type at gas limit "
+                                + limit);
+                assertSameAttempt(
+                        untypedAttempt,
+                        attemptAdmission(
+                                reference, manager, limit),
+                        scalar.label
+                                + " verified reference at gas limit "
+                                + limit);
+            }
+        }
+    }
+
+    @Test
+    void shouldApplyInferredTypeToDirectObjectPortableLimit() {
+        // given
+        Node untyped = new Node().value("bounded scalar");
+        FrozenNode exact = FrozenNode.fromNode(untyped.clone());
+        GasSchedule schedule = GasScheduleTestFixtures.withPortableLimit(
+                GasScheduleConstants.PortableLimit.DIRECT_OBJECT_ENTRIES,
+                1L);
+
+        // when
+
+        // then
+        assertDirectObjectLimit(
+                schedule,
+                untyped,
+                null);
+        assertDirectObjectLimit(
+                schedule,
+                text("bounded scalar"),
+                null);
+        assertDirectObjectLimit(
+                schedule,
+                new Node().blueId(exact.blueId()),
+                new FixedSnapshotManager(exact));
     }
 
     @Test
@@ -1331,6 +1405,55 @@ final class SemanticOutputBoundaryTest {
                 .value(value);
     }
 
+    private static List<ScalarCase> scalarCases() {
+        return Arrays.asList(
+                new ScalarCase(
+                        "text", "same scalar", TEXT_TYPE_BLUE_ID),
+                new ScalarCase(
+                        "integer", BigInteger.valueOf(42L),
+                        INTEGER_TYPE_BLUE_ID),
+                new ScalarCase(
+                        "double", new BigDecimal("12.5"),
+                        DOUBLE_TYPE_BLUE_ID),
+                new ScalarCase(
+                        "boolean", Boolean.TRUE,
+                        BOOLEAN_TYPE_BLUE_ID));
+    }
+
+    private static void assertDirectObjectLimit(
+            GasSchedule schedule,
+            Node value,
+            ProcessingSnapshotManager manager) {
+        Blue blue = new Blue();
+        GasMeter meter = new GasMeter(schedule);
+        RuntimeWorkSession session = new RuntimeWorkSession(
+                meter,
+                RuntimeWorkSession.Mode.PROCESSING);
+        SemanticOutputBoundary boundary = new SemanticOutputBoundary(
+                session,
+                blue,
+                manager,
+                meter.semantic());
+        Throwable failure;
+        try {
+            failure = captureFailure(
+                    () -> boundary.admit(value));
+        } finally {
+            session.close();
+            blue.close();
+        }
+        PortableLimitExceededException portable = assertInstanceOf(
+                PortableLimitExceededException.class,
+                failure);
+        assertEquals(
+                GasScheduleConstants.PortableLimit.DIRECT_OBJECT_ENTRIES,
+                portable.limitName());
+        assertEquals(2L, portable.observed());
+        assertEquals(1L, portable.limit());
+        assertEquals(0L, meter.totalGas());
+        assertTrue(meter.trace().isEmpty());
+    }
+
     private static String repeat(String value, int count) {
         StringBuilder builder =
                 new StringBuilder(
@@ -1393,6 +1516,21 @@ final class SemanticOutputBoundaryTest {
             closed = true;
             context.close();
             blue.close();
+        }
+    }
+
+    private static final class ScalarCase {
+        private final String label;
+        private final Object value;
+        private final String typeBlueId;
+
+        private ScalarCase(
+                String label,
+                Object value,
+                String typeBlueId) {
+            this.label = label;
+            this.value = value;
+            this.typeBlueId = typeBlueId;
         }
     }
 

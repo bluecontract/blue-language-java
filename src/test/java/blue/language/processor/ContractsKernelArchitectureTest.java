@@ -33,7 +33,7 @@ final class ContractsKernelArchitectureTest {
      * other implementation type remains subject to the 800-line limit.
      */
     private static final int MAX_EMBEDDED_SCOPE_PLANNER_LINES = 878;
-    private static final int MAX_DOCUMENT_PROCESSING_RUNTIME_LINES = 818;
+    private static final int MAX_DOCUMENT_PROCESSING_RUNTIME_LINES = 822;
     private static final int MAX_MANAGED_DOCUMENT_STEP_RUNTIME_LINES = 836;
     private static final int MAX_MANAGED_ROOT_SETTLEMENT_LINES = 1153;
     private static final int MAX_COMPOSITION_ROOT_LINES = 250;

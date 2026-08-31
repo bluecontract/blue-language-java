@@ -86,6 +86,34 @@ final class AggregateReleaseReceiptTest {
         assertTrue(after.getReport().contains("\"verified\":false"));
     }
 
+    @Test
+    void shouldBindAnExternalStageWithoutBindingItsHostPath() throws Exception {
+        // given
+        Path firstProject = Files.createDirectories(temporaryDirectory.resolve("first-project"));
+        Path secondProject = Files.createDirectories(temporaryDirectory.resolve("second-project"));
+        Path firstStage = Files.createDirectories(
+                firstProject.resolve("build/staged-dependency-repository"));
+        Path secondStage = Files.createDirectories(temporaryDirectory.resolve("invocation-stage-b"));
+        Path firstSource = write(firstProject, "build/distributions/source.zip", "source");
+        Path secondSource = write(secondProject, "build/distributions/source.zip", "source");
+        Path firstArtifact = write(
+                firstStage, "blue/language/module/1/module-1.jar", "artifact");
+        Path secondArtifact = write(
+                secondStage, "blue/language/module/1/module-1.jar", "artifact");
+
+        // when
+        String first = receipt(firstProject, firstSource, firstArtifact);
+        String second = receipt(secondProject, secondStage, secondSource, secondArtifact);
+
+        // then
+        assertEquals(first, second);
+        assertTrue(first.contains(
+                "\"path\":\"build/staged-dependency-repository/blue/language/module/1/module-1.jar\""));
+        assertTrue(first.contains("\"path\":\"build/distributions/source.zip\""));
+        assertFalse(first.contains(firstStage.toString()));
+        assertFalse(first.contains(secondStage.toString()));
+    }
+
     private String receipt(Path artifact) {
         return AggregateReleaseReceipt.create(
                 temporaryDirectory,
@@ -99,8 +127,40 @@ final class AggregateReleaseReceiptTest {
                 Collections.emptyMap());
     }
 
+    private static String receipt(
+            Path root, Path artifactRoot, Path sourceArchive, Path artifact) {
+        return AggregateReleaseReceipt.create(
+                root,
+                artifactRoot,
+                Arrays.asList(sourceArchive, artifact),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                "commit",
+                "11",
+                Collections.emptyMap());
+    }
+
+    private static String receipt(Path root, Path sourceArchive, Path artifact) {
+        return AggregateReleaseReceipt.create(
+                root,
+                Arrays.asList(sourceArchive, artifact),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                "commit",
+                "11",
+                Collections.emptyMap());
+    }
+
     private Path write(String relativePath, String content) throws Exception {
-        Path file = temporaryDirectory.resolve(relativePath);
+        return write(temporaryDirectory, relativePath, content);
+    }
+
+    private static Path write(Path root, String relativePath, String content) throws Exception {
+        Path file = root.resolve(relativePath);
         Files.createDirectories(file.getParent());
         return Files.writeString(file, content, StandardCharsets.UTF_8);
     }

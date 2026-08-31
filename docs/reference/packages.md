@@ -15,7 +15,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.conformance` | 4 | present |
 | `blue.language.conformance.api` | 9 | present |
 | `blue.language.conformance.cli` | 1 | present |
-| `blue.language.conformance.contracts` | 3 | present |
+| `blue.language.conformance.contracts` | 4 | present |
 | `blue.language.conformance.contracts.closure` | 1 | present |
 | `blue.language.conformance.runner` | 1 | present |
 | `blue.language.dictionary` | 4 | present |
@@ -33,7 +33,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
 | `blue.language.processor` | 125 | present |
-| `blue.language.processor.closure` | 57 | present |
+| `blue.language.processor.closure` | 61 | present |
 | `blue.language.processor.model` | 18 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -99,6 +99,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.conformance.contracts.ClosureFixtureRuntime`
 - `blue.language.conformance.contracts.ContractsConformanceSuite`
 - `blue.language.conformance.contracts.FullLifecycleFixtureExporter`
+- `blue.language.conformance.contracts.ManagedTransitionReceiptFixtureExporter`
 
 ## `blue.language.conformance.contracts.closure`
 
@@ -413,6 +414,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.closure.ClosureImplementationEvidence`
 - `blue.language.processor.closure.ClosureInvocationInput`
 - `blue.language.processor.closure.ClosureProcessResult`
+- `blue.language.processor.closure.ClosureProcessRetryInput`
 - `blue.language.processor.closure.ClosureProcessor`
 - `blue.language.processor.closure.ClosureResourceDemand`
 - `blue.language.processor.closure.ClosureWorkOccurrence`
@@ -439,9 +441,12 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.closure.LocalDocumentStepResult`
 - `blue.language.processor.closure.ManagedDocumentGraph`
 - `blue.language.processor.closure.ManagedDocumentSnapshot`
+- `blue.language.processor.closure.ManagedDocumentTransitionReceipt`
 - `blue.language.processor.closure.ManagedOccurrenceBinding`
 - `blue.language.processor.closure.ManagedOccurrenceEvidenceDemand`
+- `blue.language.processor.closure.ManagedOccurrenceEvidenceResolution`
 - `blue.language.processor.closure.ManagedRevisionCause`
+- `blue.language.processor.closure.ManagedRootEventOccurrence`
 - `blue.language.processor.closure.ManagedScopeKey`
 - `blue.language.processor.closure.ProcessingCause`
 - `blue.language.processor.closure.PublicEventOccurrence`

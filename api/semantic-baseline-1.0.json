@@ -1,37 +1,37 @@
 {
   "schema" : "blue-language-java-semantic-baseline/1.0",
   "source" : {
-    "commit" : "a36d57f34366af8c070a8cdf5b76f5e365433954",
-    "sourceInputIdentity" : "sha256:982011c97701030b25aca0e97021f11023e3a2e5e50f4b8bc8161f693b54eb3e"
+    "commit" : "4be9f992604ed95903472a8eb3367e3d7048cb72",
+    "sourceInputIdentity" : "sha256:dc4453a7091a8aac926a8cfe6571400dd6441a96995a4dc533be8c556c267d95"
   },
   "specifications" : {
     "languageSha256" : "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
-    "contractsSha256" : "8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242"
+    "contractsSha256" : "0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc"
   },
   "release" : {
     "packageIdentity" : "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6",
-    "contractsReleaseIdentity" : "sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3"
+    "contractsReleaseIdentity" : "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3"
   },
   "packages" : {
     "languageRegistry" : "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
     "languageFixtures" : "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55",
     "contractsRegistry" : "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
     "contractsGas" : "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a",
-    "contractsFixtures" : "sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79",
-    "contractsRelease" : "sha256:32a5c3f8dfe99a421ca0d6862bc1f59bddcfb10e4762dcf3d8200b4726defad3"
+    "contractsFixtures" : "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c",
+    "contractsRelease" : "sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3"
   },
   "tests" : {
     "all" : {
-      "minimumTests" : 2423,
-      "tests" : 2423,
-      "passed" : 2423,
+      "minimumTests" : 2426,
+      "tests" : 2426,
+      "passed" : 2426,
       "failed" : 0,
       "skipped" : 0
     }
   },
   "gas" : {
     "fixtureCount" : 71,
-    "oraclePackageIdentity" : "sha256:0d70b0399a61364774fe0509b18b89db27c4ce8bce27db2e5c238a8c6cd59b79",
+    "oraclePackageIdentity" : "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c",
     "fixtures" : [ {
       "resultKey" : "contracts:gas-composite-gas-exhaustion-prefix",
       "id" : "gas-composite-gas-exhaustion-prefix",
@@ -16806,7 +16806,7 @@
   "artifacts" : {
     "jar" : "sha256:0de1584be094515ddd27938819464dc024a993c7eb06e4145cac129ad5bbfed0",
     "sourcesJar" : "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518",
-    "javadocJar" : "sha256:309d390b1335d09b965aeb604389b6c2f882160241adf011ac835dee62ad4822",
-    "sourceRelease" : "sha256:f7aeea366fa0920fbdf0912206b531d8be9607a4d04e1fb562193a313bc5c4f5"
+    "javadocJar" : "sha256:92221e42dc126a7f10a84e30685c4a7b4467731e8d1d526c19508a25146ad702",
+    "sourceRelease" : "sha256:7d20a5160d67ce467b592142388d23ddaebf1e6cde7af60743e70d9e42d14cec"
   }
 }

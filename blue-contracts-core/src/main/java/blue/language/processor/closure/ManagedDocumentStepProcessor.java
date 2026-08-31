@@ -105,13 +105,11 @@ final class ManagedDocumentStepProcessor
         for (Map.Entry<DocumentId, String> entry
                 : context.currentBlueIds().entrySet()) {
             Node exact = currentDocuments.get(entry.getKey());
-            Node previous = exactNodes.put(entry.getValue(), exact);
-            if (previous != null
-                    && !blue.language.model.NodeWireForm.get(previous)
-                            .equals(blue.language.model.NodeWireForm.get(exact))) {
-                throw new IllegalArgumentException(
-                        "One tentative BlueId identifies different documents");
-            }
+            putExactNode(exactNodes, entry.getValue(), exact);
+        }
+        for (Map.Entry<String, Node> entry
+                : context.managedReadExactNodesByBlueId().entrySet()) {
+            putExactNode(exactNodes, entry.getKey(), entry.getValue());
         }
         ManagedDocumentStepRequest request =
                 new ManagedDocumentStepRequest(
@@ -160,6 +158,19 @@ final class ManagedDocumentStepProcessor
                         outcome.orderedPatches(),
                         outcome.orderedPatchUpdates(),
                         outcome.generatedGeneralizationWrites()));
+    }
+
+    private static void putExactNode(
+            Map<String, Node> exactNodes,
+            String blueId,
+            Node exact) {
+        Node previous = exactNodes.put(blueId, exact);
+        if (previous != null
+                && !blue.language.model.NodeWireForm.get(previous)
+                        .equals(blue.language.model.NodeWireForm.get(exact))) {
+            throw new IllegalArgumentException(
+                    "One tentative BlueId identifies different documents");
+        }
     }
 
     private static ManagedDocumentWorkKind map(WorkKind kind) {

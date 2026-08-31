@@ -1,10 +1,19 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
+import blue.language.provider.CyclicSetProof;
 
 import java.util.Objects;
+import java.util.Optional;
 
-/** Exact authenticated transition for one contiguous managed-document epoch. */
+/**
+ * Exact authenticated transition for one contiguous managed-document epoch.
+ *
+ * <p>A cyclic successor carries its complete historical cyclic-set proof as
+ * invocation evidence.  The proof is required exactly for a cyclic-member
+ * {@code afterBlueId}; an ordinary successor has no proof.</p>
+ */
 public final class ManagedRevisionCause extends ProcessingCause {
 
     private final String targetOccurrenceIdentity;
@@ -16,6 +25,8 @@ public final class ManagedRevisionCause extends ProcessingCause {
     private final Node afterDocument;
     private final String originalSourceCauseIdentity;
     private final String sourceRevisionReceiptIdentity;
+    private final ManagedDocumentTransitionReceipt sourceTransitionReceipt;
+    private final CyclicSetProof afterCyclicProof;
 
     /**
      * Creates one contiguous authenticated managed revision.
@@ -23,7 +34,8 @@ public final class ManagedRevisionCause extends ProcessingCause {
      * @param causeIdentity exact cause identity
      * @param targetOccurrenceIdentity stable target occurrence identity
      * @param childDocumentId revised child lineage
-     * @param fromEpoch exact predecessor epoch
+     * @param fromEpoch exact predecessor epoch; {@code -1} denotes the
+     *     authored pre-initialization value before epoch zero
      * @param toEpoch exact successor epoch
      * @param beforeBlueId exact predecessor BlueId
      * @param afterBlueId exact successor BlueId
@@ -42,6 +54,174 @@ public final class ManagedRevisionCause extends ProcessingCause {
             Node afterDocument,
             String originalSourceCauseIdentity,
             String sourceRevisionReceiptIdentity) {
+        this(
+                causeIdentity,
+                targetOccurrenceIdentity,
+                childDocumentId,
+                fromEpoch,
+                toEpoch,
+                beforeBlueId,
+                afterBlueId,
+                afterDocument,
+                originalSourceCauseIdentity,
+                sourceRevisionReceiptIdentity,
+                null,
+                null);
+    }
+
+    /**
+     * Creates one contiguous authenticated managed revision whose successor
+     * may be a cyclic-set member.
+     *
+     * <p>The proof is required exactly when {@code afterBlueId} is a cyclic
+     * member identity.  It is immutable invocation evidence and does not alter
+     * the established managed-revision cause identity.</p>
+     *
+     * @param causeIdentity exact cause identity
+     * @param targetOccurrenceIdentity stable target occurrence identity
+     * @param childDocumentId revised child lineage
+     * @param fromEpoch exact predecessor revision cursor
+     * @param toEpoch exact successor revision cursor
+     * @param beforeBlueId exact predecessor BlueId
+     * @param afterBlueId exact successor BlueId
+     * @param afterDocument exact successor document
+     * @param originalSourceCauseIdentity originating cause identity
+     * @param sourceRevisionReceiptIdentity authenticated receipt identity
+     * @param afterCyclicProof complete successor cyclic-set proof, or
+     *     {@code null} exactly for an ordinary successor
+     */
+    public ManagedRevisionCause(
+            String causeIdentity,
+            String targetOccurrenceIdentity,
+            DocumentId childDocumentId,
+            long fromEpoch,
+            long toEpoch,
+            String beforeBlueId,
+            String afterBlueId,
+            Node afterDocument,
+            String originalSourceCauseIdentity,
+            String sourceRevisionReceiptIdentity,
+            CyclicSetProof afterCyclicProof) {
+        this(
+                causeIdentity,
+                targetOccurrenceIdentity,
+                childDocumentId,
+                fromEpoch,
+                toEpoch,
+                beforeBlueId,
+                afterBlueId,
+                afterDocument,
+                originalSourceCauseIdentity,
+                sourceRevisionReceiptIdentity,
+                null,
+                afterCyclicProof);
+    }
+
+    /**
+     * Creates one contiguous managed revision authenticated by the complete
+     * source transition receipt whose events must be delivered.
+     *
+     * @param causeIdentity exact cause identity
+     * @param targetOccurrenceIdentity stable target occurrence identity
+     * @param childDocumentId revised child lineage
+     * @param fromEpoch exact predecessor revision cursor; {@code -1} denotes
+     *     the authored pre-initialization value before epoch zero
+     * @param toEpoch exact successor revision cursor
+     * @param beforeBlueId exact predecessor BlueId
+     * @param afterBlueId exact successor BlueId
+     * @param afterDocument exact successor document
+     * @param originalSourceCauseIdentity originating cause identity
+     * @param sourceTransitionReceipt complete authenticated source transition
+     */
+    public ManagedRevisionCause(
+            String causeIdentity,
+            String targetOccurrenceIdentity,
+            DocumentId childDocumentId,
+            long fromEpoch,
+            long toEpoch,
+            String beforeBlueId,
+            String afterBlueId,
+            Node afterDocument,
+            String originalSourceCauseIdentity,
+            ManagedDocumentTransitionReceipt sourceTransitionReceipt) {
+        this(
+                causeIdentity,
+                targetOccurrenceIdentity,
+                childDocumentId,
+                fromEpoch,
+                toEpoch,
+                beforeBlueId,
+                afterBlueId,
+                afterDocument,
+                originalSourceCauseIdentity,
+                Objects.requireNonNull(
+                        sourceTransitionReceipt,
+                        "sourceTransitionReceipt")
+                        .transitionReceiptIdentity(),
+                sourceTransitionReceipt,
+                null);
+    }
+
+    /**
+     * Creates one typed-receipt managed revision whose successor may be a
+     * cyclic-set member.
+     *
+     * @param causeIdentity exact cause identity
+     * @param targetOccurrenceIdentity stable target occurrence identity
+     * @param childDocumentId revised child lineage
+     * @param fromEpoch exact predecessor revision cursor
+     * @param toEpoch exact successor revision cursor
+     * @param beforeBlueId exact predecessor BlueId
+     * @param afterBlueId exact successor BlueId
+     * @param afterDocument exact successor document
+     * @param originalSourceCauseIdentity originating cause identity
+     * @param sourceTransitionReceipt complete authenticated source transition
+     * @param afterCyclicProof complete successor cyclic-set proof, or
+     *     {@code null} exactly for an ordinary successor
+     */
+    public ManagedRevisionCause(
+            String causeIdentity,
+            String targetOccurrenceIdentity,
+            DocumentId childDocumentId,
+            long fromEpoch,
+            long toEpoch,
+            String beforeBlueId,
+            String afterBlueId,
+            Node afterDocument,
+            String originalSourceCauseIdentity,
+            ManagedDocumentTransitionReceipt sourceTransitionReceipt,
+            CyclicSetProof afterCyclicProof) {
+        this(
+                causeIdentity,
+                targetOccurrenceIdentity,
+                childDocumentId,
+                fromEpoch,
+                toEpoch,
+                beforeBlueId,
+                afterBlueId,
+                afterDocument,
+                originalSourceCauseIdentity,
+                Objects.requireNonNull(
+                        sourceTransitionReceipt,
+                        "sourceTransitionReceipt")
+                        .transitionReceiptIdentity(),
+                sourceTransitionReceipt,
+                afterCyclicProof);
+    }
+
+    private ManagedRevisionCause(
+            String causeIdentity,
+            String targetOccurrenceIdentity,
+            DocumentId childDocumentId,
+            long fromEpoch,
+            long toEpoch,
+            String beforeBlueId,
+            String afterBlueId,
+            Node afterDocument,
+            String originalSourceCauseIdentity,
+            String sourceRevisionReceiptIdentity,
+            ManagedDocumentTransitionReceipt sourceTransitionReceipt,
+            CyclicSetProof afterCyclicProof) {
         super(causeIdentity);
         this.targetOccurrenceIdentity =
                 ClosureValueSupport.requireSha256Identity(
@@ -49,7 +229,7 @@ public final class ManagedRevisionCause extends ProcessingCause {
                         "targetOccurrenceIdentity");
         this.childDocumentId = Objects.requireNonNull(
                 childDocumentId, "childDocumentId");
-        this.fromEpoch = ClosureValueSupport.requireSafeInteger(
+        this.fromEpoch = ClosureValueSupport.requireManagedEpochCursor(
                 fromEpoch, "fromEpoch");
         this.toEpoch = ClosureValueSupport.requireSafeInteger(
                 toEpoch, "toEpoch");
@@ -72,6 +252,21 @@ public final class ManagedRevisionCause extends ProcessingCause {
                 ClosureValueSupport.requireSha256Identity(
                         sourceRevisionReceiptIdentity,
                         "sourceRevisionReceiptIdentity");
+        this.sourceTransitionReceipt = sourceTransitionReceipt;
+        boolean cyclicAfter = BlueIds.hasCyclicMemberSeparator(
+                this.afterBlueId);
+        if (cyclicAfter) {
+            BlueIds.requireBlueIdOrCyclicMember(
+                    this.afterBlueId, "afterBlueId");
+        }
+        if (cyclicAfter != (afterCyclicProof != null)) {
+            throw new IllegalArgumentException(
+                    "A cyclic successor requires exactly one complete cyclic-set proof");
+        }
+        this.afterCyclicProof = copyProof(afterCyclicProof);
+        if (sourceTransitionReceipt != null) {
+            verifyTypedReceipt(sourceTransitionReceipt);
+        }
     }
 
     /**
@@ -105,7 +300,8 @@ public final class ManagedRevisionCause extends ProcessingCause {
     /**
      * Returns the documented value.
      *
-     * @return predecessor epoch
+     * @return predecessor epoch, with {@code -1} denoting the authored
+     *     pre-initialization value
      */
     public long fromEpoch() {
         return fromEpoch;
@@ -163,5 +359,45 @@ public final class ManagedRevisionCause extends ProcessingCause {
      */
     public String sourceRevisionReceiptIdentity() {
         return sourceRevisionReceiptIdentity;
+    }
+
+    /**
+     * Returns the complete authenticated source transition when supplied.
+     * Legacy state-only causes return an empty value.
+     *
+     * @return optional complete source transition receipt
+     */
+    public Optional<ManagedDocumentTransitionReceipt>
+            sourceTransitionReceipt() {
+        return Optional.ofNullable(sourceTransitionReceipt);
+    }
+
+    /**
+     * Returns the complete cyclic proof for a cyclic successor.
+     *
+     * @return defensive optional successor proof
+     */
+    public Optional<CyclicSetProof> afterCyclicProof() {
+        return Optional.ofNullable(copyProof(afterCyclicProof));
+    }
+
+    private void verifyTypedReceipt(
+            ManagedDocumentTransitionReceipt receipt) {
+        if (!sourceRevisionReceiptIdentity.equals(
+                    receipt.transitionReceiptIdentity())
+                || !childDocumentId.equals(receipt.documentId())
+                || !beforeBlueId.equals(receipt.beforeBlueId())
+                || !afterBlueId.equals(receipt.afterBlueId())
+                || !originalSourceCauseIdentity.equals(
+                    receipt.originalCauseIdentity())) {
+            throw new IllegalArgumentException(
+                    "Complete source transition receipt disagrees with managed revision");
+        }
+    }
+
+    private static CyclicSetProof copyProof(CyclicSetProof proof) {
+        return proof == null ? null
+                : CyclicSetProof.fromDeclaredPlaceholderSet(
+                        proof.declaredPlaceholderSet());
     }
 }

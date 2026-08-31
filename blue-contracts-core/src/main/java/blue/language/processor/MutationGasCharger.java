@@ -32,21 +32,26 @@ final class MutationGasCharger {
 
     void charge(
             List<PatchInput> patches,
+            List<FrozenNode> priorCanonicalRoots,
             List<FrozenNode> resultingCanonicalRoots) {
+        Objects.requireNonNull(
+                priorCanonicalRoots,
+                "priorCanonicalRoots");
         Objects.requireNonNull(
                 resultingCanonicalRoots,
                 "resultingCanonicalRoots");
-        if (resultingCanonicalRoots.size() != patches.size()) {
+        if (priorCanonicalRoots.size() != patches.size()
+                || resultingCanonicalRoots.size() != patches.size()) {
             throw new IllegalArgumentException(
                     "Patch/result projection size changed");
         }
-        FrozenNode priorCanonicalRoot = canonicalRoot.get();
         int index = 0;
         for (PatchInput patch : patches) {
+            FrozenNode priorCanonicalRoot =
+                    priorCanonicalRoots.get(index);
             FrozenNode resultingCanonicalRoot =
                     resultingCanonicalRoots.get(index);
             if (patch == null) {
-                priorCanonicalRoot = resultingCanonicalRoot;
                 index++;
                 continue;
             }
@@ -58,7 +63,6 @@ final class MutationGasCharger {
                     patch.exactValue() != null,
                     priorCanonicalRoot,
                     resultingCanonicalRoot);
-            priorCanonicalRoot = resultingCanonicalRoot;
             index++;
         }
     }
@@ -325,6 +329,9 @@ final class MutationGasCharger {
         if (node.getContracts() != null) members++;
         if (node.getBlue() != null) members++;
         if (node.getMergePolicy() != null) members++;
+        members += CanonicalIdentityGasProjection
+                .inferredScalarTypeMember(
+                        node.getValue(), node.getType() != null);
         return members;
     }
 
@@ -342,6 +349,9 @@ final class MutationGasCharger {
         if (node.getContracts() != null) members++;
         if (node.getBlue() != null) members++;
         if (node.getMergePolicy() != null) members++;
+        members += CanonicalIdentityGasProjection
+                .inferredScalarTypeMember(
+                        node.getValue(), node.getType() != null);
         return members;
     }
 }

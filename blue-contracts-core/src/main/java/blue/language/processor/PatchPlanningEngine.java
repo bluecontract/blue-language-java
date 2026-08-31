@@ -49,6 +49,7 @@ final class PatchPlanningEngine {
     private final boolean initialResolutionComplete;
     private final EmbeddedScopePlan originEmbeddedScopePlan;
     private final boolean strictPlatformInvocation;
+    private final ReferenceTransparentPathAccess transparentPathAccess;
 
     PatchPlanningEngine(String originScopePath,
                         PatchPlanningContext planning,
@@ -120,6 +121,10 @@ final class PatchPlanningEngine {
                 planning.isResolutionComplete();
         this.strictPlatformInvocation =
                 planning.strictPlatformInvocation();
+        this.transparentPathAccess = new ReferenceTransparentPathAccess(
+                invocationEvidenceSnapshotManager,
+                strictPlatformInvocation,
+                executableBodyFieldsByType);
         this.originEmbeddedScopePlan = planning.entryEmbeddedScopePlan(
                 this.originScopePath);
     }
@@ -228,16 +233,38 @@ final class PatchPlanningEngine {
                                   boolean buildUpdates) {
         Objects.requireNonNull(patches, "patches");
         TypeGeneralizationPolicyResolver.FrozenPolicy frozenGeneralizationPolicy =
-                TypeGeneralizationPolicyResolver.freeze(
-                        initialResolved, originScopePath);
+                null;
         long planningStart = System.nanoTime();
         FrozenNode workingCanonical = initialCanonical;
         FrozenNode workingResolved = initialResolved;
+        boolean workingResolutionComplete = initialResolutionComplete;
         PatchImpact.FallbackReason authoritativeFallbackReason = null;
         List<BatchPatchRecord> records = new ArrayList<>();
         List<ImmutableJsonPatch> preparedPatches = new ArrayList<>(patches.size());
         for (ImmutableJsonPatch prepared : patches) {
             Objects.requireNonNull(prepared, "patch");
+            /*
+             * Preserve the collapsed mutation boundary first. In particular,
+             * a cyclic MASTER#index ancestor must be rejected before exact
+             * evidence can open it. Only after that check may this one patch
+             * demand the ordinary reference ancestors it actually traverses.
+             */
+            ImmutablePatchPlanner.forFrozen(workingCanonical)
+                    .validateMutationPath(prepared.path());
+            PatchBase patchBase = materializePatchBase(
+                    workingCanonical,
+                    workingResolved,
+                    workingResolutionComplete,
+                    prepared.normalizedPath());
+            workingCanonical = patchBase.canonical;
+            workingResolved = patchBase.resolved;
+            workingResolutionComplete =
+                    patchBase.resolutionComplete;
+            if (frozenGeneralizationPolicy == null) {
+                frozenGeneralizationPolicy =
+                        TypeGeneralizationPolicyResolver.freeze(
+                                workingResolved, originScopePath);
+            }
             ImmutableJsonPatch authoredPrepared = prepared;
             prepared = ProcessorOwnedContractsStatePreserver.preserve(
                     originScopePath,
@@ -295,6 +322,11 @@ final class PatchPlanningEngine {
             workingCanonical = canonicalPlan.root();
             workingResolved = resolvedPlan.root();
         }
+        if (frozenGeneralizationPolicy == null) {
+            frozenGeneralizationPolicy =
+                    TypeGeneralizationPolicyResolver.freeze(
+                            initialResolved, originScopePath);
+        }
         long patchPlanningNanos = System.nanoTime() - planningStart;
 
         long conformanceStart = System.nanoTime();
@@ -312,7 +344,7 @@ final class PatchPlanningEngine {
                 : workingCanonical;
         FrozenNode finalResolved = conformancePlan.root();
         boolean finalResolutionComplete =
-                initialResolutionComplete;
+                workingResolutionComplete;
         boolean fullSnapshotResolution = exactReplacement
                 && (authoritativeFallbackReason != null || !conformancePlan.fullSnapshotRebuildAvoidable());
         if (fullSnapshotResolution) {
@@ -406,6 +438,58 @@ final class PatchPlanningEngine {
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
+    }
+
+    private PatchBase materializePatchBase(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            boolean resolutionComplete,
+            String patchPath) {
+        if (invocationEvidenceSnapshotManager == null) {
+            return new PatchBase(
+                    canonicalRoot, resolvedRoot, resolutionComplete);
+        }
+        FrozenNode expanded = transparentPathAccess
+                .materializePatchAncestors(
+                        canonicalRoot,
+                        Collections.singletonList(patchPath));
+        if (expanded == canonicalRoot) {
+            return new PatchBase(
+                    canonicalRoot, resolvedRoot, resolutionComplete);
+        }
+        ResolvedSnapshot snapshot = strictPlatformInvocation
+                ? DocumentProcessingRuntime
+                        .resolveCanonicalTransientIncludingTypeContracts(
+                                invocationEvidenceSnapshotManager,
+                                expanded,
+                                openedScopePaths,
+                                executableBodyFieldsByType)
+                : DocumentProcessingRuntime.resolveCanonicalTransient(
+                        invocationEvidenceSnapshotManager,
+                        expanded,
+                        openedScopePaths,
+                        executableBodyFieldsByType);
+        return new PatchBase(
+                expanded,
+                snapshot.frozenResolvedRoot(),
+                snapshot.isResolutionComplete());
+    }
+
+    private static final class PatchBase {
+        private final FrozenNode canonical;
+        private final FrozenNode resolved;
+        private final boolean resolutionComplete;
+
+        private PatchBase(
+                FrozenNode canonical,
+                FrozenNode resolved,
+                boolean resolutionComplete) {
+            this.canonical = Objects.requireNonNull(
+                    canonical, "canonical");
+            this.resolved = Objects.requireNonNull(
+                    resolved, "resolved");
+            this.resolutionComplete = resolutionComplete;
+        }
     }
 
 
