@@ -140,6 +140,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
         if (node.isObject()) {
             Node obj = new Node();
             Map<String, Node> properties = new LinkedHashMap<>();
+            boolean exactEmptyObject = node.size() == 0;
             boolean hasValuePayload = false;
             boolean hasItemsPayload = false;
             boolean hasSchema = false;
@@ -148,33 +149,36 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                 Map.Entry<String, JsonNode> entry = it.next();
                 String key = entry.getKey();
                 JsonNode value = entry.getValue();
+                if (value == null || value.isNull()) {
+                    /*
+                     * Preserve Source-null provenance until mandatory
+                     * preprocessing. Reserved null fields use the same
+                     * temporary property lane so they can be omitted there,
+                     * rather than being confused with an explicit {} value.
+                     */
+                    properties.put(key, sourceNullLiteral());
+                    continue;
+                }
                 switch (key) {
                     case OBJECT_NAME:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         obj.name(requireString(value, key, appendPath(path, key)));
                         break;
                     case OBJECT_DESCRIPTION:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         obj.description(requireString(value, key, appendPath(path, key)));
                         break;
                     case OBJECT_TYPE:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         obj.type(handleNode(value, appendPath(path, key), false));
                         break;
                     case OBJECT_ITEM_TYPE:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         obj.itemType(handleNode(value, appendPath(path, key), false));
                         break;
                     case OBJECT_KEY_TYPE:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         obj.keyType(handleNode(value, appendPath(path, key), false));
                         break;
                     case OBJECT_VALUE_TYPE:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         obj.valueType(handleNode(value, appendPath(path, key), false));
                         break;
                     case OBJECT_MERGE_POLICY:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         obj.mergePolicy(requireString(value, key, appendPath(path, key)));
                         break;
                     case OBJECT_VALUE:
@@ -185,7 +189,6 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                                     appendPath(path, key),
                                     false));
                         } else {
-                            rejectNullReserved(value, key, appendPath(path, key));
                             hasValuePayload = true;
                             obj.value(handleValue(value));
                         }
@@ -197,12 +200,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         obj.blueId(requireString(value, key, appendPath(path, key)));
                         break;
                     case OBJECT_ITEMS:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         hasItemsPayload = true;
                         obj.items(handleArray(value, appendPath(path, key)));
                         break;
                     case OBJECT_BLUE:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         if (!root) {
                             throw new IllegalArgumentException("\"blue\" is valid only on the root Source Document. Path: " + appendPath(path, key));
                         }
@@ -228,7 +229,6 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                         properties.put(key, handleNode(value, appendPath(path, key), false));
                         break;
                     case OBJECT_SCHEMA:
-                        rejectNullReserved(value, key, appendPath(path, key));
                         if (hasSchema) {
                             throw new IllegalArgumentException("A Blue node cannot contain more than one \"schema\" field.");
                         }
@@ -266,7 +266,9 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             int payloadKinds = 0;
             if (hasValuePayload) payloadKinds++;
             if (hasItemsPayload) payloadKinds++;
-            if (properties.keySet().stream().anyMatch(key -> !isBlueImportsDirective(path, key))) {
+            if (properties.entrySet().stream().anyMatch(entry ->
+                    !isBlueImportsDirective(path, entry.getKey())
+                            && !Nodes.isSourceNullLiteral(entry.getValue()))) {
                 payloadKinds++;
             }
             if (payloadKinds > 1) {
@@ -284,7 +286,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                 }
             }
             validateMergePolicy(obj.getMergePolicy());
-            if (!properties.isEmpty()) {
+            if (exactEmptyObject || !properties.isEmpty()) {
                 obj.properties(properties);
             }
             if (parseContext
@@ -346,6 +348,10 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             return null;
         }
         throw new IllegalArgumentException("Can't handle node: " + node);
+    }
+
+    private Node sourceNullLiteral() {
+        return new Node().value(null).inlineValue(true);
     }
 
     private String handlePreviousBlueId(JsonNode node) {
@@ -720,12 +726,6 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             return true;
         }
         return type.isInlineValue() && alias.equals(type.getValue());
-    }
-
-    private void rejectNullReserved(JsonNode node, String field, String path) {
-        if (node.isNull()) {
-            throw new IllegalArgumentException("\"" + field + "\" must not be null; omit the field instead. Path: " + path);
-        }
     }
 
     private String requireString(JsonNode node, String field, String path) {

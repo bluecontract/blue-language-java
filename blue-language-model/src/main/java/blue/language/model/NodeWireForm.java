@@ -58,6 +58,10 @@ public final class NodeWireForm {
     public static Object get(Node node, Strategy strategy) {
         validatePayloadKind(node);
 
+        if (Nodes.isSourceNullLiteral(node)) {
+            return null;
+        }
+
         if (isEmptyPlaceholder(node)) {
             Map<String, Object> placeholder = new LinkedHashMap<>();
             placeholder.put(LIST_CONTROL_EMPTY, true);
@@ -199,8 +203,7 @@ public final class NodeWireForm {
         int payloadKinds = 0;
         if (node.getValue() != null) payloadKinds++;
         if (node.getItems() != null) payloadKinds++;
-        if (node.getProperties() != null
-                && !node.getProperties().isEmpty()) payloadKinds++;
+        if (Nodes.hasObjectPayload(node)) payloadKinds++;
         if (payloadKinds > 1) {
             throw new IllegalArgumentException(
                     "A Blue node may contain only one payload kind: value, items, or object fields.");

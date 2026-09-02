@@ -18,8 +18,8 @@ import static blue.language.model.wire.BlueLanguageConstants.LIST_CONTROL_EMPTY;
 import static blue.language.model.wire.SchemaPropertyConstants.*;
 
 /**
- * Normalizes empty list elements to explicit {@code $empty: true}
- * placeholders while removing empty object fields.
+ * Consumes Source nulls: object members are omitted and list elements become
+ * explicit {@code $empty: true} placeholders. Exact empty objects are retained.
  *
  * <p>The transformation operates on a deep clone and applies the same rules to
  * schema values and nested metadata.</p>
@@ -41,27 +41,29 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
         if (node == null) {
             return null;
         }
+        if (Nodes.isSourceNullLiteral(node)) {
+            throw new IllegalArgumentException(
+                    "Root null is not a valid Blue document.");
+        }
         return normalizeNode(node, false, JsonPointer.ROOT);
     }
 
     private Node normalizeObjectField(Node node, String path) {
-        if (node == null) {
+        if (node == null || Nodes.isSourceNullLiteral(node)) {
             return null;
         }
-        Node normalized = normalizeNode(node, false, path);
-        return Nodes.isEmptyNode(normalized) ? null : normalized;
+        return normalizeNode(node, false, path);
     }
 
     private Node normalizeListElement(Node node, String path) {
-        if (node == null || Nodes.isEmptyNode(node)) {
+        if (node == null || Nodes.isSourceNullLiteral(node)) {
             return Nodes.emptyPlaceholder();
         }
         if (node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_EMPTY)) {
             Nodes.validateEmptyPlaceholder(node, path);
             return node.clone();
         }
-        Node normalized = normalizeNode(node, true, path);
-        return Nodes.isEmptyNode(normalized) ? Nodes.emptyPlaceholder() : normalized;
+        return normalizeNode(node, true, path);
     }
 
     private Node normalizeNode(Node node, boolean listElement, String path) {
@@ -72,22 +74,34 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
             return normalized;
         }
 
-        if (normalized.getType() != null) {
+        if (Nodes.isSourceNullLiteral(normalized.getType())) {
+            normalized.type((Node) null);
+        } else if (normalized.getType() != null) {
             normalized.type(normalizeNode(normalized.getType(), false, append(path, BlueLanguageConstants.OBJECT_TYPE)));
         }
-        if (normalized.getItemType() != null) {
+        if (Nodes.isSourceNullLiteral(normalized.getItemType())) {
+            normalized.itemType((Node) null);
+        } else if (normalized.getItemType() != null) {
             normalized.itemType(normalizeNode(normalized.getItemType(), false, append(path, BlueLanguageConstants.OBJECT_ITEM_TYPE)));
         }
-        if (normalized.getKeyType() != null) {
+        if (Nodes.isSourceNullLiteral(normalized.getKeyType())) {
+            normalized.keyType((Node) null);
+        } else if (normalized.getKeyType() != null) {
             normalized.keyType(normalizeNode(normalized.getKeyType(), false, append(path, BlueLanguageConstants.OBJECT_KEY_TYPE)));
         }
-        if (normalized.getValueType() != null) {
+        if (Nodes.isSourceNullLiteral(normalized.getValueType())) {
+            normalized.valueType((Node) null);
+        } else if (normalized.getValueType() != null) {
             normalized.valueType(normalizeNode(normalized.getValueType(), false, append(path, BlueLanguageConstants.OBJECT_VALUE_TYPE)));
         }
-        if (normalized.getBlue() != null) {
+        if (Nodes.isSourceNullLiteral(normalized.getBlue())) {
+            normalized.blue(null);
+        } else if (normalized.getBlue() != null) {
             normalized.blue(normalizeNode(normalized.getBlue(), false, append(path, BlueLanguageConstants.OBJECT_BLUE)));
         }
-        if (normalized.getContracts() != null) {
+        if (Nodes.isSourceNullLiteral(normalized.getContracts())) {
+            normalized.contracts(null);
+        } else if (normalized.getContracts() != null) {
             normalized.contracts(normalizeNode(normalized.getContracts(), false, append(path, BlueLanguageConstants.OBJECT_CONTRACTS)));
         }
         if (normalized.getSchema() != null) {
@@ -110,7 +124,14 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
                     properties.put(entry.getKey(), child);
                 }
             }
-            normalized.properties(properties.isEmpty() ? null : properties);
+            if (properties.isEmpty()) {
+                normalized.properties((Map<String, Node>) null);
+                if (Nodes.isEmptyNode(normalized)) {
+                    normalized.properties(properties);
+                }
+            } else {
+                normalized.properties(properties);
+            }
         }
 
         return normalized;
