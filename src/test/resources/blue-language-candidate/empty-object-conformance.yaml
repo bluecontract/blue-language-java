@@ -1,0 +1,123 @@
+suite: blue-language-empty-object-candidate
+status: candidate
+cases:
+  - id: L-EMPTY-PREPROCESS-01
+    operation: preprocess
+    input:
+      removed: null
+      empty: {}
+      nested:
+        removed: null
+      values:
+        - A
+        - null
+        - {}
+        - []
+    expected:
+      empty: {}
+      nested: {}
+      values:
+        - A
+        - $empty: true
+        - {}
+        - []
+
+  - id: L-EMPTY-PREPROCESS-02
+    operation: preprocess
+    input:
+      type: null
+    expected: {}
+
+  - id: L-EMPTY-PREPROCESS-03
+    operation: preprocess
+    input:
+      type: {}
+    expected:
+      type: {}
+
+  - id: L-EMPTY-PREPROCESS-04
+    operation: preprocess
+    input:
+      name: Metadata
+      removed: null
+    expected:
+      name: Metadata
+
+  - id: L-EMPTY-DIRECT-01
+    operation: direct-blue-id
+    input: {}
+    expectedBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+
+  - id: L-EMPTY-DIRECT-02
+    operation: direct-rejected
+    input:
+      items:
+        - null
+
+  - id: L-EMPTY-DIRECT-03
+    operation: distinct-blue-ids
+    inputs:
+      - items:
+          - A
+          - B
+      - items:
+          - A
+          - $empty: true
+          - B
+      - items:
+          - A
+          - {}
+          - B
+      - items:
+          - A
+          - []
+          - B
+
+  - id: L-EMPTY-CANONICAL-01
+    operation: canonical-empty-type-parity
+    inline:
+      name: X
+      type: {}
+    reference:
+      name: X
+      type:
+        blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+    expectedTypeBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+
+  - id: L-EMPTY-CANONICAL-02
+    operation: minimize-round-trip
+    input:
+      x: {}
+
+  - id: L-EMPTY-MERGE-01
+    operation: inherited-payload-conflict
+    inheritedKind: scalar
+
+  - id: L-EMPTY-MERGE-02
+    operation: inherited-payload-conflict
+    inheritedKind: list
+
+  - id: L-EMPTY-SCHEMA-01
+    operation: schema
+    required: true
+    expectValid: true
+
+  - id: L-EMPTY-SCHEMA-02
+    operation: schema
+    required: true
+    minFields: 1
+    expectValid: false
+
+  - id: L-EMPTY-MAPPING-01
+    operation: map
+    input: {}
+    target: java.util.Map
+    expectNonNull: true
+    expectedSize: 0
+
+  - id: L-EMPTY-FROZEN-01
+    operation: freeze-round-trip
+    input:
+      empty: {}
+      values:
+        - {}
