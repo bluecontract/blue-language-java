@@ -1,6 +1,6 @@
 # Blue Language Specification 1.0
 
-> **Status.** Final Implementation Baseline. Blue Language 1.0 is the first public-version Language specification and the normative implementation target for this package. Final public publication MUST bind this prose, the canonical core-type registry, published BlueIds, the machine-readable conformance fixtures, and implementation-conformance evidence in one content-addressed release manifest.
+> **Status.** Proposed release-candidate revision; not a published release. This draft incorporates the in-progress inline-type canonical-identity parity repair and the identity-breaking empty-object semantics defined below. Final public publication MUST bind the completed prose, regenerated canonical core-type registry, regenerated BlueIds, machine-readable conformance fixtures, and implementation-conformance evidence in one content-addressed release manifest. Exact package identities and registry values from earlier RCs are not authoritative for this draft.
 
 > **Scope.** This document defines Blue's content language: the node model, Blue Graph, Blue Documents, typing, specialization through overlays, schema constraints, preprocessing, complete and demand-limited resolution, expansion, collapse, canonicalization, minimization, and BlueId. It defines the semantic equivalence of verified pure references and their materializations. It does **not** define runtime execution, handlers, events, channels, gas prices, provider transport, storage layout, or contract processing. Those belong to runtime specifications and implementations.
 
@@ -43,7 +43,18 @@ x:
   blueId: <blue-id-of-the-same-x-node>
 ```
 
+
 When the materialized node verifies to the referenced BlueId, these forms identify the same graph edge and the same Blue node. Inline versus referenced representation is not a semantic distinction.
+
+Blue also distinguishes absence from an exact empty object:
+
+| Context | Omitted | `null` | `{}` | `[]` |
+|---|---|---|---|---|
+| Object field | absent | absent / no information | present empty object | present empty list |
+| List element | not applicable | normalized to `$empty: true` in Source preprocessing | present empty-object element | present empty-list element |
+| Document root | not applicable | invalid | present empty-object Root | present empty-list Root |
+
+An empty object is therefore ordinary exact content. Its BlueId is the ordinary BlueId of the empty map defined by §14; it may appear inline or by pure reference, may satisfy a required field, and MUST NOT disappear merely because it has zero ordinary child fields. `$empty: true` remains a distinct positional placeholder used when a Source list contains `null`.
 
 This equivalence is a load-bearing invariant. A semantic Blue operation MUST be a function of node identity and logical content demanded by that operation. It MUST NOT be a function of whether a node was inline, collapsed, already expanded, cached, fetched from one blob, fetched from many chunks, or represented internally by one host object or many.
 
@@ -162,11 +173,13 @@ A Blue node does **not** carry a required `languageVersion`, `specification`, or
 
 The exact BlueIds of referenced types remain the normal way in which content selects type semantics. Runtime execution languages are selected by their exact runtime-type BlueIds under the applicable runtime specification; ordinary documents do not require a Language-version field.
 
-Blue Language 1.0 publishes the canonical nodes and BlueIds for `Text`, `Integer`, `Double`, `Boolean`, `Dictionary`, and `List` exactly as contained in the release registry. Those nodes have already been reproduced by multiple implementations and their identity-bearing descriptions intentionally name Blue Language 1.0. Implementations MUST load and verify the registry nodes rather than reconstructing them from prose or source-code constants.
+The eventual stable Blue Language 1.0 release publishes the canonical nodes and BlueIds for `Text`, `Integer`, `Double`, `Boolean`, `Dictionary`, and `List` exactly as contained in its regenerated release registry. Earlier release-candidate registry values are not authoritative for this proposal. Conforming implementations MUST load and verify the final registry nodes rather than reconstructing them from prose or source-code constants.
 
 After publication, an existing core-type BlueId MUST never acquire different semantics. A semantic change requires a new type node and BlueId. Editorial clarification that is not intended to alter identity-bearing meaning belongs outside the canonical node.
 
 Blue Language 1.0 is intended to remain stable. Editorial changes that do not alter normative meaning may be published as errata outside canonical registry nodes. Any change that alters the node model, BlueId algorithm, preprocessing, resolution, canonicalization, minimization, or the meaning of valid 1.0 content requires a new Language version and an out-of-band version-selection rule known before the node is interpreted.
+
+This document is still a pre-stable release-candidate proposal. The empty-object revision may therefore be incorporated into the eventual first stable 1.0 release, but it is incompatible with earlier RC behavior and identities. If a stable Blue Language 1.0 release had already been published, the same change would require a new Language version rather than reinterpretation of 1.0.
 
 A valid unprefixed plain BlueId always denotes the BlueId v1 algorithm defined by this specification. A future incompatible BlueId version MUST use syntax that is not valid as a plain BlueId v1; it MUST NOT reinterpret an existing valid v1 string.
 
@@ -496,6 +509,7 @@ Portable application semantics MUST NOT depend on whether such an implementation
 
 ### 4.1 Node anatomy (normative)
 
+
 A **Blue node** consists of reserved language fields and, optionally, one primary payload kind.
 
 ```text
@@ -506,11 +520,11 @@ The permitted payload kinds are:
 
 - **scalar payload**: a `value` field carrying a string, number, or boolean;
 - **list payload**: an `items` field carrying an ordered sequence;
-- **object payload**: one or more ordinary child fields, where ordinary child fields are fields whose keys are not reserved language keys.
+- **object payload**: zero or more ordinary child fields, where ordinary child fields are fields whose keys are not reserved language keys. A bare map `{}` is the exact empty-object payload.
 
 A node MUST NOT combine payload kinds. For example, a node MUST NOT contain both `value` and `items`, or both `value` and ordinary child fields.
 
-A node MAY have no payload. Such a node is a metadata-only, type-only, schema-only, or overlay-only node. Examples include:
+A node containing one or more retained reserved fields and no scalar, list, or ordinary-child payload is a metadata-only, type-only, schema-only, or overlay-only node. Examples include:
 
 ```yaml
 age:
@@ -523,9 +537,11 @@ and:
 name: Person
 ```
 
+A map containing no fields at all is not an omitted metadata declaration. It is the present empty-object value.
+
 A pure reference is a special metadata-only reference node. It is valid only when the object contains exactly `blueId`.
 
-If a node has no payload and no retained reserved content after object-field cleaning, it may normalize to an empty map and be omitted when it appears as an object field. It MUST NOT be silently deleted when it appears as a list element; list element normalization is context-sensitive (§11.5, §14.2).
+Object-field absence is represented by an omitted field or a Source `null` contribution. A conforming implementation MUST NOT infer absence merely because a present node is `{}` or because removing null-valued children leaves an object with zero ordinary fields.
 
 ### 4.1.1 Unconstrained field declarations (normative)
 
@@ -560,7 +576,7 @@ request:
 
 constrains the field to the canonical Dictionary type or a compatible specialization. It does **not** mean "any Blue value." Likewise, `type: List` constrains the value to a List even when `itemType` is omitted.
 
-A meaningful `name` or `description` may retain and document an unconstrained declaration. An empty declaration `{}` may be removed by object-field cleaning and therefore is not a reliable declaration marker.
+A meaningful `name` or `description` may retain and document an unconstrained declaration. A bare `{}` is not a declaration marker: it is a concrete empty-object value. Authors who mean “optional and otherwise unconstrained” must use a retained declaration such as `description`, `name`, or an applicable schema rather than `{}`.
 
 ### 4.2 Reserved language keys (normative)
 
@@ -931,7 +947,7 @@ If any transformation fails, produces invalid Source structure, introduces `blue
 Apply the following baseline operations to the transformed Source Document in this order:
 
 1. **Wrapper normalization.** Normalize scalar and list authoring sugar into the abstract Blue node model (§5).
-2. **List placeholder normalization.** Normalize Source list elements that are `null`, `{}`, or recursively clean to an empty object into `$empty: true` (§11.5).
+2. **Absence and list-placeholder normalization.** Remove Source object fields whose value is `null`. Normalize only Source list elements whose value is `null` into `$empty: true`. Preserve `{}` as an exact empty-object value in object fields, list elements, and reserved type positions (§11.5).
 3. **Type-alias substitution.** Replace built-in and document-import aliases in `type`, `itemType`, `keyType`, and `valueType` positions with their canonical pure references.
 4. **Primitive scalar inference.** Assign `Text`, `Integer`, `Double`, or `Boolean` to untyped primitive scalar payloads under §§2.4–2.5 and §14.3.
 5. **Preprocessed-form validation.** Reject unresolved authoring aliases in type-bearing positions, nested or transformation-introduced `blue`, invalid payload combinations, malformed list controls, and any other invalid Preprocessed Document content.
@@ -1125,8 +1141,9 @@ BlueId Input MUST NOT contain:
 - mixed `blueId` reference shapes;
 - unresolved cyclic placeholders such as `this#0`, except inside the explicit cyclic-set calculation API defined in §15;
 - `$pos` overlays;
-- `null` list elements;
-- empty-object list elements that have not been normalized to `$empty: true`.
+- `null` list elements.
+
+Empty-object and empty-list elements are valid direct BlueId Input. A raw `null` list element is not an empty object and must already have been normalized to `$empty: true` by the Source pipeline when positional absence was intended.
 
 A node containing `blue` MUST NOT be accepted as direct BlueId Input. The `blue` directive is never identity content.
 
@@ -1428,27 +1445,30 @@ If a schema keyword is evaluated against an incompatible effective node kind, va
 
 ### 9.2.3 Required fields (normative)
 
+
 `required: true` on a child field declaration requires that the field be semantically present in resolved descendants.
 
 A required field is satisfied only if the resolved child node contains at least one of:
 
 - a scalar payload `value`;
 - a list payload `items`, including an empty list;
-- an object payload with at least one ordinary child field;
+- an object payload, including the exact empty object `{}`;
 - a pure reference;
 - a fixed payload or fixed subtree inherited from an ancestor type.
 
 A metadata-only child declaration, such as a node containing only `type`, `schema`, `name`, or `description`, does not by itself satisfy `required: true`.
 
-If a field is required but has no semantic payload or fixed inherited content after resolution and cleaning, validation MUST fail.
+A bare `{}` is an object payload and therefore satisfies presence. If a non-empty object is required, the applicable schema MUST additionally require `minFields: 1` or a more specific type/shape.
+
+If a field is required but has no semantic payload or fixed inherited content after resolution, validation MUST fail.
 
 ### 9.2.4 Field counting (normative)
 
-`minFields` and `maxFields` count ordinary child fields of the effective object payload after resolution and object-field cleaning.
+`minFields` and `maxFields` count ordinary child fields of the effective object payload after resolution and null-field removal. An exact empty object has a field count of zero.
 
 Reserved language fields such as `name`, `description`, `type`, `schema`, `contracts`, `value`, and `items` do not count as ordinary fields.
 
-Fields removed by object-field cleaning do not count. Inherited ordinary child fields that are materialized in the Resolved Form do count.
+Null-valued fields removed as absence do not count. A present empty-object child counts as one ordinary field in its parent, while that child object's own `minFields`/`maxFields` count is zero. Inherited ordinary child fields materialized in the Resolved Form count.
 
 ### 9.3 Presence
 
@@ -1691,7 +1711,7 @@ resolve_complete(source, provider):
         T_node = expand_reference(T_ref, provider)
         A = resolve_complete(T_node, provider)
     else:
-        A = empty node
+        A = no ancestor contribution
     R = merge_as_instance(ancestor=A, instance=S, path="/")
     validate_schema_recursively(R)
     return ResolvedForm(R, provenance, complete=true)
@@ -1947,43 +1967,72 @@ mergePolicy: append-only
 
 ### 11.5 Semantics of `null`, `{}`, `[]`, and `$empty` (normative)
 
-Blue distinguishes object-field absence from list position.
+
+Blue distinguishes object-field absence, empty aggregate values, and list position.
 
 #### Object fields
 
-In object fields, `null` means no information. Before hashing:
+In object fields:
 
-- fields whose value is `null` MUST be omitted;
-- fields whose value normalizes to an empty object `{}` MUST be omitted;
-- empty lists `[]` MUST be preserved.
+- an omitted field is absent;
+- a field whose Source value is `null` means no information and MUST be omitted during Source preprocessing;
+- `{}` is a present empty-object value and MUST be preserved;
+- `[]` is a present empty-list value and MUST be preserved.
 
-This removal is recursive and may cascade.
+Null removal is recursive inside objects, but it does not remove the containing object. If:
+
+```yaml
+x:
+  y: null
+```
+
+loses `y`, the result is:
+
+```yaml
+x: {}
+```
+
+not an absent `x`.
+
+An exact empty object is an **object payload**, not a generic "no override" marker. At an ordinary instance or subtype contribution path:
+
+- if the inherited effective node has an object-compatible payload, `{}` contributes a present empty object and normal object merge rules apply;
+- if the inherited effective node fixes, requires, or supplies a scalar or list payload, an instance contribution of `{}` is a payload-kind conflict and resolution MUST fail;
+- an author intending to make no contribution and inherit the existing scalar or list payload MUST omit the field or use Source `null`, which preprocessing removes.
+
+The same distinction applies to reserved fields: Source `type: null` is omitted during preprocessing, while Source `type: {}` is a present empty inline type node and remains subject to the type-resolution and canonical-identity rules.
 
 #### List elements
 
-List elements are positional. Implementations MUST NOT delete list elements during cleaning, because doing so changes list length and shifts later indices.
+List elements are positional. Implementations MUST NOT delete list elements during preprocessing or BlueId normalization, because doing so changes list length and shifts later indices.
 
-In Source Documents, a list element that is `null`, an empty object `{}`, or an object that recursively normalizes to an empty object after object-field cleaning MUST be normalized to:
+In Source Documents, a list element whose value is `null` MUST be normalized to:
 
 ```yaml
 $empty: true
 ```
 
-It MUST NOT be deleted from the list, because list position is content.
+It MUST NOT be deleted.
 
-In Canonical Identity Input and BlueId Input, `null` list elements and empty-object list elements MUST NOT appear. They MUST already have been normalized to `$empty: true` or rejected.
+An empty object `{}` is an ordinary list element. An object such as `{x: null}` becomes `{}` after null-field removal and remains an ordinary empty-object element. Empty lists `[]` likewise remain ordinary elements.
 
-The marker `$empty: true` is content. It occupies a list position and affects BlueId.
+In Canonical Identity Input and direct BlueId Input:
 
-Empty lists `[]` are preserved as list elements and are distinct from `$empty: true`.
+- raw `null` list elements are invalid;
+- `{}` list elements are valid and preserved;
+- `[]` list elements are valid and preserved;
+- `$empty: true` is valid placeholder content.
+
+The marker `$empty: true` is content. It occupies a list position and affects BlueId. It is distinct from `{}` and `[]`.
 
 Consequences:
 
 ```text
 id([A, null, B] after preprocessing) == id([A, {$empty: true}, B])
 id([A, null, B] after preprocessing) != id([A, B])
-id([A, {}, B] after preprocessing) == id([A, {$empty: true}, B])
-id([A, [], B]) != id([A, {$empty: true}, B])
+id([A, {}, B]) != id([A, {$empty: true}, B])
+id([A, {x: null}, B] after preprocessing) == id([A, {}, B])
+id([A, [], B]) != id([A, {}, B])
 ```
 
 ### 11.6 Merge semantics (normative)
@@ -2041,14 +2090,15 @@ A direct hasher MUST NOT silently ignore `$previous` and recompute when it canno
 
 ### 11.8 List conformance checklist (normative)
 
+
 Implementations supporting lists MUST satisfy:
 
-- `id([])` is defined and distinct from absent values and cleaned object fields;
+- `id([])` is defined and distinct from absent values and from `{}`;
 - `[A]` hashes differently from `A`;
 - `[[A, B], C]` hashes differently from `[A, B, C]`;
 - Source list `[A, null, B]` normalizes to `[A, {$empty: true}, B]`, not `[A, B]`;
-- Source list `[A, {}, B]` normalizes to `[A, {$empty: true}, B]`, not `[A, B]`;
-- Source list `[A, {x: null}, B]` normalizes to `[A, {$empty: true}, B]`, not `[A, B]`;
+- Source list `[A, {}, B]` preserves the empty-object element and does not normalize it to `$empty: true`;
+- Source list `[A, {x: null}, B]` normalizes to `[A, {}, B]`, not to a placeholder and not to `[A, B]`;
 - `$previous` is recognized only as the first item;
 - `$previous` mismatch fails resolution;
 - `append-only` rejects `$pos`;
@@ -2056,21 +2106,60 @@ Implementations supporting lists MUST satisfy:
 - `positional` accepts valid `$pos` overlays and rejects duplicate or out-of-range overlays;
 - `$empty: true` remains content and affects BlueId;
 - malformed `$empty` placeholder items are rejected;
-- object-field cleaning removes `null` and object fields that normalize to `{}`, but does not delete list positions.
+- null-field removal never turns a present object field or list element into semantic absence.
 
 ### 11.9 Worked examples (informative)
 
-Present-empty vs absent:
+
+Present-empty object versus absent:
 
 ```yaml
-# Absent
+# x absent
 doc: {}
 
-# Present-empty
+# x present as an empty object
 doc:
-  list:
-    type: List
-    items: []
+  x: {}
+
+# x present as an empty list
+doc:
+  x: []
+```
+
+The three Roots are distinct. The first has no `x`; the second has child `x` whose BlueId is `H({})`; the third has child `x` whose list identity is `id([])`.
+
+Object null versus empty object:
+
+```yaml
+# normalizes to {}
+x: null
+```
+
+```yaml
+# remains {x: {}}
+x: {}
+```
+
+List positions:
+
+```yaml
+items:
+  - A
+  - null
+  - {}
+  - []
+  - B
+```
+
+preprocesses conceptually to:
+
+```yaml
+items:
+  - A
+  - $empty: true
+  - {}
+  - []
+  - B
 ```
 
 Append-only timeline:
@@ -2079,43 +2168,37 @@ Append-only timeline:
 # Parent
 entries:
   type: List
-  itemType: Timeline Entry
   mergePolicy: append-only
-  items:
-    - { type: Timeline Entry, ts: "2025-09-01T12:00:00Z", message: A }
-    - { type: Timeline Entry, ts: "2025-09-01T12:05:00Z", message: B }
+  items: [A, B]
 
-# Child
+# Descendant
 entries:
-  type: List
-  itemType: Timeline Entry
-  mergePolicy: append-only
   items:
-    - $previous: { blueId: PrevId }
-    - { type: Timeline Entry, ts: "2025-09-01T12:10:00Z", message: C }
+    - $previous:
+        blueId: <BlueId-of-[A,B]>
+    - C
 ```
 
-Positional hole and refinement:
+Positional refinement:
 
 ```yaml
 # Parent
-entries:
+items:
   type: List
   mergePolicy: positional
   items:
-    - A
-    - $empty: true
-    - C
+    - name: first
+      score: 1
+    - name: second
+      score: 2
 
-# Child
-entries:
-  type: List
-  mergePolicy: positional
+# Descendant
+items:
   items:
     - $pos: 1
-      value: B
-# Resolved: [A, B, C]
+      score: 3
 ```
+
 
 ---
 
@@ -2363,7 +2446,7 @@ Given a Resolved Form `R`, canonicalization MUST:
 - ensure the Canonical Identity Input contains no type aliases; if an instance supplied a type alias, preprocessing MUST replace it with the canonical `type: { blueId: ... }` reference before resolution;
 - for provider-materialized content, preserve the original pure reference when that reference is an instance contribution and the materialized subtree contributes no additional instance-supplied content;
 - remove the `blue` directive if present, because it is invalid after preprocessing;
-- normalize list placeholders so that list `null` and empty-object elements become `$empty: true`;
+- normalize Source list `null` elements to `$empty: true` while preserving empty-object and empty-list elements;
 - consume all `$pos` overlays and produce final canonical list content;
 - produce valid BlueId Input.
 
@@ -2375,7 +2458,9 @@ Form. It is the verified direct BlueId of the type's own Canonical Identity
 Input. Required nested type evidence MUST be complete. If that identity cannot
 be established, canonicalization fails or demands the missing evidence; it
 MUST NOT emit `{}`, `{ blueId: null }`, a mixed reference, or a materialized
-type body in any reserved type position.
+type body in any reserved type position. An authored empty inline type is legal
+exact content with the direct identity of `{}` and therefore canonicalizes in
+its parent as `type: { blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK }`.
 
 ### 13.5 Canonicalization as deterministic diff (normative)
 
@@ -2388,7 +2473,7 @@ For each node:
 3. For each ordinary child field, omit it when the child is fully derivable from the ancestor form. Otherwise include the canonical identity input of the child.
 4. For scalar values, omit an inherited fixed value and include an instance value not derivable from the ancestor.
 5. For lists, use the canonical list rules in §13.6.
-6. After the identity input is constructed, apply BlueId input normalization and object-field cleaning. Empty object fields are omitted. Empty lists are preserved.
+6. After the identity input is constructed, apply BlueId input normalization and null-field removal. Non-derivable empty objects and empty lists are preserved.
 
 Implementations MUST make all tie-breakers deterministic and covered by conformance vectors.
 
@@ -2405,7 +2490,7 @@ When multiple candidate identity inputs would represent the same Resolved Form, 
    exact node's own Canonical Identity Input. Incomplete evidence is not an
    identity and cannot be replaced by an empty or null reference.
 4. **Preserve source pure references materialized only for resolution.** If a Source Document provided a pure reference and the provider materialized it only to resolve or validate content, the Canonical Identity Input MUST prefer the original pure reference form unless the instance supplied an overlay that must be represented.
-5. **Consume overlay controls.** `$pos`, `$replace`, `$previous`, source list `null`, and empty-object list elements MUST NOT appear in Canonical Identity Input. Their effects must be represented as ordinary canonical content.
+5. **Consume overlay controls.** `$pos`, `$replace`, `$previous`, and raw Source-list `null` MUST NOT appear in Canonical Identity Input. Source-list `null` is represented by `$empty: true`; empty-object and empty-list elements remain ordinary canonical content.
 6. **No authoring aliases.** Type aliases and `blue` preprocessing directives MUST NOT appear in Canonical Identity Input.
 7. **Deterministic map ordering.** When serializing helper maps or canonical JSON, property order is the order defined by RFC 8785 canonical JSON. No locale-sensitive ordering, implementation insertion order, or host map order is permitted.
 8. **Smallest semantic identity input wins.** If two candidate identity inputs both satisfy the rules above, the one with fewer non-derivable fields and fewer materialized subtrees wins. If still tied, the RFC 8785 canonical JSON byte sequence of the candidate identity input is compared lexicographically and the smaller byte sequence wins.
@@ -2455,39 +2540,39 @@ BlueId is computed bottom-up over canonical BlueId Input using `H`.
 
 ### 14.2 Context-sensitive cleaning and placeholder normalization (normative)
 
+
 Before hashing, implementations MUST normalize BlueId Input context-sensitively.
 
-#### Object-field cleaning
+#### Object-field rules
 
 For object fields:
 
 - remove fields whose value is `null`;
-- remove fields whose value normalizes to an empty object `{}`;
-- preserve fields whose value is an empty list `[]`;
+- preserve fields whose value is the empty object `{}`;
+- preserve fields whose value is the empty list `[]`.
 
-This removal is recursive and may cascade.
+Null removal is recursive within an object, but an object that becomes empty remains `{}` and is not omitted.
 
 #### List-element rules
 
 For list elements:
 
-- list elements MUST NOT be deleted merely because they are `null` or `{}`;
-- in Source Documents, `null`, `{}`, and elements that recursively clean to empty objects MUST have been normalized to `$empty: true` before BlueId calculation;
-- in BlueId Input, `null` and `{}` list elements are invalid;
-- `[]` is preserved as an empty list element;
+- list elements MUST NOT be deleted;
+- in Source Documents, raw `null` elements MUST have been normalized to `$empty: true` before BlueId calculation;
+- in direct BlueId Input, raw `null` list elements are invalid;
+- `{}` is preserved as an empty-object element;
+- `[]` is preserved as an empty-list element;
 - `$empty: true` is preserved as placeholder content.
 
-This rule preserves list length, order, and positional meaning.
-
-In object-field context, an object that becomes empty after cleaning is omitted. In list-element context, a Source element that becomes empty after recursive cleaning is normalized to `$empty: true` before BlueId Input is produced. Direct BlueId Input MUST NOT contain raw empty-object list elements.
+This rule preserves list length, order, positional meaning, and the distinction among placeholder, empty object, and empty list.
 
 #### Root normalization
 
-The root of BlueId Input is never omitted by cleaning.
+The root of BlueId Input is never omitted.
 
 If the root is an empty object `{}`, its BlueId is `H({})`.
 
-If object-field cleaning causes the root object to become empty, the root remains `{}` and hashes as `H({})`.
+If removing null-valued root children leaves an empty object, the root remains `{}` and hashes as `H({})`.
 
 A root `null` value is not valid BlueId Input. Source Documents whose root is `null` MUST be rejected. Authors who intend an empty object document MUST write `{}`; authors who intend an empty list document MUST write `[]`.
 
@@ -2507,7 +2592,7 @@ Before hashing a Node value:
 - pure references are represented exactly as `{ blueId: X }`;
 - `blue` is rejected;
 - `$pos` is rejected;
-- list `null` and empty-object elements are rejected unless already normalized to `$empty: true`.
+- raw list `null` elements are rejected unless already normalized to `$empty: true`; empty-object and empty-list elements are valid.
 
 Primitive scalar inference for BlueId input normalization uses:
 
@@ -2619,6 +2704,7 @@ This rule ensures nested structure contributes through BlueId rather than throug
 
 ### 14.6 Object fields with `null` (normative)
 
+
 Object fields with `null` values are omitted before map hashing:
 
 ```yaml
@@ -2632,7 +2718,20 @@ normalizes as:
 b: 1
 ```
 
-If recursive cleaning makes a child object empty, the child field is also omitted. Empty lists are preserved.
+Removing a null-valued child does not remove its containing object. Therefore:
+
+```yaml
+a:
+  b: null
+```
+
+normalizes as:
+
+```yaml
+a: {}
+```
+
+Empty objects and empty lists are preserved and contribute their own child BlueIds to the parent map hash.
 
 ### 14.7 List hashing (normative)
 
@@ -2854,7 +2953,7 @@ The semantic properties of the algorithm are:
 - multiplicity is preserved;
 - lists are not flattened;
 - `[A]` is distinct from `A`;
-- `[]` is distinct from absent values and cleaned object fields;
+- `[]` is distinct from absent values, `{}`, and `$empty: true`;
 - `[A, {$empty: true}, B]` is distinct from `[A, B]`;
 - pure-reference and verified materialized elements contribute the same element BlueId;
 - append identity calculation can continue from an established exact prefix BlueId;
@@ -3101,21 +3200,22 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 
 ### 16.1 BlueId algorithm vectors
 
-- **B1.** `id([])` is defined and distinct from absent values and cleaned object fields.
+
+- **B1.** `id([])` is defined and distinct from absence and `id({})`.
 - **B2.** `[A]` hashes differently from `A`.
 - **B3.** `[[A, B], C]` hashes differently from `[A, B, C]`.
 - **B4.** `x: 1` and `x: { value: 1 }` produce the same BlueId after canonical input normalization.
 - **B5.** `x: [a, b]` and `x: { items: [a, b] }` produce the same BlueId.
 - **B6.** A map exactly `{ blueId: X }` hashes to `X`.
-- **B7.** Object-field cleaning removes `null` fields and fields that normalize to empty objects.
-- **B8.** Cleaning preserves `[]`.
+- **B7.** Object-field normalization removes `null` fields but preserves empty-object and empty-list fields.
+- **B8.** `{}` and `[]` are distinct present values in object fields and list elements.
 - **B9.** A node containing `blue` is rejected as direct BlueId Input.
 - **B10.** A map mixing `blueId` with sibling fields is rejected as BlueId Input.
 - **B11.** Primitive scalar inference assigns `Text`, `Integer`, `Double`, and `Boolean` deterministically.
 - **B12.** `$empty: true` remains content and affects BlueId.
-- **B13.** Direct BlueId Input containing a `null` list element is rejected.
-- **B14.** Direct BlueId Input containing an empty-object list element is rejected unless it has already been normalized to `$empty: true` before direct hashing.
-- **B15.** `[A, {$empty: true}, B]` hashes differently from `[A, B]`.
+- **B13.** Direct BlueId Input containing a raw `null` list element is rejected.
+- **B14.** Direct BlueId Input containing an empty-object list element is valid and preserves that element.
+- **B15.** `[A, {$empty: true}, B]`, `[A, {}, B]`, `[A, [], B]`, and `[A, B]` all have distinct identities.
 - **B16.** Integer values above `9007199254740991` or below `-9007199254740991` are represented as quoted canonical decimal text with explicit `Integer` type.
 - **B17.** `this#<index>` is rejected outside the explicit cyclic-set calculation API.
 - **B18.** A source numeric token `1` infers `Integer`; source numeric tokens `1.0` and `1e0` infer `Double`; explicit `type: Double` remains Double even when the canonical JSON number renders as `1`.
@@ -3132,12 +3232,15 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **B29.** A cyclic-set input with duplicate preliminary member inputs fails unless the members contain identity-bearing disambiguators before preliminary hashing.
 - **B30.** A fully materialized node and its direct-node materialization pattern have the same BlueId.
 - **B31.** Replacing a direct child by a pure reference to that child preserves the parent BlueId.
+- **B32.** `{x: {}}` and `{}` have different BlueIds.
+- **B33.** `{x: {}}` and `{x: {blueId: <BlueId-of-{}>}}` identify the same parent when the reference verifies.
+- **B34.** `{x: null}` and `{}` have the same BlueId after Source preprocessing.
 
 ### 16.2 Resolution and canonicalization vectors
 
 - **R1.** Preprocessing removes `blue` and applies baseline transforms before resolution.
 - **R2.** Source list `[A, null, B]` preprocesses to `[A, {$empty: true}, B]`, not `[A, B]`.
-- **R3.** Source list `[A, {}, B]` preprocesses to `[A, {$empty: true}, B]`, not `[A, B]`.
+- **R3.** Source list `[A, {}, B]` preserves `{}` as an ordinary empty-object element and does not convert it to `$empty: true`.
 - **R4.** Type chains merge according to the overlay and subtyping rules.
 - **R5.** Fixed-value invariants cannot be overridden.
 - **R6.** Schema constraints accumulate; irreconcilable constraints fail resolution.
@@ -3151,7 +3254,7 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **R14.** Append-only lists reject `$pos`.
 - **R15.** Positional lists reject inherited-prefix reordering and removal.
 - **R16.** A Minimized Overlay re-resolves to the same Resolved Form.
-- **R17.** Canonical Identity Input does not contain `$previous`, `$pos`, `blue`, unresolved aliases, `null` list elements, or empty-object list elements.
+- **R17.** Canonical Identity Input does not contain `$previous`, `$pos`, `blue`, unresolved aliases, or raw `null` list elements. Empty-object and empty-list elements are valid canonical content.
 - **R18.** Direct hashing of a Resolved Form is not used as the Source Document's BlueId unless the Resolved Form is already identical to its Canonical Identity Input.
 - **R19.** Canonical Identity Input for append-only lists does not serialize `$previous`; `$previous` may appear only in Minimized Overlay or direct anchored BlueId Input.
 - **R20.** Canonical Identity Input contains no type aliases; every `type`,
@@ -3171,12 +3274,12 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **R29.** Inherited effective Integer type rejects non-canonical decimal text.
 - **R30.** Declaration-only label overrides are allowed, but label overrides on inherited fixed-value nodes are rejected.
 - **R31.** Type-chain cycles and self-type cycles are rejected.
-- **R32.** Required metadata-only fields fail, while required instance payloads and inherited fixed payloads pass.
+- **R32.** Required metadata-only fields fail, while required scalar, list, empty-object, non-empty-object, pure-reference, and inherited fixed payloads pass.
 - **R33.** `minFields` and `maxFields` count ordinary fields only.
 - **R34.** Wrong-kind schema keywords fail schema validation.
 - **R35.** `itemType`, `keyType`, and `valueType` validate resolved collection members.
 - **R36.** Direct Dictionary integer keys use canonical textual form and reject duplicate key conflicts after canonicalization.
-- **R37.** Source list `[A, { x: null }, B]` preprocesses to `[A, { $empty: true }, B]`.
+- **R37.** Source list `[A, { x: null }, B]` preprocesses to `[A, {}, B]` and preserves the empty-object position.
 - **R38.** Canonical core type compatibility is nominal by registry BlueId.
 - **R39.** Blue Language operation path root is the empty string under RFC 6901; `/` selects the empty-key member.
 - **R40.** Limited resolution of a demanded path yields the same value, effective type, and applicable constraints as complete resolution.
@@ -3213,6 +3316,14 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **R71.** Directly hashing a Source Document, noncanonical Resolved Form, or Minimized Overlay MUST NOT be assumed to produce the Source Document's BlueId.
 - **R72.** For an inherited append-only list, canonicalization produces the final ordinary list payload, while minimization may use a valid `$previous` overlay; both derive the same BlueId only through the complete Source Document identity pipeline.
 - **R73.** For an inherited positional list, canonicalization produces the final ordinary list payload, while minimization may use `$pos` or `$replace`; both derive the same BlueId only through the complete Source Document identity pipeline.
+- **R74.** In an object field, omission and Source `null` are semantically absent, while `{}` is a present empty-object value.
+- **R75.** Removing the last null-valued child of a present object yields `{}` and does not remove the containing field.
+- **R76.** A non-derivable empty object supplied by the instance is retained in Canonical Identity Input and Minimized Overlay.
+- **R77.** A materialized empty object and a pure reference to `H({})` are representation-equivalent at root, object-field, list-element, and reserved type positions.
+- **R78.** A required field accepts `{}` as present; `minFields: 1` rejects it when non-empty content is required.
+- **R79.** An instance `{}` at a path whose inherited effective payload is scalar fails payload-kind compatibility; omission or Source `null` at the same path contributes no override and inherits the scalar.
+- **R80.** An instance `{}` at a path whose inherited effective payload is a list fails payload-kind compatibility; omission or Source `null` at the same path contributes no override and inherits the list.
+- **R81.** Source `type: null` is omitted during preprocessing, while Source `type: {}` remains a present empty inline type and canonicalizes through its verified exact type identity.
 
 ### 16.3 Provider, expansion, and collapse vectors
 
@@ -3243,18 +3354,18 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 
 The Blue Language 1.0 conformance suite MUST publish machine-readable fixtures with exact expected BlueIds.
 
-The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. The fixture package included with this final implementation baseline contains 153 machine-readable fixtures and a complete vector-to-fixture coverage map.
+The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. This proposal intentionally does not claim a final fixture count or package identity. The count and identities MUST be regenerated only after the inline-type repair and the empty-object semantic change both pass the complete implementation and differential suite.
 
 Its fixture-package identity is:
 
 ```text
-sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55
+<TO-BE-REGENERATED-AFTER-IMPLEMENTATION>
 ```
 
 The canonical core-registry package identity bound by this fixture package is:
 
 ```text
-sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e
+<TO-BE-REGENERATED-AFTER-IMPLEMENTATION>
 ```
 
 The release manifest MUST bind this exact fixture package and the canonical registry manifest. Any fixture or registry change requires a newly calculated package identity.
@@ -3332,10 +3443,10 @@ The fixture suite MUST cover:
 - deterministic integer `multipleOf` LCM merge;
 - enum scalar type inference;
 - typed scalar identity for payload-only scalar hashing;
-- object-field null removal;
+- object-field null removal with preservation of resulting empty objects;
 - list null placeholder normalization;
-- list empty-object placeholder normalization;
-- recursive list element placeholder normalization after object-field cleaning;
+- preservation and hashing of empty-object list elements;
+- recursive null-field removal inside list object elements without converting the resulting `{}` to a placeholder;
 - `$empty`;
 - malformed `$empty` rejection;
 - `$pos` map overlay and `$replace` compatibility;
@@ -3812,8 +3923,9 @@ description: >
   direct object encoding. For direct object encoding, keyType must resolve to
   a scalar key type with a canonical textual form, such as Text, Integer,
   Double, or Boolean. valueType is optional; if omitted and no effective
-  valueType is inherited, values may be any Blue node. Applicable schema
-  constraints are minFields and maxFields.
+  valueType is inherited, values may be any Blue node. A Dictionary with zero
+  direct keys is the exact present empty object `{}`; it is distinct from an
+  absent field. Applicable schema constraints are minFields and maxFields.
 ```
 
 #### List
@@ -3830,14 +3942,15 @@ description: >
   assume positional. append-only forbids changes to the inherited prefix.
   positional allows $pos overlays within the inherited prefix. $previous,
   $pos, $replace, and $empty are recognized only at the top level of items
-  when the node's effective type is List. Source list null and empty object
-  elements normalize to $empty: true and are not deleted. Applicable schema
+  when the node's effective type is List. Source list null elements normalize
+  to $empty: true and are not deleted. Empty object and empty list elements are
+  ordinary content and remain distinct from that placeholder. Applicable schema
   constraints are minItems, maxItems, and uniqueItems.
 ```
 
 ### A.2 Editorial and registry rules
 
-The canonical registry nodes above are the Blue Language 1.0 core type nodes, retaining their established exact content and BlueIds. Their registry manifest is published under the Language 1.0 release and MUST be fixture-verified together with this specification. Non-normative examples, tutorials, rationale, translations, and implementation notes are not part of the canonical type nodes unless intentionally included in the registry entries.
+The canonical registry nodes above are the proposed Blue Language 1.0 core type nodes for this pre-stable revision. Their final exact content and BlueIds MUST be regenerated and fixture-verified together with this specification. In particular, the identity-bearing `Dictionary` description now states that a zero-key Dictionary is present `{}`, and the `List` description changes because empty-object list elements are now ordinary content rather than placeholders. Non-normative examples, tutorials, rationale, translations, and implementation notes are not part of the canonical type nodes unless intentionally included in the registry entries.
 
 Additional explanatory documentation MAY follow this appendix or appear in separate registry documentation, but it MUST be clearly marked non-canonical unless it is included in the registry node itself.
 
@@ -3855,7 +3968,11 @@ This appendix is informative.
 
 ### C.1 Do not delete list positions
 
-`[A, null, B]` does not mean `[A, B]`. Source list `null` and `{}` elements normalize to `$empty: true`.
+`[A, null, B]` does not mean `[A, B]`. Source list `null` normalizes to `$empty: true`; `{}` remains an ordinary empty-object element.
+
+### C.1a Do not treat `{}` as absence
+
+A present empty object is exact content. `{x: {}}` is different from `{}`, while `{x: null}` preprocesses to `{}`. A verified pure reference to `H({})` must behave exactly like the inline empty object.
 
 ### C.2 Do not hash `blue`
 
