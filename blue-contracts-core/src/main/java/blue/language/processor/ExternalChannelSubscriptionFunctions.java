@@ -3,7 +3,6 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.util.ProcessorContractConstants;
-import blue.language.identity.DirectBlueIdCalculator;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,13 +15,14 @@ import java.util.Set;
  * Channel runtime type.
  *
  * <p>The header functions build and validate the revision-complete
- * subscription index.  {@link #payload(ChannelContract, Node)} and
- * {@link #checkpointSubject(ChannelContract, Node, Node)} authoritatively
- * freeze the accepted delivery before initialization. Implementations must
- * depend only on the supplied effective contract snapshot, immutable
- * same-scope dependency context, and exact event. Dependencies used during
- * event evaluation must be covered by those declared while deriving the
- * immutable subscription header.</p>
+ * subscription index. {@link #payload(ChannelContract, Node)} and the
+ * context-aware {@link #checkpointSubject(ChannelContract, Node, Node,
+ * ExternalChannelFunctionContext)} authoritatively freeze the accepted
+ * delivery before initialization. Implementations must depend only on the
+ * supplied effective contract snapshot, immutable same-scope dependency
+ * context, and exact event. Dependencies used during event evaluation must be
+ * covered by those declared while deriving the immutable subscription
+ * header.</p>
  *
  * @param <T> exact External Channel contract model handled by the functions
  */
@@ -352,35 +352,37 @@ public interface ExternalChannelSubscriptionFunctions<
     /**
      * Returns the exact checkpoint-subject node for an accepted occurrence.
      *
-     * <p>The default is the Contracts 1.0 exact input-event identity retained
-     * as a pure reference. A runtime type with another immutable subject or
-     * newness policy must override this function.</p>
+     * <p>Checkpoint defaults require the context-aware overload because only
+     * that boundary owns the admission-proved event identity. Runtime types
+     * with another immutable subject or newness policy may override this
+     * context-free form; calling its default implementation fails closed.</p>
      *
      * @param immutableContractSnapshot immutable effective Channel contract
      * @param exactEvent exact incoming event
      * @param exactPayload exact accepted payload
      * @return immutable checkpoint subject
-     * @throws IllegalArgumentException when {@code exactEvent} is {@code null}
+     * @throws UnsupportedOperationException always for the default
+     *         implementation
      */
     default Node checkpointSubject(
             T immutableContractSnapshot,
             Node exactEvent,
             Node exactPayload) {
-        if (exactEvent == null) {
-            throw new IllegalArgumentException(
-                    "External Channel checkpoint subject requires an exact "
-                            + "event");
-        }
-        return new Node().blueId(
-                DirectBlueIdCalculator.calculateBlueId(exactEvent));
+        throw new UnsupportedOperationException(
+                "Default External Channel checkpoint subject requires the "
+                        + "context-aware function boundary");
     }
 
     /**
      * Context-aware checkpoint subject.
      *
-     * <p>A composite runtime can return a selected member evaluation's exact
-     * subject unchanged. The subject may be an inline minimal ordering value;
-     * it is not required to retain the complete event.</p>
+     * <p>The default retains the admission-proved exact input-event identity
+     * as a pure reference. It never hashes the resolved event cursor. A
+     * context-free override remains authoritative and is dispatched exactly;
+     * a composite runtime can instead override this method and return a
+     * selected member evaluation's exact subject unchanged. The subject may
+     * be an inline minimal ordering value; it is not required to retain the
+     * complete event.</p>
      *
      * @param immutableContractSnapshot immutable effective Channel contract
      * @param exactEvent exact incoming event
@@ -393,10 +395,19 @@ public interface ExternalChannelSubscriptionFunctions<
             Node exactEvent,
             Node exactPayload,
             ExternalChannelFunctionContext context) {
-        return checkpointSubject(
-                immutableContractSnapshot,
-                exactEvent,
-                exactPayload);
+        if (ExternalChannelFunctionRules.overridesExact(
+                this,
+                "checkpointSubject",
+                ChannelContract.class,
+                Node.class,
+                Node.class)) {
+            return checkpointSubject(
+                    immutableContractSnapshot,
+                    exactEvent,
+                    exactPayload);
+        }
+        return new Node().blueId(
+                context.exactEventBlueId());
     }
 
     /**

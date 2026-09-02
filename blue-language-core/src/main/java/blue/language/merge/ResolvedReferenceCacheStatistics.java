@@ -1,8 +1,8 @@
 package blue.language.merge;
 
 /**
- * Immutable accounting value shared by the public compatibility view and the
- * cache's internal accounting collaborator.
+ * Immutable accounting value shared by the public cache view and the cache's
+ * internal accounting collaborator.
  */
 class ResolvedReferenceCacheStatistics {
 
@@ -12,11 +12,6 @@ class ResolvedReferenceCacheStatistics {
     private final long verifiedHighWaterWeightBytes;
     private final long verifiedEvictions;
     private final long verifiedOversizedRejections;
-    private final int transientTrustedEntries;
-    private final long transientTrustedCurrentWeightBytes;
-    private final long transientTrustedHighWaterWeightBytes;
-    private final long transientTrustedEvictions;
-    private final long transientTrustedOversizedRejections;
     private final int structuralEntries;
     private final long structuralCurrentWeightBytes;
     private final long structuralHighWaterWeightBytes;
@@ -30,11 +25,6 @@ class ResolvedReferenceCacheStatistics {
             long verifiedHighWaterWeightBytes,
             long verifiedEvictions,
             long verifiedOversizedRejections,
-            int transientTrustedEntries,
-            long transientTrustedCurrentWeightBytes,
-            long transientTrustedHighWaterWeightBytes,
-            long transientTrustedEvictions,
-            long transientTrustedOversizedRejections,
             int structuralEntries,
             long structuralCurrentWeightBytes,
             long structuralHighWaterWeightBytes,
@@ -46,14 +36,6 @@ class ResolvedReferenceCacheStatistics {
         this.verifiedHighWaterWeightBytes = verifiedHighWaterWeightBytes;
         this.verifiedEvictions = verifiedEvictions;
         this.verifiedOversizedRejections = verifiedOversizedRejections;
-        this.transientTrustedEntries = transientTrustedEntries;
-        this.transientTrustedCurrentWeightBytes =
-                transientTrustedCurrentWeightBytes;
-        this.transientTrustedHighWaterWeightBytes =
-                transientTrustedHighWaterWeightBytes;
-        this.transientTrustedEvictions = transientTrustedEvictions;
-        this.transientTrustedOversizedRejections =
-                transientTrustedOversizedRejections;
         this.structuralEntries = structuralEntries;
         this.structuralCurrentWeightBytes = structuralCurrentWeightBytes;
         this.structuralHighWaterWeightBytes = structuralHighWaterWeightBytes;
@@ -113,51 +95,6 @@ class ResolvedReferenceCacheStatistics {
      */
     public long verifiedOversizedRejections() {
         return verifiedOversizedRejections;
-    }
-
-    /**
-     * Returns the retired transient-trust entry count.
-     *
-     * @return legacy transient-trust entry count, always zero
-     */
-    public int transientTrustedEntries() {
-        return transientTrustedEntries;
-    }
-
-    /**
-     * Returns the retired transient-trust current weight.
-     *
-     * @return legacy transient-trust current weight in bytes, always zero
-     */
-    public long transientTrustedCurrentWeightBytes() {
-        return transientTrustedCurrentWeightBytes;
-    }
-
-    /**
-     * Returns the retired transient-trust high-water weight.
-     *
-     * @return legacy transient-trust high-water weight in bytes, always zero
-     */
-    public long transientTrustedHighWaterWeightBytes() {
-        return transientTrustedHighWaterWeightBytes;
-    }
-
-    /**
-     * Returns the retired transient-trust eviction count.
-     *
-     * @return legacy transient-trust eviction count, always zero
-     */
-    public long transientTrustedEvictions() {
-        return transientTrustedEvictions;
-    }
-
-    /**
-     * Returns the retired transient-trust oversized-rejection count.
-     *
-     * @return legacy transient-trust oversized-rejection count, always zero
-     */
-    public long transientTrustedOversizedRejections() {
-        return transientTrustedOversizedRejections;
     }
 
     /**

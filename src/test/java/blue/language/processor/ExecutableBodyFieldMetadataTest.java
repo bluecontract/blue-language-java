@@ -19,6 +19,7 @@ import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -287,7 +288,8 @@ class ExecutableBodyFieldMetadataTest {
                         FrozenNode.fromUncheckedCanonicalNode(
                                 document),
                         Collections.singleton("/"),
-                        handlerMetadata);
+                        handlerMetadata,
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -361,7 +363,8 @@ class ExecutableBodyFieldMetadataTest {
                         FrozenNode.fromUncheckedCanonicalNode(
                                 fixture.document()),
                         Collections.singleton("/"),
-                        registry.executableBodyFieldsByType());
+                        registry.executableBodyFieldsByType(),
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(

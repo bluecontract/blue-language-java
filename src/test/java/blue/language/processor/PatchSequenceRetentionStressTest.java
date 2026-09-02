@@ -82,7 +82,7 @@ class PatchSequenceRetentionStressTest {
     private SequentialPatchPlanningSession session(Node initial) {
         FrozenNode root = FrozenNode.fromResolvedNode(initial);
         return new SequentialPatchPlanningSession("/",
-                DocumentProcessingRuntime.workingPlanningContext(root, root, false, null),
+                PatchPlanningContextFactory.create(root, root, false, null),
                 null,
                 null,
                 NOOP_METRICS);

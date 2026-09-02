@@ -9,6 +9,7 @@ import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 
 import blue.language.merge.MergingProcessor;
@@ -31,7 +32,12 @@ public class ExclusiveItemsOrValueCheckerTest {
         MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
         // then
-        assertDoesNotThrow(() -> processor.process(target, source, null, null));
+        assertDoesNotThrow(() -> processor.process(
+                target,
+                source,
+                null,
+                null,
+                CanonicalTypeIdentityLookup.incomplete()));
     }
 
     @Test
@@ -44,7 +50,12 @@ public class ExclusiveItemsOrValueCheckerTest {
         MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
         // then
-        assertDoesNotThrow(() -> processor.process(target, source, null, null));
+        assertDoesNotThrow(() -> processor.process(
+                target,
+                source,
+                null,
+                null,
+                CanonicalTypeIdentityLookup.incomplete()));
     }
 
     @Test
@@ -58,7 +69,12 @@ public class ExclusiveItemsOrValueCheckerTest {
         MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
         // then
-        assertThrows(IllegalArgumentException.class, () -> processor.process(target, source, null, null));
+        assertThrows(IllegalArgumentException.class, () -> processor.process(
+                target,
+                source,
+                null,
+                null,
+                CanonicalTypeIdentityLookup.incomplete()));
     }
 
     @Test
@@ -70,6 +86,11 @@ public class ExclusiveItemsOrValueCheckerTest {
         MergingProcessor processor = new ExclusiveItemsOrValueChecker();
 
         // then
-        assertDoesNotThrow(() -> processor.process(target, source, null, null));
+        assertDoesNotThrow(() -> processor.process(
+                target,
+                source,
+                null,
+                null,
+                CanonicalTypeIdentityLookup.incomplete()));
     }
 }

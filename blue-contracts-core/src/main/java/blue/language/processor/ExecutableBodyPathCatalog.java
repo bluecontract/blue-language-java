@@ -6,6 +6,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
@@ -46,6 +47,37 @@ final class ExecutableBodyPathCatalog {
             Iterable<String> openedScopePaths,
             Map<String, List<String>> executableBodyFieldsByType,
             ProcessingSnapshotManager exactMaterializer) {
+        return fromNodeIncludingTypeContracts(
+                document,
+                openedScopePaths,
+                executableBodyFieldsByType,
+                exactMaterializer,
+                false);
+    }
+
+    /**
+     * Identity-only counterpart that retains pure referenced contract headers
+     * as exact values instead of demanding their content for recognition.
+     */
+    static Set<String> fromNodeIncludingTypeContractsForSourceIdentity(
+            Node document,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> exactSourceFieldsByType,
+            ProcessingSnapshotManager exactMaterializer) {
+        return fromNodeIncludingTypeContracts(
+                document,
+                openedScopePaths,
+                exactSourceFieldsByType,
+                exactMaterializer,
+                true);
+    }
+
+    private static Set<String> fromNodeIncludingTypeContracts(
+            Node document,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            ProcessingSnapshotManager exactMaterializer,
+            boolean retainPureContractReferences) {
         Set<String> result = new LinkedHashSet<>();
         Set<String> selectedScopes = openedScopes(openedScopePaths);
         for (String scopePath : selectedScopes) {
@@ -58,7 +90,8 @@ final class ExecutableBodyPathCatalog {
                     executableBodyFieldsByType,
                     result,
                     exactMaterializer,
-                    selectedScopes);
+                    selectedScopes,
+                    retainPureContractReferences);
         }
         return result;
     }
@@ -69,6 +102,34 @@ final class ExecutableBodyPathCatalog {
             Iterable<String> openedScopePaths,
             Map<String, List<String>> executableBodyFieldsByType,
             ProcessingSnapshotManager exactMaterializer) {
+        return fromNodeDirectContracts(
+                document,
+                openedScopePaths,
+                executableBodyFieldsByType,
+                exactMaterializer,
+                false);
+    }
+
+    /** Identity-only direct-contract catalog with exact reference retention. */
+    static Set<String> fromNodeDirectContractsForSourceIdentity(
+            Node document,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> exactSourceFieldsByType,
+            ProcessingSnapshotManager exactMaterializer) {
+        return fromNodeDirectContracts(
+                document,
+                openedScopePaths,
+                exactSourceFieldsByType,
+                exactMaterializer,
+                true);
+    }
+
+    private static Set<String> fromNodeDirectContracts(
+            Node document,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            ProcessingSnapshotManager exactMaterializer,
+            boolean retainPureContractReferences) {
         Set<String> result = new LinkedHashSet<>();
         for (String scopePath : openedScopes(openedScopePaths)) {
             Node scope = JsonPointer.ROOT.equals(scopePath)
@@ -79,7 +140,8 @@ final class ExecutableBodyPathCatalog {
                     JsonPointer.split(scopePath),
                     executableBodyFieldsByType,
                     result,
-                    exactMaterializer);
+                    exactMaterializer,
+                    retainPureContractReferences);
         }
         return result;
     }
@@ -94,7 +156,8 @@ final class ExecutableBodyPathCatalog {
             List<String> path,
             Map<String, List<String>> executableBodyFieldsByType,
             Set<String> result,
-            ProcessingSnapshotManager materializer) {
+            ProcessingSnapshotManager materializer,
+            boolean retainPureContractReferences) {
         if (node == null
                 || executableBodyFieldsByType == null
                 || executableBodyFieldsByType.isEmpty()) {
@@ -116,15 +179,25 @@ final class ExecutableBodyPathCatalog {
             Node contract = entry.getValue();
             if (contract != null && contract.isReferenceOnly()
                     && materializer != null) {
+                if (retainPureContractReferences) {
+                    addContractPath(path, entry.getKey(), result);
+                    continue;
+                }
                 contract = materializeVerifiedExact(
                         materializer,
                         FrozenNode.fromNode(contract),
                         "Contract-header recognition").toNode();
             }
             List<String> fields = executableBodyFieldsByType.get(
-                    exactTypeBlueId(contract));
+                    ExecutableBodyTypeIdentity.fromSource(
+                            contract, materializer));
             if (fields != null) {
-                addEventMatcherPath(contract, path, entry.getKey(), result);
+                // Event is an exact header matcher, not an executable body.
+                // Identity callers include it through the exact-field map.
+                if (!retainPureContractReferences) {
+                    addEventMatcherPath(
+                            contract, path, entry.getKey(), result);
+                }
                 for (String field : fields) {
                     addBodyPath(path, entry.getKey(), field, result);
                 }
@@ -135,7 +208,8 @@ final class ExecutableBodyPathCatalog {
     static Set<String> fromFrozen(
             FrozenNode document,
             Iterable<String> openedScopePaths,
-            Map<String, List<String>> executableBodyFieldsByType) {
+            Map<String, List<String>> executableBodyFieldsByType,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         Set<String> result = new LinkedHashSet<>();
         for (String scopePath : openedScopes(openedScopePaths)) {
             FrozenNode scope = document != null
@@ -145,7 +219,8 @@ final class ExecutableBodyPathCatalog {
                     scope,
                     JsonPointer.split(scopePath),
                     executableBodyFieldsByType,
-                    result);
+                    result,
+                    canonicalTypeIdentities);
         }
         return result;
     }
@@ -242,6 +317,11 @@ final class ExecutableBodyPathCatalog {
                 document, openedScopePaths);
     }
 
+    /** Finds exact processor-state witnesses carried by unapplied patches. */
+    static Set<String> processorStatePatchEffectPaths(Node source) {
+        return ProcessorStateReferencePathCatalog.findInPatchEffects(source);
+    }
+
     /**
      * Finds references that are ordinary relative to the selected scope
      * closure. Type, contracts-map, and list-replacement references are
@@ -272,9 +352,16 @@ final class ExecutableBodyPathCatalog {
         if (!checked.isResolutionComplete()) {
             return checked;
         }
-        return ResolvedSnapshot.withDeferredResolution(
-                checked.frozenCanonicalRoot(),
-                checked.frozenResolvedRoot());
+        return checked.isSourceBacked()
+                ? ResolvedSnapshot.withSource(
+                        checked.frozenSourceRoot(),
+                        checked.frozenResolvedRoot(),
+                        checked.canonicalTypeIdentities(),
+                        false)
+                : ResolvedSnapshot.withDeferredResolution(
+                        checked.frozenCanonicalRoot(),
+                        checked.frozenResolvedRoot(),
+                        checked.canonicalTypeIdentities());
     }
 
     static FrozenNode materializeVerifiedExact(
@@ -401,7 +488,8 @@ final class ExecutableBodyPathCatalog {
             Map<String, List<String>> executableBodyFieldsByType,
             Set<String> result,
             ProcessingSnapshotManager exactMaterializer,
-            Set<String> selectedScopes) {
+            Set<String> selectedScopes,
+            boolean retainPureContractReferences) {
         if (node == null) {
             return;
         }
@@ -412,14 +500,17 @@ final class ExecutableBodyPathCatalog {
                 result,
                 exactMaterializer,
                 new LinkedHashSet<String>(),
+                new IdentityHashMap<Node, Boolean>(),
                 0,
-                selectedScopes);
+                selectedScopes,
+                retainPureContractReferences);
         collectDirectContracts(
                 node,
                 path,
                 executableBodyFieldsByType,
                 result,
-                exactMaterializer);
+                exactMaterializer,
+                retainPureContractReferences);
     }
 
     /**
@@ -433,9 +524,11 @@ final class ExecutableBodyPathCatalog {
             Map<String, List<String>> executableBodyFieldsByType,
             Set<String> result,
             ProcessingSnapshotManager exactMaterializer,
-            Set<String> activeTypes,
+            Set<String> activeReferenceTypes,
+            IdentityHashMap<Node, Boolean> activeInlineTypes,
             int depth,
-            Set<String> selectedScopes) {
+            Set<String> selectedScopes,
+            boolean retainPureContractReferences) {
         if (declaredType == null) {
             return;
         }
@@ -459,10 +552,14 @@ final class ExecutableBodyPathCatalog {
                         "Scope-type executable-header recognition")
                         .toNode()
                 : declaredType;
-        String identity = declaredType.getBlueId() != null
+        String referenceIdentity = declaredType.isReferenceOnly()
                 ? declaredType.getBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(exactType);
-        if (!activeTypes.add(identity)) {
+                : null;
+        boolean entered = referenceIdentity != null
+                ? activeReferenceTypes.add(referenceIdentity)
+                : activeInlineTypes.put(
+                        declaredType, Boolean.TRUE) == null;
+        if (!entered) {
             throw new MustUnderstandFailureException(
                     "Cyclic type contribution while cataloging executable fields",
                     ProcessorErrorCategory.InvalidContractBinding);
@@ -474,24 +571,32 @@ final class ExecutableBodyPathCatalog {
                     executableBodyFieldsByType,
                     result,
                     exactMaterializer,
-                    activeTypes,
+                    activeReferenceTypes,
+                    activeInlineTypes,
                     depth + 1,
-                    selectedScopes);
+                    selectedScopes,
+                    retainPureContractReferences);
             collectDirectContracts(
                     exactType,
                     path,
                     executableBodyFieldsByType,
                     result,
-                    exactMaterializer);
+                    exactMaterializer,
+                    retainPureContractReferences);
             collectTypeProvidedScopes(
                     exactType,
                     path,
                     executableBodyFieldsByType,
                     result,
                     exactMaterializer,
-                    selectedScopes);
+                    selectedScopes,
+                    retainPureContractReferences);
         } finally {
-            activeTypes.remove(identity);
+            if (referenceIdentity != null) {
+                activeReferenceTypes.remove(referenceIdentity);
+            } else {
+                activeInlineTypes.remove(declaredType);
+            }
         }
     }
 
@@ -508,7 +613,8 @@ final class ExecutableBodyPathCatalog {
             Map<String, List<String>> executableBodyFieldsByType,
             Set<String> result,
             ProcessingSnapshotManager exactMaterializer,
-            Set<String> selectedScopes) {
+            Set<String> selectedScopes,
+            boolean retainPureContractReferences) {
         if (typeContribution == null) {
             return;
         }
@@ -523,7 +629,8 @@ final class ExecutableBodyPathCatalog {
                         executableBodyFieldsByType,
                         result,
                         exactMaterializer,
-                        selectedScopes);
+                        selectedScopes,
+                        retainPureContractReferences);
             }
         }
         if (typeContribution.getItems() != null) {
@@ -538,7 +645,8 @@ final class ExecutableBodyPathCatalog {
                         executableBodyFieldsByType,
                         result,
                         exactMaterializer,
-                        selectedScopes);
+                        selectedScopes,
+                        retainPureContractReferences);
             }
         }
     }
@@ -550,7 +658,8 @@ final class ExecutableBodyPathCatalog {
             Map<String, List<String>> executableBodyFieldsByType,
             Set<String> result,
             ProcessingSnapshotManager exactMaterializer,
-            Set<String> selectedScopes) {
+            Set<String> selectedScopes,
+            boolean retainPureContractReferences) {
         String effectivePath = JsonPointer.toPointer(childPath);
         if (!participatesInOpenedClosure(
                 effectivePath, selectedScopes)) {
@@ -572,14 +681,16 @@ final class ExecutableBodyPathCatalog {
                 executableBodyFieldsByType,
                 result,
                 exactMaterializer,
-                selectedScopes);
+                selectedScopes,
+                retainPureContractReferences);
         collectTypeProvidedScopes(
                 exactChild,
                 childPath,
                 executableBodyFieldsByType,
                 result,
                 exactMaterializer,
-                selectedScopes);
+                selectedScopes,
+                retainPureContractReferences);
     }
 
     /** Adds executable paths declared by one exact scope contribution. */
@@ -588,7 +699,8 @@ final class ExecutableBodyPathCatalog {
             List<String> path,
             Map<String, List<String>> executableBodyFieldsByType,
             Set<String> result,
-            ProcessingSnapshotManager exactMaterializer) {
+            ProcessingSnapshotManager exactMaterializer,
+            boolean retainPureContractReferences) {
         if (executableBodyFieldsByType == null
                 || executableBodyFieldsByType.isEmpty()) {
             return;
@@ -611,15 +723,26 @@ final class ExecutableBodyPathCatalog {
             if (contract != null
                     && contract.isReferenceOnly()
                     && exactMaterializer != null) {
+                if (retainPureContractReferences) {
+                    addContractPath(path, entry.getKey(), result);
+                    continue;
+                }
                 contract = materializeVerifiedExact(
                         exactMaterializer,
                         FrozenNode.fromNode(contract),
                         "Contract-header recognition").toNode();
             }
             List<String> fields = executableBodyFieldsByType.get(
-                    exactTypeBlueId(contract));
+                    ExecutableBodyTypeIdentity.fromSource(
+                            contract,
+                            exactMaterializer));
             if (fields != null) {
-                addEventMatcherPath(contract, path, entry.getKey(), result);
+                // Event is an exact header matcher, not an executable body.
+                // Identity callers include it through the exact-field map.
+                if (!retainPureContractReferences) {
+                    addEventMatcherPath(
+                            contract, path, entry.getKey(), result);
+                }
                 for (String field : fields) {
                     addBodyPath(path, entry.getKey(), field, result);
                 }
@@ -631,7 +754,8 @@ final class ExecutableBodyPathCatalog {
             FrozenNode node,
             List<String> path,
             Map<String, List<String>> executableBodyFieldsByType,
-            Set<String> result) {
+            Set<String> result,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         if (node == null
                 || executableBodyFieldsByType == null
                 || executableBodyFieldsByType.isEmpty()) {
@@ -645,7 +769,9 @@ final class ExecutableBodyPathCatalog {
                 : contracts.getProperties().entrySet()) {
             FrozenNode contract = entry.getValue();
             List<String> fields = executableBodyFieldsByType.get(
-                    exactTypeBlueId(contract));
+                    ExecutableBodyTypeIdentity.fromResolved(
+                            contract,
+                            canonicalTypeIdentities));
             if (fields != null) {
                 addEventMatcherPath(contract, path, entry.getKey(), result);
                 for (String field : fields) {
@@ -870,23 +996,14 @@ final class ExecutableBodyPathCatalog {
         result.add(JsonPointer.toPointer(bodyPath));
     }
 
-    private static String exactTypeBlueId(Node contract) {
-        if (contract == null || contract.getType() == null) {
-            return null;
-        }
-        Node type = contract.getType();
-        return type.getBlueId() != null
-                ? type.getBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(type);
+    private static void addContractPath(
+            List<String> scopePath,
+            String contractKey,
+            Set<String> result) {
+        List<String> contractPath = new ArrayList<>(scopePath);
+        contractPath.add(ProcessorContractConstants.KEY_CONTRACTS);
+        contractPath.add(contractKey);
+        result.add(JsonPointer.toPointer(contractPath));
     }
 
-    private static String exactTypeBlueId(FrozenNode contract) {
-        if (contract == null || contract.getType() == null) {
-            return null;
-        }
-        FrozenNode type = contract.getType();
-        return type.getReferenceBlueId() != null
-                ? type.getReferenceBlueId()
-                : type.blueId();
-    }
 }

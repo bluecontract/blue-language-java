@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
@@ -304,13 +305,12 @@ final class ExternalSubscriptionProjectionBuilderProviderOutcomeTest {
             String typeBlueId,
             Set<String> requestedKeys,
             boolean includeProcessEmbedded) {
-        return ExternalSubscriptionProjectionBuilder
-                .typeContributesToSubscriptionSurface(
-                        manager,
-                        reference(typeBlueId),
-                        requestedKeys,
-                        includeProcessEmbedded,
-                        new LinkedHashSet<String>());
+        return SubscriptionSurfaceTypeInspector.contributes(
+                manager,
+                reference(typeBlueId),
+                requestedKeys,
+                includeProcessEmbedded,
+                new LinkedHashSet<String>());
     }
 
     private static ExternalSubscriptionProjectionBuilder builder(
@@ -411,7 +411,8 @@ final class ExternalSubscriptionProjectionBuilderProviderOutcomeTest {
             FrozenNode canonical = FrozenNode.fromNode(document);
             return ResolvedSnapshot.withDeferredResolution(
                     canonical,
-                    FrozenNode.fromResolvedNode(document));
+                    FrozenNode.fromResolvedNode(document),
+                    CanonicalTypeIdentityLookup.incomplete());
         }
 
         @Override

@@ -1,23 +1,26 @@
 package blue.language.provider;
 
-import blue.language.model.wire.BlueLanguageConstants;
-
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
-import blue.language.model.Nodes;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import static blue.language.identity.DirectBlueIdCalculator.calculateUncheckedBlueId;
 import static blue.language.model.wire.BlueLanguageConstants.*;
 
 /**
- * Compatibility helpers for nominal Blue type identity and subtype traversal.
+ * Helpers for canonical Blue type identity and subtype traversal.
  *
- * <p>Type labels are ignored where identity requires it, while released core
- * types retain their fixed identities. Provider-backed traversal requires each
- * non-core reference to resolve to exactly one type definition.</p>
+ * <p>Provider-backed traversal requires each non-core reference to resolve to
+ * exactly one type definition. Expanded effective types require
+ * resolver-issued canonical identity evidence; this class never manufactures
+ * aliases by stripping labels or hashing a completed type body.</p>
  */
 public class Types {
 
@@ -34,125 +37,110 @@ public class Types {
     }
 
     /**
-     * Tests whether one type is identical to or derives from another.
+     * Tests whether one completed type is identical to or derives from
+     * another using resolver-issued canonical identities.
      *
-     * @param subtype candidate subtype
+     * @param subtype candidate completed type
      * @param supertype required supertype
-     * @param nodeProvider provider used to traverse non-core type references
+     * @param nodeProvider provider used to traverse pure type references
+     * @param typeIdentities resolver-issued effective identities
      * @return {@code true} when the candidate is the same type or a subtype
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if canonical evidence is missing or
+     *         conflicting, or a reference resolves ambiguously
      */
-    public static boolean isSubtype(Node subtype, Node supertype, NodeProvider nodeProvider) {
+    public static boolean isSubtype(
+            Node subtype,
+            Node supertype,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Objects.requireNonNull(typeIdentities, "typeIdentities");
         if (subtype == null || supertype == null) {
             return false;
         }
-        String subtypeBlueId = typeBlueId(subtype);
-        String supertypeBlueId = typeBlueId(supertype);
-        if (sameType(subtype, supertype, subtypeBlueId, supertypeBlueId))
+        String supertypeBlueId = canonicalIdentity(
+                supertype, typeIdentities);
+        String subtypeBlueId = canonicalIdentity(
+                subtype, typeIdentities);
+        if (supertypeBlueId.equals(subtypeBlueId)) {
             return true;
-        if (isCoreTypeIdentity(supertype, supertypeBlueId) && isAnonymousCoreAlias(subtype)) {
-            return false;
         }
 
-        if (CORE_TYPE_BLUE_IDS.contains(subtypeBlueId)) {
-            Node current = supertype;
-            while (current != null) {
-                String currentBlueId = typeBlueId(current);
-                if (sameType(current, subtype, currentBlueId, subtypeBlueId))
-                    return true;
-                current = getType(current, nodeProvider);
+        return hasAncestorIdentity(
+                subtype,
+                supertypeBlueId,
+                nodeProvider,
+                typeIdentities);
+    }
+
+    private static boolean hasAncestorIdentity(
+            Node candidate,
+            String requiredBlueId,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+
+        Set<String> visitedReferenceBlueIds = new HashSet<>();
+        Set<Node> visitedInlineNodes = Collections.newSetFromMap(
+                new IdentityHashMap<Node, Boolean>());
+        Node current = candidate;
+        if (current.isReferenceOnly()) {
+            visitedReferenceBlueIds.add(current.getBlueId());
+            current = fetchSingleDefinition(
+                    current.getBlueId(), nodeProvider);
+        }
+
+        while (current != null && visitedInlineNodes.add(current)) {
+            Node parent = current.getType();
+            if (parent == null) {
+                return false;
             }
-            return false;
-        }
-
-        Node current = firstSubtypeTraversalNode(subtype, nodeProvider);
-        while (current != null) {
-            String blueId = typeBlueId(current);
-            if (sameType(current, supertype, blueId, supertypeBlueId))
+            String parentBlueId = canonicalIdentity(
+                    parent, typeIdentities);
+            if (requiredBlueId.equals(parentBlueId)) {
                 return true;
-            current = getType(current, nodeProvider);
+            }
+            if (parent.isReferenceOnly()) {
+                if (!visitedReferenceBlueIds.add(parentBlueId)) {
+                    return false;
+                }
+                current = fetchSingleDefinition(
+                        parentBlueId, nodeProvider);
+            } else {
+                current = parent;
+            }
         }
         return false;
     }
 
-    private static Node firstSubtypeTraversalNode(Node subtype, NodeProvider nodeProvider) {
-        if (subtype.getBlueId() != null && subtype.isReferenceOnly() && !CORE_TYPE_BLUE_IDS.contains(subtype.getBlueId())) {
-            List<Node> referencedNodes = nodeProvider.fetchByBlueId(subtype.getBlueId());
-            if (referencedNodes == null || referencedNodes.isEmpty()) {
-                return null;
-            }
-            if (referencedNodes.size() > 1) {
-                throw new IllegalStateException(String.format(
-                        "Expected a single node for type with blueId '%s', but found multiple.",
-                        subtype.getBlueId()
-                ));
-            }
-            return referencedNodes.get(0);
+    private static String canonicalIdentity(
+            Node type,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (type.isReferenceOnly()) {
+            return type.getBlueId();
         }
-        return getType(subtype, nodeProvider);
+        if (isBareCoreTypeName(type)) {
+            return CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(type.getName());
+        }
+        return typeIdentities.requireCanonicalTypeBlueId(type);
     }
 
-    private static boolean sameType(Node left, Node right, String leftBlueId, String rightBlueId) {
-        if (left.getBlueId() != null && left.getBlueId().equals(right.getBlueId())) {
-            return true;
+    private static Node fetchSingleDefinition(
+            String blueId,
+            NodeProvider nodeProvider) {
+        List<Node> referencedNodes = Objects.requireNonNull(
+                nodeProvider, "nodeProvider")
+                .fetchByBlueId(blueId);
+        if (referencedNodes == null || referencedNodes.isEmpty()) {
+            return null;
         }
-        if (left.getBlueId() != null && left.getBlueId().equals(rightBlueId)) {
-            return true;
+        if (referencedNodes.size() > 1) {
+            throw new IllegalStateException(String.format(
+                    "Expected a single node for type with blueId '%s', "
+                            + "but found multiple.",
+                    blueId));
         }
-        if (right.getBlueId() != null && right.getBlueId().equals(leftBlueId)) {
-            return true;
-        }
-        if (leftBlueId.equals(rightBlueId)) {
-            return true;
-        }
-        String leftCompatibility = compatibilityBlueId(left);
-        String rightCompatibility = compatibilityBlueId(right);
-        if (CORE_TYPE_BLUE_IDS.contains(leftCompatibility) || CORE_TYPE_BLUE_IDS.contains(rightCompatibility)) {
-            return leftCompatibility.equals(rightCompatibility);
-        }
-        return leftCompatibility.equals(rightCompatibility);
-    }
-
-    private static boolean isCoreTypeIdentity(Node node, String blueId) {
-        return CORE_TYPE_BLUE_IDS.contains(blueId) || isBareCoreTypeName(node);
-    }
-
-    private static boolean isAnonymousCoreAlias(Node node) {
-        return node.getName() == null
-                && node.getDescription() == null
-                && node.getBlueId() == null
-                && node.getType() != null
-                && node.getItemType() == null
-                && node.getKeyType() == null
-                && node.getValueType() == null
-                && node.getValue() == null
-                && node.getItems() == null
-                && node.getProperties() == null
-                && node.getContracts() == null
-                && node.getSchema() == null
-                && node.getMergePolicy() == null
-                && node.getPreviousBlueId() == null
-                && node.getPosition() == null
-                && node.getBlue() == null
-                && CORE_TYPE_BLUE_IDS.contains(typeBlueId(node.getType()));
-    }
-
-    private static String typeBlueId(Node node) {
-        return node.getBlueId() != null ? node.getBlueId() : calculateUncheckedBlueId(node);
-    }
-
-    private static String compatibilityBlueId(Node node) {
-        if (node.getBlueId() != null && node.isReferenceOnly()) {
-            return node.getBlueId();
-        }
-        if (node.getBlueId() != null && CORE_TYPE_BLUE_IDS.contains(node.getBlueId())) {
-            return node.getBlueId();
-        }
-        if (isBareCoreTypeName(node)) {
-            return CORE_TYPE_NAME_TO_BLUE_ID_MAP.get(node.getName());
-        }
-        Node stripped = node.clone();
-        stripLabels(stripped);
-        return calculateUncheckedBlueId(stripped);
+        return referencedNodes.get(0);
     }
 
     private static boolean isBareCoreTypeName(Node node) {
@@ -175,111 +163,61 @@ public class Types {
                 && node.getBlue() == null;
     }
 
-    private static void stripLabels(Node node) {
-        if (node == null) {
-            return;
-        }
-        node.name(null);
-        node.description(null);
-        if (node.getBlueId() != null && !node.isReferenceOnly()) {
-            node.blueId(null);
-        }
-        stripLabels(node.getType());
-        stripLabels(node.getItemType());
-        stripLabels(node.getKeyType());
-        stripLabels(node.getValueType());
-        stripLabels(node.getBlue());
-        stripLabels(node.getContracts());
-        if (node.getItems() != null) {
-            for (int i = 0; i < node.getItems().size(); i++) {
-                Node item = node.getItems().get(i);
-                stripLabels(item);
-                if (Nodes.isEmptyNode(item)) {
-                    node.getItems().set(i, Nodes.emptyPlaceholder());
-                }
-            }
-        }
-        if (node.getProperties() != null) {
-            node.getProperties().values().forEach(Types::stripLabels);
-        }
-        stripSchemaLabels(node.getSchema());
-    }
-
-    private static void stripSchemaLabels(blue.language.model.Schema schema) {
-        if (schema == null) {
-            return;
-        }
-        stripLabels(schema.getRequired());
-        stripLabels(schema.getMinLength());
-        stripLabels(schema.getMaxLength());
-        stripLabels(schema.getMinimum());
-        stripLabels(schema.getMaximum());
-        stripLabels(schema.getExclusiveMinimum());
-        stripLabels(schema.getExclusiveMaximum());
-        stripLabels(schema.getMultipleOf());
-        stripLabels(schema.getMinItems());
-        stripLabels(schema.getMaxItems());
-        stripLabels(schema.getUniqueItems());
-        stripLabels(schema.getMinFields());
-        stripLabels(schema.getMaxFields());
-        if (schema.getEnum() != null) {
-            schema.getEnum().forEach(Types::stripLabels);
-        }
-    }
-
     /**
-     * Tests whether a type resolves to one of the released basic scalar types.
+     * Tests a completed type against the released basic scalar types.
      *
-     * @param type type to inspect
+     * @param type completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
+     * @param typeIdentities resolver-issued effective identities
      * @return {@code true} when the type derives from a basic scalar type
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if canonical evidence is missing or
+     *         conflicting, or a reference resolves ambiguously
      */
-    public static boolean isSubtypeOfBasicType(Node type, NodeProvider nodeProvider) {
+    public static boolean isSubtypeOfBasicType(
+            Node type,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
         return BASIC_TYPE_BLUE_IDS.stream()
                 .map(blueId -> new Node().blueId(blueId))
-                .anyMatch(basicTypeNode -> isSubtype(type, basicTypeNode, nodeProvider));
+                .anyMatch(basicTypeNode -> isSubtype(
+                        type,
+                        basicTypeNode,
+                        nodeProvider,
+                        typeIdentities));
     }
 
     /**
-     * Returns the released basic type name reached by a type chain.
+     * Returns the basic type name reached by a completed type chain.
      *
-     * @param type type to inspect
+     * @param type completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
+     * @param typeIdentities resolver-issued effective identities
      * @return released basic type name
+     * @throws NullPointerException if {@code type} or
+     *         {@code typeIdentities} is null, or if {@code nodeProvider} is
+     *         null when provider traversal is required
+     * @throws IllegalArgumentException if the type does not derive from a
+     *         released basic scalar type
+     * @throws IllegalStateException if canonical evidence is missing or
+     *         conflicting, or a reference resolves ambiguously
      */
-    public static String findBasicTypeName(Node type, NodeProvider nodeProvider) {
+    public static String findBasicTypeName(
+            Node type,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
         return BASIC_TYPE_BLUE_IDS.stream()
-                .filter(blueId -> Types.isSubtype(type, new Node().blueId(blueId), nodeProvider))
+                .filter(blueId -> Types.isSubtype(
+                        type,
+                        new Node().blueId(blueId),
+                        nodeProvider,
+                        typeIdentities))
                 .findFirst()
                 .map(CORE_TYPE_BLUE_ID_TO_NAME_MAP::get)
-                .orElseThrow(() -> new IllegalArgumentException("Cannot determine the basic type for node of type \"" + type.getName() + "\"."));
-    }
-
-    private static Node getType(Node node, NodeProvider nodeProvider) {
-        Node type = node.getType();
-        if (type == null) {
-            return null;
-        }
-
-        if (type.getBlueId() != null) {
-            if (!type.isReferenceOnly()) {
-                return type;
-            }
-            if (CORE_TYPE_BLUE_IDS.contains(type.getBlueId())) {
-                return new Node().blueId(type.getBlueId());
-            }
-            List<Node> typeNodes = nodeProvider.fetchByBlueId(type.getBlueId());
-            if (typeNodes == null || typeNodes.isEmpty())
-                return null;
-            if (typeNodes.size() > 1)
-                throw new IllegalStateException(String.format(
-                        "Expected a single node for type with blueId '%s', but found multiple.",
-                        type.getBlueId()
-                ));
-            return typeNodes.get(0);
-        }
-
-        return type;
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Cannot determine the basic type for node of type \""
+                                + type.getName() + "\"."));
     }
 
     /**
@@ -293,83 +231,162 @@ public class Types {
     }
 
     /**
-     * Tests whether a node is or derives from a released basic scalar type.
+     * Tests whether a completed node is a released basic scalar type.
      *
-     * @param typeNode type to inspect
+     * @param typeNode completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
-     * @return {@code true} when the node is a basic scalar type
+     * @param typeIdentities resolver-issued effective identities
+     * @return {@code true} when the type is a basic scalar type
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if canonical evidence is missing or
+     *         conflicting, or a reference resolves ambiguously
      */
-    public static boolean isBasicType(Node typeNode, NodeProvider nodeProvider) {
-        return BASIC_TYPE_BLUE_IDS.stream()
-                .map(blueId -> new Node().blueId(blueId))
-                .anyMatch(basicTypeNode -> isSubtype(typeNode, basicTypeNode, nodeProvider));
+    public static boolean isBasicType(
+            Node typeNode,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return isSubtypeOfBasicType(
+                typeNode, nodeProvider, typeIdentities);
     }
 
     /**
-     * Tests whether a type is or derives from the released Text type.
+     * Tests a completed type against Text using resolver-issued identity.
      *
-     * @param typeNode type to inspect
+     * @param typeNode completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
-     * @return {@code true} when the type is textual
+     * @param typeIdentities resolver-issued effective identities
+     * @return {@code true} when the type derives from Text
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if required evidence is unavailable or a
+     *         provider reference is ambiguous
      */
-    public static boolean isTextType(Node typeNode, NodeProvider nodeProvider) {
-        return isSubtype(typeNode, new Node().blueId(TEXT_TYPE_BLUE_ID), nodeProvider);
+    public static boolean isTextType(
+            Node typeNode,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return isSubtype(
+                typeNode,
+                new Node().blueId(TEXT_TYPE_BLUE_ID),
+                nodeProvider,
+                typeIdentities);
     }
 
     /**
-     * Tests whether a type is or derives from the released Number type.
+     * Tests a completed type against Number using resolver-issued identity.
      *
-     * @param typeNode type to inspect
+     * @param typeNode completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
-     * @return {@code true} when the type is numeric
+     * @param typeIdentities resolver-issued effective identities
+     * @return {@code true} when the type derives from Number
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if required evidence is unavailable or a
+     *         provider reference is ambiguous
      */
-    public static boolean isNumberType(Node typeNode, NodeProvider nodeProvider) {
-        return isSubtype(typeNode, new Node().blueId(DOUBLE_TYPE_BLUE_ID), nodeProvider);
+    public static boolean isNumberType(
+            Node typeNode,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return isSubtype(
+                typeNode,
+                new Node().blueId(DOUBLE_TYPE_BLUE_ID),
+                nodeProvider,
+                typeIdentities);
     }
 
     /**
-     * Tests whether a type is or derives from the released Integer type.
+     * Tests a completed type against Integer using resolver-issued identity.
      *
-     * @param typeNode type to inspect
+     * @param typeNode completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
-     * @return {@code true} when the type is integral
+     * @param typeIdentities resolver-issued effective identities
+     * @return {@code true} when the type derives from Integer
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if required evidence is unavailable or a
+     *         provider reference is ambiguous
      */
-    public static boolean isIntegerType(Node typeNode, NodeProvider nodeProvider) {
-        return isSubtype(typeNode, new Node().blueId(INTEGER_TYPE_BLUE_ID), nodeProvider);
+    public static boolean isIntegerType(
+            Node typeNode,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return isSubtype(
+                typeNode,
+                new Node().blueId(INTEGER_TYPE_BLUE_ID),
+                nodeProvider,
+                typeIdentities);
     }
 
     /**
-     * Tests whether a type is or derives from the released Boolean type.
+     * Tests a completed type against Boolean using resolver-issued identity.
      *
-     * @param typeNode type to inspect
+     * @param typeNode completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
-     * @return {@code true} when the type is Boolean
+     * @param typeIdentities resolver-issued effective identities
+     * @return {@code true} when the type derives from Boolean
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if required evidence is unavailable or a
+     *         provider reference is ambiguous
      */
-    public static boolean isBooleanType(Node typeNode, NodeProvider nodeProvider) {
-        return isSubtype(typeNode, new Node().blueId(BOOLEAN_TYPE_BLUE_ID), nodeProvider);
+    public static boolean isBooleanType(
+            Node typeNode,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return isSubtype(
+                typeNode,
+                new Node().blueId(BOOLEAN_TYPE_BLUE_ID),
+                nodeProvider,
+                typeIdentities);
     }
 
-
     /**
-     * Tests whether a type is or derives from the released List type.
+     * Tests a completed type against List using resolver-issued identity.
      *
-     * @param typeNode type to inspect
+     * @param typeNode completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
-     * @return {@code true} when the type is a list
+     * @param typeIdentities resolver-issued effective identities
+     * @return {@code true} when the type derives from List
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if required evidence is unavailable or a
+     *         provider reference is ambiguous
      */
-    public static boolean isListType(Node typeNode, NodeProvider nodeProvider) {
-        return isSubtype(typeNode, new Node().blueId(LIST_TYPE_BLUE_ID), nodeProvider);
+    public static boolean isListType(
+            Node typeNode,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return isSubtype(
+                typeNode,
+                new Node().blueId(LIST_TYPE_BLUE_ID),
+                nodeProvider,
+                typeIdentities);
     }
 
     /**
-     * Tests whether a type is or derives from the released Dictionary type.
+     * Tests a completed type against Dictionary using resolver-issued
+     * identity.
      *
-     * @param typeNode type to inspect
+     * @param typeNode completed type to inspect
      * @param nodeProvider provider used to traverse its type chain
-     * @return {@code true} when the type is a dictionary
+     * @param typeIdentities resolver-issued effective identities
+     * @return {@code true} when the type derives from Dictionary
+     * @throws NullPointerException if {@code typeIdentities} is null, or if
+     *         {@code nodeProvider} is null when provider traversal is required
+     * @throws IllegalStateException if required evidence is unavailable or a
+     *         provider reference is ambiguous
      */
-    public static boolean isDictionaryType(Node typeNode, NodeProvider nodeProvider) {
-        return isSubtype(typeNode, new Node().blueId(DICTIONARY_TYPE_BLUE_ID), nodeProvider);
+    public static boolean isDictionaryType(
+            Node typeNode,
+            NodeProvider nodeProvider,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return isSubtype(
+                typeNode,
+                new Node().blueId(DICTIONARY_TYPE_BLUE_ID),
+                nodeProvider,
+                typeIdentities);
     }
 
 }

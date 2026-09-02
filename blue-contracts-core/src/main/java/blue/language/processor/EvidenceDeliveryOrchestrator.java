@@ -470,7 +470,9 @@ final class EvidenceDeliveryOrchestrator {
                     ? bundle.effectiveContractSnapshot(handlerChannelKey)
                     : null;
             ChannelMemberSnapshot finalTarget = target != null
-                    ? ChannelMemberSnapshot.from(target)
+                    ? ChannelMemberSnapshot.from(
+                            target,
+                            bundle.canonicalTypeIdentities())
                     : null;
             if (bundle == null
                     || bundle.channelBinding(handlerChannelKey) == null

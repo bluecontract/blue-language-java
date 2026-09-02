@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.api.BlueCachePolicy;
 import blue.language.conformance.ConformanceEngine;
-import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.BlueIds;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.mapping.TypeClassResolver;
 import blue.language.model.Node;
@@ -134,7 +134,8 @@ final class ProcessorInvocationServices implements AutoCloseable {
                 processor.contractTypeResolverInternal(),
                 processor.cachePolicy(),
                 provider,
-                true);
+                true,
+                manager);
         loader.gasSchedule(processor.gasSchedule());
         ContractMatchingService matching =
                 new ContractMatchingService(runtime);
@@ -144,6 +145,9 @@ final class ProcessorInvocationServices implements AutoCloseable {
                         manager,
                         processor.registry(),
                         processor.contractConverter(),
+                        runtime,
+                        processor.gasSchedule(),
+                        processor.gasLimit(),
                         ExternalDeliveryPlanDeriver.unavailable());
         SubscriptionSurfaceValidator surfaceValidator =
                 DirectSubscriptionSurfaceValidator.configured(
@@ -256,24 +260,53 @@ final class ProcessorInvocationServices implements AutoCloseable {
      * while retaining this invocation's exact Language/provider boundary.
      */
     ExternalPreselectionVerifier.RuntimeWorkSessionFactory
-    externalPlanVerificationSessions(Node exactEvent) {
+    externalPlanVerificationSessions(
+            Node exactEvent,
+            String exactEventBlueId) {
+        return externalPlanVerificationSessions(
+                exactEvent,
+                exactEventBlueId,
+                languageRuntimeAccess,
+                snapshotManager,
+                gasSchedule,
+                gasLimit);
+    }
+
+    static ExternalPreselectionVerifier.RuntimeWorkSessionFactory
+    externalPlanVerificationSessions(
+            Node exactEvent,
+            String exactEventBlueId,
+            LanguageRuntimeAccess languageRuntimeAccess,
+            ProcessingSnapshotManager snapshotManager,
+            GasSchedule gasSchedule,
+            long gasLimit) {
         final Node event = Objects.requireNonNull(
                 exactEvent, "exactEvent").clone();
         final String eventBlueId =
-                DirectBlueIdCalculator.calculateBlueId(event);
+                BlueIds.requireBlueIdOrCyclicMember(
+                        exactEventBlueId,
+                        "external plan verification event");
         final ProcessingGasContext gasContext =
-                new ProcessingGasContext(newGasMeter());
+                new ProcessingGasContext(
+                        new GasMeter(
+                                Objects.requireNonNull(
+                                        gasSchedule,
+                                        "gasSchedule"),
+                                gasLimit));
         return new ExternalPreselectionVerifier
                 .RuntimeWorkSessionFactory() {
             @Override
             public RuntimeWorkSession open() {
+                if (snapshotManager == null) {
+                    throw new IllegalStateException(
+                            "External Channel event evaluation requires "
+                                    + "processor-backed snapshot admission");
+                }
                 RuntimeWorkSession session = gasContext
                         .newAdmissionRuntimeWorkSession(
                                 languageRuntimeAccess,
                                 snapshotManager);
-                if (session.hasSemanticOutputBoundary()) {
-                    session.carryExactInput(event, eventBlueId);
-                }
+                session.carryExactInput(event, eventBlueId);
                 return session;
             }
         };

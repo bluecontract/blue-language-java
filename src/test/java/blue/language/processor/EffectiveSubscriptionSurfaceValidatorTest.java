@@ -150,8 +150,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                 Arrays.asList(10, "timeline", 2));
 
         // when
-        SubscriptionDelta delta =
-                DirectSubscriptionSurfaceValidator.INSTANCE.validate(
+        SubscriptionDelta delta;
+        try (Blue blue = ProcessorTestSupport.blue(blueId -> null)) {
+            delta = directValidator(blue).validate(
                         SubscriptionSurfaceValidationContext
                                 .builder(
                                         before,
@@ -161,6 +162,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                         GasSchedule.contracts10())
                                 .committingInterval(order, 4L)
                                 .build());
+        }
 
         // then
         assertEquals(1, delta.removed().size());
@@ -194,8 +196,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                         originalStart);
 
         // when
-        SubscriptionDelta delta =
-                DirectSubscriptionSurfaceValidator.INSTANCE.validate(
+        SubscriptionDelta delta;
+        try (Blue blue = ProcessorTestSupport.blue(blueId -> null)) {
+            delta = directValidator(blue).validate(
                         SubscriptionSurfaceValidationContext
                                 .builder(
                                         before,
@@ -208,6 +211,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                 retained))
                                 .committingInterval(current, 7L)
                                 .build());
+        }
         SubscriptionDelta.Entry retired =
                 delta.removed().get(0);
         SubscriptionDelta.Entry activated =
@@ -339,7 +343,6 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                         0)),
                                         2L)
                                 .build());
-
         // then
         assertTrue(delta.added().isEmpty());
         assertEquals(1, delta.removed().size());
@@ -368,8 +371,9 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                         Arrays.asList(1, "timeline", 0));
 
         // when
-        SubscriptionDelta delta =
-                DirectSubscriptionSurfaceValidator.INSTANCE.validate(
+        SubscriptionDelta delta;
+        try (Blue blue = ProcessorTestSupport.blue(blueId -> null)) {
+            delta = directValidator(blue).validate(
                         SubscriptionSurfaceValidationContext
                                 .builder(
                                         before,
@@ -393,6 +397,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
                                                         0)),
                                         2L)
                                 .build());
+        }
 
         // then
         assertFalse(delta.isEmpty());
@@ -447,6 +452,14 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         Blue blue = ProcessorTestSupport.blue(provider);
         blue.registerContractProcessor(processor);
         return blue;
+    }
+
+    private SubscriptionSurfaceValidator directValidator(Blue blue) {
+        return DirectSubscriptionSurfaceValidator.configured(
+                null,
+                blue.getDocumentProcessor().snapshotManager(),
+                null,
+                null);
     }
 
     private EffectiveTypes effectiveTypes(

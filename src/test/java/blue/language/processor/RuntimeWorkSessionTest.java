@@ -1,5 +1,8 @@
 package blue.language.processor;
 
+import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.model.Node;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -12,6 +15,7 @@ import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class RuntimeWorkSessionTest {
@@ -44,6 +48,52 @@ final class RuntimeWorkSessionTest {
     private static final int ENTRIES_PER_SHARED_NAMESPACE = 160;
     private static final Map<String, Long> MEMBER_VISIT_CATALOG =
             memberVisitCatalog();
+
+    @Test
+    void shouldNotReadmitCyclicMemberRootUnderItsDirectHash() {
+        // given
+        Node input = new Node().properties(
+                "kind", new Node().value("cyclic-member"));
+        FrozenNode frozen = FrozenNode.fromResolvedNode(input);
+        String cyclicMemberBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("cycle")) + "#0";
+        RuntimeWorkSession session = processing(new GasMeter());
+
+        // when
+        session.carryExactInput(frozen, cyclicMemberBlueId);
+        List<ExactBlueValue> exactValues =
+                session.exactValuesSnapshot();
+
+        // then
+        assertEquals(1L, exactValues.stream()
+                .filter(value -> frozen.resolvedStructuralKey().equals(
+                        value.frozenValue().resolvedStructuralKey()))
+                .count());
+        assertEquals(cyclicMemberBlueId, exactValues.get(0).blueId());
+    }
+
+    @Test
+    void shouldExpireExactValueAccessWhenRuntimeWorkCompletes() {
+        // given
+        Node input = new Node().properties(
+                "kind", new Node().value("exact-input"));
+        RuntimeWorkSession session = processing(new GasMeter());
+        session.carryExactInput(
+                input,
+                DirectBlueIdCalculator.calculateBlueId(input));
+
+        // when
+        List<ExactBlueValue> snapshot = session.exactValuesSnapshot();
+        session.complete();
+
+        // then
+        assertEquals(1, snapshot.size());
+        assertThrows(
+                IllegalStateException.class,
+                session::exactValuesSnapshot);
+        session.close();
+    }
 
     @Test
     void shouldVerifySeveralNamespacesReserveLiveBudgetAndMergeCanonically() {

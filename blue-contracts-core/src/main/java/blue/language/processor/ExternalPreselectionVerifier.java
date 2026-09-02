@@ -2,7 +2,7 @@ package blue.language.processor;
 
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
-import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.BlueIds;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
@@ -63,7 +63,7 @@ final class ExternalPreselectionVerifier {
                         snapshotManager,
                         selection,
                         registry != null
-                                ? registry.executableBodyFieldsByType()
+                                ? registry.exactSourceFieldsByType()
                                 : Collections.<String, List<String>>emptyMap());
     }
 
@@ -169,17 +169,6 @@ final class ExternalPreselectionVerifier {
     void verify(
             Node root,
             Node event,
-            VerifiedExecutionEvidence evidence) {
-        verify(
-                root,
-                event,
-                evidence,
-                defaultRuntimeWorkSessions());
-    }
-
-    void verify(
-            Node root,
-            Node event,
             VerifiedExecutionEvidence evidence,
             RuntimeWorkSessionFactory runtimeWorkSessions) {
         if (!evidence.hasActiveSubscriptionIntervals()) {
@@ -192,6 +181,7 @@ final class ExternalPreselectionVerifier {
         EvaluationResult evaluated = evaluate(
                 root,
                 event,
+                evidence.eventBlueId(),
                 evidence.indexedRootRevision(),
                 evidence.eventOrderKey(),
                 evidence.activeSubscriptionIntervals(),
@@ -223,12 +213,17 @@ final class ExternalPreselectionVerifier {
     EvaluationResult evaluate(
             Node root,
             Node event,
+            String eventBlueId,
             long indexedRootRevision,
             ExternalOrderKey eventOrderKey,
             List<SubscriptionDelta.Entry> activeIntervals,
             RuntimeWorkSessionFactory runtimeWorkSessions) {
         Objects.requireNonNull(root, "root");
         Objects.requireNonNull(event, "event");
+        final String exactEventBlueId =
+                BlueIds.requireBlueIdOrCyclicMember(
+                        eventBlueId,
+                        "external delivery event identity");
         Objects.requireNonNull(eventOrderKey, "eventOrderKey");
         Objects.requireNonNull(activeIntervals, "activeIntervals");
         Objects.requireNonNull(runtimeWorkSessions, "runtimeWorkSessions");
@@ -242,8 +237,6 @@ final class ExternalPreselectionVerifier {
                             + "unavailable");
         }
 
-        final String eventBlueId =
-                DirectBlueIdCalculator.calculateBlueId(event);
         final List<EvaluatedOccurrence> occurrences = new ArrayList<>();
         final Set<ExternalSubscriptionOccurrenceKey> uniqueOccurrences =
                 new LinkedHashSet<>();
@@ -306,19 +299,19 @@ final class ExternalPreselectionVerifier {
                                         + snapshot.key());
                     }
 
-                    RuntimeWorkSession runtimeWorkSession = Objects.requireNonNull(
-                            runtimeWorkSessions.open(),
-                            "runtimeWorkSession");
                     ExternalSubscriptionEvaluation evaluation =
                             selection.evaluate(
                                     bundle,
                                     snapshot,
                                     event,
+                                    exactEventBlueId,
                                     activeInterval.dependencies()
                                             .wholeSameScopeChannelCatalog()
                                             ? projected.contractKeys(scopePath)
                                             : null,
-                                    runtimeWorkSession);
+                                    Objects.requireNonNull(
+                                            runtimeWorkSessions.open(),
+                                            "runtimeWorkSession"));
                     verifySubscriptionLaws(
                             evaluation, scopePath, snapshot.key());
                     verifyActiveInterval(
@@ -340,7 +333,7 @@ final class ExternalPreselectionVerifier {
                             eligibleAtEvent && intersects;
                     String plannedCheckpointSubject = checkpointSubject(
                             evaluation,
-                            eventBlueId,
+                            exactEventBlueId,
                             scopePath,
                             snapshot.key());
                     ExternalDeliverySnapshot delivery =
@@ -793,11 +786,6 @@ final class ExternalPreselectionVerifier {
             current = selectedChild;
         }
         return true;
-    }
-
-    private RuntimeWorkSessionFactory defaultRuntimeWorkSessions() {
-        return () -> new RuntimeWorkSession(
-                new GasMeter(), RuntimeWorkSession.Mode.ADMISSION);
     }
 
     /** Immutable products of one complete surface evaluation. */

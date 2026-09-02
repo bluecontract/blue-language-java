@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -45,15 +46,18 @@ final class ProcessingSnapshotBootstrap {
             ProcessingObserver observer) {
         ProcessingObservations.record(
                 observer,
-                snapshot.frozenCanonicalRoot().isStrictBlueIdValidation()
+                snapshot.hasCanonicalIdentity()
+                        && snapshot.frozenCanonicalRoot()
+                                .isStrictBlueIdValidation()
                         ? ProcessingMetricId.PROCESSOR_INPUT_STRICT_CANONICAL
                         : ProcessingMetricId.PROCESSOR_INPUT_UNCHECKED_CANONICAL,
                 1L);
         Map<String, FrozenNode> preservedBodies =
                 initialExecutableBodyOverlays(
-                        snapshot.frozenCanonicalRoot(),
+                        snapshot.frozenSourceRoot(),
                         snapshot.frozenResolvedRoot(),
-                        executableBodyFieldsByType);
+                        executableBodyFieldsByType,
+                        snapshot.canonicalTypeIdentities());
         if (preservedBodies.isEmpty()) {
             return snapshot;
         }
@@ -65,15 +69,24 @@ final class ProcessingSnapshotBootstrap {
                     preserved.getKey(),
                     preserved.getValue().toNode());
         }
+        FrozenNode deferred = FrozenNode.fromResolvedNode(deferredResolved);
+        if (snapshot.isSourceBacked()) {
+            return ResolvedSnapshot.withDeferredSource(
+                    snapshot.frozenSourceRoot(),
+                    deferred,
+                    snapshot.canonicalTypeIdentities());
+        }
         return ResolvedSnapshot.withDeferredResolution(
                 snapshot.frozenCanonicalRoot(),
-                FrozenNode.fromResolvedNode(deferredResolved));
+                deferred,
+                snapshot.canonicalTypeIdentities());
     }
 
     private static Map<String, FrozenNode> initialExecutableBodyOverlays(
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
-            Map<String, List<String>> executableBodyFieldsByType) {
+            Map<String, List<String>> executableBodyFieldsByType,
+            CanonicalTypeIdentityLookup typeIdentities) {
         if (canonicalRoot == null
                 || resolvedRoot == null
                 || executableBodyFieldsByType == null
@@ -102,9 +115,14 @@ final class ProcessingSnapshotBootstrap {
                     selectedScope,
                     effectiveScope,
                     executableBodyFieldsByType,
+                    typeIdentities,
                     result);
             collectEmbeddedScopes(
-                    scopePath, effectiveScope, pending, visited);
+                    scopePath,
+                    effectiveScope,
+                    pending,
+                    visited,
+                    typeIdentities);
         }
         return result;
     }
@@ -114,6 +132,7 @@ final class ProcessingSnapshotBootstrap {
             FrozenNode selectedScope,
             FrozenNode effectiveScope,
             Map<String, List<String>> executableBodyFieldsByType,
+            CanonicalTypeIdentityLookup typeIdentities,
             Map<String, FrozenNode> result) {
         FrozenNode selectedContracts = selectedScope != null
                 ? selectedScope.getContracts()
@@ -133,10 +152,10 @@ final class ProcessingSnapshotBootstrap {
                     ? selectedContracts.property(entry.getKey())
                     : null;
             List<String> fields = executableBodyFieldsByType.get(
-                    exactTypeBlueId(selectedContract));
+                    exactTypeBlueId(selectedContract, typeIdentities));
             if (fields == null) {
                 fields = executableBodyFieldsByType.get(
-                        exactTypeBlueId(effectiveContract));
+                        exactTypeBlueId(effectiveContract, typeIdentities));
             }
             if (fields == null || fields.isEmpty()) {
                 continue;
@@ -177,9 +196,10 @@ final class ProcessingSnapshotBootstrap {
             String scopePath,
             FrozenNode effectiveScope,
             Deque<String> pending,
-            Set<String> visited) {
+            Set<String> visited,
+            CanonicalTypeIdentityLookup typeIdentities) {
         EmbeddedScopePlan plan = embeddedScopePlanIfAvailable(
-                effectiveScope, scopePath);
+                effectiveScope, scopePath, typeIdentities);
         if (plan == null) {
             return;
         }
@@ -194,8 +214,10 @@ final class ProcessingSnapshotBootstrap {
     static EmbeddedScopePlan embeddedScopePlan(
             FrozenNode effectiveScope,
             String scopePath,
-            ProcessingSnapshotManager snapshotManager) {
-        FrozenNode embedded = processEmbeddedContract(effectiveScope);
+            ProcessingSnapshotManager snapshotManager,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        FrozenNode embedded = processEmbeddedContract(
+                effectiveScope, typeIdentities);
         if (embedded == null) {
             return null;
         }
@@ -223,9 +245,14 @@ final class ProcessingSnapshotBootstrap {
 
     static EmbeddedScopePlan embeddedScopePlanIfAvailable(
             FrozenNode effectiveScope,
-            String scopePath) {
+            String scopePath,
+            CanonicalTypeIdentityLookup typeIdentities) {
         try {
-            return embeddedScopePlan(effectiveScope, scopePath, null);
+            return embeddedScopePlan(
+                    effectiveScope,
+                    scopePath,
+                    null,
+                    typeIdentities);
         } catch (SubscriptionSurfaceInvalidException
                 | PortableLimitExceededException
                 | ExecutionEvidenceUnavailableException
@@ -240,18 +267,23 @@ final class ProcessingSnapshotBootstrap {
     }
 
     private static FrozenNode processEmbeddedContract(
-            FrozenNode scope) {
+            FrozenNode scope,
+            CanonicalTypeIdentityLookup typeIdentities) {
         FrozenNode contracts = scope != null ? scope.getContracts() : null;
         FrozenNode embedded = contracts != null
                 ? contracts.property(
                         ProcessorContractConstants.KEY_EMBEDDED)
                 : null;
-        return isProcessEmbeddedContract(embedded) ? embedded : null;
+        return isProcessEmbeddedContract(embedded, typeIdentities)
+                ? embedded
+                : null;
     }
 
-    static boolean isProcessEmbeddedContract(FrozenNode contract) {
+    static boolean isProcessEmbeddedContract(
+            FrozenNode contract,
+            CanonicalTypeIdentityLookup typeIdentities) {
         return RuntimeBlueIds.PROCESS_EMBEDDED.equals(
-                exactTypeBlueId(contract));
+                exactTypeBlueId(contract, typeIdentities));
     }
 
     private static List<String> embeddedDeclarations(
@@ -325,13 +357,15 @@ final class ProcessingSnapshotBootstrap {
         return JsonPointer.toPointer(path);
     }
 
-    private static String exactTypeBlueId(FrozenNode contract) {
+    private static String exactTypeBlueId(
+            FrozenNode contract,
+            CanonicalTypeIdentityLookup typeIdentities) {
         if (contract == null || contract.getType() == null) {
             return null;
         }
-        FrozenNode type = contract.getType();
-        return type.getReferenceBlueId() != null
-                ? type.getReferenceBlueId()
-                : type.blueId();
+        return CanonicalIdentityEvidence.resolvedTypeBlueId(
+                contract.getType(),
+                typeIdentities,
+                "Processing snapshot contract type");
     }
 }

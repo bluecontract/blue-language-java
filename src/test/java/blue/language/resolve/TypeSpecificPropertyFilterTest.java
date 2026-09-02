@@ -1,6 +1,8 @@
 package blue.language.resolve;
 
 import blue.language.Blue;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.graph.NodeExpander;
@@ -12,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
@@ -151,8 +154,14 @@ public class TypeSpecificPropertyFilterTest {
         Blue blue = new Blue(nodeProvider);
 
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
+        ResolutionLimits matchingFilter = ResolutionLimits
+                .filteringPropertiesForType(
+                        typeBlueId,
+                        Collections.singleton("y"),
+                        canonicalEvidenceFor(typeBlueId, typeNode));
         // when
-        boolean result = matcher.matchesType(instanceNode, typeNode, typeSpecificPropertyFilter);
+        boolean result = matcher.matchesType(
+                instanceNode, typeNode, matchingFilter);
 
         // then
         assertTrue(result);
@@ -164,7 +173,8 @@ public class TypeSpecificPropertyFilterTest {
         Node nonTargetNode =
                 new Node().type(
                         new Node().blueId(
-                                "different-blue-id"));
+                                calculateBlueId(
+                                        new Node().name("Different Type"))));
 
         // when
         List<Boolean> decisions =
@@ -172,6 +182,78 @@ public class TypeSpecificPropertyFilterTest {
 
         // then
         assertEquals(Arrays.asList(true, true, true), decisions);
+    }
+
+    @Test
+    public void shouldTreatInlineAndReferenceTypeRepresentationsEqually() {
+        // given
+        CanonicalTypeIdentityLookup evidence =
+                new CanonicalTypeIdentityLookup() {
+                    @Override
+                    public boolean hasCompleteCoverage() {
+                        return true;
+                    }
+
+                    @Override
+                    public Optional<CanonicalTypeIdentityEvidence>
+                    findCanonicalTypeIdentityEvidence(Node completedType) {
+                        return typeBlueId.equals(
+                                calculateBlueId(completedType))
+                                ? Optional.of(
+                                CanonicalTypeIdentityEvidence.identityOnly(
+                                        typeBlueId))
+                                : Optional.<CanonicalTypeIdentityEvidence>
+                                empty();
+                    }
+
+                    @Override
+                    public Optional<CanonicalTypeIdentityEvidence>
+                    findCanonicalTypeIdentityEvidence(
+                            Node completedType,
+                            Node authoredTypeSource) {
+                        return findCanonicalTypeIdentityEvidence(completedType);
+                    }
+                };
+        ResolutionLimits inlineFilter = ResolutionLimits
+                .filteringPropertiesForType(
+                        typeBlueId,
+                        Collections.singleton("y"),
+                        evidence);
+        ResolutionLimits referenceFilter = ResolutionLimits
+                .filteringPropertiesForType(
+                        typeBlueId,
+                        Collections.singleton("y"));
+        Node inline = new Node().type(typeNode.clone());
+        Node reference = new Node().type(new Node().blueId(typeBlueId));
+
+        // when
+        inlineFilter.enterPathSegment("", inline);
+        referenceFilter.enterPathSegment("", reference);
+        boolean inlineDecision = inlineFilter.shouldExpandPathSegment(
+                "y", inline);
+        boolean referenceDecision = referenceFilter.shouldExpandPathSegment(
+                "y", reference);
+        inlineFilter.exitPathSegment();
+        referenceFilter.exitPathSegment();
+
+        // then
+        assertFalse(inlineDecision);
+        assertEquals(referenceDecision, inlineDecision);
+    }
+
+    @Test
+    public void shouldFailClosedForInlineTypeWithoutCanonicalEvidence() {
+        // given
+        Node inline = new Node().type(typeNode.clone());
+
+        // when
+        Runnable enterInlineType = () ->
+                typeSpecificPropertyFilter.enterPathSegment("", inline);
+
+        // then
+        assertThrows(
+                IllegalStateException.class,
+                enterInlineType::run);
     }
 
     private List<Boolean> expansionDecisions(
@@ -186,5 +268,42 @@ public class TypeSpecificPropertyFilterTest {
                         second, node),
                 typeSpecificPropertyFilter.shouldExpandPathSegment(
                         third, node));
+    }
+
+    private CanonicalTypeIdentityLookup canonicalEvidenceFor(
+            String canonicalBlueId,
+            Node canonicalType) {
+        return new CanonicalTypeIdentityLookup() {
+            @Override
+            public boolean hasCompleteCoverage() {
+                return true;
+            }
+
+            @Override
+            public Optional<CanonicalTypeIdentityEvidence>
+            findCanonicalTypeIdentityEvidence(Node completedType) {
+                if (completedType.isReferenceOnly()) {
+                    return Optional.of(
+                            CanonicalTypeIdentityEvidence.referenceSource(
+                                    completedType.getBlueId()));
+                }
+                if (canonicalBlueId.equals(completedType.getBlueId())
+                        || canonicalType.getName().equals(
+                        completedType.getName())) {
+                    return Optional.of(
+                            CanonicalTypeIdentityEvidence.identityOnly(
+                                    canonicalBlueId));
+                }
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<CanonicalTypeIdentityEvidence>
+            findCanonicalTypeIdentityEvidence(
+                    Node completedType,
+                    Node authoredTypeSource) {
+                return findCanonicalTypeIdentityEvidence(completedType);
+            }
+        };
     }
 }

@@ -1,12 +1,10 @@
 package blue.language.merge.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.merge.MergingProcessor;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
-import blue.language.provider.Types;
-
-import static blue.language.provider.Types.findBasicTypeName;
 
 /**
  * Rejects resolved instances of scalar core types that also carry list or
@@ -19,16 +17,29 @@ public class BasicTypesVerifier implements MergingProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    public void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         // do nothing
     }
 
     @Override
-    public void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
-        if (target.getType() != null && Types.isSubtypeOfBasicType(target.getType(), nodeProvider)) {
+    public void postProcess(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (target.getType() != null
+                && EffectiveTypeChecks.isSubtypeOfBasicType(
+                target.getType(), nodeProvider, nodeResolver, typeIdentities)) {
             if ((target.getItems() != null && !target.getItems().isEmpty()) ||
                 (target.getProperties() != null && !target.getProperties().isEmpty())) {
-                String basicTypeName = findBasicTypeName(target.getType(), nodeProvider);
+                String basicTypeName = EffectiveTypeChecks.findBasicTypeName(
+                        target.getType(), nodeProvider, nodeResolver, typeIdentities);
                 throw new IllegalArgumentException("Node of type \"" + target.getType().getName() +
                                                    "\" (which extends basic type \"" + basicTypeName +
                                                    "\") must not have items or properties.");

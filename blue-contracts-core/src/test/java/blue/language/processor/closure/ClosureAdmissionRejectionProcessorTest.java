@@ -185,7 +185,8 @@ final class ClosureAdmissionRejectionProcessorTest {
     private static ClosureProcessResult reject(
             DocumentProcessor owner, ClosureInvocationInput input) {
         ClosureInvocationVerifier.Verification verification =
-                ClosureInvocationVerifier.verify(input);
+                ClosureInvocationVerifier.verify(
+                        input, owner.administration()::runtimeAccess);
         assertEquals(
                 ClosureInvocationVerifier.CandidateDisposition
                         .SEMANTICALLY_INVALID,

@@ -405,15 +405,17 @@ public final class ProcessorRuntimeAccess {
         }
 
         @Override
-        public Node resolveForMatching(
+        public blue.language.merge.TypeEvidenceResolution
+        resolveTypeEvidenceForMatching(
                 Node source,
                 ResolutionLimits limits) {
             return callRuntime(runtime ->
-                    runtime.resolveForMatching(source, limits));
+                    runtime.resolveTypeEvidenceForMatching(source, limits));
         }
 
         @Override
-        public FrozenNode materializeTypeReferenceForMatching(
+        public blue.language.merge.TypeEvidenceResolution
+        materializeTypeReferenceForMatching(
                 FrozenNode reference) {
             return callRuntime(runtime ->
                     runtime.materializeTypeReferenceForMatching(

@@ -55,6 +55,7 @@ final class ExternalSourceEvaluator {
         long channelMatchStart = System.nanoTime();
         boolean matches;
         FrozenNode frozenPayload;
+        String payloadBlueId;
         FrozenNode frozenCheckpointSubject;
         String recomputedCheckpointSubject;
         String handlerChannelKey;
@@ -81,31 +82,33 @@ final class ExternalSourceEvaluator {
             SubscriptionDelta.Entry activeInterval =
                     execution.activeSubscriptionInterval(
                             scopePath, channel.key());
+            String exactEventBlueId =
+                    checkpointTransaction.eventIdentity(event);
+            FrozenNode admittedEvent = FrozenNode.fromResolvedNode(
+                    event.clone());
             RuntimeWorkSession functionWork = runtime.newRuntimeWorkSession(
                     execution.blue());
-            if (functionWork.hasSemanticOutputBoundary()) {
-                functionWork.carryExactInput(
-                        event,
-                        checkpointTransaction.eventIdentity(event));
-            }
             ExternalChannelFunctionEvaluation evaluation =
-                    ExternalChannelFunctionEvaluation.evaluate(
-                            owner.registry(),
-                            owner.contractConverter(),
-                            runtime.externalChannelMatcherSessions(),
-                            bundle,
-                            snapshot,
-                            event,
-                            activeInterval != null
-                                    && activeInterval.dependencies()
-                                    .wholeSameScopeChannelCatalog()
-                                    ? activeInterval.dependencies()
-                                    .channelCatalogContractKeys()
-                                    : null,
-                            functionWork);
-            carriedExactValues = functionWork.exactValuesSnapshot();
+                    ExternalChannelFunctionEvaluation.evaluateWithExactInput(
+                        owner.registry(),
+                        owner.contractConverter(),
+                        runtime.externalChannelMatcherSessions(),
+                        bundle,
+                        snapshot,
+                        event,
+                        activeInterval != null
+                                && activeInterval.dependencies()
+                                .wholeSameScopeChannelCatalog()
+                                ? activeInterval.dependencies()
+                                .channelCatalogContractKeys()
+                                : null,
+                        admittedEvent,
+                        exactEventBlueId,
+                        functionWork);
+            carriedExactValues = evaluation.carriedExactValues();
             matches = evaluation.accepts();
             frozenPayload = evaluation.payload();
+            payloadBlueId = evaluation.payloadBlueId();
             frozenCheckpointSubject = evaluation.checkpointSubject();
             recomputedCheckpointSubject =
                     evaluation.checkpointSubjectBlueId();
@@ -193,6 +196,7 @@ final class ExternalSourceEvaluator {
                 handlerChannel,
                 bundle,
                 frozenPayload,
+                payloadBlueId,
                 carriedExactValues,
                 checkpoint.record,
                 checkpoint.eventSignature,

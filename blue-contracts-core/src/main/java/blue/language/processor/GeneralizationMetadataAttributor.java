@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformancePlan;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
 import blue.language.snapshot.FrozenNode;
@@ -26,7 +27,10 @@ final class GeneralizationMetadataAttributor {
             FrozenNode finalResolved,
             List<String> changedPaths,
             List<BatchPatchRecord> records,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities,
             Function<BatchPatchRecord, ConformancePlan> prefixPlanner) {
+        CanonicalTypeIdentityLookup identities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
         Set<String> uniquePaths = new LinkedHashSet<>();
         for (String path : changedPaths != null
                 ? changedPaths
@@ -38,7 +42,7 @@ final class GeneralizationMetadataAttributor {
         Map<String, FrozenNode> finalValues = new LinkedHashMap<>();
         for (String path : uniquePaths) {
             FrozenNode value = metadataValue(
-                    finalCanonical, finalResolved, path);
+                    finalCanonical, finalResolved, path, identities);
             if (value != null) {
                 finalValues.put(path, value);
             }
@@ -82,7 +86,10 @@ final class GeneralizationMetadataAttributor {
                 FrozenNode finalValue = finalValues.get(path);
                 if (finalValue == null) {
                     finalValue = metadataValue(
-                            finalCanonical, finalResolved, path);
+                            finalCanonical,
+                            finalResolved,
+                            path,
+                            identities);
                 }
                 if (finalValue == null) {
                     continue;
@@ -94,7 +101,10 @@ final class GeneralizationMetadataAttributor {
                             prefixResolved, path);
                 }
                 if (prefixValue != null
-                        && sameIdentity(prefixValue, finalValue)) {
+                        && sameIdentity(
+                                prefixValue,
+                                finalValue,
+                                identities)) {
                     finalValues.put(path, finalValue);
                     requiringIndexes.put(path, recordIndex);
                 }
@@ -131,32 +141,49 @@ final class GeneralizationMetadataAttributor {
     private static FrozenNode metadataValue(
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
-            String path) {
+            String path,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         FrozenNode value = GeneralizationMetadataPaths.read(
                 canonicalRoot, path);
         if (value != null) {
-            return value;
+            return canonicalReference(
+                    value, canonicalTypeIdentities, path);
         }
         FrozenNode resolvedValue = GeneralizationMetadataPaths.read(
                 resolvedRoot, path);
         if (resolvedValue == null) {
             return null;
         }
-        String blueId = resolvedValue.getReferenceBlueId() != null
-                ? resolvedValue.getReferenceBlueId()
-                : resolvedValue.blueId();
+        String blueId = CanonicalIdentityEvidence.resolvedTypeBlueId(
+                resolvedValue,
+                canonicalTypeIdentities,
+                "Generalization metadata at " + path);
         return FrozenNode.fromResolvedNode(new Node().blueId(blueId));
     }
 
     private static boolean sameIdentity(
             FrozenNode left,
-            FrozenNode right) {
+            FrozenNode right,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         return Objects.equals(
-                left.getReferenceBlueId() != null
-                        ? left.getReferenceBlueId()
-                        : left.blueId(),
-                right.getReferenceBlueId() != null
-                        ? right.getReferenceBlueId()
-                        : right.blueId());
+                CanonicalIdentityEvidence.resolvedTypeBlueId(
+                        left,
+                        canonicalTypeIdentities,
+                        "Generalization metadata comparison"),
+                CanonicalIdentityEvidence.resolvedTypeBlueId(
+                        right,
+                        canonicalTypeIdentities,
+                        "Generalization metadata comparison"));
+    }
+
+    private static FrozenNode canonicalReference(
+            FrozenNode value,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities,
+            String path) {
+        String blueId = CanonicalIdentityEvidence.resolvedTypeBlueId(
+                value,
+                canonicalTypeIdentities,
+                "Generalization metadata at " + path);
+        return FrozenNode.fromResolvedNode(new Node().blueId(blueId));
     }
 }

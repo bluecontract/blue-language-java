@@ -3,6 +3,7 @@ package blue.language.processor.closure;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.ProcessorStatus;
 import org.junit.jupiter.api.Test;
 
@@ -212,8 +213,7 @@ final class ClosureResultEvidenceTest {
                 3L,
                 ROOT,
                 eventOccurrenceIdentity,
-                eventBlueId,
-                event);
+                exactEvent(event, eventBlueId));
         event.name("caller mutation");
         assertEquals("public-event", publicEvent.event().getName());
         publicEvent.event().name("return mutation");
@@ -502,8 +502,7 @@ final class ClosureResultEvidenceTest {
                                 fixture.invocationIdentity,
                                 2L,
                                 firstBlueId),
-                        firstBlueId,
-                        first),
+                        exactEvent(first, firstBlueId)),
                 new PublicEventOccurrence(
                         1L,
                         1L,
@@ -512,8 +511,7 @@ final class ClosureResultEvidenceTest {
                                 fixture.invocationIdentity,
                                 1L,
                                 secondBlueId),
-                        secondBlueId,
-                        second));
+                        exactEvent(second, secondBlueId)));
         assertThrows(IllegalArgumentException.class,
                 () -> verifyTransition(fixture, fixture.snapshot,
                         Collections.<CheckpointWrite>emptyList(),
@@ -993,6 +991,13 @@ final class ClosureResultEvidenceTest {
 
     private static RejectionOwnerKind rejectionKind(RejectedCharge charge) {
         return RejectionOwnerKind.valueOf(charge.owner().kind().name());
+    }
+
+    private static ExactEventIdentityEvidence exactEvent(
+            Node event,
+            String eventBlueId) {
+        return ExactEventIdentityEvidence.verify(
+                null, event, eventBlueId, null);
     }
 
     private static String hash(char digit) {

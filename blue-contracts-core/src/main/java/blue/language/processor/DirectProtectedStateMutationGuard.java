@@ -135,7 +135,7 @@ final class DirectProtectedStateMutationGuard {
     }
 
     private FrozenNode canonicalProtected(String scopePath, String key) {
-        return runtime.canonicalFrozenAt(
+        return runtime.selectedFrozenAt(
                 ProcessorEngine.resolvePointer(
                         scopePath,
                         ProcessorPointerConstants

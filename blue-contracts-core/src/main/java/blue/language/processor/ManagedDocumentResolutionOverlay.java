@@ -1,7 +1,13 @@
 package blue.language.processor;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
+import blue.language.provider.CyclicAwareNodeProvider;
+import blue.language.provider.CyclicSetProof;
+import blue.language.provider.CyclicSetProofResult;
+import blue.language.provider.NodeProvider;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,10 +30,13 @@ public final class ManagedDocumentResolutionOverlay {
     private static final ManagedDocumentResolutionOverlay EMPTY =
             new ManagedDocumentResolutionOverlay(
                     Collections.<String, Node>emptyMap(),
-                    Collections.<String, String>emptyMap());
+                    Collections.<String, String>emptyMap(),
+                    Collections.<String, CyclicSetProof>emptyMap());
 
     private final Map<String, Node> exactNodesByBlueId;
     private final Map<String, String> expectedManagedBlueIdsByPath;
+    private final Map<String, CyclicSetProof> cyclicProofsByMasterBlueId;
+    private final ExactResolutionOverlay exactResolutionOverlay;
 
     /**
      * Creates an immutable invocation-local overlay.
@@ -37,10 +46,13 @@ public final class ManagedDocumentResolutionOverlay {
      * @param expectedManagedBlueIdsByPath canonical absolute concrete paths
      *        selected by this Root's effective {@code Process Embedded}
      *        declaration, mapped to admitted exact target BlueIds
+     * @param cyclicProofsByMasterBlueId complete cyclic-set proofs keyed by
+     *        master BlueId for every cyclic member in this overlay
      */
     public ManagedDocumentResolutionOverlay(
             Map<String, Node> exactNodesByBlueId,
-            Map<String, String> expectedManagedBlueIdsByPath) {
+            Map<String, String> expectedManagedBlueIdsByPath,
+            Map<String, CyclicSetProof> cyclicProofsByMasterBlueId) {
         LinkedHashMap<String, Node> nodes =
                 new LinkedHashMap<String, Node>();
         for (Map.Entry<String, Node> entry
@@ -60,6 +72,53 @@ public final class ManagedDocumentResolutionOverlay {
             }
         }
         this.exactNodesByBlueId = Collections.unmodifiableMap(nodes);
+
+        LinkedHashMap<String, CyclicSetProof> proofs =
+                new LinkedHashMap<String, CyclicSetProof>();
+        for (Map.Entry<String, CyclicSetProof> entry
+                : Objects.requireNonNull(
+                        cyclicProofsByMasterBlueId,
+                        "cyclicProofsByMasterBlueId").entrySet()) {
+            String masterBlueId = BlueIds.requirePlainBlueId(
+                    entry.getKey(), "overlay cyclic proof master BlueId");
+            proofs.put(
+                    masterBlueId,
+                    copyProof(Objects.requireNonNull(
+                            entry.getValue(), "overlay cyclic proof")));
+        }
+        for (String blueId : nodes.keySet()) {
+            BlueIds.requireBlueIdOrCyclicMember(
+                    blueId, "overlay exact-node BlueId");
+            if (BlueIds.hasCyclicMemberSeparator(blueId)
+                    && !proofs.containsKey(
+                            BlueIds.cyclicSetMasterBlueId(blueId))) {
+                throw new IllegalArgumentException(
+                        "Cyclic overlay member requires its complete cyclic-set proof: "
+                                + blueId);
+            }
+        }
+        for (String masterBlueId : proofs.keySet()) {
+            boolean used = false;
+            for (String blueId : nodes.keySet()) {
+                if (BlueIds.hasCyclicMemberSeparator(blueId)
+                        && masterBlueId.equals(
+                                BlueIds.cyclicSetMasterBlueId(blueId))) {
+                    used = true;
+                    break;
+                }
+            }
+            if (!used) {
+                throw new IllegalArgumentException(
+                        "Cyclic overlay proof has no exact member content: "
+                                + masterBlueId);
+            }
+        }
+        this.cyclicProofsByMasterBlueId =
+                Collections.unmodifiableMap(proofs);
+        this.exactResolutionOverlay = ExactResolutionOverlay.from(
+                new ExactNodeProvider(
+                        this.exactNodesByBlueId,
+                        this.cyclicProofsByMasterBlueId));
 
         LinkedHashMap<String, String> paths =
                 new LinkedHashMap<String, String>();
@@ -129,5 +188,46 @@ public final class ManagedDocumentResolutionOverlay {
      */
     public Map<String, String> expectedManagedBlueIdsByPath() {
         return expectedManagedBlueIdsByPath;
+    }
+
+    /** Returns the proof-preserving opaque Language overlay. */
+    ExactResolutionOverlay exactResolutionOverlay() {
+        return exactResolutionOverlay;
+    }
+
+    private static CyclicSetProof copyProof(CyclicSetProof proof) {
+        return CyclicSetProof.fromDeclaredPlaceholderSet(
+                proof.declaredPlaceholderSet());
+    }
+
+    /** Immutable proof-bearing leaf; Language still verifies all evidence. */
+    private static final class ExactNodeProvider
+            implements NodeProvider, CyclicAwareNodeProvider {
+        private final Map<String, Node> exactNodesByBlueId;
+        private final Map<String, CyclicSetProof> proofsByMasterBlueId;
+
+        private ExactNodeProvider(
+                Map<String, Node> exactNodesByBlueId,
+                Map<String, CyclicSetProof> proofsByMasterBlueId) {
+            this.exactNodesByBlueId = exactNodesByBlueId;
+            this.proofsByMasterBlueId = proofsByMasterBlueId;
+        }
+
+        @Override
+        public List<Node> fetchByBlueId(String blueId) {
+            Node exact = exactNodesByBlueId.get(blueId);
+            return exact == null
+                    ? Collections.<Node>emptyList()
+                    : Collections.singletonList(exact.clone());
+        }
+
+        @Override
+        public CyclicSetProofResult cyclicSetProofFor(String blueId) {
+            CyclicSetProof proof = proofsByMasterBlueId.get(
+                    BlueIds.cyclicSetMasterBlueId(blueId));
+            return proof == null
+                    ? CyclicSetProofResult.notFound()
+                    : CyclicSetProofResult.found(copyProof(proof));
+        }
     }
 }

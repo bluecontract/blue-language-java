@@ -1,14 +1,18 @@
 package blue.language.merge;
 
-import blue.language.provider.NodeProvider;
-import blue.language.model.Node;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.model.Node;
+import blue.language.model.Schema;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.provider.NodeProvider;
 import blue.language.provider.Types;
 import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -157,8 +161,12 @@ final class ListOverlayMerger {
                     targetChildren.size(), sourceLength));
         }
         List<String> inheritedIdentities = new ArrayList<>(targetChildren.size());
+        CanonicalTypeIdentityLookup activeTypeIdentities =
+                engine.canonicalTypeIdentities();
         for (Node inherited : targetChildren) {
-            inheritedIdentities.add(DirectBlueIdCalculator.calculateBlueId(inherited));
+            inheritedIdentities.add(comparisonBlueId(
+                    inherited,
+                    activeTypeIdentities));
         }
         for (int index = 0; index < sourceLength; index++) {
             Node sourceChild = sourceChildren.get(start + index);
@@ -170,7 +178,14 @@ final class ListOverlayMerger {
                 }
                 continue;
             }
-            String sourceIdentity = DirectBlueIdCalculator.calculateBlueId(sourceChild);
+            SnapshotResolution sourceResolution = engine
+                    .resolveDetachedContributionSnapshot(
+                            applyCompletedItemType(
+                                    sourceChild,
+                                    itemType));
+            String sourceIdentity = comparisonBlueId(
+                    sourceResolution.resolvedRoot().toNode(),
+                    sourceResolution.canonicalTypeIdentities());
             if (!sourceIdentity.equals(inheritedIdentities.get(index))
                     && inheritedIdentities.contains(sourceIdentity)) {
                 throw new IllegalArgumentException(
@@ -320,7 +335,9 @@ final class ListOverlayMerger {
 
     private void validatePreviousAnchor(
             List<Node> targetChildren, Node previousAnchor) {
-        String actualBlueId = DirectBlueIdCalculator.calculateBlueId(targetChildren);
+        String actualBlueId = comparisonBlueId(
+                targetChildren,
+                engine.canonicalTypeIdentities());
         if (!actualBlueId.equals(previousAnchor.getPreviousBlueId())) {
             throw new IllegalArgumentException(
                     "\"$previous\" blueId does not match the inherited list. Expected "
@@ -360,7 +377,9 @@ final class ListOverlayMerger {
         limits.enterPathSegment(segment, child);
         engine.enterValidationPath(segment, expansionAllowed);
         try {
-            return engine.resolve(applyItemType(child, itemType), limits);
+            return engine.resolve(
+                    applyCompletedItemType(child, itemType),
+                    limits);
         } finally {
             engine.exitValidationPath();
             limits.exitPathSegment();
@@ -375,8 +394,145 @@ final class ListOverlayMerger {
     }
 
     Node itemTypeReference(Node itemType) {
-        return itemType.getBlueId() != null
+        return itemType.isReferenceOnly()
                 ? new Node().blueId(itemType.getBlueId()) : itemType.clone();
+    }
+
+    private Node applyCompletedItemType(Node child, Node itemType) {
+        if (child.getType() != null
+                || child.getBlueId() != null
+                || itemType == null) {
+            return child;
+        }
+        engine.canonicalTypeIdentities()
+                .requireCanonicalTypeBlueId(itemType);
+        /*
+         * Inline type identities are resolver-side evidence, not necessarily
+         * independently fetchable provider objects. Carry the completed type
+         * through semantic resolution; Canonical Identity Input reconstruction
+         * will collapse it to the already-proven pure reference.
+         */
+        return child.clone().type(itemType.clone());
+    }
+
+    private String comparisonBlueId(
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Node canonical = node.clone();
+        canonicalizeTypePositions(
+                canonical,
+                typeIdentities,
+                Collections.newSetFromMap(
+                        new IdentityHashMap<Node, Boolean>()));
+        return DirectBlueIdCalculator.calculateBlueId(canonical);
+    }
+
+    private String comparisonBlueId(
+            List<Node> nodes,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        List<Node> canonical = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            Node canonicalNode = node.clone();
+            canonicalizeTypePositions(
+                    canonicalNode,
+                    typeIdentities,
+                    Collections.newSetFromMap(
+                            new IdentityHashMap<Node, Boolean>()));
+            canonical.add(canonicalNode);
+        }
+        return DirectBlueIdCalculator.calculateBlueId(canonical);
+    }
+
+    private void canonicalizeTypePositions(
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities,
+            Set<Node> visited) {
+        if (node == null || !visited.add(node)) {
+            return;
+        }
+        if (node.getType() != null) {
+            node.type(canonicalTypeReference(
+                    node.getType(), typeIdentities));
+        }
+        if (node.getItemType() != null) {
+            node.itemType(canonicalTypeReference(
+                    node.getItemType(), typeIdentities));
+        }
+        if (node.getKeyType() != null) {
+            node.keyType(canonicalTypeReference(
+                    node.getKeyType(), typeIdentities));
+        }
+        if (node.getValueType() != null) {
+            node.valueType(canonicalTypeReference(
+                    node.getValueType(), typeIdentities));
+        }
+        canonicalizeTypePositions(
+                node.getBlue(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                node.getContracts(), typeIdentities, visited);
+        if (node.getItems() != null) {
+            for (Node item : node.getItems()) {
+                canonicalizeTypePositions(
+                        item, typeIdentities, visited);
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Node property : node.getProperties().values()) {
+                canonicalizeTypePositions(
+                        property, typeIdentities, visited);
+            }
+        }
+        canonicalizeSchemaTypePositions(
+                node.getSchema(), typeIdentities, visited);
+    }
+
+    private void canonicalizeSchemaTypePositions(
+            Schema schema,
+            CanonicalTypeIdentityLookup typeIdentities,
+            Set<Node> visited) {
+        if (schema == null) {
+            return;
+        }
+        canonicalizeTypePositions(
+                schema.getRequired(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinLength(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxLength(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinimum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaximum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getExclusiveMinimum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getExclusiveMaximum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMultipleOf(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getUniqueItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinFields(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxFields(), typeIdentities, visited);
+        if (schema.getEnum() != null) {
+            for (Node value : schema.getEnum()) {
+                canonicalizeTypePositions(
+                        value, typeIdentities, visited);
+            }
+        }
+    }
+
+    private Node canonicalTypeReference(
+            Node completedType,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return new Node().blueId(
+                typeIdentities.requireCanonicalTypeBlueId(
+                        completedType));
     }
 
     Node withoutPosition(Node node) {
@@ -414,12 +570,16 @@ final class ListOverlayMerger {
         if (type == null) {
             return false;
         }
-        if (LIST_TYPE_BLUE_ID.equals(type.getBlueId())
+        if ((type.isReferenceOnly()
+                && LIST_TYPE_BLUE_ID.equals(type.getBlueId()))
                 || LIST_TYPE.equals(type.getName())) {
             return true;
         }
         Object value = type.getValue();
-        return LIST_TYPE.equals(value) || Types.isListType(type, nodeProvider);
+        return LIST_TYPE.equals(value) || Types.isListType(
+                type,
+                nodeProvider,
+                engine.canonicalTypeIdentities());
     }
 
     private void validateListControls(

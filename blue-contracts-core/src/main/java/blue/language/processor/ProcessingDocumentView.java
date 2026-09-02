@@ -1,15 +1,19 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -27,11 +31,14 @@ final class ProcessingDocumentView {
     private final DocumentProcessingRuntime runtime;
     private final Map<String, FrozenNode> exactReferencedScopes =
             new LinkedHashMap<>();
-    private final Map<String, FrozenNode> resolvedDeferredScopes =
+    private final Map<String, ResolvedScopeView> resolvedDeferredScopes =
             new LinkedHashMap<>();
     private ReferenceTransparentPathAccess transparentPathAccess;
     private ProcessingSnapshotManager transparentPathManager;
     private long exactReferencedScopesVersion = Long.MIN_VALUE;
+    private ResolvedSnapshot canonicalIdentitySnapshot;
+    private ProcessingSnapshotManager canonicalIdentityManager;
+    private long canonicalIdentityVersion = Long.MIN_VALUE;
 
     ProcessingDocumentView(DocumentProcessingRuntime runtime) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
@@ -46,8 +53,8 @@ final class ProcessingDocumentView {
     }
 
     Node selectedDocument() {
-        if (runtime.snapshot != null) {
-            return runtime.snapshot.canonicalRoot();
+        if (!runtime.selectedDocumentBacked && runtime.snapshot != null) {
+            return runtime.snapshot.sourceRoot();
         }
         runtime.syncMaterializedView();
         return runtime.materializedView.root();
@@ -66,24 +73,23 @@ final class ProcessingDocumentView {
     }
 
     Node resolvedNodeAt(String path) {
-        String normalized = PointerUtils.normalizePointer(path);
-        ResolvedSnapshot current = snapshot();
-        if (current != null) {
-            FrozenNode transparent = transparentPathAccess()
-                    .resolvedAt(
-                            current.frozenCanonicalRoot(),
-                            current.frozenResolvedRoot(),
-                            normalized);
-            return transparent != null ? transparent.toNode() : null;
-        }
-        return runtime.materializedView.nodeAt(normalized);
+        ResolvedScopeView view = scopeViewAt(path);
+        return view != null && view.resolved() != null
+                ? view.resolved().toNode()
+                : null;
     }
 
     FrozenNode resolvedFrozenAt(String path) {
+        ResolvedScopeView view = scopeViewAt(path);
+        return view != null ? view.resolved() : null;
+    }
+
+    /** Returns one selected/effective scope with its exact producing proof. */
+    ResolvedScopeView scopeViewAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
         if (current != null) {
-            FrozenNode selected = selectedCanonicalFrozenAt(normalized);
+            FrozenNode selected = selectedSourceFrozenAt(normalized);
             ProcessingSnapshotManager manager =
                     runtime.currentSnapshotManager();
             if (selected != null
@@ -96,25 +102,50 @@ final class ProcessingDocumentView {
                 return resolvedDeferredScope(
                         normalized, selected, manager);
             }
-            FrozenNode transparent = transparentPathAccess()
-                    .resolvedAt(
-                            current.frozenCanonicalRoot(),
+            ResolvedScopeView transparent = transparentPathAccess()
+                    .scopeAt(
+                            current.frozenSourceRoot(),
                             current.frozenResolvedRoot(),
+                            current.canonicalTypeIdentities(),
                             normalized);
             if (transparent != null) {
-                return transparent;
+                FrozenNode exactSelected = selectedFrozenAt(normalized);
+                return exactSelected != null
+                        ? transparent.withSelected(exactSelected)
+                        : transparent;
             }
-            return current.resolvedAt(normalized);
+            FrozenNode resolved = current.resolvedAt(normalized);
+            return resolved != null || selected != null
+                    ? new ResolvedScopeView(
+                            selected,
+                            resolved,
+                            current.canonicalTypeIdentities())
+                    : null;
         }
         Node node = runtime.materializedView.nodeAt(normalized);
-        return node != null ? FrozenNode.fromResolvedNode(node) : null;
+        if (node == null) {
+            return null;
+        }
+        FrozenNode frozen = FrozenNode.fromResolvedNode(node);
+        return new ResolvedScopeView(
+                frozen,
+                frozen,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     Node canonicalNodeAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
-        return current != null
-                ? current.canonicalNodeAt(normalized)
+        FrozenNode opaqueReference = opaqueManagedSourceReference(
+                current, normalized);
+        if (opaqueReference != null) {
+            return opaqueReference.toNode();
+        }
+        ResolvedSnapshot canonical = current != null
+                ? canonicalIdentitySnapshot(current)
+                : null;
+        return canonical != null
+                ? canonical.canonicalNodeAt(normalized)
                 : runtime.materializedView.nodeAt(normalized);
     }
 
@@ -122,7 +153,12 @@ final class ProcessingDocumentView {
         String normalized = PointerUtils.normalizePointer(path);
         ResolvedSnapshot current = snapshot();
         if (current != null) {
-            return current.canonicalAt(normalized);
+            FrozenNode opaqueReference = opaqueManagedSourceReference(
+                    current, normalized);
+            if (opaqueReference != null) {
+                return opaqueReference;
+            }
+            return canonicalIdentitySnapshot(current).canonicalAt(normalized);
         }
         Node node = runtime.materializedView.nodeAt(normalized);
         return node != null ? FrozenNode.fromResolvedNode(node) : null;
@@ -130,7 +166,7 @@ final class ProcessingDocumentView {
 
     FrozenNode selectedFrozenAt(String path) {
         String normalized = PointerUtils.normalizePointer(path);
-        FrozenNode selected = selectedCanonicalFrozenAt(normalized);
+        FrozenNode selected = selectedSourceFrozenAt(normalized);
         if (selected == null || !selected.isReferenceOnly()) {
             return selected;
         }
@@ -149,16 +185,30 @@ final class ProcessingDocumentView {
                         .isOpaqueManagedPath(normalizedPath);
     }
 
+    private FrozenNode opaqueManagedSourceReference(
+            ResolvedSnapshot current,
+            String normalizedPath) {
+        if (current == null
+                || !isOpaqueManagedPath(
+                        runtime.currentSnapshotManager(), normalizedPath)) {
+            return null;
+        }
+        FrozenNode source = current.sourceAt(normalizedPath);
+        return source != null && source.isReferenceOnly()
+                ? source
+                : null;
+    }
+
     /**
      * Returns the authored contribution without opening a pure reference.
      * Reference materialization is deliberately layered above this lookup so
      * selected and resolved reads can share one verified exact provider value.
      */
-    private FrozenNode selectedCanonicalFrozenAt(String normalizedPath) {
+    private FrozenNode selectedSourceFrozenAt(String normalizedPath) {
         if (!runtime.selectedDocumentBacked) {
             ResolvedSnapshot current = snapshot();
             if (current != null) {
-                return current.canonicalAt(normalizedPath);
+                return current.sourceAt(normalizedPath);
             }
         }
         Node node = runtime.materializedView.nodeAt(normalizedPath);
@@ -194,12 +244,12 @@ final class ProcessingDocumentView {
      * make handler discovery, gas, and must-understand behavior depend on the
      * caller's physical representation.
      */
-    private FrozenNode resolvedDeferredScope(
+    private ResolvedScopeView resolvedDeferredScope(
             String normalizedPath,
             FrozenNode selected,
             ProcessingSnapshotManager manager) {
         resetScopeCachesIfStateChanged();
-        FrozenNode cached = resolvedDeferredScopes.get(normalizedPath);
+        ResolvedScopeView cached = resolvedDeferredScopes.get(normalizedPath);
         if (cached != null) {
             return cached;
         }
@@ -219,7 +269,10 @@ final class ProcessingDocumentView {
                         exact,
                         Collections.singleton(JsonPointer.ROOT),
                         runtime.executableBodyFieldsByType);
-        FrozenNode resolved = deferred.frozenResolvedRoot();
+        ResolvedScopeView resolved = new ResolvedScopeView(
+                exact,
+                deferred.frozenResolvedRoot(),
+                deferred.canonicalTypeIdentities());
         resolvedDeferredScopes.put(normalizedPath, resolved);
         return resolved;
     }
@@ -257,7 +310,7 @@ final class ProcessingDocumentView {
         if (current != null) {
             FrozenNode transparent = transparentPathAccess()
                     .resolvedAt(
-                            current.frozenCanonicalRoot(),
+                            current.frozenSourceRoot(),
                             current.frozenResolvedRoot(),
                             normalized);
             return transparent != null ? transparent.toNode() : null;
@@ -283,16 +336,63 @@ final class ProcessingDocumentView {
         return nodeAt(path) != null;
     }
 
-    FrozenNode canonicalRootWithoutResolution() {
+    FrozenNode selectedRootWithoutResolution() {
+        if (runtime.selectedDocumentBacked) {
+            runtime.syncMaterializedView();
+            return FrozenNode.fromResolvedNode(
+                    runtime.materializedView.copyRoot());
+        }
         return runtime.snapshot != null
-                ? runtime.snapshot.frozenCanonicalRoot()
+                ? runtime.snapshot.frozenSourceRoot()
                 : FrozenNode.fromResolvedNode(runtime.materializedView.root());
     }
 
     FrozenNode identityChargeCanonicalRoot() {
-        return runtime.snapshot != null
-                ? runtime.snapshot.frozenCanonicalRoot()
-                : FrozenNode.fromNode(runtime.materializedView.copyRoot());
+        ResolvedSnapshot current = runtime.snapshot;
+        if (current != null) {
+            if (current.hasCanonicalIdentity()) {
+                return current.frozenCanonicalRoot();
+            }
+            ProcessingSnapshotManager manager = runtime.currentSnapshotManager();
+            if (canonicalIdentitySnapshot != null
+                    && canonicalIdentityVersion == runtime.stateVersion
+                    && canonicalIdentityManager == manager) {
+                return canonicalIdentitySnapshot.frozenCanonicalRoot();
+            }
+            try {
+                return CanonicalIdentityEvidence.projectSnapshot(current)
+                        .frozenCanonicalRoot();
+            } catch (CanonicalTypeIdentityEvidenceUnion
+                    .MissingEvidenceException missingEvidence) {
+                return canonicalIdentitySnapshot(current)
+                        .frozenCanonicalRoot();
+            }
+        }
+        Node source = runtime.materializedView.copyRoot();
+        if (!CanonicalIdentityEvidence
+                .requiresEffectiveTypeIdentity(source)) {
+            return FrozenNode.fromNode(source);
+        }
+        ProcessingSnapshotManager manager =
+                runtime.currentSnapshotManager();
+        if (manager == null) {
+            throw new IllegalStateException(
+                    "Inline effective type identity requires the active "
+                            + "ProcessingSnapshotManager");
+        }
+        ResolvedSnapshot authoritative = Objects.requireNonNull(
+                manager.fromDocumentTransientForCanonicalIdentity(source),
+                "canonicalIdentitySnapshot");
+        if (!authoritative.isResolutionComplete()
+                || !authoritative.hasCanonicalIdentity()) {
+            throw new IllegalStateException(
+                    "Inline effective type identity requires a complete "
+                            + "authoritative resolution");
+        }
+        canonicalIdentitySnapshot = authoritative;
+        canonicalIdentityManager = manager;
+        canonicalIdentityVersion = runtime.stateVersion;
+        return authoritative.frozenCanonicalRoot();
     }
 
     FrozenNode resolvedRootWithoutResolution() {
@@ -301,24 +401,29 @@ final class ProcessingDocumentView {
                 : FrozenNode.fromResolvedNode(runtime.materializedView.root());
     }
 
-    FrozenNode contractRecognitionScope(
-            FrozenNode selectedScope,
-            FrozenNode resolvedScope) {
+    ResolvedScopeView contractRecognitionScope(
+            ResolvedScopeView scope) {
         return contractRecognitionScope(
-                selectedScope, resolvedScope, null);
+                scope, null);
     }
 
-    FrozenNode contractRecognitionScope(
-            FrozenNode selectedScope,
-            FrozenNode resolvedScope,
+    ResolvedScopeView contractRecognitionScope(
+            ResolvedScopeView scope,
             Set<String> recognizedContractKeys) {
+        ResolvedScopeView checkedScope = Objects.requireNonNull(
+                scope, "scope");
+        FrozenNode selectedScope = checkedScope.selected();
+        FrozenNode resolvedScope = checkedScope.resolved();
         if (!hasContractProperties(selectedScope)
                 || !hasContractProperties(resolvedScope)) {
-            return resolvedScope;
+            return checkedScope;
         }
         ProcessingSnapshotManager manager = runtime.currentSnapshotManager();
         Node recognitionScope = null;
         FrozenNode refreshedEffectiveScope = null;
+        CanonicalTypeIdentityLookup refreshedScopeIdentities = null;
+        List<CanonicalTypeIdentityLookup> materializedIdentities =
+                new ArrayList<>();
         for (String key : selectedScope.getContracts().getProperties().keySet()) {
             if (recognizedContractKeys != null
                     && !recognizedContractKeys.contains(key)) {
@@ -337,28 +442,30 @@ final class ProcessingDocumentView {
                                 + "' at scope without a "
                                 + "ProcessingSnapshotManager");
             }
-            FrozenNode materialized =
-                    manager.materializeVerifiedReference(effectiveContract);
-            if (materialized.getType() == null) {
+            FrozenNode exact = ExecutableBodyPathCatalog
+                    .materializeVerifiedExact(
+                            manager,
+                            effectiveContract,
+                            "Contract Recognition Resolution");
+            FrozenNode materialized = exact;
+            if (exact.getType() != null) {
+                ResolvedSnapshot materializedSnapshot =
+                        resolveRecognitionScope(manager, exact);
+                materialized = materializedSnapshot.frozenResolvedRoot();
+                materializedIdentities.add(
+                        materializedSnapshot.canonicalTypeIdentities());
+            } else {
                 if (refreshedEffectiveScope == null) {
-                    ResolvedSnapshot refreshed =
-                            runtime.strictPlatformInvocation
-                                    ? DocumentProcessingRuntime
-                                            .resolveCanonicalTransientIncludingTypeContracts(
-                                                    manager,
-                                                    selectedScope,
-                                                    Collections.singleton(
-                                                            JsonPointer.ROOT),
-                                                    runtime.executableBodyFieldsByType)
-                                    : DocumentProcessingRuntime
-                                            .resolveCanonicalTransient(
-                                                    manager,
-                                                    selectedScope,
-                                                    Collections.singleton(
-                                                            JsonPointer.ROOT),
-                                                    runtime.executableBodyFieldsByType);
+                    ResolvedSnapshot refreshed = resolveRecognitionScope(
+                            manager,
+                            withExactSelectedContract(
+                                    selectedScope,
+                                    key,
+                                    exact));
                     refreshedEffectiveScope =
                             refreshed.frozenResolvedRoot();
+                    refreshedScopeIdentities =
+                            refreshed.canonicalTypeIdentities();
                 }
                 FrozenNode refreshedContract =
                         refreshedEffectiveScope.getContracts() != null
@@ -376,49 +483,73 @@ final class ProcessingDocumentView {
             recognitionScope.getContracts()
                     .properties(key, materialized.toNode());
         }
-        return recognitionScope != null
-                ? FrozenNode.fromResolvedNode(recognitionScope)
-                : resolvedScope;
+        if (recognitionScope == null) {
+            return checkedScope;
+        }
+        if (refreshedScopeIdentities != null) {
+            materializedIdentities.add(refreshedScopeIdentities);
+        }
+        return checkedScope.withRecombinedResolved(
+                FrozenNode.fromResolvedNode(recognitionScope),
+                materializedIdentities.toArray(
+                        new CanonicalTypeIdentityLookup[0]));
+    }
+
+    /** Reuses already-verified contract Source during effective refresh. */
+    private FrozenNode withExactSelectedContract(
+            FrozenNode selectedScope,
+            String key,
+            FrozenNode exactContract) {
+        Node exactScope = selectedScope.toNode();
+        exactScope.getContracts().properties(
+                key,
+                exactContract.toNode());
+        return FrozenNode.fromNode(exactScope);
+    }
+
+    private ResolvedSnapshot resolveRecognitionScope(
+            ProcessingSnapshotManager manager,
+            FrozenNode exactScope) {
+        return DocumentProcessingRuntime
+                .resolveCanonicalTransientIncludingTypeContracts(
+                        manager,
+                        exactScope,
+                        Collections.singleton(JsonPointer.ROOT),
+                        runtime.executableBodyFieldsByType);
     }
 
     FrozenNode capturePreInitializationScopeDocument(String scopePath) {
         String normalized = PointerUtils.normalizeScope(scopePath);
         runtime.syncMaterializedView();
         ResolvedSnapshot current = snapshot();
-        FrozenNode exactScope = current != null
-                ? current.canonicalAt(normalized)
-                : null;
-        if (exactScope != null) {
-            return exactScope;
+        if (current != null && current.hasCanonicalIdentity()) {
+            FrozenNode canonical = current.canonicalAt(normalized);
+            if (canonical != null) {
+                return canonical;
+            }
         }
-        Node selectedScope = runtime.materializedView.nodeAt(normalized);
-        if (selectedScope == null) {
+        ResolvedScopeView scope = scopeViewAt(normalized);
+        if (scope == null || scope.selected() == null
+                || scope.resolved() == null) {
             throw new IllegalStateException(
                     "Exact selected scope is absent at " + normalized);
         }
-        return FrozenNode.fromUncheckedCanonicalNode(selectedScope.clone());
-    }
-
-    String calculatePreInitializationScopeNodeBlueId(String scopePath) {
-        String normalized = PointerUtils.normalizeScope(scopePath);
-        runtime.observe(
-                ProcessingMetricId
-                        .INITIALIZATION_DOCUMENT_ID_CONTENT_BLUE_ID_CALCULATIONS,
-                1L);
-        runtime.syncMaterializedView();
-        ResolvedSnapshot current = snapshot();
-        FrozenNode exactScope = current != null
-                ? current.canonicalAt(normalized)
-                : null;
-        if (exactScope != null) {
-            return exactScope.blueId();
+        Node exactSource = NodeToBlueIdInput.stripResolvedBlueIdMetadata(
+                scope.selected().toNode());
+        if (!CanonicalIdentityEvidence
+                .requiresEffectiveTypeIdentity(exactSource)) {
+            return FrozenNode.fromNode(exactSource);
         }
-        Node selectedScope = runtime.materializedView.nodeAt(normalized);
-        if (selectedScope == null) {
-            throw new IllegalStateException(
-                    "Exact selected scope is absent at " + normalized);
-        }
-        return DirectBlueIdCalculator.calculateBlueId(selectedScope);
+        Node resolvedScope = scope.resolved().toNode();
+        CanonicalTypeIdentityLookup scopedEvidence =
+                CanonicalTypeIdentityEvidenceUnion
+                        .establishForResolvedGraph(
+                                resolvedScope,
+                                Collections.singletonList(
+                                        scope.canonicalTypeIdentities()));
+        Node canonical = new CanonicalIdentityInputBuilder().build(
+                resolvedScope, exactSource, scopedEvidence);
+        return FrozenNode.fromNode(canonical);
     }
 
     WorkingDocument workingDocument(
@@ -429,7 +560,7 @@ final class ProcessingDocumentView {
         boolean materializedFallback = false;
         if (current == null && runtime.snapshotManager != null) {
             runtime.syncMaterializedView();
-            current = runtime.snapshotFromDocument(
+            current = runtime.snapshotFromDocumentTransient(
                     runtime.materializedView.copyRoot());
             runtime.snapshot = current;
             runtime.retainEntrySnapshot(current);
@@ -437,9 +568,17 @@ final class ProcessingDocumentView {
             materializedFallback = true;
         }
         if (current != null) {
+            FrozenNode selectedRoot = runtime.selectedDocumentBacked
+                    ? FrozenNode.fromResolvedNode(
+                            runtime.materializedView.copyRoot())
+                    : current.frozenSourceRoot();
+            if (!runtime.selectedDocumentBacked
+                    && !current.isSourceBacked()) {
+                selectedRoot = current.frozenCanonicalRoot();
+            }
             return new WorkingDocument(
                     normalizedScope,
-                    current.frozenCanonicalRoot(),
+                    selectedRoot,
                     current.frozenResolvedRoot(),
                     runtime.conformanceEngine,
                     runtime.conformancePlannerOverride,
@@ -453,7 +592,9 @@ final class ProcessingDocumentView {
                     runtime.executableBodyFieldsByType,
                     runtime.entryEmbeddedScopePlans(),
                     current.isResolutionComplete(),
-                    runtime.strictPlatformInvocation);
+                    runtime.strictPlatformInvocation,
+                    runtime.selectedDocumentBacked
+                            || current.isSourceBacked());
         }
         Node root = runtime.materializedView.copyRoot();
         FrozenNode canonical =
@@ -475,7 +616,40 @@ final class ProcessingDocumentView {
                 runtime.executableBodyFieldsByType,
                 runtime.entryEmbeddedScopePlans(),
                 true,
-                runtime.strictPlatformInvocation);
+                runtime.strictPlatformInvocation,
+                true);
+    }
+
+    private ResolvedSnapshot canonicalIdentitySnapshot(
+            ResolvedSnapshot current) {
+        if (current.hasCanonicalIdentity()) {
+            return current;
+        }
+        ProcessingSnapshotManager manager = runtime.currentSnapshotManager();
+        if (manager == null) {
+            throw new IllegalStateException(
+                    "Whole-document canonical identity requires the active "
+                            + "ProcessingSnapshotManager");
+        }
+        if (canonicalIdentitySnapshot != null
+                && canonicalIdentityVersion == runtime.stateVersion
+                && canonicalIdentityManager == manager) {
+            return canonicalIdentitySnapshot;
+        }
+        ResolvedSnapshot authoritative = Objects.requireNonNull(
+                manager.fromDocumentTransientForCanonicalIdentity(
+                        current.sourceRoot()),
+                "canonicalIdentitySnapshot");
+        if (!authoritative.isResolutionComplete()
+                || !authoritative.hasCanonicalIdentity()) {
+            throw new IllegalStateException(
+                    "Whole-document canonical identity requires a complete "
+                            + "authoritative resolution");
+        }
+        canonicalIdentitySnapshot = authoritative;
+        canonicalIdentityManager = manager;
+        canonicalIdentityVersion = runtime.stateVersion;
+        return authoritative;
     }
 
     boolean hasInitializationMarker(String scopePath) {

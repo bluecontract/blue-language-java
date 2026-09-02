@@ -2076,7 +2076,9 @@ final class LogicalDeliveryRoutingTest {
                             bundle,
                             bundle.effectiveContractSnapshot(
                                     sourceKey),
-                            event);
+                            event,
+                            effectiveContractKeys(bundle),
+                            admissionRuntimeWorkSession(event));
         }
 
         private PreparedRun prepare(
@@ -2112,7 +2114,9 @@ final class LogicalDeliveryRoutingTest {
                                                                 .snapshotManager()),
                                         bundle,
                                         contract,
-                                        event);
+                                        event,
+                                        effectiveContractKeys(bundle),
+                                        admissionRuntimeWorkSession(event));
                 plan.activeSubscriptionInterval(
                                 activeInterval(
                                         contract,
@@ -2124,10 +2128,28 @@ final class LogicalDeliveryRoutingTest {
             return new PreparedRun(
                     built,
                     built.bind(
-                            document,
-                            event,
+                            DirectBlueIdCalculator.calculateBlueId(document),
+                            DirectBlueIdCalculator.calculateBlueId(event),
                             processor
                                     .runtimeRegistryIdentity()));
+        }
+
+        private List<String> effectiveContractKeys(
+                ContractBundle bundle) {
+            List<String> keys = new ArrayList<>();
+            for (EffectiveContractSnapshot snapshot
+                    : bundle.effectiveContractSnapshots()) {
+                keys.add(snapshot.key());
+            }
+            return keys;
+        }
+
+        private RuntimeWorkSession admissionRuntimeWorkSession(
+                Node event) {
+            return ProcessorTestSupport.admissionRuntimeWorkSession(
+                    processor,
+                    processor.snapshotManager(),
+                    event);
         }
 
         private PreparedRun prepareWithActiveIntervals(

@@ -38,19 +38,26 @@ final class ExternalCandidateProjector {
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         runtime.validateProcessEmbeddedTraversalWithoutResolution(
                 normalizedScope);
-        FrozenNode selected =
-                execution.classificationSelectedAt(normalizedScope);
-        FrozenNode resolved =
-                execution.classificationResolvedAt(normalizedScope);
+        ResolvedScopeView classification =
+                execution.classificationScopeAt(normalizedScope);
+        if (classification == null) {
+            throw new InvalidExecutionEvidenceException(
+                    "External delivery scope is absent or not an object: "
+                            + normalizedScope);
+        }
+        FrozenNode selected = classification.selected();
+        FrozenNode resolved = classification.resolved();
         Set<String> recognizedContractKeys = owner.contractLoader()
                 .externalClassificationContractKeys(
                         selected,
                         resolved,
                         channelKey,
                         includeProcessEmbedded,
-                        declaredDependencies);
-        FrozenNode recognitionScope = runtime.contractRecognitionScope(
-                selected, resolved, recognizedContractKeys);
+                        declaredDependencies,
+                        classification.canonicalTypeIdentities());
+        ResolvedScopeView recognition = runtime.contractRecognitionScope(
+                classification, recognizedContractKeys);
+        FrozenNode recognitionScope = recognition.resolved();
         if (!isParticipatingObject(normalizedScope, selected)
                 || !isParticipatingObject(
                 normalizedScope, recognitionScope)) {
@@ -69,7 +76,8 @@ final class ExternalCandidateProjector {
                 execution.contractRecognitionMeter(),
                 includeProcessEmbedded
                         ? "structural-route-header"
-                        : "external-channel-header");
+                        : "external-channel-header",
+                recognition.canonicalTypeIdentities());
     }
 
     ContractBundle.ChannelBinding requireExternalSource(

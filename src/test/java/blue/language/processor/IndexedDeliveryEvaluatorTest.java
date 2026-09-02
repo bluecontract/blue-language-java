@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -743,7 +744,11 @@ final class IndexedDeliveryEvaluatorTest {
         Map<String, Node> providerNodes = new LinkedHashMap<>();
         providerNodes.put(rootBlueId, exactRoot);
         providerNodes.put(CHANNEL_TYPE_BLUE_ID, CHANNEL_TYPE);
+        AtomicInteger rootReads = new AtomicInteger();
         NodeProvider provider = blueId -> {
+            if (rootBlueId.equals(blueId)) {
+                rootReads.incrementAndGet();
+            }
             Node supplied = providerNodes.get(blueId);
             return supplied != null
                     ? Collections.singletonList(supplied.clone())
@@ -785,6 +790,127 @@ final class IndexedDeliveryEvaluatorTest {
         assertEquals(1, preparation.deliveryPlan().deliveries().size());
         assertEquals("accepted",
                 preparation.deliveryPlan().deliveries().get(0).channelKey());
+        assertEquals(1, rootReads.get(),
+                "a pure-reference identity must not pre-resolve provider content");
+    }
+
+    @Test
+    void shouldBindInlineAndReferenceTypeFormsToSameSourceIdentities() {
+        // given
+        Node rootType = new Node()
+                .name("Indexed Delivery Root Type")
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+        Node eventType = new Node()
+                .name("Indexed Delivery Event Type")
+                .properties(
+                        "inheritedEventValue",
+                        new Node().value("same"));
+        String rootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(rootType);
+        String eventTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(eventType);
+        Node accepted = channel(0, true, true, false);
+        Node inlineRoot = root("accepted", accepted)
+                .type(rootType.clone())
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+        Node referenceRoot = root("accepted", accepted)
+                .type(new Node().blueId(rootTypeBlueId))
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+        Node inlineEvent = event()
+                .type(eventType.clone())
+                .properties(
+                        "inheritedEventValue",
+                        new Node().value("same"));
+        Node referenceEvent = event()
+                .type(new Node().blueId(eventTypeBlueId))
+                .properties(
+                        "inheritedEventValue",
+                        new Node().value("same"));
+        Map<String, Node> providerNodes = new LinkedHashMap<>();
+        providerNodes.put(rootTypeBlueId, rootType);
+        providerNodes.put(eventTypeBlueId, eventType);
+        providerNodes.put(CHANNEL_TYPE_BLUE_ID, CHANNEL_TYPE);
+        NodeProvider provider = blueId -> {
+            Node supplied = providerNodes.get(blueId);
+            return supplied != null
+                    ? Collections.singletonList(supplied.clone())
+                    : null;
+        };
+
+        // when
+        ExternalDeliveryPlan inlinePlan;
+        ExternalDeliveryPlan referencePlan;
+        try (Blue language = new Blue(provider)) {
+            DocumentProcessor processor = DocumentProcessor.Builder
+                    .from(language.getDocumentProcessor())
+                    .registerContractProcessor(
+                            CHANNEL_TYPE_BLUE_ID,
+                            CHANNEL_TYPE,
+                            new IndexedTestChannelProcessor())
+                    .build();
+            try {
+                IndexedDeliveryEvaluator evaluator = processor
+                        .administration()
+                        .indexedDeliveryEvaluator();
+                SubscriptionDelta.Entry activeInterval = interval(
+                        "accepted", accepted, null);
+                List<SubscriptionDelta.Entry> intervals =
+                        Collections.singletonList(activeInterval);
+                List<ExternalSubscriptionOccurrenceKey> candidates =
+                        Collections.singletonList(
+                                ExternalSubscriptionOccurrenceKey.of(
+                                        "/", "accepted"));
+                inlinePlan = evaluator.prepare(
+                        inlineRoot,
+                        inlineEvent,
+                        ROOT_REVISION,
+                        EVENT_ORDER,
+                        intervals,
+                        candidates).deliveryPlan();
+                referencePlan = evaluator.prepare(
+                        referenceRoot,
+                        referenceEvent,
+                        ROOT_REVISION,
+                        EVENT_ORDER,
+                        intervals,
+                        candidates).deliveryPlan();
+            } finally {
+                processor.close();
+            }
+        }
+
+        // then
+        VerifiedExecutionEvidence inlineBinding =
+                inlinePlan.verifiedBinding();
+        VerifiedExecutionEvidence referenceBinding =
+                referencePlan.verifiedBinding();
+        assertNotEquals(
+                DirectBlueIdCalculator.calculateBlueId(inlineRoot),
+                inlineBinding.rootBlueId());
+        assertNotEquals(
+                DirectBlueIdCalculator.calculateBlueId(inlineEvent),
+                inlineBinding.eventBlueId());
+        assertEquals(
+                referenceBinding.rootBlueId(),
+                inlineBinding.rootBlueId());
+        assertEquals(
+                referenceBinding.eventBlueId(),
+                inlineBinding.eventBlueId());
+        assertEquals(
+                inlineBinding.eventBlueId(),
+                inlinePlan.deliveries().get(0)
+                        .checkpointSubjectBlueId());
+        assertEquals(
+                referencePlan.deliveries().get(0)
+                        .checkpointSubjectBlueId(),
+                inlinePlan.deliveries().get(0)
+                        .checkpointSubjectBlueId());
     }
 
     @Test

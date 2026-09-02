@@ -9,9 +9,9 @@ import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.value.BlueNumbers;
-import blue.language.model.NodeWireForm;
 import blue.language.identity.ScalarNodeIdentity;
 
 import java.math.BigDecimal;
@@ -21,12 +21,10 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE;
 import static blue.language.model.wire.SchemaPropertyConstants.*;
-import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static java.lang.Boolean.TRUE;
 
 /**
@@ -45,12 +43,22 @@ public class SchemaVerifier implements MergingProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    public void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         // do nothing
     }
 
     @Override
-    public void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    public void postProcess(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Schema schema = target.getSchema();
         if (schema == null)
             return;
@@ -70,7 +78,11 @@ public class SchemaVerifier implements MergingProcessor {
     }
 
     @Override
-    public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
+    public void validateCompleted(
+            Node node,
+            boolean semanticallyPresent,
+            String path,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Schema schema = node.getSchema();
         if (schema == null) {
             return;
@@ -78,7 +90,11 @@ public class SchemaVerifier implements MergingProcessor {
         try {
             verifyWellFormed(schema);
             onCompletedValidation(node, path);
-            verifyValue(schema, node, semanticallyPresent);
+            verifyValue(
+                    schema,
+                    node,
+                    semanticallyPresent,
+                    typeIdentities);
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Schema validation failed at path " + path + ": "
                     + ex.getMessage(), ex);
@@ -95,7 +111,11 @@ public class SchemaVerifier implements MergingProcessor {
         // default implementation
     }
 
-    private void verifyValue(Schema schema, Node target, boolean semanticallyPresent) {
+    private void verifyValue(
+            Schema schema,
+            Node target,
+            boolean semanticallyPresent,
+            CanonicalTypeIdentityLookup typeIdentities) {
 
         verifyRequired(schema.getRequiredValue(), semanticallyPresent);
         if (!semanticallyPresent) {
@@ -110,10 +130,11 @@ public class SchemaVerifier implements MergingProcessor {
         verifyMultipleOf(schema.getMultipleOfValue(), target);
         verifyMinItems(schema.getMinItemsExact(), target);
         verifyMaxItems(schema.getMaxItemsExact(), target);
-        verifyUniqueItems(schema.getUniqueItemsValue(), target);
+        verifyUniqueItems(
+                schema.getUniqueItemsValue(), target, typeIdentities);
         verifyMinFields(schema.getMinFieldsExact(), target);
         verifyMaxFields(schema.getMaxFieldsExact(), target);
-        verifyEnum(schema.getEnum(), target);
+        verifyEnum(schema.getEnum(), target, typeIdentities);
     }
 
     private boolean hasPayloadDependentKeyword(Schema schema) {
@@ -321,7 +342,10 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyUniqueItems(Boolean uniqueItems, Node node) {
+    private void verifyUniqueItems(
+            Boolean uniqueItems,
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities) {
         if (!Boolean.TRUE.equals(uniqueItems)) {
             return;
         }
@@ -329,13 +353,105 @@ public class SchemaVerifier implements MergingProcessor {
         List<Node> items = node.getItems();
         if (items != null) {
             int uniqueItemsCount = items.stream()
-                    .map(NodeWireForm::get)
-                    .map(doc -> YAML_MAPPER.convertValue(doc, Node.class))
-                    .map(DirectBlueIdCalculator::calculateBlueId)
-                    .collect(Collectors.toSet())
+                    .map(item -> resolvedComparisonBlueId(
+                            item, typeIdentities))
+                    .collect(java.util.stream.Collectors.toSet())
                     .size();
             if (items.size() != uniqueItemsCount)
                 throw new IllegalArgumentException("Unique items are required, but some items are identical. Found items: " + items);
+        }
+    }
+
+    private String resolvedComparisonBlueId(
+            Node item,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Node canonical = item.clone();
+        canonicalizeTypePositions(
+                canonical,
+                typeIdentities,
+                Collections.newSetFromMap(
+                        new IdentityHashMap<Node, Boolean>()));
+        return DirectBlueIdCalculator.calculateBlueId(canonical);
+    }
+
+    private void canonicalizeTypePositions(
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities,
+            Set<Node> visited) {
+        if (node == null || !visited.add(node)) {
+            return;
+        }
+        node.type(canonicalTypeReference(node.getType(), typeIdentities));
+        node.itemType(canonicalTypeReference(
+                node.getItemType(), typeIdentities));
+        node.keyType(canonicalTypeReference(
+                node.getKeyType(), typeIdentities));
+        node.valueType(canonicalTypeReference(
+                node.getValueType(), typeIdentities));
+        canonicalizeTypePositions(node.getBlue(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                node.getContracts(), typeIdentities, visited);
+        if (node.getItems() != null) {
+            for (Node child : node.getItems()) {
+                canonicalizeTypePositions(child, typeIdentities, visited);
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Node child : node.getProperties().values()) {
+                canonicalizeTypePositions(child, typeIdentities, visited);
+            }
+        }
+        canonicalizeSchemaTypePositions(
+                node.getSchema(), typeIdentities, visited);
+    }
+
+    private Node canonicalTypeReference(
+            Node type,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (type == null) {
+            return null;
+        }
+        return new Node().blueId(
+                typeIdentities.requireCanonicalTypeBlueId(type));
+    }
+
+    private void canonicalizeSchemaTypePositions(
+            Schema schema,
+            CanonicalTypeIdentityLookup typeIdentities,
+            Set<Node> visited) {
+        if (schema == null) {
+            return;
+        }
+        canonicalizeTypePositions(
+                schema.getRequired(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinLength(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxLength(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinimum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaximum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getExclusiveMinimum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getExclusiveMaximum(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMultipleOf(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getUniqueItems(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMinFields(), typeIdentities, visited);
+        canonicalizeTypePositions(
+                schema.getMaxFields(), typeIdentities, visited);
+        if (schema.getEnum() != null) {
+            for (Node value : schema.getEnum()) {
+                canonicalizeTypePositions(value, typeIdentities, visited);
+            }
         }
     }
 
@@ -363,7 +479,10 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyEnum(List<Node> enumValues, Node node) {
+    private void verifyEnum(
+            List<Node> enumValues,
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities) {
         if (enumValues == null) {
             return;
         }
@@ -371,9 +490,13 @@ public class SchemaVerifier implements MergingProcessor {
             throw wrongKind(KEY_ENUM, "scalar", node);
         }
 
-        String nodeBlueId = ScalarNodeIdentity.blueId(node);
+        String nodeBlueId = ScalarNodeIdentity.resolvedBlueId(
+                node, typeIdentities);
         boolean matched = enumValues.stream()
-                .map(ScalarNodeIdentity::blueId)
+                .map(enumValue -> enumValue.isReferenceOnly()
+                        ? enumValue.getBlueId()
+                        : ScalarNodeIdentity.resolvedBlueId(
+                                enumValue, typeIdentities))
                 .anyMatch(nodeBlueId::equals);
         if (!matched) {
             throw new IllegalArgumentException("Node value is not one of the allowed enum values.");
@@ -407,7 +530,9 @@ public class SchemaVerifier implements MergingProcessor {
         Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
         Node type = node.getType();
         while (type != null && visited.add(type)) {
-            if (DICTIONARY_TYPE_BLUE_ID.equals(type.getBlueId()) || isBareDictionaryAlias(type)) {
+            if ((type.isReferenceOnly()
+                    && DICTIONARY_TYPE_BLUE_ID.equals(type.getBlueId()))
+                    || isBareDictionaryAlias(type)) {
                 return true;
             }
             type = type.getType();

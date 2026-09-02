@@ -220,7 +220,7 @@ final class ProcessingMutationSession {
 
     void validateProcessEmbeddedTraversalWithoutResolution(String path) {
         ImmutablePatchPlanner.forFrozen(
-                runtime.canonicalRootWithoutResolution())
+                runtime.selectedRootWithoutResolution())
                 .validateProcessEmbeddedTraversalPath(path);
     }
 
@@ -310,7 +310,7 @@ final class ProcessingMutationSession {
                         runtime.strictPlatformInvocation,
                         runtime.executableBodyFieldsByType);
         FrozenNode workingCanonical =
-                runtime.canonicalRootWithoutResolution();
+                runtime.selectedRootWithoutResolution();
         FrozenNode workingResolved =
                 runtime.resolvedRootWithoutResolution();
         FrozenNode workingIdentityCanonical = null;
@@ -360,7 +360,7 @@ final class ProcessingMutationSession {
             if (expandedCanonical != workingCanonical) {
                 ResolvedSnapshot expanded = resolvePreflightCanonical(
                         evidenceManager, expandedCanonical);
-                workingCanonical = expanded.frozenCanonicalRoot();
+                workingCanonical = expanded.frozenSourceRoot();
                 workingResolved = expanded.frozenResolvedRoot();
                 canonicalPlanner = ImmutablePatchPlanner.forFrozen(
                         workingCanonical);
@@ -635,7 +635,7 @@ final class ProcessingMutationSession {
 
     private void validateMutationPathWithoutResolution(String path) {
         ImmutablePatchPlanner.forFrozen(
-                runtime.canonicalRootWithoutResolution())
+                runtime.selectedRootWithoutResolution())
                 .validateMutationPath(path);
     }
 
@@ -652,9 +652,11 @@ final class ProcessingMutationSession {
         ResolvedSnapshot current = runtime.snapshot();
         return current != null
                 && preview.isBasedOn(
-                        current.frozenCanonicalRoot(),
+                        runtime.selectedRootWithoutResolution(),
                         current.frozenResolvedRoot(),
-                        current.isResolutionComplete());
+                        current.isResolutionComplete(),
+                        runtime.selectedDocumentBacked
+                                || current.isSourceBacked());
     }
 
     private List<DocumentUpdateData> commitMeasured(

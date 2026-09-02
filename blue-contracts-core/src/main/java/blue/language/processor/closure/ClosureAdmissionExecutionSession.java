@@ -6,6 +6,7 @@ import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.GasChargeContext;
 import blue.language.processor.ManagedCheckpointSettlementBatch;
@@ -341,6 +342,9 @@ final class ClosureAdmissionExecutionSession
                 work,
                 target,
                 planned.payload,
+                planned.selectedRoute != null
+                        ? planned.selectedRoute.matchingEventBlueId()
+                        : null,
                 TentativeResolutionContext.from(
                         input, currentSnapshot, work.targetDocumentId()));
         recorder.step(step);
@@ -412,8 +416,7 @@ final class ClosureAdmissionExecutionSession
     public void onApplicationEvent(
             String scopePath,
             String originContractKey,
-            Node event,
-            String eventBlueId) {
+            ExactEventIdentityEvidence exactEvent) {
         requireRoot(scopePath);
         throw new ClosureCapabilityGapException(
                 "INITIALIZATION_EVENT_QUEUE_REQUIRED",

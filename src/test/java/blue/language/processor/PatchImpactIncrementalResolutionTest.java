@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.Blue;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.IncrementalMergingProcessorCapability;
@@ -756,16 +757,20 @@ class PatchImpactIncrementalResolutionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
-            delegate.process(target, source, nodeProvider, nodeResolver);
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.process(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
         public void postProcess(Node target,
                                 Node source,
                                 NodeProvider nodeProvider,
-                                NodeResolver nodeResolver) {
-            delegate.postProcess(target, source, nodeProvider, nodeResolver);
+                                NodeResolver nodeResolver,
+                                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.postProcess(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
@@ -779,8 +784,13 @@ class PatchImpactIncrementalResolutionTest {
         }
 
         @Override
-        public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
-            delegate.validateCompleted(node, semanticallyPresent, path);
+        public void validateCompleted(
+                Node node,
+                boolean semanticallyPresent,
+                String path,
+                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.validateCompleted(
+                    node, semanticallyPresent, path, typeIdentities);
         }
     }
 
@@ -798,16 +808,20 @@ class PatchImpactIncrementalResolutionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
-            delegate.process(target, source, nodeProvider, nodeResolver);
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.process(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
         public void postProcess(Node target,
                                 Node source,
                                 NodeProvider nodeProvider,
-                                NodeResolver nodeResolver) {
-            delegate.postProcess(target, source, nodeProvider, nodeResolver);
+                                NodeResolver nodeResolver,
+                                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.postProcess(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
@@ -821,8 +835,13 @@ class PatchImpactIncrementalResolutionTest {
         }
 
         @Override
-        public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
-            delegate.validateCompleted(node, semanticallyPresent, path);
+        public void validateCompleted(
+                Node node,
+                boolean semanticallyPresent,
+                String path,
+                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.validateCompleted(
+                    node, semanticallyPresent, path, typeIdentities);
         }
 
         @Override
@@ -853,16 +872,20 @@ class PatchImpactIncrementalResolutionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
-            delegate.process(target, source, nodeProvider, nodeResolver);
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.process(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
 
         @Override
         public void postProcess(Node target,
                                 Node source,
                                 NodeProvider nodeProvider,
-                                NodeResolver nodeResolver) {
-            delegate.postProcess(target, source, nodeProvider, nodeResolver);
+                                NodeResolver nodeResolver,
+                                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.postProcess(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
             if (target.getProperties() != null
                     && target.getProperties().get("status") != null
                     && target.getProperties().get("status").getValue() != null) {
@@ -882,8 +905,13 @@ class PatchImpactIncrementalResolutionTest {
         }
 
         @Override
-        public void validateCompleted(Node node, boolean semanticallyPresent, String path) {
-            delegate.validateCompleted(node, semanticallyPresent, path);
+        public void validateCompleted(
+                Node node,
+                boolean semanticallyPresent,
+                String path,
+                CanonicalTypeIdentityLookup typeIdentities) {
+            delegate.validateCompleted(
+                    node, semanticallyPresent, path, typeIdentities);
         }
 
         @Override

@@ -13,6 +13,7 @@ import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
+import blue.language.processor.ContractMatchingService;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
 import blue.language.processor.FrozenJsonPatch;
@@ -545,6 +546,7 @@ final class ContractEvolutionClosureAcceptanceTest {
                 .nodeProvider(evidenceProvider)
                 .conformanceEngine(conformance)
                 .snapshotStore(new LanguageSnapshotManager(language))
+                .matchingService(new ContractMatchingService(language))
                 .build()) {
             Node body = new Node()
                     .name("Generated generalization evidence")

@@ -18,10 +18,15 @@ import blue.language.model.Schema;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static blue.language.model.wire.BlueLanguageConstants.*;
 import static blue.language.model.wire.SchemaPropertyConstants.*;
@@ -120,44 +125,76 @@ public final class NodeToBlueIdInput {
         if (node == null) {
             return null;
         }
-        if (node.getBlueId() != null && !node.isReferenceOnly()) {
-            node.blueId(null);
+        Deque<Node> pending = new ArrayDeque<>();
+        Set<Node> visited = Collections.newSetFromMap(
+                new IdentityHashMap<Node, Boolean>());
+        Set<Schema> visitedSchemas = Collections.newSetFromMap(
+                new IdentityHashMap<Schema, Boolean>());
+        pending.push(node);
+        while (!pending.isEmpty()) {
+            Node current = pending.pop();
+            if (!visited.add(current) || current.isReferenceOnly()) {
+                continue;
+            }
+            if (current.getBlueId() != null) {
+                current.blueId(null);
+            }
+            push(pending, current.getType());
+            push(pending, current.getItemType());
+            push(pending, current.getKeyType());
+            push(pending, current.getValueType());
+            push(pending, current.getBlue());
+            push(pending, current.getContracts());
+            if (current.getItems() != null) {
+                for (Node item : current.getItems()) {
+                    push(pending, item);
+                }
+            }
+            if (current.getProperties() != null) {
+                for (Node property : current.getProperties().values()) {
+                    push(pending, property);
+                }
+            }
+            Schema schema = current.getSchema();
+            if (schema == null
+                    || !visitedSchemas.add(schema)
+                    || schema.isReferenceOnly()) {
+                continue;
+            }
+            if (schema.getBlueId() != null) {
+                schema.blueId(null);
+            }
+            pushSchemaNodes(pending, schema);
         }
-        stripResolvedBlueIdMetadata(node.getType());
-        stripResolvedBlueIdMetadata(node.getItemType());
-        stripResolvedBlueIdMetadata(node.getKeyType());
-        stripResolvedBlueIdMetadata(node.getValueType());
-        stripResolvedBlueIdMetadata(node.getBlue());
-        stripResolvedBlueIdMetadata(node.getContracts());
-        if (node.getItems() != null) {
-            node.getItems().forEach(NodeToBlueIdInput::stripResolvedBlueIdMetadata);
-        }
-        if (node.getProperties() != null) {
-            node.getProperties().values().forEach(NodeToBlueIdInput::stripResolvedBlueIdMetadata);
-        }
-        stripResolvedBlueIdMetadata(node.getSchema());
         return node;
     }
 
-    private static void stripResolvedBlueIdMetadata(Schema schema) {
-        if (schema == null) {
-            return;
-        }
-        stripResolvedBlueIdMetadata(schema.getRequired());
-        stripResolvedBlueIdMetadata(schema.getMinLength());
-        stripResolvedBlueIdMetadata(schema.getMaxLength());
-        stripResolvedBlueIdMetadata(schema.getMinimum());
-        stripResolvedBlueIdMetadata(schema.getMaximum());
-        stripResolvedBlueIdMetadata(schema.getExclusiveMinimum());
-        stripResolvedBlueIdMetadata(schema.getExclusiveMaximum());
-        stripResolvedBlueIdMetadata(schema.getMultipleOf());
-        stripResolvedBlueIdMetadata(schema.getMinItems());
-        stripResolvedBlueIdMetadata(schema.getMaxItems());
-        stripResolvedBlueIdMetadata(schema.getUniqueItems());
-        stripResolvedBlueIdMetadata(schema.getMinFields());
-        stripResolvedBlueIdMetadata(schema.getMaxFields());
+    private static void pushSchemaNodes(
+            Deque<Node> pending,
+            Schema schema) {
+        push(pending, schema.getRequired());
+        push(pending, schema.getMinLength());
+        push(pending, schema.getMaxLength());
+        push(pending, schema.getMinimum());
+        push(pending, schema.getMaximum());
+        push(pending, schema.getExclusiveMinimum());
+        push(pending, schema.getExclusiveMaximum());
+        push(pending, schema.getMultipleOf());
+        push(pending, schema.getMinItems());
+        push(pending, schema.getMaxItems());
+        push(pending, schema.getUniqueItems());
+        push(pending, schema.getMinFields());
+        push(pending, schema.getMaxFields());
         if (schema.getEnum() != null) {
-            schema.getEnum().forEach(NodeToBlueIdInput::stripResolvedBlueIdMetadata);
+            for (Node enumValue : schema.getEnum()) {
+                push(pending, enumValue);
+            }
+        }
+    }
+
+    private static void push(Deque<Node> pending, Node child) {
+        if (child != null) {
+            pending.push(child);
         }
     }
 

@@ -34,14 +34,12 @@ public interface ManagedDocumentStepContinuation {
      *
      * @param scopePath normalized emitting scope
      * @param originContractKey exact emitting Handler contract key
-     * @param event exact emitted application event
-     * @param eventBlueId exact identity established before transfer
+     * @param exactEvent inseparable exact event and admitted identity evidence
      */
     void onApplicationEvent(
             String scopePath,
             String originContractKey,
-            Node event,
-            String eventBlueId);
+            ExactEventIdentityEvidence exactEvent);
 
     /**
      * Transfers one exact termination intent to the closure orchestrator.

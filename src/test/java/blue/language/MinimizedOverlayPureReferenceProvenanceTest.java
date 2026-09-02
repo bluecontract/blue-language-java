@@ -43,7 +43,9 @@ class MinimizedOverlayPureReferenceProvenanceTest {
         Node canonicalReference =
                 original.canonicalRoot().getAsNode("/prevEntry");
         Node resolvedReference = original.resolvedRoot().getAsNode("/prevEntry");
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         Node minimizedReference = minimized.getProperties() == null
                 ? null
                 : minimized.getProperties().get("prevEntry");
@@ -79,7 +81,9 @@ class MinimizedOverlayPureReferenceProvenanceTest {
                 "  blueId: " + holderTypeBlueId));
 
         // when
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         BasicNodeProvider readerProvider = providerWithInheritedReference();
         Blue reader = new Blue(readerProvider);
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(

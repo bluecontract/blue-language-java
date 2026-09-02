@@ -6,7 +6,6 @@ import blue.language.model.BlueDescription;
 import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Nodes;
 
 import java.lang.reflect.*;
@@ -69,7 +68,8 @@ public class ComplexObjectConverter implements Converter<Object> {
             return null;
         }
 
-        Class<?> resolvedClass = typeClassResolver.resolveClass(node);
+        Class<?> resolvedClass = converterFactory.resolveClass(
+                node, typeClassResolver);
         Class<?> classToInstantiate;
 
         if (prioritizeTargetType) {
@@ -126,7 +126,10 @@ public class ComplexObjectConverter implements Converter<Object> {
                             fieldValue = null;
                         } else {
                             Type fieldType = field.getGenericType();
-                            Class<?> resolvedFieldClass = typeClassResolver.resolveClass(fieldNode);
+                            Class<?> resolvedFieldClass =
+                                    converterFactory.resolveClass(
+                                            fieldNode,
+                                            typeClassResolver);
 
                             if (resolvedFieldClass != null && field.getType().isAssignableFrom(resolvedFieldClass)) {
                                 Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, resolvedFieldClass);
@@ -162,7 +165,7 @@ public class ComplexObjectConverter implements Converter<Object> {
         if (targetNode == null) {
             return null;
         }
-        return DirectBlueIdCalculator.calculateUncheckedBlueId(targetNode);
+        return converterFactory.requireCanonicalContentBlueId(targetNode);
     }
 
     private String handleBlueNameAnnotation(Node node, Class<?> clazz, Field field) {

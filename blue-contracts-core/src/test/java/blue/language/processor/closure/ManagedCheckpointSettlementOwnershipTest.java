@@ -13,6 +13,7 @@ import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExternalChannelFunctionContext;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
 import blue.language.processor.ExternalOrderKey;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.GasChargeContext;
 import blue.language.processor.GasSchedule;
 import blue.language.processor.HandlerProcessor;
@@ -279,7 +280,14 @@ final class ManagedCheckpointSettlementOwnershipTest {
                     "/", 0L, 1L, channel, null, null, "fixture.seed-checkpoint");
             try (ManagedDocumentStepRuntime step = new ManagedDocumentStepRuntime(owner)) {
                 ManagedCheckpointCandidate candidate = step.classifyExternalDelivery(
-                        before, channel, event, context).candidate();
+                        before,
+                        channel,
+                        ExactEventIdentityEvidence.verify(
+                                null,
+                                event,
+                                blueId(event),
+                                null),
+                        context).candidate();
                 assertNotNull(candidate);
                 exact.put(candidate.domain().blueId(), candidate.domain().exactValue());
                 Node after = before.clone();

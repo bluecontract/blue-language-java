@@ -7,7 +7,9 @@ import blue.language.model.wire.JsonPointer;
 import blue.language.resolve.ResolutionLimits;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,10 @@ final class CompletedValueValidator {
     private final ReferenceResolver referenceResolver;
     private final List<Boolean> referenceExpansionStack = new ArrayList<>();
     private final List<ContributionFrame> contributionFrames = new ArrayList<>();
+    /* Keeps declaration-vs-instance provenance when an intermediate resolved
+     * node is subsequently merged into an existing target in this invocation. */
+    private final Map<Node, Boolean> semanticPresenceByResolvedNode =
+            new IdentityHashMap<>();
     private Map<String, ValidationCandidate> candidates;
     private Map<String, PresenceGate> presenceGates;
     private Set<String> incompletePaths;
@@ -48,10 +54,12 @@ final class CompletedValueValidator {
             return null;
         }
         ContributionFrame frame = new ContributionFrame(
+                target,
                 path,
                 state.path.size(),
                 isDirectSemanticContribution(source, state.contribution),
-                isInheritedReferenceContribution(target, source),
+                isInheritedReferenceContribution(
+                        target, source, state.contribution),
                 state.contribution != ResolutionEngine.Contribution.CONTRACT_ROOT);
         contributionFrames.add(frame);
         return frame;
@@ -66,6 +74,13 @@ final class CompletedValueValidator {
         contributionFrames.remove(contributionFrames.size() - 1);
         boolean semanticContribution = frame.semanticContribution
                 || frame.inheritedSemanticContribution;
+        Boolean previousPresence = semanticPresenceByResolvedNode.get(
+                frame.target);
+        if (previousPresence == null || semanticContribution) {
+            semanticPresenceByResolvedNode.put(
+                    frame.target,
+                    semanticContribution);
+        }
         if (semanticContribution) {
             presenceGate(state, frame.path).present = true;
         }
@@ -150,11 +165,21 @@ final class CompletedValueValidator {
 
 
     private boolean isDirectSemanticContribution(Node node, ResolutionEngine.Contribution contribution) {
-        if (node == null || contribution == ResolutionEngine.Contribution.TYPE_METADATA) {
+        if (node == null
+                || contribution == ResolutionEngine.Contribution.TYPE_METADATA) {
             return false;
+        }
+        Boolean resolvedPresence = semanticPresenceByResolvedNode.get(node);
+        if (resolvedPresence != null) {
+            return resolvedPresence;
         }
         if (contribution == ResolutionEngine.Contribution.TYPE_ROOT) {
             return node.getValue() != null || node.getItems() != null;
+        }
+        if (contribution == ResolutionEngine.Contribution.TYPE_DECLARATION) {
+            return hasDeclaredInstancePayload(
+                    node,
+                    Collections.newSetFromMap(new IdentityHashMap<>()));
         }
         return node.isReferenceOnly()
                 || node.getValue() != null
@@ -162,12 +187,69 @@ final class CompletedValueValidator {
                 || (node.getProperties() != null && !node.getProperties().isEmpty());
     }
 
-    private boolean isInheritedReferenceContribution(Node target, Node source) {
+    /**
+     * Distinguishes a fixed value inherited from a type from the completed
+     * declaration graph used to describe that value.
+     *
+     * <p>Completed types may be traversed more than once (for example after
+     * reference-cache admission). Their expanded {@code type}, {@code schema}
+     * and {@code contracts} subtrees are declarations and cannot by
+     * themselves make an optional instance path present. Fixed scalars,
+     * lists, exact references, and ordinary object subtrees containing such
+     * payload are instance content and do make it present. Declaration-only
+     * children containing reserved metadata do not.</p>
+     */
+    private boolean hasDeclaredInstancePayload(
+            Node node,
+            Set<Node> visiting) {
+        if (node == null || !visiting.add(node)) {
+            return false;
+        }
+        try {
+            if (node.isReferenceOnly()
+                    || node.getValue() != null
+                    || node.getItems() != null) {
+                return true;
+            }
+            if (node.getProperties() != null) {
+                for (Node child : node.getProperties().values()) {
+                    if (hasDeclaredInstancePayload(
+                            child, visiting)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        } finally {
+            visiting.remove(node);
+        }
+    }
+
+    private boolean isInheritedReferenceContribution(
+            Node target,
+            Node source,
+            ResolutionEngine.Contribution contribution) {
+        /*
+         * A reference used to obtain a type is declaration evidence, not an
+         * authored reference value at the instance path. The declaration's
+         * own fixed payload, if any, is accounted for separately above.
+         */
+        if (contribution == ResolutionEngine.Contribution.TYPE_ROOT
+                || contribution == ResolutionEngine.Contribution.TYPE_DECLARATION
+                || contribution == ResolutionEngine.Contribution.TYPE_METADATA) {
+            return false;
+        }
         if (!target.isReferenceOnly()) {
             return false;
         }
         Node sourceType = source.getType();
-        return sourceType == null || !target.getBlueId().equals(sourceType.getBlueId());
+        if (sourceType == null) {
+            return true;
+        }
+        return !engine.canonicalTypeIdentities()
+                .findCanonicalTypeBlueId(sourceType)
+                .map(target.getBlueId()::equals)
+                .orElse(false);
     }
 
     private boolean hasConcretePayload(Node node) {
@@ -183,7 +265,7 @@ final class CompletedValueValidator {
     boolean isInlineTypeDeclaration(Node node) {
         return node != null
                 && node.getType() != null
-                && node.getType().getBlueId() == null
+                && !node.getType().isReferenceOnly()
                 && !isBareCoreTypeAlias(node.getType());
     }
 
@@ -305,7 +387,8 @@ final class CompletedValueValidator {
             }
             mergingProcessor.validateCompleted(candidate.node,
                     candidate.presence.present,
-                    entry.getKey());
+                    entry.getKey(),
+                    engine.canonicalTypeIdentities());
         }
     }
 
@@ -394,6 +477,7 @@ final class CompletedValueValidator {
 
 
     static final class ContributionFrame {
+        private final Node target;
         private final String path;
         private final int pathDepth;
         private boolean semanticContribution;
@@ -401,11 +485,13 @@ final class CompletedValueValidator {
         private final boolean propagatesToParent;
 
         private ContributionFrame(
+                Node target,
                 String path,
                 int pathDepth,
                 boolean semanticContribution,
                 boolean inheritedSemanticContribution,
                 boolean propagatesToParent) {
+            this.target = target;
             this.path = path;
             this.pathDepth = pathDepth;
             this.semanticContribution = semanticContribution;

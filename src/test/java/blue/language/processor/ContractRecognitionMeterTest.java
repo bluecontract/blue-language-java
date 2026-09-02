@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
@@ -144,14 +145,16 @@ final class ContractRecognitionMeterTest {
                 "/",
                 NoOpProcessingObserver.INSTANCE,
                 meter,
-                "participating-contract-header");
+                "participating-contract-header",
+                CanonicalTypeIdentityLookup.incomplete());
         loader.load(
                 frozen,
                 frozen,
                 "/",
                 NoOpProcessingObserver.INSTANCE,
                 meter,
-                "participating-contract-header");
+                "participating-contract-header",
+                CanonicalTypeIdentityLookup.incomplete());
         long quantityAfterDuplicateLoad =
                 quantity(
                         gas,
@@ -167,7 +170,8 @@ final class ContractRecognitionMeterTest {
                 "/",
                 NoOpProcessingObserver.INSTANCE,
                 meter,
-                "participating-contract-header");
+                "participating-contract-header",
+                CanonicalTypeIdentityLookup.incomplete());
         long quantityAfterChangedContribution =
                 quantity(
                         gas,
@@ -212,7 +216,8 @@ final class ContractRecognitionMeterTest {
                         true,
                         NoOpProcessingObserver.INSTANCE,
                         new ContractRecognitionMeter(gas),
-                        "structural-route-header");
+                        "structural-route-header",
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertTrue(bundle.hasProcessEmbedded());
@@ -256,7 +261,8 @@ final class ContractRecognitionMeterTest {
                                 true,
                                 NoOpProcessingObserver.INSTANCE,
                                 new ContractRecognitionMeter(gas),
-                                "structural-route-header");
+                                "structural-route-header",
+                                CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertTrue(bundle.effectiveContractSnapshots()
@@ -300,7 +306,8 @@ final class ContractRecognitionMeterTest {
                                 "/",
                                 null,
                                 true,
-                                NoOpProcessingObserver.INSTANCE);
+                                NoOpProcessingObserver.INSTANCE,
+                                CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -350,7 +357,8 @@ final class ContractRecognitionMeterTest {
                         NoOpProcessingObserver.INSTANCE,
                         new ContractRecognitionMeter(
                                 completeGas),
-                        "structural-route-header");
+                        "structural-route-header",
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(

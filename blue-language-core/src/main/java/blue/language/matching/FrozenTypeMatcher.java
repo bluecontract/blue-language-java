@@ -6,7 +6,12 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
-import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.merge.TypeEvidenceResolution;
+
+import blue.language.matching.FrozenTypeMatcherCacheKeys.MatchKey;
+import blue.language.matching.FrozenTypeMatcherCacheKeys.TypeKey;
+import blue.language.matching.FrozenTypeMatcherCacheKeys.TypePairKey;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -42,8 +47,9 @@ public final class FrozenTypeMatcher {
     private final MatchingPlanCache planCache;
     private final FrozenSchemaMatcher schemaMatcher;
     private final boolean resolveCandidateReferences;
-    private final Function<FrozenNode, FrozenNode>
+    private final Function<FrozenNode, TypeEvidenceResolution>
             verifiedReferenceMaterializer;
+    private final MatchingCanonicalTypeIdentityEvidence typeIdentityEvidence;
 
     /**
      * Creates a matcher backed by the runtime's verified type materialization
@@ -70,45 +76,93 @@ public final class FrozenTypeMatcher {
                 runtime,
                 resolveCandidateReferences,
                 cachePolicy,
+                null,
                 null);
+    }
+
+    FrozenTypeMatcher(
+            MatchingRuntime runtime,
+            boolean resolveCandidateReferences,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        this(
+                Objects.requireNonNull(runtime, "runtime"),
+                resolveCandidateReferences,
+                runtime.matchingCachePolicy(),
+                null,
+                Objects.requireNonNull(
+                        canonicalTypeIdentities,
+                        "canonicalTypeIdentities"));
     }
 
     private FrozenTypeMatcher(
             MatchingRuntime runtime,
             boolean resolveCandidateReferences,
             BlueCachePolicy cachePolicy,
-            Function<FrozenNode, FrozenNode>
-                    verifiedReferenceMaterializer) {
+            Function<FrozenNode, TypeEvidenceResolution>
+                    verifiedReferenceMaterializer,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         this.runtime = runtime;
         this.resolveCandidateReferences = resolveCandidateReferences;
         this.verifiedReferenceMaterializer =
                 verifiedReferenceMaterializer;
         this.planCache = new MatchingPlanCache(
                 Objects.requireNonNull(cachePolicy, "cachePolicy"));
-        this.schemaMatcher = new FrozenSchemaMatcher();
+        this.typeIdentityEvidence =
+                new MatchingCanonicalTypeIdentityEvidence(
+                        planCache,
+                        canonicalTypeIdentities);
+        this.schemaMatcher = new FrozenSchemaMatcher(
+                typeIdentityEvidence.effectiveLookup());
     }
 
     /**
      * Creates an independent matcher whose non-core reference lookups are
      * performed only through the supplied verified exact materializer.
      *
-     * <p>The callback receives the original pure reference. Its exceptions
-     * propagate unchanged, and a null, still-reference-only, or identity-
-     * mismatched result is rejected. No ambient matching runtime, raw
-     * provider fallback, or negative-result cache is consulted.</p>
+     * <p>The callback receives the original pure reference and returns both
+     * its verified materialization and the canonical type identities issued
+     * by that same resolution boundary. Its exceptions propagate unchanged,
+     * and a null or still-reference-only result is rejected. This matcher
+     * never attempts to re-verify the result by hashing its completed resolved
+     * body. No ambient matching runtime, raw provider fallback, or
+     * negative-result cache is consulted.</p>
      *
      * @param materializer callback that resolves one verified exact reference
      * @return independent matcher confined to the supplied materializer
+     * @throws NullPointerException if {@code materializer} is null
      */
     public static FrozenTypeMatcher withVerifiedReferenceMaterializer(
-            Function<FrozenNode, FrozenNode> materializer) {
+            Function<FrozenNode, TypeEvidenceResolution> materializer) {
         return new FrozenTypeMatcher(
                 null,
                 true,
                 BlueCachePolicy.boundedDefaults(),
                 Objects.requireNonNull(
                         materializer,
-                        "materializer"));
+                        "materializer"),
+                null);
+    }
+
+    /**
+     * Creates an exact matcher bound to one resolver invocation's type
+     * identity evidence and verified reference materializer.
+     *
+     * <p>The lookup is required for completed inline types. It is never
+     * replaced by hashing a resolved type body.</p>
+     *
+     * @param materializer verified exact reference materializer
+     * @param typeIdentities resolver-issued canonical type identity evidence
+     * @return matcher confined to the supplied evidence boundary
+     */
+    static FrozenTypeMatcher withVerifiedTypeEvidence(
+            Function<FrozenNode, TypeEvidenceResolution> materializer,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return new FrozenTypeMatcher(
+                null,
+                true,
+                BlueCachePolicy.boundedDefaults(),
+                Objects.requireNonNull(materializer, "materializer"),
+                Objects.requireNonNull(typeIdentities, "typeIdentities"));
     }
 
     /**
@@ -124,6 +178,7 @@ public final class FrozenTypeMatcher {
                 null,
                 true,
                 Objects.requireNonNull(cachePolicy, "cachePolicy"),
+                null,
                 null);
     }
 
@@ -138,13 +193,18 @@ public final class FrozenTypeMatcher {
      * @return {@code true} when the candidate satisfies the pattern
      */
     public boolean matchesType(FrozenNode resolvedNode, FrozenNode resolvedTargetType) {
-        if (resolvedTargetType == null) {
-            return true;
+        typeIdentityEvidence.beginInvocation();
+        try {
+            if (resolvedTargetType == null) {
+                return true;
+            }
+            if (resolvedNode == null) {
+                return !requiresPresence(resolvedTargetType);
+            }
+            return matches(resolvedNode, resolvedTargetType);
+        } finally {
+            typeIdentityEvidence.endInvocation();
         }
-        if (resolvedNode == null) {
-            return !requiresPresence(resolvedTargetType);
-        }
-        return matches(resolvedNode, resolvedTargetType);
     }
 
     /**
@@ -172,51 +232,57 @@ public final class FrozenTypeMatcher {
                     "maximumTypeChainEdges must be non-negative");
         }
 
-        FrozenNode current = candidateType;
-        Set<String> visited = new HashSet<>();
-        long traversedEdges = 0L;
-        boolean matched = false;
-        while (current != null) {
-            String identity = typeIdentity(current);
-            if (!visited.add(identity)) {
-                throw new IllegalStateException(
-                        "Type cycle in exact type hierarchy at "
-                                + identity);
-            }
-            if (typeIdentity(current).equals(
-                    typeIdentity(targetType))) {
-                matched = true;
-            }
+        typeIdentityEvidence.beginInvocation();
+        try {
+            FrozenNode current = candidateType;
+            Set<String> visited = new HashSet<>();
+            long traversedEdges = 0L;
+            boolean matched = false;
+            while (current != null) {
+                String identity = requireExactTypeIdentity(current);
+                if (!visited.add(identity)) {
+                    throw new IllegalStateException(
+                            "Type cycle in exact type hierarchy at "
+                                    + identity);
+                }
+                if (identity.equals(
+                        requireExactTypeIdentity(targetType))) {
+                    matched = true;
+                }
 
-            FrozenNode resolved = resolveTypeReference(current);
-            if (resolved == null) {
-                throw new IllegalStateException(
-                        "Exact type definition is unavailable for "
-                                + identity);
+                FrozenNode resolved = resolveTypeReference(current);
+                if (resolved == null) {
+                    throw new IllegalStateException(
+                            "Exact type definition is unavailable for "
+                                    + identity);
+                }
+                FrozenNode parent = resolved.getType();
+                if (parent == null) {
+                    return matched;
+                }
+                if (traversedEdges >= maximumTypeChainEdges) {
+                    throw new IllegalStateException(
+                            "Exact type hierarchy exceeds "
+                                    + maximumTypeChainEdges
+                                    + " parent edges");
+                }
+                traversedEdges++;
+                current = parent;
             }
-            FrozenNode parent = resolved.getType();
-            if (parent == null) {
-                return matched;
-            }
-            if (traversedEdges >= maximumTypeChainEdges) {
-                throw new IllegalStateException(
-                        "Exact type hierarchy exceeds "
-                                + maximumTypeChainEdges
-                                + " parent edges");
-            }
-            traversedEdges++;
-            current = parent;
+            return matched;
+        } finally {
+            typeIdentityEvidence.endInvocation();
         }
-        return matched;
     }
 
     /** Releases every reloadable matching and type-resolution cache entry. */
     public void clearCaches() {
         planCache.clear();
+        typeIdentityEvidence.endInvocation();
     }
 
     /**
-     * Returns the number of entries retained across all five matcher cache regions.
+     * Returns the number of entries retained across all matcher cache regions.
      *
      * @return current retained cache-entry count
      */
@@ -225,7 +291,7 @@ public final class FrozenTypeMatcher {
     }
 
     /**
-     * Returns the approximate retained weight across all five matcher cache regions.
+     * Returns the approximate retained weight across all matcher cache regions.
      *
      * @return approximate retained cache weight in bytes
      */
@@ -244,9 +310,7 @@ public final class FrozenTypeMatcher {
         }
 
         boolean result = computeMatch(node, target);
-        MatchKey retainedKey = new MatchKey(
-                key.candidate,
-                key.target,
+        MatchKey retainedKey = key.withRetainedWeightBytes(
                 FrozenNode.approximateRetainedWeightBytesOf(node, target));
         planCache.put(MATCH, retainedKey, result);
         return result;
@@ -357,7 +421,7 @@ public final class FrozenTypeMatcher {
     }
 
     private boolean hasTypeDefinitionConstraints(FrozenNode definition) {
-        if (definition == null || CORE_TYPE_BLUE_IDS.contains(typeIdentity(definition))) {
+        if (definition == null || isCoreType(definition)) {
             return false;
         }
         return definition.getType() != null
@@ -377,11 +441,13 @@ public final class FrozenTypeMatcher {
         if (targetBlueId.equals(node.getReferenceBlueId())) {
             return true;
         }
-        if (targetBlueId.equals(node.blueId())) {
+        if (node.isStrictCanonical()
+                && targetBlueId.equals(node.blueId())) {
             return true;
         }
         FrozenNode nodeType = node.getType();
-        return nodeType != null && targetBlueId.equals(typeIdentity(nodeType));
+        return nodeType != null
+                && targetBlueId.equals(canonicalTypeIdentity(nodeType));
     }
 
     private boolean valuesEqualWhenSpecified(Object nodeValue, Object targetValue) {
@@ -591,7 +657,9 @@ public final class FrozenTypeMatcher {
         if (candidateType == null || targetType == null) {
             return false;
         }
-        String key = typeIdentity(candidateType) + "->" + typeIdentity(targetType);
+        TypePairKey key = new TypePairKey(
+                typeKey(candidateType),
+                typeKey(targetType));
         Boolean cached = (Boolean) planCache.get(SUBTYPE, key);
         if (cached != null) {
             return cached;
@@ -604,9 +672,9 @@ public final class FrozenTypeMatcher {
 
     private boolean computeSubtype(FrozenNode candidateType, FrozenNode targetType) {
         FrozenNode current = resolveTypeReference(candidateType);
-        Set<String> visited = new HashSet<>();
+        Set<TypeKey> visited = new HashSet<>();
         while (current != null) {
-            String identity = typeIdentity(current);
+            TypeKey identity = typeKey(current);
             if (!visited.add(identity)) {
                 return false;
             }
@@ -638,28 +706,29 @@ public final class FrozenTypeMatcher {
             return coreType(blueId);
         }
         FrozenNode cached = (FrozenNode) planCache.get(RESOLVED_REFERENCE, blueId);
-        if (cached != null) {
+        if (cached != null
+                && typeIdentityEvidence
+                        .hasRetainedMaterializationEvidence(blueId)) {
             return cached;
         }
         if (verifiedReferenceMaterializer != null) {
-            FrozenNode materialized =
+            TypeEvidenceResolution materialization =
                     verifiedReferenceMaterializer.apply(type);
-            if (materialized == null) {
+            if (materialization == null) {
                 throw new IllegalArgumentException(
                         "Verified reference materializer returned no content for "
                                 + blueId);
             }
+            FrozenNode materialized = materialization.resolvedRoot();
             if (materialized.isReferenceOnly()) {
                 throw new IllegalArgumentException(
                         "Verified reference materializer retained a pure reference for "
                                 + blueId);
             }
-            if (!BlueIds.hasCyclicMemberSeparator(blueId)
-                    && !blueId.equals(materialized.blueId())) {
-                throw new IllegalArgumentException(
-                        "Verified reference materializer returned mismatched content for "
-                                + blueId);
-            }
+            typeIdentityEvidence.retainMaterializedTypeEvidence(
+                    blueId,
+                    materialized,
+                    materialization.canonicalTypeIdentities());
             planCache.put(
                     RESOLVED_REFERENCE,
                     blueId,
@@ -669,19 +738,26 @@ public final class FrozenTypeMatcher {
         if (planCache.get(UNRESOLVED_REFERENCE, blueId) != null) {
             return null;
         }
-        FrozenNode resolved = null;
+        TypeEvidenceResolution materialization = null;
         if (runtime != null) {
-            try {
-                resolved = runtime.materializeTypeReferenceForMatching(type);
-            } catch (RuntimeException ex) {
-                // Ambient lookup failures are indistinguishable from absence.
-                resolved = null;
-            }
+            materialization = runtime
+                    .materializeTypeReferenceForMatching(type);
         }
+        FrozenNode resolved = materialization != null
+                ? materialization.resolvedRoot()
+                : null;
         if (resolved == null) {
             planCache.put(UNRESOLVED_REFERENCE, blueId, Boolean.TRUE);
             return null;
         }
+        if (resolved.isReferenceOnly()) {
+            planCache.put(UNRESOLVED_REFERENCE, blueId, Boolean.TRUE);
+            return null;
+        }
+        typeIdentityEvidence.retainMaterializedTypeEvidence(
+                blueId,
+                resolved,
+                materialization.canonicalTypeIdentities());
         planCache.put(RESOLVED_REFERENCE, blueId, resolved);
         return resolved;
     }
@@ -697,38 +773,64 @@ public final class FrozenTypeMatcher {
     }
 
     private boolean sameType(FrozenNode left, FrozenNode right) {
-        String leftIdentity = typeIdentity(left);
-        String rightIdentity = typeIdentity(right);
-        if (leftIdentity.equals(rightIdentity)) {
+        String leftIdentity = canonicalTypeIdentity(left);
+        String rightIdentity = canonicalTypeIdentity(right);
+        if (leftIdentity != null && leftIdentity.equals(rightIdentity)) {
             return true;
         }
         String leftCompatibility = typeCompatibilityIdentity(left);
         String rightCompatibility = typeCompatibilityIdentity(right);
-        if (CORE_TYPE_BLUE_IDS.contains(leftCompatibility) || CORE_TYPE_BLUE_IDS.contains(rightCompatibility)) {
-            return leftCompatibility.equals(rightCompatibility);
+        if (leftIdentity != null && CORE_TYPE_BLUE_IDS.contains(leftIdentity)
+                || rightIdentity != null
+                && CORE_TYPE_BLUE_IDS.contains(rightIdentity)) {
+            return false;
         }
         return leftCompatibility.equals(rightCompatibility);
     }
 
-    private String typeIdentity(FrozenNode type) {
-        return type.getReferenceBlueId() != null ? type.getReferenceBlueId() : type.blueId();
+    private String requireExactTypeIdentity(FrozenNode type) {
+        return typeIdentityEvidence.requireCanonicalTypeBlueId(type);
+    }
+
+    private String canonicalTypeIdentity(FrozenNode type) {
+        return typeIdentityEvidence.canonicalTypeBlueId(type);
+    }
+
+    private boolean isCoreType(FrozenNode type) {
+        String identity = canonicalTypeIdentity(type);
+        return identity != null && CORE_TYPE_BLUE_IDS.contains(identity);
+    }
+
+    private TypeKey typeKey(FrozenNode type) {
+        String identity = canonicalTypeIdentity(type);
+        return identity != null
+                ? TypeKey.canonical(identity)
+                : TypeKey.structural(type.resolvedStructuralKey());
     }
 
     private String typeCompatibilityIdentity(FrozenNode type) {
         FrozenNode resolved = type.isReferenceOnly() ? resolveTypeReference(type) : type;
         if (resolved == null) {
-            return typeIdentity(type);
+            String identity = canonicalTypeIdentity(type);
+            if (identity == null) {
+                throw new IllegalStateException(
+                        "Verified type materialization is unavailable");
+            }
+            return "exact-type:" + identity;
         }
-        String identityBlueId = typeIdentity(resolved);
+        String identityBlueId = canonicalTypeIdentity(resolved);
         if (CORE_TYPE_BLUE_IDS.contains(identityBlueId)) {
-            return identityBlueId;
+            return "exact-type:" + identityBlueId;
         }
-        String cacheKey = typeIdentity(resolved) + "|" + resolved.blueId();
+        TypeKey cacheKey = typeKey(resolved);
         String cached = (String) planCache.get(TYPE_COMPATIBILITY, cacheKey);
         if (cached != null) {
             return cached;
         }
-        String identity = LabelNeutralTypeIdentity.calculate(resolved);
+        String identity = LabelNeutralTypeIdentity
+                .calculateCompatibilityFingerprint(
+                        resolved,
+                        this::resolveTypeReference);
         planCache.put(TYPE_COMPATIBILITY, cacheKey, identity);
         return identity;
     }
@@ -757,39 +859,4 @@ public final class FrozenTypeMatcher {
         return isSubtype(type, coreType(DICTIONARY_TYPE_BLUE_ID));
     }
 
-    private static final class MatchKey implements MatchingPlanCache.Weighted {
-        private final FrozenNode.ResolvedStructuralKey candidate;
-        private final FrozenNode.ResolvedStructuralKey target;
-        private final long retainedWeightBytes;
-
-        private MatchKey(FrozenNode.ResolvedStructuralKey candidate,
-                         FrozenNode.ResolvedStructuralKey target,
-                         long retainedWeightBytes) {
-            this.candidate = candidate;
-            this.target = target;
-            this.retainedWeightBytes = retainedWeightBytes;
-        }
-
-        @Override
-        public long retainedWeightBytes() {
-            return retainedWeightBytes;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            if (this == other) {
-                return true;
-            }
-            if (!(other instanceof MatchKey)) {
-                return false;
-            }
-            MatchKey that = (MatchKey) other;
-            return candidate.equals(that.candidate) && target.equals(that.target);
-        }
-
-        @Override
-        public int hashCode() {
-            return 31 * candidate.hashCode() + target.hashCode();
-        }
-    }
 }

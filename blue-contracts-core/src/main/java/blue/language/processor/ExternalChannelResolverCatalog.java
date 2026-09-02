@@ -79,7 +79,8 @@ final class ExternalChannelResolverCatalog {
         Contract converted = converter.convertWithType(
                 requireContractNode(snapshot).toNode(),
                 Contract.class,
-                false);
+                false,
+                bundle.canonicalTypeIdentities());
         if (!(converted instanceof ChannelContract)) {
             throw new IllegalStateException(
                     "External Channel could not be converted at "
@@ -186,7 +187,8 @@ final class ExternalChannelResolverCatalog {
 
     ChannelMemberSnapshot channelSnapshot(
             EffectiveContractSnapshot snapshot) {
-        return ChannelMemberSnapshot.from(snapshot);
+        return ChannelMemberSnapshot.from(
+                snapshot, bundle.canonicalTypeIdentities());
     }
 
     ExternalChannelDependencySnapshot.ChannelEntry channelDependencyEntry(

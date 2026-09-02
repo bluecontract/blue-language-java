@@ -3,9 +3,8 @@ package blue.language.processor;
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.Blue;
-import blue.language.api.BlueLanguageErrorCategory;
-import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.NodeProviderResult;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -98,7 +97,7 @@ class ScopeSourceProjectionTest {
         // when
         ScopeSourceProjection nodeProjection = ScopeSourceProjection.project(
                 "/",
-                FrozenNode.fromResolvedNode(source),
+                FrozenNode.fromSourceNode(source),
                 captured,
                 blue.getDocumentProcessor().snapshotManager());
         ScopeSourceProjection snapshotProjection = ScopeSourceProjection.project(
@@ -163,7 +162,7 @@ class ScopeSourceProjectionTest {
         // when
         ScopeSourceProjection nodeProjection = ScopeSourceProjection.project(
                 "/",
-                FrozenNode.fromResolvedNode(source),
+                FrozenNode.fromSourceNode(source),
                 captured,
                 blue.getDocumentProcessor().snapshotManager());
         ScopeSourceProjection snapshotProjection = ScopeSourceProjection.project(
@@ -371,6 +370,60 @@ class ScopeSourceProjectionTest {
     }
 
     @Test
+    void shouldRetainInlineTypeSourceInsteadOfTrustingMixedBlueIdMetadata() {
+        // given
+        String unrelatedBlueId = DirectBlueIdCalculator.calculateBlueId(
+                new Node().name("Unrelated mixed-type annotation"));
+        Node childType = new Node()
+                .name("Actual inline child type")
+                .description("The semantic body, not its mixed annotation")
+                .properties("inherited", text("from type"));
+        Node rootType = new Node()
+                .name("Inline scope projection root type")
+                .properties("child", new Node().type(childType));
+        Node childContribution = new Node()
+                .properties("local", text("from source"));
+        Node source = new Node()
+                .type(rootType)
+                .properties("child", childContribution);
+        Blue blue = ProcessorTestSupport.blue();
+        ResolvedSnapshot captured = blue.resolveToSnapshot(source.clone());
+        Node selectedChild = captured.canonicalNodeAt("/child");
+        Node mixedSelectedType = childType.clone()
+                .blueId(unrelatedBlueId);
+        selectedChild.type(mixedSelectedType);
+        FrozenNode resolvedChildType = captured.resolvedAt("/child")
+                .getType();
+
+        // when
+        ScopeSourceProjection projection = ScopeSourceProjection.project(
+                "/child",
+                FrozenNode.fromResolvedNode(selectedChild),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+        FrozenNode projectedType = projection.standaloneSource().getType();
+
+        // then
+        assertNotNull(resolvedChildType);
+        assertFalse(resolvedChildType.isReferenceOnly());
+        assertNull(resolvedChildType.getReferenceBlueId());
+        assertFalse(mixedSelectedType.isReferenceOnly());
+        assertEquals(unrelatedBlueId, mixedSelectedType.getBlueId());
+        assertNotNull(projectedType);
+        assertFalse(projectedType.isReferenceOnly(),
+                "a genuinely inline effective type must remain self-contained Source");
+        assertNull(projectedType.getReferenceBlueId(),
+                "mixed blueId metadata is not verified reference identity");
+        assertEquals("Actual inline child type", projectedType.getName());
+        assertTrue(projection.standaloneSnapshot().frozenResolvedRoot()
+                .sameResolvedStructure(captured.resolvedAt("/child")));
+        assertEquals(
+                blue.calculateSourceDocumentBlueId(
+                        childContribution.clone().type(childType.clone())),
+                projection.contentBlueId());
+    }
+
+    @Test
     void shouldVerifyProtocolIdentityPreservesPureReferencesInPropertyListAndContracts() {
         // given
         Node referencedPayload = new Node()
@@ -452,26 +505,38 @@ class ScopeSourceProjectionTest {
         Node source = new Node().contracts(new Node().properties(
                 "referencedLifecycle", reference(channelBlueId)));
 
+        NodeProvider unavailableProvider = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public NodeProviderResult fetchResultByBlueId(String blueId) {
+                return channelBlueId.equals(blueId)
+                        ? NodeProviderResult.unavailable(
+                                "fixture unavailable")
+                        : NodeProviderResult.notFound();
+            }
+        };
+
         // when
         Throwable failure = captureFailure(
                 () -> ProcessorTestSupport.blue(
-                        blueId -> null).initializeDocument(source.clone()));
-        BlueLanguageErrorCategory category =
-                failure instanceof IllegalArgumentException
-                        ? BlueLanguageErrorClassifier.classify(
-                        (IllegalArgumentException) failure)
-                        : null;
+                        unavailableProvider)
+                        .initializeDocument(source.clone()));
         String message =
                 failure == null ? null : failure.getMessage();
 
         // then
-        assertInstanceOf(
-                IllegalArgumentException.class,
-                failure);
+        ExecutionEvidenceUnavailableException unavailable =
+                assertInstanceOf(
+                        ExecutionEvidenceUnavailableException.class,
+                        failure);
         assertEquals(
-                BlueLanguageErrorCategory.ProviderUnavailable,
-                category);
-        assertTrue(message.contains(channelBlueId), message);
+                Collections.singletonList(channelBlueId),
+                unavailable.requiredExactBlueIds());
+        assertTrue(message.contains("fixture unavailable"), message);
         assertFalse(hasNode(source, "/contracts/initialized"));
         assertFalse(hasNode(source, "/contracts/terminated"));
     }
@@ -495,21 +560,17 @@ class ScopeSourceProjectionTest {
         Throwable failure = captureFailure(
                 () -> ProcessorTestSupport.blue(
                         mismatchProvider).initializeDocument(source.clone()));
-        BlueLanguageErrorCategory category =
-                failure instanceof IllegalArgumentException
-                        ? BlueLanguageErrorClassifier.classify(
-                        (IllegalArgumentException) failure)
-                        : null;
         String message =
                 failure == null ? null : failure.getMessage();
 
         // then
-        assertInstanceOf(
-                IllegalArgumentException.class,
-                failure);
+        InvalidExecutionEvidenceException invalid =
+                assertInstanceOf(
+                        InvalidExecutionEvidenceException.class,
+                        failure);
         assertEquals(
-                BlueLanguageErrorCategory.ProviderBlueIdMismatch,
-                category);
+                ProcessorErrorCategory.InvalidExternalChannelSnapshot,
+                invalid.errorCategory());
         assertTrue(message.contains(channelBlueId), message);
         assertFalse(hasNode(source, "/contracts/initialized"));
         assertFalse(hasNode(source, "/contracts/terminated"));

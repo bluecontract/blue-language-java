@@ -68,25 +68,32 @@ public final class ExternalChannelFunctionContext {
     private final String channelKey;
     private final Access access;
     private final RuntimeWorkSession runtimeWorkSession;
+    private final FrozenNode.ResolvedStructuralKey exactEventKey;
 
     ExternalChannelFunctionContext(
             String scopePath,
             String channelKey,
             Access access) {
-        this(scopePath, channelKey, access, null);
+        this(scopePath, channelKey, access, null, null);
     }
 
     ExternalChannelFunctionContext(
             String scopePath,
             String channelKey,
             Access access,
-            RuntimeWorkSession runtimeWorkSession) {
+            RuntimeWorkSession runtimeWorkSession,
+            Node exactEvent) {
         this.scopePath = Objects.requireNonNull(
                 scopePath, "scopePath");
         this.channelKey = Objects.requireNonNull(
                 channelKey, "channelKey");
         this.access = Objects.requireNonNull(access, "access");
         this.runtimeWorkSession = runtimeWorkSession;
+        this.exactEventKey = exactEvent != null
+                ? FrozenNode.fromResolvedNode(
+                        exactEvent.clone())
+                        .resolvedStructuralKey()
+                : null;
     }
 
     /**
@@ -120,6 +127,56 @@ public final class ExternalChannelFunctionContext {
                     "Runtime work is unavailable in this legacy out-of-band context");
         }
         return runtimeWorkSession;
+    }
+
+    /**
+     * Returns the exact identity proved when the event entered this function
+     * pass.
+     *
+     * <p>The lookup is deliberately representation-blind: it compares the
+     * resolved frozen structure with processor-carried exact capabilities and
+     * returns their asserted identity. It never calculates an identity from
+     * the resolved event cursor. This distinction is required when the cursor
+     * originated from an inline type or represents a member of a cyclic set,
+     * because hashing that cursor would establish a different ordinary
+     * content identity.</p>
+     *
+     * @return unique admission-proved event BlueId, including a cyclic-member
+     *         identity when applicable
+     * @throws IllegalStateException when runtime admission evidence is absent,
+     *         no longer active, missing, or ambiguous
+     */
+    public String exactEventBlueId() {
+        if (exactEventKey == null) {
+            throw new IllegalStateException(
+                    "External Channel exact event identity is available only "
+                            + "during event evaluation");
+        }
+        RuntimeWorkSession session = runtimeWorkSession();
+        if (!session.isOpen()) {
+            throw new IllegalStateException(
+                    "External Channel exact event identity is no longer active");
+        }
+        String matchedBlueId = null;
+        for (ExactBlueValue carried
+                : session.exactValuesSnapshot()) {
+            FrozenNode carriedValue = carried.frozenValue();
+            if (!exactEventKey.equals(
+                    carriedValue.resolvedStructuralKey())) {
+                continue;
+            }
+            if (matchedBlueId != null
+                    && !matchedBlueId.equals(carried.blueId())) {
+                throw new IllegalStateException(
+                        "External Channel exact event identity is ambiguous");
+            }
+            matchedBlueId = carried.blueId();
+        }
+        if (matchedBlueId == null) {
+            throw new IllegalStateException(
+                    "External Channel exact event identity was not admitted");
+        }
+        return matchedBlueId;
     }
 
     /**

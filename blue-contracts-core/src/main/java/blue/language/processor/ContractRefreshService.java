@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.CheckpointEntry;
@@ -44,11 +45,15 @@ final class ContractRefreshService {
             ProcessingObserver observer,
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            String canonicalContentEvidenceSignature,
             StructuralBundleLoader structuralLoader) {
         ProcessingObserver metrics = observer != null
                 ? observer
                 : NoOpProcessingObserver.INSTANCE;
-        effectiveContracts.requireRegisteredProviderEvidence(effectiveScopeNode);
+        effectiveContracts.requireRegisteredProviderEvidence(
+                effectiveScopeNode,
+                typeIdentities);
         if (recognitionMeter != null) {
             ContractBundle built = timedBuild(
                     selectedScopeNode,
@@ -57,11 +62,15 @@ final class ContractRefreshService {
                     metrics,
                     recognitionMeter,
                     recognitionReason,
+                    typeIdentities,
                     structuralLoader);
             ProcessingObservations.record(
                     metrics, ProcessingMetricId.BUNDLES_BUILT, 1L);
             return withCurrentMarkers(
-                    built, selectedScopeNode, effectiveScopeNode);
+                    built,
+                    selectedScopeNode,
+                    effectiveScopeNode,
+                    typeIdentities);
         }
 
         long keyStart = System.nanoTime();
@@ -71,7 +80,8 @@ final class ContractRefreshService {
                     selectedScopeNode,
                     effectiveScopeNode,
                     scopePath,
-                    registry.version());
+                    registry.version(),
+                    canonicalContentEvidenceSignature);
         } finally {
             ProcessingObservations.record(
                     metrics,
@@ -87,7 +97,10 @@ final class ContractRefreshService {
                 ProcessingObservations.record(
                         metrics, ProcessingMetricId.BUNDLES_REUSED, 1L);
                 return withCurrentMarkers(
-                        cached, selectedScopeNode, effectiveScopeNode);
+                        cached,
+                        selectedScopeNode,
+                        effectiveScopeNode,
+                        typeIdentities);
             } finally {
                 ProcessingObservations.record(
                         metrics,
@@ -105,12 +118,16 @@ final class ContractRefreshService {
                 metrics,
                 null,
                 null,
+                typeIdentities,
                 structuralLoader);
-        cache.putIfAbsent(key, built);
+        cache.putIfAbsent(key, built.copyForStructuralCache());
         ProcessingObservations.record(
                 metrics, ProcessingMetricId.BUNDLES_BUILT, 1L);
         return withCurrentMarkers(
-                built, selectedScopeNode, effectiveScopeNode);
+                built,
+                selectedScopeNode,
+                effectiveScopeNode,
+                typeIdentities);
     }
 
     void clear() {
@@ -132,6 +149,7 @@ final class ContractRefreshService {
             ProcessingObserver metrics,
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
             StructuralBundleLoader structuralLoader) {
         long buildStart = System.nanoTime();
         try {
@@ -140,7 +158,8 @@ final class ContractRefreshService {
                     effectiveScopeNode,
                     scopePath,
                     recognitionMeter,
-                    recognitionReason);
+                    recognitionReason,
+                    typeIdentities);
         } finally {
             ProcessingObservations.record(
                     metrics,
@@ -152,18 +171,24 @@ final class ContractRefreshService {
     private ContractBundle withCurrentMarkers(
             ContractBundle structural,
             Node selectedScopeNode,
-            FrozenNode effectiveScopeNode) {
-        RuntimeMarkers markers = runtimeMarkers(selectedScopeNode, effectiveScopeNode);
+            FrozenNode effectiveScopeNode,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        RuntimeMarkers markers = runtimeMarkers(
+                selectedScopeNode,
+                effectiveScopeNode,
+                typeIdentities);
         return structural.copyWithRuntimeMarkers(
                 markers.markers,
                 markers.nodes,
                 markers.checkpointDeclared,
-                null);
+                null,
+                typeIdentities);
     }
 
     private RuntimeMarkers runtimeMarkers(
             Node selectedScopeNode,
-            FrozenNode effectiveScopeNode) {
+            FrozenNode effectiveScopeNode,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Map<String, MarkerContract> markers = new LinkedHashMap<>();
         Map<String, FrozenNode> markerNodes = new LinkedHashMap<>();
         boolean checkpointDeclared = false;
@@ -189,7 +214,11 @@ final class ContractRefreshService {
             FrozenNode effectiveNode =
                     effectiveContractMap.getProperties().get(key);
             EffectiveContractResolver.MarkerValue markerValue =
-                    effectiveContracts.directMarker(key, selectedNode, effectiveNode);
+                    effectiveContracts.directMarker(
+                            key,
+                            selectedNode,
+                            effectiveNode,
+                            typeIdentities);
             if (markerValue == null
                     || markerValue.marker() instanceof ProcessEmbedded) {
                 continue;
@@ -276,7 +305,8 @@ final class ContractRefreshService {
                 FrozenNode effectiveScopeNode,
                 String scopePath,
                 ContractRecognitionMeter recognitionMeter,
-                String recognitionReason);
+                String recognitionReason,
+                CanonicalTypeIdentityLookup typeIdentities);
     }
 
     private static final class RuntimeMarkers {

@@ -191,7 +191,10 @@ final class FrozenCanonicalDigester {
             addReference(fields, OBJECT_ITEMS, calculateValidatedList(node.getItems(), observer));
         }
         if (node.frozenSchemaView() != null) {
-            String schemaBlueId = calculateSchemaBlueId(node.frozenSchemaView(), observer);
+            Schema schema = node.frozenSchemaView();
+            String schemaBlueId = schema.isReferenceOnly()
+                    ? schema.getBlueId()
+                    : calculateSchemaBlueId(schema, observer);
             addReference(fields, OBJECT_SCHEMA, schemaBlueId);
         }
         addNodeReference(fields, OBJECT_CONTRACTS, node.getContracts());

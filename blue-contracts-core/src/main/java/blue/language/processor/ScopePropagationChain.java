@@ -203,7 +203,9 @@ final class ScopePropagationChain {
                         sourcePath,
                         currentBundle,
                         channel.key(),
-                        occurrence.event());
+                        occurrence.frozenEvent(),
+                        occurrence.eventBlueId(),
+                        Collections.<ExactBlueValue>emptyList());
             }
         } finally {
             ProcessingObservations.record(
@@ -272,7 +274,8 @@ final class ScopePropagationChain {
                     currentBundle,
                     channel.key(),
                     wrapper.clone(),
-                    occurrence.event());
+                    occurrence.event(),
+                    occurrence.eventBlueId());
         }
     }
 
@@ -290,8 +293,9 @@ final class ScopePropagationChain {
             EventOccurrence occurrence,
             Node pattern) {
         return pattern == null
-                || owner.matchingService().matches(
+                || owner.matchingService().matchesExactValue(
                 occurrence.frozenEvent(),
+                occurrence.eventBlueId(),
                 FrozenNode.fromResolvedNode(pattern));
     }
 }

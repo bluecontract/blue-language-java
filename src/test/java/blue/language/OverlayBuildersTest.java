@@ -14,9 +14,10 @@ import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -57,11 +58,14 @@ public class OverlayBuildersTest {
         Node bNode = nodeProvider.getNodeByName("B");
 
         Blue blue = new Blue(nodeProvider);
-        Node resolved = blue.resolve(bNode);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(
+                nodeProvider.getBlueIdByName("B"));
 
         MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
         // when
-        Node reversed = builder.build(resolved);
+        Node reversed = builder.build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
 
         // then
         assertFalse(reversed.getProperties().containsKey("x"));
@@ -94,11 +98,14 @@ public class OverlayBuildersTest {
 
         Node cNode = nodeProvider.getNodeByName("C");
         Blue blue = new Blue(nodeProvider);
-        Node resolved = blue.resolve(cNode);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(
+                nodeProvider.getBlueIdByName("C"));
 
         MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
         // when
-        Node reversed = builder.build(resolved);
+        Node reversed = builder.build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
 
         // then
         assertEquals("C", reversed.getName());
@@ -142,9 +149,13 @@ public class OverlayBuildersTest {
         Node pNode = nodeProvider.getNodeByName("P");
         Blue blue = new Blue(nodeProvider);
         // when
-        Node resolved = blue.resolve(pNode);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(
+                nodeProvider.getBlueIdByName("P"));
+        Node resolved = snapshot.resolvedRoot();
         MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
-        Node reversed = builder.build(resolved);
+        Node reversed = builder.build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
 
         // then
         assertEquals(1, resolved.getAsInteger("/a/b/c/d1/value"));
@@ -185,11 +196,14 @@ public class OverlayBuildersTest {
 
         Node derivedNode = nodeProvider.getNodeByName("Derived");
         Blue blue = new Blue(nodeProvider);
-        Node resolved = blue.resolve(derivedNode);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(
+                nodeProvider.getBlueIdByName("Derived"));
 
         MinimizedOverlayBuilder builder = new MinimizedOverlayBuilder();
         // when
-        Node reversed = builder.build(resolved);
+        Node reversed = builder.build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
         Node roundTripped = blue.resolve(reversed);
 
         // then
@@ -222,9 +236,13 @@ public class OverlayBuildersTest {
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base"));
 
-        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Blue blue = new Blue(nodeProvider);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(
+                nodeProvider.getBlueIdByName("Derived"));
         // when
-        Node reversed = new MinimizedOverlayBuilder().build(resolved);
+        Node reversed = new MinimizedOverlayBuilder().build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
 
         // then
         assertTrue(reversed.getProperties() == null || !reversed.getProperties().containsKey("list"));
@@ -257,8 +275,10 @@ public class OverlayBuildersTest {
                 "    - $pos: 1\n" +
                 "      value: C");
 
-        Node resolved = blue.resolve(derived);
-        Node reversed = new MinimizedOverlayBuilder().build(resolved);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(derived);
+        Node reversed = new MinimizedOverlayBuilder().build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
         // when
         Node reversedList = reversed.getAsNode("/list");
 
@@ -301,7 +321,10 @@ public class OverlayBuildersTest {
                 "      value: Z\n" +
                 "    - D");
 
-        Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(derived);
+        Node reversed = new MinimizedOverlayBuilder().build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
         // when
         Node reversedList = reversed.getAsNode("/list");
         Node roundTripped = blue.resolve(reversed);
@@ -351,7 +374,10 @@ public class OverlayBuildersTest {
                 "      details:\n" +
                 "        color: red");
 
-        Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(derived);
+        Node reversed = new MinimizedOverlayBuilder().build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
         // when
         Node overlay = reversed.getAsNode("/list").getItems().get(0);
 
@@ -392,7 +418,10 @@ public class OverlayBuildersTest {
                 "    - $pos: 0\n" +
                 "      value: A");
 
-        Node reversed = new MinimizedOverlayBuilder().build(blue.resolve(derived));
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(derived);
+        Node reversed = new MinimizedOverlayBuilder().build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
         // when
         Node overlay = reversed.getAsNode("/list").getItems().get(0);
 
@@ -430,9 +459,7 @@ public class OverlayBuildersTest {
                 "    - $pos: 1\n" +
                 "      value: C");
 
-        Node preprocessed = blue.preprocess(derived.clone());
-        Node canonical = new CanonicalIdentityInputBuilder().build(
-                blue.resolve(preprocessed.clone()), preprocessed);
+        Node canonical = blue.resolveToSnapshot(derived.clone()).canonicalRoot();
         // when
         Node canonicalList = canonical.getAsNode("/list");
 
@@ -461,9 +488,7 @@ public class OverlayBuildersTest {
                 .description(canonicalType.getDescription())
                 .type(new Node().blueId(typeBlueId));
 
-        Node preprocessed = blue.preprocess(source.clone());
-        Node canonical = new CanonicalIdentityInputBuilder().build(
-                blue.resolve(preprocessed.clone()), preprocessed);
+        Node canonical = blue.resolveToSnapshot(source.clone()).canonicalRoot();
         // when
         Node expectedCanonical = source.clone();
 
@@ -484,15 +509,19 @@ public class OverlayBuildersTest {
         nodeProvider.addSingleDocs(
                 "name: Base\n" +
                 "status: draft");
-        Node resolved = new Blue(nodeProvider).yamlToNode(
+        Blue blue = new Blue(nodeProvider);
+        Node source = blue.yamlToNode(
                 "name: Derived\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Base") + "\n" +
                 "status: draft");
-        resolved = new Blue(nodeProvider).resolve(resolved);
+        ResolvedSnapshot original = blue.resolveToSnapshot(source);
+        Node resolved = original.resolvedRoot();
         resolved.getProperties().get("status").value("published");
         // when
-        Node reversed = new MinimizedOverlayBuilder().build(resolved);
+        Node reversed = new MinimizedOverlayBuilder().build(
+                FrozenNode.fromResolvedNode(resolved),
+                original.canonicalTypeIdentities());
 
         // then
         assertEquals("published", reversed.getAsText("/status/value"));
@@ -515,9 +544,13 @@ public class OverlayBuildersTest {
                 "schema:\n" +
                 "  minLength: 3");
 
-        Node resolved = new Blue(nodeProvider).resolve(nodeProvider.getNodeByName("Derived"));
+        Blue blue = new Blue(nodeProvider);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(
+                nodeProvider.getBlueIdByName("Derived"));
         // when
-        Node reversed = new MinimizedOverlayBuilder().build(resolved);
+        Node reversed = new MinimizedOverlayBuilder().build(
+                snapshot.frozenResolvedRoot(),
+                snapshot.canonicalTypeIdentities());
 
         // then
         assertNotNull(reversed.getSchema());

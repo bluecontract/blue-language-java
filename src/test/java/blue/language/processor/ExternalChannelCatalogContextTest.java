@@ -57,8 +57,8 @@ final class ExternalChannelCatalogContextTest {
     void shouldExposeBothChannelRolesWithoutEvaluatingPeerHeaders() {
         // given
         TargetProcessor targetProcessor = new TargetProcessor();
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             ContractBundle bundle = bundle(
                     true,
                     true,
@@ -119,8 +119,8 @@ final class ExternalChannelCatalogContextTest {
     void shouldReturnExactExternalChannelSnapshotForCatalogLookup() {
         // given
         TargetProcessor targetProcessor = new TargetProcessor();
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             ContractBundle bundle = bundle(
                     true,
                     true,
@@ -176,8 +176,8 @@ final class ExternalChannelCatalogContextTest {
     void shouldReturnDefensiveContractNodeFromExternalCatalogSnapshot() {
         // given
         TargetProcessor targetProcessor = new TargetProcessor();
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             ContractBundle bundle = bundle(
                     true,
                     true,
@@ -205,8 +205,8 @@ final class ExternalChannelCatalogContextTest {
     void shouldReturnManagedChannelSnapshotForCatalogLookup() {
         // given
         TargetProcessor targetProcessor = new TargetProcessor();
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             ContractBundle bundle = bundle(
                     true,
                     true,
@@ -237,8 +237,8 @@ final class ExternalChannelCatalogContextTest {
 
         // when
         IllegalStateException undeclared;
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             undeclared = captureFailure(
                     () -> evaluate(
                             processor,
@@ -263,8 +263,8 @@ final class ExternalChannelCatalogContextTest {
 
         // when
         ExternalChannelFunctionEvaluation absent;
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             absent = evaluate(
                     processor,
                     bundle(
@@ -290,8 +290,8 @@ final class ExternalChannelCatalogContextTest {
 
         // when
         ExternalChannelFunctionEvaluation nonChannel;
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             nonChannel = evaluate(
                     processor,
                     bundle(
@@ -317,8 +317,8 @@ final class ExternalChannelCatalogContextTest {
 
         // when
         IllegalStateException failure;
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             failure = captureFailure(
                     () -> evaluate(
                             processor,
@@ -343,8 +343,8 @@ final class ExternalChannelCatalogContextTest {
 
         // when
         IllegalStateException failure;
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             failure = captureFailure(
                     () -> evaluate(
                             processor,
@@ -784,8 +784,8 @@ final class ExternalChannelCatalogContextTest {
         TargetProcessor targetProcessor = new TargetProcessor();
         IllegalStateException exceeded;
         long limit;
-        try (DocumentProcessor processor =
-                     processor(targetProcessor)) {
+        try (Blue blue = runtime(targetProcessor)) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
             Node sourceNode = sourceNode(
                     true,
                     false,
@@ -871,18 +871,18 @@ final class ExternalChannelCatalogContextTest {
                 "catalog exceeds " + limit));
     }
 
-    private static DocumentProcessor processor(
+    private static Blue runtime(
             TargetProcessor targetProcessor) {
-        return DocumentProcessor.builder()
-                .registerContractProcessor(
-                        SOURCE_TYPE_BLUE_ID,
-                        SOURCE_TYPE,
-                        new SourceProcessor())
-                .registerContractProcessor(
-                        TARGET_TYPE_BLUE_ID,
-                        TARGET_TYPE,
-                        targetProcessor)
-                .build();
+        Blue blue = ProcessorTestSupport.blue();
+        blue.registerExternalContractType(
+                SOURCE_TYPE_BLUE_ID,
+                SOURCE_TYPE,
+                new SourceProcessor());
+        blue.registerExternalContractType(
+                TARGET_TYPE_BLUE_ID,
+                TARGET_TYPE,
+                targetProcessor);
+        return blue;
     }
 
     private static void registerCatalogTypes(
@@ -961,10 +961,17 @@ final class ExternalChannelCatalogContextTest {
                 processor.registry(),
                 processor.contractConverter(),
                 ExternalChannelFunctionEvaluation
-                        .verifiedMatcherSessions(null),
+                        .verifiedMatcherSessions(
+                                processor.snapshotManager()),
                 bundle,
                 bundle.effectiveContractSnapshot("source"),
-                EVENT);
+                EVENT,
+                null,
+                ProcessorTestSupport
+                        .admissionRuntimeWorkSession(
+                                processor,
+                                processor.snapshotManager(),
+                                EVENT));
     }
 
     private static ContractBundle bundle(

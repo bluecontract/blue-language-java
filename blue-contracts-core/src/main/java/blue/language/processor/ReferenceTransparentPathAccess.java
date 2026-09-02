@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.api.BlueViewPath;
 import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.wire.JsonPointer;
@@ -57,15 +58,34 @@ final class ReferenceTransparentPathAccess {
             FrozenNode canonicalRoot,
             FrozenNode resolvedRoot,
             String absolutePointer) {
+        ResolvedScopeView view = scopeAt(
+                canonicalRoot,
+                resolvedRoot,
+                CanonicalTypeIdentityLookup.incomplete(),
+                absolutePointer);
+        return view != null ? view.resolved() : null;
+    }
+
+    /**
+     * Returns a reference-transparent scope without separating a freshly
+     * resolved node from the lookup issued by that same resolver invocation.
+     */
+    ResolvedScopeView scopeAt(
+            FrozenNode canonicalRoot,
+            FrozenNode resolvedRoot,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities,
+            String absolutePointer) {
         String normalized = PointerUtils.normalizePointer(absolutePointer);
         FrozenNode canonical = Objects.requireNonNull(
                 canonicalRoot, "canonicalRoot");
         FrozenNode resolved = Objects.requireNonNull(
                 resolvedRoot, "resolvedRoot");
+        CanonicalTypeIdentityLookup identities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
 
         String currentPointer = JsonPointer.ROOT;
         NodePair current = openIfRequired(
-                new NodePair(canonical, resolved),
+                new NodePair(canonical, resolved, identities),
                 READ_PURPOSE,
                 currentPointer);
         for (String segment : JsonPointer.split(normalized)) {
@@ -77,9 +97,13 @@ final class ReferenceTransparentPathAccess {
             current = openIfRequired(
                     current, READ_PURPOSE, currentPointer);
         }
-        return current.resolved != null
+        FrozenNode effective = current.resolved != null
                 ? current.resolved
                 : current.canonical;
+        return new ResolvedScopeView(
+                current.canonical,
+                effective,
+                current.canonicalTypeIdentities);
     }
 
     /**
@@ -139,6 +163,15 @@ final class ReferenceTransparentPathAccess {
             return canonicalRoot;
         }
 
+        // A Source lane is an exact patching representation, not Canonical
+        // Identity Input. Its direct hash must never be treated as semantic
+        // identity; provider verification above is the proof for each opened
+        // reference ancestor. Strict canonical roots retain the stronger
+        // whole-document invariant check.
+        if (!canonicalRoot.isStrictCanonical()) {
+            return working;
+        }
+
         String expected = canonicalRoot.blueId();
         String actual = working.blueId();
         if (!expected.equals(actual)) {
@@ -196,7 +229,10 @@ final class ReferenceTransparentPathAccess {
         if (canonical == null && resolved == null) {
             return null;
         }
-        return new NodePair(canonical, resolved);
+        return new NodePair(
+                canonical,
+                resolved,
+                parent.canonicalTypeIdentities);
     }
 
     private FrozenNode semanticChild(
@@ -294,10 +330,15 @@ final class ReferenceTransparentPathAccess {
             ExactView managed = managedExactView(
                     reference, absolutePointer);
             return new NodePair(
-                    managed.canonical, managed.resolved);
+                    managed.canonical,
+                    managed.resolved,
+                    managed.canonicalTypeIdentities);
         }
         ExactView exact = exactView(reference, purpose);
-        return new NodePair(exact.canonical, exact.resolved);
+        return new NodePair(
+                exact.canonical,
+                exact.resolved,
+                exact.canonicalTypeIdentities);
     }
 
     private boolean isOpaqueManagedPath(String absolutePointer) {
@@ -352,7 +393,9 @@ final class ReferenceTransparentPathAccess {
                         exact,
                         Collections.singleton(JsonPointer.ROOT),
                         executableBodyFieldsByType);
-        FrozenNode canonical = resolved.frozenCanonicalRoot();
+        FrozenNode canonical = resolved.hasCanonicalIdentity()
+                ? resolved.frozenCanonicalRoot()
+                : exact;
         // Source normalization supplies the inline gas representation only
         // while it remains the same exact value. Typed overlays such as a
         // FINOS Money body may normalize to a different direct identity; in
@@ -362,26 +405,40 @@ final class ReferenceTransparentPathAccess {
             canonical = exact;
         }
         return new ExactView(
-                canonical, resolved.frozenResolvedRoot());
+                canonical,
+                resolved.frozenResolvedRoot(),
+                resolved.canonicalTypeIdentities());
     }
 
     private static final class NodePair {
         private final FrozenNode canonical;
         private final FrozenNode resolved;
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
 
-        private NodePair(FrozenNode canonical, FrozenNode resolved) {
+        private NodePair(
+                FrozenNode canonical,
+                FrozenNode resolved,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
             this.canonical = canonical;
             this.resolved = resolved;
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities, "canonicalTypeIdentities");
         }
     }
 
     private static final class ExactView {
         private final FrozenNode canonical;
         private final FrozenNode resolved;
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
 
-        private ExactView(FrozenNode canonical, FrozenNode resolved) {
+        private ExactView(
+                FrozenNode canonical,
+                FrozenNode resolved,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
             this.canonical = Objects.requireNonNull(canonical, "canonical");
             this.resolved = Objects.requireNonNull(resolved, "resolved");
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities, "canonicalTypeIdentities");
         }
     }
 }

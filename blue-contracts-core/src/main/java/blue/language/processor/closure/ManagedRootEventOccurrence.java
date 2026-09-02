@@ -1,7 +1,7 @@
 package blue.language.processor.closure;
 
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.processor.ExactEventIdentityEvidence;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -21,8 +21,7 @@ public final class ManagedRootEventOccurrence {
     private final long occurrenceOrdinal;
     private final DocumentId sourceDocumentId;
     private final String occurrenceIdentity;
-    private final String eventBlueId;
-    private final Node exactEvent;
+    private final ExactEventIdentityEvidence exactEvent;
     private final boolean publicAtSource;
 
     /**
@@ -32,8 +31,7 @@ public final class ManagedRootEventOccurrence {
      * @param occurrenceOrdinal source-invocation event ordinal
      * @param sourceDocumentId emitting managed Root
      * @param occurrenceIdentity exact source occurrence identity
-     * @param eventBlueId exact event identity
-     * @param exactEvent complete exact event
+     * @param exactEvent inseparable exact event and admitted identity evidence
      * @param publicAtSource whether the emitting source was a public Root
      */
     public ManagedRootEventOccurrence(
@@ -41,8 +39,7 @@ public final class ManagedRootEventOccurrence {
             long occurrenceOrdinal,
             DocumentId sourceDocumentId,
             String occurrenceIdentity,
-            String eventBlueId,
-            Node exactEvent,
+            ExactEventIdentityEvidence exactEvent,
             boolean publicAtSource) {
         this.ordinal = ClosureValueSupport.requireSafeInteger(
                 ordinal, "ordinal");
@@ -52,17 +49,9 @@ public final class ManagedRootEventOccurrence {
                 sourceDocumentId, "sourceDocumentId");
         this.occurrenceIdentity = ClosureValueSupport.requireSha256Identity(
                 occurrenceIdentity, "occurrenceIdentity");
-        this.eventBlueId = ClosureValueSupport.requireBlueId(
-                eventBlueId, "eventBlueId");
         this.exactEvent = Objects.requireNonNull(
-                exactEvent, "exactEvent").clone();
+                exactEvent, "exactEvent");
         this.publicAtSource = publicAtSource;
-        String computed = DirectBlueIdCalculator.calculateBlueId(
-                this.exactEvent);
-        if (!this.eventBlueId.equals(computed)) {
-            throw new IllegalArgumentException(
-                    "eventBlueId does not identify the complete managed Root event");
-        }
     }
 
     /**
@@ -116,7 +105,7 @@ public final class ManagedRootEventOccurrence {
      * @return exact event BlueId
      */
     public String eventBlueId() {
-        return eventBlueId;
+        return exactEvent.eventBlueId();
     }
 
     /**
@@ -125,7 +114,12 @@ public final class ManagedRootEventOccurrence {
      * @return defensive copy of the complete exact event
      */
     public Node exactEvent() {
-        return exactEvent.clone();
+        return exactEvent.event();
+    }
+
+    /** Retains the exact event capability for processor-owned redelivery. */
+    ExactEventIdentityEvidence exactEventIdentityEvidence() {
+        return exactEvent;
     }
 
     /**
@@ -144,7 +138,7 @@ public final class ManagedRootEventOccurrence {
         value.put("occurrenceOrdinal", Long.valueOf(occurrenceOrdinal));
         value.put("sourceDocumentId", sourceDocumentId.value());
         value.put("occurrenceIdentity", occurrenceIdentity);
-        value.put("eventBlueId", eventBlueId);
+        value.put("eventBlueId", eventBlueId());
         value.put("publicAtSource", Boolean.valueOf(publicAtSource));
         return value;
     }

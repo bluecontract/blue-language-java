@@ -98,7 +98,8 @@ final class ClosureEvidenceFactoryTest {
                             environment);
 
             ClosureInvocationVerifier.Verification verified =
-                    ClosureInvocationVerifier.verify(invocation);
+                    ClosureInvocationVerifier.verify(
+                            invocation, null);
             assertEquals(invocation.invocationIdentity(),
                     verified.invocationIdentity());
             assertEquals(snapshot.closureIdentity(),

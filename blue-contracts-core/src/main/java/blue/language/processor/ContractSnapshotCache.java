@@ -43,7 +43,8 @@ final class ContractSnapshotCache {
             Node selectedScopeNode,
             FrozenNode effectiveScopeNode,
             String scopePath,
-            long registryVersion) {
+            long registryVersion,
+            String canonicalContentEvidenceSignature) {
         FrozenNode contracts = property(
                 effectiveScopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         FrozenNode channelBindings = property(
@@ -55,7 +56,10 @@ final class ContractSnapshotCache {
                 frozenTypeSignature(effectiveScopeNode),
                 selectedContractKeysSignature(selectedScopeNode, contracts),
                 contractsSignature(contracts),
-                nodeSignature(channelBindings));
+                nodeSignature(channelBindings),
+                Objects.requireNonNull(
+                        canonicalContentEvidenceSignature,
+                        "canonicalContentEvidenceSignature"));
     }
 
     synchronized ContractBundle get(Key key) {
@@ -215,6 +219,13 @@ final class ContractSnapshotCache {
         weight = saturatedAdd(weight, retainedString(key.selectedContractKeysSignature));
         weight = saturatedAdd(weight, retainedString(key.contractsSignature));
         weight = saturatedAdd(weight, retainedString(key.channelBindingsSignature));
+        weight = saturatedAdd(
+                weight,
+                retainedString(key.canonicalContentEvidenceSignature));
+        weight = saturatedAdd(
+                weight,
+                bundle.canonicalTypeIdentities()
+                        .approximateRetainedWeightBytes());
         weight = saturatedAdd(weight, 192L * bundle.channels().size());
         weight = saturatedAdd(weight, 160L * bundle.markers().size());
         weight = saturatedAdd(weight, 64L * bundle.embeddedPaths().size());
@@ -252,6 +263,7 @@ final class ContractSnapshotCache {
         private final String selectedContractKeysSignature;
         private final String contractsSignature;
         private final String channelBindingsSignature;
+        private final String canonicalContentEvidenceSignature;
 
         private Key(
                 String scopePath,
@@ -260,7 +272,8 @@ final class ContractSnapshotCache {
                 String effectiveTypeSignature,
                 String selectedContractKeysSignature,
                 String contractsSignature,
-                String channelBindingsSignature) {
+                String channelBindingsSignature,
+                String canonicalContentEvidenceSignature) {
             this.scopePath = scopePath;
             this.registryVersion = registryVersion;
             this.selectedTypeSignature = selectedTypeSignature;
@@ -268,6 +281,8 @@ final class ContractSnapshotCache {
             this.selectedContractKeysSignature = selectedContractKeysSignature;
             this.contractsSignature = contractsSignature;
             this.channelBindingsSignature = channelBindingsSignature;
+            this.canonicalContentEvidenceSignature =
+                    canonicalContentEvidenceSignature;
         }
 
         @Override
@@ -289,7 +304,10 @@ final class ContractSnapshotCache {
                     && Objects.equals(contractsSignature, that.contractsSignature)
                     && Objects.equals(
                             channelBindingsSignature,
-                            that.channelBindingsSignature);
+                            that.channelBindingsSignature)
+                    && Objects.equals(
+                            canonicalContentEvidenceSignature,
+                            that.canonicalContentEvidenceSignature);
         }
 
         @Override
@@ -301,7 +319,8 @@ final class ContractSnapshotCache {
                     effectiveTypeSignature,
                     selectedContractKeysSignature,
                     contractsSignature,
-                    channelBindingsSignature);
+                    channelBindingsSignature,
+                    canonicalContentEvidenceSignature);
         }
     }
 

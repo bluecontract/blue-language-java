@@ -172,7 +172,9 @@ class MinimizedOverlayInlineTypeTest {
 
         // when
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         ResolvedSnapshot reloaded = reader.resolveToSnapshot(reader.jsonToNode(writer.nodeToJson(minimized)));
 
         // then
@@ -185,7 +187,9 @@ class MinimizedOverlayInlineTypeTest {
         ResolvedSnapshot original = writer.resolveToSnapshot(source);
         String resolvedBefore = writer.nodeToJson(original.resolvedRoot());
 
-        Node minimized = new MinimizedOverlayBuilder().build(original.resolvedRoot());
+        Node minimized = new MinimizedOverlayBuilder().build(
+                original.frozenResolvedRoot(),
+                original.canonicalTypeIdentities());
         String resolvedAfter = writer.nodeToJson(original.resolvedRoot());
 
         Blue jsonReader = new Blue();

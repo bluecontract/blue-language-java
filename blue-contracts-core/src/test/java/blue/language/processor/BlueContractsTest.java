@@ -378,7 +378,8 @@ final class BlueContractsTest {
         try (DocumentProcessor foreignProcessor = DocumentProcessor.builder()
                 .runtimeRegistryIdentity("foreign-runtime-registry")
                 .build()) {
-            foreignPlan = foreignProcessor.administration()
+            foreignPlan = foreignProcessor
+                    .administration()
                     .indexedDeliveryEvaluator()
                     .prepare(
                             root,
@@ -1003,10 +1004,11 @@ final class BlueContractsTest {
 
         @Override
         public NodeProviderResult fetchResultByBlueId(String blueId) {
+            if (!requestedBlueId.equals(blueId)) {
+                return NodeProviderResult.notFound();
+            }
             reads.incrementAndGet();
-            return requestedBlueId.equals(blueId)
-                    ? result
-                    : NodeProviderResult.notFound();
+            return result;
         }
 
         @Override

@@ -9,6 +9,7 @@ import blue.language.processor.GasScheduleConstants;
 import blue.language.processor.HandlerMatchContext;
 import blue.language.processor.ProcessingTraceConstants;
 import blue.language.processor.ProcessorExecutionContext;
+import blue.language.processor.SelectedExecutableBody;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.PointerUtils;
@@ -149,7 +150,16 @@ final class ScriptedContractsRuntime {
             JsonNode encoded = UncheckedObjectMapper.JSON_MAPPER.valueToTree(
                     NodeWireForm.get(result));
             if (!isDefinitionOnlyResult(encoded)) {
-                executeResult(encoded, context);
+                SelectedExecutableBody origin = context
+                        .selectedExecutableBody(
+                                ContractsFixtureConstants.Field.RESULT);
+                boolean resolved = origin != null
+                        && origin.wasMaterializedFromReference();
+                executeResult(
+                        encoded,
+                        resolved ? result : null,
+                        resolved ? origin : null,
+                        context);
             }
         }
         executeInstalledControl(context);
@@ -285,6 +295,13 @@ final class ScriptedContractsRuntime {
 
     private void executeResult(JsonNode result,
                                ProcessorExecutionContext context) {
+        executeResult(result, null, null, context);
+    }
+
+    private void executeResult(JsonNode result,
+                               Node resolvedResult,
+                               SelectedExecutableBody resolvedOrigin,
+                               ProcessorExecutionContext context) {
         if (result == null || result.isNull()) {
             return;
         }
@@ -326,19 +343,12 @@ final class ScriptedContractsRuntime {
                                         "runtimeCounters." + entry.getKey())));
             }
             if (fail == null) {
-                JsonNode patches = listItems(result.get(ContractsFixtureConstants.Field.PATCHES));
-                if (patches != null) {
-                    for (JsonNode patch : patches) {
-                        context.applyPatch(toPatch(patch));
-                    }
-                }
-                JsonNode events = listItems(result.get(ContractsFixtureConstants.Field.EVENTS));
-                if (events != null) {
-                    for (JsonNode event : events) {
-                        context.emitEvent(
-                                expandConstructedText(readNode(event), ledger));
-                    }
-                }
+                applyResultEffects(
+                        result,
+                        resolvedResult,
+                        resolvedOrigin,
+                        context,
+                        ledger);
                 JsonNode termination = result.get(ContractsFixtureConstants.Field.TERMINATION);
                 if (termination != null && !termination.isNull()) {
                     applyTermination(termination, context);
@@ -349,6 +359,43 @@ final class ScriptedContractsRuntime {
         }
         if (fail != null) {
             context.throwFatal("Scripted Handler failed: " + fail);
+        }
+    }
+
+    private void applyResultEffects(
+            JsonNode result,
+            Node resolvedResult,
+            SelectedExecutableBody resolvedOrigin,
+            ProcessorExecutionContext context,
+            GasMeter.ChildGasLedger ledger) {
+        if (resolvedResult != null) {
+            for (Node patch : nodeItems(property(
+                    resolvedResult,
+                    ContractsFixtureConstants.Field.PATCHES))) {
+                resolvedOrigin.applyResolvedPatch(toPatch(patch));
+            }
+            for (Node event : nodeItems(property(
+                    resolvedResult,
+                    ContractsFixtureConstants.Field.EVENTS))) {
+                resolvedOrigin.emitResolvedEvent(
+                        expandConstructedText(event.clone(), ledger));
+            }
+            return;
+        }
+        JsonNode patches = listItems(result.get(
+                ContractsFixtureConstants.Field.PATCHES));
+        if (patches != null) {
+            for (JsonNode patch : patches) {
+                context.applyPatch(toPatch(patch));
+            }
+        }
+        JsonNode events = listItems(result.get(
+                ContractsFixtureConstants.Field.EVENTS));
+        if (events != null) {
+            for (JsonNode event : events) {
+                context.emitEvent(
+                        expandConstructedText(readNode(event), ledger));
+            }
         }
     }
 
@@ -406,6 +453,41 @@ final class ScriptedContractsRuntime {
             return JsonPatch.replace(path, value);
         }
         throw new IllegalArgumentException("Unsupported scripted patch op: " + op);
+    }
+
+    private static JsonPatch toPatch(Node patch) {
+        if (patch == null || patch.getProperties() == null) {
+            throw new IllegalArgumentException(
+                    "Scripted patch must be an object");
+        }
+        String op = scalarText(property(
+                patch,
+                ContractsFixtureConstants.PatchField.OPERATION));
+        String path = scalarText(property(
+                patch,
+                ContractsFixtureConstants.PatchField.PATH));
+        if (op == null || path == null) {
+            throw new IllegalArgumentException(
+                    "Scripted patch requires op and path");
+        }
+        if (ContractsFixtureConstants.PatchOperation.REMOVE.equals(op)) {
+            return JsonPatch.remove(path);
+        }
+        Node value = property(
+                patch,
+                ContractsFixtureConstants.PatchField.VALUE);
+        if (value == null) {
+            throw new IllegalArgumentException(
+                    "Scripted add/replace patch requires val");
+        }
+        if (ContractsFixtureConstants.PatchOperation.ADD.equals(op)) {
+            return JsonPatch.add(path, value.clone());
+        }
+        if (ContractsFixtureConstants.PatchOperation.REPLACE.equals(op)) {
+            return JsonPatch.replace(path, value.clone());
+        }
+        throw new IllegalArgumentException(
+                "Unsupported scripted patch op: " + op);
     }
 
     private static boolean hasConstructedText(JsonNode events) {
@@ -552,6 +634,12 @@ final class ScriptedContractsRuntime {
         return node != null && node.getProperties() != null
                 ? node.getProperties().get(key)
                 : null;
+    }
+
+    private static java.util.List<Node> nodeItems(Node node) {
+        return node != null && node.getItems() != null
+                ? node.getItems()
+                : java.util.Collections.<Node>emptyList();
     }
 
     private static boolean hasEventType(

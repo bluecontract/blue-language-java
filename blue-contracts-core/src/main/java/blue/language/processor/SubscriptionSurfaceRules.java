@@ -7,7 +7,6 @@ import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.wire.JsonPointer;
 
 import java.nio.charset.StandardCharsets;
@@ -26,6 +25,12 @@ import java.util.Set;
  * one dependency with the normalized change set.</p>
  */
 final class SubscriptionSurfaceRules {
+
+    private final ProcessingSnapshotManager snapshotManager;
+
+    SubscriptionSurfaceRules(ProcessingSnapshotManager snapshotManager) {
+        this.snapshotManager = snapshotManager;
+    }
 
     /** Normalizes and validates the changed pointers in insertion order. */
     Set<String> normalizeChanges(Set<String> changes) {
@@ -140,9 +145,10 @@ final class SubscriptionSurfaceRules {
         Node type = contract != null ? contract.getType() : null;
         Set<String> visited = new LinkedHashSet<>();
         while (type != null) {
-            String blueId = type.getBlueId() != null
-                    ? type.getBlueId()
-                    : DirectBlueIdCalculator.calculateBlueId(type);
+            String blueId = CanonicalIdentityEvidence.sourceTypeBlueId(
+                    type,
+                    snapshotManager,
+                    "Subscription contract type recognition");
             if (!visited.add(blueId)) {
                 throw new IllegalArgumentException(
                         "Cyclic effective contract type");
@@ -307,9 +313,10 @@ final class SubscriptionSurfaceRules {
 
     /** Returns the exact retained or calculated identity of one node. */
     String exactIdentity(Node node) {
-        return node.getBlueId() != null
-                ? node.getBlueId()
-                : DirectBlueIdCalculator.calculateBlueId(node);
+        return CanonicalIdentityEvidence.sourceBlueId(
+                node,
+                snapshotManager,
+                "Direct subscription scope identity");
     }
 
     /**

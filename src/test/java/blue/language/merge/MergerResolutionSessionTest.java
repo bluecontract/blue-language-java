@@ -1,5 +1,6 @@
 package blue.language.merge;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.merge.ResolvedSnapshot;
@@ -68,31 +69,26 @@ final class MergerResolutionSessionTest {
     }
 
     @Test
-    void shouldExposeEquivalentCompatibilityAndStandaloneResolutionViews() {
+    void shouldExposeStandaloneResolutionEvidence() {
         // given
         Merger merger = new Merger(
                 new ScalarProcessor(), emptyProvider());
         Node source = new Node().value("value");
 
         // when
-        Merger.SnapshotResolution compatibility =
+        SnapshotResolution resolution =
                 merger.resolveSnapshot(source, ResolutionLimits.NO_LIMITS);
-        SnapshotResolution standalone = compatibility.asStandalone();
         VerifiedReferenceResolution evidence =
-                standalone.verifiedReferenceResolution();
+                resolution.verifiedReferenceResolution();
         ResolvedSnapshot snapshot =
-                ResolvedSnapshot.fromResolverResult(compatibility);
+                ResolvedSnapshot.fromResolverResult(resolution);
 
         // then
-        assertNotNull(compatibility.verifiedReferenceResolution());
         assertNotNull(evidence);
-        assertEquals(
-                compatibility.verifiedReferenceResolution().requestedBlueId(),
-                evidence.requestedBlueId());
-        assertSame(compatibility.canonicalRoot(), standalone.canonicalRoot());
-        assertSame(compatibility.resolvedRoot(), standalone.resolvedRoot());
+        assertSame(resolution.canonicalRoot(), snapshot.frozenCanonicalRoot());
+        assertSame(resolution.resolvedRoot(), snapshot.frozenResolvedRoot());
         assertSame(evidence, snapshot.verifiedReferenceResolution());
-        assertSame(standalone.provenance(), snapshot.resolutionProvenance());
+        assertSame(resolution.provenance(), snapshot.resolutionProvenance());
     }
 
     private static NodeProvider emptyProvider() {
@@ -105,7 +101,8 @@ final class MergerResolutionSessionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
             if (source.getRawValue() != null) {
                 target.value(source.getRawValue());
             }
@@ -126,10 +123,12 @@ final class MergerResolutionSessionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
             concurrentProcessors.countDown();
             await(concurrentProcessors);
-            super.process(target, source, nodeProvider, nodeResolver);
+            super.process(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
     }
 
@@ -140,14 +139,16 @@ final class MergerResolutionSessionTest {
         public void process(Node target,
                             Node source,
                             NodeProvider nodeProvider,
-                            NodeResolver nodeResolver) {
+                            NodeResolver nodeResolver,
+                            CanonicalTypeIdentityLookup typeIdentities) {
             if ("outer".equals(source.getRawValue())) {
                 Node inner = nodeResolver.resolve(
                         new Node().value("inner"), ResolutionLimits.NO_LIMITS);
                 target.value(inner.getRawValue());
                 return;
             }
-            super.process(target, source, nodeProvider, nodeResolver);
+            super.process(target, source, nodeProvider, nodeResolver,
+                    typeIdentities);
         }
     }
 

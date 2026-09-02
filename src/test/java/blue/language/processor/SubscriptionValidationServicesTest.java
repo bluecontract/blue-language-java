@@ -89,7 +89,7 @@ final class SubscriptionValidationServicesTest {
                         .build();
         ActivationIntervalValidator intervals =
                 new ActivationIntervalValidator(
-                        new SubscriptionSurfaceRules());
+                        new SubscriptionSurfaceRules(null));
         SubscriptionDeltaBuilder builder =
                 new SubscriptionDeltaBuilder(intervals);
         Map<String, SubscriptionDelta.Entry> beforeSurface =
@@ -144,7 +144,7 @@ final class SubscriptionValidationServicesTest {
                         .activeSubscriptionIntervals(
                                 Arrays.asList(affected, unaffected))
                         .build();
-        SubscriptionSurfaceRules rules = new SubscriptionSurfaceRules();
+        SubscriptionSurfaceRules rules = new SubscriptionSurfaceRules(null);
         ActivationIntervalValidator validator =
                 new ActivationIntervalValidator(rules);
 
@@ -212,7 +212,7 @@ final class SubscriptionValidationServicesTest {
                 Arrays.asList(1, "source", 0));
         ExternalOrderKey currentOrder = ExternalOrderKey.of(
                 Arrays.asList(8, "source", 2));
-        String contribution = channel.getBlueId();
+        String contribution = DirectBlueIdCalculator.calculateBlueId(channel);
         SubscriptionDelta.Entry retained = new SubscriptionDelta.Entry(
                 "/lessons/lesson-a",
                 CHANNEL_KEY,
@@ -347,7 +347,6 @@ final class SubscriptionValidationServicesTest {
                 .properties(
                         "checkpointDomain",
                         new Node().value(CHECKPOINT_DOMAIN));
-        channel.blueId(DirectBlueIdCalculator.calculateBlueId(channel));
         return channel;
     }
 

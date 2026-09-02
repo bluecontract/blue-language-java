@@ -7,12 +7,16 @@ import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.matching.FrozenTypeMatcher;
+import blue.language.merge.TypeEvidenceResolution;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -189,9 +193,46 @@ final class SubtypeAssignablePredicateTest {
                                         + reference
                                         .getReferenceBlueId());
                     }
-                    return FrozenNode.fromNode(
-                            definition.clone());
+                    return verifiedTypeMaterialization(
+                            definition,
+                            reference.getReferenceBlueId());
                 });
+    }
+
+    private static TypeEvidenceResolution verifiedTypeMaterialization(
+            Node definition,
+            String requestedBlueId) {
+        FrozenNode retained = FrozenNode.fromResolvedNode(
+                definition.clone().blueId(requestedBlueId));
+        CanonicalTypeIdentityLookup identities =
+                new CanonicalTypeIdentityLookup() {
+                    @Override
+                    public boolean hasCompleteCoverage() {
+                        return false;
+                    }
+
+                    @Override
+                    public Optional<CanonicalTypeIdentityEvidence>
+                    findCanonicalTypeIdentityEvidence(
+                            Node completedType) {
+                        return Optional.of(CanonicalTypeIdentityEvidence
+                                .identityOnly(requireCanonicalTypeBlueId(
+                                        completedType)));
+                    }
+
+                    @Override
+                    public String requireCanonicalTypeBlueId(
+                            Node completedType) {
+                        if (!retained.resolvedStructuralKey().equals(
+                                FrozenNode.fromResolvedNode(completedType)
+                                        .resolvedStructuralKey())) {
+                            throw new IllegalStateException(
+                                    "Unexpected completed type");
+                        }
+                        return requestedBlueId;
+                    }
+                };
+        return new TypeEvidenceResolution(retained, identities);
     }
 
     private static String add(

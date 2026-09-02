@@ -4,8 +4,11 @@ import blue.language.api.BlueOperationResult;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.SequentialNodeProvider;
+import blue.language.registry.NodeProviderWrapper;
 import blue.language.snapshot.BluePatch;
 import blue.language.snapshot.FrozenNode;
 
@@ -121,6 +124,87 @@ public interface LanguageProcessing {
     }
 
     /**
+     * Opaque operation-local exact-node overlay for canonical resolution.
+     *
+     * <p>The wrapped provider remains untrusted. Only a Language-owned
+     * {@link Scope} can consume this value directly, and every returned
+     * candidate still crosses the ordinary provider-verification boundary.
+     * Downstream Language adapters can compose only a verification-only view;
+     * the raw provider remains inaccessible.</p>
+     */
+    final class ExactResolutionOverlay {
+        private final NodeProvider provider;
+
+        private ExactResolutionOverlay(NodeProvider provider) {
+            this.provider = Objects.requireNonNull(provider, "provider");
+        }
+
+        /**
+         * Wraps one borrowed provider as operation-local exact evidence.
+         *
+         * @param provider provider whose results Language must verify
+         * @return opaque exact-resolution overlay
+         * @throws NullPointerException if {@code provider} is {@code null}
+         */
+        public static ExactResolutionOverlay from(NodeProvider provider) {
+            return new ExactResolutionOverlay(provider);
+        }
+
+        /**
+         * Composes this overlay ahead of one fallback overlay.
+         *
+         * <p>Only a definitive miss reaches the fallback. Unavailability and
+         * invalid evidence remain authoritative.</p>
+         *
+         * @param fallback overlay consulted after a definitive miss
+         * @return ordered opaque overlay
+         * @throws NullPointerException if {@code fallback} is {@code null}
+         */
+        public ExactResolutionOverlay followedBy(
+                ExactResolutionOverlay fallback) {
+            ExactResolutionOverlay checked = Objects.requireNonNull(
+                    fallback, "fallback");
+            return new ExactResolutionOverlay(
+                    new SequentialNodeProvider(
+                            provider, checked.provider));
+        }
+
+        /**
+         * Composes this untrusted overlay ahead of one fallback provider and
+         * independently verifies every result-producing leaf.
+         *
+         * <p>The returned graph inserts no bootstrap or ambient fallback.
+         * Invalid or unavailable overlay evidence therefore remains
+         * authoritative, while cyclic members retain the proof capability of
+         * their exact provider leaf.</p>
+         *
+         * @param fallback verified provider graph consulted after a definitive
+         *        overlay miss
+         * @return fallback-free verification-only provider composition
+         * @throws NullPointerException if {@code fallback} is null
+         */
+        public NodeProvider verifiedBefore(NodeProvider fallback) {
+            return VerificationBridge.verifyOnlyWithoutFallback(
+                    new SequentialNodeProvider(
+                            provider,
+                            Objects.requireNonNull(fallback, "fallback")));
+        }
+
+        /** Keeps the fallback-free verifier hook inside Language ownership. */
+        private static final class VerificationBridge
+                extends NodeProviderWrapper {
+            private static NodeProvider verifyOnlyWithoutFallback(
+                    NodeProvider provider) {
+                return verifyOnly(provider);
+            }
+        }
+
+        NodeProvider provider() {
+            return provider;
+        }
+    }
+
+    /**
      * Closeable processing view over one Language runtime generation.
      *
      * <p>A root scope uses one-shot transient caches. A scope returned by
@@ -175,13 +259,75 @@ public interface LanguageProcessing {
         ResolvedSnapshot resolveTransient(Node document);
 
         /**
+         * Resolves one complete authored document against operation-local
+         * exact evidence followed by this scope's provider graph.
+         *
+         * <p>The overlay is not trusted materialized state: every returned
+         * candidate passes the ordinary Language provider-verification
+         * boundary before it can contribute to resolution. An unavailable or
+         * invalid overlay result is authoritative and is not hidden by the
+         * scope provider. The returned snapshot has complete canonical type
+         * evidence and a whole-document canonical identity. This operation
+         * never publishes newly discovered state.</p>
+         *
+         * @param document authored document to resolve
+         * @param exactResolutionOverlay opaque operation-local exact evidence
+         *        tried before this scope's provider
+         * @return invocation-local complete resolved snapshot
+         * @throws NullPointerException if either argument is {@code null}
+         * @throws IllegalStateException if this scope or its runtime is closed
+         */
+        ResolvedSnapshot resolveTransientForCanonicalIdentity(
+                Node document,
+                ExactResolutionOverlay exactResolutionOverlay);
+
+        /**
+         * Resolves an authored type declaration as metadata and returns its
+         * resolver-issued canonical identity evidence. Required-field and
+         * other instance-schema checks never run against the declaration.
+         *
+         * @param declaration authored inline declaration or pure reference
+         * @return identity evidence selected with the exact preprocessed
+         *         authored representation
+         * @throws NullPointerException if {@code declaration} is null
+         * @throws IllegalArgumentException if declaration or provider evidence
+         *         is invalid
+         * @throws IllegalStateException if the scope is closed or exact
+         *         evidence cannot be established
+         */
+        CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration);
+
+        /**
+         * Overlay-aware declaration-identity resolution. Exact operation-local
+         * evidence is verified before the scope provider is consulted.
+         *
+         * @param declaration authored inline declaration or pure reference
+         * @param exactResolutionOverlay operation-local exact evidence
+         * @return identity evidence selected with the exact preprocessed
+         *         authored representation
+         * @throws NullPointerException if an argument is null
+         * @throws IllegalArgumentException if declaration or provider evidence
+         *         is invalid
+         * @throws IllegalStateException if the scope is closed or exact
+         *         evidence cannot be established
+         */
+        CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration,
+                ExactResolutionOverlay exactResolutionOverlay);
+
+        /**
          * Resolves a document while retaining exact authored subtrees at the
-         * supplied RFC 6901 paths.
+         * supplied RFC 6901 paths. A retained pure reference remains cold.
+         * Its exact input is available through
+         * {@link ResolvedSnapshot#sourceRoot()}. When retained inline type
+         * metadata leaves canonical evidence incomplete, canonical-root and
+         * BlueId access fail closed until an unlimited retry succeeds.
          *
          * @param document authored document to resolve
          * @param preservedPaths paths retained in authored form; null or empty
          *        means no paths are retained
-         * @return resolved snapshot with the selected subtrees deferred
+         * @return target-limited snapshot with selected subtrees deferred
          * @throws NullPointerException if {@code document} is {@code null}
          * @throws IllegalStateException if this scope or its runtime is closed
          */

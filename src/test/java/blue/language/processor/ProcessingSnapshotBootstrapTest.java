@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -70,7 +71,11 @@ final class ProcessingSnapshotBootstrapTest {
 
         // when
         EmbeddedScopePlan plan = ProcessingSnapshotBootstrap
-                .embeddedScopePlan(effectiveScope, "/", null);
+                .embeddedScopePlan(
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -98,7 +103,11 @@ final class ProcessingSnapshotBootstrapTest {
 
         // when
         EmbeddedScopePlan plan = ProcessingSnapshotBootstrap
-                .embeddedScopePlan(effectiveScope, "/", null);
+                .embeddedScopePlan(
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -126,7 +135,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);
@@ -149,7 +161,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);
@@ -172,7 +187,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);
@@ -195,7 +213,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);
@@ -218,7 +239,10 @@ final class ProcessingSnapshotBootstrapTest {
         SubscriptionSurfaceInvalidException failure =
                 FailureCapture.captureFailure(
                 () -> ProcessingSnapshotBootstrap.embeddedScopePlan(
-                        effectiveScope, "/", null));
+                        effectiveScope,
+                        "/",
+                        null,
+                        CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertNotNull(failure);

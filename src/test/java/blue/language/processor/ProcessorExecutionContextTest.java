@@ -1,15 +1,18 @@
 package blue.language.processor;
 
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,6 +20,45 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Focused tests for the slim handler context surface.
  */
 final class ProcessorExecutionContextTest {
+
+    @Test
+    void shouldCarryAdmissionProvedCyclicMemberIdentityForExactEvent() {
+        // given
+        Node event = new Node().properties(
+                "kind", new Node().value("cyclic-member"));
+        FrozenNode frozenEvent = FrozenNode.fromNode(event.clone());
+        String directEventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(event);
+        String admittedEventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("event-cycle")) + "#0";
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                new DocumentProcessor(), new Node());
+        execution.preflightScope("/");
+
+        // when
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                event,
+                frozenEvent,
+                admittedEventBlueId,
+                admittedEventBlueId,
+                Collections.<ExactBlueValue>emptyList(),
+                null,
+                null,
+                false);
+        List<ExactBlueValue> exactValues =
+                context.runtimeWorkSession().exactValuesSnapshot();
+
+        // then
+        assertNotEquals(directEventBlueId, admittedEventBlueId);
+        assertTrue(exactValues.stream().anyMatch(value ->
+                admittedEventBlueId.equals(value.blueId())
+                        && frozenEvent.resolvedStructuralKey().equals(
+                                value.frozenValue().resolvedStructuralKey())));
+    }
 
     @Test
     void shouldVerifyDocumentHelpersExposeSnapshots() {

@@ -1,10 +1,10 @@
 package blue.language.processor;
 
-import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
-import blue.language.snapshot.FrozenNode;
+import blue.language.runtime.LanguageRuntimeAccess;
 
 import java.util.Map;
 import java.util.Objects;
@@ -231,9 +231,23 @@ public final class DocumentProcessorAdministration {
             String scopePath) {
         try (DocumentProcessorLifecycle.ReadScope ignored =
                      lifecycle.openRead(processor.registry())) {
-            ContractBundle bundle = processor.contractLoader().load(
-                    FrozenNode.fromResolvedNode(scopeNode), scopePath);
-            return bundle.markers();
+            ProcessingSnapshotManager manager =
+                    processor.scopeIdentitySnapshotManager();
+            if (manager == null) {
+                throw new IllegalStateException(
+                        "Marker inspection requires a verified ProcessingSnapshotManager");
+            }
+            ProcessingSnapshotManager sequence =
+                    manager.transientSequence();
+            try {
+                ResolvedSnapshot snapshot =
+                        sequence.fromDocumentTransient(scopeNode);
+                ContractBundle bundle = processor.contractLoader().load(
+                        snapshot, scopePath);
+                return bundle.markers();
+            } finally {
+                sequence.releaseTransientState();
+            }
         }
     }
 

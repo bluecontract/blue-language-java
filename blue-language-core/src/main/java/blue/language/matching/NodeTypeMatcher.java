@@ -3,6 +3,8 @@ package blue.language.matching;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.NodeToBlueIdInput;
 import blue.language.resolve.ResolutionLimits;
@@ -66,9 +68,13 @@ public class NodeTypeMatcher {
             Node targetPatternNode = runtime.preprocessForMatching(
                     targetType.clone());
             ResolutionLimits matchingLimits = matchingLimits(globalLimits, targetPatternNode);
-            FrozenNode resolvedNode = FrozenNode.fromResolvedNode(resolveForMatching(node, matchingLimits));
+            MatchingCandidate resolved = resolveForMatching(
+                    node, matchingLimits);
             FrozenNode targetPattern = FrozenNode.fromResolvedNode(targetPatternNode);
-            return matcherFor(globalLimits).matchesType(resolvedNode, targetPattern);
+            return matcherFor(
+                    globalLimits,
+                    resolved.canonicalTypeIdentities)
+                    .matchesType(resolved.node, targetPattern);
         } catch (RuntimeException ex) {
             return false;
         }
@@ -97,10 +103,17 @@ public class NodeTypeMatcher {
         if (snapshot == null) {
             return false;
         }
-        return matchesResolvedType(snapshot.resolvedAt(pointer), resolvedTargetType);
+        FrozenNode resolved = snapshot.resolvedAt(pointer);
+        return new FrozenTypeMatcher(
+                runtime,
+                true,
+                snapshot.canonicalTypeIdentities())
+                .matchesType(resolved, resolvedTargetType);
     }
 
-    private Node resolveForMatching(Node node, ResolutionLimits limits) {
+    private MatchingCandidate resolveForMatching(
+            Node node,
+            ResolutionLimits limits) {
         /*
          * Mutable compatibility callers may supply a verified materialization
          * produced by a provider or snapshot. Its attached identity is
@@ -111,9 +124,14 @@ public class NodeTypeMatcher {
         Node original = runtime.preprocessForMatching(sourceProjection);
         Node expanded = original.clone();
         runtime.expandForMatching(expanded, limits);
-        Node resolved = runtime.resolveForMatching(expanded, limits);
+        TypeEvidenceResolution resolution = Objects.requireNonNull(
+                runtime.resolveTypeEvidenceForMatching(expanded, limits),
+                "matching resolution");
+        Node resolved = resolution.resolvedRoot().toNode();
         restoreMissingStructure(resolved, expanded);
-        return resolved;
+        return new MatchingCandidate(
+                FrozenNode.fromResolvedNode(resolved),
+                resolution.canonicalTypeIdentities());
     }
 
     private ResolutionLimits matchingLimits(ResolutionLimits globalLimits, Node targetPattern) {
@@ -121,11 +139,29 @@ public class NodeTypeMatcher {
         return ResolutionLimits.allOf(effectiveGlobalLimits, new TargetPatternLimits(targetPattern));
     }
 
-    private FrozenTypeMatcher matcherFor(ResolutionLimits globalLimits) {
-        if (globalLimits == null || globalLimits == ResolutionLimits.NO_LIMITS) {
-            return frozenMatcher;
+    private FrozenTypeMatcher matcherFor(
+            ResolutionLimits globalLimits,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        boolean resolveCandidateReferences = globalLimits == null
+                || globalLimits == ResolutionLimits.NO_LIMITS;
+        return new FrozenTypeMatcher(
+                runtime,
+                resolveCandidateReferences,
+                canonicalTypeIdentities);
+    }
+
+    private static final class MatchingCandidate {
+        private final FrozenNode node;
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
+
+        private MatchingCandidate(
+                FrozenNode node,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+            this.node = Objects.requireNonNull(node, "node");
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities,
+                    "canonicalTypeIdentities");
         }
-        return new FrozenTypeMatcher(runtime, false);
     }
 
     private void restoreMissingStructure(Node target, Node source) {
@@ -220,12 +256,6 @@ public class NodeTypeMatcher {
                     && !currentNode.getBlueId().equals(targetAtPath.node.getBlueId());
         }
 
-        /** Legacy binary-API spelling delegated to the canonical method. */
-        @Override
-        public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-            return shouldExpandPathSegment(pathSegment, currentNode);
-        }
-
         @Override
         public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
             return targetAtForMerge(candidatePath(pathSegment)) != null;
@@ -241,6 +271,11 @@ public class NodeTypeMatcher {
             return targetItems != null
                     && targetItems.size() > items.size()
                     && shouldAttemptBundleReconstruction(items, targetItems);
+        }
+
+        @Override
+        public boolean retainsEveryAuthoredPath() {
+            return false;
         }
 
         @Override

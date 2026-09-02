@@ -1,6 +1,8 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
+import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
@@ -9,6 +11,7 @@ import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodePathEditor;
 
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -40,13 +43,18 @@ final class ProcessingSnapshotTransaction {
             if (patch == null) {
                 return;
             }
-            planning.canonicalPlanner().plan(JsonPointer.ROOT, patch);
+            ImmutablePatchPlanner.PatchPlan selectedPlan =
+                    planning.canonicalPlanner().plan(
+                            JsonPointer.ROOT, patch);
             ImmutablePatchPlanner.PatchPlan resolvedPlan =
                     planning.resolvedPlanner().plan(
                             JsonPointer.ROOT, patch);
             SnapshotPatchPlan snapshotPlan = prepareSnapshotPatch(
                     planning.baseSnapshot(), patch);
-            commitSnapshotPatch(snapshotPlan, resolvedPlan.root());
+            commitSnapshotPatch(
+                    snapshotPlan,
+                    selectedPlan.root(),
+                    resolvedPlan.root());
             runtime.changedPaths.add(PointerUtils.normalizePointer(path));
         } catch (RuntimeException failure) {
             runtime.materializedView.replaceWith(rollback);
@@ -72,15 +80,21 @@ final class ProcessingSnapshotTransaction {
                     runtime.executableBodyFieldsByType,
                     runtime.entryEmbeddedScopePlans(),
                     true,
-                    runtime.strictPlatformInvocation);
+                    runtime.strictPlatformInvocation,
+                    blue.language.identity.CanonicalTypeIdentityLookup
+                            .incomplete(),
+                    true);
         }
         ResolvedSnapshot base = runtime.snapshot != null
                 ? runtime.snapshot
-                : snapshotFromDocument(rollback);
+                : snapshotFromDocumentTransient(rollback);
         runtime.retainEntrySnapshot(base);
+        FrozenNode selectedRoot = runtime.selectedDocumentBacked
+                ? FrozenNode.fromResolvedNode(rollback)
+                : base.frozenSourceRoot();
         return new PatchPlanningContext(
                 base,
-                ImmutablePatchPlanner.forSnapshot(base),
+                ImmutablePatchPlanner.forFrozen(selectedRoot),
                 ImmutablePatchPlanner.forFrozen(base.frozenResolvedRoot()),
                 !runtime.selectedDocumentBacked,
                 !runtime.selectedDocumentBacked ? manager : null,
@@ -89,7 +103,10 @@ final class ProcessingSnapshotTransaction {
                 runtime.executableBodyFieldsByType,
                 runtime.entryEmbeddedScopePlans(),
                 base.isResolutionComplete(),
-                runtime.strictPlatformInvocation);
+                runtime.strictPlatformInvocation,
+                base.canonicalTypeIdentities(),
+                runtime.selectedDocumentBacked
+                        || base.isSourceBacked());
     }
 
     List<DocumentUpdateData> commitBatchPatchResult(
@@ -152,7 +169,9 @@ final class ProcessingSnapshotTransaction {
                         exactResult.canonicalRoot(),
                         exactResult.resolvedRoot(),
                         exactResult.isResolutionComplete(),
-                        insertSharedSnapshot);
+                        exactResult.isSourceBacked(),
+                        insertSharedSnapshot,
+                        exactResult.canonicalTypeIdentities());
         boolean published = insertSharedSnapshot
                 && next.isResolutionComplete();
         ResolvedSnapshot committed = insertSharedSnapshot
@@ -196,8 +215,7 @@ final class ProcessingSnapshotTransaction {
                 "selectedBeforeContinuation");
         FrozenNode after = FrozenNode.fromResolvedNode(
                 runtime.materializedView.copyRoot());
-        if (before.blueId().equals(after.blueId())
-                && before.sameResolvedStructure(after)) {
+        if (before.sameResolvedStructure(after)) {
             return;
         }
 
@@ -314,6 +332,60 @@ final class ProcessingSnapshotTransaction {
                 manager, reference, "Selected executable body");
     }
 
+    ResolvedSnapshot resolveSelectedExecutableReference(
+            FrozenNode reference) {
+        ProcessingSnapshotManager manager = currentManager();
+        FrozenNode exact = materializeSelectedExecutableReference(reference);
+        Node exactBody = exact.toNode();
+        Set<String> preservedPaths = new LinkedHashSet<>(
+                ExecutableBodyPathCatalog.ordinaryReferencePaths(
+                        exactBody));
+        preservedPaths.addAll(
+                ExecutableBodyPathCatalog.opaqueCyclicMemberPaths(
+                        exactBody));
+        ResolvedSnapshot resolved = Objects.requireNonNull(
+                preservedPaths.isEmpty()
+                        ? manager.fromDocumentTransient(exactBody)
+                        : ExecutableBodyPathCatalog.forceDeferredResolution(
+                                manager.fromDocumentTransientPreservingPaths(
+                                        exactBody,
+                                        preservedPaths)),
+                "selectedExecutableBodySnapshot");
+        CanonicalTypeIdentityLookup graphEvidence =
+                CanonicalTypeIdentityEvidenceUnion
+                        .establishForResolvedGraph(
+                                resolved.resolvedRoot(),
+                                Collections.singletonList(
+                                        resolved.canonicalTypeIdentities()));
+        if (!resolved.hasCanonicalIdentity()) {
+            /*
+             * materializeVerifiedExact established this provider body as the
+             * exact canonical value named by the selected reference. A
+             * preservation-limited resolver may omit whole-source identity,
+             * but that must not discard the independently verified root.
+             */
+            resolved = ResolvedSnapshot.withDeferredResolution(
+                    exact,
+                    resolved.frozenResolvedRoot(),
+                    graphEvidence);
+        } else if (!resolved.canonicalTypeIdentities()
+                .hasCompleteCoverage()) {
+            resolved = resolved.withCanonicalIdentityEvidence(
+                    graphEvidence);
+        }
+        if (!BlueIds.hasCyclicMemberSeparator(
+                reference.getReferenceBlueId())
+                && !reference.getReferenceBlueId().equals(
+                        resolved.blueId())) {
+            throw new ProcessorFailureException(
+                    ProcessorErrorCategory.InvalidProcessingDocument,
+                    "Selected executable body resolver identity mismatch: expected "
+                            + reference.getReferenceBlueId()
+                            + " but established " + resolved.blueId());
+        }
+        return resolved;
+    }
+
     Supplier<Node> checkpointSubjectMaterializer(Node subjectReference) {
         final Node capturedReference = Objects.requireNonNull(
                 subjectReference, "subjectReference").clone();
@@ -397,16 +469,19 @@ final class ProcessingSnapshotTransaction {
 
     private void commitSnapshotPatch(
             SnapshotPatchPlan plan,
-            FrozenNode fallbackRoot) {
+            FrozenNode fallbackSelectedRoot,
+            FrozenNode fallbackResolvedRoot) {
         if (runtime.snapshotManager == null || plan == null) {
-            runtime.materializedView.replaceWith(fallbackRoot.toNode());
+            runtime.materializedView.replaceWith(
+                    fallbackResolvedRoot.toNode());
             runtime.materializedViewStale = false;
             markStateAdvanced(false);
             return;
         }
         runtime.snapshot = plan.next != null
                 ? plan.next
-                : snapshotFromDocument(fallbackRoot.toNode());
+                : snapshotFromDocument(
+                        fallbackSelectedRoot.toNode());
         commitMaterializedSnapshot(runtime.snapshot);
         markStateAdvanced(false);
     }

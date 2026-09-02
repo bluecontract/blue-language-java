@@ -1,13 +1,13 @@
 package blue.language.processor;
 
-import blue.language.model.wire.BlueLanguageConstants;
-
-import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.model.Schema;
+import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.wire.JsonPointer;
 import blue.language.processor.util.NodeCanonicalizer;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.snapshot.FrozenNode;
-import blue.language.identity.BlueIds;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -216,45 +216,6 @@ public final class SemanticOutputBoundary {
         }
         admittedByIdentity.put(exact.blueId(), exact);
         return exact;
-    }
-
-    /**
-     * Carries an exact runtime cursor by an identity already admitted for this
-     * invocation.
-     *
-     * <p>This is the return lane for hosted runtimes that preserve an exact
-     * input identity while exposing a run-local resolved cursor for reads. If
-     * the identity is already present, the invocation-owned capability is
-     * returned directly and the cursor is never normalized or re-hashed. A
-     * previously unseen identity follows the ordinary admission path and must
-     * reproduce the asserted identity.</p>
-     *
-     * @param blueId exact identity retained by the hosted runtime
-     * @param cursor canonical value, pure reference, or resolved read cursor
-     * @return invocation-owned exact capability
-     */
-    public synchronized ExactBlueValue carryExactValue(
-            String blueId,
-            FrozenNode cursor) {
-        ensureOpen();
-        String asserted = BlueIds.requireBlueIdOrCyclicMember(
-                Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID),
-                "hosted exact value blueId");
-        ExactBlueValue existing = admittedByIdentity.get(asserted);
-        if (existing != null) {
-            return existing;
-        }
-        ExactBlueValue admitted = admit(
-                Objects.requireNonNull(cursor, "cursor"));
-        if (!asserted.equals(admitted.blueId())) {
-            throw new InvalidExecutionEvidenceException(
-                    "Hosted runtime exact cursor changed identity: expected "
-                            + asserted + " but calculated "
-                            + admitted.blueId() + " (strict="
-                            + cursor.isStrictCanonical() + ", reference="
-                            + cursor.isReferenceOnly() + ")");
-        }
-        return admitted;
     }
 
     /**
@@ -658,7 +619,8 @@ public final class SemanticOutputBoundary {
                 "exact input blueId");
         admit(new ExactBlueValue(frozen, asserted, admissionMemo));
         for (Map.Entry<String, FrozenNode> entry : frozen.pathIndex().entrySet()) {
-            if (entry.getKey().isEmpty()) {
+            if (entry.getKey().isEmpty()
+                    || JsonPointer.ROOT.equals(entry.getKey())) {
                 continue;
             }
             FrozenNode descendant = entry.getValue();

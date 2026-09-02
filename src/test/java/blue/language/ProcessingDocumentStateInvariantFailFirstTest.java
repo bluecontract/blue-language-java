@@ -191,7 +191,8 @@ class ProcessingDocumentStateInvariantFailFirstTest {
         ResolvedSnapshot completedSnapshot =
                 snapshot(processor, completed);
         Node minimized = new MinimizedOverlayBuilder().build(
-                completedSnapshot.resolvedRoot());
+                completedSnapshot.frozenResolvedRoot(),
+                completedSnapshot.canonicalTypeIdentities());
         Node transported = processor.jsonToNode(processor.nodeToJson(minimized));
         Blue reloader = fixture.newBlue(new AtomicInteger());
         ResolvedSnapshot reloaded = reloader.resolveToSnapshot(transported);

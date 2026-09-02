@@ -1,11 +1,14 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.snapshot.FrozenNode;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -41,6 +44,105 @@ public interface ProcessingSnapshotManager {
     }
 
     /**
+     * Performs an unmasked transient resolution for an operation that must
+     * establish the document's canonical identity and complete resolver-issued
+     * effective-type identity evidence.
+     *
+     * <p>This operation is deliberately distinct from path-preserving
+     * processing resolution. Implementations must fail closed rather than
+     * return a target-limited snapshot or infer identities from its resolved
+     * structure.</p>
+     *
+     * @param document authored document
+     * @return transient snapshot with canonical identity and complete type
+     *         identity evidence
+     * @throws NullPointerException if {@code document} or the delegated
+     *         snapshot result is null
+     * @throws IllegalStateException if the delegated resolution does not
+     *         establish complete type evidence and whole-document identity
+     */
+    default ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+            Node document) {
+        ResolvedSnapshot snapshot = Objects.requireNonNull(
+                fromDocumentTransient(
+                        Objects.requireNonNull(document, "document")),
+                "canonicalIdentitySnapshot");
+        snapshot.canonicalTypeIdentities().requireCompleteCoverage();
+        if (!snapshot.hasCanonicalIdentity()) {
+            throw new IllegalStateException(
+                    "Canonical identity resolution did not establish a "
+                            + "whole-document identity");
+        }
+        return snapshot;
+    }
+
+    /**
+     * Canonical-identity counterpart that admits one operation-local exact
+     * provider ahead of the manager's ordinary provider graph.
+     *
+     * <p>The default rejects the capability. A decorator holding exact
+     * invocation evidence must not silently discard it and retry against an
+     * ambient provider.</p>
+     *
+     * @param document authored document
+     * @param exactResolutionOverlay opaque operation-local exact evidence
+     * @return transient snapshot with canonical identity and complete type
+     *         identity evidence
+     * @throws NullPointerException if an argument is null
+     * @throws UnsupportedOperationException when overlay-aware authoritative
+     *         resolution is unavailable
+     */
+    default ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+            Node document,
+            ExactResolutionOverlay exactResolutionOverlay) {
+        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(
+                exactResolutionOverlay, "exactResolutionOverlay");
+        throw new UnsupportedOperationException(
+                "This ProcessingSnapshotManager cannot establish canonical "
+                        + "identity through operation-local exact evidence");
+    }
+
+    /**
+     * Resolves one authored type declaration as metadata and returns exact
+     * resolver-issued identity evidence for that representation.
+     *
+     * @param declaration authored inline declaration or pure reference
+     * @return exact canonical identity and representation evidence
+     * @throws NullPointerException if {@code declaration} is null
+     * @throws UnsupportedOperationException when the manager cannot expose
+     *         verified declaration-resolution evidence
+     */
+    default CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration) {
+        Objects.requireNonNull(declaration, "declaration");
+        throw new UnsupportedOperationException(
+                "This ProcessingSnapshotManager cannot resolve authored type "
+                        + "declaration identity");
+    }
+
+    /**
+     * Overlay-aware declaration identity resolution.
+     *
+     * @param declaration authored inline declaration or pure reference
+     * @param exactResolutionOverlay operation-local exact evidence
+     * @return exact canonical identity and representation evidence
+     * @throws NullPointerException if an argument is null
+     * @throws UnsupportedOperationException when the manager cannot preserve
+     *         the overlay-aware declaration boundary
+     */
+    default CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration,
+            ExactResolutionOverlay exactResolutionOverlay) {
+        Objects.requireNonNull(declaration, "declaration");
+        Objects.requireNonNull(exactResolutionOverlay, "exactResolutionOverlay");
+        throw new UnsupportedOperationException(
+                "This ProcessingSnapshotManager cannot resolve authored type "
+                        + "declaration identity through operation-local exact "
+                        + "evidence");
+    }
+
+    /**
      * Resolves a Processing Document while retaining the exact authored
      * subtrees at the supplied paths. Contracts uses this boundary for
      * executable bodies: preflight may resolve their surrounding headers, but
@@ -53,7 +155,8 @@ public interface ProcessingSnapshotManager {
      *
      * @param document authored processing document
      * @param preservedPaths absolute paths whose authored form must remain exact
-     * @return resolved snapshot retaining the requested canonical subtrees
+     * @return target-limited snapshot retaining the requested exact Source;
+     *         whole-document identity is absent when type evidence is incomplete
      * @throws UnsupportedOperationException when preservation is unsupported
      */
     default ResolvedSnapshot fromDocumentPreservingPaths(
@@ -101,7 +204,7 @@ public interface ProcessingSnapshotManager {
      * is never used.</p>
      *
      * @param scopePath absolute selected scope path
-     * @param selectedScope exact canonical selected contribution
+     * @param selectedScope exact selected Source contribution
      * @param capturedDocumentSnapshot immutable containing document snapshot
      * @return strict standalone scope Content BlueId
      * @throws IllegalArgumentException when projection cannot be reproduced
@@ -165,6 +268,38 @@ public interface ProcessingSnapshotManager {
     default FrozenNode materializeVerifiedExactReference(
             FrozenNode reference) {
         return materializeVerifiedReference(reference);
+    }
+
+    /**
+     * Materializes one pure exact type reference together with canonical
+     * identity evidence issued by the same verified resolver invocation.
+     *
+     * <p>This is a first-class snapshot-manager operation because transparent
+     * manager decorators and transient forks must preserve every semantic
+     * capability of the manager they wrap. It must not be implemented by
+     * hashing a resolved type body. Managers without access to verified type
+     * metadata fail closed by default.</p>
+     *
+     * @param reference pure exact type reference
+     * @return resolved type declaration and same-invocation identity evidence,
+     *         or {@code null} when verified content is absent
+     * @throws NullPointerException if {@code reference} is null
+     * @throws IllegalArgumentException if {@code reference} is not a pure
+     *         exact reference
+     * @throws UnsupportedOperationException when verified type evidence is
+     *         unavailable through this manager
+     */
+    default TypeEvidenceResolution materializeVerifiedTypeReference(
+            FrozenNode reference) {
+        FrozenNode checked = Objects.requireNonNull(reference, "reference");
+        if (!checked.isReferenceOnly()) {
+            throw new IllegalArgumentException(
+                    "Verified type materialization requires a pure exact "
+                            + "reference");
+        }
+        throw new UnsupportedOperationException(
+                "This ProcessingSnapshotManager cannot materialize verified "
+                        + "type-reference evidence");
     }
 
     /**
@@ -250,10 +385,13 @@ public interface ProcessingSnapshotManager {
 
     /**
      * Applies one patch and resolves the resulting immutable snapshot.
+     * Implementations must retain or re-establish the source provenance and
+     * canonical type-identity evidence required by the resulting graph; an
+     * evidence-less structural snapshot is not an equivalent result.
      *
      * @param snapshot immutable base snapshot
      * @param patch patch to apply
-     * @return resulting immutable snapshot
+     * @return resulting immutable evidence-bearing snapshot
      */
     ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch);
 

@@ -2,6 +2,8 @@ package blue.language.mapping;
 
 import blue.language.model.wire.BlueLanguageConstants;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 
 import java.lang.reflect.Type;
@@ -77,6 +79,80 @@ public final class BlueMapper {
     }
 
     /**
+     * Materializes a resolved node using resolver-issued canonical type
+     * identities for every expanded effective type.
+     *
+     * <p>This overload has no canonical content lane. Models containing
+     * {@code @BlueId} fields must use
+     * {@link #fromSnapshot(ResolvedSnapshot, Class)}.</p>
+     *
+     * @param node source resolved node; it is not mutated
+     * @param targetClass requested Java class
+     * @param typeIdentities authoritative resolver evidence
+     * @param <T> requested Java value type
+     * @return newly allocated mapped value
+     * @throws NullPointerException if {@code node}, {@code targetClass}, or
+     *         {@code typeIdentities} is null
+     * @throws IllegalArgumentException if the node cannot be converted to the
+     *         requested class
+     * @throws IllegalStateException if required canonical type evidence is
+     *         unavailable
+     */
+    public <T> T fromNode(
+            Node node,
+            Class<T> targetClass,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return nodeToObjectConverter.convert(
+                node,
+                targetClass,
+                typeIdentities);
+    }
+
+    /**
+     * Materializes the root of an authoritative resolved snapshot.
+     *
+     * <p>The snapshot's canonical lane supplies exact Content BlueIds for
+     * {@code @BlueId} fields even when the mapped resolved graph contains
+     * inherited fields.</p>
+     *
+     * @param snapshot authoritative resolution snapshot
+     * @param targetClass requested Java class
+     * @param <T> requested Java value type
+     * @return newly allocated mapped value
+     * @throws NullPointerException if an argument is null
+     * @throws IllegalStateException if an annotated field has no canonical
+     *         identity lane
+     */
+    public <T> T fromSnapshot(
+            ResolvedSnapshot snapshot,
+            Class<T> targetClass) {
+        return nodeToObjectConverter.convert(snapshot, targetClass);
+    }
+
+    /**
+     * Materializes one subtree of an authoritative resolved snapshot.
+     *
+     * @param snapshot authoritative resolution snapshot
+     * @param pointer RFC 6901 path of the subtree; null selects the root
+     * @param targetClass requested Java class
+     * @param <T> requested Java value type
+     * @return newly allocated mapped value, or null when the path is absent
+     * @throws NullPointerException if {@code snapshot} or
+     *         {@code targetClass} is null
+     * @throws IllegalStateException if an annotated field has no canonical
+     *         identity lane
+     */
+    public <T> T fromSnapshot(
+            ResolvedSnapshot snapshot,
+            String pointer,
+            Class<T> targetClass) {
+        return nodeToObjectConverter.convert(
+                snapshot,
+                pointer,
+                targetClass);
+    }
+
+    /**
      * Materializes one node as an arbitrary reflective Java type.
      *
      * @param node source node; it is not mutated
@@ -94,6 +170,38 @@ public final class BlueMapper {
                 node,
                 targetType,
                 prioritizeTargetType);
+    }
+
+    /**
+     * Materializes a resolved node as an arbitrary reflective type using
+     * authoritative canonical type identity evidence. This overload cannot
+     * derive {@code @BlueId} fields from materialized Resolved Form; use a
+     * snapshot overload for identity-bearing models.
+     *
+     * @param node source resolved node; it is not mutated
+     * @param targetType requested reflective type
+     * @param prioritizeTargetType whether the requested type takes precedence
+     *                             over a mapped Blue type
+     * @param typeIdentities authoritative resolver evidence
+     * @param <T> converted Java value type
+     * @return newly allocated mapped value
+     * @throws NullPointerException if {@code node}, {@code targetType}, or
+     *         {@code typeIdentities} is null
+     * @throws IllegalArgumentException if the node cannot be converted to the
+     *         requested type
+     * @throws IllegalStateException if required canonical type evidence is
+     *         unavailable
+     */
+    public <T> T fromNode(
+            Node node,
+            Type targetType,
+            boolean prioritizeTargetType,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return nodeToObjectConverter.convertWithType(
+                node,
+                targetType,
+                prioritizeTargetType,
+                typeIdentities);
     }
 
     /**
@@ -122,6 +230,30 @@ public final class BlueMapper {
         return node == null
                 ? Optional.empty()
                 : Optional.ofNullable(typeClassResolver.resolveClass(node));
+    }
+
+    /**
+     * Resolves a mapped class for a resolved node using exact evidence.
+     *
+     * @param node node whose mapped class is requested, or {@code null}
+     * @param typeIdentities authoritative resolver evidence
+     * @return mapped class, or empty when the node is null or its effective
+     *         type is unregistered
+     * @throws NullPointerException if {@code node} is non-null and
+     *         {@code typeIdentities} is null
+     * @throws IllegalStateException if required canonical type evidence is
+     *         unavailable
+     */
+    public Optional<Class<?>> mappedClass(
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        return node == null
+                ? Optional.empty()
+                : Optional.ofNullable(typeClassResolver.resolveClass(
+                        node,
+                        Objects.requireNonNull(
+                                typeIdentities,
+                                "typeIdentities")));
     }
 
     /**

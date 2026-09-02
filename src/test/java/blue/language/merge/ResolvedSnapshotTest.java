@@ -643,7 +643,13 @@ class ResolvedSnapshotTest {
                 .getProperties().containsKey("currency"));
         assertFalse(canonical.getProperties().get("deliveryWindow")
                 .getProperties().containsKey("timezone"));
-        assertSame(first, fromMinimizedCanonical);
+        assertTrue(first.isSourceBacked());
+        assertFalse(fromMinimizedCanonical.isSourceBacked());
+        assertNotSame(first, fromMinimizedCanonical);
+        assertSame(first.frozenCanonicalRoot(),
+                fromMinimizedCanonical.frozenCanonicalRoot());
+        assertSame(first.frozenResolvedRoot(),
+                fromMinimizedCanonical.frozenResolvedRoot());
         assertEquals(fetchesAfterFirstResolve,
                 fetchesAfterMinimizedReload);
         assertNotSame(first, secondOrder);

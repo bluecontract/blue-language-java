@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
-import blue.language.provider.NodeProvider;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ApplyBatchPatch;
@@ -20,12 +20,14 @@ import blue.language.processor.model.SetPropertyOnEvent;
 import blue.language.processor.model.TerminateScope;
 import blue.language.processor.model.TestEvent;
 import blue.language.processor.model.TestEventChannel;
+import blue.language.provider.NodeProvider;
 import blue.language.provider.SequentialNodeProvider;
-import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.runtime.LanguageRuntimeAccess;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 final class ProcessorTestSupport {
 
@@ -57,6 +59,32 @@ final class ProcessorTestSupport {
 
     static Blue blue(NodeProvider provider) {
         return new Blue(providerWithTestContractTypes(provider));
+    }
+
+    static RuntimeWorkSession admissionRuntimeWorkSession(
+            DocumentProcessor processor,
+            ProcessingSnapshotManager snapshotManager,
+            Node exactEvent) {
+        DocumentProcessor owner = Objects.requireNonNull(
+                processor, "processor");
+        ProcessingSnapshotManager snapshots = Objects.requireNonNull(
+                snapshotManager, "snapshotManager");
+        Node event = Objects.requireNonNull(
+                exactEvent, "exactEvent");
+        LanguageRuntimeAccess languageRuntime = Objects.requireNonNull(
+                owner.languageRuntimeAccess(),
+                "processor.languageRuntimeAccess");
+        RuntimeWorkSession session =
+                new ProcessingGasContext(owner.newGasMeter())
+                        .newAdmissionRuntimeWorkSession(
+                                languageRuntime,
+                                snapshots);
+        session.carryExactInput(
+                event,
+                CheckpointIdentityCalculator.identity(
+                        event,
+                        languageRuntime));
+        return session;
     }
 
     static NodeProvider providerWithTestContractTypes(NodeProvider provider) {

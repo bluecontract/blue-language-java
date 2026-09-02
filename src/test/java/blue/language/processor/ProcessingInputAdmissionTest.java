@@ -10,6 +10,7 @@ import blue.language.provider.VerifyingNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.NodePathEditor;
 import org.junit.jupiter.api.Test;
 
@@ -171,7 +172,8 @@ class ProcessingInputAdmissionTest {
         ResolvedSnapshot snapshot =
                 ResolvedSnapshot.withDeferredResolution(
                         FrozenNode.fromNode(root),
-                        FrozenNode.fromResolvedNode(root));
+                        FrozenNode.fromResolvedNode(root),
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // when
         try (DocumentProcessor processor = processor(

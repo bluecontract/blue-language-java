@@ -99,7 +99,8 @@ public class MapConverter implements Converter<Map<?, ?>> {
             return null;
         }
 
-        Class<?> resolvedClass = typeClassResolver.resolveClass(valueNode);
+        Class<?> resolvedClass = converterFactory.resolveClass(
+                valueNode, typeClassResolver);
         if (resolvedClass != null && isAssignableToValueType(resolvedClass, valueType)) {
             Converter<?> converter = converterFactory.getConverter(valueNode, resolvedClass);
             return converter.convert(valueNode, resolvedClass);

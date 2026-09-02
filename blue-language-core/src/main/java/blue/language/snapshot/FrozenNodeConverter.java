@@ -4,14 +4,17 @@ import blue.language.model.Node;
 
 import java.lang.reflect.Array;
 import java.math.BigInteger;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /** Converts between mutable boundary nodes and exact immutable snapshots. */
@@ -35,6 +38,24 @@ public final class FrozenNodeConverter {
      */
     public FrozenNode fromNode(Node node) {
         return freeze(node, true, null, true, false);
+    }
+
+    /**
+     * Defensively freezes exact preprocessed Source input.
+     *
+     * <p>Source syntax may still contain authoring controls such as
+     * {@code $pos} and {@code $previous}. It therefore must not be admitted
+     * through the strict Canonical Identity Input constructor. The resulting
+     * value is immutable but intentionally has no direct BlueId.</p>
+     *
+     * @param node mutable preprocessed Source input to freeze
+     * @return an immutable Source representation
+     * @throws NullPointerException when {@code node} is {@code null}
+     * @throws IllegalArgumentException when the source contains an unsupported
+     *         value graph or incompatible payload shapes
+     */
+    public FrozenNode fromSourceNode(Node node) {
+        return freeze(node, false, null, false, false);
     }
 
     /**
@@ -109,38 +130,65 @@ public final class FrozenNodeConverter {
      * @throws NullPointerException when {@code frozen} is {@code null}
      */
     public Node toNode(FrozenNode frozen) {
-        Node node = new Node()
-                .name(frozen.name)
-                .description(frozen.description)
-                .type(toNodeOrNull(frozen.type))
-                .itemType(toNodeOrNull(frozen.itemType))
-                .keyType(toNodeOrNull(frozen.keyType))
-                .valueType(toNodeOrNull(frozen.valueType))
-                .value(mutableValueCopy(frozen.value))
-                .blueId(frozen.referenceBlueId)
-                .schema(frozen.schema != null ? frozen.schema.clone() : null)
-                .mergePolicy(frozen.mergePolicy)
-                .previousBlueId(frozen.previousBlueId)
-                .position(frozen.position)
-                .blue(toNodeOrNull(frozen.blue))
-                .contracts(toNodeOrNull(frozen.contracts))
-                .inlineValue(frozen.inlineValue);
-        if (frozen.items != null) {
-            List<Node> items = new ArrayList<>(frozen.items.size());
-            for (FrozenNode item : frozen.items) {
-                items.add(toNode(item));
-            }
-            node.items(items);
+        if (frozen == null) {
+            throw new NullPointerException("frozen");
         }
-        if (frozen.properties != null) {
-            Map<String, Node> properties = new LinkedHashMap<>();
-            for (Map.Entry<String, FrozenNode> entry
-                    : frozen.properties.entrySet()) {
-                properties.put(entry.getKey(), toNode(entry.getValue()));
+        Node root = materializeLocalFields(frozen);
+        Deque<MaterializeVisit> pending = new ArrayDeque<>();
+        pending.push(new MaterializeVisit(frozen, root));
+        while (!pending.isEmpty()) {
+            MaterializeVisit visit = pending.pop();
+            FrozenNode source = visit.frozen;
+            Node target = visit.mutable;
+            target.type(materializeChild(source.type, pending));
+            target.itemType(materializeChild(source.itemType, pending));
+            target.keyType(materializeChild(source.keyType, pending));
+            target.valueType(materializeChild(source.valueType, pending));
+            target.blue(materializeChild(source.blue, pending));
+            target.contracts(materializeChild(source.contracts, pending));
+            if (source.items != null) {
+                List<Node> items = new ArrayList<>(source.items.size());
+                for (FrozenNode item : source.items) {
+                    items.add(materializeChild(item, pending));
+                }
+                target.items(items);
             }
-            node.properties(properties);
+            if (source.properties != null) {
+                Map<String, Node> properties = new LinkedHashMap<>();
+                for (Map.Entry<String, FrozenNode> entry
+                        : source.properties.entrySet()) {
+                    properties.put(
+                            entry.getKey(),
+                            materializeChild(entry.getValue(), pending));
+                }
+                target.properties(properties);
+            }
         }
-        return node;
+        return root;
+    }
+
+    private static Node materializeChild(
+            FrozenNode source,
+            Deque<MaterializeVisit> pending) {
+        if (source == null) {
+            return null;
+        }
+        Node child = materializeLocalFields(source);
+        pending.push(new MaterializeVisit(source, child));
+        return child;
+    }
+
+    private static Node materializeLocalFields(FrozenNode source) {
+        return new Node()
+                .name(source.name)
+                .description(source.description)
+                .value(mutableValueCopy(source.value))
+                .blueId(source.referenceBlueId)
+                .schema(source.schema != null ? source.schema.clone() : null)
+                .mergePolicy(source.mergePolicy)
+                .previousBlueId(source.previousBlueId)
+                .position(source.position)
+                .inlineValue(source.inlineValue);
     }
 
     /** Returns a defensive immutable public view of a frozen scalar graph. */
@@ -222,129 +270,167 @@ public final class FrozenNodeConverter {
         if (node == null) {
             throw new NullPointerException("node");
         }
+        IdentityHashMap<Node, FrozenNode> ordinary = new IdentityHashMap<>();
+        IdentityHashMap<Node, FrozenNode> anchors = new IdentityHashMap<>();
+        Set<Node> active = Collections.newSetFromMap(
+                new IdentityHashMap<Node, Boolean>());
+        Deque<FreezeVisit> pending = new ArrayDeque<>();
+        pending.push(new FreezeVisit(
+                node, previousAnchorContext, false));
+        while (!pending.isEmpty()) {
+            FreezeVisit visit = pending.pop();
+            IdentityHashMap<Node, FrozenNode> completed = visit.anchor
+                    ? anchors
+                    : ordinary;
+            if (completed.containsKey(visit.node)) {
+                continue;
+            }
+            if (visit.exit) {
+                FrozenNode frozen = buildFrozenNode(
+                        visit.node,
+                        strictCanonical,
+                        interner,
+                        strictBlueIdValidation,
+                        visit.anchor,
+                        ordinary,
+                        anchors);
+                completed.put(visit.node, frozen);
+                active.remove(visit.node);
+                continue;
+            }
+            if (!active.add(visit.node)) {
+                throw new IllegalArgumentException(
+                        "Frozen node graphs must not contain object cycles");
+            }
+            pending.push(new FreezeVisit(
+                    visit.node, visit.anchor, true));
+            pushChildren(pending, visit.node);
+        }
+        return (previousAnchorContext ? anchors : ordinary).get(node);
+    }
+
+    private FrozenNode buildFrozenNode(
+            Node node,
+            boolean strictCanonical,
+            FrozenNode.ResolvedStructuralInterner interner,
+            boolean strictBlueIdValidation,
+            boolean previousAnchorContext,
+            IdentityHashMap<Node, FrozenNode> ordinary,
+            IdentityHashMap<Node, FrozenNode> anchors) {
         FrozenNode frozen = FrozenNodeBuilder.builder()
                 .name(node.getName())
                 .description(node.getDescription())
-                .type(freezeNullable(
-                        node.getType(),
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation,
-                        false))
-                .itemType(freezeNullable(
-                        node.getItemType(),
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation,
-                        false))
-                .keyType(freezeNullable(
-                        node.getKeyType(),
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation,
-                        false))
-                .valueType(freezeNullable(
-                        node.getValueType(),
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation,
-                        false))
+                .type(ordinary.get(node.getType()))
+                .itemType(ordinary.get(node.getItemType()))
+                .keyType(ordinary.get(node.getKeyType()))
+                .valueType(ordinary.get(node.getValueType()))
                 .value(node.getValue())
-                .items(freezeItems(
-                        node.getItems(),
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation))
-                .properties(freezeProperties(
-                        node.getProperties(),
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation))
-                .contracts(freezeNullable(
-                        node.getContracts(),
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation,
-                        false))
+                .items(frozenItems(node.getItems(), anchors))
+                .properties(frozenProperties(
+                        node.getProperties(), ordinary, strictCanonical))
+                .contracts(ordinary.get(node.getContracts()))
                 .referenceBlueId(node.getBlueId())
                 .schema(node.getSchema())
                 .mergePolicy(node.getMergePolicy())
                 .previousBlueId(node.getPreviousBlueId())
                 .position(node.getPosition())
-                .blue(freezeNullable(
-                        node.getBlue(),
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation,
-                        false))
+                .blue(ordinary.get(node.getBlue()))
                 .inlineValue(node.isInlineValue())
                 .strictCanonical(strictCanonical)
                 .strictBlueIdValidation(strictBlueIdValidation)
                 .previousAnchorContext(previousAnchorContext)
                 .build();
         if (!strictCanonical && interner != null) {
-            return interner.intern(frozen.resolvedStructuralKey(), frozen);
+            FrozenNode.ResolvedStructuralKey structuralKey =
+                    frozen.resolvedStructuralKey();
+            return interner.intern(structuralKey, frozen);
         }
         return frozen;
     }
 
-    private FrozenNode freezeNullable(
-            Node node,
-            boolean strictCanonical,
-            FrozenNode.ResolvedStructuralInterner interner,
-            boolean strictBlueIdValidation,
-            boolean previousAnchorContext) {
-        return node == null
-                ? null
-                : freeze(
-                        node,
-                        strictCanonical,
-                        interner,
-                        strictBlueIdValidation,
-                        previousAnchorContext);
+    private static void pushChildren(
+            Deque<FreezeVisit> pending,
+            Node node) {
+        push(pending, node.getBlue(), false);
+        push(pending, node.getContracts(), false);
+        if (node.getProperties() != null) {
+            List<Node> properties = new ArrayList<>(
+                    node.getProperties().values());
+            for (int index = properties.size() - 1; index >= 0; index--) {
+                push(pending, properties.get(index), false);
+            }
+        }
+        if (node.getItems() != null) {
+            for (int index = node.getItems().size() - 1;
+                    index >= 0; index--) {
+                push(pending, node.getItems().get(index), true);
+            }
+        }
+        push(pending, node.getValueType(), false);
+        push(pending, node.getKeyType(), false);
+        push(pending, node.getItemType(), false);
+        push(pending, node.getType(), false);
     }
 
-    private List<FrozenNode> freezeItems(
+    private static void push(
+            Deque<FreezeVisit> pending,
+            Node node,
+            boolean anchor) {
+        if (node != null) {
+            pending.push(new FreezeVisit(node, anchor, false));
+        }
+    }
+
+    private static List<FrozenNode> frozenItems(
             List<Node> source,
-            boolean strictCanonical,
-            FrozenNode.ResolvedStructuralInterner interner,
-            boolean strictBlueIdValidation) {
+            IdentityHashMap<Node, FrozenNode> anchors) {
         if (source == null) {
             return null;
         }
         List<FrozenNode> result = new ArrayList<>(source.size());
         for (Node item : source) {
-            result.add(freeze(
-                    item,
-                    strictCanonical,
-                    interner,
-                    strictBlueIdValidation,
-                    true));
+            result.add(anchors.get(item));
         }
         return result;
     }
 
-    private Map<String, FrozenNode> freezeProperties(
+    private static Map<String, FrozenNode> frozenProperties(
             Map<String, Node> source,
-            boolean strictCanonical,
-            FrozenNode.ResolvedStructuralInterner interner,
-            boolean strictBlueIdValidation) {
+            IdentityHashMap<Node, FrozenNode> ordinary,
+            boolean strictCanonical) {
         if (source == null || source.isEmpty()) {
             return null;
         }
         Map<String, FrozenNode> result = new LinkedHashMap<>();
         for (Map.Entry<String, Node> entry : source.entrySet()) {
-            FrozenNode child = freeze(
-                    entry.getValue(),
-                    strictCanonical,
-                    interner,
-                    strictBlueIdValidation,
-                    false);
+            FrozenNode child = ordinary.get(entry.getValue());
             if (!strictCanonical || !child.isEmptyNode()) {
                 result.put(entry.getKey(), child);
             }
         }
         return result.isEmpty() ? null : result;
+    }
+
+    private static final class FreezeVisit {
+        private final Node node;
+        private final boolean anchor;
+        private final boolean exit;
+
+        private FreezeVisit(Node node, boolean anchor, boolean exit) {
+            this.node = node;
+            this.anchor = anchor;
+            this.exit = exit;
+        }
+    }
+
+    private static final class MaterializeVisit {
+        private final FrozenNode frozen;
+        private final Node mutable;
+
+        private MaterializeVisit(FrozenNode frozen, Node mutable) {
+            this.frozen = frozen;
+            this.mutable = mutable;
+        }
     }
 
     private static Object freezeValue(
@@ -539,7 +625,4 @@ public final class FrozenNodeConverter {
         return new LinkedHashMap<>();
     }
 
-    private Node toNodeOrNull(FrozenNode node) {
-        return node == null ? null : toNode(node);
-    }
 }

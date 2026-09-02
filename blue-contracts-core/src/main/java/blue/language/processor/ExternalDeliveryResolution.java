@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.util.PointerUtils;
 
@@ -33,9 +34,12 @@ final class ExternalDeliveryResolution implements AutoCloseable {
         if (snapshot != null) {
             if (JsonPointer.ROOT.equals(
                     PointerUtils.normalizeScope(scopePath))) {
-                selected = snapshot.canonicalRoot();
+                selected = snapshot.sourceRoot();
             } else {
-                selected = snapshot.canonicalNodeAt(scopePath);
+                FrozenNode source = snapshot.sourceAt(scopePath);
+                selected = source != null
+                        ? source.toNode()
+                        : null;
             }
         } else {
             selected = ExternalEvidenceVerificationSupport.nodeAt(
@@ -77,7 +81,8 @@ final class ExternalDeliveryResolution implements AutoCloseable {
         }
         return contractLoader.load(
                 FrozenNode.fromResolvedNode(selected),
-                scopePath);
+                scopePath,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     /** Plans concrete embedded children against this resolution's full scope. */
@@ -132,15 +137,15 @@ final class ExternalDeliveryResolution implements AutoCloseable {
         }
         FrozenNode selectedFrozen;
         if (snapshot != null) {
-            FrozenNode canonical = snapshot.canonicalAt(scopePath);
+            FrozenNode source = snapshot.sourceAt(scopePath);
             /*
-             * A pure-reference canonical fragment carries only its identity.
+             * A pure-reference Source fragment carries only its identity.
              * Contract contribution proof needs the verified exact selected
              * content that selectedNodeAt already materialized.
              */
-            selectedFrozen = canonical != null && canonical.isReferenceOnly()
+            selectedFrozen = source != null && source.isReferenceOnly()
                     ? FrozenNode.fromResolvedNode(selected)
-                    : canonical;
+                    : source;
         } else {
             selectedFrozen = FrozenNode.fromResolvedNode(selected);
         }
@@ -148,7 +153,8 @@ final class ExternalDeliveryResolution implements AutoCloseable {
             return contractLoader.load(
                     selectedFrozen,
                     FrozenNode.fromResolvedNode(effective),
-                    scopePath);
+                    scopePath,
+                    contractTypeIdentities());
         }
         return contractLoader.loadExternalClassification(
                 selectedFrozen,
@@ -156,10 +162,25 @@ final class ExternalDeliveryResolution implements AutoCloseable {
                         selected,
                         effective,
                         retainedChannelKeys,
-                        includeProcessEmbedded),
+                        includeProcessEmbedded,
+                        canonicalTypeIdentities()),
                 scopePath,
                 retainedChannelKeys,
-                includeProcessEmbedded);
+                includeProcessEmbedded,
+                contractTypeIdentities());
+    }
+
+    /** Returns type identities issued by this exact effective resolution. */
+    CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        return snapshot != null
+                ? snapshot.canonicalTypeIdentities()
+                : CanonicalTypeIdentityLookup.incomplete();
+    }
+
+    private CanonicalTypeIdentityLookup contractTypeIdentities() {
+        return snapshot != null
+                ? snapshot.canonicalTypeIdentities()
+                : CanonicalTypeIdentityLookup.incomplete();
     }
 
     @Override

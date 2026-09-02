@@ -6,9 +6,9 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.merge.ResolvedSnapshot;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.BlueIdReferenceValidator;
 import blue.language.model.wire.JsonPointer;
+import blue.language.snapshot.FrozenNode;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -38,7 +38,8 @@ final class ProcessorMarkerStore {
         String pointer = markerPointer(
                 JsonPointer.ROOT,
                 ProcessorPointerConstants.RELATIVE_INITIALIZED);
-        Node marker = snapshot.canonicalNodeAt(pointer);
+        FrozenNode selected = snapshot.sourceAt(pointer);
+        Node marker = selected != null ? selected.toNode() : null;
         if (marker == null) {
             return false;
         }
@@ -151,10 +152,13 @@ final class ProcessorMarkerStore {
      * The marker document is already exact and must not be treated as an
      * overlay merely because it is stored inline.
      */
-    static void collapseInitializationDocuments(Node root) {
+    static void collapseInitializationDocuments(
+            Node root,
+            ProcessingSnapshotManager snapshotManager) {
         collapseInitializationDocuments(
                 root,
                 JsonPointer.ROOT,
+                snapshotManager,
                 Collections.newSetFromMap(
                         new IdentityHashMap<Node, Boolean>()));
     }
@@ -185,6 +189,7 @@ final class ProcessorMarkerStore {
     private static void collapseInitializationDocuments(
             Node node,
             String path,
+            ProcessingSnapshotManager snapshotManager,
             Set<Node> visited) {
         if (node == null
                 || node.isReferenceOnly()
@@ -215,7 +220,10 @@ final class ProcessorMarkerStore {
                 marker.getProperties().put(
                         ProcessorContractConstants.KEY_DOCUMENT,
                         new Node().blueId(
-                                DirectBlueIdCalculator.calculateBlueId(exactDocument)));
+                                CanonicalIdentityEvidence.sourceBlueId(
+                                        exactDocument,
+                                        snapshotManager,
+                                        "Initialization marker exact document")));
             }
         }
         if (node.getItems() != null) {
@@ -223,6 +231,7 @@ final class ProcessorMarkerStore {
                 collapseInitializationDocuments(
                         node.getItems().get(index),
                         JsonPointer.append(path, String.valueOf(index)),
+                        snapshotManager,
                         visited);
             }
         }
@@ -232,6 +241,7 @@ final class ProcessorMarkerStore {
                 collapseInitializationDocuments(
                         entry.getValue(),
                         JsonPointer.append(path, entry.getKey()),
+                        snapshotManager,
                         visited);
             }
         }
@@ -247,14 +257,7 @@ final class ProcessorMarkerStore {
         if (type == null) {
             return null;
         }
-        if (type.getBlueId() != null) {
-            return type.getBlueId();
-        }
-        try {
-            return DirectBlueIdCalculator.calculateBlueId(type);
-        } catch (RuntimeException ignored) {
-            return null;
-        }
+        return type.isReferenceOnly() ? type.getBlueId() : null;
     }
 
     private static String stringProperty(Node node, String key) {

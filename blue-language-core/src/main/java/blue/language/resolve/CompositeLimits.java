@@ -32,12 +32,6 @@ final class CompositeLimits implements ResolutionLimits {
                 limit -> limit.shouldExpandPathSegment(pathSegment, currentNode));
     }
 
-    /** Legacy binary-API spelling delegated to the canonical method. */
-    @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-        return shouldExpandPathSegment(pathSegment, currentNode);
-    }
-
     @Override
     public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
         return limitsList.stream().allMatch(l -> l.shouldMergePathSegment(pathSegment, currentNode));
@@ -46,6 +40,12 @@ final class CompositeLimits implements ResolutionLimits {
     @Override
     public boolean shouldReconstructList(Node currentNode, List<Node> items) {
         return limitsList.stream().allMatch(l -> l.shouldReconstructList(currentNode, items));
+    }
+
+    @Override
+    public boolean retainsEveryAuthoredPath() {
+        return limitsList.stream().allMatch(
+                ResolutionLimits::retainsEveryAuthoredPath);
     }
 
     @Override

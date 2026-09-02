@@ -314,7 +314,8 @@ final class Contracts10KernelInvariantTest {
         Node event = new Node().value("event");
         VerifiedExecutionEvidence evidence =
                 VerifiedExecutionEvidence.builder(
-                                "forged-root",
+                                DirectBlueIdCalculator.calculateBlueId(
+                                        new Node().name("forged root")),
                                 DirectBlueIdCalculator.calculateBlueId(event))
                         .revisions(3L, 3L)
                         .runtimeRegistryIdentity(
@@ -322,7 +323,10 @@ final class Contracts10KernelInvariantTest {
                                         .REGISTRY_PACKAGE_IDENTITY)
                         .eventOrderKey(ExternalOrderKey.of(
                                 java.util.Arrays.asList(1, "source", 1)))
-                        .requiredExactNode("missing-exact-node")
+                        .requiredExactNode(
+                                DirectBlueIdCalculator.calculateBlueId(
+                                        new Node().name(
+                                                "missing exact node")))
                         .build();
 
         // when

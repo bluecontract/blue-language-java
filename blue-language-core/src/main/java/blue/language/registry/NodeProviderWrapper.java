@@ -60,11 +60,11 @@ public class NodeProviderWrapper {
      * graph, without inserting the Language bootstrap provider or any other
      * fallback.
      *
-     * <p>This protected hook lets Language-owned bridges and specialized
-     * subclasses preserve a deliberate fallback-free boundary through nested
-     * Language components. The private return marker cannot be imitated by an
-     * ordinary provider implementation; ordinary runtime construction still
-     * restores its normal bootstrap composition.</p>
+     * <p>This hook lets Language-owned bridges preserve a deliberate
+     * fallback-free boundary through nested Language components. The private
+     * return marker cannot be imitated by an ordinary provider implementation;
+     * ordinary runtime construction still restores its normal bootstrap
+     * composition.</p>
      *
      * @param originalProvider complete caller-supplied provider graph
      * @return verification-only view with no implicit fallback

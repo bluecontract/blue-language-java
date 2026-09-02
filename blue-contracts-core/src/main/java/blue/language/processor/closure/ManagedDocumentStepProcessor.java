@@ -29,6 +29,7 @@ import blue.language.processor.ManagedRootSubscriptionSurface;
 import blue.language.processor.ManagedSemanticGasBridge;
 import blue.language.processor.ProcessorRuntimeAccess;
 import blue.language.processor.ExecutionEvidenceUnavailableException;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.InvalidExecutionEvidenceException;
 import blue.language.processor.ProcessorErrorCategory;
 import blue.language.snapshot.FrozenNode;
@@ -119,6 +120,7 @@ final class ManagedDocumentStepProcessor
                         map(admitted.work().kind()),
                         admitted.work().channelKey(),
                         admitted.exactPayload(),
+                        admitted.matchingEventBlueId(),
                         admitted.occurrenceEvent(),
                         admitted.processorPatch(),
                         GasChargeContext.closure(
@@ -134,7 +136,8 @@ final class ManagedDocumentStepProcessor
                                 "managed-document-step"),
                         new ManagedDocumentResolutionOverlay(
                                 exactNodes,
-                                context.targetManagedBlueIdsByPath()));
+                                context.targetManagedBlueIdsByPath(),
+                                context.cyclicProofsByMasterBlueId()));
         ManagedDocumentStepOutcome outcome = selectedRoute == null
                 ? runtime.execute(request)
                 : runtime.executeSelectedRoute(
@@ -180,7 +183,7 @@ final class ManagedDocumentStepProcessor
 
     List<ManagedDocumentStepRoute> classifyTriggeredEventRoutes(
             Node exactDocument,
-            Node exactEvent) {
+            ExactEventIdentityEvidence exactEvent) {
         return runtime.classifyTriggeredEventRoutes(
                 exactDocument, exactEvent);
     }
@@ -194,13 +197,11 @@ final class ManagedDocumentStepProcessor
     List<ManagedDocumentStepRoute> classifyEmbeddedEventRoutes(
             Node exactContainingDocument,
             String exactSourcePath,
-            Node exactEvent,
-            String exactEventBlueId) {
+            ExactEventIdentityEvidence exactEvent) {
         return runtime.classifyEmbeddedEventRoutes(
                 exactContainingDocument,
                 exactSourcePath,
-                exactEvent,
-                exactEventBlueId);
+                exactEvent);
     }
 
     List<ManagedDocumentStepRoute> classifyDocumentUpdateRoutes(
@@ -280,7 +281,7 @@ final class ManagedDocumentStepProcessor
     ManagedExternalDeliveryClassification classifyExternalDelivery(
             Node exactDocument,
             String rawChannelKey,
-            Node exactEvent,
+            ExactEventIdentityEvidence exactEvent,
             GasChargeContext context) {
         return runtime.classifyExternalDelivery(
                 exactDocument,

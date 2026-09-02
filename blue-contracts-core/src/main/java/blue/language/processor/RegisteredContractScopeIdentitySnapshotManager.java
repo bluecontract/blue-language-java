@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.api.BlueCachePolicy;
 import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.runtime.LanguageRuntimeAccess;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
@@ -11,7 +12,9 @@ import blue.language.provider.NodeProviderResult;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,8 +63,11 @@ final class RegisteredContractScopeIdentitySnapshotManager
         Map<String, String> aliases = inheritedRuntime != null
                 ? inheritedRuntime.preprocessingAliases()
                 : Collections.emptyMap();
+        Map<String, String> environmentImports = inheritedRuntime != null
+                ? inheritedRuntime.environmentImports()
+                : Collections.emptyMap();
         this.languageRuntime = BlueLanguageRuntime.create(
-                provider, cachePolicy, aliases);
+                provider, cachePolicy, aliases, environmentImports);
     }
 
     @Override
@@ -131,6 +137,26 @@ final class RegisteredContractScopeIdentitySnapshotManager
                     "Provider content BlueId mismatch for " + blueId);
         }
         return exact;
+    }
+
+    @Override
+    public TypeEvidenceResolution materializeVerifiedTypeReference(
+            FrozenNode reference) {
+        return languageRuntime.materializeTypeReferenceForMatching(reference);
+    }
+
+    @Override
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration) {
+        return languageRuntime.resolveTypeDeclarationIdentity(declaration);
+    }
+
+    @Override
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration,
+            ExactResolutionOverlay exactResolutionOverlay) {
+        return languageRuntime.resolveTypeDeclarationIdentity(
+                declaration, exactResolutionOverlay);
     }
 
     @Override

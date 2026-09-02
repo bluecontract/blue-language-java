@@ -15,6 +15,7 @@ import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExternalChannelFunctionContext;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
 import blue.language.processor.ExternalOrderKey;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.GasChargeContext;
 import blue.language.processor.GasSchedule;
 import blue.language.processor.HandlerProcessor;
@@ -425,8 +426,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             0L,
                                             sourceEventBlueId),
-                            sourceEventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, sourceEventBlueId),
                             true);
             ManagedRootEventOccurrence duplicateSourceEvent =
                     new ManagedRootEventOccurrence(
@@ -438,8 +438,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             1L,
                                             sourceEventBlueId),
-                            sourceEventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, sourceEventBlueId),
                             true);
             ManagedDocumentTransitionReceipt sourceReceipt =
                     ManagedDocumentTransitionReceipt.identified(
@@ -604,8 +603,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             0L,
                                             sourceEventBlueId),
-                            sourceEventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, sourceEventBlueId),
                             false);
             ManagedDocumentTransitionReceipt sourceReceipt =
                     ManagedDocumentTransitionReceipt.identified(
@@ -761,7 +759,9 @@ final class FullLifecycleAdmissionTest {
                             malformedB3, sourceReceipt);
                     IllegalArgumentException mismatch = assertThrows(
                             IllegalArgumentException.class,
-                            () -> ClosureInvocationVerifier.verify(malformed));
+                            () -> ClosureInvocationVerifier.verify(
+                                    malformed,
+                                    owner.administration()::runtimeAccess));
                     assertTrue(mismatch.getMessage().contains("afterBlueId"));
                     assertEquals(retainedBefore, retainedNestedValues(exactNodes));
                 }
@@ -870,7 +870,14 @@ final class FullLifecycleAdmissionTest {
                         .properties("subscriptionKey", new Node().value("retained-catalog"));
                 exactNodes.put(blueId(sourceEvent), sourceEvent.clone());
                 ManagedCheckpointCandidate candidate = runtime.classifyExternalDelivery(
-                        b, "ownerChannel", sourceEvent, context).candidate();
+                        b,
+                        "ownerChannel",
+                        ExactEventIdentityEvidence.verify(
+                                null,
+                                sourceEvent,
+                                blueId(sourceEvent),
+                                null),
+                        context).candidate();
                 assertNotNull(candidate);
                 frozenDomain = candidate.domain().blueId();
                 exactNodes.put(frozenDomain, candidate.domain().exactValue());
@@ -1304,8 +1311,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             0L,
                                             eventBlueId),
-                            eventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, eventBlueId),
                             false);
             ManagedRootEventOccurrence duplicateSourceEvent =
                     new ManagedRootEventOccurrence(
@@ -1317,8 +1323,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             1L,
                                             eventBlueId),
-                            eventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, eventBlueId),
                             false);
             ManagedDocumentTransitionReceipt sourceReceipt =
                     ManagedDocumentTransitionReceipt.identified(
@@ -1650,8 +1655,7 @@ final class FullLifecycleAdmissionTest {
                                             sourceInvocationIdentity,
                                             0L,
                                             sourceEventBlueId),
-                            sourceEventBlueId,
-                            EVENT_CHILD,
+                            exactEvent(EVENT_CHILD, sourceEventBlueId),
                             false);
             ManagedDocumentTransitionReceipt sourceReceipt =
                     ManagedDocumentTransitionReceipt.identified(
@@ -2618,7 +2622,14 @@ final class FullLifecycleAdmissionTest {
                     "/", Long.valueOf(0L), Long.valueOf(1L), "ownerChannel",
                     null, null, "fixture.retained-checkpoint");
             ManagedCheckpointCandidate candidate = runtime.classifyExternalDelivery(
-                    source, "ownerChannel", event, context).candidate();
+                    source,
+                    "ownerChannel",
+                    ExactEventIdentityEvidence.verify(
+                            null,
+                            event,
+                            blueId(event),
+                            null),
+                    context).candidate();
             assertNotNull(candidate);
             exactNodes.put(candidate.domain().blueId(), candidate.domain().exactValue());
             source = runtime.settleCheckpoints(source,
@@ -2640,7 +2651,7 @@ final class FullLifecycleAdmissionTest {
                 events.add(new ManagedRootEventOccurrence(ordinal, ordinal, source,
                         ClosureIdentityService.INSTANCE.eventOccurrenceIdentity(
                                 invocation, ordinal, blueId(EVENT_CHILD)),
-                        blueId(EVENT_CHILD), EVENT_CHILD, true));
+                        exactEvent(EVENT_CHILD, blueId(EVENT_CHILD)), true));
             }
         }
         return ManagedDocumentTransitionReceipt.identified(invocation, 0L, source,
@@ -3021,8 +3032,7 @@ final class FullLifecycleAdmissionTest {
                                         sourceInvocationIdentity,
                                         0L,
                                         eventBlueId),
-                        eventBlueId,
-                        EVENT_CHILD,
+                        exactEvent(EVENT_CHILD, eventBlueId),
                         false);
         ManagedDocumentTransitionReceipt sourceReceipt =
                 ManagedDocumentTransitionReceipt.identified(
@@ -3526,6 +3536,13 @@ final class FullLifecycleAdmissionTest {
 
     private static String blueId(Node value) {
         return DirectBlueIdCalculator.calculateBlueId(value);
+    }
+
+    private static ExactEventIdentityEvidence exactEvent(
+            Node event,
+            String eventBlueId) {
+        return ExactEventIdentityEvidence.verify(
+                null, event, eventBlueId, null);
     }
 
     private static void installInitializedMarker(

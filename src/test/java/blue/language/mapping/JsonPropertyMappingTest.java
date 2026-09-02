@@ -1,32 +1,51 @@
 package blue.language.mapping;
 
 import blue.language.Blue;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.BlueDescription;
 import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
-import blue.language.identity.DirectBlueIdCalculator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JsonPropertyMappingTest {
+
+    private static final String JSON_PROPERTY_MAPPED_TYPE_BLUE_ID =
+            "D5NXSGwiw9zjGi2dFCioN7m22rtdPYqjtzWt1Fe6PxLT";
+    private static final String JSON_PROPERTY_METADATA_TYPE_BLUE_ID =
+            "2myUR4YQ3VxbXYqvQm93L4KcTbDQybBkixPJsVCAyHUa";
+    private static final String JSON_PROPERTY_BLUE_ID_METADATA_TYPE_BLUE_ID =
+            "5KfaV4wCcpuL6woATfqyg6stKWTjDp3uFCudTrraGx2j";
+    private static final String NODE_PAYLOAD_MAPPED_TYPE_BLUE_ID =
+            "8GouLjnHLp2YbJ35hhxPUKN1htEcMdXf2xMZiywxJ5aB";
+    private static final String CLASS_TARGET_BLUE_ID =
+            "w7itmBeEMwx3aCertGMSDn5cj1JSHj3cMWsemKu7L2e";
+    private static final String REQUEST_TYPE_BLUE_ID =
+            "AKDNsp4DrMjuQePRCXm9iAeUCgZc6rmJ6egST3mEonVC";
+    private static final String DOCUMENT_TARGET_BLUE_ID =
+            "88dMGYQeu4vnorDNHyjqQsG1HoSVtq1pv96CGXgTDavJ";
 
     @Test
     void shouldReadJsonPropertyNameAndUseTypeResolver() {
         // given
         Blue blue = blueWithJsonPropertyTypes();
         Node node = new Node()
-                .type(new Node().blueId("JsonProperty-Mapped"))
+                .type(new Node().blueId(
+                        JSON_PROPERTY_MAPPED_TYPE_BLUE_ID))
                 .properties("package", new Node().value("Conversation"))
-                .properties("class", new Node().blueId("Class-BlueId"));
+                .properties("class", new Node().blueId(
+                        CLASS_TARGET_BLUE_ID));
 
         // when
         Object converted = blue.nodeToObject(node, Object.class);
@@ -35,7 +54,7 @@ class JsonPropertyMappingTest {
         // then
         assertTrue(converted instanceof JsonPropertyMapped);
         assertEquals("Conversation", mapped.packageValue);
-        assertEquals("Class-BlueId", mapped.classBlueId);
+        assertEquals(CLASS_TARGET_BLUE_ID, mapped.classBlueId);
     }
 
     @Test
@@ -43,7 +62,8 @@ class JsonPropertyMappingTest {
         // given
         Blue blue = blueWithJsonPropertyTypes();
         Node source = new Node()
-                .type(new Node().blueId("JsonProperty-Mapped"))
+                .type(new Node().blueId(
+                        JSON_PROPERTY_MAPPED_TYPE_BLUE_ID))
                 .properties("package", new Node().value("Conversation"));
 
         // when
@@ -67,17 +87,21 @@ class JsonPropertyMappingTest {
         Blue blue = blueWithJsonPropertyTypes();
         JsonPropertyMapped mapped = new JsonPropertyMapped();
         mapped.packageValue = "Conversation";
-        mapped.classBlueId = "Class-BlueId";
+        mapped.classBlueId = CLASS_TARGET_BLUE_ID;
 
         // when
         Node node = blue.objectToNode(mapped);
 
         // then
-        assertEquals("JsonProperty-Mapped", node.getType().getBlueId());
+        assertEquals(
+                JSON_PROPERTY_MAPPED_TYPE_BLUE_ID,
+                node.getType().getBlueId());
         assertNotNull(node.getProperties().get("package"));
         assertEquals("Conversation", node.getProperties().get("package").getValue());
         assertNotNull(node.getProperties().get("class"));
-        assertEquals("Class-BlueId", node.getProperties().get("class").getBlueId());
+        assertEquals(
+                CLASS_TARGET_BLUE_ID,
+                node.getProperties().get("class").getBlueId());
         assertFalse(node.getProperties().containsKey("packageValue"));
         assertFalse(node.getProperties().containsKey("classBlueId"));
     }
@@ -88,7 +112,7 @@ class JsonPropertyMappingTest {
         Blue blue = blueWithJsonPropertyTypes();
         JsonPropertyMapped original = new JsonPropertyMapped();
         original.packageValue = "Conversation";
-        original.classBlueId = "Class-BlueId";
+        original.classBlueId = CLASS_TARGET_BLUE_ID;
 
         // when
         Node node = blue.objectToNode(original);
@@ -97,6 +121,28 @@ class JsonPropertyMappingTest {
         // then
         assertEquals(original.packageValue, converted.packageValue);
         assertEquals(original.classBlueId, converted.classBlueId);
+    }
+
+    @Test
+    void shouldRejectMalformedReferenceForBlueIdAnnotatedField() {
+        // given
+        Blue blue = blueWithJsonPropertyTypes();
+        Node source = new Node()
+                .type(new Node().blueId(
+                        JSON_PROPERTY_MAPPED_TYPE_BLUE_ID))
+                .properties("class", new Node().blueId("not-a-blue-id"));
+
+        // when
+        Executable conversion = () -> blue.nodeToObject(
+                source,
+                JsonPropertyMapped.class);
+
+        // then
+        RuntimeException failure = assertThrows(
+                RuntimeException.class,
+                conversion);
+        assertTrue(messageChain(failure).contains(
+                "Expected canonical Base58 SHA-256 BlueId"));
     }
 
     @Test
@@ -131,14 +177,17 @@ class JsonPropertyMappingTest {
         Blue blue = blueWithJsonPropertyTypes();
         Node target = new Node().value("Conversation");
         Node node = new Node()
-                .type(new Node().blueId("JsonProperty-BlueId-Metadata"))
+                .type(new Node().blueId(
+                        JSON_PROPERTY_BLUE_ID_METADATA_TYPE_BLUE_ID))
                 .properties("package", target);
 
         // when
         JsonPropertyBlueIdMetadata converted = blue.nodeToObject(node, JsonPropertyBlueIdMetadata.class);
 
         // then
-        assertEquals(DirectBlueIdCalculator.calculateUncheckedBlueId(target), converted.packageBlueId);
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(target),
+                converted.packageBlueId);
     }
 
     @Test
@@ -147,9 +196,9 @@ class JsonPropertyMappingTest {
         Blue blue = blueWithJsonPropertyTypes();
         NodePayloadMapped mapped = new NodePayloadMapped()
                 .request(new Node()
-                        .type(new Node().blueId("Request-Type"))
+                        .type(new Node().blueId(REQUEST_TYPE_BLUE_ID))
                         .properties("amount", new Node().value(5)))
-                .document(new Node().blueId("Document-BlueId"));
+                .document(new Node().blueId(DOCUMENT_TARGET_BLUE_ID));
 
         // when
         Node node = blue.objectToNode(mapped);
@@ -157,16 +206,30 @@ class JsonPropertyMappingTest {
         Node document = node.getProperties().get("document");
 
         // then
-        assertEquals("Node-Payload-Mapped", node.getType().getBlueId());
+        assertEquals(
+                NODE_PAYLOAD_MAPPED_TYPE_BLUE_ID,
+                node.getType().getBlueId());
         assertNotNull(request);
-        assertEquals("Request-Type", request.getType().getBlueId());
+        assertEquals(REQUEST_TYPE_BLUE_ID, request.getType().getBlueId());
         assertEquals(new BigInteger("5"), request.getProperties().get("amount").getValue());
         assertFalse(request.getProperties().containsKey("properties"));
         assertFalse(request.getProperties().containsKey("value"));
 
         assertNotNull(document);
         assertTrue(document.isReferenceOnly());
-        assertEquals("Document-BlueId", document.getBlueId());
+        assertEquals(DOCUMENT_TARGET_BLUE_ID, document.getBlueId());
+    }
+
+    private static String messageChain(Throwable failure) {
+        StringBuilder messages = new StringBuilder();
+        Throwable current = failure;
+        while (current != null) {
+            if (current.getMessage() != null) {
+                messages.append(current.getMessage()).append('\n');
+            }
+            current = current.getCause();
+        }
+        return messages.toString();
     }
 
     private Blue blueWithJsonPropertyTypes() {
@@ -178,7 +241,7 @@ class JsonPropertyMappingTest {
         return new Blue(blueId -> null, resolver);
     }
 
-    @TypeBlueId("JsonProperty-Mapped")
+    @TypeBlueId(JSON_PROPERTY_MAPPED_TYPE_BLUE_ID)
     public static class JsonPropertyMapped {
         public static final String PROPERTY_PACKAGE = "package";
         @JsonProperty("package")
@@ -188,7 +251,7 @@ class JsonPropertyMappingTest {
         public String classBlueId;
     }
 
-    @TypeBlueId("JsonProperty-Metadata-Mapped")
+    @TypeBlueId(JSON_PROPERTY_METADATA_TYPE_BLUE_ID)
     public static class JsonPropertyMetadataMapped {
         @BlueName("packageValue")
         public String packageName;
@@ -198,14 +261,14 @@ class JsonPropertyMappingTest {
         public String packageValue;
     }
 
-    @TypeBlueId("JsonProperty-BlueId-Metadata")
+    @TypeBlueId(JSON_PROPERTY_BLUE_ID_METADATA_TYPE_BLUE_ID)
     public static class JsonPropertyBlueIdMetadata {
         @JsonProperty("package")
         @BlueId
         public String packageBlueId;
     }
 
-    @TypeBlueId("Node-Payload-Mapped")
+    @TypeBlueId(NODE_PAYLOAD_MAPPED_TYPE_BLUE_ID)
     public static class NodePayloadMapped {
         private Node request;
         private Node document;

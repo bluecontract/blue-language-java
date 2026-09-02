@@ -7,6 +7,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.SchemaEnumCanonicalizer;
 
 import java.math.BigDecimal;
@@ -38,7 +39,12 @@ public class SchemaPropagator implements MergingProcessor {
     }
     
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    public void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Schema sourceSchema = source.getSchema();
         if (sourceSchema == null) {
             return;
@@ -63,7 +69,11 @@ public class SchemaPropagator implements MergingProcessor {
         propagateUniqueItems(sourceSchema, targetSchema);
         propagateMinFields(sourceSchema, targetSchema);
         propagateMaxFields(sourceSchema, targetSchema);
-        propagateEnum(sourceSchema, targetSchema);
+        propagateEnum(
+                sourceSchema,
+                targetSchema,
+                nodeResolver,
+                typeIdentities);
     }
 
 
@@ -189,7 +199,8 @@ public class SchemaPropagator implements MergingProcessor {
         if (type == null) {
             return null;
         }
-        if (blueId.equals(type.getBlueId())) {
+        if (type.isReferenceOnly()
+                && blueId.equals(type.getBlueId())) {
             return type.clone();
         }
         return null;
@@ -225,36 +236,72 @@ public class SchemaPropagator implements MergingProcessor {
                 node -> target.maxFields(node));
     }
 
-    private void propagateEnum(Schema source, Schema target) {
+    private void propagateEnum(
+            Schema source,
+            Schema target,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         List<Node> sourceEnum = source.getEnum();
         if (sourceEnum == null) {
             return;
         }
 
+        List<Node> canonicalSource = canonicalizeEnum(
+                sourceEnum, nodeResolver, typeIdentities);
+
         List<Node> targetEnum = target.getEnum();
         if (targetEnum == null) {
-            target.enumValues(canonicalizeEnum(sourceEnum));
+            target.enumValues(canonicalSource);
             return;
         }
 
-        Map<String, Node> targetValuesByBlueId = targetEnum.stream()
+        List<Node> canonicalTarget = canonicalizeEnum(
+                targetEnum, nodeResolver, typeIdentities);
+        Map<String, Node> targetValuesByBlueId = canonicalTarget.stream()
                 .collect(Collectors.toMap(
                         SchemaEnumCanonicalizer::canonicalKey,
                         Function.identity(),
                         (left, right) -> left));
         List<Node> intersection = new ArrayList<>();
-        for (Node sourceValue : sourceEnum) {
+        for (Node sourceValue : canonicalSource) {
             Node targetValue = targetValuesByBlueId.get(
                     SchemaEnumCanonicalizer.canonicalKey(sourceValue));
             if (targetValue != null) {
                 intersection.add(targetValue.clone());
             }
         }
-        target.enumValues(canonicalizeEnum(intersection));
+        target.enumValues(SchemaEnumCanonicalizer.canonicalize(intersection));
     }
 
-    private List<Node> canonicalizeEnum(List<Node> nodes) {
-        return SchemaEnumCanonicalizer.canonicalize(nodes);
+    private List<Node> canonicalizeEnum(
+            List<Node> nodes,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (!requiresEffectiveTypeEvidence(nodes)) {
+            return SchemaEnumCanonicalizer.canonicalize(nodes);
+        }
+        if (nodeResolver == null) {
+            throw new IllegalStateException(
+                    "Schema enum contains a completed inline type but no "
+                            + "resolver-issued canonical type identity evidence");
+        }
+        return SchemaEnumCanonicalizer.canonicalizeResolved(
+                nodes,
+                java.util.Objects.requireNonNull(
+                        typeIdentities,
+                        "typeIdentities"));
+    }
+
+    private boolean requiresEffectiveTypeEvidence(List<Node> nodes) {
+        for (Node node : nodes) {
+            if (node != null
+                    && !node.isReferenceOnly()
+                    && node.getType() != null
+                    && !node.getType().isReferenceOnly()) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

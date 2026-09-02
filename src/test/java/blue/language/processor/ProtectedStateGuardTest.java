@@ -1,5 +1,8 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.processor.model.JsonPatch;
@@ -11,10 +14,14 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
+import static blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 final class ProtectedStateGuardTest {
 
@@ -554,6 +561,61 @@ final class ProtectedStateGuardTest {
     }
 
     @Test
+    void shouldVerifyEffectiveGeneralizationHasCanonicalTypeRepresentationParity() {
+        // given
+        Node materializedType = new Node()
+                .name("Protected Generalization Type")
+                .properties("mode", new Node().value("strict"));
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                materializedType);
+        materializedType.blueId(typeBlueId);
+        Node before = new Node().contracts(new Node().properties(
+                "generalization",
+                new Node().type(new Node().blueId(typeBlueId))));
+        Node after = new Node().contracts(new Node().properties(
+                "generalization",
+                new Node().type(materializedType)));
+        CanonicalTypeIdentityLookup identities = typeIdentities(
+                typeBlueId);
+
+        // when
+        // then
+        assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
+                frozen(new Node()),
+                frozen(before),
+                frozen(new Node()),
+                frozen(after),
+                Collections.<String>emptySet(),
+                null,
+                Collections.singleton("/"),
+                identities));
+    }
+
+    @Test
+    void shouldFailClosedWhenEffectiveGeneralizationTypeEvidenceIsMissing() {
+        // given
+        Node materializedType = new Node()
+                .name("Unverified Generalization Type")
+                .properties("mode", new Node().value("strict"));
+        Node resolved = new Node().contracts(new Node().properties(
+                "generalization",
+                new Node().type(materializedType)));
+
+        // when
+        // then
+        assertThrows(IllegalStateException.class,
+                () -> ProtectedStateGuard.verifyUnchanged(
+                        frozen(new Node()),
+                        frozen(resolved),
+                        frozen(new Node()),
+                        frozen(resolved),
+                        Collections.<String>emptySet(),
+                        null,
+                        Collections.singleton("/"),
+                        CanonicalTypeIdentityLookup.incomplete()));
+    }
+
+    @Test
     void shouldVerifyEffectiveProcessEmbeddedStateHasInlineReferenceBackedTypeParity() {
         // given
         Node beforeNode = rootWithEmbedded(
@@ -749,7 +811,7 @@ final class ProtectedStateGuardTest {
                         "generalization",
                         new Node()
                                 .type(new Node().blueId(
-                                        "22222222222222222222222222222222"))
+                                        TEXT_TYPE_BLUE_ID))
                                 .properties(
                                         "defaultMode",
                                         new Node().value(defaultMode))));
@@ -757,6 +819,38 @@ final class ProtectedStateGuardTest {
 
     private static FrozenNode frozen(Node node) {
         return FrozenNode.fromResolvedNode(node);
+    }
+
+    private static CanonicalTypeIdentityLookup typeIdentities(
+            final String typeBlueId) {
+        return new CanonicalTypeIdentityLookup() {
+            @Override
+            public boolean hasCompleteCoverage() {
+                return true;
+            }
+
+            @Override
+            public Optional<CanonicalTypeIdentityEvidence>
+            findCanonicalTypeIdentityEvidence(Node completedType) {
+                String blueId = requireCanonicalTypeBlueId(completedType);
+                return Optional.of(completedType.isReferenceOnly()
+                        ? CanonicalTypeIdentityEvidence.referenceSource(blueId)
+                        : CanonicalTypeIdentityEvidence.identityOnly(blueId));
+            }
+
+            @Override
+            public String requireCanonicalTypeBlueId(Node completedType) {
+                if (completedType.isReferenceOnly()) {
+                    return completedType.getBlueId();
+                }
+                if ("Protected Generalization Type".equals(
+                        completedType.getName())) {
+                    return typeBlueId;
+                }
+                throw new IllegalStateException(
+                        "Unexpected completed type without evidence");
+            }
+        };
     }
 
     private static ProcessingSnapshotManager unavailableManager(

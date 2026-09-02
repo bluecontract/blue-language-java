@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
@@ -17,6 +18,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,6 +30,59 @@ final class ManagedRootSettlementServiceTest {
             new Node().name("Managed Root Settlement Source Channel");
     private static final String SOURCE_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(SOURCE_TYPE);
+
+    @Test
+    void preservesAdmissionProvedCyclicMemberPayloadIdentity() {
+        // given
+        ExactDomainSnapshotManager domainStore =
+                new ExactDomainSnapshotManager();
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                SOURCE_BLUE_ID,
+                                SOURCE_TYPE,
+                                new SourceProcessor())
+                        .build();
+        DocumentProcessor processor = DocumentProcessor.builder()
+                .runtimeRegistry(registry)
+                .snapshotStore(domainStore)
+                .build();
+        Node exactEvent = event("cyclic-member");
+        String directEventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(exactEvent);
+        String admittedEventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().name("event-cycle")) + "#0";
+
+        try (ManagedDocumentStepRuntime runtime =
+                     new ManagedDocumentStepRuntime(processor)) {
+            // when
+            ManagedExternalDeliveryClassification classification =
+                    runtime.classifyExternalDelivery(
+                            document(),
+                            "source",
+                            ExactEventIdentityEvidence.fromAdmitted(
+                                    new ExactBlueValue(
+                                            FrozenNode.fromResolvedNode(
+                                                    exactEvent),
+                                            admittedEventBlueId)),
+                            context(
+                                    "source",
+                                    "direct-source-cyclic",
+                                    "direct-admission.cyclic.classification"));
+
+            // then
+            assertEquals(
+                    ManagedExternalDeliveryClassification.State.ACCEPTED_NEW,
+                    classification.state());
+            assertNotEquals(directEventBlueId, admittedEventBlueId);
+            assertEquals(
+                    admittedEventBlueId,
+                    classification.candidate().payloadBlueId());
+        } finally {
+            processor.close();
+        }
+    }
 
     @Test
     void projectsRootChannelsAndSettlesAddThenReplaceOnTheSharedLedger() {
@@ -64,7 +119,7 @@ final class ManagedRootSettlementServiceTest {
             assertEquals(beforeProjection, runtime.totalGas());
 
             ManagedExternalDeliveryClassification first =
-                    runtime.classifyExternalDelivery(
+                    classify(runtime,
                             input,
                             "source",
                             event("first"),
@@ -136,7 +191,7 @@ final class ManagedRootSettlementServiceTest {
                                     .CHECKPOINT_WRITTEN).reason());
 
             ManagedExternalDeliveryClassification second =
-                    runtime.classifyExternalDelivery(
+                    classify(runtime,
                             added.resultingBody(),
                             "source",
                             event("second"),
@@ -245,7 +300,7 @@ final class ManagedRootSettlementServiceTest {
                      new ManagedDocumentStepRuntime(processor)) {
             Node input = twoSourceDocument();
             ManagedCheckpointCandidate zSource =
-                    runtime.classifyExternalDelivery(
+                    classify(runtime,
                             input,
                             "zSource",
                             event("z"),
@@ -255,7 +310,7 @@ final class ManagedRootSettlementServiceTest {
                                     "direct-admission.0.checkpoint-compare"))
                             .candidate();
             ManagedCheckpointCandidate aSource =
-                    runtime.classifyExternalDelivery(
+                    classify(runtime,
                             input,
                             "aSource",
                             event("a"),
@@ -330,7 +385,7 @@ final class ManagedRootSettlementServiceTest {
             Node a = sourceAndRetiredDocument("Batch Root A");
             Node b = sourceAndRetiredDocument("Batch Root B");
             ManagedExternalDeliveryClassification retiredA =
-                    runtime.classifyExternalDelivery(
+                    classify(runtime,
                             a,
                             "retired",
                             event("retired-a"),
@@ -340,7 +395,7 @@ final class ManagedRootSettlementServiceTest {
                                     "retired-a",
                                     "setup.compare.a"));
             ManagedExternalDeliveryClassification retiredB =
-                    runtime.classifyExternalDelivery(
+                    classify(runtime,
                             b,
                             "retired",
                             event("retired-b"),
@@ -383,7 +438,7 @@ final class ManagedRootSettlementServiceTest {
             finalA.getContracts().getProperties().remove("retired");
             finalB.getContracts().getProperties().remove("retired");
             ManagedCheckpointCandidate sourceA =
-                    runtime.classifyExternalDelivery(
+                    classify(runtime,
                             finalA,
                             "source",
                             event("source-a"),
@@ -394,7 +449,7 @@ final class ManagedRootSettlementServiceTest {
                                     "batch.compare.a"))
                             .candidate();
             ManagedCheckpointCandidate sourceB =
-                    runtime.classifyExternalDelivery(
+                    classify(runtime,
                             finalB,
                             "source",
                             event("source-b"),
@@ -518,25 +573,25 @@ final class ManagedRootSettlementServiceTest {
         try (ManagedDocumentStepRuntime runtime =
                      new ManagedDocumentStepRuntime(processor)) {
             Node input = sourceAndOrphanDocument();
-            ManagedCheckpointCandidate source = runtime
-                    .classifyExternalDelivery(
-                            input,
+            ManagedCheckpointCandidate source = classify(
+                    runtime,
+                    input,
+                    "source",
+                    event("source"),
+                    context(
                             "source",
-                            event("source"),
-                            context(
-                                    "source",
-                                    "direct-source",
-                                    "setup.compare.source"))
+                            "direct-source",
+                            "setup.compare.source"))
                     .candidate();
-            ManagedCheckpointCandidate orphan = runtime
-                    .classifyExternalDelivery(
-                            input,
+            ManagedCheckpointCandidate orphan = classify(
+                    runtime,
+                    input,
+                    "orphan",
+                    event("orphan"),
+                    context(
                             "orphan",
-                            event("orphan"),
-                            context(
-                                    "orphan",
-                                    "direct-orphan",
-                                    "setup.compare.orphan"))
+                            "direct-orphan",
+                            "setup.compare.orphan"))
                     .candidate();
             ManagedCheckpointSettlement seeded = runtime.settleCheckpoints(
                     input,
@@ -833,8 +888,7 @@ final class ManagedRootSettlementServiceTest {
             public void onApplicationEvent(
                     String scopePath,
                     String originContractKey,
-                    Node event,
-                    String eventBlueId) {
+                    ExactEventIdentityEvidence exactEvent) {
                 throw new AssertionError("Unexpected application event");
             }
 
@@ -898,6 +952,23 @@ final class ManagedRootSettlementServiceTest {
                 .properties(
                         "subscriptionKey",
                         new Node().value("root"));
+    }
+
+    private static ManagedExternalDeliveryClassification classify(
+            ManagedDocumentStepRuntime runtime,
+            Node exactRoot,
+            String rawChannelKey,
+            Node exactEvent,
+            GasChargeContext context) {
+        return runtime.classifyExternalDelivery(
+                exactRoot,
+                rawChannelKey,
+                ExactEventIdentityEvidence.verify(
+                        null,
+                        exactEvent,
+                        DirectBlueIdCalculator.calculateBlueId(exactEvent),
+                        null),
+                context);
     }
 
     /** Mutable conversion model used by the focused processor registry. */
@@ -987,7 +1058,8 @@ final class ManagedRootSettlementServiceTest {
         public ResolvedSnapshot fromDocument(Node document) {
             return ResolvedSnapshot.withDeferredResolution(
                     FrozenNode.fromNode(document),
-                    FrozenNode.fromResolvedNode(document));
+                    FrozenNode.fromResolvedNode(document),
+                    CanonicalTypeIdentityLookup.incomplete());
         }
 
         @Override

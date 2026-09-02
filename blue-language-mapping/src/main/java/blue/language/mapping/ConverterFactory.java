@@ -1,5 +1,6 @@
 package blue.language.mapping;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 
 import java.lang.reflect.*;
@@ -14,6 +15,8 @@ import java.util.*;
 public class ConverterFactory {
     private final TypeClassResolver typeClassResolver;
     private final ObjectFactoryRegistry objectFactories;
+    private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
+    private final CanonicalContentIdentityLookup canonicalContentIdentities;
     private final Map<Class<?>, Converter<?>> converters = new HashMap<>();
 
     /**
@@ -34,12 +37,35 @@ public class ConverterFactory {
     public ConverterFactory(
             TypeClassResolver typeClassResolver,
             ObjectFactoryRegistry objectFactories) {
+        this(typeClassResolver, objectFactories, null);
+    }
+
+    ConverterFactory(
+            TypeClassResolver typeClassResolver,
+            ObjectFactoryRegistry objectFactories,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        this(
+                typeClassResolver,
+                objectFactories,
+                canonicalTypeIdentities,
+                CanonicalContentIdentityLookup.directOnly());
+    }
+
+    ConverterFactory(
+            TypeClassResolver typeClassResolver,
+            ObjectFactoryRegistry objectFactories,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities,
+            CanonicalContentIdentityLookup canonicalContentIdentities) {
         this.typeClassResolver = typeClassResolver != null
                 ? typeClassResolver
                 : new TypeClassResolver();
         this.objectFactories = Objects.requireNonNull(
                 objectFactories,
                 "objectFactories");
+        this.canonicalTypeIdentities = canonicalTypeIdentities;
+        this.canonicalContentIdentities = Objects.requireNonNull(
+                canonicalContentIdentities,
+                "canonicalContentIdentities");
         registerConverters();
     }
 
@@ -162,5 +188,23 @@ public class ConverterFactory {
                 this.typeClassResolver,
                 objectFactories);
         return mapConverter.convert(node, mapType);
+    }
+
+    Class<?> resolveClass(
+            Node node,
+            TypeClassResolver resolver) {
+        return canonicalTypeIdentities == null
+                ? resolver.resolveClass(node)
+                : resolver.resolveClass(node, canonicalTypeIdentities);
+    }
+
+    CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        return canonicalTypeIdentities != null
+                ? canonicalTypeIdentities
+                : CanonicalTypeIdentityLookup.incomplete();
+    }
+
+    String requireCanonicalContentBlueId(Node node) {
+        return canonicalContentIdentities.requireBlueId(node);
     }
 }

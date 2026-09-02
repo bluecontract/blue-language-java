@@ -92,7 +92,8 @@ public class CollectionConverter implements Converter<Object> {
             if (item == null) {
                 result.add(null);
             } else {
-                Class<?> resolvedClass = typeClassResolver.resolveClass(item);
+                Class<?> resolvedClass = converterFactory.resolveClass(
+                        item, typeClassResolver);
                 Object convertedItem;
                 if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
                     Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
@@ -152,7 +153,8 @@ public class CollectionConverter implements Converter<Object> {
             if (item == null) {
                 result.add(null);
             } else {
-                Class<?> resolvedClass = typeClassResolver.resolveClass(item);
+                Class<?> resolvedClass = converterFactory.resolveClass(
+                        item, typeClassResolver);
                 if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
                     Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
                     result.add(itemConverter.convert(item, resolvedClass));

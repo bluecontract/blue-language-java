@@ -7,6 +7,7 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.BlueIdReferenceValidator;
 import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
@@ -253,7 +254,8 @@ final class ProcessingInputAdmission {
         Node root = admittedRoot.node();
         return ResolvedSnapshot.withDeferredResolution(
                 FrozenNode.fromNode(root),
-                FrozenNode.fromResolvedNode(root));
+                FrozenNode.fromResolvedNode(root),
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     private Node exactContent(Node reference, String label) {

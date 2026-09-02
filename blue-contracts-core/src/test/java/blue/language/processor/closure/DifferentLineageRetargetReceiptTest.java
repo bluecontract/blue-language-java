@@ -236,7 +236,9 @@ final class DifferentLineageRetargetReceiptTest {
             assertNotEquals(input.invocationIdentity(),
                     first.retryInvocationIdentity());
             assertEquals(first.retryInvocationIdentity(),
-                    ClosureInvocationVerifier.verifyRetry(first)
+                    ClosureInvocationVerifier.verifyRetry(
+                            first,
+                            owner.administration()::runtimeAccess)
                             .invocationIdentity());
             assertThrows(UnsupportedOperationException.class,
                     () -> first.resolutions().clear());
@@ -262,7 +264,9 @@ final class DifferentLineageRetargetReceiptTest {
                                                     C,
                                                     -1L)));
             assertThrows(IllegalArgumentException.class,
-                    () -> ClosureInvocationVerifier.verifyRetry(foreign));
+                    () -> ClosureInvocationVerifier.verifyRetry(
+                            foreign,
+                            owner.administration()::runtimeAccess));
         }
     }
 

@@ -1,7 +1,9 @@
 package blue.language.processor.closure;
 
+import blue.language.identity.BlueIds;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
+import blue.language.provider.CyclicSetProof;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +37,7 @@ public final class TentativeResolutionContext {
     private final Map<DocumentId, Node> currentDocuments;
     private final Map<String, String> targetManagedBlueIdsByPath;
     private final Map<String, Node> managedReadExactNodesByBlueId;
+    private final Map<String, CyclicSetProof> cyclicProofsByMasterBlueId;
     private final String exactNodeProviderDomainIdentity;
     private final String occurrenceBindingSetIdentity;
 
@@ -51,6 +54,7 @@ public final class TentativeResolutionContext {
             Map<DocumentId, Node> currentDocuments,
             Map<String, String> targetManagedBlueIdsByPath,
             Map<String, Node> managedReadExactNodesByBlueId,
+            Map<String, CyclicSetProof> cyclicProofsByMasterBlueId,
             String exactNodeProviderDomainIdentity,
             String occurrenceBindingSetIdentity) {
         this.closureIdentity = ClosureValueSupport.requireSha256Identity(
@@ -79,6 +83,10 @@ public final class TentativeResolutionContext {
                 targetManagedBlueIdsByPath);
         this.managedReadExactNodesByBlueId = immutableExactNodes(
                 managedReadExactNodesByBlueId);
+        this.cyclicProofsByMasterBlueId = immutableCyclicProofs(
+                cyclicProofsByMasterBlueId,
+                this.currentBlueIds,
+                this.managedReadExactNodesByBlueId);
         if (!this.targetBeforeBlueId.equals(
                 this.currentBlueIds.get(this.targetDocumentId))) {
             throw new IllegalArgumentException(
@@ -177,6 +185,15 @@ public final class TentativeResolutionContext {
         }
         LinkedHashMap<String, Node> managedReadExactNodes =
                 new LinkedHashMap<String, Node>();
+        LinkedHashMap<String, CyclicSetProof> cyclicProofs =
+                new LinkedHashMap<String, CyclicSetProof>();
+        for (ComponentSnapshot component : tentativeState.components()) {
+            if (component.kind() == ComponentKind.CYCLIC) {
+                cyclicProofs.put(
+                        component.masterBlueId(),
+                        component.completeCyclicProof());
+            }
+        }
         if (invocation.cause() instanceof ManagedRevisionCause) {
             ManagedRevisionCause revision =
                     (ManagedRevisionCause) invocation.cause();
@@ -190,6 +207,15 @@ public final class TentativeResolutionContext {
                     managedReadExactNodes.put(
                             revision.afterBlueId(),
                             revision.afterDocument());
+                    if (BlueIds.hasCyclicMemberSeparator(
+                            revision.afterBlueId())) {
+                        cyclicProofs.putIfAbsent(
+                                BlueIds.cyclicSetMasterBlueId(
+                                        revision.afterBlueId()),
+                                revision.afterCyclicProof().orElseThrow(
+                                        () -> new IllegalArgumentException(
+                                                "Cyclic managed read omitted its complete proof")));
+                    }
                     break;
                 }
             }
@@ -207,6 +233,7 @@ public final class TentativeResolutionContext {
                 documents,
                 canonicalForwardPaths,
                 managedReadExactNodes,
+                cyclicProofs,
                 invocation.environment().exactNodeProviderDomainIdentity(),
                 tentativeState.occurrenceBindingSetIdentity());
     }
@@ -304,6 +331,17 @@ public final class TentativeResolutionContext {
         return Collections.unmodifiableMap(copy);
     }
 
+    /** Returns defensive complete proofs for invocation-local cyclic members. */
+    Map<String, CyclicSetProof> cyclicProofsByMasterBlueId() {
+        LinkedHashMap<String, CyclicSetProof> copy =
+                new LinkedHashMap<String, CyclicSetProof>();
+        for (Map.Entry<String, CyclicSetProof> entry
+                : cyclicProofsByMasterBlueId.entrySet()) {
+            copy.put(entry.getKey(), copyProof(entry.getValue()));
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
     /** Returns the selected provider-domain identity.
      * @return identity */
     public String exactNodeProviderDomainIdentity() {
@@ -395,5 +433,43 @@ public final class TentativeResolutionContext {
                     entry.getValue(), "managed read exact node").clone());
         }
         return Collections.unmodifiableMap(copy);
+    }
+
+    private static Map<String, CyclicSetProof> immutableCyclicProofs(
+            Map<String, CyclicSetProof> values,
+            Map<DocumentId, String> currentBlueIds,
+            Map<String, Node> managedReadExactNodes) {
+        LinkedHashMap<String, CyclicSetProof> copy =
+                new LinkedHashMap<String, CyclicSetProof>();
+        for (Map.Entry<String, CyclicSetProof> entry
+                : Objects.requireNonNull(
+                        values, "cyclicProofsByMasterBlueId").entrySet()) {
+            String masterBlueId = BlueIds.requirePlainBlueId(
+                    entry.getKey(), "resolution-context cyclic proof master");
+            copy.put(masterBlueId, copyProof(Objects.requireNonNull(
+                    entry.getValue(), "resolution-context cyclic proof")));
+        }
+        java.util.LinkedHashSet<String> requiredMasters =
+                new java.util.LinkedHashSet<String>();
+        for (String blueId : currentBlueIds.values()) {
+            if (BlueIds.hasCyclicMemberSeparator(blueId)) {
+                requiredMasters.add(BlueIds.cyclicSetMasterBlueId(blueId));
+            }
+        }
+        for (String blueId : managedReadExactNodes.keySet()) {
+            if (BlueIds.hasCyclicMemberSeparator(blueId)) {
+                requiredMasters.add(BlueIds.cyclicSetMasterBlueId(blueId));
+            }
+        }
+        if (!copy.keySet().equals(requiredMasters)) {
+            throw new IllegalArgumentException(
+                    "Resolution-context cyclic proofs must exactly cover cyclic exact nodes");
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private static CyclicSetProof copyProof(CyclicSetProof proof) {
+        return CyclicSetProof.fromDeclaredPlaceholderSet(
+                proof.declaredPlaceholderSet());
     }
 }

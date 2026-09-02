@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
@@ -26,33 +27,28 @@ public final class HandlerRegistrationContext {
     private final Map<String, FrozenNode> contracts;
     private final Map<String, String> contractTypeBlueIds;
     private final NodeToObjectConverter converter;
+    private final CanonicalTypeIdentityLookup typeIdentities;
+    private final ContractHeaderMappingEvidence mappingEvidence;
     private final RuntimeWorkSession runtimeWorkSession;
 
     HandlerRegistrationContext(String scopePath,
                                String handlerKey,
                                Map<String, FrozenNode> contracts,
                                Map<String, String> contractTypeBlueIds,
-                               NodeToObjectConverter converter) {
-        this(scopePath,
-                handlerKey,
-                contracts,
-                contractTypeBlueIds,
-                converter,
-                null);
-    }
-
-    HandlerRegistrationContext(String scopePath,
-                               String handlerKey,
-                               Map<String, FrozenNode> contracts,
-                               Map<String, String> contractTypeBlueIds,
                                NodeToObjectConverter converter,
-                               RuntimeWorkSession runtimeWorkSession) {
+                               RuntimeWorkSession runtimeWorkSession,
+                               CanonicalTypeIdentityLookup typeIdentities,
+                               ContractHeaderMappingEvidence mappingEvidence) {
         this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
         this.handlerKey = Objects.requireNonNull(handlerKey, "handlerKey");
         this.contracts = Collections.unmodifiableMap(new LinkedHashMap<>(contracts));
         this.contractTypeBlueIds = Collections.unmodifiableMap(new LinkedHashMap<>(contractTypeBlueIds));
         this.converter = Objects.requireNonNull(converter, "converter");
         this.runtimeWorkSession = runtimeWorkSession;
+        this.typeIdentities = Objects.requireNonNull(
+                typeIdentities, "typeIdentities");
+        this.mappingEvidence = Objects.requireNonNull(
+                mappingEvidence, "mappingEvidence");
     }
 
     /**
@@ -136,7 +132,14 @@ public final class HandlerRegistrationContext {
         if (node == null) {
             return null;
         }
-        return converter.convertWithType(node.toNode(), type, false);
+        return mappingEvidence.convertContract(
+                key,
+                node.toNode(),
+                Collections.<String>emptyList(),
+                type,
+                false,
+                converter,
+                typeIdentities);
     }
 
     /**

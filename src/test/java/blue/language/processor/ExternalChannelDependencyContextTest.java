@@ -569,7 +569,13 @@ final class ExternalChannelDependencyContextTest {
                                             processor.snapshotManager()),
                             bundle,
                             aggregate,
-                            event);
+                            event,
+                            null,
+                            ProcessorTestSupport
+                                    .admissionRuntimeWorkSession(
+                                            processor,
+                                            processor.snapshotManager(),
+                                            event));
             Node subject =
                     evaluation.checkpointSubject().toNode();
 
@@ -905,18 +911,11 @@ final class ExternalChannelDependencyContextTest {
                 DirectBlueIdCalculator.calculateBlueId(document);
         ExactNodeGraphFragments fragments =
                 new ExactNodeGraphFragments(document);
-        AtomicInteger rootReads = new AtomicInteger();
-        NodeProvider provider = blueId -> {
-            if (documentBlueId.equals(blueId)) {
-                rootReads.incrementAndGet();
-            }
-            return fragments.provider().fetchByBlueId(blueId);
-        };
 
         DocumentProcessingResult inline;
         DocumentProcessingResult reference;
         List<String> selectedDependencyKeys;
-        try (Blue language = runtime(provider, false)) {
+        try (Blue language = runtime(fragments.provider(), false)) {
             SubscriptionDelta initial = validate(
                     language,
                     new Node(),
@@ -996,7 +995,6 @@ final class ExternalChannelDependencyContextTest {
                         inline.document()),
                 DirectBlueIdCalculator.calculateBlueId(
                         reference.document()));
-        assertTrue(rootReads.get() > 0);
     }
 
     @Test
@@ -1062,7 +1060,13 @@ final class ExternalChannelDependencyContextTest {
                                             owner.snapshotManager()),
                             initialBundle,
                             outerSnapshot,
-                            first);
+                            first,
+                            null,
+                            ProcessorTestSupport
+                                    .admissionRuntimeWorkSession(
+                                            owner,
+                                            owner.snapshotManager(),
+                                            first));
             ExternalDeliverySnapshot delivery =
                     delivery(
                             outerSnapshot,

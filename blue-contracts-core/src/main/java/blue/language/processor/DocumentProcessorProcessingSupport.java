@@ -1,13 +1,17 @@
 package blue.language.processor;
 
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.Node;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import static blue.language.processor.ProcessingInputAdmission.PROCESSING_EVENT_LABEL;
 import static blue.language.processor.ProcessingInputAdmission.PROCESSING_ROOT_LABEL;
@@ -56,32 +60,39 @@ final class DocumentProcessorProcessingSupport {
     }
 
     Node requireProcessableSnapshotRoot(ResolvedSnapshot snapshot) {
-        Node canonicalRoot = Objects.requireNonNull(
-                snapshot, "snapshot").canonicalRoot();
+        Node selectedRoot = Objects.requireNonNull(
+                snapshot, "snapshot").sourceRoot();
         admission().requireProcessableTopLevel(
-                canonicalRoot, PROCESSING_ROOT_LABEL);
-        return canonicalRoot;
+                selectedRoot, PROCESSING_ROOT_LABEL);
+        return selectedRoot;
     }
 
     VerifiedExecutionEvidence deriveExternalDeliveryEvidence(
             Node document,
-            Node event) {
+            Node event,
+            SourceIdentityBinding sourceIdentities) {
         ExternalDeliveryPlan plan =
                 deriveExternalDeliveryPlan(document, event);
-        return bindAndVerifyDerived(document, event, plan);
+        return bindAndVerifyDerived(
+                document, event, sourceIdentities, plan);
     }
 
     VerifiedExecutionEvidence bindAndVerifyDerived(
             Node document,
             Node event,
+            SourceIdentityBinding sourceIdentities,
             ExternalDeliveryPlan plan) {
+        SourceIdentityBinding identities = Objects.requireNonNull(
+                sourceIdentities, "sourceIdentities");
         VerifiedExecutionEvidence evidence = plan.bind(
-                document,
-                event,
+                identities.rootBlueId(),
+                identities.eventBlueId(),
                 processor.runtimeRegistryIdentity());
         evidence.revalidateDerived(
                 document,
                 event,
+                identities.rootBlueId(),
+                identities.eventBlueId(),
                 processor.runtimeRegistryIdentity(),
                 processor.deliveryEvidenceVerifier(),
                 plan);
@@ -93,12 +104,15 @@ final class DocumentProcessorProcessingSupport {
             Node event,
             ExternalDeliveryPlan plan,
             VerifiedExecutionEvidence evidence,
+            SourceIdentityBinding sourceIdentities,
             ProcessorInvocationServices services) {
+        SourceIdentityBinding identities = Objects.requireNonNull(
+                sourceIdentities, "sourceIdentities");
         Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(evidence, "evidence")
                 .revalidateBinding(
-                        document,
-                        event,
+                        identities.rootBlueId(),
+                        identities.eventBlueId(),
                         services.runtimeRegistryIdentity());
         establishRequiredExactResources(plan, services);
         ExternalDeliveryEvidenceVerifier verifier =
@@ -111,7 +125,8 @@ final class DocumentProcessorProcessingSupport {
                             evidence,
                             plan,
                             services.externalPlanVerificationSessions(
-                                    event));
+                                    event,
+                                    identities.eventBlueId()));
         } else {
             verifier.verifyDerived(
                     document, event, evidence, plan);
@@ -162,6 +177,154 @@ final class DocumentProcessorProcessingSupport {
                     INCOMPLETE_DELIVERY_PLAN_MESSAGE);
         }
         return plan;
+    }
+
+    /**
+     * Establishes canonical Source identities before admission changes either
+     * semantic input's representation.
+     */
+    SourceIdentityBinding sourceIdentities(
+            Node rootSource,
+            Node eventSource,
+            LanguageRuntimeAccess languageRuntime,
+            ProcessingSnapshotManager snapshotManager) {
+        Node checkedRoot = Objects.requireNonNull(
+                rootSource, "rootSource");
+        Node checkedEvent = Objects.requireNonNull(
+                eventSource, "eventSource");
+        SourceIdentityFieldPlan rootFields = sourceIdentityFieldPlan(
+                checkedRoot,
+                snapshotManager,
+                true);
+        SourceIdentityFieldPlan eventFields = sourceIdentityFieldPlan(
+                checkedEvent,
+                snapshotManager,
+                false);
+        return new SourceIdentityBinding(
+                sourceBlueId(
+                        checkedRoot,
+                        languageRuntime,
+                        snapshotManager,
+                        "Processing Root identity",
+                        rootFields),
+                sourceBlueId(
+                        checkedEvent,
+                        languageRuntime,
+                        snapshotManager,
+                        "Processing Event identity",
+                        eventFields));
+    }
+
+    /** Uses an already-resolved snapshot's authoritative Source identity. */
+    SourceIdentityBinding sourceIdentities(
+            ResolvedSnapshot rootSnapshot,
+            Node eventSource,
+            LanguageRuntimeAccess languageRuntime,
+            ProcessingSnapshotManager snapshotManager) {
+        ResolvedSnapshot checkedRoot = Objects.requireNonNull(
+                rootSnapshot, "rootSnapshot");
+        SourceIdentityFieldPlan rootFields = sourceIdentityFieldPlan(
+                checkedRoot.sourceRoot(),
+                snapshotManager,
+                true);
+        Node checkedEvent = Objects.requireNonNull(
+                eventSource, "eventSource");
+        SourceIdentityFieldPlan eventFields = sourceIdentityFieldPlan(
+                checkedEvent,
+                snapshotManager,
+                false);
+        return new SourceIdentityBinding(
+                // A target-limited snapshot retains exact Source but has no
+                // whole-document canonical identity to read directly. A full
+                // generic Language snapshot is likewise not authoritative
+                // for runtime-owned exact fields, which must first be
+                // canonicalized as independent Source values.
+                checkedRoot.hasCanonicalIdentity()
+                        && rootFields.exactFieldPaths.isEmpty()
+                        ? checkedRoot.blueId()
+                        : sourceBlueId(
+                                checkedRoot.sourceRoot(),
+                                languageRuntime,
+                                snapshotManager,
+                                "Processing Root identity",
+                                rootFields),
+                sourceBlueId(
+                        checkedEvent,
+                        languageRuntime,
+                        snapshotManager,
+                        "Processing Event identity",
+                        eventFields));
+    }
+
+    private String sourceBlueId(
+            Node source,
+            LanguageRuntimeAccess languageRuntime,
+            ProcessingSnapshotManager snapshotManager,
+            String purpose,
+            SourceIdentityFieldPlan fieldPlan) {
+        if (source.isReferenceOnly()) {
+            return source.getBlueId();
+        }
+        /*
+         * The processor snapshot manager owns the active registered-extension
+         * provider graph. The generic Language runtime need not know those
+         * contract types and therefore is not an equivalent identity oracle.
+         */
+        if (snapshotManager != null) {
+            return CanonicalIdentityEvidence
+                    .sourceBlueIdWithCanonicalExactFields(
+                    source,
+                    snapshotManager,
+                    purpose,
+                    fieldPlan.exactFieldPaths,
+                    fieldPlan.executableBodyPaths);
+        }
+        if (languageRuntime != null) {
+            return languageRuntime.calculateSourceDocumentBlueId(
+                    NodeToBlueIdInput.stripResolvedBlueIdMetadata(
+                            source.clone()));
+        }
+        return CanonicalIdentityEvidence.sourceBlueId(
+                source, null, purpose);
+    }
+
+    private SourceIdentityFieldPlan sourceIdentityFieldPlan(
+            Node source,
+            ProcessingSnapshotManager snapshotManager,
+            boolean includeEnclosingScopeTypeContracts) {
+        if (snapshotManager == null || source.isReferenceOnly()) {
+            return SourceIdentityFieldPlan.empty();
+        }
+        Set<String> authoredPaths =
+                ExecutableBodyPathCatalog.authoredNodePaths(source);
+        if (includeEnclosingScopeTypeContracts) {
+            return new SourceIdentityFieldPlan(
+                    ExecutableBodyPathCatalog
+                    .fromNodeIncludingTypeContractsForSourceIdentity(
+                            source,
+                            authoredPaths,
+                            processor.registry().exactSourceFieldsByType(),
+                            snapshotManager),
+                    ExecutableBodyPathCatalog
+                    .fromNodeIncludingTypeContractsForSourceIdentity(
+                            source,
+                            authoredPaths,
+                            processor.registry().executableBodyFieldsByType(),
+                            snapshotManager));
+        }
+        return new SourceIdentityFieldPlan(
+                ExecutableBodyPathCatalog
+                .fromNodeDirectContractsForSourceIdentity(
+                        source,
+                        authoredPaths,
+                        processor.registry().exactSourceFieldsByType(),
+                        snapshotManager),
+                ExecutableBodyPathCatalog
+                .fromNodeDirectContractsForSourceIdentity(
+                        source,
+                        authoredPaths,
+                        processor.registry().executableBodyFieldsByType(),
+                        snapshotManager));
     }
 
     ProcessingInputAdmission.AdmittedNode admitDeliveryScopes(
@@ -254,11 +417,14 @@ final class DocumentProcessorProcessingSupport {
             ProcessingInputAdmission.AdmittedNode admittedRoot,
             Node event,
             VerifiedExecutionEvidence evidence,
+            SourceIdentityBinding sourceIdentities,
             ExternalDeliveryPlan derivedPlan) {
+        SourceIdentityBinding identities = Objects.requireNonNull(
+                sourceIdentities, "sourceIdentities");
         try {
             evidence.revalidateBinding(
-                    admittedRoot.node(),
-                    event,
+                    identities.rootBlueId(),
+                    identities.eventBlueId(),
                     processor.runtimeRegistryIdentity());
             List<String> missing =
                     evidence.missingRequiredExactNodeBlueIds();
@@ -272,6 +438,8 @@ final class DocumentProcessorProcessingSupport {
             evidence.revalidateDerived(
                     admittedRoot.node(),
                     event,
+                    identities.rootBlueId(),
+                    identities.eventBlueId(),
                     processor.runtimeRegistryIdentity(),
                     processor.deliveryEvidenceVerifier(),
                     derivedPlan);
@@ -364,5 +532,56 @@ final class DocumentProcessorProcessingSupport {
         }
         return new PlatformProcessingResult(
                 debug.processResult(), companion);
+    }
+
+    /** Exact semantic-input identities established at the Source boundary. */
+    static final class SourceIdentityBinding {
+        private final String rootBlueId;
+        private final String eventBlueId;
+
+        private SourceIdentityBinding(
+                String rootBlueId,
+                String eventBlueId) {
+            this.rootBlueId = Objects.requireNonNull(
+                    rootBlueId, "rootBlueId");
+            this.eventBlueId = Objects.requireNonNull(
+                    eventBlueId, "eventBlueId");
+        }
+
+        String rootBlueId() {
+            return rootBlueId;
+        }
+
+        String eventBlueId() {
+            return eventBlueId;
+        }
+    }
+
+    /** Runtime-owned exact fields and their executable-body subset. */
+    private static final class SourceIdentityFieldPlan {
+        private final Set<String> exactFieldPaths;
+        private final Set<String> executableBodyPaths;
+
+        private SourceIdentityFieldPlan(
+                Set<String> exactFieldPaths,
+                Set<String> executableBodyPaths) {
+            this.exactFieldPaths = Collections.unmodifiableSet(
+                    new LinkedHashSet<>(Objects.requireNonNull(
+                            exactFieldPaths, "exactFieldPaths")));
+            this.executableBodyPaths = Collections.unmodifiableSet(
+                    new LinkedHashSet<>(Objects.requireNonNull(
+                            executableBodyPaths, "executableBodyPaths")));
+            if (!this.exactFieldPaths.containsAll(
+                    this.executableBodyPaths)) {
+                throw new IllegalStateException(
+                        "Executable body paths are not exact Source fields");
+            }
+        }
+
+        private static SourceIdentityFieldPlan empty() {
+            return new SourceIdentityFieldPlan(
+                    Collections.<String>emptySet(),
+                    Collections.<String>emptySet());
+        }
     }
 }

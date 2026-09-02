@@ -205,8 +205,8 @@ final class EmbeddedSurfacePreflightTest {
                         (ignoredRoot, ignoredEvent) -> plan)
                 .build();
         VerifiedExecutionEvidence evidence = plan.bind(
-                root,
-                event,
+                DirectBlueIdCalculator.calculateBlueId(root),
+                DirectBlueIdCalculator.calculateBlueId(event),
                 processor.runtimeRegistryIdentity());
         try {
             return processor.processDocumentForPlatformCommit(

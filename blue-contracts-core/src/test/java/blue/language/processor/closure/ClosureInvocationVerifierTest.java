@@ -2,9 +2,12 @@ package blue.language.processor.closure;
 
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.processor.BlueContracts;
 import blue.language.processor.ClosureRuntimeDescriptor;
 import blue.language.processor.ExternalOrderKey;
 import blue.language.provider.CyclicSetProof;
+import blue.language.runtime.BlueLanguage;
+import blue.language.snapshot.FrozenNode;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.erdtman.jcs.JsonCanonicalizer;
@@ -168,7 +171,7 @@ final class ClosureInvocationVerifierTest {
         input = exactSimpleProcessInput(invocationIdentity);
 
         ClosureInvocationVerifier.Verification verification =
-                ClosureInvocationVerifier.verify(input);
+                verifyInvocation(input);
         assertEquals(invocationIdentity, verification.invocationIdentity());
         assertEquals(
                 ClosureInvocationVerifier.CandidateDisposition.NOT_SUBMITTED,
@@ -176,7 +179,84 @@ final class ClosureInvocationVerifierTest {
 
         ClosureInvocationInput wrong = exactSimpleProcessInput(hash('f'));
         assertThrows(IllegalArgumentException.class,
-                () -> ClosureInvocationVerifier.verify(wrong));
+                () -> verifyInvocation(wrong));
+    }
+
+    @Test
+    void shouldRejectCyclicMemberAtTopLevelExternalBoundary() {
+        String eventBlueId = DirectBlueIdCalculator.calculateBlueId(
+                new Node().name("cyclic external set")) + "#0";
+        ClosureInvocationInput referenceInput = exactExternalProcessInput(
+                new Node().blueId(eventBlueId), eventBlueId);
+        ClosureInvocationInput resolvedInput = exactExternalProcessInput(
+                new Node().properties(
+                        "kind", new Node().value("resolved cyclic member")),
+                eventBlueId);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> verifyInvocation(referenceInput));
+        assertThrows(IllegalArgumentException.class,
+                () -> verifyInvocation(resolvedInput));
+    }
+
+    @Test
+    void shouldPreservePlainExactReferenceExternalIdentity() {
+        String eventBlueId = DirectBlueIdCalculator.calculateBlueId(
+                new Node().properties(
+                        "kind", new Node().value("referenced external")));
+        Node reference = new Node().blueId(eventBlueId);
+        ClosureInvocationInput input = exactExternalProcessInput(
+                reference, eventBlueId);
+
+        ClosureInvocationVerifier.Verification verification =
+                verifyInvocation(input);
+
+        assertEquals(eventBlueId,
+                verification.externalEventIdentityEvidence().eventBlueId());
+        assertEquals(
+                FrozenNode.fromResolvedNode(reference)
+                        .resolvedStructuralKey(),
+                verification.externalEventIdentityEvidence()
+                        .frozenEvent().resolvedStructuralKey());
+    }
+
+    @Test
+    void shouldUseSourceCanonicalIdentityForInlineExternalEvent() {
+        Node event = new Node()
+                .type(new Node().name("Inline External Event Type"))
+                .properties("value", new Node().value("exact"));
+        try (BlueLanguage language = BlueLanguage.builder().build();
+             BlueContracts contracts = BlueContracts.builder(
+                     language.processing()).build()) {
+            String eventBlueId = language.identity()
+                    .sourceDocumentBlueId(event.clone());
+            ClosureInvocationInput input = exactExternalProcessInput(
+                    event, eventBlueId);
+
+            ClosureInvocationVerifier.Verification verification =
+                    ClosureInvocationVerifier.verify(
+                            input,
+                            contracts::runtimeAccess);
+            assertEquals(input.invocationIdentity(),
+                    verification.invocationIdentity());
+            assertEquals(eventBlueId,
+                    verification.externalEventIdentityEvidence()
+                            .eventBlueId());
+            assertEquals(
+                    FrozenNode.fromResolvedNode(event)
+                            .resolvedStructuralKey(),
+                    verification.externalEventIdentityEvidence()
+                            .frozenEvent().resolvedStructuralKey());
+
+            ClosureInvocationInput mismatchedInput = exactExternalProcessInput(
+                    event,
+                    DirectBlueIdCalculator.calculateBlueId(
+                            new Node().value("different event")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> ClosureInvocationVerifier.verify(
+                            mismatchedInput,
+                            contracts::runtimeAccess));
+        }
     }
 
     @Test
@@ -201,7 +281,7 @@ final class ClosureInvocationVerifierTest {
                 IDENTITIES.invocationIdentity(provisional), mismatched);
 
         assertThrows(IllegalArgumentException.class,
-                () -> ClosureInvocationVerifier.verify(input));
+                () -> verifyInvocation(input));
     }
 
     @Test
@@ -223,11 +303,11 @@ final class ClosureInvocationVerifierTest {
         assertEquals(
                 ClosureInvocationVerifier.CandidateDisposition
                         .SEMANTICALLY_INVALID,
-                ClosureInvocationVerifier.verify(input)
+                verifyInvocation(input)
                         .candidateDisposition());
         assertEquals(
                 AdmissionCandidate.Kind.AMBIGUOUS_PRELIMINARY_MEMBERS,
-                ClosureInvocationVerifier.verify(input).candidateKind());
+                verifyInvocation(input).candidateKind());
 
         assertThrows(IllegalArgumentException.class, () ->
                 AdmissionCandidate.ambiguousPreliminaryMembers(Arrays.asList(
@@ -239,7 +319,7 @@ final class ClosureInvocationVerifierTest {
         ClosureInvocationInput wrongCandidateIdentity =
                 exactSimpleAdmissionInput(hash('1'), candidate, hash('2'));
         assertThrows(IllegalArgumentException.class, () ->
-                ClosureInvocationVerifier.verify(wrongCandidateIdentity));
+                verifyInvocation(wrongCandidateIdentity));
     }
 
     private static ClosureInvocationInput cclo34Input() {
@@ -389,6 +469,25 @@ final class ClosureInvocationVerifierTest {
                 Collections.<DirectLogicalDelivery>emptyList(),
                 IDENTITIES.directDeliverySnapshotIdentity(
                         Collections.<DirectLogicalDelivery>emptyList()),
+                state.policy,
+                environment);
+    }
+
+    private static ClosureInvocationInput exactExternalProcessInput(
+            Node event,
+            String eventBlueId) {
+        SimpleState state = simpleState();
+        ClosureEnvironment environment = environment(BINDING_POLICY);
+        ExternalEventCause cause = ClosureEvidenceFactory.externalCause(
+                event,
+                eventBlueId,
+                ExternalOrderKey.of(Collections.singletonList(
+                        BigInteger.ONE)),
+                EXTERNAL_ORDER_POLICY);
+        return ClosureEvidenceFactory.processClosure(
+                state.snapshot,
+                cause,
+                Collections.<DirectLogicalDelivery>emptyList(),
                 state.policy,
                 environment);
     }
@@ -631,6 +730,11 @@ final class ClosureInvocationVerifierTest {
                 null,
                 null,
                 null);
+    }
+
+    private static ClosureInvocationVerifier.Verification verifyInvocation(
+            ClosureInvocationInput input) {
+        return ClosureInvocationVerifier.verify(input, null);
     }
 
     private static DocumentId id(String value) {

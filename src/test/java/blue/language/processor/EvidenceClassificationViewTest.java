@@ -282,7 +282,10 @@ final class EvidenceClassificationViewTest {
                         .checkpointSubjectBlueId("checkpoint-subject")
                         .build();
         VerifiedExecutionEvidence evidence =
-                VerifiedExecutionEvidence.builder("root", "event")
+                VerifiedExecutionEvidence.builder(
+                                DirectBlueIdCalculator.calculateBlueId(root),
+                                DirectBlueIdCalculator.calculateBlueId(
+                                        new Node().value("event")))
                         .revisions(1L, 1L)
                         .runtimeRegistryIdentity("registry")
                         .eventOrderKey(ExternalOrderKey.of(

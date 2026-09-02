@@ -24,10 +24,19 @@ final class ResolutionSnapshotFactory {
     SnapshotResolution resolve(Node preprocessedSource, ResolutionLimits limits) {
         Objects.requireNonNull(preprocessedSource, "preprocessedSource");
         Objects.requireNonNull(limits, "limits");
+        InlineTypeCycleValidator.validate(preprocessedSource);
         Node resolved = engine.resolve(preprocessedSource.clone(), limits);
+        CanonicalTypeIdentityIndex.EvidenceSnapshot typeIdentityEvidence =
+                engine.completedTypeIdentityEvidence();
         Node canonical = new CanonicalIdentityInputBuilder().build(
-                resolved.clone(), preprocessedSource);
-        return snapshot(FrozenNode.fromNode(canonical), resolved, limits);
+                resolved.clone(),
+                preprocessedSource,
+                typeIdentityEvidence);
+        return snapshot(
+                FrozenNode.fromNode(canonical),
+                resolved,
+                limits,
+                typeIdentityEvidence);
     }
 
     SnapshotResolution resolve(FrozenNode canonicalRoot, ResolutionLimits limits) {
@@ -38,11 +47,19 @@ final class ResolutionSnapshotFactory {
                     "Snapshot resolution requires a strict canonical root.");
         }
         Node resolved = engine.resolve(canonicalRoot.toNode(), limits);
-        return snapshot(canonicalRoot, resolved, limits);
+        return snapshot(
+                canonicalRoot,
+                resolved,
+                limits,
+                engine.completedTypeIdentityEvidence());
     }
 
     private SnapshotResolution snapshot(
-            FrozenNode canonicalRoot, Node resolved, ResolutionLimits limits) {
+            FrozenNode canonicalRoot,
+            Node resolved,
+            ResolutionLimits limits,
+            CanonicalTypeIdentityIndex.EvidenceSnapshot
+                    typeIdentityEvidence) {
         FrozenNode frozenResolved = freezeResolved(resolved);
         VerifiedReferenceResolution verification = null;
         if (limits == ResolutionLimits.NO_LIMITS
@@ -50,14 +67,19 @@ final class ResolutionSnapshotFactory {
                 && !canonicalRoot.isReferenceOnly()
                 && !frozenResolved.isReferenceOnly()) {
             verification = new VerifiedReferenceResolution(
-                    canonicalRoot.blueId(), canonicalRoot, frozenResolved);
+                    canonicalRoot.blueId(),
+                    canonicalRoot,
+                    frozenResolved,
+                    typeIdentityEvidence);
         }
         return new SnapshotResolution(
                 canonicalRoot,
                 frozenResolved,
                 verification != null
                         ? ResolutionProvenance.verified(verification)
-                        : ResolutionProvenance.none());
+                        : ResolutionProvenance.none(),
+                typeIdentityEvidence,
+                limits == ResolutionLimits.NO_LIMITS);
     }
 
     private FrozenNode freezeResolved(Node resolved) {

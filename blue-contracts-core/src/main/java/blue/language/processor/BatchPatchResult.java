@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.snapshot.FrozenNode;
@@ -28,7 +29,9 @@ final class BatchPatchResult {
     private final UpdatePlan updatePlan;
     private final List<ImmutableJsonPatch> requestedPatches;
     private final List<GeneralizationMetadataWrite> generalizationMetadataWrites;
+    private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
     private final boolean resolutionComplete;
+    private final boolean sourceBacked;
     private final long patchPlanningNanos;
     private final long conformanceNanos;
     private final long buildUpdatesNanos;
@@ -51,7 +54,9 @@ final class BatchPatchResult {
                 null,
                 Collections.<ImmutableJsonPatch>emptyList(),
                 Collections.<GeneralizationMetadataWrite>emptyList(),
+                CanonicalTypeIdentityLookup.incomplete(),
                 true,
+                false,
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
@@ -72,7 +77,9 @@ final class BatchPatchResult {
                 updatePlan,
                 requestedPatches,
                 generalizationMetadataWrites,
+                CanonicalTypeIdentityLookup.incomplete(),
                 true,
+                false,
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);
@@ -84,7 +91,9 @@ final class BatchPatchResult {
                      UpdatePlan updatePlan,
                      List<ImmutableJsonPatch> requestedPatches,
                      List<GeneralizationMetadataWrite> generalizationMetadataWrites,
+                     CanonicalTypeIdentityLookup canonicalTypeIdentities,
                      boolean resolutionComplete,
+                     boolean sourceBacked,
                      long patchPlanningNanos,
                      long conformanceNanos,
                      long buildUpdatesNanos) {
@@ -98,7 +107,10 @@ final class BatchPatchResult {
                 Objects.requireNonNull(requestedPatches, "requestedPatches")));
         this.generalizationMetadataWrites = Collections.unmodifiableList(new ArrayList<>(
                 Objects.requireNonNull(generalizationMetadataWrites, "generalizationMetadataWrites")));
+        this.canonicalTypeIdentities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
         this.resolutionComplete = resolutionComplete;
+        this.sourceBacked = sourceBacked;
         this.patchPlanningNanos = patchPlanningNanos;
         this.conformanceNanos = conformanceNanos;
         this.buildUpdatesNanos = buildUpdatesNanos;
@@ -116,7 +128,10 @@ final class BatchPatchResult {
         this.updatePlan = Objects.requireNonNull(updatePlan, "updatePlan");
         this.requestedPatches = Collections.emptyList();
         this.generalizationMetadataWrites = Collections.emptyList();
+        this.canonicalTypeIdentities =
+                CanonicalTypeIdentityLookup.incomplete();
         this.resolutionComplete = true;
+        this.sourceBacked = false;
         this.patchPlanningNanos = patchPlanningNanos;
         this.conformanceNanos = conformanceNanos;
         this.buildUpdatesNanos = buildUpdatesNanos;
@@ -168,8 +183,16 @@ final class BatchPatchResult {
         return generalizationMetadataWrites;
     }
 
+    CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        return canonicalTypeIdentities;
+    }
+
     boolean isResolutionComplete() {
         return resolutionComplete;
+    }
+
+    boolean isSourceBacked() {
+        return sourceBacked;
     }
 
     long patchPlanningNanos() {
@@ -193,7 +216,9 @@ final class BatchPatchResult {
                     updatePlan,
                     requestedPatches,
                     generalizationMetadataWrites,
+                    canonicalTypeIdentities,
                     resolutionComplete,
+                    sourceBacked,
                     patchPlanningNanos,
                     conformanceNanos,
                     buildUpdatesNanos);
@@ -208,7 +233,9 @@ final class BatchPatchResult {
                 null,
                 requestedPatches,
                 generalizationMetadataWrites,
+                canonicalTypeIdentities,
                 resolutionComplete,
+                sourceBacked,
                 patchPlanningNanos,
                 conformanceNanos,
                 buildUpdatesNanos);

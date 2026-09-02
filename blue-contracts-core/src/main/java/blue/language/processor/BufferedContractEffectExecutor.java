@@ -162,12 +162,17 @@ final class BufferedContractEffectExecutor {
 
     private boolean emitEvent(ContractEffectBuffer.EventEmission emission) {
         Node event = emission.event();
-        String eventBlueId;
+        ExactEventIdentityEvidence exactEvent;
         try {
-            eventBlueId = emission.exactValue() != null
-                    ? emission.exactValue().blueId()
-                    : CheckpointIdentityCalculator.identity(
-                            event, execution.blue());
+            if (emission.exactValue() != null) {
+                exactEvent = ExactEventIdentityEvidence.fromAdmitted(
+                        emission.exactValue());
+            } else {
+                String eventBlueId = CheckpointIdentityCalculator.identity(
+                        event, execution.blue());
+                exactEvent = ExactEventIdentityEvidence.fromVerifiedSource(
+                        event, eventBlueId);
+            }
         } catch (RuntimeException exception) {
             execution.abortRuntimeFailure(scopePath,
                     bundle,
@@ -179,7 +184,7 @@ final class BufferedContractEffectExecutor {
             return false;
         }
         execution.enqueueApplicationEvent(
-                scopePath, contractKey, event, eventBlueId);
+                scopePath, contractKey, exactEvent);
         return true;
     }
 

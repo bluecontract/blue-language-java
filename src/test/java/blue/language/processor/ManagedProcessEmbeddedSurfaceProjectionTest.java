@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
@@ -37,7 +38,9 @@ final class ManagedProcessEmbeddedSurfaceProjectionTest {
              ManagedDocumentStepRuntime runtime =
                      new ManagedDocumentStepRuntime(owner)) {
             ContractBundle bundle = owner.contractLoader().load(
-                    FrozenNode.fromResolvedNode(document), "/");
+                    FrozenNode.fromResolvedNode(document),
+                    "/",
+                    CanonicalTypeIdentityLookup.incomplete());
             EffectiveContractSnapshot embedded = processEmbedded(bundle);
             String explicitBlueId = embedded.headerFields().get(
                     ProcessorContractConstants.KEY_PATHS).blueId();

@@ -126,8 +126,7 @@ final class ClosureDocumentRuntimeIsolationTest {
             public void onApplicationEvent(
                     String scopePath,
                     String originContractKey,
-                    Node event,
-                    String eventBlueId) {
+                    ExactEventIdentityEvidence exactEvent) {
             }
 
             @Override

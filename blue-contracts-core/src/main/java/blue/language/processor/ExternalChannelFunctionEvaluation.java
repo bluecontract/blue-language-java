@@ -2,13 +2,15 @@ package blue.language.processor;
 
 import blue.language.api.BlueLanguageErrorCategory;
 import blue.language.api.BlueLanguageErrorClassifier;
+import blue.language.identity.BlueIds;
+import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.mapping.NodeToObjectConverter;
+import blue.language.matching.FrozenTypeMatcher;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
-import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.identity.BlueIds;
-import blue.language.matching.FrozenTypeMatcher;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -74,6 +76,7 @@ final class ExternalChannelFunctionEvaluation {
     private final ExternalChannelDependencySnapshot dependencies;
     private final String runtimeDiscriminator;
     private final List<String> channelLookupResults;
+    private final List<ExactBlueValue> carriedExactValues;
 
     private ExternalChannelFunctionEvaluation(
             List<String> channelKeys,
@@ -90,7 +93,8 @@ final class ExternalChannelFunctionEvaluation {
             ChannelMemberSnapshot handlerChannel,
             ExternalChannelDependencySnapshot dependencies,
             String runtimeDiscriminator,
-            List<String> channelLookupResults) {
+            List<String> channelLookupResults,
+            List<ExactBlueValue> carriedExactValues) {
         this.channelKeys = channelKeys;
         this.eventKeys = eventKeys;
         this.preselects = preselects;
@@ -110,52 +114,11 @@ final class ExternalChannelFunctionEvaluation {
                         Objects.requireNonNull(
                                 channelLookupResults,
                                 "channelLookupResults"));
-    }
-
-    static ExternalChannelFunctionEvaluation evaluate(
-            ContractProcessorRegistry registry,
-            NodeToObjectConverter converter,
-            MatcherSessionFactory matcherSessions,
-            ContractBundle bundle,
-            EffectiveContractSnapshot snapshot,
-            Node exactEvent) {
-        return evaluate(
-                registry,
-                converter,
-                matcherSessions,
-                bundle,
-                snapshot,
-                exactEvent,
-                null);
-    }
-
-    static ExternalChannelFunctionEvaluation evaluate(
-            ContractProcessorRegistry registry,
-            NodeToObjectConverter converter,
-            MatcherSessionFactory matcherSessions,
-            ContractBundle bundle,
-            EffectiveContractSnapshot snapshot,
-            Node exactEvent,
-            List<String> effectiveContractKeys) {
-        RuntimeWorkSession admission =
-                new RuntimeWorkSession(
-                        new GasMeter(),
-                        RuntimeWorkSession.Mode.ADMISSION);
-        try {
-            return evaluate(
-                    registry,
-                    converter,
-                    matcherSessions,
-                    bundle,
-                    snapshot,
-                    exactEvent,
-                    effectiveContractKeys,
-                    admission);
-        } finally {
-            if (admission.isOpen()) {
-                admission.suspend();
-            }
-        }
+        this.carriedExactValues =
+                Collections.unmodifiableList(
+                        new ArrayList<>(Objects.requireNonNull(
+                                carriedExactValues,
+                                "carriedExactValues")));
     }
 
     static ExternalChannelFunctionEvaluation evaluate(
@@ -179,63 +142,133 @@ final class ExternalChannelFunctionEvaluation {
                 Objects.requireNonNull(
                         runtimeWorkSession,
                         "runtimeWorkSession");
-        RuntimeWorkSession comparison =
-                authoritative.diagnosticTwin();
-
-        final ExternalChannelFunctionEvaluation first;
+        RuntimeWorkSession comparison = null;
+        ExternalChannelFunctionEvaluation result = null;
+        Throwable failure = null;
+        boolean evidenceUnavailable = false;
         try {
-            first = evaluateOnce(
-                        registry,
-                        converter,
-                        matcherSessions,
-                        bundle,
-                        snapshot,
-                        exactEvent,
-                        effectiveContractKeys,
-                        authoritative);
+            comparison = authoritative.diagnosticTwin();
+            ExternalChannelFunctionEvaluation first = evaluateOnce(
+                    registry,
+                    converter,
+                    matcherSessions,
+                    bundle,
+                    snapshot,
+                    exactEvent,
+                    effectiveContractKeys,
+                    authoritative);
+            ExternalChannelFunctionEvaluation second = evaluateOnce(
+                    registry,
+                    converter,
+                    matcherSessions,
+                    bundle,
+                    snapshot,
+                    exactEvent,
+                    effectiveContractKeys,
+                    comparison);
+            if (!first.sameResult(second)
+                    || !sameRuntimeTrace(
+                            authoritative.stagedTrace(),
+                            comparison.stagedTrace())) {
+                throw new IllegalStateException(
+                        "External Channel functions are not deterministic at "
+                                + snapshot.scopePath() + "/" + snapshot.key());
+            }
+            List<ExactBlueValue> exactValues =
+                    authoritative.exactValuesSnapshot();
+            authoritative.complete();
+            comparison.suspend();
+            result = first.withCarriedExactValues(exactValues);
         } catch (ExecutionEvidenceUnavailableException unavailable) {
-            suspendIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw unavailable;
-        } catch (RuntimeException | Error failure) {
-            failIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw failure;
+            failure = unavailable;
+            evidenceUnavailable = true;
+        } catch (RuntimeException | Error caught) {
+            failure = caught;
+        } finally {
+            if (failure != null) {
+                failure = evidenceUnavailable
+                        ? RuntimeWorkSession.suspendIfOpenPreserving(
+                                authoritative, failure)
+                        : RuntimeWorkSession.failIfOpenPreserving(
+                                authoritative, failure);
+                failure = RuntimeWorkSession.suspendIfOpenPreserving(
+                        comparison, failure);
+            }
+            failure = RuntimeWorkSession.closePreserving(comparison, failure);
         }
+        RuntimeWorkSession.rethrow(failure);
+        return Objects.requireNonNull(result, "functionEvaluation");
+    }
 
-        final ExternalChannelFunctionEvaluation second;
+    /** Evaluates one exact event and owns the supplied work-session lifecycle. */
+    static ExternalChannelFunctionEvaluation evaluateWithExactInput(
+            ProcessorInvocationServices owner,
+            DocumentProcessingRuntime runtime,
+            ContractBundle bundle,
+            EffectiveContractSnapshot snapshot,
+            ExactEventIdentityEvidence eventEvidence,
+            List<String> effectiveContractKeys) {
+        ExactEventIdentityEvidence evidence = Objects.requireNonNull(
+                eventEvidence, "eventEvidence");
+        return evaluateWithExactInput(
+                owner.registry(),
+                owner.contractConverter(),
+                runtime.externalChannelMatcherSessions(),
+                bundle,
+                snapshot,
+                evidence.event(),
+                effectiveContractKeys,
+                evidence.frozenEvent(),
+                evidence.eventBlueId(),
+                runtime.newRuntimeWorkSession(owner.languageRuntimeAccess()));
+    }
+
+    /** Evaluates one exact event and owns the supplied work-session lifecycle. */
+    static ExternalChannelFunctionEvaluation evaluateWithExactInput(
+            ContractProcessorRegistry registry,
+            NodeToObjectConverter converter,
+            MatcherSessionFactory matcherSessions,
+            ContractBundle bundle,
+            EffectiveContractSnapshot snapshot,
+            Node exactEvent,
+            List<String> effectiveContractKeys,
+            FrozenNode admittedEvent,
+            String eventBlueId,
+            RuntimeWorkSession runtimeWorkSession) {
+        RuntimeWorkSession authoritative = Objects.requireNonNull(
+                runtimeWorkSession, "runtimeWorkSession");
+        ExternalChannelFunctionEvaluation result = null;
+        Throwable failure = null;
+        boolean evidenceUnavailable = false;
         try {
-            second = evaluateOnce(
-                        registry,
-                        converter,
-                        matcherSessions,
-                        bundle,
-                        snapshot,
-                        exactEvent,
-                        effectiveContractKeys,
-                        comparison);
+            authoritative.carryExactInput(admittedEvent, eventBlueId);
+            result = evaluate(
+                    registry,
+                    converter,
+                    matcherSessions,
+                    bundle,
+                    snapshot,
+                    exactEvent,
+                    effectiveContractKeys,
+                    authoritative);
         } catch (ExecutionEvidenceUnavailableException unavailable) {
-            suspendIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw unavailable;
-        } catch (RuntimeException | Error failure) {
-            failIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw failure;
+            failure = unavailable;
+            evidenceUnavailable = true;
+        } catch (RuntimeException | Error caught) {
+            failure = caught;
+        } finally {
+            if (failure != null) {
+                failure = evidenceUnavailable
+                        ? RuntimeWorkSession.suspendIfOpenPreserving(
+                                authoritative, failure)
+                        : RuntimeWorkSession.failIfOpenPreserving(
+                                authoritative, failure);
+            }
+            failure = RuntimeWorkSession.closePreserving(
+                    authoritative, failure);
         }
-        if (!first.sameResult(second)
-                || !sameRuntimeTrace(
-                        authoritative.stagedTrace(),
-                        comparison.stagedTrace())) {
-            failIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw new IllegalStateException(
-                    "External Channel functions are not deterministic at "
-                            + snapshot.scopePath() + "/" + snapshot.key());
-        }
-        authoritative.complete();
-        comparison.suspend();
-        return first;
+        RuntimeWorkSession.rethrow(failure);
+        return Objects.requireNonNull(result, "functionEvaluation");
     }
 
     private static ExternalChannelFunctionEvaluation evaluateOnce(
@@ -247,10 +280,13 @@ final class ExternalChannelFunctionEvaluation {
             Node exactEvent,
             List<String> effectiveContractKeys,
             RuntimeWorkSession runtimeWorkSession) {
-        MatcherSession matcher = Objects.requireNonNull(
-                matcherSessions.open(),
-                "matcherSession");
+        MatcherSession matcher = null;
+        ExternalChannelFunctionEvaluation result = null;
+        Throwable failure = null;
         try {
+            matcher = Objects.requireNonNull(
+                    matcherSessions.open(),
+                    "matcherSession");
             ExternalChannelFunctionResolver.Evaluation resolved =
                     new ExternalChannelFunctionResolver(
                             registry,
@@ -265,7 +301,7 @@ final class ExternalChannelFunctionEvaluation {
             String checkpointSubjectBlueId =
                     resolved.checkpointSubjectBlueId();
 
-            return new ExternalChannelFunctionEvaluation(
+            result = new ExternalChannelFunctionEvaluation(
                     resolved.channelKeys(),
                     resolved.eventKeys(),
                     resolved.preselects(),
@@ -280,24 +316,38 @@ final class ExternalChannelFunctionEvaluation {
                     resolved.handlerChannel(),
                     resolved.dependencies(),
                     resolved.runtimeDiscriminator(),
-                    resolved.channelLookupResults());
+                    resolved.channelLookupResults(),
+                    Collections.<ExactBlueValue>emptyList());
+        } catch (RuntimeException | Error caught) {
+            failure = caught;
         } finally {
-            matcher.close();
+            failure = RuntimeWorkSession.closePreserving(
+                    matcher == null ? null : matcher::close,
+                    failure);
         }
+        RuntimeWorkSession.rethrow(failure);
+        return Objects.requireNonNull(result, "functionEvaluation");
     }
 
-    private static void failIfOpen(
-            RuntimeWorkSession session) {
-        if (session.isOpen()) {
-            session.failDeterministically();
-        }
-    }
-
-    private static void suspendIfOpen(
-            RuntimeWorkSession session) {
-        if (session.isOpen()) {
-            session.suspend();
-        }
+    private ExternalChannelFunctionEvaluation withCarriedExactValues(
+            List<ExactBlueValue> exactValues) {
+        return new ExternalChannelFunctionEvaluation(
+                channelKeys,
+                eventKeys,
+                preselects,
+                accepts,
+                checkpointDomainBlueId,
+                payload,
+                payloadBlueId,
+                checkpointSubject,
+                checkpointSubjectBlueId,
+                handlerChannelKey,
+                logicalDeliveryKey,
+                handlerChannel,
+                dependencies,
+                runtimeDiscriminator,
+                channelLookupResults,
+                exactValues);
     }
 
     private static boolean sameRuntimeTrace(
@@ -367,7 +417,7 @@ final class ExternalChannelFunctionEvaluation {
                     FrozenTypeMatcher
                             .withVerifiedReferenceMaterializer(
                                     reference ->
-                                            materializeVerifiedExactReference(
+                                            materializeVerifiedTypeReference(
                                                     captured,
                                                     reference,
                                                     "reference matching"));
@@ -533,6 +583,46 @@ final class ExternalChannelFunctionEvaluation {
         }
     }
 
+    private static TypeEvidenceResolution materializeVerifiedTypeReference(
+            ProcessingSnapshotManager snapshotManager,
+            FrozenNode reference,
+            String purpose) {
+        if (snapshotManager == null) {
+            throw new IllegalStateException(
+                    "External Channel " + purpose
+                            + " requires a verified "
+                            + "ProcessingSnapshotManager");
+        }
+        try {
+            TypeEvidenceResolution materialization =
+                    snapshotManager.materializeVerifiedTypeReference(
+                            reference);
+            if (materialization == null
+                    || materialization.resolvedRoot().isReferenceOnly()) {
+                throw new ExecutionEvidenceUnavailableException(
+                        "External Channel " + purpose
+                                + " exact type content is unavailable for "
+                                + reference.getReferenceBlueId(),
+                        Collections.singleton(
+                                reference.getReferenceBlueId()));
+            }
+            return materialization;
+        } catch (ExecutionEvidenceUnavailableException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            if (BlueLanguageErrorClassifier.classify(exception)
+                    == BlueLanguageErrorCategory.ProviderUnavailable) {
+                throw new ExecutionEvidenceUnavailableException(
+                        "External Channel " + purpose
+                                + " exact content is unavailable for "
+                                + reference.getReferenceBlueId(),
+                        Collections.singleton(
+                                reference.getReferenceBlueId()));
+            }
+            throw exception;
+        }
+    }
+
     private boolean sameResult(
             ExternalChannelFunctionEvaluation other) {
         return channelKeys.equals(other.channelKeys)
@@ -652,5 +742,9 @@ final class ExternalChannelFunctionEvaluation {
 
     List<String> channelLookupResults() {
         return channelLookupResults;
+    }
+
+    List<ExactBlueValue> carriedExactValues() {
+        return carriedExactValues;
     }
 }

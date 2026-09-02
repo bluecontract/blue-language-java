@@ -8,7 +8,8 @@ import blue.language.merge.MergingProcessor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
-import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.merge.TypeEvidenceResolution;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.wire.JsonPointer;
 import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.registry.NodeProviderWrapper;
@@ -42,12 +43,18 @@ final class FrozenConformancePlanner {
                 @Override
                 public boolean shouldExpandPathSegment(
                         String pathSegment, Node currentNode) {
-                    return false;
+                    return currentNode == null
+                            || !currentNode.isReferenceOnly();
                 }
 
                 @Override
                 public boolean shouldMergePathSegment(
                         String pathSegment, Node currentNode) {
+                    return true;
+                }
+
+                @Override
+                public boolean retainsEveryAuthoredPath() {
                     return true;
                 }
 
@@ -67,23 +74,30 @@ final class FrozenConformancePlanner {
     private final MergingProcessor mergingProcessor;
     private final ResolvedReferenceCache resolvedReferenceCache;
     private final Set<String> deferredReferencePaths;
+    private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
 
     FrozenConformancePlanner(NodeProvider nodeProvider,
                              MergingProcessor mergingProcessor,
-                             ResolvedReferenceCache resolvedReferenceCache) {
+                             ResolvedReferenceCache resolvedReferenceCache,
+                             CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         this(nodeProvider,
                 mergingProcessor,
                 resolvedReferenceCache,
+                canonicalTypeIdentities,
                 Collections.emptySet());
     }
 
     FrozenConformancePlanner(NodeProvider nodeProvider,
                              MergingProcessor mergingProcessor,
                              ResolvedReferenceCache resolvedReferenceCache,
+                             CanonicalTypeIdentityLookup canonicalTypeIdentities,
                              Collection<String> deferredReferencePaths) {
         this.nodeProvider = NodeProviderWrapper.wrap(nodeProvider);
         this.mergingProcessor = Objects.requireNonNull(mergingProcessor, "mergingProcessor");
         this.resolvedReferenceCache = resolvedReferenceCache;
+        this.canonicalTypeIdentities = Objects.requireNonNull(
+                canonicalTypeIdentities,
+                "canonicalTypeIdentities");
         this.deferredReferencePaths = canonicalPaths(deferredReferencePaths);
     }
 
@@ -116,10 +130,7 @@ final class FrozenConformancePlanner {
                 FrozenNode before = read(nextCanonicalRoot, path);
                 FrozenNode after = reuseUnchangedSubtrees(
                         before,
-                        canonicalize(
-                                generalizedNode.resolved(),
-                                generalizedNode.source(),
-                                nextCanonicalRoot));
+                        generalizedNode.canonical());
                 nextCanonicalRoot = replaceAt(nextCanonicalRoot, path, after);
                 canonicalPatches.add(new CanonicalGeneralizationPatch(path, before, after));
             }
@@ -145,7 +156,9 @@ final class FrozenConformancePlanner {
 
         ResolutionLimits resolutionLimits =
                 resolutionLimitsAt(nodePath);
-        Node source = new MinimizedOverlayBuilder().build(node.toNode());
+        Node source = new MinimizedOverlayBuilder().build(
+                node,
+                canonicalTypeIdentities);
         Node canonical = source.clone();
         ConformanceResult result = checkCanonical(
                 canonical, resolutionLimits);
@@ -189,15 +202,20 @@ final class FrozenConformancePlanner {
         if (!generalized) {
             return GeneralizedNode.unchanged(node);
         }
-        Node resolved = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
-                .resolve(canonical, resolutionLimits);
+        FrozenNode canonicalInput = FrozenNode.fromNode(canonical);
+        Node resolved = new Merger(
+                mergingProcessor,
+                nodeProvider,
+                resolvedReferenceCache).resolve(
+                canonicalInput.toNode(),
+                resolutionLimits);
         return new GeneralizedNode(
                 reuseUnchangedSubtrees(
                         node,
-                        resolvedReferenceCache.freezeResolved(resolved)),
+                        FrozenNode.fromResolvedNode(resolved)),
                 true,
                 metadataFields,
-                canonical);
+                canonicalInput);
     }
 
     private boolean hasTypeMetadata(FrozenNode node) {
@@ -212,7 +230,7 @@ final class FrozenConformancePlanner {
             ResolutionLimits resolutionLimits) {
         try {
             new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
-                    .resolve(canonical, resolutionLimits);
+                    .resolve(canonical.clone(), resolutionLimits);
             return ConformanceResult.conformant();
         } catch (RuntimeException ex) {
             return ConformanceResult.nonConformant(ex.getMessage());
@@ -255,13 +273,18 @@ final class FrozenConformancePlanner {
             String metadataField,
             FrozenNode typeNode,
             ResolutionLimits resolutionLimits) {
-        FrozenNode parentType = parentType(
+        ParentTypeEvidence parentType = parentType(
                 typeNode, resolutionLimits);
-        return parentType != null ? new GeneralizationStep(metadataField, parentType) : null;
+        return parentType != null
+                ? new GeneralizationStep(
+                        metadataField,
+                        parentType.type(),
+                        parentType.canonicalBlueId())
+                : null;
     }
 
     private void applyGeneralizationStep(Node canonical, GeneralizationStep step) {
-        Node parentType = new Node().blueId(typeReferenceBlueId(step.parentType()));
+        Node parentType = new Node().blueId(step.parentTypeBlueId());
         switch (step.metadataField()) {
             case BlueLanguageConstants.OBJECT_TYPE:
                 canonical.type(parentType);
@@ -280,20 +303,48 @@ final class FrozenConformancePlanner {
         }
     }
 
-    private FrozenNode parentType(
+    private ParentTypeEvidence parentType(
             FrozenNode type,
             ResolutionLimits resolutionLimits) {
         if (type == null) {
             return null;
         }
         if (type.getType() != null) {
-            return type.getType();
+            FrozenNode parent = type.getType();
+            return new ParentTypeEvidence(
+                    parent,
+                    typeReferenceBlueId(
+                            parent,
+                            canonicalTypeIdentities));
         }
 
-        Node resolvedType = new Merger(mergingProcessor, nodeProvider, resolvedReferenceCache)
-                .resolve(type.toNode(), resolutionLimits);
-        Node parentType = resolvedType.getType();
-        return parentType != null ? resolvedReferenceCache.freezeResolved(parentType) : null;
+        Merger merger = new Merger(
+                mergingProcessor,
+                nodeProvider,
+                resolvedReferenceCache);
+        TypeEvidenceResolution resolution;
+        FrozenNode parent;
+        if (type.isReferenceOnly()) {
+            resolution = merger.materializeTypeReferenceEvidence(
+                    type,
+                    resolutionLimits);
+            FrozenNode materializedType = resolution.resolvedRoot().getType();
+            parent = materializedType != null
+                    ? materializedType.getType()
+                    : null;
+        } else {
+            resolution = merger.resolveTypeEvidence(
+                    type.toNode(),
+                    resolutionLimits);
+            parent = resolution.resolvedRoot().getType();
+        }
+        return parent != null
+                ? new ParentTypeEvidence(
+                        parent,
+                        typeReferenceBlueId(
+                                parent,
+                                resolution.canonicalTypeIdentities()))
+                : null;
     }
 
     /**
@@ -350,21 +401,26 @@ final class FrozenConformancePlanner {
         return true;
     }
 
-    private String typeReferenceBlueId(FrozenNode type) {
-        return type.getReferenceBlueId() != null
-                ? type.getReferenceBlueId()
-                : type.blueId();
-    }
-
-    private FrozenNode canonicalize(FrozenNode resolvedNode,
-                                    Node source,
-                                    FrozenNode canonicalRoot) {
-        Node canonical = new CanonicalIdentityInputBuilder().build(
-                resolvedNode.toNode(), source);
-        if (canonicalRoot != null && !canonicalRoot.isStrictBlueIdValidation()) {
-            return FrozenNode.fromUncheckedCanonicalNode(canonical);
+    private String typeReferenceBlueId(
+            FrozenNode type,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (type.isReferenceOnly()) {
+            return type.getReferenceBlueId();
         }
-        return FrozenNode.fromNode(canonical);
+        if (typeIdentities == null) {
+            throw new IllegalStateException(
+                    "Canonical identity evidence is required to publish a "
+                            + "completed inline parent type");
+        }
+        String verified = typeIdentities.requireCanonicalTypeBlueId(
+                type.toNode());
+        if (type.getReferenceBlueId() != null
+                && !type.getReferenceBlueId().equals(verified)) {
+            throw new IllegalStateException(
+                    "Retained type identity conflicts with resolver-issued "
+                            + "canonical evidence");
+        }
+        return verified;
     }
 
     private List<String> existingPathSegments(FrozenNode root, String pointer) {
@@ -524,7 +580,7 @@ final class FrozenConformancePlanner {
         private final FrozenNode resolved;
         private final boolean generalized;
         private final List<String> metadataFields;
-        private final Node source;
+        private final FrozenNode canonical;
 
         private GeneralizedNode(FrozenNode resolved, boolean generalized) {
             this(resolved, generalized, Collections.emptyList(), null);
@@ -533,11 +589,11 @@ final class FrozenConformancePlanner {
         private GeneralizedNode(FrozenNode resolved,
                                 boolean generalized,
                                 List<String> metadataFields,
-                                Node source) {
+                                FrozenNode canonical) {
             this.resolved = resolved;
             this.generalized = generalized;
             this.metadataFields = metadataFields;
-            this.source = source;
+            this.canonical = canonical;
         }
 
         private static GeneralizedNode unchanged(FrozenNode resolved) {
@@ -556,18 +612,23 @@ final class FrozenConformancePlanner {
             return metadataFields;
         }
 
-        private Node source() {
-            return source;
+        private FrozenNode canonical() {
+            return canonical;
         }
     }
 
     private static final class GeneralizationStep {
         private final String metadataField;
         private final FrozenNode parentType;
+        private final String parentTypeBlueId;
 
-        private GeneralizationStep(String metadataField, FrozenNode parentType) {
+        private GeneralizationStep(
+                String metadataField,
+                FrozenNode parentType,
+                String parentTypeBlueId) {
             this.metadataField = metadataField;
             this.parentType = parentType;
+            this.parentTypeBlueId = parentTypeBlueId;
         }
 
         private String metadataField() {
@@ -576,6 +637,32 @@ final class FrozenConformancePlanner {
 
         private FrozenNode parentType() {
             return parentType;
+        }
+
+        private String parentTypeBlueId() {
+            return parentTypeBlueId;
+        }
+    }
+
+    private static final class ParentTypeEvidence {
+        private final FrozenNode type;
+        private final String canonicalBlueId;
+
+        private ParentTypeEvidence(
+                FrozenNode type,
+                String canonicalBlueId) {
+            this.type = Objects.requireNonNull(type, "parent type");
+            this.canonicalBlueId = Objects.requireNonNull(
+                    canonicalBlueId,
+                    "canonicalBlueId");
+        }
+
+        private FrozenNode type() {
+            return type;
+        }
+
+        private String canonicalBlueId() {
+            return canonicalBlueId;
         }
     }
 }

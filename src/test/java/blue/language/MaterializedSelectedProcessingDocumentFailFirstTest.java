@@ -10,8 +10,10 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
+import blue.language.api.NodeProviderOutcome;
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.NodeProviderResult;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
@@ -34,7 +36,9 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -210,6 +214,49 @@ class MaterializedSelectedProcessingDocumentFailFirstTest {
                                 java.util.Collection<String> preservedPaths) {
                             return blue.resolveToSnapshotPreservingPaths(
                                     document, preservedPaths);
+                        }
+
+                        @Override
+                        public FrozenNode materializeVerifiedExactReference(
+                                FrozenNode reference) {
+                            if (!reference.isReferenceOnly()) {
+                                return reference;
+                            }
+                            NodeProviderResult result = blue.getNodeProvider()
+                                    .fetchResultByBlueId(
+                                            reference.getReferenceBlueId());
+                            if (result.outcome()
+                                    != NodeProviderOutcome.FOUND
+                                    || result.nodes().size() != 1) {
+                                throw new IllegalArgumentException(
+                                        "Exact audit fixture content is not "
+                                                + "uniquely available for "
+                                                + reference
+                                                        .getReferenceBlueId());
+                            }
+                            Node exactSource = result.nodes().get(0);
+                            if (exactSource.getBlueId() != null
+                                    && !exactSource.isReferenceOnly()) {
+                                exactSource.blueId(null);
+                            }
+                            FrozenNode exact = FrozenNode.fromNode(
+                                    exactSource);
+                            if (!reference.getReferenceBlueId().equals(
+                                    exact.blueId())) {
+                                throw new IllegalArgumentException(
+                                        "Exact audit fixture content BlueId "
+                                                + "mismatch for "
+                                                + reference
+                                                        .getReferenceBlueId());
+                            }
+                            return exact;
+                        }
+
+                        @Override
+                        public CanonicalTypeIdentityEvidence
+                        resolveTypeDeclarationIdentity(Node declaration) {
+                            return blue.resolveTypeDeclarationIdentity(
+                                    declaration);
                         }
 
                         @Override

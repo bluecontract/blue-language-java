@@ -1,5 +1,6 @@
 package blue.language.merge;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 
@@ -18,8 +19,14 @@ public interface MergingProcessor {
      * @param source source contribution being merged
      * @param nodeProvider provider used for referenced content
      * @param nodeResolver resolver bound to the active merge
+     * @param typeIdentities mutable invocation-local canonical type evidence
      */
-    void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver);
+    void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities);
 
     /**
      * Runs after the source contribution has passed the primary stage.
@@ -28,8 +35,14 @@ public interface MergingProcessor {
      * @param source source contribution that passed the primary stage
      * @param nodeProvider provider used for referenced content
      * @param nodeResolver resolver bound to the active merge
+     * @param typeIdentities mutable invocation-local canonical type evidence
      */
-    default void postProcess(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    default void postProcess(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         // default implementation
     }
 
@@ -60,8 +73,13 @@ public interface MergingProcessor {
      * @param node completed resolved value
      * @param semanticallyPresent whether instance or inherited payload contributes semantic presence
      * @param path RFC 6901 path used for diagnostics
+     * @param typeIdentities resolver-issued effective type identities
      */
-    default void validateCompleted(Node node, boolean semanticallyPresent, String path) {
+    default void validateCompleted(
+            Node node,
+            boolean semanticallyPresent,
+            String path,
+            CanonicalTypeIdentityLookup typeIdentities) {
         // default implementation
     }
 }

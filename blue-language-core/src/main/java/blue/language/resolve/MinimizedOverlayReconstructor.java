@@ -1,5 +1,6 @@
 package blue.language.resolve;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
@@ -8,6 +9,8 @@ import blue.language.model.Nodes;
 import blue.language.model.Schema;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +20,14 @@ import java.util.function.Function;
 
 /** Reconstructs a compact ordinary Source overlay from resolved meaning. */
 final class MinimizedOverlayReconstructor {
+
+    private final CanonicalTypeIdentityLookup typeIdentities;
+
+    MinimizedOverlayReconstructor(
+            CanonicalTypeIdentityLookup typeIdentities) {
+        this.typeIdentities = Objects.requireNonNull(
+                typeIdentities, "typeIdentities");
+    }
 
     Node reconstruct(Node resolved) {
         Node minimized = new Node();
@@ -210,7 +221,7 @@ final class MinimizedOverlayReconstructor {
                 .anyMatch(item -> item.getPosition() != null);
         if (appendOnly || !positional) {
             result.add(0, new Node().previousBlueId(
-                    NodeIdentities.calculate(inheritedItems)));
+                    comparisonBlueId(inheritedItems)));
         }
     }
 
@@ -277,7 +288,7 @@ final class MinimizedOverlayReconstructor {
 
     private Node overlayTypeNode(Node resolvedType) {
         if (resolvedType.getBlueId() != null) {
-            return new Node().blueId(resolvedType.getBlueId());
+            return canonicalTypeReference(resolvedType);
         }
         Node minimizedType = new Node();
         reconstructNode(
@@ -299,29 +310,20 @@ final class MinimizedOverlayReconstructor {
             return;
         }
         Node type = resolved.getType();
-        minimized.type(type.getBlueId() != null
-                ? new Node().blueId(type.getBlueId())
-                : type.clone());
+        minimized.type(overlayTypeNode(type));
     }
 
     private boolean sameSchema(Schema left, Schema right) {
-        if (left == right) {
-            return true;
-        }
         if (left == null || right == null) {
-            return false;
+            return left == null && right == null;
         }
-        return NodeIdentities.calculate(new Node().schema(left))
-                .equals(NodeIdentities.calculate(
-                        new Node().schema(right)));
+        return comparisonBlueId(new Node().schema(left))
+                .equals(comparisonBlueId(new Node().schema(right)));
     }
 
     private boolean sameNodeBlueId(Node left, Node right) {
-        if (left == right) {
-            return true;
-        }
         if (left == null || right == null) {
-            return false;
+            return left == null && right == null;
         }
         return comparisonBlueId(left).equals(comparisonBlueId(right));
     }
@@ -337,7 +339,91 @@ final class MinimizedOverlayReconstructor {
     }
 
     private String comparisonBlueId(Node node) {
-        return NodeIdentities.calculate(node);
+        return NodeIdentities.calculate(canonicalComparisonNode(node));
+    }
+
+    private String comparisonBlueId(List<Node> nodes) {
+        List<Node> canonical = new ArrayList<>(nodes.size());
+        for (Node node : nodes) {
+            canonical.add(canonicalComparisonNode(node));
+        }
+        return NodeIdentities.calculate(canonical);
+    }
+
+    private Node canonicalComparisonNode(Node node) {
+        Node canonical = node.clone();
+        canonicalizeTypePositions(
+                canonical,
+                Collections.newSetFromMap(
+                        new IdentityHashMap<Node, Boolean>()));
+        return canonical;
+    }
+
+    private void canonicalizeTypePositions(
+            Node node,
+            java.util.Set<Node> visited) {
+        if (node == null || !visited.add(node)) {
+            return;
+        }
+        if (node.getType() != null) {
+            node.type(canonicalTypeReference(node.getType()));
+        }
+        if (node.getItemType() != null) {
+            node.itemType(canonicalTypeReference(node.getItemType()));
+        }
+        if (node.getKeyType() != null) {
+            node.keyType(canonicalTypeReference(node.getKeyType()));
+        }
+        if (node.getValueType() != null) {
+            node.valueType(canonicalTypeReference(node.getValueType()));
+        }
+        canonicalizeTypePositions(node.getBlue(), visited);
+        canonicalizeTypePositions(node.getContracts(), visited);
+        if (node.getItems() != null) {
+            for (Node item : node.getItems()) {
+                canonicalizeTypePositions(item, visited);
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Node property : node.getProperties().values()) {
+                canonicalizeTypePositions(property, visited);
+            }
+        }
+        canonicalizeSchemaTypePositions(node.getSchema(), visited);
+    }
+
+    private void canonicalizeSchemaTypePositions(
+            Schema schema,
+            java.util.Set<Node> visited) {
+        if (schema == null) {
+            return;
+        }
+        canonicalizeTypePositions(schema.getRequired(), visited);
+        canonicalizeTypePositions(schema.getMinLength(), visited);
+        canonicalizeTypePositions(schema.getMaxLength(), visited);
+        canonicalizeTypePositions(schema.getMinimum(), visited);
+        canonicalizeTypePositions(schema.getMaximum(), visited);
+        canonicalizeTypePositions(schema.getExclusiveMinimum(), visited);
+        canonicalizeTypePositions(schema.getExclusiveMaximum(), visited);
+        canonicalizeTypePositions(schema.getMultipleOf(), visited);
+        canonicalizeTypePositions(schema.getMinItems(), visited);
+        canonicalizeTypePositions(schema.getMaxItems(), visited);
+        canonicalizeTypePositions(schema.getUniqueItems(), visited);
+        canonicalizeTypePositions(schema.getMinFields(), visited);
+        canonicalizeTypePositions(schema.getMaxFields(), visited);
+        if (schema.getEnum() != null) {
+            for (Node value : schema.getEnum()) {
+                canonicalizeTypePositions(value, visited);
+            }
+        }
+    }
+
+    private Node canonicalTypeReference(Node completedType) {
+        if (completedType.isReferenceOnly()) {
+            return new Node().blueId(completedType.getBlueId());
+        }
+        return new Node().blueId(
+                typeIdentities.requireCanonicalTypeBlueId(completedType));
     }
 
     private Node derivationBaseline(Node inherited, Node resolved) {

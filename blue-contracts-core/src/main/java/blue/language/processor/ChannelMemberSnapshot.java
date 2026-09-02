@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 
@@ -66,15 +68,18 @@ public final class ChannelMemberSnapshot {
     }
 
     /**
-     * Freezes the sanitized effective header of one Channel-role contract.
+     * Freezes the canonical Source projection of one effective Channel header.
      *
      * <p>Package-private callers share this factory so dispatch verification
      * and External-function evaluation cannot disagree about the target
-     * identity. Executable-body fields are never consulted.</p>
+     * identity. Resolver-issued evidence is mandatory for every materialized
+     * type position; executable-body fields are never consulted.</p>
      */
     static ChannelMemberSnapshot from(
-            EffectiveContractSnapshot snapshot) {
+            EffectiveContractSnapshot snapshot,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(typeIdentities, "typeIdentities");
         Node headerNode = new Node().type(
                 new Node().blueId(
                         snapshot.effectiveTypeBlueId()));
@@ -84,9 +89,11 @@ public final class ChannelMemberSnapshot {
                     field.getKey(),
                     field.getValue().toNode());
         }
-        MaterializationProvenance.clear(headerNode);
+        CanonicalEffectSourceProjection.projectResolvedOwned(
+                headerNode, typeIdentities);
+        NodeToBlueIdInput.stripResolvedBlueIdMetadata(headerNode);
         FrozenNode exactHeader =
-                FrozenNode.fromResolvedNode(headerNode);
+                FrozenNode.fromNode(headerNode);
         return new ChannelMemberSnapshot(
                 snapshot.key(),
                 snapshot.order(),

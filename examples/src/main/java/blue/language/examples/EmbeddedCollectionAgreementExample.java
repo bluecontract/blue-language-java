@@ -1,14 +1,15 @@
 package blue.language.examples;
 
+import blue.language.BlueRuntime;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.processor.BlueContracts;
 import blue.language.processor.ChannelEvaluationContext;
 import blue.language.processor.ChannelProcessor;
 import blue.language.processor.CheckpointDomain;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
 import blue.language.processor.DocumentProcessingResult;
-import blue.language.processor.DocumentProcessor;
 import blue.language.processor.ExternalChannelDependencySnapshot;
 import blue.language.processor.ExternalChannelFunctionContext;
 import blue.language.processor.ExternalChannelSubscriptionFunctions;
@@ -81,8 +82,6 @@ public final class EmbeddedCollectionAgreementExample {
     private static final String OLD_PARTICIPANT_BINDING = "participant-v1";
     private static final String NEW_PARTICIPANT_BINDING = "participant-v2";
     private static final String ADMIN_BINDING = "agreement-admin";
-    private static final String EXAMPLE_REGISTRY_IDENTITY =
-            "example:embedded-collection-agreement/1";
     private static final String CHANNEL_KEY_SEPARATOR = "@";
 
     private static final long INITIAL_ROOT_REVISION = 7L;
@@ -118,14 +117,16 @@ public final class EmbeddedCollectionAgreementExample {
         ExternalDeliveryPlanDeriver deliveryPlans =
                 EmbeddedCollectionAgreementExample::deliveryPlan;
         ContractProcessorRegistry registry = runtimeRegistry();
-        try (DocumentProcessor processor = DocumentProcessor.builder()
-                .runtimeRegistry(registry)
-                .runtimeRegistryIdentity(EXAMPLE_REGISTRY_IDENTITY)
+        String registryIdentity = registry.generationIdentity();
+        try (BlueRuntime runtime = BlueRuntime.builder()
+                .contractRuntimeRegistry(registry)
                 .deliveryPlanDeriver(deliveryPlans)
                 .build()) {
+            BlueContracts contracts = runtime.contracts();
             PlatformProcessingResult targeted = processForCommit(
-                    processor,
+                    contracts,
                     deliveryPlans,
+                    registryIdentity,
                     agreement,
                     event(
                             LESSON_A_PATH,
@@ -147,8 +148,9 @@ public final class EmbeddedCollectionAgreementExample {
                     "The same initial Lesson BlueId may occur at two keys");
 
             PlatformProcessingResult created = processForCommit(
-                    processor,
+                    contracts,
                     deliveryPlans,
+                    registryIdentity,
                     afterTarget,
                     event(
                             ROOT_SCOPE,
@@ -183,8 +185,9 @@ public final class EmbeddedCollectionAgreementExample {
                     "A new Lesson may use the replacement parent binding");
 
             PlatformProcessingResult activated = processForCommit(
-                    processor,
+                    contracts,
                     deliveryPlans,
+                    registryIdentity,
                     afterCreate,
                     event(
                             LESSON_C_PATH,
@@ -333,8 +336,9 @@ public final class EmbeddedCollectionAgreementExample {
     }
 
     private static PlatformProcessingResult processForCommit(
-            DocumentProcessor processor,
+            BlueContracts contracts,
             ExternalDeliveryPlanDeriver deriver,
+            String registryIdentity,
             Node root,
             Node event) {
         ExternalDeliveryPlan plan = deriver.derive(root, event);
@@ -345,8 +349,7 @@ public final class EmbeddedCollectionAgreementExample {
                         .revisions(
                                 plan.managedRootRevision(),
                                 plan.indexedRootRevision())
-                        .runtimeRegistryIdentity(
-                                EXAMPLE_REGISTRY_IDENTITY)
+                        .runtimeRegistryIdentity(registryIdentity)
                         .eventOrderKey(plan.eventOrderKey());
         for (ExternalDeliverySnapshot delivery : plan.deliveries()) {
             evidence.delivery(delivery);
@@ -361,7 +364,7 @@ public final class EmbeddedCollectionAgreementExample {
         for (String blueId : plan.requiredExactNodeBlueIds()) {
             evidence.requiredExactNode(blueId);
         }
-        return processor.processDocumentForPlatformCommit(
+        return contracts.processForPlatformCommit(
                 root, event, evidence.build());
     }
 

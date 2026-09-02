@@ -51,15 +51,14 @@ final class PathLimits implements ResolutionLimits {
         return isAllowedPath(potentialPath);
     }
 
-    /** Legacy binary-API spelling delegated to the canonical method. */
-    @Override
-    public boolean shouldExtendPathSegment(String pathSegment, Node node) {
-        return shouldExpandPathSegment(pathSegment, node);
-    }
-
     @Override
     public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
         return shouldExpandPathSegment(pathSegment, currentNode);
+    }
+
+    @Override
+    public boolean retainsEveryAuthoredPath() {
+        return false;
     }
 
     private boolean isAllowedPath(List<String> path) {

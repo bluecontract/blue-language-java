@@ -7,6 +7,7 @@ import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.GasChargeContext;
 import blue.language.processor.InvalidExecutionEvidenceException;
@@ -70,6 +71,7 @@ final class ClosureExecutionSession
     private final ExecutionMode executionMode;
     private final ClosureExecutionRecorder recorder;
     private final ManagedDocumentStepProcessor stepProcessor;
+    private final ExactEventIdentityEvidence externalEventIdentityEvidence;
     private final ComponentFinalizationKernel finalizer =
             new ComponentFinalizationKernel();
     private final ProcessEmbeddedSurfaceReconciler
@@ -170,26 +172,37 @@ final class ClosureExecutionSession
             DocumentProcessor owner,
             ClosureInvocationInput input,
             ClosureExecutionRecorder recorder,
-            ExecutionMode executionMode) {
-        this(
-                owner,
-                input,
-                recorder,
-                executionMode,
-                Collections.<ManagedOccurrenceEvidenceResolution>
-                        emptyList());
-    }
-
-    ClosureExecutionSession(
-            DocumentProcessor owner,
-            ClosureInvocationInput input,
-            ClosureExecutionRecorder recorder,
             ExecutionMode executionMode,
+            ExactEventIdentityEvidence externalEventIdentityEvidence,
             List<ManagedOccurrenceEvidenceResolution> resolutions) {
         this.input = Objects.requireNonNull(input, "input");
         this.executionMode = Objects.requireNonNull(
                 executionMode, "executionMode");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
+        boolean externalProcessing = executionMode == ExecutionMode.PROCESSING
+                && input.cause().kind() == ProcessingCause.Kind.EXTERNAL;
+        if (externalProcessing) {
+            this.externalEventIdentityEvidence = Objects.requireNonNull(
+                    externalEventIdentityEvidence,
+                    "externalEventIdentityEvidence");
+            ExternalEventCause cause = (ExternalEventCause) input.cause();
+            if (!cause.eventBlueId().equals(
+                            externalEventIdentityEvidence.eventBlueId())
+                    || !FrozenNode.fromResolvedNode(cause.event())
+                    .sameResolvedStructure(
+                            externalEventIdentityEvidence.frozenEvent())) {
+                throw new IllegalArgumentException(
+                        "External event identity evidence does not match the "
+                                + "verified invocation cause");
+            }
+        } else {
+            if (externalEventIdentityEvidence != null) {
+                throw new IllegalArgumentException(
+                        "External event identity evidence is valid only for "
+                                + "external processing");
+            }
+            this.externalEventIdentityEvidence = null;
+        }
         this.currentSnapshot = input.snapshot();
         this.currentBindings = new ArrayList<ManagedOccurrenceBinding>(
                 currentSnapshot.occurrences());
@@ -245,7 +258,7 @@ final class ClosureExecutionSession
             executeAdmissionCause((AdmissionCause) input.cause());
         } else if (input.cause().kind()
                 == ProcessingCause.Kind.EXTERNAL) {
-            executeExternalCause((ExternalEventCause) input.cause());
+            executeExternalCause();
         } else {
             executeManagedRevisionCause(
                     (ManagedRevisionCause) input.cause());
@@ -289,11 +302,14 @@ final class ClosureExecutionSession
         runPendingInitializationBatch();
     }
 
-    private void executeExternalCause(ExternalEventCause cause) {
+    private void executeExternalCause() {
+        ExactEventIdentityEvidence eventEvidence = Objects.requireNonNull(
+                externalEventIdentityEvidence,
+                "externalEventIdentityEvidence");
         List<ClosureWorkOccurrence> directSeeds =
                 ClosureDirectSeedPlanner.plan(
                         input.invocationIdentity(),
-                        cause.eventBlueId(),
+                        eventEvidence.eventBlueId(),
                         currentSnapshot.components(),
                         input.directDeliveries());
         requireWorkOccurrenceCount(directSeeds.size());
@@ -320,7 +336,7 @@ final class ClosureExecutionSession
                     stepProcessor.classifyExternalDelivery(
                             latestBodies.get(delivery.targetDocumentId()),
                             delivery.channelKey(),
-                            cause.event(),
+                            eventEvidence,
                             workContext(seed,
                                     "direct-admission."
                                             + delivery.rawOccurrenceOrder()
@@ -429,10 +445,9 @@ final class ClosureExecutionSession
                 : receipt.emittedRootEvents()) {
             eventQueue.addLast(new EmittedOccurrence(
                     event.occurrenceOrdinal(),
-                    event.eventBlueId(),
                     event.occurrenceIdentity(),
                     event.sourceDocumentId(),
-                    event.exactEvent(),
+                    event.exactEventIdentityEvidence(),
                     Collections.singletonList(target),
                     null,
                     true));
@@ -904,6 +919,7 @@ final class ClosureExecutionSession
                 work,
                 target,
                 pending.exactPayload,
+                pending.matchingEventBlueId,
                 pending.occurrenceEvent,
                 pending.processorPatch,
                 TentativeResolutionContext.from(
@@ -1572,12 +1588,14 @@ final class ClosureExecutionSession
     public void onApplicationEvent(
             String scopePath,
             String originContractKey,
-            Node event,
-            String eventBlueId) {
+            ExactEventIdentityEvidence exactEventEvidence) {
         requireRoot(scopePath);
         ActiveFrame frame = activeFrame();
         frame.applicationEventCount++;
-        Node exactEvent = Objects.requireNonNull(event, "event").clone();
+        ExactEventIdentityEvidence evidence = Objects.requireNonNull(
+                exactEventEvidence, "exactEventEvidence");
+        Node exactEvent = evidence.event();
+        String eventBlueId = evidence.eventBlueId();
         long eventOrdinal = nextEventOrdinal++;
         String occurrenceIdentity = IDENTITIES.eventOccurrenceIdentity(
                 input.invocationIdentity(), eventOrdinal, eventBlueId);
@@ -1592,8 +1610,7 @@ final class ClosureExecutionSession
                 eventOrdinal,
                 emitter.documentId(),
                 occurrenceIdentity,
-                eventBlueId,
-                exactEvent,
+                evidence,
                 emitter.publicRoot()));
         if (emitter.publicRoot()) {
             publicEvents.add(new PublicEventOccurrence(
@@ -1601,8 +1618,7 @@ final class ClosureExecutionSession
                     eventOrdinal,
                     emitter.documentId(),
                     occurrenceIdentity,
-                    eventBlueId,
-                    exactEvent));
+                    evidence));
             charge("processor", "rootEventRecorded", 1L,
                     frame.context("event." + eventOrdinal
                             + ".public-record"));
@@ -1610,10 +1626,9 @@ final class ClosureExecutionSession
 
         eventQueue.addLast(new EmittedOccurrence(
                 eventOrdinal,
-                eventBlueId,
                 occurrenceIdentity,
                 emitter.documentId(),
-                exactEvent,
+                evidence,
                 activeContainingOccurrences(emitter.documentId())));
         charge("processor", "internalEventEnqueued", 1L,
                 frame.context("event." + eventOrdinal + ".enqueue"));
@@ -1929,7 +1944,8 @@ final class ClosureExecutionSession
             if (!unavailableForOrdinaryDelivery(source.documentId())) {
                 for (ManagedDocumentStepRoute route
                         : stepProcessor.classifyTriggeredEventRoutes(
-                                source.document(), occurrence.event)) {
+                                source.document(),
+                                occurrence.exactEventEvidence)) {
                     routes.add(new RouteTarget(
                             source.documentId(), route));
                 }
@@ -1957,8 +1973,7 @@ final class ClosureExecutionSession
                     : stepProcessor.classifyEmbeddedEventRoutes(
                             containing.document(),
                             frozen.sourcePath(),
-                            occurrence.event,
-                            occurrence.eventBlueId)) {
+                            occurrence.exactEventEvidence)) {
                 routes.add(new RouteTarget(
                         containing.documentId(), route));
             }
@@ -3810,6 +3825,7 @@ final class ClosureExecutionSession
     private static final class PendingWork {
         private final ClosureWorkOccurrence work;
         private final Node exactPayload;
+        private final String matchingEventBlueId;
         private final Node occurrenceEvent;
         private final FrozenJsonPatch processorPatch;
         private final ManagedCheckpointCandidate checkpointCandidate;
@@ -3843,6 +3859,11 @@ final class ClosureExecutionSession
             this.work = Objects.requireNonNull(work, "work");
             this.exactPayload = Objects.requireNonNull(
                     exactPayload, "exactPayload").clone();
+            this.matchingEventBlueId = selectedRoute != null
+                    ? selectedRoute.matchingEventBlueId()
+                    : checkpointCandidate != null
+                    ? checkpointCandidate.payloadBlueId()
+                    : null;
             this.occurrenceEvent = occurrenceEvent == null
                     ? null : occurrenceEvent.clone();
             this.processorPatch = processorPatch;
@@ -3959,23 +3980,22 @@ final class ClosureExecutionSession
         private final String occurrenceIdentity;
         private final DocumentId sourceDocumentId;
         private final Node event;
+        private final ExactEventIdentityEvidence exactEventEvidence;
         private final List<ManagedOccurrenceBinding> containingTargets;
         private final ActiveFrame capturedBy;
         private final boolean imported;
 
         private EmittedOccurrence(
                 long ordinal,
-                String eventBlueId,
                 String occurrenceIdentity,
                 DocumentId sourceDocumentId,
-                Node event,
+                ExactEventIdentityEvidence exactEventEvidence,
                 List<ManagedOccurrenceBinding> containingTargets) {
             this(
                     ordinal,
-                    eventBlueId,
                     occurrenceIdentity,
                     sourceDocumentId,
-                    event,
+                    exactEventEvidence,
                     containingTargets,
                     activeFrame(),
                     false);
@@ -3983,21 +4003,21 @@ final class ClosureExecutionSession
 
         private EmittedOccurrence(
                 long ordinal,
-                String eventBlueId,
                 String occurrenceIdentity,
                 DocumentId sourceDocumentId,
-                Node event,
+                ExactEventIdentityEvidence exactEventEvidence,
                 List<ManagedOccurrenceBinding> containingTargets,
                 ActiveFrame capturedBy,
                 boolean imported) {
             this.ordinal = ordinal;
-            this.eventBlueId = Objects.requireNonNull(
-                    eventBlueId, "eventBlueId");
+            this.exactEventEvidence = Objects.requireNonNull(
+                    exactEventEvidence, "exactEventEvidence");
+            this.eventBlueId = this.exactEventEvidence.eventBlueId();
             this.occurrenceIdentity = Objects.requireNonNull(
                     occurrenceIdentity, "occurrenceIdentity");
             this.sourceDocumentId = Objects.requireNonNull(
                     sourceDocumentId, "sourceDocumentId");
-            this.event = Objects.requireNonNull(event, "event").clone();
+            this.event = this.exactEventEvidence.event();
             this.containingTargets = Collections.unmodifiableList(
                     new ArrayList<ManagedOccurrenceBinding>(
                             Objects.requireNonNull(

@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -16,67 +17,80 @@ final class SelectedExecutableBodyDemandGasTest {
     void shouldGiveInlineAndPureReferenceFormsExactDemandAndGasParity() {
         // given
         Node authoredBody = executableBodyNode();
-        String exactBodyBlueId =
-                DirectBlueIdCalculator.calculateBlueId(authoredBody);
-        FrozenNode inline =
-                FrozenNode.fromResolvedNode(authoredBody);
-        FrozenNode reference = FrozenNode.fromNode(
-                new Node().blueId(exactBodyBlueId));
-        DocumentProcessingRuntime inlineRuntime =
-                new DocumentProcessingRuntime(new Node());
-        DocumentProcessingRuntime referenceRuntime =
-                new DocumentProcessingRuntime(new Node());
+        authoredBody.type(new Node().name("Inline executable body type"));
+        try (Blue blue = ProcessorTestSupport.blue()) {
+            ProcessingSnapshotManager manager =
+                    blue.getDocumentProcessor().snapshotManager();
+            String exactBodyBlueId = manager
+                    .fromDocumentTransientForCanonicalIdentity(
+                            authoredBody.clone())
+                    .blueId();
+            FrozenNode inline = FrozenNode.fromResolvedNode(authoredBody);
+            FrozenNode reference = FrozenNode.fromNode(
+                    new Node().blueId(exactBodyBlueId));
+            DocumentProcessingRuntime inlineRuntime =
+                    new DocumentProcessingRuntime(
+                            new Node(), null, manager);
+            DocumentProcessingRuntime referenceRuntime =
+                    new DocumentProcessingRuntime(
+                            new Node(), null, manager);
 
-        // when
-        inlineRuntime.recordSelectedExecutableBodyDemand(
-                inline, "/child", "handler", "/contracts/handler/result");
-        referenceRuntime.recordSelectedExecutableBodyDemand(
-                reference, "/child", "handler", "/contracts/handler/result");
-        ProcessingConformanceTrace inlineTrace =
-                inlineRuntime.conformanceTrace();
-        ProcessingConformanceTrace referenceTrace =
-                referenceRuntime.conformanceTrace();
+            // when
+            inlineRuntime.recordSelectedExecutableBodyDemand(
+                    inline, "/child", "handler", "/contracts/handler/result");
+            referenceRuntime.recordSelectedExecutableBodyDemand(
+                    reference, "/child", "handler", "/contracts/handler/result");
+            ProcessingConformanceTrace inlineTrace =
+                    inlineRuntime.conformanceTrace();
+            ProcessingConformanceTrace referenceTrace =
+                    referenceRuntime.conformanceTrace();
 
-        // then
-        assertEquals(
-                Arrays.asList(exactBodyBlueId),
-                inlineTrace.semanticDemands());
-        assertEquals(
-                inlineTrace.semanticDemands(),
-                referenceTrace.semanticDemands());
-        assertEquals(
-                inlineRuntime.totalGas(),
-                referenceRuntime.totalGas());
-        assertEquals(0L, inlineRuntime.totalGas());
-        assertEquals(
-                gasProjection(inlineTrace.gas()),
-                gasProjection(referenceTrace.gas()));
-        assertEquals(
-                java.util.Collections.emptyList(),
-                gasProjection(inlineTrace.gas()));
+            // then
+            assertEquals(
+                    Arrays.asList(exactBodyBlueId),
+                    inlineTrace.semanticDemands());
+            assertEquals(
+                    inlineTrace.semanticDemands(),
+                    referenceTrace.semanticDemands());
+            assertEquals(
+                    inlineRuntime.totalGas(),
+                    referenceRuntime.totalGas());
+            assertEquals(0L, inlineRuntime.totalGas());
+            assertEquals(
+                    gasProjection(inlineTrace.gas()),
+                    gasProjection(referenceTrace.gas()));
+            assertEquals(
+                    java.util.Collections.emptyList(),
+                    gasProjection(inlineTrace.gas()));
+        }
     }
 
     @Test
     void shouldCarryPreAdmittedExactBodyAcrossRepeatedSelectionWithoutKernelGas() {
         // given
         FrozenNode body = executableBody();
-        DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(new Node());
+        try (Blue blue = ProcessorTestSupport.blue()) {
+            DocumentProcessingRuntime runtime =
+                    new DocumentProcessingRuntime(
+                            new Node(),
+                            null,
+                            blue.getDocumentProcessor().snapshotManager());
 
-        // when
-        runtime.recordSelectedExecutableBodyDemand(
-                body, "/", "first", "/contracts/first/result");
-        runtime.recordSelectedExecutableBodyDemand(
-                body, "/", "second", "/contracts/second/result");
-        ProcessingConformanceTrace trace = runtime.conformanceTrace();
+            // when
+            runtime.recordSelectedExecutableBodyDemand(
+                    body, "/", "first", "/contracts/first/result");
+            runtime.recordSelectedExecutableBodyDemand(
+                    body, "/", "second", "/contracts/second/result");
+            ProcessingConformanceTrace trace = runtime.conformanceTrace();
 
-        // then
-        assertEquals(
-                Arrays.asList(
-                        DirectBlueIdCalculator.calculateBlueId(
-                                body.toNode())),
-                trace.semanticDemands());
-        assertEquals(java.util.Collections.emptyList(), trace.gas());
+            // then
+            assertEquals(
+                    Arrays.asList(
+                            DirectBlueIdCalculator.calculateBlueId(
+                                    body.toNode())),
+                    trace.semanticDemands());
+            assertEquals(java.util.Collections.emptyList(), trace.gas());
+        }
     }
 
     @Test

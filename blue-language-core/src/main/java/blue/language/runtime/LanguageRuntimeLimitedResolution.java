@@ -184,15 +184,14 @@ final class LanguageRuntimeLimitedResolution {
         }
 
         @Override
-        public boolean shouldExtendPathSegment(
-                String segment, Node current) {
-            return shouldExpandPathSegment(segment, current);
-        }
-
-        @Override
         public boolean shouldMergePathSegment(
                 String segment, Node current) {
             return isDemandedClosure(potentialPath(segment));
+        }
+
+        @Override
+        public boolean retainsEveryAuthoredPath() {
+            return false;
         }
 
         @Override

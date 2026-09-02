@@ -21,6 +21,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
@@ -60,6 +61,11 @@ final class ReferenceResolver {
     }
 
     void expandTypeReference(Node typeNode, String blueId) {
+        if (!typeNode.isReferenceOnly()
+                || !Objects.equals(typeNode.getBlueId(), blueId)) {
+            throw new IllegalArgumentException(
+                    "Type expansion requires an exact pure reference");
+        }
         if (CORE_TYPE_BLUE_IDS.contains(blueId)) {
             return;
         }
@@ -94,10 +100,10 @@ final class ReferenceResolver {
     }
 
     Node canonicalTypeForLabelProvenance(Node typeNode) {
-        String typeBlueId = typeNode.getBlueId();
-        if (typeBlueId == null) {
+        if (!typeNode.isReferenceOnly()) {
             return typeNode;
         }
+        String typeBlueId = typeNode.getBlueId();
         if (CORE_TYPE_BLUE_IDS.contains(typeBlueId)) {
             return null;
         }
@@ -135,7 +141,17 @@ final class ReferenceResolver {
         if (blueId == null || resolvedReferenceCache == null || limits != ResolutionLimits.NO_LIMITS) {
             return null;
         }
-        return resolvedReferenceCache.getVerifiedResolved(blueId).orElse(null);
+        VerifiedReferenceResolution verification = resolvedReferenceCache
+                .getVerifiedResolution(blueId).orElse(null);
+        if (verification == null
+                || !verification.canonicalTypeIdentityEvidence()
+                .hasCompleteCoverage()) {
+            return null;
+        }
+        engine.activeResolutionState().canonicalTypeIdentityIndex
+                .importComplete(
+                        verification.canonicalTypeIdentityEvidence());
+        return verification.resolvedRoot();
     }
 
     FrozenNode cachedResolvedType(String blueId, ResolutionLimits limits) {
@@ -210,7 +226,13 @@ final class ReferenceResolver {
             if (!frozenResolved.isReferenceOnly()) {
                 resolvedReferenceCache.putVerifiedResolved(
                         new blue.language.merge.VerifiedReferenceResolution(
-                                blueId, canonical, frozenResolved));
+                                blueId,
+                                canonical,
+                                frozenResolved,
+                                engine.activeResolutionState()
+                                        .canonicalTypeIdentityIndex
+                                        .completeSnapshotForResolvedReference(
+                                                resolvedType)));
             }
         }
     }
@@ -390,9 +412,7 @@ final class ReferenceResolver {
             }
         }
 
-        FrozenNode cached = resolvedReferenceCache != null && limits == ResolutionLimits.NO_LIMITS
-                ? resolvedReferenceCache.getVerifiedResolved(blueId).orElse(null)
-                : null;
+        FrozenNode cached = cachedResolvedReference(blueId, limits);
         if (cached != null) {
             Node materialized = cached.toNode();
             rememberFullyResolved(state, blueId, materialized);
@@ -417,7 +437,10 @@ final class ReferenceResolver {
                 resolvedReferenceCache.putVerifiedResolved(
                         new blue.language.merge.VerifiedReferenceResolution(
                                 blueId, canonical,
-                                resolvedReferenceCache.freezeResolved(resolved)));
+                                resolvedReferenceCache.freezeResolved(resolved),
+                                state.canonicalTypeIdentityIndex
+                                        .completeSnapshotForResolvedReference(
+                                                resolved)));
             }
             if (limits == ResolutionLimits.NO_LIMITS) {
                 rememberFullyResolved(state, blueId, resolved);

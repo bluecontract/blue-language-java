@@ -9,6 +9,7 @@ import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -26,7 +27,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class StandardBlueGraphTest {
 
     private static final NodeResolver IDENTITY_RESOLVER =
-            (node, limits) -> node;
+            new NodeResolver() {
+                @Override
+                public Node resolve(Node node, ResolutionLimits limits) {
+                    return node;
+                }
+
+                @Override
+                public blue.language.merge.TypeEvidenceResolution
+                resolveTypeEvidence(Node node, ResolutionLimits limits) {
+                    throw new AssertionError(
+                            "graph operation must not request type evidence");
+                }
+
+            };
 
     @Test
     void shouldExpandExactReferenceWithoutMutatingProviderOrSource() {
@@ -124,9 +138,20 @@ final class StandardBlueGraphTest {
         Node type = new Node().blueId(TEXT_TYPE_BLUE_ID);
         Node overlay = new Node().value("hello");
         AtomicReference<Node> validated = new AtomicReference<>();
-        NodeResolver resolver = (node, limits) -> {
-            validated.set(node);
-            return node;
+        NodeResolver resolver = new NodeResolver() {
+            @Override
+            public Node resolve(Node node, ResolutionLimits limits) {
+                validated.set(node);
+                return node;
+            }
+
+            @Override
+            public blue.language.merge.TypeEvidenceResolution
+            resolveTypeEvidence(Node node, ResolutionLimits limits) {
+                throw new AssertionError(
+                        "specialization must not request type evidence");
+            }
+
         };
         StandardBlueGraph graph = new StandardBlueGraph(
                 blueId -> null, resolver);

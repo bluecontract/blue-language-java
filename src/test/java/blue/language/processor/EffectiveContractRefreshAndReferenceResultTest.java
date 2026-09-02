@@ -10,9 +10,13 @@ import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport.diagnosticMessage;
 import static blue.language.processor.FailureCapture.captureFailure;
@@ -135,7 +139,8 @@ final class EffectiveContractRefreshAndReferenceResultTest {
                 loader.load(
                         selected,
                         effective,
-                        "/");
+                        "/",
+                        CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertNotNull(
@@ -151,6 +156,12 @@ final class EffectiveContractRefreshAndReferenceResultTest {
     @Test
     void shouldRefreshReferenceBackedOverlayFromEffectiveScopeType() {
         // given
+        Node scopeType =
+                new Node().name(
+                        "Refresh Scope Type");
+        String scopeTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        scopeType);
         Node typelessOverlay =
                 new Node().properties(
                         "order",
@@ -161,9 +172,7 @@ final class EffectiveContractRefreshAndReferenceResultTest {
         Node selected =
                 new Node()
                         .type(reference(
-                                DirectBlueIdCalculator.calculateBlueId(
-                                        new Node().name(
-                                                "Refresh Scope Type"))))
+                                scopeTypeBlueId))
                         .contracts(
                                 new Node().properties(
                                         "lifecycle",
@@ -177,6 +186,8 @@ final class EffectiveContractRefreshAndReferenceResultTest {
                         selected);
         RefreshingSnapshotManager manager =
                 new RefreshingSnapshotManager(
+                        scopeTypeBlueId,
+                        scopeType,
                         overlayBlueId,
                         typelessOverlay);
         DocumentProcessingRuntime runtime =
@@ -186,10 +197,13 @@ final class EffectiveContractRefreshAndReferenceResultTest {
                         manager);
 
         // when
-        FrozenNode refreshed =
+        ResolvedScopeView refreshedView =
                 runtime.contractRecognitionScope(
-                        selectedScope,
-                        unresolvedEffectiveScope);
+                        new ResolvedScopeView(
+                                selectedScope,
+                                unresolvedEffectiveScope,
+                                CanonicalTypeIdentityLookup.incomplete()));
+        FrozenNode refreshed = refreshedView.resolved();
         FrozenNode lifecycle =
                 refreshed.getContracts()
                         .property(
@@ -205,6 +219,22 @@ final class EffectiveContractRefreshAndReferenceResultTest {
                 lifecycle.property(
                         "order")
                         .getValue());
+        assertEquals(
+                Arrays.asList(
+                        overlayBlueId,
+                        scopeTypeBlueId),
+                manager.exactMaterializationBlueIds);
+        assertEquals(
+                1,
+                manager.refreshInputs.size());
+        FrozenNode refreshedOverlay =
+                manager.refreshInputs.get(0)
+                        .getContracts()
+                        .property("lifecycle");
+        assertFalse(refreshedOverlay.isReferenceOnly());
+        assertEquals(
+                overlayBlueId,
+                refreshedOverlay.blueId());
     }
 
     @Test
@@ -227,7 +257,8 @@ final class EffectiveContractRefreshAndReferenceResultTest {
                         () -> loader.load(
                                 typeless,
                                 typeless,
-                                "/"));
+                                "/",
+                                CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertInstanceOf(
@@ -450,12 +481,25 @@ final class EffectiveContractRefreshAndReferenceResultTest {
 
     private static final class RefreshingSnapshotManager
             implements ProcessingSnapshotManager {
+        private final String scopeTypeBlueId;
+        private final FrozenNode scopeType;
         private final String overlayBlueId;
         private final FrozenNode typelessOverlay;
+        private final List<String> exactMaterializationBlueIds =
+                new ArrayList<>();
+        private final List<FrozenNode> refreshInputs =
+                new ArrayList<>();
 
         private RefreshingSnapshotManager(
+                String scopeTypeBlueId,
+                Node scopeType,
                 String overlayBlueId,
                 Node typelessOverlay) {
+            this.scopeTypeBlueId =
+                    scopeTypeBlueId;
+            this.scopeType =
+                    FrozenNode.fromNode(
+                            scopeType);
             this.overlayBlueId =
                     overlayBlueId;
             this.typelessOverlay =
@@ -466,6 +510,9 @@ final class EffectiveContractRefreshAndReferenceResultTest {
         @Override
         public ResolvedSnapshot fromDocument(
                 Node document) {
+            refreshInputs.add(
+                    FrozenNode.fromNode(
+                            document));
             Node effective =
                     document.clone();
             effective.getContracts()
@@ -492,10 +539,18 @@ final class EffectiveContractRefreshAndReferenceResultTest {
         @Override
         public FrozenNode materializeVerifiedReference(
                 FrozenNode reference) {
-            assertEquals(
-                    overlayBlueId,
-                    reference.getReferenceBlueId());
-            return typelessOverlay;
+            String blueId =
+                    reference.getReferenceBlueId();
+            exactMaterializationBlueIds.add(
+                    blueId);
+            if (overlayBlueId.equals(blueId)) {
+                return typelessOverlay;
+            }
+            if (scopeTypeBlueId.equals(blueId)) {
+                return scopeType;
+            }
+            throw new AssertionError(
+                    "Unexpected exact materialization: " + blueId);
         }
 
         @Override

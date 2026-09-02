@@ -7,6 +7,7 @@ import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.NodeProvider;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.merge.IncrementalValueResolutionRequest;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
 import blue.language.processor.conformance.MockExternalChannelProcessor;
 import blue.language.processor.conformance.MockHandler;
@@ -21,8 +22,10 @@ import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.runtime.BlueLanguage;
 import blue.language.runtime.LanguageProcessing;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.NodePathEditor;
 import org.junit.jupiter.api.Test;
@@ -1973,6 +1976,12 @@ class DeepGraphPhysicalLocalityIntegrationTest {
         admission.requireProcessableTopLevel(
                 event,
                 ProcessingInputAdmission.PROCESSING_EVENT_LABEL);
+        DocumentProcessorProcessingSupport.SourceIdentityBinding
+                sourceIdentities = support.sourceIdentities(
+                        root,
+                        event,
+                        services.languageRuntimeAccess(),
+                        services.snapshotManager());
         ProcessingInputAdmission.AdmittedNode admittedRoot =
                 admission.materializeTopLevel(
                         root,
@@ -1990,6 +1999,7 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                 admittedEvent,
                 invocation.deliveryPlan(),
                 invocation.verifiedEvidence(),
+                sourceIdentities,
                 services);
         return support.processAdmittedWithTrace(
                 admission,
@@ -3431,6 +3441,36 @@ class DeepGraphPhysicalLocalityIntegrationTest {
         }
 
         @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document) {
+            return intern(delegate
+                    .fromDocumentTransientForCanonicalIdentity(document));
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document,
+                ExactResolutionOverlay exactResolutionOverlay) {
+            return intern(delegate
+                    .fromDocumentTransientForCanonicalIdentity(
+                            document, exactResolutionOverlay));
+        }
+
+        @Override
+        public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration) {
+            return delegate.resolveTypeDeclarationIdentity(declaration);
+        }
+
+        @Override
+        public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration,
+                ExactResolutionOverlay exactResolutionOverlay) {
+            return delegate.resolveTypeDeclarationIdentity(
+                    declaration, exactResolutionOverlay);
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentPreservingPaths(
                 Node document,
                 Collection<String> preservedPaths) {
@@ -3475,6 +3515,12 @@ class DeepGraphPhysicalLocalityIntegrationTest {
             return delegate
                     .materializeVerifiedExactReference(
                             reference);
+        }
+
+        @Override
+        public TypeEvidenceResolution materializeVerifiedTypeReference(
+                FrozenNode reference) {
+            return delegate.materializeVerifiedTypeReference(reference);
         }
 
         @Override
@@ -3565,15 +3611,11 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                     FrozenNode.fromResolvedNode(
                             snapshot.resolvedRoot(),
                             structuralInterner);
-            if (snapshot.isResolutionComplete()) {
-                return new ResolvedSnapshot(
-                        snapshot.frozenCanonicalRoot(),
-                        resolved,
-                        snapshot.blueId());
-            }
-            return ResolvedSnapshot.withDeferredResolution(
-                    snapshot.frozenCanonicalRoot(),
-                    resolved);
+            return ResolvedSnapshot.withSource(
+                    snapshot.frozenSourceRoot(),
+                    resolved,
+                    snapshot.canonicalTypeIdentities(),
+                    snapshot.isResolutionComplete());
         }
     }
 

@@ -972,7 +972,9 @@ class HandlerMatchContextDeclaredTypeLineageTest {
                 "channel",
                 event,
                 Collections.<String, MarkerContract>emptyMap(),
-                matching);
+                matching,
+                blue.language.identity.CanonicalTypeIdentityLookup
+                        .incomplete());
     }
 
     private static String syntheticId(String name) {

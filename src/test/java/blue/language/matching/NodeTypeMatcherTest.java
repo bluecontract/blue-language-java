@@ -3,8 +3,11 @@ package blue.language.matching;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.Blue;
+import blue.language.api.BlueCachePolicy;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.ProviderUnavailableException;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.provider.BasicNodeProvider;
@@ -13,15 +16,18 @@ import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class NodeTypeMatcherTest {
@@ -1093,7 +1099,7 @@ public class NodeTypeMatcherTest {
         assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Positive USD Line Item")));
         assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Line Item One")));
         assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Line Item Two")));
-        assertEquals(0, provider.fetchesFor(delegate.getBlueIdByName("USD")));
+        assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("USD")));
         assertEquals(0, provider.fetchesFor(delegate.getBlueIdByName("Line Item Debug")));
     }
 
@@ -1414,7 +1420,7 @@ public class NodeTypeMatcherTest {
     }
 
     @Test
-    void shouldNotFetchFromProviderDuringFrozenMatchingAfterSnapshotResolution() {
+    void shouldNotFetchFromProviderDuringSnapshotEvidenceMatching() {
         // given
         BasicNodeProvider delegate = new BasicNodeProvider();
         delegate.addSingleDocs(
@@ -1444,7 +1450,7 @@ public class NodeTypeMatcherTest {
         // when
         for (int i = 0; i < 100; i++) {
             // then
-            assertTrue(matcher.matchesResolvedType(snapshot.frozenResolvedRoot(), target));
+            assertTrue(matcher.matchesResolvedType(snapshot, "", target));
         }
 
         assertEquals(fetchesAfterResolution, provider.fetches);
@@ -1470,16 +1476,21 @@ public class NodeTypeMatcherTest {
         NodeTypeMatcher matcher = new NodeTypeMatcher(blue);
 
         // when
+        boolean[] matches = new boolean[20];
         for (int i = 0; i < 20; i++) {
-            // then
-            assertTrue(matcher.matchesResolvedType(candidateReference, target));
+            matches[i] = matcher.matchesResolvedType(
+                    candidateReference, target);
         }
 
+        // then
+        for (boolean match : matches) {
+            assertTrue(match);
+        }
         assertEquals(1, provider.fetchesFor(delegate.getBlueIdByName("Request Event")));
     }
 
     @Test
-    void shouldCacheUnresolvedReferenceMissesDuringDirectFrozenMatching() {
+    void shouldNotCacheUnresolvedReferenceFailuresDuringDirectFrozenMatching() {
         // given
         CountingNodeProvider provider = new CountingNodeProvider(new BasicNodeProvider());
         Blue blue = new Blue(provider);
@@ -1491,10 +1502,79 @@ public class NodeTypeMatcherTest {
         // when
         for (int i = 0; i < 20; i++) {
             // then
-            assertFalse(matcher.matchesResolvedType(missingReference, target));
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> matcher.matchesResolvedType(
+                            missingReference, target));
         }
 
-        assertEquals(2, provider.fetchesFor(missingBlueId));
+        assertEquals(20, provider.fetchesFor(missingBlueId));
+    }
+
+    @Test
+    void shouldPropagateAndRetryTransientTypeEvidenceFailures() {
+        // given
+        String unavailableBlueId = DirectBlueIdCalculator.calculateBlueId(
+                new Node().value("temporarily unavailable"));
+        AtomicInteger attempts = new AtomicInteger();
+        MatchingRuntime runtime = new MatchingRuntime() {
+            @Override
+            public BlueCachePolicy matchingCachePolicy() {
+                return BlueCachePolicy.boundedDefaults();
+            }
+
+            @Override
+            public Node preprocessForMatching(Node source) {
+                return source;
+            }
+
+            @Override
+            public void expandForMatching(
+                    Node source,
+                    ResolutionLimits limits) {
+            }
+
+            @Override
+            public TypeEvidenceResolution resolveTypeEvidenceForMatching(
+                    Node source,
+                    ResolutionLimits limits) {
+                throw new AssertionError("Candidate resolution is not expected");
+            }
+
+            @Override
+            public TypeEvidenceResolution materializeTypeReferenceForMatching(
+                    FrozenNode reference) {
+                attempts.incrementAndGet();
+                throw new ProviderUnavailableException(
+                        unavailableBlueId,
+                        "temporarily offline");
+            }
+        };
+        FrozenTypeMatcher matcher = new FrozenTypeMatcher(runtime);
+        FrozenNode reference = FrozenNode.fromResolvedNode(
+                new Node().blueId(unavailableBlueId));
+        FrozenNode target = FrozenNode.fromResolvedNode(
+                new Node().properties(
+                        "payload", new Node().value(1)));
+
+        // when
+        Executable firstAttempt =
+                () -> matcher.matchesType(reference, target);
+        Executable secondAttempt =
+                () -> matcher.matchesType(reference, target);
+
+        // then
+        ProviderUnavailableException first = assertThrows(
+                ProviderUnavailableException.class,
+                firstAttempt);
+        ProviderUnavailableException second = assertThrows(
+                ProviderUnavailableException.class,
+                secondAttempt);
+        assertEquals(unavailableBlueId,
+                first.requiredExactBlueId().orElseThrow(AssertionError::new));
+        assertEquals(unavailableBlueId,
+                second.requiredExactBlueId().orElseThrow(AssertionError::new));
+        assertEquals(2, attempts.get());
     }
 
     @Test

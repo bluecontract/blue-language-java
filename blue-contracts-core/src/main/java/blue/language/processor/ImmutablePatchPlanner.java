@@ -10,7 +10,6 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.BluePatchOperation;
 import blue.language.snapshot.FrozenNode;
-import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.BlueIds;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.wire.ParsedJsonPointer;
@@ -35,11 +34,14 @@ final class ImmutablePatchPlanner {
         this.root = Objects.requireNonNull(root, "root");
     }
 
-    static ImmutablePatchPlanner forSnapshot(ResolvedSnapshot snapshot) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        return new ImmutablePatchPlanner(snapshot.frozenCanonicalRoot());
-    }
-
+    /**
+     * Creates a planner for the exact lane selected by the caller.
+     *
+     * <p>This low-level patcher deliberately does not accept a
+     * {@code ResolvedSnapshot}: Source/Canonical/Resolved lane choice and the
+     * lifetime of canonical type identity evidence belong to the snapshot
+     * orchestration layer.</p>
+     */
     static ImmutablePatchPlanner forFrozen(FrozenNode root) {
         return new ImmutablePatchPlanner(root);
     }
@@ -283,11 +285,11 @@ final class ImmutablePatchPlanner {
     }
 
     FrozenNode read(String path) {
-        return read(root, path, LookupMode.AFTER);
+        return read(root, path);
     }
 
     FrozenNode read(ParsedJsonPointer path) {
-        return read(root, path, LookupMode.AFTER);
+        return read(root, path);
     }
 
     void validateMutationPath(String path) {
@@ -449,34 +451,16 @@ final class ImmutablePatchPlanner {
         }
     }
 
-    static FrozenNode readAfter(ResolvedSnapshot snapshot, String path, boolean resolved) {
-        return readSnapshot(snapshot, path, resolved, LookupMode.AFTER);
-    }
-
-    static FrozenNode readBefore(ResolvedSnapshot snapshot, String path, boolean resolved) {
-        return readSnapshot(snapshot, path, resolved, LookupMode.BEFORE);
-    }
-
-    private static FrozenNode readSnapshot(ResolvedSnapshot snapshot, String path, boolean resolved, LookupMode mode) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        String normalized = PointerUtils.normalizePointer(path);
-        if (!normalized.endsWith("/-")) {
-            return resolved ? snapshot.resolvedAt(normalized) : snapshot.canonicalAt(normalized);
-        }
-        FrozenNode root = resolved ? snapshot.frozenResolvedRoot() : snapshot.frozenCanonicalRoot();
-        return read(root, normalized, mode);
-    }
-
     static Node readNode(Node root, String path) {
         FrozenNode node = forMaterialized(root).read(path);
         return node != null ? node.toNode() : null;
     }
 
-    private static FrozenNode read(FrozenNode root, String path, LookupMode mode) {
-        return read(root, ParsedJsonPointer.parse(path), mode);
+    private static FrozenNode read(FrozenNode root, String path) {
+        return read(root, ParsedJsonPointer.parse(path));
     }
 
-    private static FrozenNode read(FrozenNode root, ParsedJsonPointer path, LookupMode mode) {
+    private static FrozenNode read(FrozenNode root, ParsedJsonPointer path) {
         String normalized = path.pointer();
         List<String> segments = path.segments();
         FrozenNode current = root;
@@ -491,7 +475,7 @@ final class ImmutablePatchPlanner {
                     if (!last) {
                         throw new IllegalStateException("Append token '-' must be final segment: " + normalized);
                     }
-                    return mode == LookupMode.BEFORE ? null : current.item(current.getItems().size() - 1);
+                    return current.item(current.getItems().size() - 1);
                 }
                 current = current.item(parseArrayIndex(segment, normalized));
             } else {
@@ -525,11 +509,6 @@ final class ImmutablePatchPlanner {
         } catch (NumberFormatException ex) {
             throw new IllegalStateException("Expected numeric array index in path: " + path);
         }
-    }
-
-    private enum LookupMode {
-        BEFORE,
-        AFTER
     }
 
     static final class PatchPlan {

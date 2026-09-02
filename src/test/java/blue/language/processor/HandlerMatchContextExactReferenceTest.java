@@ -3,10 +3,14 @@ package blue.language.processor;
 import blue.language.model.Node;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.matching.FrozenTypeMatcher;
+import blue.language.merge.TypeEvidenceResolution;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,6 +32,8 @@ final class HandlerMatchContextExactReferenceTest {
                         "request",
                         new Node().blueId(
                                 exactTextBlueId));
+        String eventBlueId =
+                DirectBlueIdCalculator.calculateBlueId(event);
         Node exactPattern =
                 new Node().properties(
                         "request",
@@ -52,8 +58,10 @@ final class HandlerMatchContextExactReferenceTest {
                         "events",
                         event,
                         event,
+                        eventBlueId,
                         Collections.emptyMap(),
                         new ContractMatchingService(),
+                        CanonicalTypeIdentityLookup.incomplete(),
                         null,
                         matcherSession);
 
@@ -64,10 +72,14 @@ final class HandlerMatchContextExactReferenceTest {
         boolean rewrittenMatch =
                 context.matchesEventPattern(
                         rewrittenPattern);
+        boolean exactIdentityMatch =
+                context.matchesEventPattern(
+                        new Node().blueId(eventBlueId));
 
         // then
         assertTrue(exactMatch);
         assertFalse(rewrittenMatch);
+        assertTrue(exactIdentityMatch);
         assertTrue(materializations.get() >= 1);
         matcherSession.close();
     }
@@ -93,7 +105,7 @@ final class HandlerMatchContextExactReferenceTest {
             this.matcher =
                     FrozenTypeMatcher
                             .withVerifiedReferenceMaterializer(
-                                    this::materializeExactReference);
+                                    this::materializeReferenceEvidence);
         }
 
         @Override
@@ -134,6 +146,41 @@ final class HandlerMatchContextExactReferenceTest {
             }
             materializations.incrementAndGet();
             return exactContent;
+        }
+
+        private TypeEvidenceResolution materializeReferenceEvidence(
+                FrozenNode reference) {
+            FrozenNode materialized = materializeExactReference(reference);
+            return new TypeEvidenceResolution(
+                    materialized,
+                    new CanonicalTypeIdentityLookup() {
+                        @Override
+                        public boolean hasCompleteCoverage() {
+                            return false;
+                        }
+
+                        @Override
+                        public Optional<CanonicalTypeIdentityEvidence>
+                        findCanonicalTypeIdentityEvidence(
+                                Node completedType) {
+                            return Optional.of(CanonicalTypeIdentityEvidence
+                                    .referenceSource(
+                                            requireCanonicalTypeBlueId(
+                                                    completedType)));
+                        }
+
+                        @Override
+                        public String requireCanonicalTypeBlueId(
+                                Node completedType) {
+                            if (!materialized.resolvedStructuralKey().equals(
+                                    FrozenNode.fromResolvedNode(completedType)
+                                            .resolvedStructuralKey())) {
+                                throw new IllegalStateException(
+                                        "Unexpected exact materialization");
+                            }
+                            return reference.getReferenceBlueId();
+                        }
+                    });
         }
 
         @Override

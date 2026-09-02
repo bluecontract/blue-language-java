@@ -63,8 +63,7 @@ class EffectiveFragmentationCatalogTest {
                         .contains(fixture.programBlueId),
                 "catalog inspection demanded the executable body");
         assertEquals(
-                DirectBlueIdCalculator.calculateBlueId(
-                        fixture.document()),
+                observation.expectedRootBlueId,
                 observation.catalog.rootBlueId());
     }
 
@@ -422,20 +421,20 @@ class EffectiveFragmentationCatalogTest {
                         .contracts(
                                 new Node().blueId(
                                         contractsBlueId));
-        String rootBlueId =
-                DirectBlueIdCalculator.calculateBlueId(
-                        fragmented);
         fixture.content.put(
                 contractsBlueId,
                 exactContracts);
+        String rootBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        fragmented);
         fixture.content.put(
                 rootBlueId,
                 fragmented);
 
         // when
-        String inlineSignature;
-        String fragmentedSignature;
-        String referenceSignature;
+        String inlineSurfaceSignature;
+        String fragmentedSurfaceSignature;
+        String referenceSurfaceSignature;
         String inlineRootBlueId;
         String fragmentedRootBlueId;
         String referenceRootBlueId;
@@ -453,9 +452,9 @@ class EffectiveFragmentationCatalogTest {
                             .administration().effectiveFragmentationCatalog(
                                     new Node().blueId(
                                             rootBlueId));
-            inlineSignature = signature(inlineCatalog);
-            fragmentedSignature = signature(fragmentedCatalog);
-            referenceSignature = signature(referenceCatalog);
+            inlineSurfaceSignature = surfaceSignature(inlineCatalog);
+            fragmentedSurfaceSignature = surfaceSignature(fragmentedCatalog);
+            referenceSurfaceSignature = surfaceSignature(referenceCatalog);
             inlineRootBlueId = inlineCatalog.rootBlueId();
             fragmentedRootBlueId =
                     fragmentedCatalog.rootBlueId();
@@ -467,8 +466,8 @@ class EffectiveFragmentationCatalogTest {
          * A fresh processor starts with the pure Root reference so the same
          * comparison also covers cold-reference then warm-inline order.
          */
-        String coldReferenceSignature;
-        String warmInlineSignature;
+        String coldReferenceSurfaceSignature;
+        String warmInlineSurfaceSignature;
         try (Blue cold = fixture.blue()) {
             EffectiveFragmentationCatalog coldReference =
                     cold.getDocumentProcessor()
@@ -479,21 +478,73 @@ class EffectiveFragmentationCatalogTest {
                     cold.getDocumentProcessor()
                             .administration().effectiveFragmentationCatalog(
                                     inline);
-            coldReferenceSignature = signature(coldReference);
-            warmInlineSignature = signature(warmInline);
+            coldReferenceSurfaceSignature = surfaceSignature(coldReference);
+            warmInlineSurfaceSignature = surfaceSignature(warmInline);
         }
         boolean programRequested =
                 fixture.providerRequests
                         .contains(fixture.programBlueId);
 
         // then
-        assertEquals(inlineSignature, fragmentedSignature);
-        assertEquals(inlineSignature, referenceSignature);
-        assertEquals(inlineRootBlueId, fragmentedRootBlueId);
-        assertEquals(inlineRootBlueId, referenceRootBlueId);
-        assertEquals(rootBlueId, inlineRootBlueId);
-        assertEquals(coldReferenceSignature, warmInlineSignature);
+        assertEquals(inlineSurfaceSignature, fragmentedSurfaceSignature);
+        assertEquals(inlineSurfaceSignature, referenceSurfaceSignature);
+        assertNotEquals(inlineRootBlueId, fragmentedRootBlueId);
+        assertEquals(rootBlueId, fragmentedRootBlueId);
+        assertEquals(rootBlueId, referenceRootBlueId);
+        assertEquals(
+                coldReferenceSurfaceSignature,
+                warmInlineSurfaceSignature);
         assertFalse(programRequested);
+    }
+
+    @Test
+    void shouldReportCanonicalRootIdentityForInlineTypeSource() {
+        // given
+        Fixture fixture = new Fixture();
+        Node rootType = new Node()
+                .name("Catalog Root Type")
+                .type(new Node().blueId(
+                        fixture.scopeTypeBlueId))
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+        String rootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(rootType);
+        fixture.content.put(rootTypeBlueId, rootType);
+        Node inlineRoot = fixture.document()
+                .type(rootType.clone())
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+        Node referenceRoot = fixture.document()
+                .type(new Node().blueId(rootTypeBlueId))
+                .properties(
+                        "inheritedRootValue",
+                        new Node().value("same"));
+
+        // when
+        String expectedRootBlueId;
+        EffectiveFragmentationCatalog inlineCatalog;
+        EffectiveFragmentationCatalog referenceCatalog;
+        try (Blue blue = fixture.blue()) {
+            expectedRootBlueId =
+                    blue.calculateSourceDocumentBlueId(
+                            referenceRoot.clone());
+            inlineCatalog = blue.getDocumentProcessor()
+                    .administration()
+                    .effectiveFragmentationCatalog(inlineRoot);
+            referenceCatalog = blue.getDocumentProcessor()
+                    .administration()
+                    .effectiveFragmentationCatalog(referenceRoot);
+        }
+
+        // then
+        assertNotEquals(
+                DirectBlueIdCalculator.calculateBlueId(inlineRoot),
+                expectedRootBlueId,
+                "the fixture must exercise canonical Source minimization");
+        assertEquals(expectedRootBlueId, inlineCatalog.rootBlueId());
+        assertEquals(expectedRootBlueId, referenceCatalog.rootBlueId());
     }
 
     @Test
@@ -1035,10 +1086,14 @@ class EffectiveFragmentationCatalogTest {
     private static CatalogObservation observeCatalog(
             Fixture fixture) {
         try (Blue blue = fixture.blue()) {
+            Node document = fixture.document();
+            String expectedRootBlueId =
+                    blue.calculateSourceDocumentBlueId(
+                            document.clone());
             EffectiveFragmentationCatalog catalog =
                     blue.getDocumentProcessor()
                             .administration().effectiveFragmentationCatalog(
-                                    fixture.document());
+                                    document);
             EffectiveContractSnapshot handler =
                     contract(catalog, "/", "run");
             return new CatalogObservation(
@@ -1046,7 +1101,8 @@ class EffectiveFragmentationCatalogTest {
                     handler,
                     handler
                             .executableBodySourceDescriptorsByField()
-                            .get("program"));
+                            .get("program"),
+                    expectedRootBlueId);
         }
     }
 
@@ -1054,14 +1110,17 @@ class EffectiveFragmentationCatalogTest {
         private final EffectiveFragmentationCatalog catalog;
         private final EffectiveContractSnapshot handler;
         private final ExecutableBodySourceDescriptor bodySource;
+        private final String expectedRootBlueId;
 
         private CatalogObservation(
                 EffectiveFragmentationCatalog catalog,
                 EffectiveContractSnapshot handler,
-                ExecutableBodySourceDescriptor bodySource) {
+                ExecutableBodySourceDescriptor bodySource,
+                String expectedRootBlueId) {
             this.catalog = catalog;
             this.handler = handler;
             this.bodySource = bodySource;
+            this.expectedRootBlueId = expectedRootBlueId;
         }
     }
 
@@ -1160,6 +1219,12 @@ class EffectiveFragmentationCatalogTest {
             }
         }
         return value.toString();
+    }
+
+    private static String surfaceSignature(
+            EffectiveFragmentationCatalog catalog) {
+        String complete = signature(catalog);
+        return complete.substring(complete.indexOf('|') + 1);
     }
 
     private static Blue blue(

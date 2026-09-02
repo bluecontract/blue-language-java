@@ -282,38 +282,6 @@ public final class ResolvedReferenceCache
     }
 
     /**
-     * Binary-compatible fail-closed view of the removed transient-trust cache.
-     * Only independently verified canonical entries are reusable.
-     *
-     * @param blueId requested content identity
-     * @return an empty result because transient-trust reuse is disabled
-     */
-    public Optional<FrozenNode> getTransientTrustedCanonical(
-            String blueId) {
-        Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
-        ensureCurrentGeneration();
-        return Optional.empty();
-    }
-
-    /**
-     * Binary-compatible fail-closed bridge. The supplied value is returned to
-     * its caller but is deliberately not retained as verified evidence.
-     *
-     * @param blueId claimed content identity
-     * @param canonicalContent content that must remain outside verified storage
-     * @return {@code canonicalContent} unchanged
-     */
-    public FrozenNode putTransientTrustedCanonical(
-            String blueId,
-            FrozenNode canonicalContent) {
-        Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
-        Objects.requireNonNull(
-                canonicalContent, "canonicalContent");
-        ensureCurrentGeneration();
-        return canonicalContent;
-    }
-
-    /**
      * Returns verified materialized canonical content visible to this scope.
      *
      * @param blueId content identity to look up
@@ -342,6 +310,26 @@ public final class ResolvedReferenceCache
             throw new IllegalStateException("Verified resolved content is reference-only for blueId: " + blueId);
         }
         return Optional.ofNullable(resolved);
+    }
+
+    /** Returns the complete resolver-issued evidence retained for a reference. */
+    Optional<VerifiedReferenceResolution> getVerifiedResolution(
+            String blueId) {
+        ensureCurrentGeneration();
+        VerifiedReferenceEntry entry = findEntry(blueId);
+        if (entry == null || entry.fullyResolvedContent == null) {
+            return Optional.empty();
+        }
+        if (entry.fullyResolvedContent.isReferenceOnly()) {
+            throw new IllegalStateException(
+                    "Verified resolved content is reference-only for blueId: "
+                            + blueId);
+        }
+        return Optional.of(new VerifiedReferenceResolution(
+                blueId,
+                entry.canonicalContent,
+                entry.fullyResolvedContent,
+                entry.canonicalTypeIdentityEvidence));
     }
 
     /**
@@ -413,7 +401,8 @@ public final class ResolvedReferenceCache
         Objects.requireNonNull(verification, "verification");
         return retainVerifiedResolved(verification.requestedBlueId(),
                 verification.canonicalRoot(),
-                verification.resolvedRoot());
+                verification.resolvedRoot(),
+                verification.canonicalTypeIdentityEvidence());
     }
 
     /**
@@ -425,6 +414,8 @@ public final class ResolvedReferenceCache
      */
     public FrozenNode putPinnedVerifiedResolved(VerifiedReferenceResolution verification) {
         Objects.requireNonNull(verification, "verification");
+        verification.canonicalTypeIdentityEvidence()
+                .requireCompleteCoverage();
         synchronized (cacheGeneration.mutationLock) {
             ensureCurrentGeneration();
             if (!isCurrentGeneration()) {
@@ -437,7 +428,8 @@ public final class ResolvedReferenceCache
             accounting.pin(verification.requestedBlueId());
             return retainVerifiedResolved(verification.requestedBlueId(),
                     verification.canonicalRoot(),
-                    verification.resolvedRoot());
+                    verification.resolvedRoot(),
+                    verification.canonicalTypeIdentityEvidence());
         }
     }
 
@@ -451,19 +443,53 @@ public final class ResolvedReferenceCache
 
     private FrozenNode retainVerifiedResolved(String blueId,
                                               FrozenNode canonicalContent,
-                                              FrozenNode fullyResolvedContent) {
+                                              FrozenNode fullyResolvedContent,
+                                              CanonicalTypeIdentityIndex.EvidenceSnapshot
+                                                      canonicalTypeIdentityEvidence) {
         Objects.requireNonNull(blueId, BlueLanguageConstants.OBJECT_BLUE_ID);
         requireCanonical(blueId, canonicalContent);
         requireResolved(blueId, fullyResolvedContent);
+        Objects.requireNonNull(
+                canonicalTypeIdentityEvidence,
+                "canonicalTypeIdentityEvidence");
+        canonicalTypeIdentityEvidence.requireCompleteCoverage();
         synchronized (cacheGeneration.mutationLock) {
             ensureCurrentGeneration();
             VerifiedReferenceEntry local = entriesByBlueId.get(blueId);
-            if (local != null && local.fullyResolvedContent != null) {
-                return local.fullyResolvedContent;
-            }
             VerifiedReferenceEntry inherited = inheritedEntry(blueId);
-            if (inherited != null && inherited.fullyResolvedContent != null) {
-                return inherited.fullyResolvedContent;
+            VerifiedReferenceEntry existingResolved =
+                    local != null && local.fullyResolvedContent != null
+                            ? local
+                            : inherited != null
+                            && inherited.fullyResolvedContent != null
+                            ? inherited
+                            : null;
+            if (existingResolved != null) {
+                /*
+                 * Resolution preserves exact physical representation when no
+                 * consumer requires a reference to be expanded. A pure
+                 * reference and its verified inline materialization can
+                 * therefore have one independently verified canonical identity
+                 * while retaining different strict-canonical and completed
+                 * shapes. Keep the established graphs and union their complete
+                 * type-identity evidence. requireCanonical above remains the
+                 * fail-closed trust boundary for every candidate.
+                 */
+                CanonicalTypeIdentityIndex.EvidenceSnapshot combined =
+                        existingResolved.canonicalTypeIdentityEvidence
+                                .combine(canonicalTypeIdentityEvidence);
+                if (combined.equals(
+                        existingResolved.canonicalTypeIdentityEvidence)) {
+                    return existingResolved.fullyResolvedContent;
+                }
+                VerifiedReferenceEntry upgraded = new VerifiedReferenceEntry(
+                        existingResolved.canonicalContent,
+                        existingResolved.fullyResolvedContent,
+                        combined);
+                entriesByBlueId.put(blueId, upgraded);
+                accounting.recordVerifiedReplacement(
+                        blueId, local, upgraded, entriesByBlueId);
+                return upgraded.fullyResolvedContent;
             }
             FrozenNode retainedCanonical = local != null
                     ? local.canonicalContent
@@ -472,7 +498,9 @@ public final class ResolvedReferenceCache
                     ? local.fullyResolvedContent
                     : fullyResolvedContent;
             VerifiedReferenceEntry retained = new VerifiedReferenceEntry(
-                    retainedCanonical, retainedResolved);
+                    retainedCanonical,
+                    retainedResolved,
+                    canonicalTypeIdentityEvidence);
             entriesByBlueId.put(blueId, retained);
             accounting.recordVerifiedReplacement(
                     blueId, local, retained, entriesByBlueId);
@@ -564,7 +592,10 @@ public final class ResolvedReferenceCache
                         && (retainedCanonical == local.canonicalContent
                         || retainedCanonical.sameResolvedStructure(local.canonicalContent))) {
                     readThroughParent.retainVerifiedResolved(
-                            blueId, retainedCanonical, local.fullyResolvedContent);
+                            blueId,
+                            retainedCanonical,
+                            local.fullyResolvedContent,
+                            local.canonicalTypeIdentityEvidence);
                 }
             }
         }
@@ -774,9 +805,7 @@ public final class ResolvedReferenceCache
                 int verifiedEntries, int pinnedVerifiedEntries,
                 long verifiedCurrentWeightBytes, long verifiedHighWaterWeightBytes,
                 long verifiedEvictions, long verifiedOversizedRejections,
-                int transientTrustedEntries, long transientTrustedCurrentWeightBytes,
-                long transientTrustedHighWaterWeightBytes, long transientTrustedEvictions,
-                long transientTrustedOversizedRejections, int structuralEntries,
+                int structuralEntries,
                 long structuralCurrentWeightBytes, long structuralHighWaterWeightBytes,
                 long structuralEvictions,
                 long structuralOversizedRejections) {
@@ -784,9 +813,7 @@ public final class ResolvedReferenceCache
                     verifiedEntries, pinnedVerifiedEntries,
                     verifiedCurrentWeightBytes, verifiedHighWaterWeightBytes,
                     verifiedEvictions, verifiedOversizedRejections,
-                    transientTrustedEntries, transientTrustedCurrentWeightBytes,
-                    transientTrustedHighWaterWeightBytes, transientTrustedEvictions,
-                    transientTrustedOversizedRejections, structuralEntries,
+                    structuralEntries,
                     structuralCurrentWeightBytes, structuralHighWaterWeightBytes,
                     structuralEvictions,
                     structuralOversizedRejections);

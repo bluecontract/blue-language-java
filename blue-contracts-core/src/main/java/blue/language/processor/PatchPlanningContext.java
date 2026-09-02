@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.processor.util.PointerUtils;
@@ -25,6 +26,8 @@ class PatchPlanningContext {
     private final Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans;
     private final boolean resolutionComplete;
     private final boolean strictPlatformInvocation;
+    private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
+    private final boolean sourceBacked;
 
     PatchPlanningContext(
             ResolvedSnapshot baseSnapshot,
@@ -79,6 +82,53 @@ class PatchPlanningContext {
             Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
             boolean resolutionComplete,
             boolean strictPlatformInvocation) {
+        this(baseSnapshot, canonicalPlanner, resolvedPlanner,
+                exactReplacement, authoritativeSnapshotManager,
+                invocationEvidenceSnapshotManager, openedScopePaths,
+                executableBodyFieldsByType, entryEmbeddedScopePlans,
+                resolutionComplete, strictPlatformInvocation,
+                baseSnapshot != null
+                        ? baseSnapshot.canonicalTypeIdentities()
+                        : CanonicalTypeIdentityLookup.incomplete(),
+                baseSnapshot != null && baseSnapshot.isSourceBacked());
+    }
+
+    PatchPlanningContext(
+            ResolvedSnapshot baseSnapshot,
+            ImmutablePatchPlanner canonicalPlanner,
+            ImmutablePatchPlanner resolvedPlanner,
+            boolean exactReplacement,
+            ProcessingSnapshotManager authoritativeSnapshotManager,
+            ProcessingSnapshotManager invocationEvidenceSnapshotManager,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
+            boolean resolutionComplete,
+            boolean strictPlatformInvocation,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        this(baseSnapshot, canonicalPlanner, resolvedPlanner,
+                exactReplacement, authoritativeSnapshotManager,
+                invocationEvidenceSnapshotManager, openedScopePaths,
+                executableBodyFieldsByType, entryEmbeddedScopePlans,
+                resolutionComplete, strictPlatformInvocation,
+                canonicalTypeIdentities,
+                baseSnapshot != null && baseSnapshot.isSourceBacked());
+    }
+
+    PatchPlanningContext(
+            ResolvedSnapshot baseSnapshot,
+            ImmutablePatchPlanner canonicalPlanner,
+            ImmutablePatchPlanner resolvedPlanner,
+            boolean exactReplacement,
+            ProcessingSnapshotManager authoritativeSnapshotManager,
+            ProcessingSnapshotManager invocationEvidenceSnapshotManager,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> executableBodyFieldsByType,
+            Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
+            boolean resolutionComplete,
+            boolean strictPlatformInvocation,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities,
+            boolean sourceBacked) {
         this.baseSnapshot = baseSnapshot;
         this.canonicalPlanner = canonicalPlanner;
         this.resolvedPlanner = resolvedPlanner;
@@ -94,10 +144,17 @@ class PatchPlanningContext {
                 entryEmbeddedScopePlans);
         this.resolutionComplete = resolutionComplete;
         this.strictPlatformInvocation = strictPlatformInvocation;
+        this.canonicalTypeIdentities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
+        this.sourceBacked = sourceBacked;
     }
 
     ResolvedSnapshot baseSnapshot() {
         return baseSnapshot;
+    }
+
+    CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        return canonicalTypeIdentities;
     }
 
     ImmutablePatchPlanner canonicalPlanner() {
@@ -139,6 +196,10 @@ class PatchPlanningContext {
 
     boolean strictPlatformInvocation() {
         return strictPlatformInvocation;
+    }
+
+    boolean isSourceBacked() {
+        return sourceBacked;
     }
 
     ResolvedSnapshot resolveCanonical(FrozenNode canonicalRoot) {

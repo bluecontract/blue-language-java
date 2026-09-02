@@ -436,6 +436,37 @@ public class ContractProcessorRegistry {
     }
 
     /**
+     * Returns fields whose exact authored representation is owned by a
+     * runtime phase rather than by contract-header completion.
+     */
+    synchronized Map<String, List<String>> exactSourceFieldsByType() {
+        Set<String> typeBlueIds = new LinkedHashSet<>();
+        typeBlueIds.addAll(nodeValuedHeaderFieldsByBlueId.keySet());
+        typeBlueIds.addAll(handlerExecutableBodyFieldsByBlueId.keySet());
+        Map<String, List<String>> snapshot = new LinkedHashMap<>();
+        for (String typeBlueId : typeBlueIds) {
+            Set<String> fields = new LinkedHashSet<>();
+            List<String> nodeFields =
+                    nodeValuedHeaderFieldsByBlueId.get(typeBlueId);
+            if (nodeFields != null) {
+                fields.addAll(nodeFields);
+            }
+            List<String> executableFields =
+                    handlerExecutableBodyFieldsByBlueId.get(typeBlueId);
+            if (executableFields != null) {
+                fields.addAll(executableFields);
+            }
+            if (!fields.isEmpty()) {
+                snapshot.put(
+                        typeBlueId,
+                        Collections.unmodifiableList(
+                                new ArrayList<>(fields)));
+            }
+        }
+        return Collections.unmodifiableMap(snapshot);
+    }
+
+    /**
      * Returns mapped fields whose Java value preserves Blue node structure.
      * Such fields remain authored references until an owning runtime phase
      * explicitly selects them; scalar header fields may be materialized for

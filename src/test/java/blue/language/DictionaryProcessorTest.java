@@ -10,6 +10,7 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationOutcome;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
@@ -95,7 +96,6 @@ public class DictionaryProcessorTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         Node dictOfAToBNode = nodeProvider.getNodeByName("DictOfAToB");
-        new NodeExpander(nodeProvider).expand(dictOfAToBNode, ResolutionLimits.NO_LIMITS);
         // when
         Node result = merger.resolve(dictOfAToBNode);
 
@@ -226,7 +226,8 @@ public class DictionaryProcessorTest {
                 target,
                 source,
                 nodeProvider,
-                null);
+                null,
+                CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertEquals(
@@ -262,7 +263,8 @@ public class DictionaryProcessorTest {
                                 target,
                                 source,
                                 nodeProvider,
-                                null));
+                                null,
+                                CanonicalTypeIdentityLookup.incomplete()));
 
         // then
         assertInstanceOf(

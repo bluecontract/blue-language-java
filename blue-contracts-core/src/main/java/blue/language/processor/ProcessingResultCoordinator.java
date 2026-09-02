@@ -1,6 +1,5 @@
 package blue.language.processor;
 
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
@@ -99,7 +98,7 @@ final class ProcessingResultCoordinator {
         subscriptionDelta = SubscriptionDelta.empty();
         contractSurfaceReconciliation = null;
         Node validationInput = inputDocument.clone();
-        Node validationTentative = runtime.document().clone();
+        Node validationTentative = runtime.selectedDocument().clone();
         ResolvedSnapshot retainedEntrySnapshot = runtime.entrySnapshot();
         SubscriptionSurfaceValidationContext.Builder validation =
                 SubscriptionSurfaceValidationContext.builder(
@@ -319,12 +318,20 @@ final class ProcessingResultCoordinator {
         return ProcessorStatus.NO_MATCH;
     }
 
-    private static String rootIdentity(
+    private String rootIdentity(
             Node root,
             ResolvedSnapshot snapshot) {
         return snapshot != null
-                ? snapshot.blueId()
-                : DirectBlueIdCalculator.calculateBlueId(root);
+                ? snapshot.hasCanonicalIdentity()
+                        ? snapshot.blueId()
+                        : CanonicalIdentityEvidence.sourceBlueId(
+                                snapshot.sourceRoot(),
+                                owner.snapshotManager(),
+                                "Subscription surface root")
+                : CanonicalIdentityEvidence.sourceBlueId(
+                        root,
+                        owner.snapshotManager(),
+                        "Subscription surface root");
     }
 
     private ResolvedSnapshot publishableSnapshot(
@@ -355,6 +362,34 @@ final class ProcessingResultCoordinator {
                     1L);
             long canonicalizationStart = System.nanoTime();
             try {
+                if (!published.hasCanonicalIdentity()) {
+                    ProcessingSnapshotManager manager =
+                            owner.snapshotManager();
+                    try {
+                        published = CanonicalIdentityEvidence
+                                .projectSnapshot(published);
+                    } catch (CanonicalTypeIdentityEvidenceUnion
+                            .MissingEvidenceException missingEvidence) {
+                        if (manager == null) {
+                            throw new IllegalStateException(
+                                    "Processor result publication requires a "
+                                            + "ProcessingSnapshotManager to "
+                                            + "establish canonical identity",
+                                    missingEvidence);
+                        }
+                        published = Objects.requireNonNull(
+                                manager
+                                        .fromDocumentTransientForCanonicalIdentity(
+                                                published.sourceRoot()),
+                                "authoritativePublicationSnapshot");
+                        if (!published.isResolutionComplete()
+                                || !published.hasCanonicalIdentity()) {
+                            throw new IllegalStateException(
+                                    "Processor result publication requires a "
+                                            + "complete authoritative snapshot");
+                        }
+                    }
+                }
                 published = published.toStrictBlueIdValidatedCanonical();
             } catch (RuntimeException exception) {
                 recordPublicationMismatch(sink);
@@ -406,6 +441,9 @@ final class ProcessingResultCoordinator {
     }
 
     private boolean isStrictPublishable(ResolvedSnapshot snapshot) {
+        if (!snapshot.hasCanonicalIdentity()) {
+            return false;
+        }
         FrozenNode canonicalRoot = snapshot.frozenCanonicalRoot();
         return canonicalRoot.isStrictCanonical()
                 && canonicalRoot.isStrictBlueIdValidation();

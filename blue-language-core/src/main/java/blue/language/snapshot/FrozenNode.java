@@ -105,6 +105,23 @@ public final class FrozenNode {
     }
 
     /**
+     * Defensively freezes exact preprocessed Source input.
+     *
+     * <p>Unlike {@link #fromNode(Node)}, this entry point accepts ordinary
+     * authoring controls and does not claim that the input is a strict
+     * Canonical Identity Input.</p>
+     *
+     * @param node mutable preprocessed Source input to freeze
+     * @return an immutable Source representation with no direct BlueId
+     * @throws NullPointerException when {@code node} is {@code null}
+     * @throws IllegalArgumentException when the source contains an unsupported
+     *         value graph or incompatible payload shapes
+     */
+    public static FrozenNode fromSourceNode(Node node) {
+        return FrozenNodeConverter.INSTANCE.fromSourceNode(node);
+    }
+
+    /**
      * Defensively freezes a completed resolved view.
      *
      * @param node mutable resolved content to freeze

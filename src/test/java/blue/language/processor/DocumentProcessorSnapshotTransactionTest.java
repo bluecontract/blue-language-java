@@ -13,15 +13,21 @@ import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static blue.language.processor.DocumentProcessingResultTestSupport.resolvedDocument;
 import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
+import static blue.language.processor.DocumentProcessingResultTestSupport.diagnosticCategory;
+import static blue.language.processor.DocumentProcessingResultTestSupport.diagnosticMessage;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -616,6 +622,11 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult processed = processedDebug.processResult();
 
         // then
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                processed.status(),
+                "category=" + diagnosticCategory(processed)
+                        + ", diagnostic=" + diagnosticMessage(processed));
         assertNotNull(processedDebug.resultingSnapshot());
         assertEquals(
                 processedDebug.resultingSnapshot().blueId(),
@@ -665,6 +676,11 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult result = debug.processResult();
 
         // then
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                result.status(),
+                "category=" + diagnosticCategory(result)
+                        + ", diagnostic=" + diagnosticMessage(result));
         assertTrue(manager.fromDocumentCalls >= 2,
                 "feeder verification and scalar writes must use coherent immutable snapshots");
         assertTrue(manager.fromDocumentInputs.stream()
@@ -711,14 +727,27 @@ class DocumentProcessorSnapshotTransactionTest {
         DocumentProcessingResult snapshotProcessed = snapshotProcessor.processDocument(
                 uncheckedSnapshot(snapshotInitialized.document()),
                 event.clone());
+
+        // then
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                nodeProcessed.status(),
+                "node category=" + diagnosticCategory(nodeProcessed)
+                        + ", diagnostic="
+                        + diagnosticMessage(nodeProcessed));
+        assertEquals(
+                ProcessorStatus.SUCCESS,
+                snapshotProcessed.status(),
+                "snapshot category="
+                        + diagnosticCategory(snapshotProcessed)
+                        + ", diagnostic="
+                        + diagnosticMessage(snapshotProcessed));
         String expectedSubject =
                 DirectBlueIdCalculator.calculateBlueId(event);
         String nodeDomain = nodeProcessed.document().getAsText(
                 "/contracts/checkpoint/entries/testChannel/domain/blueId");
         String snapshotDomain = snapshotProcessed.document().getAsText(
                 "/contracts/checkpoint/entries/testChannel/domain/blueId");
-
-        // then
         assertEquals(nodeInitialized.totalGas(), snapshotInitialized.totalGas());
         assertEquals(
                 DirectBlueIdCalculator.calculateBlueId(nodeInitialized.document()),
@@ -986,6 +1015,32 @@ class DocumentProcessorSnapshotTransactionTest {
     }
 
     private static final class CountingSnapshotManager implements ProcessingSnapshotManager {
+        private static final CanonicalTypeIdentityLookup
+                COMPLETE_PURE_REFERENCE_EVIDENCE =
+                new CanonicalTypeIdentityLookup() {
+                    @Override
+                    public boolean hasCompleteCoverage() {
+                        return true;
+                    }
+
+                    @Override
+                    public Optional<CanonicalTypeIdentityEvidence>
+                    findCanonicalTypeIdentityEvidence(
+                            Node completedType) {
+                        String blueId = requireCanonicalTypeBlueId(
+                                completedType);
+                        return Optional.of(CanonicalTypeIdentityEvidence
+                                .referenceSource(blueId));
+                    }
+
+                    @Override
+                    public String requireCanonicalTypeBlueId(
+                            Node completedType) {
+                        return CanonicalTypeIdentityLookup.incomplete()
+                                .requireCanonicalTypeBlueId(completedType);
+                    }
+                };
+
         private final Blue blue;
         private final Node canonical;
         private final Node resolved;
@@ -997,6 +1052,7 @@ class DocumentProcessorSnapshotTransactionTest {
         private boolean returnCurrentSnapshotOnApplyPatch;
         private int failFromDocumentOnCall;
         private final List<Node> fromDocumentInputs = new java.util.ArrayList<>();
+        private boolean canonicalIdentityResolution;
 
         private CountingSnapshotManager() {
             this(null, null, null);
@@ -1019,7 +1075,9 @@ class DocumentProcessorSnapshotTransactionTest {
         @Override
         public ResolvedSnapshot fromDocument(Node document) {
             fromDocumentCalls++;
-            fromDocumentInputs.add(document.clone());
+            if (!canonicalIdentityResolution) {
+                fromDocumentInputs.add(document.clone());
+            }
             if (fromDocumentCalls == failFromDocumentOnCall) {
                 throw new IllegalStateException("snapshot rebuild failed");
             }
@@ -1029,9 +1087,34 @@ class DocumentProcessorSnapshotTransactionTest {
             Node canonicalSource = canonical != null ? canonical.clone() : document.clone();
             Node resolvedSource = resolved != null ? resolved.clone() : document.clone();
             FrozenNode canonicalRoot = FrozenNode.fromUncheckedCanonicalNode(canonicalSource);
+            if (canonical == null && resolved == null) {
+                return ResolvedSnapshot.withCanonicalTypeIdentities(
+                        canonicalRoot,
+                        FrozenNode.fromResolvedNode(resolvedSource),
+                        COMPLETE_PURE_REFERENCE_EVIDENCE);
+            }
             return new ResolvedSnapshot(canonicalRoot,
                     FrozenNode.fromResolvedNode(resolvedSource),
                     canonicalRoot.blueId());
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document) {
+            canonicalIdentityResolution = true;
+            try {
+                return ProcessingSnapshotManager.super
+                        .fromDocumentTransientForCanonicalIdentity(document);
+            } finally {
+                canonicalIdentityResolution = false;
+            }
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+                Node document,
+                Collection<String> preservedPaths) {
+            return fromDocumentTransientForCanonicalIdentity(document);
         }
 
         @Override
@@ -1046,6 +1129,12 @@ class DocumentProcessorSnapshotTransactionTest {
             CanonicalPatchResult patched = new CanonicalOverlayPatchEngine(
                     snapshot.frozenCanonicalRoot()).apply(patch);
             Node resolved = patched.root().toNode();
+            if (snapshot.canonicalTypeIdentities().hasCompleteCoverage()) {
+                return ResolvedSnapshot.withCanonicalTypeIdentities(
+                        patched.root(),
+                        FrozenNode.fromResolvedNode(resolved),
+                        snapshot.canonicalTypeIdentities());
+            }
             return new ResolvedSnapshot(patched.root(),
                     FrozenNode.fromResolvedNode(resolved),
                     patched.blueId());

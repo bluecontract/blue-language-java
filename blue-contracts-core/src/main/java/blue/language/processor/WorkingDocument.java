@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.conformance.ConformanceEngine;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
@@ -64,7 +65,9 @@ public final class WorkingDocument implements AutoCloseable {
     private ReferenceTransparentPathAccess transparentPathAccess;
     private ProcessingSnapshotManager transparentPathManager;
     private ResolvedSnapshot snapshot;
+    private CanonicalTypeIdentityLookup canonicalTypeIdentities;
     private boolean resolutionComplete;
+    private boolean sourceBacked;
     private boolean closed;
 
     WorkingDocument(String originScope,
@@ -168,11 +171,53 @@ public final class WorkingDocument implements AutoCloseable {
                     Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
                     boolean resolutionComplete,
                     boolean strictPlatformInvocation) {
+        this(originScope,
+                canonicalRoot,
+                resolvedRoot,
+                conformanceEngine,
+                conformancePlannerOverride,
+                snapshotManager,
+                snapshot,
+                materializedFallback,
+                exactReplacement,
+                mutablePatchSource,
+                metrics,
+                openedScopePaths,
+                executableBodyFieldsByType,
+                entryEmbeddedScopePlans,
+                resolutionComplete,
+                strictPlatformInvocation,
+                snapshot != null
+                        ? snapshot.isSourceBacked()
+                        : materializedFallback);
+    }
+
+    WorkingDocument(String originScope,
+                    FrozenNode canonicalRoot,
+                    FrozenNode resolvedRoot,
+                    ConformanceEngine conformanceEngine,
+                    ConformancePlannerOverride conformancePlannerOverride,
+                    ProcessingSnapshotManager snapshotManager,
+                    ResolvedSnapshot snapshot,
+                    boolean materializedFallback,
+                    boolean exactReplacement,
+                    PatchSource mutablePatchSource,
+                    ProcessingObserver metrics,
+                    Iterable<String> openedScopePaths,
+                    Map<String, List<String>> executableBodyFieldsByType,
+                    Map<String, EmbeddedScopePlan> entryEmbeddedScopePlans,
+                    boolean resolutionComplete,
+                    boolean strictPlatformInvocation,
+                    boolean sourceBacked) {
         this.originScope = PointerUtils.normalizeScope(originScope);
         this.canonicalRoot = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(resolvedRoot, "resolvedRoot");
         this.snapshotManager = snapshotManager;
         this.snapshot = snapshot;
+        this.sourceBacked = sourceBacked;
+        this.canonicalTypeIdentities = snapshot != null
+                ? snapshot.canonicalTypeIdentities()
+                : CanonicalTypeIdentityLookup.incomplete();
         this.materializedFallback = materializedFallback;
         this.conformanceEngine = conformanceEngine;
         this.conformancePlannerOverride = conformancePlannerOverride;
@@ -203,7 +248,9 @@ public final class WorkingDocument implements AutoCloseable {
      * @return working canonical root
      */
     public FrozenNode canonicalRoot() {
-        return canonicalRoot;
+        return snapshot != null && snapshot.hasCanonicalIdentity()
+                ? snapshot.frozenCanonicalRoot()
+                : canonicalRoot;
     }
 
     /**
@@ -342,7 +389,9 @@ public final class WorkingDocument implements AutoCloseable {
                         executableBodyFieldsByType,
                         entryEmbeddedScopePlans,
                         resolutionComplete,
-                        strictPlatformInvocation);
+                        strictPlatformInvocation,
+                        canonicalTypeIdentities,
+                        sourceBacked);
         SequentialPatchPlanningSession planningSession = new SequentialPatchPlanningSession(
                 this.originScope,
                 planning,
@@ -366,6 +415,9 @@ public final class WorkingDocument implements AutoCloseable {
         }
         canonicalRoot = planningSession.canonicalRoot();
         resolvedRoot = planningSession.resolvedRoot();
+        canonicalTypeIdentities =
+                planningSession.canonicalTypeIdentities();
+        sourceBacked = planningSession.isSourceBacked();
         resolutionComplete =
                 planningSession.isResolutionComplete();
         snapshot = null;
@@ -430,17 +482,68 @@ public final class WorkingDocument implements AutoCloseable {
      */
     public ResolvedSnapshot snapshot() {
         if (snapshot == null) {
-            snapshot = resolutionComplete
-                    ? new ResolvedSnapshot(
-                    canonicalRoot,
-                    resolvedRoot,
-                    canonicalRoot.blueId())
-                    : ResolvedSnapshot
-                    .withDeferredResolution(
+            CanonicalTypeIdentityLookup typeIdentities =
+                    currentCanonicalTypeIdentities();
+            if (sourceBacked) {
+                Node source = canonicalRoot.toNode();
+                if (resolutionComplete
+                        && !typeIdentities.hasCompleteCoverage()
+                        && !CanonicalIdentityEvidence
+                                .requiresEffectiveTypeIdentity(source)) {
+                    FrozenNode canonical = FrozenNode.fromNode(source);
+                    snapshot = new ResolvedSnapshot(
+                            canonical,
+                            resolvedRoot,
+                            canonical.blueId());
+                } else {
+                    snapshot = ResolvedSnapshot.withSource(
                             canonicalRoot,
-                            resolvedRoot);
+                            resolvedRoot,
+                            typeIdentities,
+                            resolutionComplete);
+                }
+            } else if (resolutionComplete && snapshotManager != null) {
+                snapshot = ResolvedSnapshot.withCanonicalTypeIdentities(
+                        canonicalRoot,
+                        resolvedRoot,
+                        typeIdentities);
+            } else if (resolutionComplete) {
+                snapshot = new ResolvedSnapshot(
+                        canonicalRoot,
+                        resolvedRoot,
+                        canonicalRoot.blueId());
+            } else {
+                snapshot = ResolvedSnapshot.withDeferredResolution(
+                        canonicalRoot,
+                        resolvedRoot,
+                        typeIdentities);
+            }
         }
         return snapshot;
+    }
+
+    private CanonicalTypeIdentityLookup currentCanonicalTypeIdentities() {
+        if (snapshot != null) {
+            return snapshot.canonicalTypeIdentities();
+        }
+        if (canonicalTypeIdentities.hasCompleteCoverage()) {
+            return canonicalTypeIdentities;
+        }
+        if (!resolutionComplete || sourceBacked) {
+            return canonicalTypeIdentities;
+        }
+        ProcessingSnapshotManager manager = workingSequenceManager();
+        if (manager == null) {
+            return CanonicalTypeIdentityLookup.incomplete();
+        }
+        ResolvedSnapshot identitySnapshot = manager
+                .fromDocumentTransientForCanonicalIdentity(
+                        canonicalRoot.toNode());
+        CanonicalTypeIdentityLookup identities =
+                identitySnapshot.canonicalTypeIdentities();
+        identities.requireCompleteCoverage();
+        canonicalTypeIdentities = identities;
+        return canonicalTypeIdentities;
     }
 
     /**
@@ -482,6 +585,12 @@ public final class WorkingDocument implements AutoCloseable {
         ensureOpen();
         ResolvedSnapshot current = snapshot();
         if (snapshotManager == null) {
+            if (!current.hasCanonicalIdentity()) {
+                throw new IllegalStateException(
+                        "Working-document publication requires a "
+                                + "ProcessingSnapshotManager to establish "
+                                + "canonical identity");
+            }
             snapshot = current;
             return snapshot;
         }
@@ -489,7 +598,24 @@ public final class WorkingDocument implements AutoCloseable {
                 || workingSequenceManager.isTransientStateCurrent();
         ProcessingSnapshotManager publicationManager = workingSequenceManager();
         ResolvedSnapshot authoritative;
-        if (exactReplacement && currentResolutionScope) {
+        if (sourceBacked || !current.hasCanonicalIdentity()) {
+            authoritative = Objects.requireNonNull(
+                    publicationManager
+                            .fromDocumentTransientForCanonicalIdentity(
+                                    current.sourceRoot()),
+                    "authoritativeWorkingSnapshot");
+            if (!authoritative.isResolutionComplete()
+                    || !authoritative.hasCanonicalIdentity()) {
+                throw new IllegalStateException(
+                        "Working-document publication requires complete "
+                                + "canonical identity evidence");
+            }
+            authoritative = ResolvedSnapshot.withSource(
+                    current.frozenSourceRoot(),
+                    authoritative.frozenResolvedRoot(),
+                    authoritative.canonicalTypeIdentities(),
+                    true);
+        } else if (exactReplacement && currentResolutionScope) {
             authoritative = current;
         } else if (strictPlatformInvocation) {
             authoritative = DocumentProcessingRuntime
@@ -507,14 +633,13 @@ public final class WorkingDocument implements AutoCloseable {
                             executableBodyFieldsByType);
         }
         snapshot = authoritative.isResolutionComplete()
-                ? Objects.requireNonNull(
-                publicationManager.cacheSnapshot(
-                        authoritative),
-                "cachedSnapshot")
+                ? ProcessingSnapshotEvidence.cacheIfComplete(
+                        publicationManager, authoritative)
                 : authoritative;
         resolutionComplete =
                 snapshot.isResolutionComplete();
-        canonicalRoot = snapshot.frozenCanonicalRoot();
+        sourceBacked = snapshot.isSourceBacked();
+        canonicalRoot = snapshot.frozenSourceRoot();
         resolvedRoot = snapshot.frozenResolvedRoot();
         publicationManager.retainTransientState(canonicalRoot, resolvedRoot);
         return snapshot;
@@ -663,6 +788,7 @@ public final class WorkingDocument implements AutoCloseable {
         private final FrozenNode baseCanonical;
         private final FrozenNode baseResolved;
         private final boolean baseResolutionComplete;
+        private final boolean baseSourceBacked;
         private final BatchPatchResult result;
 
         private PatchPreview(String originScope,
@@ -670,12 +796,14 @@ public final class WorkingDocument implements AutoCloseable {
                              FrozenNode baseCanonical,
                              FrozenNode baseResolved,
                              boolean baseResolutionComplete,
+                             boolean baseSourceBacked,
                              BatchPatchResult result) {
             this.originScope = PointerUtils.normalizeScope(originScope);
             this.patch = patch;
             this.baseCanonical = baseCanonical;
             this.baseResolved = baseResolved;
             this.baseResolutionComplete = baseResolutionComplete;
+            this.baseSourceBacked = baseSourceBacked;
             this.result = result;
         }
 
@@ -686,6 +814,7 @@ public final class WorkingDocument implements AutoCloseable {
                     step.baseCanonical(),
                     step.baseResolved(),
                     step.isBaseResolutionComplete(),
+                    step.isBaseSourceBacked(),
                     step.result());
         }
 
@@ -721,6 +850,16 @@ public final class WorkingDocument implements AutoCloseable {
                           boolean actualResolutionComplete) {
             return baseResolutionComplete == actualResolutionComplete
                     && isBasedOn(actualCanonical, actualResolved);
+        }
+
+        boolean isBasedOn(FrozenNode actualCanonical,
+                          FrozenNode actualResolved,
+                          boolean actualResolutionComplete,
+                          boolean actualSourceBacked) {
+            return baseSourceBacked == actualSourceBacked
+                    && isBasedOn(actualCanonical,
+                            actualResolved,
+                            actualResolutionComplete);
         }
 
         boolean matches(JsonPatch candidate) {

@@ -1,18 +1,16 @@
 package blue.language.merge.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
 import blue.language.provider.NodeProvider;
 import blue.language.model.NodeWireForm;
 import blue.language.model.wire.BlueLanguageConstants;
-import blue.language.provider.Types;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Map;
-
-import static blue.language.provider.Types.isSubtype;
 
 /**
  * Propagates Dictionary key/value type metadata and validates every contributed
@@ -25,12 +23,21 @@ public class DictionaryProcessor implements MergingProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    public void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Node effectiveCollectionType =
                 source.getType() != null
                         ? source.getType()
                         : target.getType();
-        if (Types.isDictionaryType(effectiveCollectionType, nodeProvider)
+        if (EffectiveTypeChecks.isDictionaryType(
+                effectiveCollectionType,
+                nodeProvider,
+                nodeResolver,
+                typeIdentities)
                 && (source.getValue() != null
                 || source.getItems() != null)) {
             throw new IllegalArgumentException(
@@ -44,41 +51,73 @@ public class DictionaryProcessor implements MergingProcessor {
              * still wins for validation and cannot borrow Dictionary
              * compatibility from the target.
              */
-            if (!Types.isDictionaryType(
+            if (!EffectiveTypeChecks.isDictionaryType(
                     effectiveCollectionType,
-                    nodeProvider)) {
+                    nodeProvider,
+                    nodeResolver,
+                    typeIdentities)) {
                 throw new IllegalArgumentException(
                         "Source node with keyType or valueType must have a Dictionary type");
             }
         }
 
-        processKeyType(target, source, nodeProvider);
-        processValueType(target, source, nodeProvider);
+        processKeyType(
+                target, source, nodeProvider, nodeResolver, typeIdentities);
+        processValueType(
+                target, source, nodeProvider, nodeResolver, typeIdentities);
 
         if ((target.getKeyType() != null || target.getValueType() != null) && source.getProperties() != null) {
             for (Map.Entry<String, Node> entry : source.getProperties().entrySet()) {
                 if (target.getKeyType() != null) {
-                    validateKeyType(entry.getKey(), target.getKeyType(), nodeProvider);
+                    validateKeyType(
+                            entry.getKey(),
+                            target.getKeyType(),
+                            nodeProvider,
+                            nodeResolver,
+                            typeIdentities);
                 }
                 if (target.getValueType() != null) {
-                    validateValueType(entry.getValue(), target.getValueType(), nodeProvider);
+                    validateValueType(
+                            entry.getValue(),
+                            target.getValueType(),
+                            nodeProvider,
+                            nodeResolver,
+                            typeIdentities);
                 }
             }
         }
     }
 
-    private void processKeyType(Node target, Node source, NodeProvider nodeProvider) {
+    private void processKeyType(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Node targetKeyType = target.getKeyType();
         Node sourceKeyType = source.getKeyType();
 
         if (targetKeyType == null) {
             if (sourceKeyType != null) {
-                validateBasicKeyType(sourceKeyType, nodeProvider);
+                validateBasicKeyType(
+                        sourceKeyType,
+                        nodeProvider,
+                        nodeResolver,
+                        typeIdentities);
                 target.keyType(sourceKeyType);
             }
         } else if (sourceKeyType != null) {
-            validateBasicKeyType(sourceKeyType, nodeProvider);
-            boolean isSubtype = isSubtype(sourceKeyType, targetKeyType, nodeProvider);
+            validateBasicKeyType(
+                    sourceKeyType,
+                    nodeProvider,
+                    nodeResolver,
+                    typeIdentities);
+            boolean isSubtype = EffectiveTypeChecks.isSubtype(
+                    sourceKeyType,
+                    targetKeyType,
+                    nodeProvider,
+                    nodeResolver,
+                    typeIdentities);
             if (!isSubtype) {
                 String errorMessage = String.format("The source key type '%s' is not a subtype of the target key type '%s'.",
                         NodeWireForm.get(sourceKeyType), NodeWireForm.get(targetKeyType));
@@ -88,7 +127,12 @@ public class DictionaryProcessor implements MergingProcessor {
         }
     }
 
-    private void processValueType(Node target, Node source, NodeProvider nodeProvider) {
+    private void processValueType(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Node targetValueType = target.getValueType();
         Node sourceValueType = source.getValueType();
 
@@ -97,7 +141,12 @@ public class DictionaryProcessor implements MergingProcessor {
                 target.valueType(sourceValueType);
             }
         } else if (sourceValueType != null) {
-            boolean isSubtype = isSubtype(sourceValueType, targetValueType, nodeProvider);
+            boolean isSubtype = EffectiveTypeChecks.isSubtype(
+                    sourceValueType,
+                    targetValueType,
+                    nodeProvider,
+                    nodeResolver,
+                    typeIdentities);
             if (!isSubtype) {
                 String errorMessage = String.format("The source value type '%s' is not a subtype of the target value type '%s'.",
                         NodeWireForm.get(sourceValueType), NodeWireForm.get(targetValueType));
@@ -107,18 +156,30 @@ public class DictionaryProcessor implements MergingProcessor {
         }
     }
 
-    private void validateBasicKeyType(Node keyType, NodeProvider nodeProvider) {
-        if (!Types.isBasicType(keyType, nodeProvider)) {
+    private void validateBasicKeyType(
+            Node keyType,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (!EffectiveTypeChecks.isBasicType(
+                keyType, nodeProvider, nodeResolver, typeIdentities)) {
             throw new IllegalArgumentException("Dictionary key type must be a basic type");
         }
     }
 
-    private void validateKeyType(String key, Node keyType, NodeProvider nodeProvider) {
-        if (Types.isTextType(keyType, nodeProvider)) {
+    private void validateKeyType(
+            String key,
+            Node keyType,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (EffectiveTypeChecks.isTextType(
+                keyType, nodeProvider, nodeResolver, typeIdentities)) {
             return;
         }
 
-        if (Types.isIntegerType(keyType, nodeProvider)) {
+        if (EffectiveTypeChecks.isIntegerType(
+                keyType, nodeProvider, nodeResolver, typeIdentities)) {
             try {
                 BigInteger value = new BigInteger(key);
                 if (!value.toString().equals(key)) {
@@ -128,7 +189,8 @@ public class DictionaryProcessor implements MergingProcessor {
                 throw new IllegalArgumentException("Dictionary key '" + key
                         + "' is not a canonical Integer textual form.");
             }
-        } else if (Types.isNumberType(keyType, nodeProvider)) {
+        } else if (EffectiveTypeChecks.isNumberType(
+                keyType, nodeProvider, nodeResolver, typeIdentities)) {
             try {
                 double value = Double.parseDouble(key);
                 if (!Double.isFinite(value)
@@ -139,7 +201,8 @@ public class DictionaryProcessor implements MergingProcessor {
                 throw new IllegalArgumentException("Dictionary key '" + key
                         + "' is not a canonical Double textual form.");
             }
-        } else if (Types.isBooleanType(keyType, nodeProvider)) {
+        } else if (EffectiveTypeChecks.isBooleanType(
+                keyType, nodeProvider, nodeResolver, typeIdentities)) {
             if (!BlueLanguageConstants.BOOLEAN_TEXT_TRUE.equals(key)
                     && !BlueLanguageConstants.BOOLEAN_TEXT_FALSE.equals(key)) {
                 throw new IllegalArgumentException("Dictionary key '" + key
@@ -150,8 +213,19 @@ public class DictionaryProcessor implements MergingProcessor {
         }
     }
 
-    private void validateValueType(Node value, Node valueType, NodeProvider nodeProvider) {
-        if (value.getType() != null && !isSubtype(value.getType(), valueType, nodeProvider)) {
+    private void validateValueType(
+            Node value,
+            Node valueType,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        if (value.getType() != null
+                && !EffectiveTypeChecks.isCollectionMemberCompatible(
+                value.getType(),
+                valueType,
+                nodeProvider,
+                nodeResolver,
+                typeIdentities)) {
             String errorMessage = String.format("Value of type '%s' is not a subtype of the dictionary's value type '%s'.",
                     NodeWireForm.get(value.getType()), NodeWireForm.get(valueType));
             throw new IllegalArgumentException(errorMessage);

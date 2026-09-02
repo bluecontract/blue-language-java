@@ -676,6 +676,8 @@ class FrozenCanonicalDigesterTest {
                 .maximum(new BigDecimal("10.25"))
                 .enumValues(Arrays.asList(new Node().value("x"), new Node().value(BigInteger.ONE)));
         cases.add(new Node().schema(schema).value("schema-value"));
+        cases.add(new Node().schema(
+                new Schema().blueId(TEXT_TYPE_BLUE_ID)));
         cases.add(new Node().contracts(new Node().properties(
                 "handler", new Node().type(new Node().blueId(TEXT_TYPE_BLUE_ID)).value("run"))));
         return cases;

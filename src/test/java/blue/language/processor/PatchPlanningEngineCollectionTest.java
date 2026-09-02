@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -86,7 +87,10 @@ final class PatchPlanningEngineCollectionTest {
                         new Node().value("processor-state")));
         rootSession.rebase(
                 initialized.result().canonicalRoot(),
-                initialized.result().resolvedRoot());
+                initialized.result().resolvedRoot(),
+                initialized.result().isResolutionComplete(),
+                initialized.result().canonicalTypeIdentities(),
+                initialized.result().isSourceBacked());
 
         // when
         SequentialPatchPlanningSession.PlannedStep removed =
@@ -111,7 +115,7 @@ final class PatchPlanningEngineCollectionTest {
             FrozenNode canonical,
             FrozenNode resolved,
             EmbeddedScopePlan entryPlan) {
-        return DocumentProcessingRuntime.workingPlanningContext(
+        return PatchPlanningContextFactory.create(
                 canonical,
                 resolved,
                 false,
@@ -121,7 +125,10 @@ final class PatchPlanningEngineCollectionTest {
 
     private static EmbeddedScopePlan embeddedScopePlan(Node root) {
         return ProcessingSnapshotBootstrap.embeddedScopePlan(
-                FrozenNode.fromResolvedNode(root), "/", null);
+                FrozenNode.fromResolvedNode(root),
+                "/",
+                null,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     private static Node rootWithCollectionMember(Node child) {

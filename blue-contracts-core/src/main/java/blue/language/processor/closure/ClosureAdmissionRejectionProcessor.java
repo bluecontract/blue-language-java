@@ -3,6 +3,7 @@ package blue.language.processor.closure;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
+import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.ManagedDocumentStepContinuation;
 import blue.language.processor.ProcessorErrorCategory;
@@ -29,8 +30,7 @@ final class ClosureAdmissionRejectionProcessor {
                 public void onApplicationEvent(
                         String scopePath,
                         String originContractKey,
-                        Node event,
-                        String eventBlueId) {
+                        ExactEventIdentityEvidence exactEvent) {
                     throw new IllegalStateException(
                             "Admission verification cannot emit events");
                 }

@@ -33,8 +33,6 @@ final class LanguageRuntimeSnapshotStore {
             "recentProcessingSnapshots";
     private static final String VERIFIED_REFERENCE_CACHE =
             "verifiedReferences";
-    private static final String TRANSIENT_REFERENCE_CACHE =
-            "transientTrustedReferences";
     private static final String STRUCTURAL_INTERNER_CACHE =
             "resolvedStructuralInterner";
 
@@ -84,8 +82,9 @@ final class LanguageRuntimeSnapshotStore {
         if (!snapshot.isResolutionComplete()) {
             return snapshot;
         }
-        ResolvedSnapshot publishable =
+        ResolvedSnapshot invocationResult =
                 snapshot.toStrictBlueIdValidatedCanonical();
+        ResolvedSnapshot publishable = invocationResult.toCanonicalBacked();
         if (publishable.verifiedReferenceResolution() != null) {
             referenceCache.putVerifiedResolved(
                     publishable.verifiedReferenceResolution());
@@ -97,7 +96,11 @@ final class LanguageRuntimeSnapshotStore {
         synchronized (mutationLock) {
             ResolvedSnapshot pinned = pinnedByCanonical.get(key);
             if (pinned != null) {
-                return preferVerified(pinned, publishable);
+                ResolvedSnapshot shared = preferVerified(
+                        pinned, publishable);
+                return invocationResult.isSourceBacked()
+                        ? invocationResult
+                        : shared;
             }
             ResolvedSnapshot existing = derivedByCanonical.peek(key);
             ResolvedSnapshot selected = preferVerified(
@@ -109,7 +112,12 @@ final class LanguageRuntimeSnapshotStore {
                 derivedByBlueId.put(
                         retained.blueId(), new WeakReference<>(retained));
             }
-            return retained != null ? retained : selected;
+            ResolvedSnapshot shared = retained != null
+                    ? retained
+                    : selected;
+            return invocationResult.isSourceBacked()
+                    ? invocationResult
+                    : shared;
         }
     }
 
@@ -120,7 +128,8 @@ final class LanguageRuntimeSnapshotStore {
                             + "complete resolved snapshots");
         }
         ResolvedSnapshot publishable =
-                snapshot.toStrictBlueIdValidatedCanonical();
+                snapshot.toStrictBlueIdValidatedCanonical()
+                        .toCanonicalBacked();
         if (publishable.verifiedReferenceResolution() != null) {
             referenceCache.putPinnedVerifiedResolved(
                     publishable.verifiedReferenceResolution());
@@ -243,16 +252,6 @@ final class LanguageRuntimeSnapshotStore {
                             reference.verifiedEvictions(),
                             reference.verifiedOversizedRejections(),
                             reference.pinnedVerifiedEntries() > 0));
-            regions.put(TRANSIENT_REFERENCE_CACHE,
-                    new BlueCacheStats.Region(
-                            reference.transientTrustedEntries(),
-                            reference.transientTrustedCurrentWeightBytes(),
-                            reference.transientTrustedHighWaterWeightBytes(),
-                            0L,
-                            0L,
-                            reference.transientTrustedEvictions(),
-                            reference.transientTrustedOversizedRejections(),
-                            false));
             regions.put(STRUCTURAL_INTERNER_CACHE,
                     new BlueCacheStats.Region(
                             reference.structuralEntries(),

@@ -42,7 +42,7 @@ public class PatchSequenceBenchmark {
         FrozenNode resolved = state.initialFrozen;
         for (JsonPatch patch : state.patches) {
             PatchPlanningContext planning =
-                    DocumentProcessingRuntime.workingPlanningContext(
+                    PatchPlanningContextFactory.create(
                             canonical, resolved, false, null);
             BatchPatchResult result = new BatchPatchTransaction("/",
                     Collections.singletonList(patch),
@@ -60,7 +60,7 @@ public class PatchSequenceBenchmark {
     @Benchmark
     public FrozenNode reusableSequentialPlanningSession(SequenceState state) {
         SequentialPatchPlanningSession session = new SequentialPatchPlanningSession("/",
-                DocumentProcessingRuntime.workingPlanningContext(
+                PatchPlanningContextFactory.create(
                         state.initialFrozen, state.initialFrozen, false, null),
                 null,
                 null,

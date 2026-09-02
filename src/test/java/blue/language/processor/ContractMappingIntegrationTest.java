@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.Contract;
@@ -157,7 +158,10 @@ class ContractMappingIntegrationTest {
                 resolver);
 
         // when
-        ContractBundle bundle = loader.load(FrozenNode.fromResolvedNode(document), "/");
+        ContractBundle bundle = loader.load(
+                FrozenNode.fromResolvedNode(document),
+                "/",
+                CanonicalTypeIdentityLookup.incomplete());
 
         // then
         assertNotNull(bundle.contractNode("setProperty"));

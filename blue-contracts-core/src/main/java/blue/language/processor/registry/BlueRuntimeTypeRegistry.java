@@ -171,9 +171,12 @@ public final class BlueRuntimeTypeRegistry {
             if (declaredType == null) {
                 return false;
             }
-            currentBlueId = declaredType.getBlueId() != null
-                    ? declaredType.getBlueId()
-                    : DirectBlueIdCalculator.calculateBlueId(declaredType);
+            if (!declaredType.isReferenceOnly()) {
+                throw new IllegalStateException(
+                        "Runtime registry ancestry must use canonical pure "
+                                + "type references for " + currentKey);
+            }
+            currentBlueId = declaredType.getBlueId();
         }
         throw new IllegalStateException(
                 "Cyclic runtime registry type ancestry at "

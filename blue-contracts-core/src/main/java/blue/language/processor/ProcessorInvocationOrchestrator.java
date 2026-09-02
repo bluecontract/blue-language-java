@@ -104,7 +104,7 @@ final class ProcessorInvocationOrchestrator {
         } catch (SubscriptionSurfaceInvalidException exception) {
             if (execution == null) {
                 return DocumentProcessingResult.nonCommitting(
-                        snapshot.canonicalRoot(),
+                        snapshot.sourceRoot(),
                         0L,
                         ProcessorStatus.SUBSCRIPTION_SURFACE_INVALID,
                         exception.diagnostic());
@@ -146,7 +146,8 @@ final class ProcessorInvocationOrchestrator {
                         ProcessingConformanceTrace.empty());
             }
             Node admitted = document.clone();
-            ProcessorMarkerStore.collapseInitializationDocuments(admitted);
+            ProcessorMarkerStore.collapseInitializationDocuments(
+                    admitted, owner.snapshotManager());
             execution = new ProcessorInvocationState(
                     owner,
                     admitted,
@@ -412,7 +413,7 @@ final class ProcessorInvocationOrchestrator {
             ProcessorStatus status,
             ProcessorDiagnostic diagnostic) {
         DocumentProcessingResult result = DocumentProcessingResult.nonCommitting(
-                snapshot.canonicalRoot(),
+                snapshot.sourceRoot(),
                 admittedGas,
                 status,
                 diagnostic);

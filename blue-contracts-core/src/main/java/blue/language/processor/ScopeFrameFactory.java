@@ -53,21 +53,21 @@ final class ScopeFrameFactory {
             owner.contractLoader().preflightSelectedContractHeaders(
                     selectedScope);
         }
-        FrozenNode resolvedScope;
+        ResolvedScopeView scope;
         try {
-            resolvedScope = runtime.resolvedFrozenAt(normalizedScope);
+            scope = runtime.scopeViewAt(normalizedScope);
         } finally {
             ProcessingObservations.record(
                     metrics,
                     ProcessingMetricId.BUNDLE_SCOPE_RESOLVED_LOOKUP_NANOS,
                     System.nanoTime() - resolvedStart);
         }
-        if (resolvedScope == null) {
+        if (scope == null || scope.resolved() == null) {
             participation.withdraw(normalizedScope);
             return null;
         }
         ContractBundle refreshed = load(
-                resolvedScope,
+                scope,
                 normalizedScope,
                 metrics,
                 attachEmbeddedEntryPlans);
@@ -85,34 +85,36 @@ final class ScopeFrameFactory {
                 metrics, ProcessingMetricId.BUNDLE_SCOPE_REFRESHES, 1L);
         long resolvedStart = System.nanoTime();
         FrozenNode selectedScope = selectedAt(normalizedScope);
-        FrozenNode resolvedScope;
+        ResolvedScopeView scope;
         try {
-            resolvedScope = runtime.resolvedFrozenAt(normalizedScope);
+            scope = runtime.scopeViewAt(normalizedScope);
         } finally {
             ProcessingObservations.record(
                     metrics,
                     ProcessingMetricId.BUNDLE_SCOPE_RESOLVED_LOOKUP_NANOS,
                     System.nanoTime() - resolvedStart);
         }
-        if (resolvedScope == null) {
+        if (scope == null || scope.resolved() == null) {
             participation.withdraw(normalizedScope);
             return null;
         }
         long loadStart = System.nanoTime();
         try {
-            FrozenNode recognitionScope = runtime.contractRecognitionScope(
-                    selectedScope, resolvedScope);
+            scope = scope.withSelected(selectedScope);
+            ResolvedScopeView recognition =
+                    runtime.contractRecognitionScope(scope);
             ContractBundle loaded = owner.contractLoader().load(
                     selectedScope,
-                    recognitionScope,
+                    recognition.resolved(),
                     normalizedScope,
                     metrics,
                     execution.contractRecognitionMeter(),
-                    "participating-contract-header");
+                    "participating-contract-header",
+                    recognition.canonicalTypeIdentities());
             loaded = EmbeddedScopeEntryPlans.attachManagedRoot(
                     runtime,
                     normalizedScope,
-                    resolvedScope,
+                    scope.resolved(),
                     loaded,
                     expectedManagedBlueIdsByPath);
             for (EffectiveContractSnapshot snapshot
@@ -130,35 +132,35 @@ final class ScopeFrameFactory {
     }
 
     ContractBundle load(
-            FrozenNode resolvedScope,
+            ResolvedScopeView scope,
             String normalizedScope,
             ProcessingObserver metrics) {
-        return load(
-                resolvedScope, normalizedScope, metrics, true);
+        return load(scope, normalizedScope, metrics, true);
     }
 
     private ContractBundle load(
-            FrozenNode resolvedScope,
+            ResolvedScopeView scope,
             String normalizedScope,
             ProcessingObserver metrics,
             boolean attachEmbeddedEntryPlans) {
         long loadStart = System.nanoTime();
         try {
-            FrozenNode selectedScope = selectedAt(normalizedScope);
-            FrozenNode recognitionScope = runtime.contractRecognitionScope(
-                    selectedScope, resolvedScope);
+            FrozenNode selectedScope = scope.selected();
+            ResolvedScopeView recognition =
+                    runtime.contractRecognitionScope(scope);
             ContractBundle loaded = owner.contractLoader().load(
                     selectedScope,
-                    recognitionScope,
+                    recognition.resolved(),
                     normalizedScope,
                     metrics,
                     execution.contractRecognitionMeter(),
-                    "participating-contract-header");
+                    "participating-contract-header",
+                    recognition.canonicalTypeIdentities());
             if (attachEmbeddedEntryPlans) {
                 loaded = EmbeddedScopeEntryPlans.attach(
                         runtime,
                         normalizedScope,
-                        resolvedScope,
+                        scope.resolved(),
                         loaded);
             }
             for (EffectiveContractSnapshot snapshot

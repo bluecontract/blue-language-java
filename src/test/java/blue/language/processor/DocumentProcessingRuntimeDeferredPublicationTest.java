@@ -5,16 +5,82 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessingRuntimeDeferredPublicationTest {
+
+    @Test
+    void shouldKeepSourceLaneSelectedWhileCanonicalIdentityRetriesAuthoritatively() {
+        // given
+        Node inlineType = new Node()
+                .name("Inline Runtime Type")
+                .properties("inherited", new Node().value("yes"));
+        Node document = new Node()
+                .type(inlineType.clone())
+                .properties("counter", new Node().value(1));
+        InlineTypeManager manager = new InlineTypeManager(inlineType);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                document, null, manager);
+        runtime.snapshot = manager.deferredSource(document);
+
+        // when
+        Node selected = runtime.selectedDocument();
+        Node canonicalType = runtime.canonicalNodeAt("/").getType();
+        FrozenNode charged = runtime.identityChargeCanonicalRoot();
+
+        // then
+        assertFalse(runtime.snapshot().hasCanonicalIdentity());
+        assertEquals("Inline Runtime Type", selected.getType().getName());
+        assertNull(selected.getType().getBlueId());
+        assertTrue(canonicalType.isReferenceOnly());
+        assertEquals(manager.typeBlueId, canonicalType.getBlueId());
+        assertEquals(manager.canonical(document).blueId(), charged.blueId());
+        assertEquals(1, manager.eagerCalls,
+                "one authoritative retry must serve all identity reads in the state");
+        assertNull(document.getType().getBlueId(),
+                "identity reconstruction must not mutate Source");
+    }
+
+    @Test
+    void shouldPatchSourceLaneWithoutRewritingInlineTypeRepresentation() {
+        // given
+        Node inlineType = new Node()
+                .name("Inline Runtime Type")
+                .properties("inherited", new Node().value("yes"));
+        Node document = new Node()
+                .type(inlineType.clone())
+                .properties("counter", new Node().value(1));
+        InlineTypeManager manager = new InlineTypeManager(inlineType);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                document, null, manager);
+        runtime.snapshot = manager.deferredSource(document);
+
+        // when
+        runtime.applyPatch(
+                "/",
+                JsonPatch.replace("/counter", new Node().value(2)));
+
+        // then
+        assertEquals(2, document.getAsInteger("/counter"));
+        assertEquals("Inline Runtime Type", document.getType().getName());
+        assertNull(document.getType().getBlueId(),
+                "selected Source must retain its authored inline type");
+        assertTrue(runtime.snapshot().canonicalRoot().getType()
+                .isReferenceOnly());
+        assertEquals(manager.typeBlueId,
+                runtime.snapshot().canonicalRoot().getType().getBlueId());
+    }
 
     @Test
     void shouldVerifyEagerSnapshotAdmissionRestoresOnlyDeclaredExecutableBody() {
@@ -243,7 +309,8 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
                     ? ResolvedSnapshot
                     .withDeferredResolution(
                             complete.frozenCanonicalRoot(),
-                            complete.frozenResolvedRoot())
+                            complete.frozenResolvedRoot(),
+                            complete.canonicalTypeIdentities())
                     : complete;
         }
 
@@ -272,6 +339,127 @@ class DocumentProcessingRuntimeDeferredPublicationTest {
                     canonical.clone(),
                     DirectBlueIdCalculator.calculateBlueId(
                             canonical));
+        }
+    }
+
+    private static final class InlineTypeManager
+            implements ProcessingSnapshotManager {
+        private final Node inlineType;
+        private final FrozenNode inlineTypeStructure;
+        private final String typeBlueId;
+        private final CanonicalTypeIdentityLookup identities;
+        private int eagerCalls;
+
+        private InlineTypeManager(Node inlineType) {
+            this.inlineType = inlineType.clone();
+            this.inlineTypeStructure = FrozenNode.fromResolvedNode(
+                    this.inlineType);
+            this.typeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                    this.inlineType);
+            this.identities = new CanonicalTypeIdentityLookup() {
+                @Override
+                public boolean hasCompleteCoverage() {
+                    return true;
+                }
+
+                @Override
+                public Optional<CanonicalTypeIdentityEvidence>
+                findCanonicalTypeIdentityEvidence(Node completedType) {
+                    String blueId = requireCanonicalTypeBlueId(completedType);
+                    return Optional.of(completedType.isReferenceOnly()
+                            ? CanonicalTypeIdentityEvidence
+                            .referenceSource(blueId)
+                            : CanonicalTypeIdentityEvidence
+                            .authoredInline(
+                                    blueId,
+                                    InlineTypeManager.this.inlineType
+                                            .clone(),
+                                    InlineTypeManager.this.inlineType
+                                            .clone()));
+                }
+
+                @Override
+                public Optional<CanonicalTypeIdentityEvidence>
+                findCanonicalTypeIdentityEvidence(
+                        Node completedType,
+                        Node authoredTypeSource) {
+                    CanonicalTypeIdentityEvidence evidence =
+                            findCanonicalTypeIdentityEvidence(
+                                    completedType).get();
+                    if (authoredTypeSource == null) {
+                        return Optional.of(evidence);
+                    }
+                    if (authoredTypeSource.isReferenceOnly()) {
+                        return evidence.blueId().equals(
+                                authoredTypeSource.getBlueId())
+                                ? Optional.of(evidence)
+                                : Optional
+                                .<CanonicalTypeIdentityEvidence>empty();
+                    }
+                    return InlineTypeManager.this.inlineTypeStructure
+                            .sameResolvedStructure(
+                                    FrozenNode.fromResolvedNode(
+                                            authoredTypeSource))
+                            ? Optional.of(evidence)
+                            : Optional
+                            .<CanonicalTypeIdentityEvidence>empty();
+                }
+
+                @Override
+                public String requireCanonicalTypeBlueId(
+                        Node completedType) {
+                    if (completedType != null
+                            && completedType.isReferenceOnly()) {
+                        return completedType.getBlueId();
+                    }
+                    if (completedType != null
+                            && inlineTypeStructure.sameResolvedStructure(
+                                    FrozenNode.fromResolvedNode(
+                                            completedType))) {
+                        return typeBlueId;
+                    }
+                    throw new IllegalStateException(
+                            "Unexpected completed type in test fixture");
+                }
+            };
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocument(Node document) {
+            eagerCalls++;
+            return canonical(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransient(Node document) {
+            eagerCalls++;
+            return canonical(document);
+        }
+
+        @Override
+        public ResolvedSnapshot applyPatch(
+                ResolvedSnapshot snapshot,
+                JsonPatch patch) {
+            return snapshot;
+        }
+
+        private ResolvedSnapshot deferredSource(Node source) {
+            return ResolvedSnapshot.withDeferredSource(
+                    FrozenNode.fromResolvedNode(source.clone()),
+                    FrozenNode.fromResolvedNode(source.clone()),
+                    CanonicalTypeIdentityLookup.incomplete());
+        }
+
+        private ResolvedSnapshot canonical(Node source) {
+            Node canonical = source.clone();
+            if (canonical.getType() != null
+                    && !canonical.getType().isReferenceOnly()) {
+                canonical.type(new Node().blueId(typeBlueId));
+            }
+            return ResolvedSnapshot.withCanonicalTypeIdentities(
+                    FrozenNode.fromNode(canonical),
+                    FrozenNode.fromResolvedNode(source.clone()),
+                    identities);
         }
     }
 }

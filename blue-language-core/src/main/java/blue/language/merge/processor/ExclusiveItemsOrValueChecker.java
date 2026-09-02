@@ -1,5 +1,6 @@
 package blue.language.merge.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
 import blue.language.merge.MergingProcessor;
@@ -15,7 +16,12 @@ public class ExclusiveItemsOrValueChecker implements MergingProcessor {
     }
 
     @Override
-    public void process(Node target, Node source, NodeProvider nodeProvider, NodeResolver nodeResolver) {
+    public void process(
+            Node target,
+            Node source,
+            NodeProvider nodeProvider,
+            NodeResolver nodeResolver,
+            CanonicalTypeIdentityLookup typeIdentities) {
         List<Node> items = source.getItems();
         Object value = source.getValue();
         if (items != null && value != null)

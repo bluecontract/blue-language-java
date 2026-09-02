@@ -497,7 +497,10 @@ class DocumentProcessingRuntimeBatchPatchTest {
                 "type:\n" +
                 "  blueId: " + provider.getBlueIdByName("Has Inherited List") + "\n", Node.class);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(canonical);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(snapshot, null, new PassthroughSnapshotManager());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                snapshot,
+                blue.getDocumentProcessor().conformanceEngine(),
+                blue.getDocumentProcessor().snapshotManager());
         Node inheritedList = new Node().items(
                 Collections.singletonList(
                         new Node().value("inherited")));
@@ -518,7 +521,13 @@ class DocumentProcessingRuntimeBatchPatchTest {
         // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
+                "name: Mutable Status\n" +
+                "status:\n" +
+                "  type: Text");
+        provider.addSingleDocs(
                 "name: Has Inherited Status\n" +
+                "type:\n" +
+                "  blueId: " + provider.getBlueIdByName("Mutable Status") + "\n" +
                 "status: idle");
         Blue blue = ProcessorTestSupport.blue(provider);
         Node canonical = YAML_MAPPER.readValue(
@@ -526,7 +535,10 @@ class DocumentProcessingRuntimeBatchPatchTest {
                 "type:\n" +
                 "  blueId: " + provider.getBlueIdByName("Has Inherited Status") + "\n", Node.class);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(canonical);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(snapshot, null, new PassthroughSnapshotManager());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                snapshot,
+                blue.getDocumentProcessor().conformanceEngine(),
+                blue.getDocumentProcessor().snapshotManager());
 
         // when
         runtime.applyPatches("/", Arrays.asList(
@@ -536,6 +548,11 @@ class DocumentProcessingRuntimeBatchPatchTest {
 
         // then
         assertEquals("custom", runtime.snapshot().canonicalRoot().getAsText("/status"));
+        assertEquals(
+                provider.getBlueIdByName("Mutable Status"),
+                runtime.snapshot().frozenCanonicalRoot()
+                        .getType()
+                        .getReferenceBlueId());
     }
 
     @Test
@@ -635,25 +652,4 @@ class DocumentProcessingRuntimeBatchPatchTest {
         }
     }
 
-    private static final class PassthroughSnapshotManager implements ProcessingSnapshotManager {
-        @Override
-        public ResolvedSnapshot fromDocument(Node document) {
-            FrozenNode root = FrozenNode.fromNode(document.clone());
-            return new ResolvedSnapshot(root, FrozenNode.fromResolvedNode(document.clone()), root.blueId());
-        }
-
-        @Override
-        public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
-            CanonicalPatchResult patched = new CanonicalOverlayPatchEngine(
-                    snapshot.frozenCanonicalRoot()).apply(patch);
-            return new ResolvedSnapshot(patched.root(),
-                    FrozenNode.fromResolvedNode(patched.root().toNode()),
-                    patched.blueId());
-        }
-
-        @Override
-        public ResolvedSnapshot cacheSnapshot(ResolvedSnapshot snapshot) {
-            return snapshot;
-        }
-    }
 }

@@ -1,7 +1,6 @@
 package blue.language.processor;
 
-import blue.language.model.Node;
-import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.BlueIds;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -185,13 +184,17 @@ public final class ExternalDeliveryPlan {
         return exactRuntimeState;
     }
 
-    VerifiedExecutionEvidence bind(Node root,
-                                   Node event,
+    VerifiedExecutionEvidence bind(String rootBlueId,
+                                   String eventBlueId,
                                    String runtimeRegistryIdentity) {
         VerifiedExecutionEvidence.Builder evidence =
                 VerifiedExecutionEvidence.builder(
-                                DirectBlueIdCalculator.calculateBlueId(root),
-                                DirectBlueIdCalculator.calculateBlueId(event))
+                                BlueIds.requireBlueIdOrCyclicMember(
+                                        rootBlueId,
+                                        "external delivery Root identity"),
+                                BlueIds.requireBlueIdOrCyclicMember(
+                                        eventBlueId,
+                                        "external delivery event identity"))
                         .revisions(
                                 managedRootRevision,
                                 indexedRootRevision)
@@ -218,11 +221,11 @@ public final class ExternalDeliveryPlan {
 
     /** Retains the exact binding established by the public indexed evaluator. */
     ExternalDeliveryPlan withVerifiedBinding(
-            Node root,
-            Node event,
+            String rootBlueId,
+            String eventBlueId,
             String runtimeRegistryIdentity) {
         VerifiedExecutionEvidence binding = bind(
-                root, event, runtimeRegistryIdentity);
+                rootBlueId, eventBlueId, runtimeRegistryIdentity);
         return new ExternalDeliveryPlan(this, binding);
     }
 
@@ -335,12 +338,13 @@ public final class ExternalDeliveryPlan {
          *
          * @param blueId exact node identity available to execution
          * @return this builder
-         * @throws IllegalArgumentException if {@code blueId} is {@code null}
-         *         or empty
+         * @throws IllegalArgumentException if {@code blueId} is not a
+         *         canonical plain or cyclic-member BlueId
          */
         public Builder availableExactNode(String blueId) {
             availableExactNodeBlueIds.add(
-                    requireText(blueId, "available exact BlueId"));
+                    BlueIds.requireBlueIdOrCyclicMember(
+                            blueId, "available exact BlueId"));
             return this;
         }
 
@@ -349,12 +353,13 @@ public final class ExternalDeliveryPlan {
          *
          * @param blueId exact node identity required by execution
          * @return this builder
-         * @throws IllegalArgumentException if {@code blueId} is {@code null}
-         *         or empty
+         * @throws IllegalArgumentException if {@code blueId} is not a
+         *         canonical plain or cyclic-member BlueId
          */
         public Builder requiredExactNode(String blueId) {
             requiredExactNodeBlueIds.add(
-                    requireText(blueId, "required exact BlueId"));
+                    BlueIds.requireBlueIdOrCyclicMember(
+                            blueId, "required exact BlueId"));
             return this;
         }
 
@@ -378,14 +383,6 @@ public final class ExternalDeliveryPlan {
          */
         public ExternalDeliveryPlan build() {
             return new ExternalDeliveryPlan(this);
-        }
-
-        private static String requireText(String value, String label) {
-            if (value == null || value.isEmpty()) {
-                throw new IllegalArgumentException(
-                        label + " must be non-empty");
-            }
-            return value;
         }
     }
 }

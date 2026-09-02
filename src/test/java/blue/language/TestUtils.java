@@ -52,7 +52,8 @@ public class TestUtils {
     }
 
     public static MergingProcessor numbersMustIncreasePayloadMerger() {
-        return (target, source, nodeProvider, nodeResolver) -> {
+        return (target, source, nodeProvider, nodeResolver,
+                typeIdentities) -> {
             Integer targetValue = (Integer) target.getValue();
             Integer sourceValue = (Integer) source.getValue();
             if (sourceValue == null)

@@ -1,6 +1,5 @@
 package blue.language.processor;
 
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.model.ChannelContract;
@@ -88,12 +87,14 @@ final class ManagedRootSettlementService {
     ManagedExternalDeliveryClassification classifyExternalDelivery(
             Node exactRoot,
             String rawChannelKey,
-            Node exactEvent,
+            ExactEventIdentityEvidence exactEvent,
             GasChargeContext comparisonContext) {
         RootView view = openRoot(exactRoot);
         requireActiveRoot(view.document);
         String channelKey = requireText(rawChannelKey, "rawChannelKey");
-        Node event = Objects.requireNonNull(exactEvent, "exactEvent").clone();
+        ExactEventIdentityEvidence eventEvidence = Objects.requireNonNull(
+                exactEvent, "exactEvent");
+        Node event = eventEvidence.event();
         EffectiveContractSnapshot snapshot =
                 view.bundle.effectiveContractSnapshot(channelKey);
         if (snapshot == null
@@ -113,24 +114,10 @@ final class ManagedRootSettlementService {
         }
 
         view.runtime.chargeChannelMatchAttempt(JsonPointer.ROOT, channelKey);
-        RuntimeWorkSession functionWork = view.runtime.newRuntimeWorkSession(
-                owner.languageRuntimeAccess());
-        if (functionWork.hasSemanticOutputBoundary()) {
-            functionWork.carryExactInput(
-                    event,
-                    CheckpointIdentityCalculator.identity(
-                            event, owner.languageRuntimeAccess()));
-        }
         ExternalChannelFunctionEvaluation evaluation =
-                ExternalChannelFunctionEvaluation.evaluate(
-                        owner.registry(),
-                        owner.contractConverter(),
-                        view.runtime.externalChannelMatcherSessions(),
-                        view.bundle,
-                        snapshot,
-                        event,
-                        null,
-                        functionWork);
+                ExternalChannelFunctionEvaluation.evaluateWithExactInput(
+                        owner, view.runtime, view.bundle, snapshot,
+                        eventEvidence, null);
         if (!evaluation.preselects()) {
             return new ManagedExternalDeliveryClassification(
                     ManagedExternalDeliveryClassification.State.NO_MATCH,
@@ -167,9 +154,9 @@ final class ManagedRootSettlementService {
         String subjectBlueId = requireText(
                 evaluation.checkpointSubjectBlueId(),
                 "checkpointSubjectBlueId");
-        Node exactSubject = Objects.requireNonNull(
+        FrozenNode exactSubject = Objects.requireNonNull(
                 evaluation.checkpointSubject(),
-                "checkpointSubject").toNode();
+                "checkpointSubject");
         CheckpointManager.CheckpointRecord record =
                 transaction.findForComparison(
                         JsonPointer.ROOT,
@@ -185,7 +172,7 @@ final class ManagedRootSettlementService {
                 binding,
                 view,
                 event,
-                exactSubject,
+                exactSubject.toNode(),
                 subjectBlueId,
                 record);
         boolean eligibleNew = newer
@@ -205,7 +192,10 @@ final class ManagedRootSettlementService {
                                 evaluation.logicalDeliveryKey(),
                                 "logicalDeliveryKey"),
                         Objects.requireNonNull(
-                                evaluation.payload(), "payload").toNode());
+                                evaluation.payload(), "payload"),
+                        requireText(
+                                evaluation.payloadBlueId(),
+                                "payloadBlueId"));
         return new ManagedExternalDeliveryClassification(
                 eligibleNew
                         ? ManagedExternalDeliveryClassification.State
@@ -425,7 +415,7 @@ final class ManagedRootSettlementService {
                         plan.view.bundle,
                         record,
                         mutation.after.subjectBlueId(),
-                        mutation.candidate.exactSubject(),
+                        mutation.candidate.settlementSubject(),
                         mutation.writeContext);
             } else {
                 transaction.removeSettlementEntry(
@@ -522,22 +512,26 @@ final class ManagedRootSettlementService {
     private ExternalChannelFunctionResolver.Header resolveHeader(
             RootView view,
             EffectiveContractSnapshot snapshot) {
-        RuntimeWorkSession authoritative = view.runtime.newRuntimeWorkSession(
-                owner.languageRuntimeAccess());
-        RuntimeWorkSession comparison = authoritative.diagnosticTwin();
-        ExternalChannelFunctionEvaluation.MatcherSession firstMatcher =
-                view.runtime.externalChannelMatcherSessions().open();
-        ExternalChannelFunctionEvaluation.MatcherSession secondMatcher =
-                view.runtime.externalChannelMatcherSessions().open();
+        RuntimeWorkSession authoritative = null;
+        RuntimeWorkSession comparison = null;
+        ExternalChannelFunctionEvaluation.MatcherSession firstMatcher = null;
+        ExternalChannelFunctionEvaluation.MatcherSession secondMatcher = null;
+        ExternalChannelFunctionResolver.Header first = null;
+        Throwable failure = null;
+        boolean evidenceUnavailable = false;
         try {
-            ExternalChannelFunctionResolver.Header first =
-                    new ExternalChannelFunctionResolver(
-                            owner.registry(),
-                            owner.contractConverter(),
-                            firstMatcher,
-                            view.bundle,
-                            null,
-                            authoritative).header(snapshot);
+            authoritative = view.runtime.newRuntimeWorkSession(
+                    owner.languageRuntimeAccess());
+            comparison = authoritative.diagnosticTwin();
+            firstMatcher = view.runtime.externalChannelMatcherSessions().open();
+            secondMatcher = view.runtime.externalChannelMatcherSessions().open();
+            first = new ExternalChannelFunctionResolver(
+                    owner.registry(),
+                    owner.contractConverter(),
+                    firstMatcher,
+                    view.bundle,
+                    null,
+                    authoritative).header(snapshot);
             ExternalChannelFunctionResolver.Header second =
                     new ExternalChannelFunctionResolver(
                             owner.registry(),
@@ -550,29 +544,38 @@ final class ManagedRootSettlementService {
                     || !sameRuntimeTrace(
                     authoritative.stagedTrace(),
                     comparison.stagedTrace())) {
-                authoritative.failDeterministically();
-                comparison.suspend();
                 throw new InvalidExecutionEvidenceException(
                         "External Channel header functions are not deterministic",
                         ProcessorErrorCategory.RuntimeExecutionFailure);
             }
             authoritative.complete();
             comparison.suspend();
-            return first;
         } catch (ExecutionEvidenceUnavailableException unavailable) {
-            suspendIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw unavailable;
-        } catch (RuntimeException failure) {
-            failIfOpen(authoritative);
-            suspendIfOpen(comparison);
-            throw failure;
+            failure = unavailable;
+            evidenceUnavailable = true;
+        } catch (RuntimeException | Error caught) {
+            failure = caught;
         } finally {
-            firstMatcher.close();
-            secondMatcher.close();
-            authoritative.close();
-            comparison.close();
+            if (failure != null) {
+                failure = evidenceUnavailable
+                        ? RuntimeWorkSession.suspendIfOpenPreserving(
+                                authoritative, failure)
+                        : RuntimeWorkSession.failIfOpenPreserving(
+                                authoritative, failure);
+                failure = RuntimeWorkSession.suspendIfOpenPreserving(
+                        comparison, failure);
+            }
+            failure = RuntimeWorkSession.closePreserving(
+                    secondMatcher == null ? null : secondMatcher::close,
+                    failure);
+            failure = RuntimeWorkSession.closePreserving(
+                    firstMatcher == null ? null : firstMatcher::close,
+                    failure);
+            failure = RuntimeWorkSession.closePreserving(comparison, failure);
+            failure = RuntimeWorkSession.closePreserving(authoritative, failure);
         }
+        RuntimeWorkSession.rethrow(failure);
+        return Objects.requireNonNull(first, "resolvedHeader");
     }
 
     private ManagedCheckpointState checkpointState(
@@ -685,7 +688,6 @@ final class ManagedRootSettlementService {
                             + snapshot.key(),
                     Collections.<String>emptySet());
         }
-        ChannelMemberSnapshot header = ChannelMemberSnapshot.from(snapshot);
         return new ManagedRootChannelOccurrence(
                 snapshot.key(),
                 snapshot.order(),
@@ -693,7 +695,8 @@ final class ManagedRootSettlementService {
                         .equals(snapshot.role()),
                 snapshot.effectiveTypeBlueId(),
                 exactContribution.blueId(),
-                header.headerIdentityBlueId(),
+                ChannelMemberSnapshot.from(snapshot, bundle.canonicalTypeIdentities())
+                        .headerIdentityBlueId(),
                 snapshot.sourceContributionNodeBlueIds(),
                 snapshot.deterministicDependencyNodeBlueIds());
     }
@@ -745,7 +748,8 @@ final class ManagedRootSettlementService {
                             ? diagnostic.message()
                             : "Invalid independently managed Root");
         }
-        ProcessorMarkerStore.collapseInitializationDocuments(document);
+        ProcessorMarkerStore.collapseInitializationDocuments(
+                document, owner.snapshotManager());
         long gasBefore = sharedGasContext.meter().totalGas();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 document,
@@ -756,18 +760,17 @@ final class ManagedRootSettlementService {
                 sharedGasContext,
                 owner.registry().executableBodyFieldsByType(),
                 owner.strictPlatformInvocation());
-        FrozenNode selected = runtime.selectedFrozenAt(JsonPointer.ROOT);
-        owner.contractLoader().preflightSelectedContractHeaders(selected);
-        FrozenNode resolved = runtime.resolvedFrozenAt(JsonPointer.ROOT);
-        FrozenNode recognition = runtime.contractRecognitionScope(
-                selected, resolved);
+        ResolvedScopeView scope = runtime.scopeViewAt(JsonPointer.ROOT);
+        owner.contractLoader().preflightSelectedContractHeaders(scope.selected());
+        ResolvedScopeView recognition = runtime.contractRecognitionScope(scope);
         ContractBundle bundle = owner.contractLoader().load(
-                selected,
-                recognition,
+                scope.selected(),
+                recognition.resolved(),
                 JsonPointer.ROOT,
                 owner.observer(),
                 null,
-                null);
+                null,
+                recognition.canonicalTypeIdentities());
         if (sharedGasContext.meter().totalGas() != gasBefore) {
             throw new IllegalStateException(
                     "Managed Root contract projection must not charge gas");
@@ -931,9 +934,8 @@ final class ManagedRootSettlementService {
                         ProcessorErrorCategory.CheckpointPolicyError);
             }
             if (mutation.candidate != null) {
-                String actual = DirectBlueIdCalculator.calculateBlueId(
-                        mutation.candidate.exactSubject());
-                if (!actual.equals(mutation.after.subjectBlueId())) {
+                if (!mutation.candidate.subjectBlueId().equals(
+                        mutation.after.subjectBlueId())) {
                     throw new InvalidExecutionEvidenceException(
                             "Checkpoint settlement subject identity mismatch",
                             ProcessorErrorCategory.CheckpointPolicyError);
@@ -1011,18 +1013,6 @@ final class ManagedRootSettlementService {
         return true;
     }
 
-    private static void failIfOpen(RuntimeWorkSession session) {
-        if (session.isOpen()) {
-            session.failDeterministically();
-        }
-    }
-
-    private static void suspendIfOpen(RuntimeWorkSession session) {
-        if (session.isOpen()) {
-            session.suspend();
-        }
-    }
-
     private static String requireText(String value, String label) {
         if (value == null || value.isEmpty()) {
             throw new IllegalArgumentException(label + " must be non-empty");
@@ -1085,7 +1075,7 @@ final class ManagedRootSettlementService {
                             new Node().blueId(after.domainBlueId()))
                     .properties(
                             ProcessorContractConstants.KEY_SUBJECT,
-                            candidate.exactSubject());
+                            candidate.settlementSubject());
             String path = PointerUtils.resolvePointer(
                     JsonPointer.ROOT,
                     ProcessorPointerConstants.relativeCheckpointEntry(

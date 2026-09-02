@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,11 +65,14 @@ final class SelectedExecutableBodyCapabilityTest {
                         "script",
                         "schema-body",
                         FrozenNode.fromResolvedNode(body),
+                        false,
                         reference ->
                                 FrozenNode.fromResolvedNode(
                                         new Node().name(
                                                 reference
                                                         .getReferenceBlueId())),
+                        (origin, patches) -> Collections.emptyList(),
+                        (origin, event) -> event,
                         () -> true,
                         GasSchedule.contracts10());
         Set<String> expected =
@@ -86,6 +90,45 @@ final class SelectedExecutableBodyCapabilityTest {
         assertEquals(
                 blueIds.get(7),
                 opened.getName());
+    }
+
+    @Test
+    void shouldNotGrantMixedSchemaBlueIdAsAReferenceCapability() {
+        // given
+        String metadataBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().value(
+                                "mixed schema metadata"));
+        Schema authoredMixedSchema =
+                new Schema()
+                        .blueId(metadataBlueId)
+                        .required(new Node().value(true));
+        SelectedExecutableBody selected =
+                new SelectedExecutableBody(
+                        "script",
+                        "mixed-schema-body",
+                        FrozenNode.fromResolvedNode(
+                                new Node().schema(
+                                        authoredMixedSchema)),
+                        false,
+                        reference -> FrozenNode.empty(),
+                        (origin, patches) -> Collections.emptyList(),
+                        (origin, event) -> event,
+                        () -> true,
+                        GasSchedule.contracts10());
+
+        // when
+        Set<String> available =
+                selected.availableReferenceBlueIds();
+        Throwable failure = captureFailure(
+                () -> selected.materializeExactReference(
+                        metadataBlueId));
+
+        // then
+        assertFalse(available.contains(metadataBlueId));
+        assertInstanceOf(
+                IllegalArgumentException.class,
+                failure);
     }
 
     @Test
@@ -107,8 +150,11 @@ final class SelectedExecutableBodyCapabilityTest {
                         FrozenNode.fromResolvedNode(
                                 new Node().items(
                                         oversized)),
+                        false,
                         reference ->
                                 FrozenNode.empty(),
+                        (origin, patches) -> Collections.emptyList(),
+                        (origin, event) -> event,
                         () -> true,
                         schedule));
         String limitName = failure
@@ -153,12 +199,15 @@ final class SelectedExecutableBodyCapabilityTest {
                         "transitive-body",
                         FrozenNode.fromResolvedNode(
                                 ref(entry)),
+                        false,
                         reference ->
                                 FrozenNode.fromResolvedNode(
                                         new Node().items(
                                                 references(
                                                         "expanded",
                                                         limit))),
+                        (origin, patches) -> Collections.emptyList(),
+                        (origin, event) -> event,
                         () -> true,
                         schedule);
 
@@ -235,7 +284,8 @@ final class SelectedExecutableBodyCapabilityTest {
             context.bindSelectedExecutableBodies(
                     Collections.singletonList("script"),
                     Collections.singletonMap(
-                            "script", bodyBlueId));
+                            "script", bodyBlueId),
+                    context.frozenContractNode());
             SelectedExecutableBody selected =
                     context.selectedExecutableBody(
                             "script");
@@ -336,7 +386,8 @@ final class SelectedExecutableBodyCapabilityTest {
             context.bindSelectedExecutableBodies(
                     Collections.singletonList("script"),
                     Collections.singletonMap(
-                            "script", memberBlueId));
+                            "script", memberBlueId),
+                    context.frozenContractNode());
 
             // when
             FrozenNode member =

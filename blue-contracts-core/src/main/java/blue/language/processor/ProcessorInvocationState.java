@@ -270,7 +270,7 @@ final class ProcessorInvocationState {
             ProcessingGasContext sharedGasContext) {
         this.owner = owner;
         this.documentStepContinuationHook = null;
-        this.inputDocument = snapshot.canonicalRoot();
+        this.inputDocument = snapshot.sourceRoot();
         this.inputSnapshot = snapshot;
         this.runtime = new DocumentProcessingRuntime(snapshot,
                 owner.conformanceEngine(),
@@ -428,6 +428,10 @@ final class ProcessorInvocationState {
         return classificationView.resolvedAt(scopePath);
     }
 
+    ResolvedScopeView classificationScopeAt(String scopePath) {
+        return classificationView.scopeAt(scopePath);
+    }
+
     SubscriptionDelta.Entry activeSubscriptionInterval(
             String scopePath,
             String channelKey) {
@@ -502,7 +506,7 @@ final class ProcessorInvocationState {
                                             Node event,
                                             boolean allowReservedMutation) {
         return createContext(
-                scopePath, bundle, event, event, null,
+                scopePath, bundle, event, event, null, null, null,
                 java.util.Collections.<ExactBlueValue>emptyList(),
                 null, null, allowReservedMutation);
     }
@@ -519,6 +523,8 @@ final class ProcessorInvocationState {
                 event,
                 event,
                 null,
+                null,
+                null,
                 java.util.Collections.<ExactBlueValue>emptyList(),
                 contractKey,
                 contractNode,
@@ -530,6 +536,8 @@ final class ProcessorInvocationState {
                                             Node event,
                                             Node occurrenceEvent,
                                             FrozenNode exactEvent,
+                                            String exactEventBlueId,
+                                            String occurrenceEventBlueId,
                                             List<ExactBlueValue> carriedExactValues,
                                             String contractKey,
                                             FrozenNode contractNode,
@@ -539,6 +547,8 @@ final class ProcessorInvocationState {
                 cloneEvent(event),
                 cloneEvent(occurrenceEvent),
                 exactEvent,
+                exactEventBlueId,
+                occurrenceEventBlueId,
                 carriedExactValues,
                 allowReservedMutation);
     }
@@ -794,21 +804,21 @@ final class ProcessorInvocationState {
     void enqueueApplicationEvent(
             String scopePath,
             String contractKey,
-            Node event,
-            String eventBlueId) {
+            ExactEventIdentityEvidence exactEvent) {
+        ExactEventIdentityEvidence admitted = Objects.requireNonNull(
+                exactEvent, "exactEvent");
         if (documentStepContinuationHook != null) {
             documentStepContinuationHook.onApplicationEvent(
                     normalizeScope(scopePath),
                     contractKey,
-                    event.clone(),
-                    eventBlueId);
+                    admitted);
             return;
         }
         lifecycleCoordinator.enqueueApplicationEvent(
                 scopePath,
                 contractKey,
-                event,
-                eventBlueId);
+                admitted.event(),
+                admitted.eventBlueId());
     }
 
     void drainInternalEvents() {

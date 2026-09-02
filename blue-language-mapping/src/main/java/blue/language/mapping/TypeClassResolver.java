@@ -1,8 +1,8 @@
 package blue.language.mapping;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
-import blue.language.identity.DirectBlueIdCalculator;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ClasspathHelper;
@@ -16,6 +16,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -184,17 +185,65 @@ public class TypeClassResolver {
     }
 
     /**
-     * Resolves the effective type of a node.
+     * Resolves the exact referenced type of a node.
+     *
+     * <p>This evidence-free entry point intentionally accepts only a pure
+     * canonical type reference. A materialized or inline type body is not
+     * itself canonical identity input and therefore cannot be hashed here.</p>
      *
      * @param node node whose effective type should be resolved
      * @return registered Java class, or {@code null} if unregistered
+     * @throws NullPointerException if {@code node} is null
+     * @throws IllegalStateException if the effective type is materialized or
+     *         inline and no resolver evidence was supplied
      */
     public synchronized Class<?> resolveClass(Node node) {
-        String blueId = getEffectiveBlueId(node);
+        Objects.requireNonNull(node, "node");
+        Node type = node.getType();
+        if (type == null) {
+            return null;
+        }
+        if (!type.isReferenceOnly()) {
+            throw new IllegalStateException(
+                    "Resolving a materialized or inline type requires "
+                            + "resolver-issued canonical identity evidence");
+        }
+        String blueId = type.getBlueId();
         if (blueId == null) {
             return null;
         }
 
+        return resolveClass(blueId);
+    }
+
+    /**
+     * Resolves the effective type of a node using exact resolver evidence.
+     *
+     * <p>Pure references are already canonical identity input. Expanded and
+     * inline type bodies must be covered by the supplied lookup; incomplete
+     * evidence fails closed.</p>
+     *
+     * @param node node whose effective type should be resolved
+     * @param typeIdentities resolver-issued canonical type identities
+     * @return registered Java class, or {@code null} if unregistered
+     * @throws NullPointerException if {@code node} is null, or if a
+     *         materialized type is encountered and {@code typeIdentities} is
+     *         null
+     * @throws IllegalStateException if required canonical type evidence is
+     *         unavailable or conflicting
+     */
+    public synchronized Class<?> resolveClass(
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        Objects.requireNonNull(node, "node");
+        Node type = node.getType();
+        if (type == null) {
+            return null;
+        }
+        String blueId = type.isReferenceOnly()
+                ? type.getBlueId()
+                : Objects.requireNonNull(typeIdentities, "typeIdentities")
+                .requireCanonicalTypeBlueId(type);
         return resolveClass(blueId);
     }
 
@@ -206,15 +255,6 @@ public class TypeClassResolver {
      */
     public synchronized Class<?> resolveClass(String blueId) {
         return blueIdMap.get(blueId);
-    }
-
-    private String getEffectiveBlueId(Node node) {
-        if (node.getType() != null && node.getType().getBlueId() != null) {
-            return node.getType().getBlueId();
-        } else if (node.getType() != null) {
-            return DirectBlueIdCalculator.calculateBlueId(node.getType());
-        }
-        return null;
     }
 
     /**

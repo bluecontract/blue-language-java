@@ -15,6 +15,7 @@ import blue.language.api.BlueViewPath;
 import blue.language.runtime.LanguageMatchingService;
 import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.runtime.LanguageRuntimeServices;
+import blue.language.runtime.LanguageProcessing.ExactResolutionOverlay;
 import blue.language.runtime.WeightedLruCache;
 import blue.language.model.wire.BlueLanguageConstants;
 
@@ -29,12 +30,15 @@ import blue.language.dictionary.TypeDictionary;
 import blue.language.graph.StandardBlueGraph;
 import blue.language.graph.NodeExpander;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.StandardBlueIdentity;
 import blue.language.merge.Merger;
 import blue.language.merge.IncrementalMergingProcessorCapability;
 import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
+import blue.language.merge.SnapshotResolution;
 import blue.language.merge.processor.*;
 import blue.language.matching.MatchingRuntime;
 import blue.language.model.Node;
@@ -77,9 +81,9 @@ import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.identity.BlueIdReferenceValidator;
 import blue.language.identity.BlueIds;
-import blue.language.identity.CanonicalIdentityInputBuilder;
 import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.NodePathEditor;
 import blue.language.resolve.MinimizedOverlayBuilder;
@@ -132,7 +136,6 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     private static final String CANONICAL_ALIAS_CACHE = "canonicalAliases";
     private static final String RECENT_PROCESSING_CACHE = "recentProcessingSnapshots";
     private static final String VERIFIED_REFERENCE_CACHE = "verifiedReferences";
-    private static final String TRANSIENT_REFERENCE_CACHE = "transientTrustedReferences";
     private static final String STRUCTURAL_INTERNER_CACHE = "resolvedStructuralInterner";
     private static final String PROCESSOR_PLAN_CACHE = "processorPlans";
     private static final ReferenceCacheAdmissionPolicy
@@ -353,6 +356,112 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     }
 
     /**
+     * Resolves a node under the intersection of method and global limits and
+     * returns canonical type evidence from that same resolver invocation.
+     *
+     * @param node non-null source graph; it is not mutated
+     * @param limits non-null per-call traversal limits
+     * @return immutable resolved graph and invocation-local type evidence
+     * @throws NullPointerException if {@code node} or {@code limits} is null
+     * @throws IllegalArgumentException if the graph contains invalid reference
+     *         or type metadata
+     * @throws IllegalStateException if this facade is closed or exact type
+     *         evidence cannot be established
+     */
+    @Override
+    public TypeEvidenceResolution resolveTypeEvidence(
+            Node node,
+            ResolutionLimits limits) {
+        beginDirectCacheOperation();
+        try {
+            ResolutionLimits effectiveLimits = combineWithGlobalLimits(
+                    Objects.requireNonNull(limits, "limits"));
+            return languageMerger(
+                    mergingProcessor,
+                    nodeProvider,
+                    resolvedReferenceCache).resolveTypeEvidence(
+                    Objects.requireNonNull(node, "node").clone(),
+                    effectiveLimits);
+        } finally {
+            endDirectCacheOperation();
+        }
+    }
+
+    /** Resolves an authored type declaration without applying instance rules. */
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration) {
+        Node preprocessedWrapper = preprocess(
+                new Node().type(Objects.requireNonNull(
+                        declaration, "declaration").clone()));
+        Node authoredType = Objects.requireNonNull(
+                preprocessedWrapper.getType(),
+                "preprocessedTypeDeclaration");
+        beginDirectCacheOperation();
+        try {
+            TypeEvidenceResolution resolution = languageMerger(
+                    mergingProcessor,
+                    nodeProvider,
+                    resolvedReferenceCache).resolveTypeDeclarationEvidence(
+                    authoredType,
+                    combineWithGlobalLimits(NO_LIMITS));
+            return resolution.canonicalTypeIdentities()
+                    .findCanonicalTypeIdentityEvidence(
+                            resolution.resolvedRoot().toNode(),
+                            authoredType)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Language did not establish canonical identity "
+                                    + "evidence for the authored type declaration"));
+        } finally {
+            endDirectCacheOperation();
+        }
+    }
+
+    /**
+     * Resolves an authored type declaration against operation-local exact
+     * evidence followed by this runtime's frozen provider graph.
+     *
+     * @param declaration authored inline declaration or pure reference
+     * @param exactResolutionOverlay operation-local untrusted exact evidence
+     * @return resolver-issued canonical type identity evidence
+     */
+    public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+            Node declaration,
+            ExactResolutionOverlay exactResolutionOverlay) {
+        beginDirectCacheOperation();
+        ResolvedReferenceCache identityCache =
+                new ResolvedReferenceCache(cachePolicy);
+        try {
+            ExactResolutionOverlay overlay = Objects.requireNonNull(
+                    exactResolutionOverlay, "exactResolutionOverlay");
+            NodeProvider provider = overlay.verifiedBefore(nodeProvider);
+            Node preprocessedWrapper = preprocess(
+                    new Node().type(Objects.requireNonNull(
+                            declaration, "declaration").clone()),
+                    provider,
+                    preprocessingAliases);
+            Node authoredType = Objects.requireNonNull(
+                    preprocessedWrapper.getType(),
+                    "preprocessedTypeDeclaration");
+            TypeEvidenceResolution resolution = languageMerger(
+                    mergingProcessor,
+                    provider,
+                    identityCache).resolveTypeDeclarationEvidence(
+                    authoredType,
+                    combineWithGlobalLimits(NO_LIMITS));
+            return resolution.canonicalTypeIdentities()
+                    .findCanonicalTypeIdentityEvidence(
+                            resolution.resolvedRoot().toNode(),
+                            authoredType)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Language did not establish canonical identity "
+                                    + "evidence for the authored type declaration"));
+        } finally {
+            identityCache.close();
+            endDirectCacheOperation();
+        }
+    }
+
+    /**
      * Resolves a defensive copy while restoring authored subtrees at selected
      * RFC 6901 paths.
      *
@@ -469,8 +578,13 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         beginDirectCacheOperation();
         try {
             Node preprocessed = preprocess(node.clone());
-            Node resolved = resolve(preprocessed.clone());
-            return new CanonicalIdentityInputBuilder().build(resolved, preprocessed);
+            Merger merger = languageMerger(
+                    mergingProcessor, nodeProvider, resolvedReferenceCache);
+            return merger.resolveSnapshot(
+                    preprocessed,
+                    combineWithGlobalLimits(NO_LIMITS))
+                    .canonicalRoot()
+                    .toNode();
         } finally {
             endDirectCacheOperation();
         }
@@ -502,8 +616,15 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     public Node minimize(Node node) {
         beginDirectCacheOperation();
         try {
-            Node resolved = resolve(preprocess(node.clone()));
-            return new MinimizedOverlayBuilder().build(resolved);
+            Node preprocessed = preprocess(node.clone());
+            Merger merger = languageMerger(
+                    mergingProcessor, nodeProvider, resolvedReferenceCache);
+            SnapshotResolution resolution = merger.resolveSnapshot(
+                    preprocessed,
+                    combineWithGlobalLimits(NO_LIMITS));
+            return new MinimizedOverlayBuilder().build(
+                    resolution.resolvedRoot(),
+                    resolution.canonicalTypeIdentities());
         } finally {
             endDirectCacheOperation();
         }
@@ -743,8 +864,11 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             ResolutionLimits limits = combineWithGlobalLimits(NO_LIMITS);
             Merger merger = languageMerger(
                     mergingProcessor, nodeProvider, resolvedReferenceCache);
-            return cacheSnapshot(ResolvedSnapshot.fromResolverResult(
-                    merger.resolveSnapshot(preprocessed, limits)));
+            return cacheSnapshot(
+                    ResolvedSnapshot.fromSourceResolverResult(
+                            FrozenNode.fromSourceNode(preprocessed),
+                            merger.resolveSnapshot(
+                                    preprocessed.clone(), limits)));
         } finally {
             endDirectCacheOperation();
         }
@@ -752,8 +876,9 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
 
     /**
      * Builds a verified snapshot while retaining exact authored subtrees for
-     * a later semantic demand. The canonical lane is still derived from the
-     * complete input; only resolution below the supplied paths is deferred.
+     * a later semantic demand. The result retains exact preprocessed Source;
+     * it exposes a whole-document canonical identity only when the limited
+     * resolver obtained complete canonical-type evidence.
      *
      * @param node non-null authored source; it is not mutated
      * @param preservedPaths paths whose resolution is deferred
@@ -1104,15 +1229,6 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                     reference.verifiedEvictions(),
                     reference.verifiedOversizedRejections(),
                     reference.pinnedVerifiedEntries() > 0));
-            regions.put(TRANSIENT_REFERENCE_CACHE, new BlueCacheStats.Region(
-                    reference.transientTrustedEntries(),
-                    reference.transientTrustedCurrentWeightBytes(),
-                    reference.transientTrustedHighWaterWeightBytes(),
-                    0L,
-                    0L,
-                    reference.transientTrustedEvictions(),
-                    reference.transientTrustedOversizedRejections(),
-                    false));
             regions.put(STRUCTURAL_INTERNER_CACHE, new BlueCacheStats.Region(
                     reference.structuralEntries(),
                     reference.structuralCurrentWeightBytes(),
@@ -1228,18 +1344,34 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         expand(source, limits);
     }
 
-    /** Resolves a matching candidate under target-driven limits. */
+    /** Resolves a matching candidate and retains invocation type evidence. */
     @Override
-    public Node resolveForMatching(Node source, ResolutionLimits limits) {
-        return resolve(source, limits);
+    public blue.language.merge.TypeEvidenceResolution
+    resolveTypeEvidenceForMatching(
+            Node source,
+            ResolutionLimits limits) {
+        beginDirectCacheOperation();
+        try {
+            ResolutionLimits effectiveLimits = combineWithGlobalLimits(
+                    Objects.requireNonNull(limits, "limits"));
+            return languageMerger(
+                    mergingProcessor,
+                    nodeProvider,
+                    resolvedReferenceCache)
+                    .resolveTypeEvidence(
+                            Objects.requireNonNull(source, "source").clone(),
+                            effectiveLimits);
+        } finally {
+            endDirectCacheOperation();
+        }
     }
 
     /**
-     * Materializes a type reference through verified snapshots, with the
-     * released raw-definition compatibility fallback.
+     * Materializes a type reference together with exact identity evidence
+     * produced by the same bounded resolution.
      */
     @Override
-    public FrozenNode materializeTypeReferenceForMatching(
+    public TypeEvidenceResolution materializeTypeReferenceForMatching(
             FrozenNode reference) {
         Objects.requireNonNull(reference, "reference");
         if (!reference.isReferenceOnly()
@@ -1247,24 +1379,24 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             throw new IllegalArgumentException(
                     "Matching materialization requires a pure reference");
         }
-        String blueId = reference.getReferenceBlueId();
+        beginDirectCacheOperation();
         try {
-            return loadSnapshot(blueId).frozenResolvedRoot();
-        } catch (RuntimeException unavailableSnapshot) {
-            try {
-                List<Node> nodes = getNodeProvider()
-                        .fetchByBlueId(blueId);
-                if (nodes == null || nodes.size() != 1) {
-                    return null;
-                }
-                Node sourceProjection = NodeToBlueIdInput
-                        .stripResolvedBlueIdMetadata(
-                                nodes.get(0).clone());
-                return FrozenNode.fromResolvedNode(
-                        preprocess(sourceProjection));
-            } catch (RuntimeException unavailableDefinition) {
+            TypeEvidenceResolution wrapper = languageMerger(
+                    mergingProcessor,
+                    nodeProvider,
+                    resolvedReferenceCache).materializeTypeReferenceEvidence(
+                    reference,
+                    combineWithGlobalLimits(ResolutionLimits.NO_LIMITS));
+            FrozenNode materializedType = wrapper.resolvedRoot().getType();
+            if (materializedType == null
+                    || materializedType.isReferenceOnly()) {
                 return null;
             }
+            return new TypeEvidenceResolution(
+                    materializedType,
+                    wrapper.canonicalTypeIdentities());
+        } finally {
+            endDirectCacheOperation();
         }
     }
 
@@ -2126,6 +2258,59 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     }
 
     /**
+     * Resolves the effective Java type of a resolved node using canonical type
+     * identities captured by the resolver invocation that produced it.
+     *
+     * @param node resolved node whose effective type should be inspected
+     * @param typeIdentities authoritative resolver-issued type identities
+     * @return registered Java class, or empty when unavailable/disabled
+     * @throws NullPointerException when {@code typeIdentities} is null
+     * @throws IllegalStateException when identity evidence is incomplete or
+     *         this facade is closed
+     */
+    public Optional<Class<?>> determineClass(
+            Node node,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        CanonicalTypeIdentityLookup identities = Objects.requireNonNull(
+                typeIdentities,
+                "typeIdentities");
+        beginDirectCacheOperation();
+        try {
+            TypeClassResolver capturedResolver;
+            synchronized (lifecycleLock) {
+                capturedResolver = typeClassResolver;
+            }
+            if (capturedResolver == null || node == null) {
+                return Optional.empty();
+            }
+            return Optional.ofNullable(capturedResolver.resolveClass(
+                    node,
+                    identities));
+        } finally {
+            endDirectCacheOperation();
+        }
+    }
+
+    /**
+     * Resolves the Java type of a snapshot's resolved root with the exact type
+     * identity evidence carried by that snapshot.
+     *
+     * @param snapshot resolver-produced snapshot
+     * @return registered Java class, or empty when unavailable/disabled
+     * @throws NullPointerException when {@code snapshot} is null
+     * @throws IllegalStateException when the snapshot evidence is incomplete
+     *         or this facade is closed
+     */
+    public Optional<Class<?>> determineClass(ResolvedSnapshot snapshot) {
+        ResolvedSnapshot resolved = Objects.requireNonNull(
+                snapshot,
+                "snapshot");
+        return determineClass(
+                resolved.resolvedRoot(),
+                resolved.canonicalTypeIdentities());
+    }
+
+    /**
      * Maps a node graph to a newly created Java object.
      *
      * @param node source graph; it is not mutated
@@ -2147,6 +2332,71 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     }
 
     /**
+     * Maps a resolved node graph using canonical type identities captured by
+     * the resolver invocation that produced it.
+     *
+     * @param node resolved source graph; it is not mutated
+     * @param clazz non-null target class
+     * @param typeIdentities authoritative resolver-issued type identities
+     * @param <T> target type
+     * @return newly mapped object
+     * @throws NullPointerException when {@code node}, {@code clazz}, or
+     *         {@code typeIdentities} is null
+     * @throws IllegalArgumentException when the resolved graph cannot be
+     *         mapped to {@code clazz}
+     * @throws IllegalStateException when identity evidence is incomplete or
+     *         this facade is closed
+     */
+    public <T> T nodeToObject(
+            Node node,
+            Class<T> clazz,
+            CanonicalTypeIdentityLookup typeIdentities) {
+        CanonicalTypeIdentityLookup identities = Objects.requireNonNull(
+                typeIdentities,
+                "typeIdentities");
+        beginDirectCacheOperation();
+        try {
+            TypeClassResolver capturedResolver;
+            synchronized (lifecycleLock) {
+                capturedResolver = typeClassResolver;
+            }
+            return new NodeToObjectConverter(capturedResolver).convert(
+                    node,
+                    clazz,
+                    identities);
+        } finally {
+            endDirectCacheOperation();
+        }
+    }
+
+    /**
+     * Maps a snapshot's resolved root with the exact canonical type identity
+     * evidence carried by that snapshot.
+     *
+     * @param snapshot resolver-produced snapshot
+     * @param clazz non-null target class
+     * @param <T> target type
+     * @return newly mapped object
+     * @throws NullPointerException when {@code snapshot} or {@code clazz} is
+     *         null
+     * @throws IllegalArgumentException when the resolved graph cannot be
+     *         mapped to {@code clazz}
+     * @throws IllegalStateException when snapshot evidence is incomplete or
+     *         this facade is closed
+     */
+    public <T> T nodeToObject(
+            ResolvedSnapshot snapshot,
+            Class<T> clazz) {
+        ResolvedSnapshot resolved = Objects.requireNonNull(
+                snapshot,
+                "snapshot");
+        return nodeToObject(
+                resolved.resolvedRoot(),
+                clazz,
+                resolved.canonicalTypeIdentities());
+    }
+
+    /**
      * Traverses verified provider-backed type ancestry.
      *
      * @param candidateNode candidate type
@@ -2156,7 +2406,42 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
     public boolean isNodeSubtypeOf(Node candidateNode, Node superTypeNode) {
         beginDirectCacheOperation();
         try {
-            return Types.isSubtype(candidateNode, superTypeNode, nodeProvider);
+            if (candidateNode == null || superTypeNode == null) {
+                return false;
+            }
+
+            Node request = new Node().properties(
+                    "candidateType",
+                    new Node().type(candidateNode.clone()),
+                    "requiredSupertype",
+                    new Node().type(superTypeNode.clone()));
+            blue.language.merge.TypeEvidenceResolution resolution =
+                    languageMerger(
+                    mergingProcessor,
+                    nodeProvider,
+                    resolvedReferenceCache)
+                    .resolveTypeEvidence(
+                            preprocess(request),
+                            combineWithGlobalLimits(NO_LIMITS));
+            Node completed = resolution.resolvedRoot().toNode();
+            Node completedCandidate = completed.getProperties()
+                    .get("candidateType")
+                    .getType();
+            Node completedSupertype = completed.getProperties()
+                    .get("requiredSupertype")
+                    .getType();
+            /*
+             * The resolver already materialized every ancestry edge allowed
+             * by the composed operation limits. Provider traversal here would
+             * bypass a preserved-reference boundary merely because pure
+             * reference terminals need no sidecar identity evidence.
+             */
+            NodeProvider ancestryProvider = blueId -> null;
+            return Types.isSubtype(
+                    completedCandidate,
+                    completedSupertype,
+                    ancestryProvider,
+                    resolution.canonicalTypeIdentities());
         } finally {
             endDirectCacheOperation();
         }
@@ -2814,6 +3099,40 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         }
 
         @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document,
+                ExactResolutionOverlay exactResolutionOverlay) {
+            operationStamp();
+            ResolvedReferenceCache identityCache =
+                    new ResolvedReferenceCache(cachePolicy);
+            try {
+                ExactResolutionOverlay overlay = Objects.requireNonNull(
+                        exactResolutionOverlay, "exactResolutionOverlay");
+                NodeProvider preprocessingProvider = overlay.verifiedBefore(
+                        preprocessingNodeProvider);
+                NodeProvider resolutionProvider = overlay.verifiedBefore(
+                        snapshotNodeProvider);
+                ResolvedSnapshot snapshot = resolveProcessingSnapshot(
+                        Objects.requireNonNull(document, "document"),
+                        identityCache,
+                        preprocessingProvider,
+                        aliases,
+                        resolutionProvider,
+                        snapshotMergingProcessor,
+                        limits);
+                snapshot.canonicalTypeIdentities().requireCompleteCoverage();
+                if (!snapshot.hasCanonicalIdentity()) {
+                    throw new IllegalStateException(
+                            "Language canonical identity resolution did not "
+                                    + "establish a whole-document identity");
+                }
+                return snapshot;
+            } finally {
+                identityCache.close();
+            }
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentPreservingPaths(
                 Node document,
                 Collection<String> preservedPaths) {
@@ -2933,6 +3252,103 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             }
             return activeCache.putVerifiedCanonical(
                     blueId, exact);
+        }
+
+        @Override
+        public TypeEvidenceResolution materializeVerifiedTypeReference(
+                FrozenNode reference) {
+            FrozenNode checked = Objects.requireNonNull(
+                    reference, "reference");
+            operationStamp();
+            ResolvedReferenceCache activeCache =
+                    sequenceReferenceCache != null
+                            ? sequenceReferenceCache
+                            : resolvedReferenceCache;
+            TypeEvidenceResolution wrapper = languageMerger(
+                    snapshotMergingProcessor,
+                    snapshotNodeProvider,
+                    activeCache).materializeTypeReferenceEvidence(
+                    checked,
+                    limits);
+            FrozenNode materializedType = wrapper.resolvedRoot().getType();
+            if (materializedType == null
+                    || materializedType.isReferenceOnly()) {
+                return null;
+            }
+            return new TypeEvidenceResolution(
+                    materializedType,
+                    wrapper.canonicalTypeIdentities());
+        }
+
+        @Override
+        public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration) {
+            operationStamp();
+            ResolvedReferenceCache activeCache =
+                    sequenceReferenceCache != null
+                            ? sequenceReferenceCache
+                            : resolvedReferenceCache;
+            Node preprocessedWrapper = preprocess(
+                    new Node().type(Objects.requireNonNull(
+                            declaration, "declaration").clone()),
+                    preprocessingNodeProvider,
+                    aliases);
+            Node authoredType = Objects.requireNonNull(
+                    preprocessedWrapper.getType(),
+                    "preprocessedTypeDeclaration");
+            TypeEvidenceResolution resolution = languageMerger(
+                    snapshotMergingProcessor,
+                    snapshotNodeProvider,
+                    activeCache).resolveTypeDeclarationEvidence(
+                    authoredType,
+                    limits);
+            return resolution.canonicalTypeIdentities()
+                    .findCanonicalTypeIdentityEvidence(
+                            resolution.resolvedRoot().toNode(),
+                            authoredType)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Language did not establish canonical identity "
+                                    + "evidence for the authored type declaration"));
+        }
+
+        @Override
+        public CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration,
+                ExactResolutionOverlay exactResolutionOverlay) {
+            operationStamp();
+            ResolvedReferenceCache identityCache =
+                    new ResolvedReferenceCache(cachePolicy);
+            try {
+                ExactResolutionOverlay overlay = Objects.requireNonNull(
+                        exactResolutionOverlay, "exactResolutionOverlay");
+                NodeProvider preprocessingProvider = overlay.verifiedBefore(
+                        preprocessingNodeProvider);
+                NodeProvider resolutionProvider = overlay.verifiedBefore(
+                        snapshotNodeProvider);
+                Node preprocessedWrapper = preprocess(
+                        new Node().type(Objects.requireNonNull(
+                                declaration, "declaration").clone()),
+                        preprocessingProvider,
+                        aliases);
+                Node authoredType = Objects.requireNonNull(
+                        preprocessedWrapper.getType(),
+                        "preprocessedTypeDeclaration");
+                TypeEvidenceResolution resolution = languageMerger(
+                        snapshotMergingProcessor,
+                        resolutionProvider,
+                        identityCache).resolveTypeDeclarationEvidence(
+                        authoredType,
+                        limits);
+                return resolution.canonicalTypeIdentities()
+                        .findCanonicalTypeIdentityEvidence(
+                                resolution.resolvedRoot().toNode(),
+                                authoredType)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Language did not establish canonical identity "
+                                        + "evidence for the authored type declaration"));
+            } finally {
+                identityCache.close();
+            }
         }
 
         @Override
@@ -3082,15 +3498,22 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             MergingProcessor snapshotMergingProcessor,
             ResolutionLimits limits) {
         Node preprocessed = preprocess(node.clone(), preprocessingNodeProvider, aliases);
-        Node resolved = languageMerger(snapshotMergingProcessor,
+        Merger merger = languageMerger(snapshotMergingProcessor,
                 snapshotNodeProvider,
-                resolutionCache)
-                .resolve(preprocessed.clone(), limits);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(
-                new CanonicalIdentityInputBuilder().build(
-                        resolved.clone(), preprocessed));
+                resolutionCache);
+        SnapshotResolution complete = merger.resolveSnapshot(
+                preprocessed.clone(), NO_LIMITS);
+        if (limits == NO_LIMITS) {
+            return ResolvedSnapshot.fromSourceResolverResult(
+                    FrozenNode.fromSourceNode(preprocessed), complete);
+        }
+
+        Node resolved = merger.resolve(preprocessed.clone(), limits);
         FrozenNode resolvedRoot = resolutionCache.freezeResolved(resolved);
-        return new ResolvedSnapshot(canonicalRoot, resolvedRoot, canonicalRoot.blueId());
+        return ResolvedSnapshot.withDeferredResolution(
+                complete.canonicalRoot(),
+                resolvedRoot,
+                complete.canonicalTypeIdentities());
     }
 
     private ResolvedSnapshot resolveProcessingSnapshot(
@@ -3116,25 +3539,25 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         }
         Node preprocessed = preprocess(
                 node.clone(), preprocessingNodeProvider, aliases);
+        Merger merger = languageMerger(
+                snapshotMergingProcessor,
+                snapshotNodeProvider,
+                resolutionCache);
         ResolutionLimits preservingLimits = ResolutionLimits.allOf(
                 limits,
                 ResolutionLimits.deferringReferencesAt(
                         canonicalPaths));
-        Node resolved = languageMerger(
-                snapshotMergingProcessor,
-                snapshotNodeProvider,
-                resolutionCache)
-                .resolve(preprocessed.clone(), preservingLimits);
+        TypeEvidenceResolution projection = merger.resolveTypeEvidence(
+                preprocessed.clone(), preservingLimits);
+        Node resolved = projection.resolvedRoot().toNode();
         restorePreservedPaths(
                 resolved, preprocessed, canonicalPaths);
-        FrozenNode canonicalRoot = FrozenNode.fromNode(
-                new CanonicalIdentityInputBuilder().build(
-                        resolved.clone(), preprocessed));
         FrozenNode resolvedRoot =
                 resolutionCache.freezeResolved(resolved);
-        return ResolvedSnapshot.withDeferredResolution(
-                canonicalRoot,
-                resolvedRoot);
+        return ResolvedSnapshot.withDeferredSource(
+                FrozenNode.fromSourceNode(preprocessed),
+                resolvedRoot,
+                projection.canonicalTypeIdentities());
     }
 
     private ResolvedSnapshot applyProcessingCanonicalPatch(
@@ -3190,23 +3613,18 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         }
         Merger merger = languageMerger(
                 mergingProcessor, nodeProvider, resolvedReferenceCache);
-        return cacheSnapshot(ResolvedSnapshot.fromResolverResult(
-                merger.resolveSnapshot(canonicalRoot, combineWithGlobalLimits(NO_LIMITS))));
-    }
-
-    private ResolvedSnapshot snapshotFromCanonical(FrozenNode canonicalRoot,
-                                                   NodeProvider snapshotNodeProvider) {
-        ResolvedSnapshot cached = cachedSnapshotByCanonical(
-                canonicalRoot.resolvedStructuralKey());
-        if (cached != null) {
-            return cached;
+        SnapshotResolution complete = merger.resolveSnapshot(
+                canonicalRoot, NO_LIMITS);
+        ResolutionLimits limits = combineWithGlobalLimits(NO_LIMITS);
+        if (limits == NO_LIMITS) {
+            return cacheSnapshot(ResolvedSnapshot.fromResolverResult(
+                    complete));
         }
-        Merger merger = languageMerger(
-                mergingProcessor, snapshotNodeProvider,
-                resolvedReferenceCache);
-        Node canonical = canonicalRoot.toNode();
-        Node resolved = merger.resolve(canonical.clone(), combineWithGlobalLimits(NO_LIMITS));
-        return snapshotFromResolved(canonical, resolved, canonicalRoot);
+        Node resolved = merger.resolve(canonicalRoot.toNode(), limits);
+        return ResolvedSnapshot.withDeferredResolution(
+                complete.canonicalRoot(),
+                resolvedReferenceCache.freezeResolved(resolved),
+                complete.canonicalTypeIdentities());
     }
 
     private ResolvedSnapshot snapshotFromCanonical(
@@ -3217,48 +3635,18 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             ResolvedReferenceCache resolutionCache) {
         Merger merger = languageMerger(
                 snapshotMergingProcessor, snapshotNodeProvider, resolutionCache);
-        Node canonical = canonicalRoot.toNode();
-        Node resolved = merger.resolve(canonical.clone(), limits);
-        FrozenNode resolvedRoot = resolutionCache.freezeResolved(resolved);
-        return new ResolvedSnapshot(canonicalRoot, resolvedRoot, canonicalRoot.blueId());
-    }
-
-    private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource,
-                                                  Node resolved,
-                                                  FrozenNode authoritativeCanonicalRoot) {
-        return snapshotFromResolved(preprocessedSource, resolved, authoritativeCanonicalRoot, true);
-    }
-
-    private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource,
-                                                  Node resolved,
-                                                  FrozenNode authoritativeCanonicalRoot,
-                                                  boolean publish) {
-        return snapshotFromResolved(preprocessedSource,
-                resolved,
-                authoritativeCanonicalRoot,
-                publish,
-                resolvedReferenceCache);
-    }
-
-    private ResolvedSnapshot snapshotFromResolved(Node preprocessedSource,
-                                                  Node resolved,
-                                                  FrozenNode authoritativeCanonicalRoot,
-                                                  boolean publish,
-                                                  ResolvedReferenceCache resolutionCache) {
-        FrozenNode canonicalRoot = authoritativeCanonicalRoot;
-        if (canonicalRoot == null) {
-            Node canonical = new CanonicalIdentityInputBuilder().build(
-                    resolved.clone(), preprocessedSource);
-            canonicalRoot = FrozenNode.fromNode(canonical);
+        SnapshotResolution complete = merger.resolveSnapshot(
+                canonicalRoot, NO_LIMITS);
+        if (limits == NO_LIMITS) {
+            return ResolvedSnapshot.fromResolverResult(complete);
         }
-        FrozenNode resolvedRoot = publish
-                ? resolvedReferenceCache.freezeResolved(resolved)
-                : resolutionCache.freezeResolved(resolved);
-        ResolvedSnapshot snapshot = new ResolvedSnapshot(
-                canonicalRoot,
+
+        Node resolved = merger.resolve(canonicalRoot.toNode(), limits);
+        FrozenNode resolvedRoot = resolutionCache.freezeResolved(resolved);
+        return ResolvedSnapshot.withDeferredResolution(
+                complete.canonicalRoot(),
                 resolvedRoot,
-                canonicalRoot.blueId());
-        return publish ? cacheSnapshot(snapshot) : snapshot;
+                complete.canonicalTypeIdentities());
     }
 
     private Set<String> processorContractPaths(Node root) {
@@ -3371,14 +3759,17 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         if (snapshot != null && !snapshot.isResolutionComplete()) {
             return snapshot;
         }
-        ResolvedSnapshot publishable = publishableCacheSnapshot(snapshot);
+        ResolvedSnapshot invocationResult =
+                publishableCacheSnapshot(snapshot);
         CacheSnapshotPublication publication;
         synchronized (lifecycleLock) {
             ensureOpen();
-            publication = cacheSnapshotLocked(publishable);
+            publication = cacheSnapshotLocked(invocationResult);
         }
         publication.emit();
-        return publication.result;
+        return invocationResult.isSourceBacked()
+                ? invocationResult
+                : publication.result;
     }
 
     /** Caller holds lifecycleLock, which linearizes publication with invalidation. */
@@ -3387,7 +3778,8 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             throw new IllegalArgumentException(
                     "Deferred-resolution snapshots cannot enter shared resolved snapshot caches");
         }
-        snapshot = publishableCacheSnapshot(snapshot);
+        snapshot = publishableCacheSnapshot(snapshot)
+                .toCanonicalBacked();
         if (snapshot.verifiedReferenceResolution() != null) {
             resolvedReferenceCache.putVerifiedResolved(snapshot.verifiedReferenceResolution());
         }
@@ -3445,6 +3837,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         if (snapshot == null || !snapshot.isResolutionComplete()) {
             return snapshot;
         }
+        ResolvedSnapshot invocationResult;
         CacheSnapshotPublication publication;
         synchronized (lifecycleLock) {
             if (!isCurrentCacheStampLocked(stamp)
@@ -3453,6 +3846,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                 return snapshot;
             }
             snapshot = publishableCacheSnapshot(snapshot, processingObserver());
+            invocationResult = snapshot;
             if (transientReferenceCache != null) {
                 transientReferenceCache.promoteReferencesReachableFrom(
                         snapshot.frozenCanonicalRoot());
@@ -3460,7 +3854,9 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             publication = cacheSnapshotLocked(snapshot);
         }
         publication.emit();
-        return publication.result;
+        return invocationResult.isSourceBacked()
+                ? invocationResult
+                : publication.result;
     }
 
     private void pinSnapshot(ResolvedSnapshot snapshot) {
@@ -3468,7 +3864,8 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             throw new IllegalArgumentException(
                     "Deferred-resolution snapshots cannot be pinned as complete resolved snapshots");
         }
-        snapshot = publishableCacheSnapshot(snapshot);
+        snapshot = publishableCacheSnapshot(snapshot)
+                .toCanonicalBacked();
         ensureOpen();
         if (snapshot.verifiedReferenceResolution() != null) {
             resolvedReferenceCache.putPinnedVerifiedResolved(snapshot.verifiedReferenceResolution());
@@ -3703,13 +4100,6 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                 reference.pinnedVerifiedEntries(),
                 reference.verifiedEntries() - reference.pinnedVerifiedEntries()));
         gauges.add(new CacheGauge(
-                TRANSIENT_REFERENCE_CACHE,
-                reference.transientTrustedCurrentWeightBytes(),
-                reference.transientTrustedHighWaterWeightBytes(),
-                reference.transientTrustedEntries(),
-                -1,
-                -1));
-        gauges.add(new CacheGauge(
                 STRUCTURAL_INTERNER_CACHE,
                 reference.structuralCurrentWeightBytes(),
                 reference.structuralHighWaterWeightBytes(),
@@ -3943,7 +4333,6 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         long pinnedReferenceWeight = resolvedReferenceCache.pinnedVerifiedWeightBytes();
         released = saturatedAdd(released, Math.max(0L,
                 reference.verifiedCurrentWeightBytes() - pinnedReferenceWeight));
-        released = saturatedAdd(released, reference.transientTrustedCurrentWeightBytes());
         released = saturatedAdd(released, reference.structuralCurrentWeightBytes());
         resolvedReferenceCache.clearReloadable();
         return released;
@@ -3961,7 +4350,6 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         released = saturatedAdd(released, recentProcessingDocumentSnapshots.clear());
         ResolvedReferenceCache.CacheStats reference = resolvedReferenceCache.cacheStats();
         released = saturatedAdd(released, reference.verifiedCurrentWeightBytes());
-        released = saturatedAdd(released, reference.transientTrustedCurrentWeightBytes());
         released = saturatedAdd(released, reference.structuralCurrentWeightBytes());
         resolvedReferenceCache.clear();
         return released;
@@ -4273,15 +4661,14 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             return isDemandedClosure(potentialPath(pathSegment));
         }
 
-        /** Legacy binary-API spelling delegated to the canonical method. */
-        @Override
-        public boolean shouldExtendPathSegment(String pathSegment, Node currentNode) {
-            return shouldExpandPathSegment(pathSegment, currentNode);
-        }
-
         @Override
         public boolean shouldMergePathSegment(String pathSegment, Node currentNode) {
             return isDemandedClosure(potentialPath(pathSegment));
+        }
+
+        @Override
+        public boolean retainsEveryAuthoredPath() {
+            return false;
         }
 
         @Override

@@ -18,6 +18,13 @@ import java.util.Set;
  */
 final class ContractSnapshotFactory {
 
+    private final ProcessingSnapshotManager snapshotManager;
+
+    ContractSnapshotFactory(
+            ProcessingSnapshotManager snapshotManager) {
+        this.snapshotManager = snapshotManager;
+    }
+
     EffectiveContractSnapshot.Builder begin(
             String scopePath,
             String key,
@@ -56,13 +63,18 @@ final class ContractSnapshotFactory {
         }
     }
 
+    /** Adds the identity of an exact Source event pattern. */
     void addEventDispatch(
             EffectiveContractSnapshot.Builder snapshot,
-            Node eventPattern) {
-        if (eventPattern == null) {
+            Node exactEventPattern) {
+        if (exactEventPattern == null) {
             return;
         }
-        String identity = FrozenNode.fromResolvedNode(eventPattern).blueId();
+        Node sourceProjection = exactEventPattern.clone();
+        String identity = CanonicalIdentityEvidence.sourceBlueId(
+                sourceProjection,
+                snapshotManager,
+                "Effective contract event pattern");
         snapshot.dispatchField(
                         EffectiveContractSnapshotConstants.DispatchField.EVENT,
                         identity)
@@ -81,8 +93,12 @@ final class ContractSnapshotFactory {
             return;
         }
         Node canonicalBody = exactBody.clone();
-        MaterializationProvenance.clear(canonicalBody);
-        String exactBodyBlueId = FrozenNode.fromNode(canonicalBody).blueId();
+        String exactBodyBlueId = CanonicalIdentityEvidence
+                .executableBodyBlueId(
+                        canonicalBody,
+                        snapshotManager,
+                        "Contract '" + contractKey + "' executable body '"
+                                + field + "'");
         ContractContributionResolver.ExecutableBodySource source =
                 binding.executableBodySources().get(field);
         if (source == null) {

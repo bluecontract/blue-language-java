@@ -1,5 +1,6 @@
 package blue.language.merge;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Objects;
@@ -12,16 +13,23 @@ public final class SnapshotResolution implements ResolutionSnapshot {
     private final FrozenNode canonicalRoot;
     private final FrozenNode resolvedRoot;
     private final ResolutionProvenance provenance;
+    private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
+    private final boolean resolutionComplete;
 
     SnapshotResolution(FrozenNode canonicalRoot,
                        FrozenNode resolvedRoot,
-                       ResolutionProvenance provenance) {
+                       ResolutionProvenance provenance,
+                       CanonicalTypeIdentityLookup canonicalTypeIdentities,
+                       boolean resolutionComplete) {
         this.canonicalRoot = Objects.requireNonNull(
                 canonicalRoot, "canonicalRoot");
         this.resolvedRoot = Objects.requireNonNull(
                 resolvedRoot, "resolvedRoot");
         this.provenance = Objects.requireNonNull(
                 provenance, "provenance");
+        this.canonicalTypeIdentities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
+        this.resolutionComplete = resolutionComplete;
     }
 
     /**
@@ -52,6 +60,16 @@ public final class SnapshotResolution implements ResolutionSnapshot {
     @Override
     public ResolutionProvenance provenance() {
         return provenance;
+    }
+
+    @Override
+    public CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        return canonicalTypeIdentities;
+    }
+
+    @Override
+    public boolean isResolutionComplete() {
+        return resolutionComplete;
     }
 
     /**

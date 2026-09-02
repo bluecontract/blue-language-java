@@ -138,7 +138,8 @@ final class ExternalChannelFunctionResolver {
                             snapshot,
                             capture,
                             false,
-                            ExternalChannelDependencySnapshot.none());
+                            ExternalChannelDependencySnapshot.none(),
+                            null);
             List<String> channelKeys =
                     ExternalChannelFunctionRules.immutableKeys(
                             functions.channelKeys(
@@ -197,7 +198,8 @@ final class ExternalChannelFunctionResolver {
                             snapshot,
                             capture,
                             false,
-                            header.dependencies);
+                            header.dependencies,
+                            null);
             List<String> channelKeys =
                     ExternalChannelFunctionRules.immutableKeys(
                             functions.channelKeys(
@@ -215,7 +217,9 @@ final class ExternalChannelFunctionResolver {
                             snapshot,
                             capture,
                             true,
-                            header.dependencies);
+                            header.dependencies,
+                            exactEvent);
+            context.exactEventBlueId();
             List<String> eventKeys =
                     ExternalChannelFunctionRules.immutableKeys(
                             functions.eventKeys(
@@ -254,7 +258,7 @@ final class ExternalChannelFunctionResolver {
                                     + key);
                 }
                 ExactBlueValue admittedPayload =
-                        admitHostedOutput(suppliedPayload, true);
+                        admitHostedOutput(suppliedPayload);
                 payload = admittedPayload.frozenValue();
                 payloadBlueId = admittedPayload.blueId();
                 handlerChannelKey = immutableRoutingKey(
@@ -288,7 +292,7 @@ final class ExternalChannelFunctionResolver {
                 }
                 try {
                     ExactBlueValue admittedSubject =
-                            admitHostedOutput(suppliedSubject, false);
+                            admitHostedOutput(suppliedSubject);
                     checkpointSubject = suppliedSubject.isReferenceOnly()
                             ? FrozenNode.fromNode(suppliedSubject.clone())
                             : admittedSubject.frozenValue();
@@ -337,24 +341,21 @@ final class ExternalChannelFunctionResolver {
         }
     }
 
-    private ExactBlueValue admitHostedOutput(
-            Node output,
-            boolean resolvedLegacyFallback) {
+    private ExactBlueValue admitHostedOutput(Node output) {
         Node exact = Objects.requireNonNull(output, "output");
-        if (runtimeWorkSession != null
-                && runtimeWorkSession.hasSemanticOutputBoundary()) {
-            return runtimeWorkSession.semanticOutputBoundary().admit(exact);
+        ExactBlueValue carried = runtimeWorkSession != null
+                ? runtimeWorkSession.carriedExactInput(exact)
+                : null;
+        if (carried != null) {
+            return carried;
         }
-        /*
-         * Legacy header/index probes do not own a Language-backed runtime
-         * phase. Event processing always supplies an attached semantic
-         * boundary; retain the historical exact conversion only for those
-         * out-of-band compatibility probes.
-         */
-        FrozenNode frozen = resolvedLegacyFallback
-                ? FrozenNode.fromResolvedNode(exact)
-                : FrozenNode.fromNode(exact);
-        return new ExactBlueValue(frozen, frozen.blueId());
+        if (runtimeWorkSession == null
+                || !runtimeWorkSession.hasSemanticOutputBoundary()) {
+            throw new IllegalStateException(
+                    "External Channel hosted output requires a live "
+                            + "Language semantic admission boundary");
+        }
+        return runtimeWorkSession.semanticOutputBoundary().admit(exact);
     }
 
     private Evaluation evaluate(String key, Node exactEvent) {

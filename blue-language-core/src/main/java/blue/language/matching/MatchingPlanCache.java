@@ -5,7 +5,9 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.api.BlueCachePolicy;
 import blue.language.snapshot.FrozenNode;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -33,6 +35,7 @@ final class MatchingPlanCache {
         SUBTYPE,
         MATCH,
         TYPE_COMPATIBILITY,
+        TYPE_IDENTITY_EVIDENCE,
         UNRESOLVED_REFERENCE
     }
 
@@ -79,6 +82,18 @@ final class MatchingPlanCache {
         entries.put(cacheKey, new CacheEntry(value, weight));
         currentWeightBytes = saturatedAdd(currentWeightBytes, weight);
         evictToBounds();
+    }
+
+    /** Returns a stable snapshot of values retained in one region. */
+    synchronized List<Object> values(Region region) {
+        List<Object> values = new ArrayList<>();
+        for (Map.Entry<PlanCacheKey, CacheEntry> entry
+                : entries.entrySet()) {
+            if (entry.getKey().region == region) {
+                values.add(entry.getValue().value);
+            }
+        }
+        return values;
     }
 
     /** Releases every reloadable result. */

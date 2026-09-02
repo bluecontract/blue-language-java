@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 
@@ -24,26 +25,58 @@ final class ContractEffectBuffer implements AutoCloseable {
     private TerminationRequest terminationRequest;
     private boolean closed;
 
-    void addPatch(JsonPatch patch) {
+    void addPatch(
+            JsonPatch patch) {
         if (patch != null) {
             addPatches(Collections.singletonList(patch));
         }
     }
 
     void addPatches(List<JsonPatch> input) {
-        addPatchInputs(PatchInput.mutableList(input, PatchSource.CUSTOM_PROCESSOR), null);
+        addPatchInputs(
+                PatchInput.mutableList(
+                        input,
+                        PatchSource.CUSTOM_PROCESSOR),
+                null);
     }
 
-    void addPreviewedPatches(List<JsonPatch> input, WorkingDocument.Preview preview) {
-        addPatchInputs(PatchInput.mutableList(input, PatchSource.CUSTOM_PROCESSOR), preview);
+    List<JsonPatch> addResolvedPatches(
+            List<JsonPatch> input,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        List<PatchInput> captured = PatchInput.resolvedList(
+                input,
+                PatchSource.CUSTOM_PROCESSOR,
+                canonicalTypeIdentities);
+        addPatchInputs(captured, null);
+        List<JsonPatch> sourcePatches = new ArrayList<>(captured.size());
+        for (PatchInput patch : captured) {
+            sourcePatches.add(patch.detachedSourcePatch());
+        }
+        return Collections.unmodifiableList(sourcePatches);
+    }
+
+    void addPreviewedPatches(
+            List<JsonPatch> input,
+            WorkingDocument.Preview preview) {
+        addPatchInputs(
+                PatchInput.mutableList(
+                        input,
+                        PatchSource.CUSTOM_PROCESSOR),
+                preview);
     }
 
     void addFrozenPatches(List<FrozenJsonPatch> input) {
-        addPatchInputs(PatchInput.frozenList(input), null);
+        addPatchInputs(
+                PatchInput.frozenList(input),
+                null);
     }
 
-    void addPreviewedFrozenPatches(List<FrozenJsonPatch> input, WorkingDocument.Preview preview) {
-        addPatchInputs(PatchInput.frozenList(input), preview);
+    void addPreviewedFrozenPatches(
+            List<FrozenJsonPatch> input,
+            WorkingDocument.Preview preview) {
+        addPatchInputs(
+                PatchInput.frozenList(input),
+                preview);
     }
 
     private void addPatchInputs(List<PatchInput> input, WorkingDocument.Preview preview) {
@@ -66,9 +99,17 @@ final class ContractEffectBuffer implements AutoCloseable {
 
     void emit(Node event) {
         ensureOpen();
-        emittedEvents.add(
-                EventEmission.mutable(
-                        event));
+        emittedEvents.add(EventEmission.mutable(event));
+    }
+
+    Node emitResolved(
+            Node event,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        ensureOpen();
+        EventEmission captured = EventEmission.resolved(
+                event, canonicalTypeIdentities);
+        emittedEvents.add(captured);
+        return captured.event().clone();
     }
 
     void emit(ExactBlueValue event) {
@@ -161,13 +202,26 @@ final class ContractEffectBuffer implements AutoCloseable {
             this.exactValue = exactValue;
         }
 
-        private static EventEmission mutable(
-                Node event) {
+        private static EventEmission mutable(Node event) {
+            Node captured = event != null
+                    ? event.clone()
+                    : null;
             return new EventEmission(
-                    event != null
-                            ? event.clone()
-                            : null,
+                    captured,
                     null);
+        }
+
+        private static EventEmission resolved(
+                Node event,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+            Node captured = java.util.Objects.requireNonNull(
+                    event, "event").clone();
+            CanonicalEffectSourceProjection.projectResolvedOwned(
+                    captured,
+                    java.util.Objects.requireNonNull(
+                            canonicalTypeIdentities,
+                            "canonicalTypeIdentities"));
+            return new EventEmission(captured, null);
         }
 
         private static EventEmission exact(

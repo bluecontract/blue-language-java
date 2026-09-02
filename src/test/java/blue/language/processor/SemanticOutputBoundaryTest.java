@@ -1255,63 +1255,20 @@ final class SemanticOutputBoundaryTest {
     }
 
     @Test
-    void shouldRejectHostedCursorPairedWithDifferentIdentity() {
+    void shouldNotExposeExactValueLookupByBlueId() {
         // given
-        Throwable failure;
+        Class<SemanticOutputBoundary> boundaryType =
+                SemanticOutputBoundary.class;
 
         // when
-        try (Invocation invocation = new Invocation(new Blue())) {
-            String expected = DirectBlueIdCalculator.calculateBlueId(
-                    new Node().properties("value", text("expected")));
-            FrozenNode tampered = FrozenNode.fromNode(
-                    new Node().properties("value", text("tampered")));
-
-            failure = captureFailure(
-                    () -> invocation.boundary()
-                            .carryExactValue(expected, tampered));
-        }
+        Throwable failure = captureFailure(
+                () -> boundaryType.getMethod(
+                        "carryExactValue",
+                        String.class,
+                        FrozenNode.class));
 
         // then
-        assertInstanceOf(
-                InvalidExecutionEvidenceException.class,
-                failure);
-    }
-
-    @Test
-    void shouldCarryOnlyOpaqueReferencesProvenByAuthenticatedExactInput() {
-        // given
-        Node target = new Node().properties("value", text("target"));
-        String targetBlueId = DirectBlueIdCalculator.calculateBlueId(target);
-        String cyclicMemberBlueId = targetBlueId + "#0";
-        FrozenNode authenticatedInput = FrozenNode.fromNode(
-                new Node().properties(
-                        "ordinary", new Node().blueId(targetBlueId),
-                        "cyclic", new Node().blueId(cyclicMemberBlueId)));
-        FrozenNode mismatchedReadCursor = FrozenNode.fromNode(
-                new Node().properties("value", text("schema-shaped")));
-        ExactBlueValue ordinary;
-        ExactBlueValue cyclic;
-
-        // when
-        try (Invocation invocation = new Invocation(new Blue())) {
-            invocation.boundary().carryExactInput(
-                    authenticatedInput, authenticatedInput.blueId());
-
-            ordinary = invocation.boundary().carryExactValue(
-                    targetBlueId, mismatchedReadCursor);
-            cyclic = invocation.boundary().carryExactValue(
-                    cyclicMemberBlueId, mismatchedReadCursor);
-        }
-
-        // then
-        assertEquals(targetBlueId, ordinary.blueId());
-        assertTrue(ordinary.frozenValue().isReferenceOnly());
-        assertEquals(targetBlueId,
-                ordinary.frozenValue().getReferenceBlueId());
-        assertEquals(cyclicMemberBlueId, cyclic.blueId());
-        assertTrue(cyclic.frozenValue().isReferenceOnly());
-        assertEquals(cyclicMemberBlueId,
-                cyclic.frozenValue().getReferenceBlueId());
+        assertInstanceOf(NoSuchMethodException.class, failure);
     }
 
     @Test

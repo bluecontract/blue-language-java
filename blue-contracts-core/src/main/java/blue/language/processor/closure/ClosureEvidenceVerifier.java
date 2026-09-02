@@ -2,7 +2,6 @@ package blue.language.processor.closure;
 
 import blue.language.identity.BlueIdReferenceValidator;
 import blue.language.identity.BlueIds;
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodeWireForm;
 import blue.language.model.NodePathEditor;
@@ -422,10 +421,9 @@ final class ClosureEvidenceVerifier {
             String expected,
             String label) {
         Node type = marker.getType();
-        String actual = type == null ? null : type.getBlueId();
-        if (actual == null && type != null) {
-            actual = DirectBlueIdCalculator.calculateBlueId(type);
-        }
+        String actual = type != null && type.isReferenceOnly()
+                ? type.getBlueId()
+                : null;
         if (!expected.equals(actual)) {
             throw new IllegalArgumentException(
                     "Invalid direct " + label + " marker");

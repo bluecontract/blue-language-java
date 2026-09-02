@@ -37,7 +37,7 @@ final class ManagedRevisionCyclicEvidenceTest {
             ManagedRevisionCause cause = fixture.cause;
 
             ClosureInvocationVerifier.Verification verified =
-                    ClosureInvocationVerifier.verify(fixture.input);
+                    ClosureInvocationVerifier.verify(fixture.input, null);
 
             assertEquals(fixture.input.invocationIdentity(),
                     verified.invocationIdentity());
@@ -64,7 +64,7 @@ final class ManagedRevisionCyclicEvidenceTest {
             assertNotSame(first, second);
             first.declaredPlaceholderSet().get(0)
                     .properties("tampered", new Node().value(Boolean.TRUE));
-            ClosureInvocationVerifier.verify(fixture.input);
+            ClosureInvocationVerifier.verify(fixture.input, null);
         }
     }
 
@@ -145,7 +145,8 @@ final class ManagedRevisionCyclicEvidenceTest {
             // when
             IllegalArgumentException failure = assertThrows(
                     IllegalArgumentException.class,
-                    () -> ClosureInvocationVerifier.verify(invalidInput));
+                    () -> ClosureInvocationVerifier.verify(
+                            invalidInput, null));
 
             // then
             assertTrue(failure.getMessage() != null
@@ -412,7 +413,7 @@ final class ManagedRevisionCyclicEvidenceTest {
                 fixture.input.executionPolicy(),
                 fixture.input.environment());
         assertThrows(IllegalArgumentException.class,
-                () -> ClosureInvocationVerifier.verify(input));
+                () -> ClosureInvocationVerifier.verify(input, null));
     }
 
     private static CyclicSetProof proof() {

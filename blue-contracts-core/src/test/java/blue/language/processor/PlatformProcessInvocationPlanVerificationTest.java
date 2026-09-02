@@ -92,6 +92,75 @@ final class PlatformProcessInvocationPlanVerificationTest {
     }
 
     @Test
+    void shouldAcceptReferenceInputsForPlanPreparedFromInlineTypeForms() {
+        // given
+        Node rootType = new Node().name(
+                "Platform Input Root Type");
+        Node eventType = new Node().name(
+                "Platform Input Event Type");
+        String rootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(rootType);
+        String eventTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(eventType);
+        Node inlineRoot = root(true).type(rootType.clone());
+        Node referenceRoot = root(true)
+                .type(new Node().blueId(rootTypeBlueId));
+        Node inlineEvent = event().type(eventType.clone());
+        Node referenceEvent = event()
+                .type(new Node().blueId(eventTypeBlueId));
+        NodeProvider runtimeTypes = outcomeProvider(
+                rootTypeBlueId,
+                NodeProviderResult.found(
+                        Collections.singletonList(rootType)),
+                outcomeProvider(
+                        eventTypeBlueId,
+                        NodeProviderResult.found(
+                                Collections.singletonList(eventType)),
+                        platformTypes()));
+
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(runtimeTypes)
+                .build();
+             BlueContracts contracts = BlueContracts.builder(
+                     language.processing())
+                     .runtimeRegistry(registry(CHANNEL_TYPE_BLUE_ID))
+                     .build()) {
+            ExternalDeliveryPlan plan = prepare(
+                    contracts, inlineRoot, inlineEvent);
+
+            // when
+            PlatformProcessingResult result =
+                    contracts.processForPlatformCommit(
+                            referenceRoot,
+                            referenceEvent,
+                            invocation(plan, runtimeTypes));
+
+            // then
+            String inlineRootBlueId = language.identity()
+                    .sourceDocumentBlueId(inlineRoot);
+            String referenceRootBlueId = language.identity()
+                    .sourceDocumentBlueId(referenceRoot);
+            String inlineEventBlueId = language.identity()
+                    .sourceDocumentBlueId(inlineEvent);
+            String referenceEventBlueId = language.identity()
+                    .sourceDocumentBlueId(referenceEvent);
+            assertEquals(inlineRootBlueId, referenceRootBlueId);
+            assertEquals(inlineRootBlueId,
+                    plan.verifiedBinding().rootBlueId());
+            assertEquals(inlineEventBlueId, referenceEventBlueId);
+            assertEquals(inlineEventBlueId,
+                    plan.verifiedBinding().eventBlueId());
+            assertEquals(
+                    plan.verifiedBinding().eventBlueId(),
+                    plan.deliveries().get(0)
+                            .checkpointSubjectBlueId());
+            assertEquals(
+                    ProcessorStatus.SUCCESS,
+                    result.processResult().status());
+        }
+    }
+
+    @Test
     void shouldReplayHostedOutputsThroughInvocationProviderBoundary() {
         // given
         Node hostedOutput = new Node()
@@ -217,8 +286,8 @@ final class PlatformProcessInvocationPlanVerificationTest {
                     evaluated)
                     .build()
                     .withVerifiedBinding(
-                            root,
-                            event,
+                            evaluated.verifiedBinding().rootBlueId(),
+                            evaluated.verifiedBinding().eventBlueId(),
                             evaluated.verifiedBinding()
                                     .runtimeRegistryIdentity());
             PlatformProcessInvocation invocation = invocation(
@@ -256,8 +325,8 @@ final class PlatformProcessInvocationPlanVerificationTest {
                     evaluated)
                     .build()
                     .withVerifiedBinding(
-                            root,
-                            event,
+                            evaluated.verifiedBinding().rootBlueId(),
+                            evaluated.verifiedBinding().eventBlueId(),
                             evaluated.verifiedBinding()
                                     .runtimeRegistryIdentity());
             PlatformProcessInvocation invocation = invocation(
@@ -362,8 +431,8 @@ final class PlatformProcessInvocationPlanVerificationTest {
                             original.sourceContributionNodeBlueIds()))
                     .build()
                     .withVerifiedBinding(
-                            root,
-                            event,
+                            evaluated.verifiedBinding().rootBlueId(),
+                            evaluated.verifiedBinding().eventBlueId(),
                             evaluated.verifiedBinding()
                                     .runtimeRegistryIdentity());
 
@@ -401,8 +470,8 @@ final class PlatformProcessInvocationPlanVerificationTest {
                     .delivery(evaluated.deliveries().get(0))
                     .build()
                     .withVerifiedBinding(
-                            root,
-                            event,
+                            evaluated.verifiedBinding().rootBlueId(),
+                            evaluated.verifiedBinding().eventBlueId(),
                             evaluated.verifiedBinding()
                                     .runtimeRegistryIdentity());
 
@@ -449,8 +518,8 @@ final class PlatformProcessInvocationPlanVerificationTest {
                     .delivery(changed)
                     .build()
                     .withVerifiedBinding(
-                            root,
-                            event,
+                            evaluated.verifiedBinding().rootBlueId(),
+                            evaluated.verifiedBinding().eventBlueId(),
                             evaluated.verifiedBinding()
                                     .runtimeRegistryIdentity());
 
@@ -502,8 +571,8 @@ final class PlatformProcessInvocationPlanVerificationTest {
                             Collections.singletonList(changed))
                     .build()
                     .withVerifiedBinding(
-                            root,
-                            event,
+                            evaluated.verifiedBinding().rootBlueId(),
+                            evaluated.verifiedBinding().eventBlueId(),
                             evaluated.verifiedBinding()
                                     .runtimeRegistryIdentity());
 
@@ -810,7 +879,7 @@ final class PlatformProcessInvocationPlanVerificationTest {
             ExternalDeliveryPlan evaluated = prepare(
                     contracts, root, event);
             ExternalDeliveryPlan plan = withRequiredResource(
-                    evaluated, root, event, resourceBlueId);
+                    evaluated, resourceBlueId);
             PlatformProcessInvocation invocation = invocation(
                     plan,
                     outcomeProvider(
@@ -849,8 +918,6 @@ final class PlatformProcessInvocationPlanVerificationTest {
                      .build()) {
             ExternalDeliveryPlan plan = withRequiredResource(
                     prepare(contracts, root, event),
-                    root,
-                    event,
                     resourceBlueId);
 
             // when
@@ -1049,15 +1116,13 @@ final class PlatformProcessInvocationPlanVerificationTest {
 
     private static ExternalDeliveryPlan withRequiredResource(
             ExternalDeliveryPlan evaluated,
-            Node root,
-            Node event,
             String blueId) {
         return copyPlan(evaluated)
                 .requiredExactNode(blueId)
                 .build()
                 .withVerifiedBinding(
-                        root,
-                        event,
+                        evaluated.verifiedBinding().rootBlueId(),
+                        evaluated.verifiedBinding().eventBlueId(),
                         evaluated.verifiedBinding()
                                 .runtimeRegistryIdentity());
     }

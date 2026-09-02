@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
@@ -16,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -34,6 +36,7 @@ public final class ContractBundle {
     private final Map<String, MarkerContract> markers;
     private final Map<String, FrozenNode> contractNodes;
     private final List<EffectiveContractSnapshot> effectiveContractSnapshots;
+    private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
     private final EmbeddedScopeDeclaration embeddedScopeDeclaration;
     private final EmbeddedScopePlan embeddedScopePlan;
     private final List<String> embeddedPaths;
@@ -50,6 +53,7 @@ public final class ContractBundle {
                            Map<String, MarkerContract> markers,
                            Map<String, FrozenNode> contractNodes,
                            List<EffectiveContractSnapshot> effectiveContractSnapshots,
+                           CanonicalTypeIdentityLookup canonicalTypeIdentities,
                            EmbeddedScopeDeclaration embeddedScopeDeclaration,
                            EmbeddedScopePlan embeddedScopePlan,
                            boolean checkpointDeclared) {
@@ -59,6 +63,8 @@ public final class ContractBundle {
         this.markers = markers;
         this.contractNodes = contractNodes;
         this.effectiveContractSnapshots = effectiveContractSnapshots;
+        this.canonicalTypeIdentities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
         this.embeddedScopeDeclaration = embeddedScopeDeclaration;
         this.embeddedScopePlan = embeddedScopePlan;
         this.embeddedPaths = effectiveEmbeddedPaths(
@@ -77,7 +83,19 @@ public final class ContractBundle {
      * @return a new empty builder
      */
     public static Builder builder() {
-        return new Builder();
+        return new Builder(CanonicalTypeIdentityLookup.incomplete());
+    }
+
+    /**
+     * Starts a bundle builder bound to the producing resolution's canonical
+     * type identity evidence.
+     *
+     * @param canonicalTypeIdentities authoritative invocation-local evidence
+     * @return a new empty builder
+     */
+    static Builder builder(
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        return new Builder(canonicalTypeIdentities);
     }
 
     /**
@@ -179,6 +197,11 @@ public final class ContractBundle {
             }
         }
         return null;
+    }
+
+    /** Returns canonical type identity evidence for this invocation view. */
+    CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+        return canonicalTypeIdentities;
     }
 
     /**
@@ -294,10 +317,22 @@ public final class ContractBundle {
     ContractBundle copyWithRuntimeMarkers(Map<String, MarkerContract> runtimeMarkers,
                                           Map<String, FrozenNode> runtimeMarkerNodes,
                                           boolean runtimeCheckpointDeclared,
-                                          EmbeddedScopePlan runtimeEmbeddedScopePlan) {
+                                          EmbeddedScopePlan runtimeEmbeddedScopePlan,
+                                          CanonicalTypeIdentityLookup typeIdentities) {
+        CanonicalTypeIdentityLookup currentTypeIdentities =
+                Objects.requireNonNull(typeIdentities, "typeIdentities");
         Map<String, List<HandlerBinding>> handlersCopy = new LinkedHashMap<>();
         for (Map.Entry<String, List<HandlerBinding>> entry : handlersByChannel.entrySet()) {
-            handlersCopy.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+            List<HandlerBinding> rebound = new ArrayList<>();
+            for (HandlerBinding binding : entry.getValue()) {
+                rebound.add(new HandlerBinding(
+                        binding.key,
+                        binding.contract,
+                        binding.node,
+                        binding.executableBodyFields,
+                        currentTypeIdentities));
+            }
+            handlersCopy.put(entry.getKey(), rebound);
         }
         Map<String, FrozenNode> nodesCopy = new LinkedHashMap<>(contractNodes);
         for (String key : markers.keySet()) {
@@ -312,9 +347,20 @@ public final class ContractBundle {
                 runtimeMarkers != null ? new LinkedHashMap<>(runtimeMarkers) : new LinkedHashMap<>(),
                 nodesCopy,
                 new ArrayList<>(effectiveContractSnapshots),
+                currentTypeIdentities,
                 embeddedScopeDeclaration,
                 runtimeEmbeddedScopePlan,
                 runtimeCheckpointDeclared);
+    }
+
+    /** Returns structural cache state without invocation-local evidence. */
+    ContractBundle copyForStructuralCache() {
+        return copyWithRuntimeMarkers(
+                Collections.<String, MarkerContract>emptyMap(),
+                Collections.<String, FrozenNode>emptyMap(),
+                false,
+                null,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     /** Returns an invocation-local copy carrying the frozen entry plan. */
@@ -333,6 +379,7 @@ public final class ContractBundle {
                 new LinkedHashMap<>(markers),
                 new LinkedHashMap<>(contractNodes),
                 new ArrayList<>(effectiveContractSnapshots),
+                canonicalTypeIdentities,
                 embeddedScopeDeclaration,
                 plan,
                 checkpointDeclared);
@@ -421,15 +468,13 @@ public final class ContractBundle {
         private final HandlerContract contract;
         private final FrozenNode node;
         private final List<String> executableBodyFields;
-
-        HandlerBinding(String key, HandlerContract contract, FrozenNode node) {
-            this(key, contract, node, Collections.emptyList());
-        }
+        private final CanonicalTypeIdentityLookup typeIdentities;
 
         HandlerBinding(String key,
                        HandlerContract contract,
                        FrozenNode node,
-                       List<String> executableBodyFields) {
+                       List<String> executableBodyFields,
+                       CanonicalTypeIdentityLookup typeIdentities) {
             this.key = key;
             this.contract = contract;
             this.node = node;
@@ -437,6 +482,8 @@ public final class ContractBundle {
                     new ArrayList<>(executableBodyFields != null
                             ? executableBodyFields
                             : Collections.emptyList()));
+            this.typeIdentities = Objects.requireNonNull(
+                    typeIdentities, "typeIdentities");
         }
 
         /**
@@ -475,6 +522,10 @@ public final class ContractBundle {
             return executableBodyFields;
         }
 
+        CanonicalTypeIdentityLookup typeIdentities() {
+            return typeIdentities;
+        }
+
         /**
          * Resolves the Handler's dispatch order.
          *
@@ -500,12 +551,16 @@ public final class ContractBundle {
         private final Map<String, FrozenNode> contractNodes = new LinkedHashMap<>();
         private final List<EffectiveContractSnapshot> effectiveContractSnapshots =
                 new ArrayList<>();
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
         private EmbeddedScopeDeclaration embeddedScopeDeclaration =
                 EmbeddedScopeDeclaration.empty();
         private boolean embeddedDeclared;
         private boolean checkpointDeclared;
 
-        private Builder() {
+        private Builder(
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities, "canonicalTypeIdentities");
         }
 
         /**
@@ -568,7 +623,11 @@ public final class ContractBundle {
          */
         public Builder addHandler(String key, HandlerContract contract, FrozenNode node) {
             return addHandler(
-                    key, contract, node, Collections.emptyList());
+                    key,
+                    contract,
+                    node,
+                    Collections.emptyList(),
+                    canonicalTypeIdentities);
         }
 
         /**
@@ -578,16 +637,22 @@ public final class ContractBundle {
          * @param contract converted handler contract
          * @param node immutable source node, or {@code null}
          * @param executableBodyFields selected executable-body field names
+         * @param typeIdentities invocation-local canonical type identity evidence
          * @return this builder
          */
         public Builder addHandler(String key,
                                   HandlerContract contract,
                                   FrozenNode node,
-                                  List<String> executableBodyFields) {
+                                  List<String> executableBodyFields,
+                                  CanonicalTypeIdentityLookup typeIdentities) {
             handlersByChannel
                     .computeIfAbsent(contract.getChannelKey(), k -> new ArrayList<>())
                     .add(new HandlerBinding(
-                            key, contract, node, executableBodyFields));
+                            key,
+                            contract,
+                            node,
+                            executableBodyFields,
+                            typeIdentities));
             if (node != null) {
                 contractNodes.put(key, node);
             }
@@ -685,6 +750,7 @@ public final class ContractBundle {
                     markers,
                     contractNodes,
                     effectiveContractSnapshots,
+                    canonicalTypeIdentities,
                     embeddedScopeDeclaration,
                     null,
                     checkpointDeclared);

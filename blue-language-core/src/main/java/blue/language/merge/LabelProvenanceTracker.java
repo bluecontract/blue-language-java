@@ -141,7 +141,9 @@ final class LabelProvenanceTracker {
                 || !hasLabelPathAtOrBelow(scan.relevantLabelPaths, task.path)) {
             return;
         }
-        String typeBlueId = typeNode.getBlueId();
+        String typeBlueId = typeNode.isReferenceOnly()
+                ? typeNode.getBlueId()
+                : null;
         if (typeBlueId != null && CORE_TYPE_BLUE_IDS.contains(typeBlueId)) {
             return;
         }
@@ -341,7 +343,7 @@ final class LabelProvenanceTracker {
             if (current.getRawValue() != null
                     || current.isInlineValue()
                     || current.getItems() != null
-                    || (!task.typeRoot && current.getBlueId() != null)
+                    || (!task.typeRoot && current.isReferenceOnly())
                     || current.getPreviousBlueId() != null
                     || current.getPosition() != null) {
                 return true;
@@ -369,7 +371,9 @@ final class LabelProvenanceTracker {
         if (typeNode == null || isBareCoreTypeAlias(typeNode)) {
             return;
         }
-        String typeBlueId = typeNode.getBlueId();
+        String typeBlueId = typeNode.isReferenceOnly()
+                ? typeNode.getBlueId()
+                : null;
         if (typeBlueId != null) {
             if (CORE_TYPE_BLUE_IDS.contains(typeBlueId)
                     || !visitedTypeBlueIds.add(typeBlueId)) {
