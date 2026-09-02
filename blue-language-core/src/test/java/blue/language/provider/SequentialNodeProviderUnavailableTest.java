@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 final class SequentialNodeProviderUnavailableTest {
 
     private static final String REQUESTED =
-            "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e";
+            "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3";
 
     @Test
     void retainsRequestedExactBlueIdAcrossLegacyLookupBoundary() {

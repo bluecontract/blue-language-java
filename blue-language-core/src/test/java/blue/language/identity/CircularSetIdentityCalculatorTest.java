@@ -106,7 +106,7 @@ class CircularSetIdentityCalculatorTest {
                         "contracts", new Node().properties(
                                 "embedded", new Node().properties(
                                         "type", new Node().blueId(
-                                                "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"),
+                                                "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"),
                                         "paths", new Node().items(
                                                 scalar("/self")))));
 
@@ -118,11 +118,11 @@ class CircularSetIdentityCalculatorTest {
 
         // then
         assertEquals(
-                "69wLCpGL7koAkP9azLCdydGyHzQCRVKqz2qjbMJBuS5Z",
+                "AtYu1mzovKqo8KuN173RRymAHQrarZmNVLGbKEmKpLFK",
                 finalization.membersInInputOrder().get(0)
                         .preliminaryBlueId());
         assertEquals(
-                "J6MGqn8npgKGY1B9JzayUziZqBbZqAvYrFvPm7kBB6ap",
+                "2Rh775x5AkBuDgFmaTuWKfuZjFiWBpxLhh1ARRmUpVQ3",
                 finalization.masterBlueId());
         assertEquals(
                 finalization.masterBlueId() + "#0",

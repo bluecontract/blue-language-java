@@ -40,7 +40,7 @@ final class ClosureInvocationVerifierTest {
     private static final String BLUE_B =
             "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ";
     private static final String C_CLO_34_INVOCATION_IDENTITY =
-            "sha256:7a602429b3959efe5bddf701231474a42c9cafe4c58abd65d655dc46265f9a06";
+            "sha256:ab58c68cd8dae9a99411a3650fc75e904a6e7c7b30abf59e28fd25d7fb0aad3a";
     private static final String C_CLO_34_CANONICAL_INVOCATION_ENVELOPE =
             "{\"domain\":\"blue-contracts-invocation/1.0\",\"value\":{\"admissionCandidateIdenti"
                     + "ty\":null,\"blueLanguageSpecificationIdentity\":\"sha256:01b038b64e3f0a9a11f3f70"
@@ -69,7 +69,7 @@ final class ClosureInvocationVerifierTest {
                     + "ha256:bf684fafcc3901aedb2c6f7154b15a1cfa36958dbc8d479113317fd5cd0588ee\",\"ope"
                     + "ration\":\"process-closure\",\"portableLimitPolicyIdentity\":\"sha256:fcd17a9a3270"
                     + "82d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5\",\"runtimeRegistryIdenti"
-                    + "ty\":\"sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1"
+                    + "ty\":\"sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4"
                     + "\"}}";
 
     @Test
@@ -599,7 +599,7 @@ final class ClosureInvocationVerifierTest {
         return new ClosureEnvironment(
                 "sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
                 "sha256:e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193",
-                "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1",
+                "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4",
                 "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
                 labeled(
                         "sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac",

@@ -177,7 +177,7 @@ final class ComponentFinalizationKernelTest {
                 "contracts", new Node().properties(
                         "embedded", new Node().properties(
                                 "type", reference(
-                                        "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"),
+                                        "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"),
                                 "paths", new Node().items(
                                         scalar("/self")))));
         ManagedOccurrenceBinding selfEdge = binding(
@@ -190,10 +190,10 @@ final class ComponentFinalizationKernelTest {
                 Collections.singletonMap(self, Long.valueOf(1L)));
 
         assertEquals(
-                "J6MGqn8npgKGY1B9JzayUziZqBbZqAvYrFvPm7kBB6ap#0",
+                "2Rh775x5AkBuDgFmaTuWKfuZjFiWBpxLhh1ARRmUpVQ3#0",
                 result.document(self).blueId());
         assertEquals(
-                "J6MGqn8npgKGY1B9JzayUziZqBbZqAvYrFvPm7kBB6ap#0",
+                "2Rh775x5AkBuDgFmaTuWKfuZjFiWBpxLhh1ARRmUpVQ3#0",
                 result.document(self).document().getNode("/self").getBlueId());
         assertEquals("this#0", result.components().get(0).component()
                 .completeCyclicProof().declaredPlaceholderSet().get(0)
