@@ -277,8 +277,9 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
         ProviderContext provider = providerContext(fixture, null);
         LanguageFixtureRuntime blue =
                 new LanguageFixtureRuntime(provider.provider);
+        Node actual;
         try {
-            blue.resolve(blue.preprocess(source));
+            actual = blue.resolve(blue.preprocess(source));
         } catch (RuntimeException failure) {
             if (!variant.hasNonNull(FixtureField.EXPECTED_ERROR_CATEGORY)) {
                 throw failure;
@@ -292,6 +293,7 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
         }
         assertTrue(variant.path(FixtureField.EXPECTED_VALID).asBoolean(false),
                 "Successful variant must declare expectedValid: true.");
+        assertResolutionExpectations(variant, actual, blue, source);
     }
 
     static void runMatch(JsonNode spec) {

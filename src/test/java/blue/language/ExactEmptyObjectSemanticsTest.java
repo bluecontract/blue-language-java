@@ -1,6 +1,8 @@
 package blue.language;
 
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.model.Node;
 import blue.language.model.NodeWireForm;
 import blue.language.model.Nodes;
@@ -233,20 +235,37 @@ final class ExactEmptyObjectSemanticsTest {
 
         // when
         Node inherited = blue.resolve(new Node().type(reference(holderId)));
+        Node inheritedAfterNull = blue.resolve(blue.preprocess(
+                YAML_MAPPER.readValue(
+                        "type:\n"
+                                + "  blueId: " + holderId + "\n"
+                                + "scalar: null\n"
+                                + "list: null\n",
+                        Node.class)));
+        IllegalArgumentException scalarConflict = assertThrows(
+                IllegalArgumentException.class,
+                () -> blue.resolve(new Node()
+                        .type(reference(holderId))
+                        .properties("scalar", Nodes.emptyObject())));
+        IllegalArgumentException listConflict = assertThrows(
+                IllegalArgumentException.class,
+                () -> blue.resolve(new Node()
+                        .type(reference(holderId))
+                        .properties("list", Nodes.emptyObject())));
 
         // then
         assertEquals("fixed", inherited.getProperties()
                 .get("scalar").getValue());
         assertEquals(2, inherited.getProperties().get("list")
                 .getItems().size());
-        assertThrows(IllegalArgumentException.class,
-                () -> blue.resolve(new Node()
-                        .type(reference(holderId))
-                        .properties("scalar", Nodes.emptyObject())));
-        assertThrows(IllegalArgumentException.class,
-                () -> blue.resolve(new Node()
-                        .type(reference(holderId))
-                        .properties("list", Nodes.emptyObject())));
+        assertEquals("fixed", inheritedAfterNull.getProperties()
+                .get("scalar").getValue());
+        assertEquals(2, inheritedAfterNull.getProperties().get("list")
+                .getItems().size());
+        assertEquals(BlueLanguageErrorCategory.TypeCompatibilityViolation,
+                BlueLanguageErrorClassifier.classify(scalarConflict));
+        assertEquals(BlueLanguageErrorCategory.TypeCompatibilityViolation,
+                BlueLanguageErrorClassifier.classify(listConflict));
     }
 
     @Test
