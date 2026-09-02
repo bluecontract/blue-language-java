@@ -853,6 +853,14 @@ ExternalCause {
 }
 ```
 
+For ordinary Source, the selected Language runtime MUST derive
+`eventBlueId` from the exact semantic Source representation; a raw direct hash
+is insufficient when inline type content participates in canonical identity.
+A pure exact reference establishes its own plain BlueId. A claimed identity
+that does not identify the exact Source or reference fails before semantic
+execution. Cyclic-member event identities remain forbidden at this top-level
+external boundary.
+
 `PROCESS_CLOSURE` also accepts one exact processor-managed revision cause. It
 is not an external event and carries no direct delivery:
 

@@ -80,6 +80,35 @@ Apply matcher-neutral label behavior and typed semantic matching, then compare `
 
 Resolve the Source value completely and derive the unique Canonical Identity Input. Compare `expectedCanonicalOverlay`, canonical items, control absence, and expected Content BlueId fields where supplied.
 
+Every `type`, `itemType`, `keyType`, and `valueType` position anywhere in the
+result MUST be a pure reference containing one non-null canonical BlueId. An
+empty object, a null BlueId, a mixed reference, or a materialized type body in
+one of those positions is a fixture failure.
+
+When `alsoEquivalentTo` is present, canonicalize both Source forms in
+independent fresh runtimes. Their Canonical Identity Inputs and Source-derived
+BlueIds MUST be identical. Their complete Resolved Forms MUST also be
+semantically identical after applying the strict resolved-content projection:
+recursively remove a `blueId` only when it annotates expanded, non-reference
+content; preserve pure references and every semantic field; then serialize as
+strict BlueId input. This is the same projection used by the public Source
+identity parity contract. Raw diagnostic wire forms need not be byte-identical
+because verified provider materialization may retain nonsemantic BlueId
+provenance that an inline form never carried; no other difference is ignored.
+
+Canonicalize the forms as `A -> B -> A` and `B -> A -> B` in two otherwise
+fresh runtimes. Each three-step sequence deliberately reuses one runtime so the
+second and third operations observe any cache state established by the first.
+Then repeat the first form once more in a separate runtime. Together these
+checks prove cold/warm cache parity, evaluation-order parity, process-local
+repeatability, and independence from Java object identity. `expectedNodeBlueId`,
+when present, is the exact independently derived Source BlueId of both forms.
+
+When `alsoDifferentFrom` is present, its independently canonicalized Source
+MUST produce a different Canonical Identity Input and Source-derived BlueId.
+This guards against false convergence caused by malformed or cleaned-away type
+metadata.
+
 ### `compareContentAndDirectResolvedBlueId`
 
 Prove that Content BlueId is the Node BlueId of Canonical Identity Input and that directly hashing a noncanonical Resolved View need not yield it.
@@ -98,7 +127,12 @@ The two Content BlueIds MUST be equal. The runner MUST NOT establish this assert
 
 ### `canonicalizeLimitedResult`
 
-Reject canonicalization when the supplied limited result is incomplete.
+Reject canonicalization when the supplied limited result is incomplete. The
+rejected attempt MUST NOT poison resolver or identity state: retry the authored
+Source with complete evidence in the same runtime and compare its Canonical
+Identity Input and Source-derived BlueId with a clean eager run in a separate
+runtime. When supplied, `expectedCanonicalOverlay` and `expectedNodeBlueId`
+freeze that recovered result.
 
 ## 6. Expansion, collapse, providers, and direct manifests
 

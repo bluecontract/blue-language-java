@@ -48,6 +48,10 @@
 
 ### Compatibility
 
+- correct rc23 Source-derived identities for genuinely inline effective
+  `type`, `itemType`, `keyType`, and `valueType` metadata without retaining
+  aliases from defective identities; affected stored Source identities and
+  transitive parents must be recomputed
 - retain legacy state-only managed-revision inputs, receipt-free result
   accessors, and the Contracts 1.0 commit-companion constructor; Blue
   value/model/core/mapping, BlueId, BEX, and repository semantics are unchanged
@@ -69,6 +73,9 @@
 
 ### Fix
 
+- canonicalize inline effective types through their own Canonical Identity
+  Input so inline and verified-reference forms produce one nonempty parent type
+  reference and one Source-derived BlueId
 - preserve authenticated managed event targets, activation state, occurrence
   continuity, and pending-event retargeting across retained managed-epoch
   application

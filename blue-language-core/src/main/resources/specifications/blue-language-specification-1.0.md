@@ -2355,7 +2355,11 @@ Given a Resolved Form `R`, canonicalization MUST:
 - preserve instance-level `name` and `description` when present on the instance;
 - not inherit top-level `name` or `description` from the type;
 - preserve instance-fixed values that are not derivable from the type chain;
-- replace materialized type objects with canonical `type: { blueId: ... }` references when their BlueId is known;
+- replace every materialized effective type in `type`, `itemType`, `keyType`,
+  and `valueType` with a non-null canonical pure reference. For verified
+  reference-backed content, retain the verified requested BlueId. For genuine
+  inline content, recursively construct that type's own Canonical Identity
+  Input and calculate its direct BlueId before emitting the parent reference;
 - ensure the Canonical Identity Input contains no type aliases; if an instance supplied a type alias, preprocessing MUST replace it with the canonical `type: { blueId: ... }` reference before resolution;
 - for provider-materialized content, preserve the original pure reference when that reference is an instance contribution and the materialized subtree contributes no additional instance-supplied content;
 - remove the `blue` directive if present, because it is invalid after preprocessing;
@@ -2364,6 +2368,14 @@ Given a Resolved Form `R`, canonicalization MUST:
 - produce valid BlueId Input.
 
 Schema objects included in Canonical Identity Input MUST use normalized effective schema form. In particular, `enum` values are duplicate-free and sorted under §9.8.1, and integer `multipleOf` constraints are represented by the merged LCM value rather than by raw inherited/descendant contributions.
+
+The identity used for a materialized inline type is not the nullable authored
+`blueId` field of that materialization and is not a direct hash of its Resolved
+Form. It is the verified direct BlueId of the type's own Canonical Identity
+Input. Required nested type evidence MUST be complete. If that identity cannot
+be established, canonicalization fails or demands the missing evidence; it
+MUST NOT emit `{}`, `{ blueId: null }`, a mixed reference, or a materialized
+type body in any reserved type position.
 
 ### 13.5 Canonicalization as deterministic diff (normative)
 
@@ -2386,7 +2398,12 @@ When multiple candidate identity inputs would represent the same Resolved Form, 
 
 1. **Omit derivable non-list content.** A field, metadata entry, or non-list subtree that is fully derivable from the effective type chain MUST be omitted from the Canonical Identity Input, unless another rule in this section explicitly requires it. **List payloads are special:** for list nodes, §13.6 overrides this general omission rule. Canonicalization of a list produces the final canonical list payload for identity calculation, including inherited prefix elements, positional refinements, append-only appends, and `$empty` placeholders after normalization.
 2. **Preserve non-derivable instance content.** Content supplied by the instance or Source Document and not derivable from the type chain MUST be preserved.
-3. **Use pure references for referenced ancestors/types.** A materialized type or referenced ancestor whose BlueId is known MUST be represented as `{ blueId: X }` in type positions and other reference-preserving positions.
+3. **Use verified canonical pure references for ancestors/types.** A
+   materialized type or referenced ancestor MUST be represented as
+   `{ blueId: X }` in type positions and other reference-preserving positions,
+   where `X` is retained from verified reference evidence or derived from the
+   exact node's own Canonical Identity Input. Incomplete evidence is not an
+   identity and cannot be replaced by an empty or null reference.
 4. **Preserve source pure references materialized only for resolution.** If a Source Document provided a pure reference and the provider materialized it only to resolve or validate content, the Canonical Identity Input MUST prefer the original pure reference form unless the instance supplied an overlay that must be represented.
 5. **Consume overlay controls.** `$pos`, `$replace`, `$previous`, source list `null`, and empty-object list elements MUST NOT appear in Canonical Identity Input. Their effects must be represented as ordinary canonical content.
 6. **No authoring aliases.** Type aliases and `blue` preprocessing directives MUST NOT appear in Canonical Identity Input.
@@ -3137,7 +3154,12 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 - **R17.** Canonical Identity Input does not contain `$previous`, `$pos`, `blue`, unresolved aliases, `null` list elements, or empty-object list elements.
 - **R18.** Direct hashing of a Resolved Form is not used as the Source Document's BlueId unless the Resolved Form is already identical to its Canonical Identity Input.
 - **R19.** Canonical Identity Input for append-only lists does not serialize `$previous`; `$previous` may appear only in Minimized Overlay or direct anchored BlueId Input.
-- **R20.** Canonical Identity Input contains no type aliases; all type references are canonical BlueId references.
+- **R20.** Canonical Identity Input contains no type aliases; every `type`,
+  `itemType`, `keyType`, and `valueType` contribution is a non-null canonical
+  pure BlueId reference. A materialized inline effective type and a verified
+  pure reference to its canonical BlueId produce the same parent Canonical
+  Identity Input and Source-derived BlueId; distinct exact inline types retain
+  distinct parent identities.
 - **R21.** A source pure reference that is materialized only for resolution canonicalizes back to the pure reference unless the source overlays additional instance content onto it.
 - **R22.** A child overlay of an inherited `append-only` list that omits `mergePolicy` remains `append-only`; `$pos` is still rejected.
 - **R23.** A descendant collection that omits inherited `itemType`, `keyType`, or `valueType` retains the inherited constraint.

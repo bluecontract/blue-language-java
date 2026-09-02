@@ -7,6 +7,17 @@ The preserved release entry point is
 `release_regenerate_package.py`; the repository entry point is
 `regenerate_package.py`.
 
+Verify inline-type parity fixtures and their expected BlueIds with the
+independent Python identity implementation (this does not invoke Java
+canonicalization):
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 \
+  blue-conformance/src/main/tools/verify_inline_type_fixture_oracles.py \
+  --fixture-root \
+  blue-conformance/src/main/resources/blue-language-1.0/fixtures
+```
+
 The repository entry point always requires an explicit resource-package root:
 
 ```bash

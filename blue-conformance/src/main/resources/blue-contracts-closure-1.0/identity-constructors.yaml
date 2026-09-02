@@ -190,7 +190,7 @@ constructors:
           ordinal: Zero-based receipt-local ordinal preserving order and duplicates.
           occurrenceOrdinal: Original invocation-global event occurrence ordinal.
           occurrenceIdentity: Exact eventOccurrenceIdentity for source invocation, occurrenceOrdinal and eventBlueId.
-          eventBlueId: Exact direct BlueId of the separately retained complete exact event value.
+          eventBlueId: Exact independently verified ordinary, reference, or cyclic-member BlueId of the separately retained complete exact event value.
           publicAtSource: Whether the emitting managed Root was public at source creation.
   managedDocumentTransitionReceiptIdentity:
     domain: blue-contracts-managed-document-transition-receipt/1.0
