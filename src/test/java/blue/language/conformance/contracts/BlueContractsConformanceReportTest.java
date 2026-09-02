@@ -57,7 +57,7 @@ class BlueContractsConformanceReportTest {
     @Test
     void shouldReportEveryLanguageFixturePassingInExactRelease() {
         // given
-        int expectedLanguageFixtures = 153;
+        int expectedLanguageFixtures = 175;
 
         // when
         BlueReleaseConformanceReport release =
@@ -123,9 +123,9 @@ class BlueContractsConformanceReportTest {
     void shouldExposeExactPackageAndSpecificationBindingsInReleaseReport() {
         // given
         String expectedLanguageRegistry =
-                "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
+                "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";
         String expectedLanguageFixtures =
-                "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55";
+                "sha256:27c4aed817c768d7d217e129cda94c797d19adf1ae7a02d3c0190e0fa6d9a64c";
         String expectedContractsRegistry =
                 RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
         String expectedContractsGas =

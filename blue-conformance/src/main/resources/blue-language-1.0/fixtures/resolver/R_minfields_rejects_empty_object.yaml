@@ -1,0 +1,14 @@
+id: R_minfields_rejects_empty_object
+category: Schema
+operation: resolveVariants
+description: a Dictionary may be empty unless its effective schema requires at least one ordinary field
+fieldDeclaration:
+  x:
+    type: Dictionary
+    schema:
+      required: true
+      minFields: 1
+variants:
+- source:
+    x: {}
+  expectedErrorCategory: SchemaViolation

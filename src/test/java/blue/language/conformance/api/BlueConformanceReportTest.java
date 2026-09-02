@@ -90,7 +90,7 @@ class BlueConformanceReportTest {
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 reportedIdentity);
         assertEquals(
-                "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55",
+                "sha256:27c4aed817c768d7d217e129cda94c797d19adf1ae7a02d3c0190e0fa6d9a64c",
                 reportedIdentity);
         assertEquals("blue-language-1.0-final-implementation-baseline",
                 BlueConformanceReport.BLUE_SPEC_SOURCE);
@@ -424,7 +424,7 @@ class BlueConformanceReportTest {
         assertTrue(manifestIsPackaged);
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 manifest.get("packageIdentity").asText());
-        assertEquals(153, manifest.get("behaviorFixtureCount").asInt());
+        assertEquals(175, manifest.get("behaviorFixtureCount").asInt());
         assertTrue(manifestViolations.isEmpty(),
                 manifestViolations.toString());
         assertEquals(BlueConformanceReport.requiredFixtureIdsForBlueLanguage10(), manifestIds);
@@ -445,11 +445,11 @@ class BlueConformanceReportTest {
         // then
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 encoded.get("fixturePackageIdentity"));
-        assertEquals("sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e",
+        assertEquals("sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321",
                 encoded.get("registryPackageIdentity"));
-        assertEquals(153, encoded.get("fixtureCount"));
-        assertEquals(153, results.size());
-        assertEquals(153, results.stream()
+        assertEquals(175, encoded.get("fixtureCount"));
+        assertEquals(175, results.size());
+        assertEquals(175, results.stream()
                 .map(result -> result.get("id"))
                 .collect(Collectors.toSet()).size());
         assertTrue(results.stream().allMatch(result ->

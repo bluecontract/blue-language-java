@@ -1,0 +1,9 @@
+id: R_empty_object_canonical_identity
+category: Canonicalization
+operation: canonicalize
+description: a non-derivable exact empty-object child remains in Canonical Identity Input
+source:
+  x: {}
+expectedCanonicalOverlay:
+  x: {}
+expectedNodeBlueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE

@@ -63,10 +63,10 @@ public final class BlueContractsConformanceReport {
             "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
-            "sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e";
+            "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";
     /** Exact Language fixture package identity. */
     public static final String LANGUAGE_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55";
+            "sha256:27c4aed817c768d7d217e129cda94c797d19adf1ae7a02d3c0190e0fa6d9a64c";
     /** Exact Contracts registry package identity. */
     public static final String CONTRACTS_REGISTRY_PACKAGE_IDENTITY =
             RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;

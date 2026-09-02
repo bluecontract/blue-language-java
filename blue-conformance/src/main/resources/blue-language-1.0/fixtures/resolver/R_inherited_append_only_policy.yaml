@@ -7,7 +7,7 @@ expectError: true
 source:
   type:
     type:
-      blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+      blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
     mergePolicy: append-only
     items:
     - value: A

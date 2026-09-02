@@ -1,0 +1,11 @@
+id: B_empty_object_child_reference_equivalence
+category: BlueId
+operation: calculateBlueId
+description: an exact empty-object child and a verified pure reference to its identity contribute the same parent identity
+input:
+  x: {}
+alsoEquivalentTo:
+  x:
+    blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+expectedNodeBlueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
+note: The expected identity was independently derived from the RFC 8785 parent reference input.

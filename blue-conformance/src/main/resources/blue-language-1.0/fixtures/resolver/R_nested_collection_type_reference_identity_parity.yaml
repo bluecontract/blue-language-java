@@ -15,13 +15,13 @@ alsoEquivalentTo:
   name: Nested Collection
   type: List
   itemType:
-    blueId: F2Si6n2ZSGQ8v9YmwWeAr9YYkZsNC3cyKdjcmsriieTt
+    blueId: 2wxe3qchcxF5i9cbwpQHWMSLH5BajPidv6XkTzfy8Mir
 provider:
-- requestedBlueId: F2Si6n2ZSGQ8v9YmwWeAr9YYkZsNC3cyKdjcmsriieTt
+- requestedBlueId: 2wxe3qchcxF5i9cbwpQHWMSLH5BajPidv6XkTzfy8Mir
   node:
     name: Nested Dictionary Item Shape
     type:
-      blueId: Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG
+      blueId: 5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF
     valueType:
       blueId: 89ijM38Uhmsv1ZVBWi41o4wfGKAmh2g26fGyYqhPhj5k
 - requestedBlueId: 89ijM38Uhmsv1ZVBWi41o4wfGKAmh2g26fGyYqhPhj5k
@@ -30,7 +30,7 @@ provider:
 expectedCanonicalOverlay:
   name: Nested Collection
   type:
-    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
   itemType:
-    blueId: F2Si6n2ZSGQ8v9YmwWeAr9YYkZsNC3cyKdjcmsriieTt
-expectedNodeBlueId: 94qNwSmk35Yk41uRyvmgbRaZFiJ9cfeKrKRz1WF4X93h
+    blueId: 2wxe3qchcxF5i9cbwpQHWMSLH5BajPidv6XkTzfy8Mir
+expectedNodeBlueId: Ayh7jK5rrwnQ2RAV4gKnMFZj2noiCXmxnVCxScXwLKLz

@@ -34,7 +34,7 @@ public final class BlueConformanceReport {
     public static final String FIXTURE_MANIFEST_RESOURCE = "blue-language-1.0/fixtures/manifest.yaml";
     /** Expected identity of the complete final fixture package. */
     public static final String FIXTURE_PACKAGE_IDENTITY =
-            "sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55";
+            "sha256:27c4aed817c768d7d217e129cda94c797d19adf1ae7a02d3c0190e0fa6d9a64c";
     /** Human-readable identifier of the specification source bound to the package. */
     public static final String BLUE_SPEC_SOURCE =
             "blue-language-1.0-final-implementation-baseline";

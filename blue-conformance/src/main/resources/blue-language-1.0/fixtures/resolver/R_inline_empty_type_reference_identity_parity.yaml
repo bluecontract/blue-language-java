@@ -1,0 +1,19 @@
+id: R_inline_empty_type_reference_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: inline and reference-backed empty types produce the same pure type reference and parent Source-derived identity
+source:
+  name: X
+  type: {}
+alsoEquivalentTo:
+  name: X
+  type:
+    blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+provider:
+- requestedBlueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+  node: {}
+expectedCanonicalOverlay:
+  name: X
+  type:
+    blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+expectedNodeBlueId: 981RbHZT5EPKmypv8JMFLCuvkDPUUYqoYE8k2NEezUcF

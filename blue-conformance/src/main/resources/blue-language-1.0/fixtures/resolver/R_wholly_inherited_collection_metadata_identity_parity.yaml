@@ -17,13 +17,13 @@ source:
 alsoEquivalentTo:
   name: Inherited Collection Root
   type:
-    blueId: 3kWWmTv5Gy6FNuJyRLLa2rFpGLzkbaoevD1e98StAaCV
+    blueId: 9JR2XRoLduUncHe72fG5tvkEFEhM5SazYHnLXb3tPwq2
 provider:
-- requestedBlueId: 3kWWmTv5Gy6FNuJyRLLa2rFpGLzkbaoevD1e98StAaCV
+- requestedBlueId: 9JR2XRoLduUncHe72fG5tvkEFEhM5SazYHnLXb3tPwq2
   node:
     name: Inherited Collection Type
     type:
-      blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+      blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
     itemType:
       blueId: 6w4HdLKCE4f53AXxQHrgymJRRchmVwvhnadFnHKBtyK3
 - requestedBlueId: 6w4HdLKCE4f53AXxQHrgymJRRchmVwvhnadFnHKBtyK3
@@ -39,8 +39,8 @@ provider:
 expectedCanonicalOverlay:
   name: Inherited Collection Root
   type:
-    blueId: 3kWWmTv5Gy6FNuJyRLLa2rFpGLzkbaoevD1e98StAaCV
-expectedNodeBlueId: GP4pCEEnuWtQyCd5kFrJgMXBx8Rq8j5S3R1uoVBvrZNH
+    blueId: 9JR2XRoLduUncHe72fG5tvkEFEhM5SazYHnLXb3tPwq2
+expectedNodeBlueId: 4513SmpduFSZkXAqKWp6cTgkNfh4JncWMs2Q5zqsKjnd
 note: The root authors no itemType. The effective itemType is inherited from
   the collection type and therefore must not leak into the root Canonical
   Identity Input.

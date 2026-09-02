@@ -1,0 +1,15 @@
+id: R_required_empty_object_present
+category: Schema
+operation: resolveVariants
+description: an exact empty object satisfies required semantic presence
+fieldDeclaration:
+  x:
+    schema:
+      required: true
+variants:
+- source:
+    x: {}
+  expectedValid: true
+- source:
+    x: null
+  expectedErrorCategory: SchemaViolation

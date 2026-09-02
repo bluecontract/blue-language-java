@@ -6,6 +6,11 @@ description: canonical core type compatibility is nominal by registry BlueId; a 
 expectError: true
 source:
   type:
+    x:
+      type:
+        blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
+  x:
     type:
-      blueId: E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq
-  value: 1
+      name: Integer
+      description: This is deliberately not the canonical registry Integer type.
+    value: 1

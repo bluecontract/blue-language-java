@@ -18,7 +18,7 @@
   - B_root_pure_reference
 - id: B7
   fixtures:
-  - B_object_field_null_removal
+  - R_source_object_null_omission
 - id: B8
   fixtures:
   - B_empty_list
@@ -39,7 +39,7 @@
   - B_null_list_element_rejected
 - id: B14
   fixtures:
-  - B_empty_object_list_element_rejected
+  - B_empty_object_list_element_identity
 - id: B15
   fixtures:
   - B_placeholder_changes_list_identity
@@ -178,7 +178,7 @@
   - R_source_null_list_to_empty
 - id: R3
   fixtures:
-  - R_source_empty_object_list_to_empty
+  - R_source_empty_object_list_retained
 - id: R4
   fixtures:
   - R_type_chain_merge
@@ -312,7 +312,7 @@
   - R_dictionary_key_canonicalization
 - id: R37
   fixtures:
-  - R_source_recursive_empty_object_list_to_empty
+  - R_source_recursive_empty_object_list_retained
 - id: R38
   fixtures:
   - R_core_type_compatibility_nominal_by_blueid

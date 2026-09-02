@@ -5,14 +5,14 @@ description: canonical overlay serializes final list content without $previous o
   $pos controls
 source:
   type:
-    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
   items:
   - $pos: 0
     value: A
   - value: B
 expectedCanonicalOverlay:
   type:
-    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
   items:
   - value: A
   - value: B

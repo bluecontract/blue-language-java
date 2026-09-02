@@ -41,10 +41,10 @@ LIST_CONTROLS = frozenset(("$pos", "$previous", "$replace", "$empty"))
 LIMITED_RETRY_FIXTURE_ID = "R_incomplete_cannot_canonicalize"
 CORE_TYPE_BLUE_IDS = {
     "Boolean": "AwvXD961fmnmqcSQhjMA7r15HpVh39cefb6ZTyUz2Fm2",
-    "Dictionary": "Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG",
+    "Dictionary": "5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF",
     "Double": "9eWaHYz2vKrFofdHTHAizNNu8xP6QE3WQ5y7DGrGZvyJ",
     "Integer": "E2LM6qgzWG9ttagq2xTmiZkgYEAgkYedFCmU9v7NnVEq",
-    "List": "8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF",
+    "List": "85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK",
     "Text": "GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC",
 }
 
@@ -312,8 +312,25 @@ def verify_fixture(fixture_id: str, fixture: dict[str, Any]) -> None:
             expected,
         )
         if fixture_id == "R_positional_inline_item_type_identity_parity":
+            expected_items = expected.get("items")
             require(
-                expected.get("items") == fixture.get("expectedCanonicalItems")
+                isinstance(expected_items, list),
+                "positional parity fixture lacks its final item list",
+            )
+            expected_values = [
+                item.get("value") if isinstance(item, dict) else item
+                for item in expected_items
+            ]
+            inherited_item_type_id = canonical_type_blue_id(
+                source["type"]["itemType"]
+            )
+            require(
+                expected_values == fixture.get("expectedCanonicalItems")
+                and all(
+                    isinstance(item, dict)
+                    and item.get("type") == {"blueId": inherited_item_type_id}
+                    for item in expected_items
+                )
                 and fixture.get("expectedCanonicalContainsControls") is False,
                 "positional parity fixture does not freeze its final control-free payload",
             )
