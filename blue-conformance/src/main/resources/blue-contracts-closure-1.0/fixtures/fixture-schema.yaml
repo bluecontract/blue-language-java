@@ -17,7 +17,7 @@ properties:
     uniqueItems: true
     items:
       type: string
-      pattern: '^C-[A-Z0-9]+-[0-9]{2}$'
+      pattern: '^C-(?:[A-Z0-9]+-)+[0-9]{2}$'
   category:
     enum: [chk, disc, e2e, emb, evt, fail, feed, gas, idx, init, life, prot, rep, snd, upd]
   description:
@@ -202,6 +202,11 @@ $defs:
           index: {type: integer, minimum: 0}
       newEmbeddedSurface: {}
       rootForm: {enum: [inline, reference, eager, lazy]}
+      rootOverrides:
+        type: object
+        minProperties: 1
+        propertyNames: {pattern: '^/'}
+        additionalProperties: {$ref: '#/$defs/blueValue'}
       rootRevision: {type: integer, minimum: 0}
       sameEvent: {type: boolean}
   input:

@@ -133,6 +133,7 @@ For collection declarations, the runner reads the complete direct ordinary membe
 Every variant is a complete deterministic transformation of the base input:
 
 - `rootForm`: inline, pure reference, eager materialization, or lazy materialization of the same exact node;
+- `rootOverrides`: ordered-by-field JSON Pointer replacements used to express semantically equivalent nested representations, such as an inline value versus its verified pure reference; a Root replacement is forbidden;
 - `cache`: warm/cold physical provider state, never semantic evidence;
 - `batching`: batched/unbatched physical retrieval;
 - `accept`: replace the fixture channel's immutable `accept` header;

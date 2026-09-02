@@ -3,6 +3,7 @@ package blue.language.conformance.contracts;
 import blue.language.conformance.api.BlueContractsFixtureCategory;
 import blue.language.processor.GasScheduleConstants;
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.wire.ParsedJsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Arrays;
@@ -26,7 +27,7 @@ final class ClosedContractsFixtureValidator {
     private static final Pattern ID =
             Pattern.compile("^[A-Za-z0-9][A-Za-z0-9-]*$");
     private static final Pattern VECTOR =
-            Pattern.compile("^C-[A-Z0-9]+-[0-9]{2}$");
+            Pattern.compile("^C-(?:[A-Z0-9]+-)+[0-9]{2}$");
 
     private static final Set<String> TOP = set(
             BlueLanguageConstants.OBJECT_SCHEMA,
@@ -112,6 +113,7 @@ final class ClosedContractsFixtureValidator {
             ContractsFixtureConstants.Field.LIST_OPERATION,
             "newEmbeddedSurface",
             ContractsFixtureConstants.Field.ROOT_FORM,
+            ContractsFixtureConstants.Field.ROOT_OVERRIDES,
             ContractsFixtureConstants.Field.ROOT_REVISION,
             ContractsFixtureConstants.Field.SAME_EVENT);
     private static final Set<String> LIST_OPERATION = set(
@@ -275,6 +277,29 @@ final class ClosedContractsFixtureValidator {
                         path,
                         ContractsFixtureConstants.Field.ROOT_FORM,
                         set("inline", "reference", "eager", "lazy"));
+                if (variant.has(
+                        ContractsFixtureConstants.Field.ROOT_OVERRIDES)) {
+                    JsonNode overrides = variant.get(
+                            ContractsFixtureConstants.Field.ROOT_OVERRIDES);
+                    requireObject(overrides, path + ".rootOverrides");
+                    if (overrides.size() == 0) {
+                        fail(path + ".rootOverrides",
+                                "must contain at least one pointer override");
+                    }
+                    Iterator<String> pointers = overrides.fieldNames();
+                    while (pointers.hasNext()) {
+                        String pointer = pointers.next();
+                        try {
+                            if (ParsedJsonPointer.parse(pointer).isRoot()) {
+                                fail(path + ".rootOverrides",
+                                        "cannot replace the fixture Root");
+                            }
+                        } catch (IllegalArgumentException invalidPointer) {
+                            fail(path + ".rootOverrides",
+                                    "invalid JSON Pointer " + pointer);
+                        }
+                    }
+                }
                 optionalEnum(
                         variant,
                         path,

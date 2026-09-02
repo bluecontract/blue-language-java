@@ -66,6 +66,7 @@ final class ContractsFixtureConstants {
         static final String APPEND = "append";
         static final String NAME = "name";
         static final String ROOT_FORM = "rootForm";
+        static final String ROOT_OVERRIDES = "rootOverrides";
         static final String CACHE = "cache";
         static final String BATCHING = "batching";
         static final String ACCEPT = "accept";
