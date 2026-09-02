@@ -1,0 +1,71 @@
+schema: blue-contracts-fixture/1.0
+id: c-evt-collection-02
+vectors:
+- C-EVT-COLLECTION-02
+category: evt
+description: Embedded Node Channel with sourcePath omitted accepts every descendant embedded emission.
+operation: process
+input:
+  root:
+    payments:
+      p1:
+        contracts:
+          in:
+            type:
+              blueId: 2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt
+            order: 0
+            subscriptionKey: payment
+            eventKey: payment
+            accept: true
+            checkpointDomain: payment-v1
+          emit:
+            type:
+              blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+            channel: in
+            order: 0
+            result:
+              events:
+              - id: A
+    contracts:
+      embedded:
+        type:
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+        collectionPaths: [/payments]
+      everyChild:
+        type:
+          blueId: 7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN
+        order: 0
+      observe:
+        type:
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+        channel: everyChild
+        order: 0
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: payment
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey: [1000, payment, 1]
+    deliverySnapshot:
+    - scopePath: /payments/p1
+      channelKey: in
+      order: 0
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: success
+  - actual: trace.handlerExecutionCount
+    op: equals
+    expected: 2
+  - actual: result.events
+    op: sequenceEquals
+    expected: []

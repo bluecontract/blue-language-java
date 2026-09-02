@@ -1,0 +1,41 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-empty-01
+vectors:
+- C-EMB-EMPTY-01
+category: emb
+description: A semantically absent embedded collection is valid, contributes zero occurrences, and is not synthesized.
+operation: process
+input:
+  root:
+    retained: true
+    contracts:
+      embedded:
+        type:
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+        collectionPaths:
+        - /orders
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: none
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey: [1000, none, 1]
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: no-match
+  - actual: result.document.orders
+    op: absent
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root

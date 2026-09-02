@@ -1,0 +1,68 @@
+schema: blue-contracts-fixture/1.0
+id: c-emb-empty-03
+vectors:
+- C-EMB-EMPTY-03
+category: emb
+description: A present list is the wrong kind for an embedded collection and fails deterministically.
+operation: process
+input:
+  root:
+    orders: []
+    contracts:
+      embedded:
+        type:
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
+        collectionPaths:
+        - /orders
+  event:
+    type:
+      blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
+    subscriptionKey: none
+    id: E1
+  feeder:
+    managedRootRevision: 7
+    indexedRootRevision: 7
+    eventOrderKey: [1000, none, 1]
+    deliverySnapshot: []
+  provider:
+    mode: exact-node
+    semanticDemandsOnly: true
+    nodes:
+      GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz: 1
+  runtime:
+    typeRegistryManifest: ../../registry/manifest.yaml
+  variants:
+  - name: list-inline
+    rootOverrides:
+      /orders: []
+  - name: scalar-inline
+    rootOverrides:
+      /orders: 1
+  - name: scalar-reference-cold
+    cache: cold
+    rootOverrides:
+      /orders:
+        blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
+  - name: scalar-reference-warm
+    cache: warm
+    batching: batched
+    rootOverrides:
+      /orders:
+        blueId: GhNUbi6oXA1HArr2uTqwpcgegPv8kxUuj11riBtoMJXz
+expected:
+  assertions:
+  - actual: result.status
+    op: equals
+    expected: subscription-surface-invalid
+  - actual: result.diagnostic.category
+    op: equals
+    expected: EmbeddedCollectionMustBeObject
+  - actual: result.document
+    op: equalsProjection
+    expectedProjection: input.root
+  - actual: result.status
+    op: sameAcrossVariants
+    variant: all
+  - actual: result.diagnostic.category
+    op: sameAcrossVariants
+    variant: all
