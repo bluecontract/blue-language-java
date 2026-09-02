@@ -5,7 +5,9 @@ import blue.language.api.BlueOperationResult;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
+import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.LifecycleChannel;
@@ -542,17 +544,20 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
 
     /**
      * Selects matching Root Embedded Event channels and constructs their exact
-     * adapter wrappers without executing, enqueueing, draining, or charging.
+     * adapter wrappers without executing, enqueueing, or draining. Candidate
+     * and structural path-comparison work is charged to the shared meter.
      *
      * @param exactContainingDocument exact independently managed receiver
      * @param exactSourcePath exact Root-relative contained occurrence path
      * @param exactEvent inseparable originating event and identity evidence
+     * @param attribution complete owning closure classification attribution
      * @return immutable embedded routes in channel order/key order
      */
     public List<ManagedDocumentStepRoute> classifyEmbeddedEventRoutes(
             Node exactContainingDocument,
             String exactSourcePath,
-            ExactEventIdentityEvidence exactEvent) {
+            ExactEventIdentityEvidence exactEvent,
+            GasChargeContext attribution) {
         ensureOpen();
         String sourcePath = ProcessorEngine.normalizeScope(
                 Objects.requireNonNull(exactSourcePath, "exactSourcePath"));
@@ -575,35 +580,74 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 .properties(
                         ProcessorContractConstants.KEY_EVENT,
                         new Node().blueId(eventBlueId));
-        ContractBundle bundle = rootSurfaceResolver.classify(
-                exactContainingDocument).bundle();
-        List<ManagedDocumentStepRoute> routes =
-                new ArrayList<ManagedDocumentStepRoute>();
-        for (ContractBundle.ChannelBinding binding
-                : bundle.channelsOfType(EmbeddedNodeChannel.class)) {
-            EmbeddedNodeChannel channel =
-                    (EmbeddedNodeChannel) binding.contract();
-            String configured = channel.getSourcePath();
-            boolean pathMatches = configured == null
-                    || ProcessorEngine.resolvePointer(
-                            JsonPointer.ROOT, configured).equals(sourcePath);
-            boolean eventMatches = channel.getEvent() == null
-                    || owner.matchingService().matchesExactValue(
-                            FrozenNode.fromResolvedNode(event),
+        try (GasMeter.AttributionScope ignored =
+                     sharedGasContext.withAttribution(
+                             Objects.requireNonNull(
+                                     attribution, "attribution"))) {
+            ContractBundle bundle = rootSurfaceResolver.classify(
+                    exactContainingDocument).bundle();
+            List<ManagedDocumentStepRoute> routes =
+                    new ArrayList<ManagedDocumentStepRoute>();
+            for (ContractBundle.ChannelBinding binding
+                    : EmbeddedCollectionEventChannelSupport
+                    .orderedChannels(bundle)) {
+                sharedGasContext.processMeter().channelMatch(
+                        JsonPointer.ROOT, binding.key());
+                ChannelContract channel = binding.contract();
+                boolean pathMatches = matchesEmbeddedSourcePath(
+                        sourcePath, channel);
+                Node pattern = eventPattern(channel);
+                boolean eventMatches = pathMatches && (pattern == null
+                        || owner.matchingService().matchesExactValue(
+                                FrozenNode.fromResolvedNode(event),
+                                eventBlueId,
+                                FrozenNode.fromResolvedNode(pattern)));
+                if (eventMatches) {
+                    routes.add(new ManagedDocumentStepRoute(
+                            ManagedDocumentWorkKind.EMBEDDED_EVENT,
+                            binding.key(),
+                            wrapper,
+                            event,
                             eventBlueId,
-                            FrozenNode.fromResolvedNode(
-                                    channel.getEvent()));
-            if (pathMatches && eventMatches) {
-                routes.add(new ManagedDocumentStepRoute(
-                        ManagedDocumentWorkKind.EMBEDDED_EVENT,
-                        binding.key(),
-                        wrapper,
-                        event,
-                        eventBlueId,
-                        bundle));
+                            bundle));
+                }
             }
+            return Collections.unmodifiableList(routes);
         }
-        return Collections.unmodifiableList(routes);
+    }
+
+    private boolean matchesEmbeddedSourcePath(
+            String sourcePath,
+            ChannelContract channel) {
+        if (channel instanceof EmbeddedNodeChannel) {
+            return ScopePropagationChain.matchesEmbeddedNodeSourcePath(
+                    JsonPointer.ROOT,
+                    sourcePath,
+                    (EmbeddedNodeChannel) channel);
+        }
+        EmbeddedCollectionEventChannel collection =
+                (EmbeddedCollectionEventChannel) channel;
+        sharedGasContext.processMeter().embeddedPathEntry(
+                JsonPointer.ROOT, collection.getCollectionPath());
+        EmbeddedCollectionEventChannelSupport.Match match =
+                EmbeddedCollectionEventChannelSupport.match(
+                        collection.getCollectionPath(),
+                        sourcePath,
+                        collection.includesDescendants());
+        if (match.comparedSegments() > 0) {
+            sharedGasContext.processMeter().embeddedPathSegments(
+                    JsonPointer.ROOT,
+                    collection.getCollectionPath(),
+                    match.comparedSegments());
+        }
+        return match.matches();
+    }
+
+    private static Node eventPattern(ChannelContract channel) {
+        if (channel instanceof EmbeddedNodeChannel) {
+            return ((EmbeddedNodeChannel) channel).getEvent();
+        }
+        return ((EmbeddedCollectionEventChannel) channel).getEvent();
     }
 
     private static ExactEventIdentityEvidence requireExactEventIdentity(

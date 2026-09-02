@@ -33,6 +33,20 @@ final class ContractRecognitionMeter {
                 RuntimeWorkSession.Mode.PROCESSING);
     }
 
+    void embeddedPathEntryRead(
+            String scopePath,
+            String logicalPath) {
+        gas.chargeEmbeddedPathEntryRead(scopePath, logicalPath);
+    }
+
+    void embeddedPathSegmentsValidated(
+            String scopePath,
+            String logicalPath,
+            long quantity) {
+        gas.chargeEmbeddedPathSegmentsValidated(
+                scopePath, logicalPath, quantity);
+    }
+
     void recognizeHeader(String scopePath,
                          String contractKey,
                          List<String> orderedContributionBlueIds,

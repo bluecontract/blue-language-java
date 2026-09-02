@@ -1,6 +1,8 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -233,22 +235,20 @@ final class ScopePropagationChain {
         ContractBundle currentBundle = frames.refresh(receivingPath);
         List<ContractBundle.ChannelBinding> channels =
                 currentBundle != null
-                        ? currentBundle.channelsOfType(
-                        EmbeddedNodeChannel.class)
+                        ? EmbeddedCollectionEventChannelSupport
+                        .orderedChannels(currentBundle)
                         : Collections.emptyList();
         for (ContractBundle.ChannelBinding channel : channels) {
             if (!execution.canDeliverOccurrenceLocally(
                     receivingAncestor)) {
                 return;
             }
-            EmbeddedNodeChannel embedded =
-                    (EmbeddedNodeChannel) channel.contract();
-            if (!matchesSourcePath(
-                    receivingPath,
-                    occurrence.source().scopePath(),
-                    embedded)
+            runtime.chargeChannelMatchAttempt(
+                    receivingPath, channel.key());
+            if (!matchesEmbeddedSourcePath(
+                    receivingPath, sourcePath, channel.contract())
                     || !matchesEventPattern(
-                    occurrence, embedded.getEvent())) {
+                    occurrence, eventPattern(channel.contract()))) {
                 continue;
             }
             runtime.chargeBridge(wrapper);
@@ -279,7 +279,43 @@ final class ScopePropagationChain {
         }
     }
 
-    private boolean matchesSourcePath(
+    private boolean matchesEmbeddedSourcePath(
+            String receivingPath,
+            String sourcePath,
+            ChannelContract channel) {
+        if (channel instanceof EmbeddedNodeChannel) {
+            return matchesEmbeddedNodeSourcePath(
+                    receivingPath,
+                    ProcessorEngine.resolvePointer(
+                            receivingPath, sourcePath),
+                    (EmbeddedNodeChannel) channel);
+        }
+        EmbeddedCollectionEventChannel collection =
+                (EmbeddedCollectionEventChannel) channel;
+        runtime.chargeEmbeddedPathEntryRead(
+                receivingPath, collection.getCollectionPath());
+        EmbeddedCollectionEventChannelSupport.Match match =
+                EmbeddedCollectionEventChannelSupport.match(
+                        collection.getCollectionPath(),
+                        sourcePath,
+                        collection.includesDescendants());
+        if (match.comparedSegments() > 0) {
+            runtime.chargeEmbeddedPathSegmentsValidated(
+                    receivingPath,
+                    collection.getCollectionPath(),
+                    match.comparedSegments());
+        }
+        return match.matches();
+    }
+
+    private Node eventPattern(ChannelContract channel) {
+        if (channel instanceof EmbeddedNodeChannel) {
+            return ((EmbeddedNodeChannel) channel).getEvent();
+        }
+        return ((EmbeddedCollectionEventChannel) channel).getEvent();
+    }
+
+    static boolean matchesEmbeddedNodeSourcePath(
             String receivingPath,
             String absoluteSourcePath,
             EmbeddedNodeChannel channel) {

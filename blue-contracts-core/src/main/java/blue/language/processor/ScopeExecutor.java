@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
@@ -312,7 +313,8 @@ final class ScopeExecutor {
                 valid = contract instanceof TriggeredEventChannel;
                 break;
             case EMBEDDED_EVENT:
-                valid = contract instanceof EmbeddedNodeChannel;
+                valid = contract instanceof EmbeddedNodeChannel
+                        || contract instanceof EmbeddedCollectionEventChannel;
                 break;
             case LIFECYCLE:
                 valid = contract instanceof LifecycleChannel;

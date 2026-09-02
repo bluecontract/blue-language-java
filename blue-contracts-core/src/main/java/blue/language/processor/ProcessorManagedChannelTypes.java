@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
@@ -24,7 +25,8 @@ final class ProcessorManagedChannelTypes {
                                     DocumentUpdateChannel.class,
                                     TriggeredEventChannel.class,
                                     LifecycleChannel.class,
-                                    EmbeddedNodeChannel.class)));
+                                    EmbeddedNodeChannel.class,
+                                    EmbeddedCollectionEventChannel.class)));
 
     private ProcessorManagedChannelTypes() {
     }

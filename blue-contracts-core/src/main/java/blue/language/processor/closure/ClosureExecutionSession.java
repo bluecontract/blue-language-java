@@ -1973,12 +1973,31 @@ final class ClosureExecutionSession
                     : stepProcessor.classifyEmbeddedEventRoutes(
                             containing.document(),
                             frozen.sourcePath(),
-                            occurrence.exactEventEvidence)) {
+                            occurrence.exactEventEvidence,
+                            embeddedRouteClassificationContext(
+                                    containing, frozen, occurrence))) {
                 routes.add(new RouteTarget(
                         containing.documentId(), route));
             }
         }
         return Collections.unmodifiableList(routes);
+    }
+
+    private GasChargeContext embeddedRouteClassificationContext(
+            ManagedDocumentSnapshot containing,
+            ManagedOccurrenceBinding occurrenceBinding,
+            EmittedOccurrence occurrence) {
+        return GasChargeContext.closure(
+                containing.documentId().value(),
+                "/",
+                Long.valueOf(0L),
+                Long.valueOf(containing.componentGeneration()),
+                null,
+                null,
+                null,
+                "event." + occurrence.ordinal
+                        + ".embedded-route."
+                        + occurrenceBinding.occurrenceIdentity());
     }
 
     private void requireManagedRevisionEventTarget(

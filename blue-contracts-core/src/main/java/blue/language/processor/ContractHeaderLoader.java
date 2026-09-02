@@ -5,6 +5,7 @@ import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
@@ -227,7 +228,10 @@ final class ContractHeaderLoader {
                     typeIdentities,
                     mappingEvidence);
         }
-        return bundle.build();
+        ContractBundle result = bundle.build();
+        validateEmbeddedCollectionChannels(
+                result, scopePath, recognitionMeter);
+        return result;
     }
 
     private void recognize(
@@ -273,7 +277,9 @@ final class ContractHeaderLoader {
                 .DispatchField.EVENT;
         boolean managedEventChannel = TriggeredEventChannel.class
                 .isAssignableFrom(contractClass)
-                || EmbeddedNodeChannel.class.isAssignableFrom(contractClass);
+                || EmbeddedNodeChannel.class.isAssignableFrom(contractClass)
+                || EmbeddedCollectionEventChannel.class
+                .isAssignableFrom(contractClass);
         if (managedEventChannel && !exactSourceFields.contains(eventField)) {
             exactSourceFields.add(eventField);
         }
@@ -442,12 +448,43 @@ final class ContractHeaderLoader {
                     EffectiveContractSnapshotConstants.DispatchField.SOURCE_PATH,
                     embedded.getSourcePath());
             snapshots.addEventDispatch(snapshot, exactEvent);
+        } else if (channel instanceof EmbeddedCollectionEventChannel) {
+            EmbeddedCollectionEventChannel embedded =
+                    (EmbeddedCollectionEventChannel) channel;
+            Node exactEvent = exactManagedEvent(
+                    key, effectiveContract, binding);
+            embedded.setEvent(exactEvent != null ? exactEvent.clone() : null);
+            snapshot.dispatchField(
+                    EffectiveContractSnapshotConstants.DispatchField
+                            .COLLECTION_PATH,
+                    embedded.getCollectionPath());
+            snapshot.dispatchField(
+                    EffectiveContractSnapshotConstants.DispatchField
+                            .INCLUDE_DESCENDANTS,
+                    embedded.includesDescendants());
+            snapshots.addEventDispatch(snapshot, exactEvent);
         } else if (channel instanceof TriggeredEventChannel) {
             TriggeredEventChannel triggered = (TriggeredEventChannel) channel;
             Node exactEvent = exactManagedEvent(
                     key, effectiveContract, binding);
             triggered.setEvent(exactEvent != null ? exactEvent.clone() : null);
             snapshots.addEventDispatch(snapshot, exactEvent);
+        }
+    }
+
+    private void validateEmbeddedCollectionChannels(
+            ContractBundle bundle,
+            String scopePath,
+            ContractRecognitionMeter recognitionMeter) {
+        for (ContractBundle.ChannelBinding binding
+                : bundle.channelsOfType(
+                        EmbeddedCollectionEventChannel.class)) {
+            EmbeddedCollectionEventChannelSupport.validateHeader(
+                    (EmbeddedCollectionEventChannel) binding.contract(),
+                    bundle.embeddedScopeDeclaration(),
+                    scopePath,
+                    gasSchedule,
+                    recognitionMeter);
         }
     }
 

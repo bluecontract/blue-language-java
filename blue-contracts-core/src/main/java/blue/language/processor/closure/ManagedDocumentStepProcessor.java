@@ -197,11 +197,13 @@ final class ManagedDocumentStepProcessor
     List<ManagedDocumentStepRoute> classifyEmbeddedEventRoutes(
             Node exactContainingDocument,
             String exactSourcePath,
-            ExactEventIdentityEvidence exactEvent) {
+            ExactEventIdentityEvidence exactEvent,
+            GasChargeContext attribution) {
         return runtime.classifyEmbeddedEventRoutes(
                 exactContainingDocument,
                 exactSourcePath,
-                exactEvent);
+                exactEvent,
+                attribution);
     }
 
     List<ManagedDocumentStepRoute> classifyDocumentUpdateRoutes(
