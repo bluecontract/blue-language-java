@@ -24,12 +24,12 @@ input:
         operationId: EVO-UNRELATED-REQUIRED-WORKFLOW
       mutate:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: in
         order: 0
       generalization:
         type:
-          blueId: 8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz
+          blueId: EDE6SzFj2saVRDYunxDTMDZdZNjSLHFHeHUzzB74bBdP
         defaultMode: reject
   event:
     type:

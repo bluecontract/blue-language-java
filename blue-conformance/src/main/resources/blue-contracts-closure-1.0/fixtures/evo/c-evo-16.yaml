@@ -49,12 +49,12 @@ input:
         operationId: EVO-UNRELATED-REQUIRED-WORKFLOW
       generalize:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: in
         order: 0
       generalization:
         type:
-          blueId: 8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz
+          blueId: EDE6SzFj2saVRDYunxDTMDZdZNjSLHFHeHUzzB74bBdP
         defaultMode: nearest-valid-ancestor
   event:
     type:
@@ -91,7 +91,7 @@ input:
           required: true
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /child
     handlers:
