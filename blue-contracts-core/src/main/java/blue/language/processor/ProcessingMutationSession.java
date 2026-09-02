@@ -353,6 +353,14 @@ final class ProcessingMutationSession {
                                     input.op(),
                                     path.pointer());
             canonicalPlanner.validateMutationPath(path);
+            ImmutablePatchPlanner resolvedPlanner =
+                    ImmutablePatchPlanner.forFrozen(workingResolved);
+            if (!path.isRoot()
+                    && resolvedPlanner.read(path.parent()) == null) {
+                throw new IllegalStateException(
+                        "Final parent does not exist for patch path: "
+                                + path.pointer());
+            }
             FrozenNode expandedCanonical = pathAccess
                     .materializePatchAncestors(
                             workingCanonical,
@@ -365,14 +373,8 @@ final class ProcessingMutationSession {
                 canonicalPlanner = ImmutablePatchPlanner.forFrozen(
                         workingCanonical);
             }
-            ImmutablePatchPlanner resolvedPlanner =
+            resolvedPlanner =
                     ImmutablePatchPlanner.forFrozen(workingResolved);
-            if (!path.isRoot()
-                    && resolvedPlanner.read(path.parent()) == null) {
-                throw new IllegalStateException(
-                        "Final parent does not exist for patch path: "
-                                + path.pointer());
-            }
             if (canProjectStrictIdentity) {
                 workingIdentityCanonical = pathAccess
                         .materializePatchAncestors(

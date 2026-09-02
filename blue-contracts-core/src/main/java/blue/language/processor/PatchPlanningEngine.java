@@ -273,6 +273,16 @@ final class PatchPlanningEngine {
              */
             ImmutablePatchPlanner.forFrozen(workingCanonical)
                     .validateMutationPath(prepared.path());
+            ImmutablePatchPlanner resolvedBeforeMaterialization =
+                    ImmutablePatchPlanner.forFrozen(workingResolved);
+            if (!prepared.path().isRoot()
+                    && resolvedBeforeMaterialization.read(
+                            prepared.path().parent()) == null) {
+                throw new ProcessorFailureException(
+                        ProcessorErrorCategory.InvalidPatch,
+                        "Final parent does not exist for patch path: "
+                                + prepared.normalizedPath());
+            }
             PatchBase patchBase = materializePatchBase(
                     workingCanonical,
                     workingResolved,
