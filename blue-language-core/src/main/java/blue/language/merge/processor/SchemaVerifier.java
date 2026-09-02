@@ -524,7 +524,7 @@ public class SchemaVerifier implements MergingProcessor {
     }
 
     private boolean hasEffectiveObjectKind(Node node) {
-        if (node.getProperties() != null && !node.getProperties().isEmpty()) {
+        if (blue.language.model.Nodes.hasObjectPayload(node)) {
             return true;
         }
         Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());

@@ -3,6 +3,7 @@ package blue.language.merge;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.wire.JsonPointer;
 import blue.language.resolve.ResolutionLimits;
 
@@ -184,7 +185,7 @@ final class CompletedValueValidator {
         return node.isReferenceOnly()
                 || node.getValue() != null
                 || node.getItems() != null
-                || (node.getProperties() != null && !node.getProperties().isEmpty());
+                || Nodes.hasObjectPayload(node);
     }
 
     /**
@@ -208,7 +209,8 @@ final class CompletedValueValidator {
         try {
             if (node.isReferenceOnly()
                     || node.getValue() != null
-                    || node.getItems() != null) {
+                    || node.getItems() != null
+                    || Nodes.isExactEmptyObject(node)) {
                 return true;
             }
             if (node.getProperties() != null) {
@@ -259,7 +261,7 @@ final class CompletedValueValidator {
         if (node.getValue() != null || node.getItems() != null) {
             return true;
         }
-        return node.getProperties() != null && !node.getProperties().isEmpty();
+        return Nodes.hasObjectPayload(node);
     }
 
     boolean isInlineTypeDeclaration(Node node) {

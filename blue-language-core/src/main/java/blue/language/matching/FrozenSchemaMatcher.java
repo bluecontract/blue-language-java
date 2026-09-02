@@ -184,8 +184,7 @@ final class FrozenSchemaMatcher {
         if (minimumItems == null || !hasPayload(node)) {
             return true;
         }
-        if (node.getValue() != null
-                || node.getProperties() != null && !node.getProperties().isEmpty()) {
+        if (node.getValue() != null || node.getProperties() != null) {
             return false;
         }
         int size = node.getItems() != null ? node.getItems().size() : 0;
@@ -197,8 +196,7 @@ final class FrozenSchemaMatcher {
         if (maximumItems == null || !hasPayload(node)) {
             return true;
         }
-        if (node.getValue() != null
-                || node.getProperties() != null && !node.getProperties().isEmpty()) {
+        if (node.getValue() != null || node.getProperties() != null) {
             return false;
         }
         int size = node.getItems() != null ? node.getItems().size() : 0;
@@ -209,8 +207,7 @@ final class FrozenSchemaMatcher {
         if (!Boolean.TRUE.equals(schema.getUniqueItemsValue()) || !hasPayload(node)) {
             return true;
         }
-        if (node.getValue() != null
-                || node.getProperties() != null && !node.getProperties().isEmpty()) {
+        if (node.getValue() != null || node.getProperties() != null) {
             return false;
         }
         if (node.getItems() == null) {
@@ -343,6 +340,6 @@ final class FrozenSchemaMatcher {
         return node.isReferenceOnly()
                 || node.getValue() != null
                 || node.getItems() != null
-                || node.getProperties() != null && !node.getProperties().isEmpty();
+                || node.getProperties() != null;
     }
 }

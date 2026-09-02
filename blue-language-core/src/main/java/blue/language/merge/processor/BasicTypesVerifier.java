@@ -36,8 +36,8 @@ public class BasicTypesVerifier implements MergingProcessor {
         if (target.getType() != null
                 && EffectiveTypeChecks.isSubtypeOfBasicType(
                 target.getType(), nodeProvider, nodeResolver, typeIdentities)) {
-            if ((target.getItems() != null && !target.getItems().isEmpty()) ||
-                (target.getProperties() != null && !target.getProperties().isEmpty())) {
+            if (target.getItems() != null
+                    || blue.language.model.Nodes.hasObjectPayload(target)) {
                 String basicTypeName = EffectiveTypeChecks.findBasicTypeName(
                         target.getType(), nodeProvider, nodeResolver, typeIdentities);
                 throw new IllegalArgumentException("Node of type \"" + target.getType().getName() +

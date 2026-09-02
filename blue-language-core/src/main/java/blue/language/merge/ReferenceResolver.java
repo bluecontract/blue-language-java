@@ -334,8 +334,7 @@ final class ReferenceResolver {
         if (node.getValue() != null || node.getItems() != null) {
             return true;
         }
-        return node.getProperties() != null
-                && !node.getProperties().isEmpty();
+        return blue.language.model.Nodes.hasObjectPayload(node);
     }
 
     private void materializeReference(Node target,

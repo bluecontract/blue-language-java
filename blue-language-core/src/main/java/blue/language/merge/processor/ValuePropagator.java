@@ -3,10 +3,12 @@ package blue.language.merge.processor;
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 
 import java.math.BigInteger;
+import java.util.LinkedHashMap;
 
 /**
  * Propagates scalar values and rejects conflicting fixed values.
@@ -29,6 +31,7 @@ public class ValuePropagator implements MergingProcessor {
             NodeProvider nodeProvider,
             NodeResolver nodeResolver,
             CanonicalTypeIdentityLookup typeIdentities) {
+        validatePayloadCompatibility(target, source);
         normalizeQuotedIntegerInInheritedContext(
                 target,
                 source,
@@ -43,6 +46,25 @@ public class ValuePropagator implements MergingProcessor {
                         ", target node value: " + target.getValue());
         }
         
+    }
+
+    private void validatePayloadCompatibility(Node target, Node source) {
+        boolean targetObject = Nodes.hasObjectPayload(target);
+        boolean sourceObject = Nodes.hasObjectPayload(source);
+        boolean targetScalar = target.getValue() != null;
+        boolean sourceScalar = source.getValue() != null;
+        boolean targetList = target.getItems() != null;
+        boolean sourceList = source.getItems() != null;
+        if (sourceObject && (targetScalar || targetList)
+                || targetObject && (sourceScalar || sourceList)) {
+            throw new IllegalArgumentException(
+                    "Node payload kinds conflict: object, list, and scalar values cannot override one another.");
+        }
+        if (sourceObject
+                && source.getProperties().isEmpty()
+                && target.getProperties() == null) {
+            target.properties(new LinkedHashMap<>());
+        }
     }
 
     private void normalizeQuotedIntegerInInheritedContext(

@@ -284,8 +284,7 @@ final class ListOverlayMerger {
     }
 
     private boolean isObjectOverlay(Node overlay) {
-        return overlay.getProperties() != null
-                && !overlay.getProperties().isEmpty();
+        return blue.language.model.Nodes.hasObjectPayload(overlay);
     }
 
     private boolean isObjectCompatibleListItem(Node inherited) {
