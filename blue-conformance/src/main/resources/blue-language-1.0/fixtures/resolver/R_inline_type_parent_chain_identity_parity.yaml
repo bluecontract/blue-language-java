@@ -1,0 +1,35 @@
+id: R_inline_type_parent_chain_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: An inline type extending an inline parent has the same canonical
+  identity as the fully verified reference-backed parent chain
+source:
+  name: Inline Chain Root
+  type:
+    name: Inline Chain Child
+    type:
+      name: Inline Chain Parent
+      parentMarker: inherited
+    childMarker: local
+alsoEquivalentTo:
+  name: Inline Chain Root
+  type:
+    blueId: 8J7jFcUkwx2JJsSgSvBpDyDCqE71YmtQqs6MCoE5MxET
+provider:
+- requestedBlueId: 8J7jFcUkwx2JJsSgSvBpDyDCqE71YmtQqs6MCoE5MxET
+  node:
+    name: Inline Chain Child
+    type:
+      blueId: Ao3KY8nRbE3LTWftpsgkdfho2eB7PjfoxNXYZrdrhNBV
+    childMarker: local
+- requestedBlueId: Ao3KY8nRbE3LTWftpsgkdfho2eB7PjfoxNXYZrdrhNBV
+  node:
+    name: Inline Chain Parent
+    parentMarker: inherited
+expectedCanonicalOverlay:
+  name: Inline Chain Root
+  type:
+    blueId: 8J7jFcUkwx2JJsSgSvBpDyDCqE71YmtQqs6MCoE5MxET
+expectedNodeBlueId: 5DbytcRPxKVQ5SZ2PQgq3BLL8fGAb7NMnnVKArdQtcFS
+note: The child type BlueId is derived from its own canonical input, which
+  retains a pure reference to the independently identified parent type.

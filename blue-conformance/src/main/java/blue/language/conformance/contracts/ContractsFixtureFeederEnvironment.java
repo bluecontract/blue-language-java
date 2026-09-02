@@ -85,7 +85,8 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
     abstract ExternalChannelDependencySnapshot fixtureChannelDependencies(
             ObjectNode scope,
             String ownerKey,
-            JsonNode ownerContract);
+            JsonNode ownerContract,
+            Map<String, Node> providerNodes);
 
     Map<String, Node> verifyProviderNodes(JsonNode provider) {
         Map<String, Node> result = new LinkedHashMap<>();
@@ -111,7 +112,9 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
             JsonNode event,
             JsonNode hints,
             String eventBlueId,
-            Node checkpointSubjectOverride,
+            Node canonicalEvent,
+            String checkpointSubjectOverrideBlueId,
+            Node canonicalCheckpointSubjectOverride,
             Map<String, Node> providerNodes,
             boolean includeUnhintedCandidates) {
         /*
@@ -166,7 +169,17 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                 if (contract == null) {
                     continue;
                 }
-                String typeBlueId = contract.path(BlueLanguageConstants.OBJECT_TYPE).path(BlueLanguageConstants.OBJECT_BLUE_ID).asText(null);
+                Node contractNode = readNode(contract);
+                ResolvedSnapshot contractSnapshot =
+                        fixtureContractSourceSnapshot(
+                                contractNode, providerNodes);
+                Node effectiveType = contractSnapshot
+                        .resolvedRoot()
+                        .getType();
+                String typeBlueId = effectiveType != null
+                        ? contractSnapshot.canonicalTypeIdentities()
+                                .requireCanonicalTypeBlueId(effectiveType)
+                        : null;
                 if (!registry.isSubtype(typeBlueId, registryId("ExternalChannel"))) {
                     continue;
                 }
@@ -183,8 +196,7 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                     continue;
                 }
                 int order = contract.path(ContractsFixtureConstants.Field.ORDER).asInt(0);
-                Node contractNode = readNode(contract);
-                String contribution = DirectBlueIdCalculator.calculateBlueId(contractNode);
+                String contribution = contractSnapshot.blueId();
                 String domain = contract.path("checkpointDomain").asText(null);
                 if (domain == null) {
                     throw new IllegalArgumentException(
@@ -196,7 +208,8 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                         fixtureChannelDependencies(
                                 scope.value,
                                 entry.getKey(),
-                                contract);
+                                contract,
+                                providerNodes);
                 Node domainNode = checkpointDomainNode(
                         typeBlueId,
                         contributions,
@@ -214,12 +227,12 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                             "Checkpoint domain derivation drift");
                 }
                 String subjectBlueId = eventBlueId;
-                Node subjectNode = readNode(event);
-                if (checkpointSubjectOverride != null) {
-                    subjectNode = checkpointSubjectOverride.clone();
-                    subjectBlueId =
-                            DirectBlueIdCalculator.calculateBlueId(
-                                    subjectNode);
+                Node subjectNode = canonicalEvent.clone();
+                if (canonicalCheckpointSubjectOverride != null) {
+                    subjectNode = canonicalCheckpointSubjectOverride.clone();
+                    subjectBlueId = Objects.requireNonNull(
+                            checkpointSubjectOverrideBlueId,
+                            "checkpointSubjectOverrideBlueId");
                 }
                 ExternalDeliverySnapshot.Builder snapshot =
                         ExternalDeliverySnapshot.builder(scope.path, entry.getKey())
@@ -401,9 +414,17 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                 if (contract == null) {
                     continue;
                 }
-                String typeBlueId =
-                        contract.path(BlueLanguageConstants.OBJECT_TYPE).path(BlueLanguageConstants.OBJECT_BLUE_ID)
-                                .asText(null);
+                Node contractNode = readNode(contract);
+                ResolvedSnapshot contractSnapshot =
+                        fixtureContractSourceSnapshot(
+                                contractNode, providerNodes);
+                Node effectiveType = contractSnapshot
+                        .resolvedRoot()
+                        .getType();
+                String typeBlueId = effectiveType != null
+                        ? contractSnapshot.canonicalTypeIdentities()
+                                .requireCanonicalTypeBlueId(effectiveType)
+                        : null;
                 if (!registry.isSubtype(
                         typeBlueId,
                         registryId("ExternalChannel"))) {
@@ -443,10 +464,7 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                                     + "keys at " + scope.path + "/"
                                     + entry.getKey());
                 }
-                Node contractNode = readNode(contract);
-                String contribution =
-                        DirectBlueIdCalculator.calculateBlueId(
-                                contractNode);
+                String contribution = contractSnapshot.blueId();
                 String discriminator =
                         contract.path("checkpointDomain")
                                 .asText(null);
@@ -460,7 +478,8 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                         fixtureChannelDependencies(
                                 scope.value,
                                 entry.getKey(),
-                                contract);
+                                contract,
+                                providerNodes);
                 String domain = CheckpointDomain.derive(
                         typeBlueId,
                         Collections.singletonList(contribution),

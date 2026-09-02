@@ -1,0 +1,26 @@
+id: R_inline_value_type_reference_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: Inline and verified-reference Dictionary valueType forms have one
+  canonical collection identity
+source:
+  name: Typed Dictionary
+  type: Dictionary
+  valueType:
+    name: Dictionary Value Shape
+alsoEquivalentTo:
+  name: Typed Dictionary
+  type: Dictionary
+  valueType:
+    blueId: 9HULfypJgxwSz6FZFaYZSXQ7wbPdjR2NZbek9F1s7eok
+provider:
+- requestedBlueId: 9HULfypJgxwSz6FZFaYZSXQ7wbPdjR2NZbek9F1s7eok
+  node:
+    name: Dictionary Value Shape
+expectedCanonicalOverlay:
+  name: Typed Dictionary
+  type:
+    blueId: Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG
+  valueType:
+    blueId: 9HULfypJgxwSz6FZFaYZSXQ7wbPdjR2NZbek9F1s7eok
+expectedNodeBlueId: FfKfJTdDYW2u7bjACSvNrothqwfG1V9ZneocmbvKNg2h

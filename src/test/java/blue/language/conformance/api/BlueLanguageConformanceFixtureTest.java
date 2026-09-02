@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -231,6 +232,7 @@ public class BlueLanguageConformanceFixtureTest {
                         + "operation: expandLimited\n"
                         + "source:\n"
                         + "  left: wanted\n"
+                        + "provider: []\n"
                         + "limits:\n"
                         + "  demandedPaths: [/left]\n"
                         + "expectedOutcome: Established\n"
@@ -240,21 +242,22 @@ public class BlueLanguageConformanceFixtureTest {
                         + "category: LimitedResolution\n"
                         + "operation: semanticExists\n"
                         + "source: {}\n"
+                        + "provider: []\n"
                         + "path: /missing\n"
                         + "expectedOutcome: Established\n");
 
         // when
-        AssertionError identityFailure = captureFailure(
+        Throwable identityFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongIdentity));
-        AssertionError valueFailure = captureFailure(
+        Throwable valueFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongValue));
-        AssertionError outcomeFailure = captureFailure(
+        Throwable outcomeFailure = captureFailure(
                 () -> BlueConformanceSuiteRunner.runFixtureForTest(wrongOutcome));
 
         // then
-        assertTrue(identityFailure instanceof AssertionError);
-        assertTrue(valueFailure instanceof AssertionError);
-        assertTrue(outcomeFailure instanceof AssertionError);
+        assertInstanceOf(AssertionError.class, identityFailure);
+        assertInstanceOf(AssertionError.class, valueFailure);
+        assertInstanceOf(AssertionError.class, outcomeFailure);
     }
 
     @Test

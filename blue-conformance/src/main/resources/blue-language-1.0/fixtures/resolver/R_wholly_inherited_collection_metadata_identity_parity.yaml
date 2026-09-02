@@ -1,0 +1,46 @@
+id: R_wholly_inherited_collection_metadata_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: Collection metadata inherited wholly from an inline collection type
+  has the same root identity as the verified reference-backed type chain
+source:
+  name: Inherited Collection Root
+  type:
+    name: Inherited Collection Type
+    type: List
+    itemType:
+      name: Inherited Derived Item
+      type:
+        name: Inherited Item Base
+        baseMarker: base
+      derivedMarker: derived
+alsoEquivalentTo:
+  name: Inherited Collection Root
+  type:
+    blueId: 3kWWmTv5Gy6FNuJyRLLa2rFpGLzkbaoevD1e98StAaCV
+provider:
+- requestedBlueId: 3kWWmTv5Gy6FNuJyRLLa2rFpGLzkbaoevD1e98StAaCV
+  node:
+    name: Inherited Collection Type
+    type:
+      blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    itemType:
+      blueId: 6w4HdLKCE4f53AXxQHrgymJRRchmVwvhnadFnHKBtyK3
+- requestedBlueId: 6w4HdLKCE4f53AXxQHrgymJRRchmVwvhnadFnHKBtyK3
+  node:
+    name: Inherited Derived Item
+    type:
+      blueId: 2xnXs7FQtF2tFj3Mg91APvgoqhdoP4Bex2ax9YAJzJ1K
+    derivedMarker: derived
+- requestedBlueId: 2xnXs7FQtF2tFj3Mg91APvgoqhdoP4Bex2ax9YAJzJ1K
+  node:
+    name: Inherited Item Base
+    baseMarker: base
+expectedCanonicalOverlay:
+  name: Inherited Collection Root
+  type:
+    blueId: 3kWWmTv5Gy6FNuJyRLLa2rFpGLzkbaoevD1e98StAaCV
+expectedNodeBlueId: GP4pCEEnuWtQyCd5kFrJgMXBx8Rq8j5S3R1uoVBvrZNH
+note: The root authors no itemType. The effective itemType is inherited from
+  the collection type and therefore must not leak into the root Canonical
+  Identity Input.

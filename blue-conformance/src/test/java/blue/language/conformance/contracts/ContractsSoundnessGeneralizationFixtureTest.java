@@ -84,8 +84,34 @@ final class ContractsSoundnessGeneralizationFixtureTest {
     private static ContractsConformanceProjection execute(String name)
             throws IOException {
         JsonNode fixture = read(ROOT + name);
+        ContractsFixtureHarness harness = new ContractsFixtureHarness();
+        ContractsFixtureHarnessDataSupport.PreparedInput prepared =
+                harness.prepare(
+                        fixture.path("input"),
+                        null,
+                        null,
+                        true,
+                        ContractsFixtureInputPreparer.hasVector(
+                                fixture, "C-LOOP-01"));
+        ContractsFixtureHarnessDataSupport.ProcessExecution execution =
+                harness.runProcess(prepared);
+        ContractsConformanceProjection projection =
+                harness.projectProcess(prepared, execution);
+        assertEquals(
+                "success",
+                value(projection, "result.status"),
+                diagnostic(projection));
         ContractsConformanceSuite.runFixture(fixture);
-        return new ContractsFixtureHarness().execute(fixture, false);
+        return projection;
+    }
+
+    private static String diagnostic(
+            ContractsConformanceProjection projection) {
+        ContractsConformanceProjection.Presence projected =
+                projection.project("result.diagnostic");
+        return projected.isPresent()
+                ? String.valueOf(projected.getValue())
+                : "no processor diagnostic";
     }
 
     private static JsonNode read(String resource) throws IOException {

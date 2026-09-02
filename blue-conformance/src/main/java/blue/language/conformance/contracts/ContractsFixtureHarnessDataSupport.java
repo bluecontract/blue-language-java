@@ -10,6 +10,7 @@ import static blue.language.conformance.contracts.ContractsFixtureScriptedEnviro
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.api.BlueCachePolicy;
+import blue.language.runtime.BlueLanguage;
 import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.conformance.api.BlueContractsConformanceReport;
@@ -45,6 +46,14 @@ import blue.language.processor.ProcessorStatus;
 import blue.language.processor.SubscriptionDelta;
 import blue.language.processor.VerifiedExecutionEvidence;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.Contract;
+import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.EmbeddedNodeChannel;
+import blue.language.processor.model.HandlerContract;
+import blue.language.processor.model.InitializationMarker;
+import blue.language.processor.model.LifecycleChannel;
+import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
@@ -62,9 +71,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -429,30 +441,82 @@ abstract class ContractsFixtureHarnessDataSupport {
         return RegistryEnvironment.load().idByKey.get(key);
     }
 
+    final FixtureSourceIdentityResolver.Identity sourceIdentity(
+            Node source,
+            Map<String, Node> providerNodes,
+            boolean includeTypeContracts) {
+        NodeProvider provider = sourceIdentityProvider(providerNodes);
+        BlueLanguage canonicalizer = sourceIdentityLanguage(provider);
+        try {
+            return FixtureSourceIdentityResolver.resolve(
+                    canonicalizer,
+                    source,
+                    registry.exactSourceFieldsByType(),
+                    registry.executableBodyFieldsByType(),
+                    includeTypeContracts);
+        } finally {
+            canonicalizer.close();
+        }
+    }
+
+    final ResolvedSnapshot fixtureContractSourceSnapshot(
+            Node exactContract,
+            Map<String, Node> providerNodes) {
+        NodeProvider provider = sourceIdentityProvider(providerNodes);
+        BlueLanguage canonicalizer = sourceIdentityLanguage(provider);
+        try {
+            return FixtureSourceIdentityResolver.resolveContractSnapshot(
+                    canonicalizer,
+                    exactContract,
+                    registry.exactSourceFieldsByType(),
+                    registry.executableBodyFieldsByType());
+        } finally {
+            canonicalizer.close();
+        }
+    }
+
+    private NodeProvider sourceIdentityProvider(
+            Map<String, Node> providerNodes) {
+        Map<String, Node> exactNodes =
+                new LinkedHashMap<>(registry.nodesByBlueId);
+        exactNodes.putAll(Objects.requireNonNull(
+                providerNodes, "providerNodes"));
+        NodeProvider fixtureProvider = blueId -> {
+            Node exact = exactNodes.get(blueId);
+            return exact == null
+                    ? null
+                    : Collections.singletonList(exact.clone());
+        };
+        return new SequentialNodeProvider(
+                BootstrapProvider.INSTANCE,
+                new VerifiedNodeProvider(
+                        BlueRuntimeTypeRegistry.getDefault()
+                                .asProcessorSnapshotProvider()),
+                fixtureProvider);
+    }
+
+    private static BlueLanguage sourceIdentityLanguage(
+            NodeProvider processorLanguageProvider) {
+        return BlueLanguage.builder()
+                .nodeProvider(processorLanguageProvider)
+                .cachePolicy(BlueCachePolicy.boundedDefaults())
+                .build();
+    }
+
     static final class RegistryEnvironment {
         final Map<String, Node> nodesByBlueId;
         final Map<String, String> idByKey;
-        final BlueLanguageRuntime language;
         final String runtimeRegistryIdentity;
 
         private RegistryEnvironment(Map<String, Node> nodesByBlueId,
                                     Map<String, String> idByKey,
-                                    String runtimeRegistryIdentity,
-                                    boolean needsResolutionRuntime) {
+                                    String runtimeRegistryIdentity) {
             this.nodesByBlueId =
                     Collections.unmodifiableMap(new LinkedHashMap<>(nodesByBlueId));
             this.idByKey =
                     Collections.unmodifiableMap(new LinkedHashMap<>(idByKey));
             this.runtimeRegistryIdentity = Objects.requireNonNull(
                     runtimeRegistryIdentity, "runtimeRegistryIdentity");
-            this.language = needsResolutionRuntime
-                    ? languageRuntime(blueId -> {
-                        Node value = this.nodesByBlueId.get(blueId);
-                        return value == null
-                                ? null
-                                : Collections.singletonList(value.clone());
-                    })
-                    : null;
         }
 
         static RegistryEnvironment load() {
@@ -495,7 +559,7 @@ abstract class ContractsFixtureHarnessDataSupport {
                         "Candidate fixture runtime registry identity mismatch");
             }
             return new RegistryEnvironment(
-                    nodes, keys, registryIdentity, false);
+                    nodes, keys, registryIdentity);
         }
 
         Node require(String blueId) {
@@ -507,12 +571,150 @@ abstract class ContractsFixtureHarnessDataSupport {
             return value.clone();
         }
 
-        Node resolve(Node node) {
-            if (language == null) {
-                throw new IllegalStateException(
-                        "Candidate registry environment has no resolution runtime");
+        Map<String, List<String>> exactSourceFieldsByType() {
+            Map<String, List<String>> fields = new LinkedHashMap<>();
+            fields.put(
+                    RuntimeBlueIds.CHANNEL,
+                    exactSourceFields(
+                            ChannelContract.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    RuntimeBlueIds.EXTERNAL_CHANNEL,
+                    exactSourceFields(
+                            ChannelContract.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    RuntimeBlueIds.HANDLER,
+                    exactSourceFields(
+                            HandlerContract.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL,
+                    exactSourceFields(
+                            DocumentUpdateChannel.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL,
+                    exactSourceFields(
+                            TriggeredEventChannel.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    RuntimeBlueIds.EMBEDDED_NODE_CHANNEL,
+                    exactSourceFields(
+                            EmbeddedNodeChannel.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL,
+                    exactSourceFields(
+                            LifecycleChannel.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
+                    exactSourceFields(
+                            InitializationMarker.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL,
+                    exactSourceFields(
+                            MockExternalChannel.Value.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    MockTypeBlueIds.MOCK_HANDLER,
+                    exactSourceFields(
+                            MockHandler.Value.class,
+                            Collections.singletonList(
+                                    ContractsFixtureConstants.Field.RESULT)));
+            fields.put(
+                    MockTypeBlueIds.MOCK_OPERATION,
+                    exactSourceFields(
+                            MockOperation.Value.class,
+                            Collections.singletonList(
+                                    ContractsFixtureConstants.Field.RESULT)));
+            return inheritedContractFields(fields);
+        }
+
+        Map<String, List<String>> executableBodyFieldsByType() {
+            Map<String, List<String>> fields = new LinkedHashMap<>();
+            fields.put(
+                    MockTypeBlueIds.MOCK_HANDLER,
+                    Collections.singletonList(
+                            ContractsFixtureConstants.Field.RESULT));
+            fields.put(
+                    MockTypeBlueIds.MOCK_OPERATION,
+                    Collections.singletonList(
+                            ContractsFixtureConstants.Field.RESULT));
+            return inheritedContractFields(fields);
+        }
+
+        private Map<String, List<String>> inheritedContractFields(
+                Map<String, List<String>> fields) {
+            Map<String, List<String>> complete = new LinkedHashMap<>();
+            for (String typeBlueId : nodesByBlueId.keySet()) {
+                if (!isSubtype(typeBlueId, RuntimeBlueIds.CONTRACT)) {
+                    continue;
+                }
+                Set<String> inherited = new LinkedHashSet<>();
+                Set<String> visited = new LinkedHashSet<>();
+                String current = typeBlueId;
+                while (current != null && visited.add(current)) {
+                    List<String> direct = fields.get(current);
+                    if (direct != null) {
+                        inherited.addAll(direct);
+                    }
+                    Node type = nodesByBlueId.get(current);
+                    current = type != null && type.getType() != null
+                            ? type.getType().getBlueId()
+                            : null;
+                }
+                if (current != null) {
+                    throw new IllegalStateException(
+                            "Cyclic Contracts registry type ancestry at "
+                                    + current);
+                }
+                if (!inherited.isEmpty()) {
+                    List<String> ordered = new ArrayList<>(inherited);
+                    ordered.sort(ExternalOrderKey::compareTextCodePoints);
+                    complete.put(
+                            typeBlueId,
+                            Collections.unmodifiableList(ordered));
+                }
             }
-            return language.resolution().resolve(node);
+            return Collections.unmodifiableMap(complete);
+        }
+
+        private static List<String> exactSourceFields(
+                Class<? extends Contract> contractType,
+                List<String> executableBodyFields) {
+            Set<String> fields = new LinkedHashSet<>();
+            Class<?> current = contractType;
+            while (current != null && current != Object.class) {
+                for (Field field : current.getDeclaredFields()) {
+                    if (!Modifier.isStatic(field.getModifiers())
+                            && !field.isSynthetic()
+                            && Node.class.isAssignableFrom(field.getType())) {
+                        fields.add(jsonPropertyName(field));
+                    }
+                }
+                current = current.getSuperclass();
+            }
+            List<String> nodeFields = new ArrayList<>(fields);
+            nodeFields.sort(ExternalOrderKey::compareTextCodePoints);
+            fields.clear();
+            fields.addAll(nodeFields);
+            fields.addAll(executableBodyFields);
+            return Collections.unmodifiableList(new ArrayList<>(fields));
+        }
+
+        private static String jsonPropertyName(Field field) {
+            JsonProperty property = field.getAnnotation(JsonProperty.class);
+            if (property != null
+                    && property.value() != null
+                    && !property.value().isEmpty()
+                    && !JsonProperty.USE_DEFAULT_NAME.equals(
+                            property.value())) {
+                return property.value();
+            }
+            return field.getName();
         }
 
         boolean isSubtype(String candidate, String parent) {
@@ -552,8 +754,7 @@ abstract class ContractsFixtureHarnessDataSupport {
                     nodes,
                     keys,
                     BlueContractsConformanceReport
-                            .CONTRACTS_REGISTRY_PACKAGE_IDENTITY,
-                    true);
+                            .CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
         }
 
         private static void loadConformanceOperation(

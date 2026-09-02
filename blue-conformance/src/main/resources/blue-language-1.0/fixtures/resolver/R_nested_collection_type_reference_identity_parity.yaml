@@ -1,0 +1,36 @@
+id: R_nested_collection_type_reference_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: A List item type containing Dictionary valueType metadata has the
+  same recursive identity inline and through verified references
+source:
+  name: Nested Collection
+  type: List
+  itemType:
+    name: Nested Dictionary Item Shape
+    type: Dictionary
+    valueType:
+      name: Nested Dictionary Value Shape
+alsoEquivalentTo:
+  name: Nested Collection
+  type: List
+  itemType:
+    blueId: F2Si6n2ZSGQ8v9YmwWeAr9YYkZsNC3cyKdjcmsriieTt
+provider:
+- requestedBlueId: F2Si6n2ZSGQ8v9YmwWeAr9YYkZsNC3cyKdjcmsriieTt
+  node:
+    name: Nested Dictionary Item Shape
+    type:
+      blueId: Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG
+    valueType:
+      blueId: 89ijM38Uhmsv1ZVBWi41o4wfGKAmh2g26fGyYqhPhj5k
+- requestedBlueId: 89ijM38Uhmsv1ZVBWi41o4wfGKAmh2g26fGyYqhPhj5k
+  node:
+    name: Nested Dictionary Value Shape
+expectedCanonicalOverlay:
+  name: Nested Collection
+  type:
+    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+  itemType:
+    blueId: F2Si6n2ZSGQ8v9YmwWeAr9YYkZsNC3cyKdjcmsriieTt
+expectedNodeBlueId: 94qNwSmk35Yk41uRyvmgbRaZFiJ9cfeKrKRz1WF4X93h

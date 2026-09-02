@@ -365,6 +365,65 @@ abstract class BlueConformanceFixtureSupport extends BlueConformanceFixturePrimi
         assertJsonNodeEquals(expectedTree, actualTree, "/");
     }
 
+    static boolean nodesEqual(Node left, Node right) {
+        JsonNode leftTree = UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                NodeWireForm.get(left));
+        JsonNode rightTree = UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                NodeWireForm.get(right));
+        return leftTree.equals(rightTree);
+    }
+
+    static void assertCanonicalTypeReferences(Node canonical) {
+        JsonNode tree = UncheckedObjectMapper.JSON_MAPPER.valueToTree(
+                NodeWireForm.get(canonical));
+        assertCanonicalTypeReferences(tree, "/");
+    }
+
+    private static void assertCanonicalTypeReferences(
+            JsonNode node, String path) {
+        if (node == null || node.isNull()) return;
+        if (node.isArray()) {
+            for (int index = 0; index < node.size(); index++) {
+                assertCanonicalTypeReferences(
+                        node.get(index), JsonPointer.append(path,
+                                Integer.toString(index)));
+            }
+            return;
+        }
+        if (!node.isObject()) return;
+        java.util.Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> field = fields.next();
+            String childPath = JsonPointer.append(path, field.getKey());
+            if (isTypeMetadataField(field.getKey())) {
+                JsonNode reference = field.getValue();
+                assertTrue(reference != null && reference.isObject()
+                                && reference.size() == 1
+                                && reference.hasNonNull(
+                                        BlueLanguageConstants.OBJECT_BLUE_ID)
+                                && reference.get(
+                                        BlueLanguageConstants.OBJECT_BLUE_ID)
+                                        .isTextual(),
+                        "Canonical type metadata must be one pure non-null BlueId reference at "
+                                + childPath + ".");
+                String blueId = reference.get(
+                        BlueLanguageConstants.OBJECT_BLUE_ID).asText();
+                BlueIds.requireNoThisPlaceholderOutsideCyclicApi(
+                        blueId, childPath);
+                BlueIds.requireBlueIdOrCyclicMember(blueId, childPath);
+            } else {
+                assertCanonicalTypeReferences(field.getValue(), childPath);
+            }
+        }
+    }
+
+    private static boolean isTypeMetadataField(String field) {
+        return BlueLanguageConstants.OBJECT_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)
+                || BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field);
+    }
+
     static void assertJsonNodeEquals(JsonNode expected,
                                              JsonNode actual,
                                              String path) {

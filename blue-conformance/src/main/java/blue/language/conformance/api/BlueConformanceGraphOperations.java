@@ -30,6 +30,7 @@ import blue.language.registry.BlueCoreTypeRegistry;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.BlueIds;
 import blue.language.identity.CircularSetIdentityCalculator;
+import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.wire.JsonPointer;
 import blue.language.model.NodePath;
 import blue.language.registry.NodeProviderWrapper;
@@ -162,11 +163,9 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
     }
 
     static void runCanonicalize(JsonNode spec) {
-        ProviderContext provider = providerContext(spec, null);
-        LanguageFixtureRuntime blue =
-                new LanguageFixtureRuntime(provider.provider);
         Node source = sourceWithParent(spec);
-        Node actual = blue.canonicalize(source);
+        Node actual = canonicalizeInFreshRuntime(spec, source);
+        assertCanonicalTypeReferences(actual);
         assertExpectedNodeIfPresent(spec, FixtureField.EXPECTED_CANONICAL_OVERLAY, actual);
         if (spec.has(FixtureField.EXPECTED_CANONICAL_ITEMS)) {
             assertItemValues(spec.get(FixtureField.EXPECTED_CANONICAL_ITEMS), actual.getItems());
@@ -175,7 +174,139 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
             assertEquals(spec.get(FixtureField.EXPECTED_CANONICAL_CONTAINS_CONTROLS).asBoolean(),
                     containsListControls(actual));
         }
-        DirectBlueIdCalculator.calculateBlueId(actual);
+        String actualBlueId = DirectBlueIdCalculator.calculateBlueId(actual);
+        String sourceBlueId = sourceBlueIdInFreshRuntime(spec, source);
+        assertEquals(actualBlueId, sourceBlueId);
+        if (spec.has(FixtureField.EXPECTED_NODE_BLUE_ID)) {
+            assertEquals(requireText(spec, FixtureField.EXPECTED_NODE_BLUE_ID),
+                    sourceBlueId);
+        }
+        if (spec.has(FixtureField.ALSO_EQUIVALENT_TO)) {
+            Node equivalentSource = readNode(spec.get(FixtureField.ALSO_EQUIVALENT_TO));
+            attachBaselineType(equivalentSource, spec);
+            Node equivalent = canonicalizeInFreshRuntime(spec, equivalentSource);
+            assertCanonicalTypeReferences(equivalent);
+            assertNodeEquals(actual, equivalent);
+            assertEquals(actualBlueId,
+                    DirectBlueIdCalculator.calculateBlueId(equivalent));
+            assertEquals(sourceBlueId,
+                    sourceBlueIdInFreshRuntime(spec, equivalentSource));
+            assertEquals(
+                    resolvedSemanticProjectionInFreshRuntime(spec, source),
+                    resolvedSemanticProjectionInFreshRuntime(
+                            spec, equivalentSource),
+                    "Equivalent Source forms produced different semantic Resolved Forms");
+
+            assertEquivalentWithWarmCacheInBothOrders(
+                    spec,
+                    source,
+                    equivalentSource,
+                    actual,
+                    sourceBlueId);
+
+            // Repeat the original form in another isolated runtime as a
+            // process-local determinism check independent of the warm-cache
+            // A/B and B/A checks above.
+            Node repeated = canonicalizeInFreshRuntime(spec, source.clone());
+            assertCanonicalTypeReferences(repeated);
+            assertNodeEquals(actual, repeated);
+            assertEquals(actualBlueId,
+                    DirectBlueIdCalculator.calculateBlueId(repeated));
+            assertEquals(sourceBlueId,
+                    sourceBlueIdInFreshRuntime(spec, source.clone()));
+        }
+        if (spec.has(FixtureField.ALSO_DIFFERENT_FROM)) {
+            Node differentSource = readNode(spec.get(FixtureField.ALSO_DIFFERENT_FROM));
+            attachBaselineType(differentSource, spec);
+            Node different = canonicalizeInFreshRuntime(spec, differentSource);
+            assertCanonicalTypeReferences(different);
+            String differentBlueId = sourceBlueIdInFreshRuntime(
+                    spec, differentSource);
+            assertEquals(DirectBlueIdCalculator.calculateBlueId(different),
+                    differentBlueId);
+            assertTrue(!sourceBlueId.equals(differentBlueId),
+                    "Distinct Source meanings converged on one canonical identity.");
+            assertTrue(!nodesEqual(actual, different),
+                    "Distinct Source meanings produced one Canonical Identity Input.");
+        }
+    }
+
+    private static void assertEquivalentWithWarmCacheInBothOrders(
+            JsonNode spec,
+            Node source,
+            Node equivalentSource,
+            Node expectedCanonical,
+            String expectedBlueId) {
+        assertEquivalentWithWarmCacheOrder(
+                spec,
+                source,
+                equivalentSource,
+                expectedCanonical,
+                expectedBlueId);
+        assertEquivalentWithWarmCacheOrder(
+                spec,
+                equivalentSource,
+                source,
+                expectedCanonical,
+                expectedBlueId);
+    }
+
+    private static void assertEquivalentWithWarmCacheOrder(
+            JsonNode spec,
+            Node firstSource,
+            Node secondSource,
+            Node expectedCanonical,
+            String expectedBlueId) {
+        ProviderContext provider = providerContext(spec, null);
+        try (LanguageFixtureRuntime blue =
+                     new LanguageFixtureRuntime(provider.provider)) {
+            Node first = blue.canonicalize(firstSource.clone());
+            Node second = blue.canonicalize(secondSource.clone());
+            Node repeatedFirst = blue.canonicalize(firstSource.clone());
+            assertCanonicalTypeReferences(first);
+            assertCanonicalTypeReferences(second);
+            assertCanonicalTypeReferences(repeatedFirst);
+            assertNodeEquals(expectedCanonical, first);
+            assertNodeEquals(expectedCanonical, second);
+            assertNodeEquals(expectedCanonical, repeatedFirst);
+            assertEquals(expectedBlueId,
+                    blue.calculateSourceDocumentBlueId(firstSource.clone()));
+            assertEquals(expectedBlueId,
+                    blue.calculateSourceDocumentBlueId(secondSource.clone()));
+            assertEquals(expectedBlueId,
+                    DirectBlueIdCalculator.calculateBlueId(first));
+            assertEquals(expectedBlueId,
+                    DirectBlueIdCalculator.calculateBlueId(second));
+            assertEquals(expectedBlueId,
+                    DirectBlueIdCalculator.calculateBlueId(repeatedFirst));
+        }
+    }
+
+    private static String sourceBlueIdInFreshRuntime(
+            JsonNode spec, Node source) {
+        ProviderContext provider = providerContext(spec, null);
+        try (LanguageFixtureRuntime blue =
+                     new LanguageFixtureRuntime(provider.provider)) {
+            return blue.calculateSourceDocumentBlueId(source.clone());
+        }
+    }
+
+    private static Node canonicalizeInFreshRuntime(JsonNode spec, Node source) {
+        ProviderContext provider = providerContext(spec, null);
+        try (LanguageFixtureRuntime blue =
+                     new LanguageFixtureRuntime(provider.provider)) {
+            return blue.canonicalize(source.clone());
+        }
+    }
+
+    private static Object resolvedSemanticProjectionInFreshRuntime(
+            JsonNode spec, Node source) {
+        ProviderContext provider = providerContext(spec, null);
+        try (LanguageFixtureRuntime blue =
+                     new LanguageFixtureRuntime(provider.provider)) {
+            Node resolved = blue.resolve(source.clone());
+            return NodeToBlueIdInput.getWithResolvedBlueIdMetadata(resolved);
+        }
     }
 
     static void runCollapse(JsonNode spec) {
@@ -240,17 +371,46 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
     }
 
     static void runCanonicalizeLimitedResult(JsonNode spec) {
-        LanguageFixtureRuntime blue = new LanguageFixtureRuntime(
-                providerContext(spec, null).provider);
-        BlueOperationResult<Node> limited = blue.resolveLimited(
-                readNode(requirePresent(spec, FixtureField.SOURCE)), operationLimits(spec));
-        assertOutcome(spec, FixtureField.EXPECTED_RESOLUTION_OUTCOME, limited.outcome());
-        try {
-            blue.canonicalize(limited);
-        } catch (RuntimeException expected) {
-            assertExpectedErrorCategory(
-                    spec, FixtureField.EXPECTED_CANONICALIZATION_ERROR_CATEGORY, expected);
-            return;
+        Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
+        ProviderContext provider = providerContext(spec, null);
+        try (LanguageFixtureRuntime blue =
+                     new LanguageFixtureRuntime(provider.provider)) {
+            BlueOperationResult<Node> limited = blue.resolveLimited(
+                    source.clone(), operationLimits(spec));
+            assertOutcome(spec, FixtureField.EXPECTED_RESOLUTION_OUTCOME,
+                    limited.outcome());
+            try {
+                blue.canonicalize(limited);
+            } catch (RuntimeException expected) {
+                assertExpectedErrorCategory(
+                        spec,
+                        FixtureField.EXPECTED_CANONICALIZATION_ERROR_CATEGORY,
+                        expected);
+
+                // The rejected limited attempt must not poison the runtime.
+                // Retrying the authored Source with complete evidence in that
+                // same runtime must converge with a clean eager run.
+                Node retried = blue.canonicalize(source.clone());
+                Node eager = canonicalizeInFreshRuntime(spec, source.clone());
+                assertCanonicalTypeReferences(retried);
+                assertCanonicalTypeReferences(eager);
+                assertNodeEquals(eager, retried);
+                String eagerBlueId = DirectBlueIdCalculator.calculateBlueId(eager);
+                assertEquals(eagerBlueId,
+                        DirectBlueIdCalculator.calculateBlueId(retried));
+                assertEquals(eagerBlueId,
+                        blue.calculateSourceDocumentBlueId(source.clone()));
+                if (spec.has(FixtureField.EXPECTED_CANONICAL_OVERLAY)) {
+                    assertNodeEquals(readNode(spec.get(
+                            FixtureField.EXPECTED_CANONICAL_OVERLAY)), retried);
+                }
+                if (spec.has(FixtureField.EXPECTED_NODE_BLUE_ID)) {
+                    assertEquals(requireText(
+                                    spec, FixtureField.EXPECTED_NODE_BLUE_ID),
+                            eagerBlueId);
+                }
+                return;
+            }
         }
         throw new AssertionError("Incomplete result was accepted for canonicalization.");
     }

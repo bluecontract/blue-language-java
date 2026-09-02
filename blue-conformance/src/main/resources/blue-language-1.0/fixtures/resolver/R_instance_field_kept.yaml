@@ -1,11 +1,27 @@
 id: R_instance_field_kept
 category: Canonicalization
 operation: canonicalize
-description: canonical overlay keeps fields supplied by the instance
+description: Inline and verified-reference forms retain the same non-derivable
+  instance contribution and Source-derived identity
 source:
   type:
     inherited: from-type
   instanceField: supplied
-expectedCanonicalOverlay:
-  type: {}
+alsoEquivalentTo:
+  type:
+    blueId: 7UySht9q3eJt7cRSrYzHRHUA4BTkccTXKnnYFzaworTw
   instanceField: supplied
+alsoDifferentFrom:
+  type:
+    blueId: 7UySht9q3eJt7cRSrYzHRHUA4BTkccTXKnnYFzaworTw
+provider:
+- requestedBlueId: 7UySht9q3eJt7cRSrYzHRHUA4BTkccTXKnnYFzaworTw
+  node:
+    inherited: from-type
+expectedCanonicalOverlay:
+  type:
+    blueId: 7UySht9q3eJt7cRSrYzHRHUA4BTkccTXKnnYFzaworTw
+  instanceField: supplied
+expectedNodeBlueId: 7ivbVcfxUZsDt2524jq1ZEqcdcMZCnivZY5EeRPNSthn
+note: Removing instanceField produces a different canonical input and Source
+  BlueId; the field is not derivable from the effective type.

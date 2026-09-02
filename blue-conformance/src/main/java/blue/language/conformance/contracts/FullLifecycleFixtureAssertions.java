@@ -147,8 +147,15 @@ static void assertExpectations(
         Map<String, JsonNode> events,
         ClosureProcessResult result,
         ClosureImplementationEvidence evidence) {
-    require(text(expect, "status").equals(result.status().wireValue()),
-            id + " expected status disagrees with execution");
+    String expectedStatus = text(expect, "status");
+    String actualStatus = result.status().wireValue();
+    require(expectedStatus.equals(actualStatus),
+            id + " expected status " + expectedStatus
+                    + " but execution produced " + actualStatus
+                    + " (totalGas=" + result.totalGas()
+                    + ", workOccurrences=" + evidence.workTrace().size()
+                    + ", documentSteps="
+                    + evidence.documentStepTrace().size() + ")");
     require(requiredBoolean(expect, "atomic") == result.atomic(),
             id + " expected atomic disagrees with execution");
     require(requiredBoolean(expect, "rollbackToInput")

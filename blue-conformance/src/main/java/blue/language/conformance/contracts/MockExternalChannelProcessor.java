@@ -189,14 +189,16 @@ final class MockExternalChannelProcessor
         public Node checkpointSubject(
                 MockExternalChannel.Value immutableContractSnapshot,
                 Node exactEvent,
-                Node exactPayload) {
+                Node exactPayload,
+                ExternalChannelFunctionContext context) {
             return checkpointSubjectOverride != null
                     ? checkpointSubjectOverride.clone()
                     : ExternalChannelSubscriptionFunctions.super
                     .checkpointSubject(
                             immutableContractSnapshot,
                             exactEvent,
-                            exactPayload);
+                            exactPayload,
+                            context);
         }
 
         @Override

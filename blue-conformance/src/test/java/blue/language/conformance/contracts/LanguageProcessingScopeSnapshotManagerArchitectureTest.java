@@ -25,6 +25,7 @@ final class LanguageProcessingScopeSnapshotManagerArchitectureTest {
         for (String delegation : Arrays.asList(
                 "scope.resolve(document)",
                 "scope.resolveTransient(document)",
+                "scope.resolveTransientForCanonicalIdentity(",
                 "scope.resolvePreservingPaths(document, preservedPaths)",
                 "scope.resolveTransientPreservingPaths(",
                 "scope.materializeVerifiedExactReference(reference)",
@@ -44,6 +45,7 @@ final class LanguageProcessingScopeSnapshotManagerArchitectureTest {
 
         for (String forbidden : Arrays.asList(
                 "NodeProvider",
+                "ExactResolutionOverlay.from",
                 "fetchResultByBlueId",
                 "getNodeProvider",
                 "DirectBlueIdCalculator",

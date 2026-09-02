@@ -1,0 +1,21 @@
+id: R_inline_type_false_convergence_guard
+category: Canonicalization
+operation: canonicalize
+description: Distinct inline types cannot disappear as empty metadata and converge
+  on one otherwise identical parent identity
+source:
+  name: Parity Parent
+  type:
+    name: Inline Type Alpha
+alsoDifferentFrom:
+  name: Parity Parent
+  type:
+    name: Inline Type Beta
+expectedCanonicalOverlay:
+  name: Parity Parent
+  type:
+    blueId: 9RgWgDnbhELs1kTouQD5dCCdSsuwVp6JSXUonKXsfwV6
+expectedNodeBlueId: 4unj5x4kEnRPTtZ111A9ATgxvD6c8fB4oqnVtw41WFky
+note: The alternate inline type has canonical BlueId
+  2RCMd1f3XjDbUmgWmQaoNx4PNyn8nMREWqbMTYpRgCSW and its parent has Source-derived
+  BlueId Ddtt9U667FDTHHLEtcJF6V791G1s7pHF8mMaLwnbbuRg.

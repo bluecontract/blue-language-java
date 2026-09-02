@@ -2,10 +2,12 @@ package blue.language.conformance;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.NodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.CanonicalIdentityInputBuilder;
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.resolve.MinimizedOverlayBuilder;
 import blue.language.model.wire.BlueLanguageConstants;
 import org.junit.jupiter.api.Test;
@@ -27,20 +29,27 @@ public class ConformanceEngineTest {
         // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
+        Node document = snapshot.resolvedRoot();
 
         document.getProperties().get("price").getProperties().get("currency").value("USD");
 
         // when
         ConformanceEngine engine = blue.conformanceEngine();
         boolean initiallyConformant = engine.conforms(document);
-        ConformancePlan plan = engine.planGeneralization(FrozenNode.fromResolvedNode(document), "/price/currency");
+        ConformancePlan plan = engine.planGeneralization(
+                canonicalIdentityRoot(
+                        document, snapshot.canonicalTypeIdentities()),
+                FrozenNode.fromResolvedNode(document),
+                "/price/currency",
+                snapshot.canonicalTypeIdentities());
         boolean generalizedRootConformant =
                 engine.conforms(plan.rootNode());
 
@@ -57,17 +66,25 @@ public class ConformanceEngineTest {
         // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
+        Node document = snapshot.resolvedRoot();
 
         // when
         ConformancePlan plan = blue.conformanceEngine()
-                .planGeneralization(FrozenNode.fromResolvedNode(document), "/price/amount");
+                .planGeneralization(
+                        canonicalIdentityRoot(
+                                document,
+                                snapshot.canonicalTypeIdentities()),
+                        FrozenNode.fromResolvedNode(document),
+                        "/price/amount",
+                        snapshot.canonicalTypeIdentities());
 
         // then
         assertFalse(plan.generalized());
@@ -80,18 +97,24 @@ public class ConformanceEngineTest {
         // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
+        Node document = snapshot.resolvedRoot();
         document.getProperties().get("price").getProperties().get("currency").value("USD");
         FrozenNode patchedRoot = FrozenNode.fromResolvedNode(document);
 
         // when
-        ConformancePlan plan = blue.conformanceEngine().planGeneralization(patchedRoot, "/price/currency");
+        ConformancePlan plan = blue.conformanceEngine().planGeneralization(
+                null,
+                patchedRoot,
+                "/price/currency",
+                snapshot.canonicalTypeIdentities());
 
         // then
         assertTrue(plan.generalized());
@@ -109,7 +132,8 @@ public class ConformanceEngineTest {
         // given
         BasicNodeProvider nodeProvider = priceProvider();
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Shoes\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Product") + "\n" +
@@ -118,13 +142,19 @@ public class ConformanceEngineTest {
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
+        Node document = snapshot.resolvedRoot();
         document.getProperties().get("price").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
+        FrozenNode canonicalRoot = canonicalIdentityRoot(
+                document, snapshot.canonicalTypeIdentities());
 
         // when
         ConformancePlan plan = blue.conformanceEngine()
-                .planGeneralization(canonicalRoot, resolvedRoot, "/price/currency");
+                .planGeneralization(
+                        canonicalRoot,
+                        resolvedRoot,
+                        "/price/currency",
+                        snapshot.canonicalTypeIdentities());
 
         // then
         assertTrue(plan.generalized());
@@ -163,19 +193,26 @@ public class ConformanceEngineTest {
                 "  blueId: " + nodeProvider.getBlueIdByName("Product") + "\n" +
                 "status: draft");
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Release\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Draft Product") + "\n" +
                 "status: draft", Node.class));
+        Node document = snapshot.resolvedRoot();
 
         document.getProperties().get("status").value("published");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
+        FrozenNode canonicalRoot = canonicalIdentityRoot(
+                document, snapshot.canonicalTypeIdentities());
 
         // when
         ConformancePlan plan = blue.conformanceEngine()
-                .planGeneralization(canonicalRoot, resolvedRoot, "/status");
+                .planGeneralization(
+                        canonicalRoot,
+                        resolvedRoot,
+                        "/status",
+                        snapshot.canonicalTypeIdentities());
 
         // then
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
@@ -207,17 +244,25 @@ public class ConformanceEngineTest {
                 "schema:\n" +
                 "  minimum: 0");
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Score\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Positive Score") + "\n" +
                 "value: 5", Node.class));
+        Node document = snapshot.resolvedRoot();
 
         document.value(-1);
 
         // when
         ConformancePlan plan = blue.conformanceEngine()
-                .planGeneralization(FrozenNode.fromResolvedNode(document), "/value");
+                .planGeneralization(
+                        canonicalIdentityRoot(
+                                document,
+                                snapshot.canonicalTypeIdentities()),
+                        FrozenNode.fromResolvedNode(document),
+                        "/value",
+                        snapshot.canonicalTypeIdentities());
 
         // then
         assertTrue(blue.conformanceEngine().conforms(plan.rootNode()));
@@ -230,7 +275,8 @@ public class ConformanceEngineTest {
         // given
         BasicNodeProvider nodeProvider = basketProvider();
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Cart\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Basket") + "\n" +
@@ -248,14 +294,20 @@ public class ConformanceEngineTest {
                 "        blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
                 "      amount: 20\n" +
                 "      currency: EUR", Node.class));
+        Node document = snapshot.resolvedRoot();
 
         document.getAsNode("/prices/1").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
+        FrozenNode canonicalRoot = canonicalIdentityRoot(
+                document, snapshot.canonicalTypeIdentities());
 
         // when
         ConformancePlan plan = blue.conformanceEngine()
-                .planGeneralization(canonicalRoot, resolvedRoot, "/prices/-/currency");
+                .planGeneralization(
+                        canonicalRoot,
+                        resolvedRoot,
+                        "/prices/-/currency",
+                        snapshot.canonicalTypeIdentities());
 
         // then
         assertTrue(plan.generalized());
@@ -275,7 +327,8 @@ public class ConformanceEngineTest {
         // given
         BasicNodeProvider nodeProvider = catalogProvider();
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Catalog\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("European Catalog") + "\n" +
@@ -296,14 +349,20 @@ public class ConformanceEngineTest {
                 "      blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
                 "    amount: 20\n" +
                 "    currency: EUR", Node.class));
+        Node document = snapshot.resolvedRoot();
 
         document.getAsNode("/prices/sku2").getProperties().get("currency").value("USD");
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
-        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
+        FrozenNode canonicalRoot = canonicalIdentityRoot(
+                document, snapshot.canonicalTypeIdentities());
 
         // when
         ConformancePlan plan = blue.conformanceEngine()
-                .planGeneralization(canonicalRoot, resolvedRoot, "/prices/sku2/currency");
+                .planGeneralization(
+                        canonicalRoot,
+                        resolvedRoot,
+                        "/prices/sku2/currency",
+                        snapshot.canonicalTypeIdentities());
 
         // then
         assertTrue(plan.generalized());
@@ -326,19 +385,26 @@ public class ConformanceEngineTest {
                 "name: Fixed One\n" +
                 "x: 1");
         Blue blue = new Blue(nodeProvider);
-        Node document = blue.resolve(YAML_MAPPER.readValue(
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(
+                YAML_MAPPER.readValue(
                 "name: Instance\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Fixed One") + "\n" +
                 "x: 1", Node.class));
+        Node document = snapshot.resolvedRoot();
         document.getProperties().get("x").value(2);
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
         // when
-        FrozenNode canonicalRoot = canonicalIdentityRoot(document);
+        FrozenNode canonicalRoot = canonicalIdentityRoot(
+                document, snapshot.canonicalTypeIdentities());
 
         // then
         assertThrows(IllegalArgumentException.class,
-                () -> blue.conformanceEngine().planGeneralization(canonicalRoot, resolvedRoot, "/x"));
+                () -> blue.conformanceEngine().planGeneralization(
+                        canonicalRoot,
+                        resolvedRoot,
+                        "/x",
+                        snapshot.canonicalTypeIdentities()));
 
         assertEquals("Fixed One", resolvedRoot.getType().getName());
         assertEquals("2", resolvedRoot.at("/x").getValue().toString());
@@ -347,7 +413,7 @@ public class ConformanceEngineTest {
     }
 
     @Test
-    void shouldKeepPreservedHandlerBodyColdWhenPlanningInsideItsSubtree() {
+    void shouldKeepPreservedHandlerBodyCollapsedDuringPlanning() {
         // given
         BasicNodeProvider content = new BasicNodeProvider();
         content.addSingleDocs("name: Cold Handler Body\npayload: secret");
@@ -363,7 +429,6 @@ public class ConformanceEngineTest {
         NodeProvider strictProvider = blueId -> {
             if (coldBodyBlueId.equals(blueId)) {
                 coldBodyReads.incrementAndGet();
-                throw new AssertionError("Preserved handler body was read");
             }
             return content.fetchByBlueId(blueId);
         };
@@ -381,20 +446,90 @@ public class ConformanceEngineTest {
                                         .value("ready"),
                                 "body",
                                 new Node().blueId(coldBodyBlueId)));
-        FrozenNode canonicalRoot = FrozenNode.fromNode(document);
-        FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(document);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshotPreservingPaths(
+                document,
+                Collections.singleton("/handler"));
 
         // when
         ConformancePlan plan = blue.conformanceEngine()
                 .planGeneralizationPreservingPaths(
-                        canonicalRoot,
-                        resolvedRoot,
+                        snapshot.frozenCanonicalRoot(),
+                        snapshot.frozenResolvedRoot(),
                         Collections.singletonList("/handler/state"),
+                        snapshot.canonicalTypeIdentities(),
                         Collections.singleton("/handler"));
 
         // then
         assertFalse(plan.generalized());
         assertEquals(0, coldBodyReads.get());
+        assertEquals(coldBodyBlueId,
+                snapshot.resolvedNodeAt("/handler/body").getBlueId());
+    }
+
+    @Test
+    void shouldGeneralizeAcrossADeferredHandlerWithoutWholeGraphCanonicalization() {
+        // given
+        BasicNodeProvider content = new BasicNodeProvider();
+        content.addSingleDocs(
+                "name: Cold Handler Body\n"
+                        + "payload: secret");
+        String coldBodyBlueId = content.getBlueIdByName(
+                "Cold Handler Body");
+        content.addSingleDocs(
+                "name: Generic Handler\n"
+                        + "state:\n"
+                        + "  type: Text\n"
+                        + "body:\n"
+                        + "  blueId: " + coldBodyBlueId);
+        String genericHandlerBlueId = content.getBlueIdByName(
+                "Generic Handler");
+        content.addSingleDocs(
+                "name: Ready Handler\n"
+                        + "type:\n"
+                        + "  blueId: " + genericHandlerBlueId + "\n"
+                        + "state: ready");
+        String readyHandlerBlueId = content.getBlueIdByName(
+                "Ready Handler");
+        Blue blue = new Blue(content);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshotPreservingPaths(
+                new Node().properties(
+                        "handler",
+                        new Node()
+                                .type(new Node().blueId(
+                                        readyHandlerBlueId))
+                                .properties(
+                                        "state",
+                                        new Node().value("ready"),
+                                        "body",
+                                        new Node().blueId(
+                                                coldBodyBlueId))),
+                Collections.singleton("/handler"));
+        Node patched = snapshot.resolvedRoot();
+        patched.getProperties()
+                .get("handler")
+                .getProperties()
+                .get("state")
+                .value("busy");
+
+        // when
+        ConformancePlan plan = blue.conformanceEngine()
+                .planGeneralizationPreservingPaths(
+                        canonicalIdentityRoot(
+                                patched,
+                                snapshot.canonicalTypeIdentities()),
+                        FrozenNode.fromResolvedNode(patched),
+                        Collections.singletonList("/handler/state"),
+                        snapshot.canonicalTypeIdentities(),
+                        Collections.singleton("/handler"));
+
+        // then
+        assertTrue(plan.generalized());
+        assertEquals("Generic Handler",
+                plan.root().at("/handler").getType().getName());
+        assertEquals("busy",
+                plan.root().at("/handler/state").getValue());
+        assertEquals(coldBodyBlueId,
+                plan.root().at("/handler/body").getReferenceBlueId());
     }
 
     public static BasicNodeProvider priceProvider() {
@@ -425,12 +560,18 @@ public class ConformanceEngineTest {
         return nodeProvider;
     }
 
-    private static FrozenNode canonicalIdentityRoot(Node resolved) {
+    private static FrozenNode canonicalIdentityRoot(
+            Node resolved,
+            CanonicalTypeIdentityLookup typeIdentities) {
         Node sourceEquivalent =
-                new MinimizedOverlayBuilder().build(resolved.clone());
+                new MinimizedOverlayBuilder().build(
+                        FrozenNode.fromResolvedNode(resolved),
+                        typeIdentities);
         return FrozenNode.fromNode(
                 new CanonicalIdentityInputBuilder().build(
-                        resolved.clone(), sourceEquivalent));
+                        resolved.clone(),
+                        sourceEquivalent,
+                        typeIdentities));
     }
 
     private static BasicNodeProvider basketProvider() {

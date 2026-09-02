@@ -1,0 +1,26 @@
+id: R_inline_item_type_reference_identity_parity
+category: Canonicalization
+operation: canonicalize
+description: Inline and verified-reference List itemType forms have one canonical
+  collection identity
+source:
+  name: Typed List
+  type: List
+  itemType:
+    name: List Item Shape
+alsoEquivalentTo:
+  name: Typed List
+  type: List
+  itemType:
+    blueId: 9Az8cmTM41kiAeFEtXUWVVQPQ19hGwuxGKd3CCeLPsdE
+provider:
+- requestedBlueId: 9Az8cmTM41kiAeFEtXUWVVQPQ19hGwuxGKd3CCeLPsdE
+  node:
+    name: List Item Shape
+expectedCanonicalOverlay:
+  name: Typed List
+  type:
+    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+  itemType:
+    blueId: 9Az8cmTM41kiAeFEtXUWVVQPQ19hGwuxGKd3CCeLPsdE
+expectedNodeBlueId: F6cmYCiW856GZvxUS52P1SdL5C5dQJnEPcCPHSoRZ4nX

@@ -8,6 +8,10 @@ parent:
   items: [A, B]
 source:
   items: [C]
+alsoEquivalentTo:
+  items: [C]
+alsoDifferentFrom:
+  items: [D]
 expectedCanonicalItems: [A, B, C]
 expectedCanonicalContainsControls: false
 expectedContentBlueIdEqualsCanonicalIdentityInput: true

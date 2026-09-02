@@ -509,8 +509,8 @@ public final class SemanticBaselineVerifierCli {
                 "public Node canonicalize(Node source)",
                 "Language runtime canonicalization",
                 "rawPreprocess(",
-                "rawResolve(",
-                "new CanonicalIdentityInputBuilder().build(");
+                ".resolveSnapshot(",
+                ".canonicalRoot().toNode()");
 
         String runtimeServices = readSource(
                 "src/main/java/blue/language/runtime/LanguageRuntimeServices.java");
