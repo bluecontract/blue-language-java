@@ -49,10 +49,10 @@ from runtime_surface_projection import (  # noqa: E402
     project_runtime_surface,
 )
 from package_hygiene import release_inventory_files  # noqa: E402
-PROCESS_EMBEDDED = "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"
+PROCESS_EMBEDDED = "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
 SAFE_INTEGER_MAX = 2**53 - 1
 SCRIPTED_EXTERNAL = "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt"
-SCRIPTED_HANDLER = "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw"
+SCRIPTED_HANDLER = "9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8"
 TRIGGERED_EVENT_CHANNEL = "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf"
 EMBEDDED_NODE_CHANNEL = "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN"
 LIFECYCLE_EVENT_CHANNEL = "2ukJitzzDKQWHJ5EVUtn3t4FXieGmNA1NdwFSqG8qcfo"

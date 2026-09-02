@@ -38,7 +38,7 @@ from gas_reference import (  # noqa: E402
 
 FIX = ROOT / "conformance/contracts/fixtures/closure"
 ORC = ROOT / "conformance/contracts/oracles"
-PROCESS_EMBEDDED = "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"
+PROCESS_EMBEDDED = "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
 
 
 def load_yaml(path: Path) -> Any:
@@ -702,7 +702,7 @@ def derive_loop_trace(
         )
     marker_types = {
         "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB",
-        "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR",
+        "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS",
     }
 
     def participating_contract_keys(document_id: str) -> list[str]:
@@ -1624,7 +1624,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
     event_ordinal = 0
     marker_types = {
         "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB",
-        "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR",
+        "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS",
     }
 
     for work_item in work:
@@ -1898,7 +1898,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
         if marker is None:
             marker = {
                 "type": {
-                    "blueId": "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR"
+                    "blueId": "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"
                 },
                 "entries": {},
             }
@@ -2849,7 +2849,7 @@ def derive_managed_revision_trace(
     )
     marker_type_ids = {
         "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB",
-        "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR",
+        "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS",
     }
     participating_contract_keys = []
     for contract_key, contract in source_contracts.items():

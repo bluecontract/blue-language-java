@@ -24,15 +24,15 @@ from blue_identity import (  # noqa: E402
 )
 from gas_reference import gas_trace_identity  # noqa: E402
 
-PE = "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e"
+PE = "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
 SEC = "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt"
-SH = "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw"
+SH = "9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8"
 TEC = "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf"
 ENC = "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN"
 FE = "5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX"
 INITIALIZED_MARKER = "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB"
 TERMINATED_MARKER = "4c1aabU6a3idKpWPzTRS4upLjCb6eZh3F1PDXkNh7i6v"
-CHECKPOINT_MARKER = "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR"
+CHECKPOINT_MARKER = "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS"
 
 FIXTURE_DIR = ROOT / "conformance/contracts/fixtures/closure"
 ORACLE_DIR = ROOT / "conformance/contracts/oracles"
