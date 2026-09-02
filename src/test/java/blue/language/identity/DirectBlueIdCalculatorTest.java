@@ -6,6 +6,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.registry.RuntimeBlueIds;
 import org.junit.jupiter.api.Test;
@@ -560,7 +561,7 @@ public class DirectBlueIdCalculatorTest {
         }
 
         @Test
-        public void shouldRemoveNullAndEmptyValues() {
+        public void shouldRemoveSourceNullButPreserveExactEmptyObjects() {
                 // given
                 String yaml1 = "a: 1\n" +
                                 "b: null";
@@ -575,11 +576,12 @@ public class DirectBlueIdCalculatorTest {
                 String yaml5 = "a: 1\n" +
                                 "d: {}";
 
-                Node node1 = YAML_MAPPER.readValue(yaml1, Node.class);
-                Node node2 = YAML_MAPPER.readValue(yaml2, Node.class);
-                Node node3 = YAML_MAPPER.readValue(yaml3, Node.class);
-                Node node4 = YAML_MAPPER.readValue(yaml4, Node.class);
-                Node node5 = YAML_MAPPER.readValue(yaml5, Node.class);
+                Blue blue = new Blue();
+                Node node1 = blue.yamlToNode(yaml1);
+                Node node2 = blue.yamlToNode(yaml2);
+                Node node3 = blue.yamlToNode(yaml3);
+                Node node4 = blue.yamlToNode(yaml4);
+                Node node5 = blue.yamlToNode(yaml5);
 
                 String result1 = DirectBlueIdCalculator.calculateBlueId(node1);
                 String result2 = DirectBlueIdCalculator.calculateBlueId(node2);
@@ -591,8 +593,8 @@ public class DirectBlueIdCalculatorTest {
                 // then
                 assertEquals(result1, result2);
                 assertEquals(result1, result3);
-                assertEquals(result1, result5);
                 assertNotEquals(result1, result4);
+                assertNotEquals(result1, result5);
         }
 
         @Test
@@ -847,7 +849,7 @@ public class DirectBlueIdCalculatorTest {
         }
 
         @Test
-        public void shouldNormalizeEmptyObjectSourceListToEmptyPlaceholder() {
+        public void shouldKeepEmptyObjectSourceListElementDistinctFromPlaceholder() {
                 // given
                 Blue blue = new Blue();
                 Node withEmptyObject = blue.yamlToNode(
@@ -867,23 +869,25 @@ public class DirectBlueIdCalculatorTest {
                                 "  - B");
 
                 // then
-                assertEquals(DirectBlueIdCalculator.calculateBlueId(withPlaceholder), DirectBlueIdCalculator.calculateBlueId(withEmptyObject));
+                assertNotEquals(DirectBlueIdCalculator.calculateBlueId(withPlaceholder), DirectBlueIdCalculator.calculateBlueId(withEmptyObject));
                 assertNotEquals(DirectBlueIdCalculator.calculateBlueId(compact), DirectBlueIdCalculator.calculateBlueId(withEmptyObject));
+                assertTrue(Nodes.isExactEmptyObject(
+                                withEmptyObject.getItems().get(1)));
         }
 
         @Test
-        public void shouldRejectEmptyObjectListElementForDirectBlueId() {
+        public void shouldAcceptEmptyObjectListElementForDirectBlueId() {
                 // given
                 Node withEmptyObject = YAML_MAPPER.readValue(
                                 "items:\n" +
                                 "  - {}", Node.class);
 
                 // when
-                IllegalArgumentException failure = captureFailure(
-                                () -> DirectBlueIdCalculator.calculateBlueId(withEmptyObject));
+                String blueId = DirectBlueIdCalculator.calculateBlueId(
+                                withEmptyObject);
 
                 // then
-                assertTrue(failure instanceof IllegalArgumentException);
+                assertTrue(blueId != null && !blueId.isEmpty());
         }
 
         @Test

@@ -13,6 +13,7 @@ import blue.language.provider.NodeProvider;
 
 import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
@@ -935,31 +936,87 @@ public class NodeDeserializerTest {
     }
 
     @Test
-    public void shouldRejectReservedNullFields() {
+    public void shouldPreserveReservedNullFieldsUntilMandatoryPreprocessing() {
         // given
-        String[] invalidDocuments = {
+        String[] reservedFields = {
+                "name",
+                "description",
+                "mergePolicy",
+                "value",
+                "items",
+                "type",
+                "itemType",
+                "keyType",
+                "valueType",
+                "schema",
+                "contracts",
+                "blueId"
+        };
+        String[] sourceDocuments = {
                 "name: null",
                 "description: null",
                 "mergePolicy: null",
                 "value: null",
                 "items: null",
                 "type: null",
+                "itemType: null",
+                "keyType: null",
+                "valueType: null",
                 "schema: null",
-                "contracts: null"
+                "contracts: null",
+                "blueId: null"
         };
 
         // when
-        Throwable[] failures = new Throwable[invalidDocuments.length];
-        for (int index = 0; index < invalidDocuments.length; index++) {
-            String document = invalidDocuments[index];
-            failures[index] = captureFailure(
-                    () -> YAML_MAPPER.readValue(document, Node.class));
+        for (int index = 0; index < sourceDocuments.length; index++) {
+            Node raw = YAML_MAPPER.readValue(
+                    sourceDocuments[index], Node.class);
+
+            // then
+            Node rawReservedValue = "contracts".equals(
+                    reservedFields[index])
+                    ? raw.getContracts()
+                    : raw.getProperties().get(reservedFields[index]);
+            assertTrue(Nodes.isSourceNullLiteral(rawReservedValue),
+                    reservedFields[index]);
+            Node preprocessed = new Blue().preprocess(raw);
+            assertTrue(Nodes.isExactEmptyObject(preprocessed));
         }
+    }
+
+    @Test
+    public void shouldDistinguishSourceNullEmptyObjectAndEmptyList() {
+        // given
+        Node raw = YAML_MAPPER.readValue(
+                "x: null\n"
+                        + "emptyObject: {}\n"
+                        + "emptyList: []",
+                Node.class);
+        Node rawList = YAML_MAPPER.readValue(
+                "items: [null, {}, []]",
+                Node.class);
+
+        // when
+        Node preprocessed = new Blue().preprocess(raw);
+        Node preprocessedList = new Blue().preprocess(rawList);
 
         // then
-        for (Throwable failure : failures) {
-            assertInstanceOf(RuntimeException.class, failure);
-        }
+        assertTrue(Nodes.isSourceNullLiteral(
+                raw.getProperties().get("x")));
+        assertTrue(Nodes.isExactEmptyObject(
+                raw.getProperties().get("emptyObject")));
+        assertNotNull(raw.getProperties().get("emptyList").getItems());
+        assertTrue(Nodes.isSourceNullLiteral(rawList.getItems().get(0)));
+        assertTrue(Nodes.isExactEmptyObject(rawList.getItems().get(1)));
+        assertNotNull(rawList.getItems().get(2).getItems());
+
+        assertFalse(preprocessed.getProperties().containsKey("x"));
+        assertTrue(Nodes.isExactEmptyObject(
+                preprocessed.getProperties().get("emptyObject")));
+        assertNotNull(preprocessed.getProperties().get("emptyList").getItems());
+        assertTrue(Nodes.isEmptyPlaceholder(preprocessedList.getItems().get(0)));
+        assertTrue(Nodes.isExactEmptyObject(preprocessedList.getItems().get(1)));
+        assertNotNull(preprocessedList.getItems().get(2).getItems());
     }
 
     @Test

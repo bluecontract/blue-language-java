@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -256,7 +257,7 @@ class FrozenNodeTest {
     }
 
     @Test
-    void shouldDropEmptyObjectPropertiesInStrictCanonicalModeLikeMutableCalculator() {
+    void shouldPreserveEmptyObjectPropertiesInStrictCanonicalModeLikeMutableCalculator() {
         // given
         Node node = YAML_MAPPER.readValue(
                 "a: 1\n" +
@@ -278,8 +279,8 @@ class FrozenNodeTest {
 
         // then
         assertEquals(mutableBlueId, frozenBlueId);
-        assertNull(emptyProperty);
-        assertNull(nestedEmptyProperty);
+        assertTrue(emptyProperty.getProperties().isEmpty());
+        assertTrue(nestedEmptyProperty.getProperties().isEmpty());
         assertEquals(materializedBlueId, frozenBlueId);
     }
 
@@ -311,18 +312,21 @@ class FrozenNodeTest {
     }
 
     @Test
-    void shouldRejectDirectEmptyObjectInsideList() {
+    void shouldAcceptDirectEmptyObjectInsideList() {
         // given
         Node withEmptyObject = YAML_MAPPER.readValue(
                 "items:\n" +
                 "  - {}", Node.class);
 
         // when
-        Throwable failure = captureFailure(
-                () -> FrozenNode.fromNode(withEmptyObject));
+        FrozenNode frozen = FrozenNode.fromNode(withEmptyObject);
 
         // then
-        assertTrue(failure instanceof IllegalArgumentException);
+        assertNotNull(frozen.item(0).getProperties());
+        assertTrue(frozen.item(0).getProperties().isEmpty());
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(withEmptyObject),
+                frozen.blueId());
     }
 
     @Test
@@ -999,8 +1003,8 @@ class FrozenNodeTest {
         // then
         assertThrows(IllegalArgumentException.class,
                 () -> FrozenNode.calculateBlueId(Collections.singletonList(invalidEmptyMarker)));
-        assertThrows(IllegalArgumentException.class,
-                () -> FrozenNode.calculateBlueId(Collections.singletonList(emptyObject)));
+        assertNotNull(FrozenNode.calculateBlueId(
+                Collections.singletonList(emptyObject)));
         assertThrows(IllegalArgumentException.class,
                 () -> FrozenNode.calculateBlueId(Arrays.asList(anchored.item(1), anchored.item(0))));
     }
