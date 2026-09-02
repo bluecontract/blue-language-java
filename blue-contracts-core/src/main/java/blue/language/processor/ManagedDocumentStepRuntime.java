@@ -633,7 +633,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 EmbeddedCollectionEventChannelSupport.match(
                         collection.getCollectionPath(),
                         sourcePath,
-                        collection.includesDescendants());
+                        collection.includesDescendants(),
+                        owner.gasSchedule());
         if (match.comparedSegments() > 0) {
             sharedGasContext.processMeter().embeddedPathSegments(
                     JsonPointer.ROOT,

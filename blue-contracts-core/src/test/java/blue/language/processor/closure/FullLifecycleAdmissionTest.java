@@ -319,6 +319,77 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void nestedEmitterReachesTransitiveContainingOccurrenceByComposedPath() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            ClosureEnvironment environment = environment(owner);
+            Node leaf = new Node()
+                    .name("Nested private event source")
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("childEmit", handler("lifecycle")));
+            String leafBlueId = blueId(leaf);
+            Node member = new Node()
+                    .name("Collection member")
+                    .properties("payment", new Node().blueId(leafBlueId))
+                    .contracts(new Node().properties(
+                            "embedded", processEmbedded("/payment")));
+            String memberBlueId = blueId(member);
+            Node root = new Node()
+                    .name("Collection owner")
+                    .properties("orders", new Node().properties(
+                            "o1", new Node().blueId(memberBlueId)))
+                    .properties("observed", new Node().value(Boolean.FALSE))
+                    .contracts(new Node()
+                            .properties(
+                                    "embedded",
+                                    processEmbedded("/orders/o1"))
+                            .properties(
+                                    "fromNestedPayment",
+                                    embeddedChannel(
+                                            "/orders/o1/payment"))
+                            .properties(
+                                    "containReact",
+                                    handler("fromNestedPayment")));
+            ManagedOccurrenceBinding rootToMember =
+                    ManagedOccurrenceBinding.derived(
+                            environment.managedBindingPolicyIdentity(),
+                            A,
+                            ScopeAddress.embedded("/orders/o1", 1L),
+                            B,
+                            memberBlueId,
+                            true,
+                            null);
+            ManagedOccurrenceBinding memberToLeaf =
+                    ManagedOccurrenceBinding.derived(
+                            environment.managedBindingPolicyIdentity(),
+                            B,
+                            ScopeAddress.embedded("/payment", 1L),
+                            C,
+                            leafBlueId,
+                            true,
+                            null);
+            AffectedClosureSnapshot snapshot = finalizedSnapshot(
+                    bodies(A, root, B, member, C, leaf),
+                    Arrays.asList(memberToLeaf, rootToMember),
+                    Collections.singletonList(A));
+
+            ClosureProcessResult result = full(
+                    owner,
+                    admission(snapshot, environment, GENEROUS_GAS),
+                    null).processResult();
+
+            assertSuccess(result);
+            assertEquals(
+                    Boolean.TRUE,
+                    document(result, A).document().get("/observed"));
+            assertEquals(
+                    Collections.singletonList("child"),
+                    probe.observedEventKinds);
+        }
+    }
+
+    @Test
     void requirement05PublicRootInitializationEventIsProjectedOnce() {
         ProbeProcessor probe = new ProbeProcessor();
         try (DocumentProcessor owner = owner(probe)) {

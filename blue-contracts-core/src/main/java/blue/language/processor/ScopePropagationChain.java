@@ -298,7 +298,8 @@ final class ScopePropagationChain {
                 EmbeddedCollectionEventChannelSupport.match(
                         collection.getCollectionPath(),
                         sourcePath,
-                        collection.includesDescendants());
+                        collection.includesDescendants(),
+                        owner.gasSchedule());
         if (match.comparedSegments() > 0) {
             runtime.chargeEmbeddedPathSegmentsValidated(
                     receivingPath,

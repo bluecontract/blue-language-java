@@ -10,6 +10,7 @@ import blue.language.processor.DocumentUpdateOccurrence;
 import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.FrozenJsonPatch;
 import blue.language.processor.GasChargeContext;
+import blue.language.processor.GasScheduleConstants;
 import blue.language.processor.InvalidExecutionEvidenceException;
 import blue.language.processor.ManagedCheckpointBatchCleanupContextFactory;
 import blue.language.processor.ManagedCheckpointCandidate;
@@ -448,7 +449,8 @@ final class ClosureExecutionSession
                     event.occurrenceIdentity(),
                     event.sourceDocumentId(),
                     event.exactEventIdentityEvidence(),
-                    Collections.singletonList(target),
+                    Collections.singletonList(
+                            FrozenContainingEventTarget.direct(target)),
                     null,
                     true));
             charge(
@@ -1629,7 +1631,7 @@ final class ClosureExecutionSession
                 occurrenceIdentity,
                 emitter.documentId(),
                 evidence,
-                activeContainingOccurrences(emitter.documentId())));
+                activeContainingEventTargets(emitter.documentId())));
         charge("processor", "internalEventEnqueued", 1L,
                 frame.context("event." + eventOrdinal + ".enqueue"));
     }
@@ -1951,19 +1953,19 @@ final class ClosureExecutionSession
                 }
             }
         }
-        for (ManagedOccurrenceBinding frozen
+        for (FrozenContainingEventTarget frozen
                 : occurrence.containingTargets) {
             if (occurrence.imported) {
                 requireManagedRevisionEventTarget(
                         (ManagedRevisionCause) input.cause(),
-                        frozen,
+                        frozen.directBinding(),
                         occurrence);
             } else {
                 revalidateFrozenEventTarget(
                         occurrence.sourceDocumentId, frozen);
             }
             ManagedDocumentSnapshot containing = requireEventDocument(
-                    frozen.sourceDocumentId(),
+                    frozen.receivingDocumentId(),
                     "frozen containing target");
             if (unavailableForOrdinaryDelivery(
                     containing.documentId())) {
@@ -1985,7 +1987,7 @@ final class ClosureExecutionSession
 
     private GasChargeContext embeddedRouteClassificationContext(
             ManagedDocumentSnapshot containing,
-            ManagedOccurrenceBinding occurrenceBinding,
+            FrozenContainingEventTarget target,
             EmittedOccurrence occurrence) {
         return GasChargeContext.closure(
                 containing.documentId().value(),
@@ -1997,7 +1999,7 @@ final class ClosureExecutionSession
                 null,
                 "event." + occurrence.ordinal
                         + ".embedded-route."
-                        + occurrenceBinding.occurrenceIdentity());
+                        + target.attributionIdentity());
     }
 
     private void requireManagedRevisionEventTarget(
@@ -2271,6 +2273,24 @@ final class ClosureExecutionSession
         // A later generation proves retirement/re-add continuity only.  Its
         // target never replaces the target frozen by this event occurrence.
         verifyFrozenEventBinding(successor);
+    }
+
+    private void revalidateFrozenEventTarget(
+            DocumentId eventSourceDocumentId,
+            FrozenContainingEventTarget frozen) {
+        DocumentId expectedTarget = Objects.requireNonNull(
+                eventSourceDocumentId, "eventSourceDocumentId");
+        List<ManagedOccurrenceBinding> lineage = frozen.lineage();
+        for (int index = lineage.size() - 1; index >= 0; index--) {
+            ManagedOccurrenceBinding edge = lineage.get(index);
+            revalidateFrozenEventTarget(expectedTarget, edge);
+            expectedTarget = edge.sourceDocumentId();
+        }
+        if (!expectedTarget.equals(frozen.receivingDocumentId())) {
+            throw eventBindingFailure(
+                    "Frozen containing-event lineage does not end at receiver "
+                            + frozen.receivingDocumentId());
+        }
     }
 
     private void verifyFrozenEventBinding(
@@ -3636,43 +3656,23 @@ final class ClosureExecutionSession
         }
     }
 
-    private List<ManagedOccurrenceBinding> activeContainingOccurrences(
+    private List<FrozenContainingEventTarget> activeContainingEventTargets(
             DocumentId targetDocumentId) {
-        ArrayList<ManagedOccurrenceBinding> result =
-                new ArrayList<ManagedOccurrenceBinding>();
-        for (ManagedOccurrenceBinding binding : currentBindings) {
-            if (binding.active()
-                    && binding.targetDocumentId().equals(
-                            targetDocumentId)) {
-                result.add(binding);
-            }
-        }
-        Collections.sort(result,
-                new Comparator<ManagedOccurrenceBinding>() {
-                    @Override
-                    public int compare(
-                            ManagedOccurrenceBinding left,
-                            ManagedOccurrenceBinding right) {
-                        int order = left.sourceDocumentId().compareTo(
-                                right.sourceDocumentId());
-                        if (order != 0) {
-                            return order;
-                        }
-                        order = ClosureValueSupport.comparePortableText(
-                                left.sourcePath(), right.sourcePath());
-                        if (order != 0) {
-                            return order;
-                        }
-                        order = Long.compare(
-                                left.activationGeneration(),
-                                right.activationGeneration());
-                        return order != 0 ? order
-                                : ClosureValueSupport.comparePortableText(
-                                        left.occurrenceIdentity(),
-                                        right.occurrenceIdentity());
-                    }
-                });
-        return result;
+        return ContainingEventTargetPlanner.freeze(
+                targetDocumentId,
+                currentBindings,
+                ClosureAdmissionPortableLimits.limit(
+                        input,
+                        GasScheduleConstants.PortableLimit
+                                .PARTICIPATING_SCOPES_PER_EVENT),
+                ClosureAdmissionPortableLimits.limit(
+                        input,
+                        GasScheduleConstants.PortableLimit
+                                .RUNTIME_POINTER_SEGMENTS),
+                ClosureAdmissionPortableLimits.limit(
+                        input,
+                        GasScheduleConstants.PortableLimit
+                                .RUNTIME_POINTER_UTF8_BYTES));
     }
 
     private String transitionIdentity(
@@ -4000,7 +4000,7 @@ final class ClosureExecutionSession
         private final DocumentId sourceDocumentId;
         private final Node event;
         private final ExactEventIdentityEvidence exactEventEvidence;
-        private final List<ManagedOccurrenceBinding> containingTargets;
+        private final List<FrozenContainingEventTarget> containingTargets;
         private final ActiveFrame capturedBy;
         private final boolean imported;
 
@@ -4009,7 +4009,7 @@ final class ClosureExecutionSession
                 String occurrenceIdentity,
                 DocumentId sourceDocumentId,
                 ExactEventIdentityEvidence exactEventEvidence,
-                List<ManagedOccurrenceBinding> containingTargets) {
+                List<FrozenContainingEventTarget> containingTargets) {
             this(
                     ordinal,
                     occurrenceIdentity,
@@ -4025,7 +4025,7 @@ final class ClosureExecutionSession
                 String occurrenceIdentity,
                 DocumentId sourceDocumentId,
                 ExactEventIdentityEvidence exactEventEvidence,
-                List<ManagedOccurrenceBinding> containingTargets,
+                List<FrozenContainingEventTarget> containingTargets,
                 ActiveFrame capturedBy,
                 boolean imported) {
             this.ordinal = ordinal;
@@ -4038,7 +4038,7 @@ final class ClosureExecutionSession
                     sourceDocumentId, "sourceDocumentId");
             this.event = this.exactEventEvidence.event();
             this.containingTargets = Collections.unmodifiableList(
-                    new ArrayList<ManagedOccurrenceBinding>(
+                    new ArrayList<FrozenContainingEventTarget>(
                             Objects.requireNonNull(
                                     containingTargets,
                                     "containingTargets")));

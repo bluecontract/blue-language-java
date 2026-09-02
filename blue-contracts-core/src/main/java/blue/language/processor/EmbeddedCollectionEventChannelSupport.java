@@ -33,30 +33,18 @@ final class EmbeddedCollectionEventChannelSupport {
         EmbeddedCollectionEventChannel checked = Objects.requireNonNull(
                 channel, "channel");
         String path = checked.getCollectionPath();
-        String normalized;
+        List<String> segments;
         try {
-            normalized = PointerUtils.assertValidRuntimePointer(path);
+            segments = boundedRuntimePointerSegments(
+                    path,
+                    schedule,
+                    ProcessorErrorCategory.InvalidContractBinding);
         } catch (IllegalArgumentException invalid) {
             throw invalidHeader(
                     "Embedded Collection Event Channel collectionPath must "
                             + "be a normalized absolute Runtime Pointer",
                     scopePath);
         }
-        if (JsonPointer.ROOT.equals(normalized)
-                || !normalized.equals(path)) {
-            throw invalidHeader(
-                    "Embedded Collection Event Channel collectionPath must "
-                            + "be normalized and non-root: " + path,
-                    scopePath);
-        }
-        List<String> segments = JsonPointer.split(normalized);
-        requireLimit(
-                GasScheduleConstants.PortableLimit.RUNTIME_POINTER_SEGMENTS,
-                segments.size(), schedule);
-        requireLimit(
-                GasScheduleConstants.PortableLimit.RUNTIME_POINTER_UTF8_BYTES,
-                normalized.getBytes(StandardCharsets.UTF_8).length,
-                schedule);
         for (String segment : segments) {
             if (BlueLanguageConstants.isLanguageReservedField(segment)) {
                 throw invalidHeader(
@@ -82,9 +70,7 @@ final class EmbeddedCollectionEventChannelSupport {
                 List<String> candidateSegments = JsonPointer.split(candidate);
                 int compared = 0;
                 boolean equal = candidateSegments.size() == segments.size();
-                int count = Math.min(
-                        candidateSegments.size(), segments.size());
-                for (int index = 0; index < count; index++) {
+                for (int index = 0; equal && index < segments.size(); index++) {
                     compared++;
                     if (!candidateSegments.get(index).equals(
                             segments.get(index))) {
@@ -115,21 +101,16 @@ final class EmbeddedCollectionEventChannelSupport {
     static Match match(
             String collectionPath,
             String sourcePath,
-            boolean includeDescendants) {
-        String normalizedCollection =
-                PointerUtils.assertValidRuntimePointer(collectionPath);
-        String normalizedSource =
-                PointerUtils.assertValidRuntimePointer(sourcePath);
-        if (!normalizedCollection.equals(collectionPath)
-                || !normalizedSource.equals(sourcePath)
-                || JsonPointer.ROOT.equals(normalizedCollection)
-                || JsonPointer.ROOT.equals(normalizedSource)) {
-            throw new IllegalArgumentException(
-                    "Collection-event paths must be normalized non-root "
-                            + "Runtime Pointers");
-        }
-        List<String> collection = JsonPointer.split(normalizedCollection);
-        List<String> source = JsonPointer.split(normalizedSource);
+            boolean includeDescendants,
+            GasSchedule schedule) {
+        List<String> collection = boundedRuntimePointerSegments(
+                collectionPath,
+                schedule,
+                ProcessorErrorCategory.InvalidProcessingDocument);
+        List<String> source = boundedRuntimePointerSegments(
+                sourcePath,
+                schedule,
+                ProcessorErrorCategory.InvalidProcessingDocument);
         int additionalSegments = source.size() - collection.size();
         if (additionalSegments <= 0
                 || (!includeDescendants && additionalSegments != 1)) {
@@ -164,15 +145,45 @@ final class EmbeddedCollectionEventChannelSupport {
         return Collections.unmodifiableList(result);
     }
 
+    private static List<String> boundedRuntimePointerSegments(
+            String path,
+            GasSchedule schedule,
+            ProcessorErrorCategory category) {
+        if (path == null) {
+            throw new IllegalArgumentException(
+                    "Collection-event path must not be null");
+        }
+        requireLimit(
+                GasScheduleConstants.PortableLimit.RUNTIME_POINTER_UTF8_BYTES,
+                path.getBytes(StandardCharsets.UTF_8).length,
+                schedule,
+                category);
+        String normalized = PointerUtils.assertValidRuntimePointer(path);
+        if (JsonPointer.ROOT.equals(normalized)
+                || !normalized.equals(path)) {
+            throw new IllegalArgumentException(
+                    "Collection-event paths must be normalized non-root "
+                            + "Runtime Pointers");
+        }
+        List<String> segments = JsonPointer.split(normalized);
+        requireLimit(
+                GasScheduleConstants.PortableLimit.RUNTIME_POINTER_SEGMENTS,
+                segments.size(),
+                schedule,
+                category);
+        return segments;
+    }
+
     private static void requireLimit(
             String name,
             long observed,
-            GasSchedule schedule) {
+            GasSchedule schedule,
+            ProcessorErrorCategory category) {
         long limit = Objects.requireNonNull(schedule, "schedule")
                 .portableLimit(name);
         if (observed > limit) {
             throw new PortableLimitExceededException(
-                    ProcessorErrorCategory.InvalidContractBinding,
+                    category,
                     name,
                     observed,
                     limit);
