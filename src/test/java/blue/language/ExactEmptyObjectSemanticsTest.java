@@ -196,6 +196,13 @@ final class ExactEmptyObjectSemanticsTest {
                 .type(reference(provider.getBlueIdByName(
                         "Nonempty Dictionary Holder")))
                 .properties("x", Nodes.emptyObject());
+        Node absentInlineSource = YAML_MAPPER.readValue(
+                "type:\n"
+                        + "  x:\n"
+                        + "    schema:\n"
+                        + "      required: true\n"
+                        + "x: null\n",
+                Node.class);
 
         // when
         Node resolved = blue.resolve(requiredSource);
@@ -205,6 +212,8 @@ final class ExactEmptyObjectSemanticsTest {
                 resolved.getProperties().get("x")));
         assertThrows(IllegalArgumentException.class,
                 () -> blue.resolve(nonemptySource));
+        assertThrows(IllegalArgumentException.class,
+                () -> blue.resolve(blue.preprocess(absentInlineSource)));
     }
 
     @Test

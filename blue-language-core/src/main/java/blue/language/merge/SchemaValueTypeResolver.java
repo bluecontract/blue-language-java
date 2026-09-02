@@ -53,6 +53,6 @@ final class SchemaValueTypeResolver {
             return value;
         }
         return engine.resolveWithContribution(
-                value, limits, ResolutionEngine.Contribution.INSTANCE);
+                value, limits, ResolutionEngine.Contribution.TYPE_METADATA);
     }
 }
