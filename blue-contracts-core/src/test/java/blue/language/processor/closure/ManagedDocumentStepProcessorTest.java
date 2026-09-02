@@ -4,6 +4,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.CircularSetIdentityCalculator;
 import blue.language.identity.CyclicSetFinalization;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.BlueContracts;
 import blue.language.processor.ChannelProcessor;
 import blue.language.processor.ContractProcessorRegistry;
@@ -14,6 +15,9 @@ import blue.language.processor.DocumentUpdateOccurrence;
 import blue.language.processor.ExactEventIdentityEvidence;
 import blue.language.processor.ExternalOrderKey;
 import blue.language.processor.FrozenJsonPatch;
+import blue.language.processor.GasChargeContext;
+import blue.language.processor.GasSchedule;
+import blue.language.processor.GasScheduleConstants;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ManagedDocumentStepContinuation;
 import blue.language.processor.ManagedDocumentStepRoute;
@@ -21,10 +25,12 @@ import blue.language.processor.ManagedDocumentStepRuntime;
 import blue.language.processor.ManagedDocumentWorkKind;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.registry.RuntimeTypeKey;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.provider.CyclicSetProof;
 import blue.language.provider.NodeProvider;
@@ -61,6 +67,17 @@ final class ManagedDocumentStepProcessorTest {
             new Node().name("Managed Document Step External Channel");
     private static final String EXTERNAL_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(EXTERNAL_TYPE);
+    private static final Node COLLECTION_CHANNEL_TYPE =
+            BlueRuntimeTypeRegistry.getDefault().node(
+                    RuntimeTypeKey.EMBEDDED_COLLECTION_EVENT_CHANNEL);
+    private static final String COLLECTION_CHANNEL_BLUE_ID =
+            RuntimeBlueIds.EMBEDDED_COLLECTION_EVENT_CHANNEL;
+    private static final Node FILTERED_COLLECTION_EVENT =
+            new Node().properties(
+                    "kind", new Node().value("filtered"));
+    private static final String FILTERED_COLLECTION_EVENT_BLUE_ID =
+            DirectBlueIdCalculator.calculateBlueId(
+                    FILTERED_COLLECTION_EVENT);
 
     @Test
     void executesContainingAndContainedDocumentsAsIndependentRootsWithSharedGas() {
@@ -445,7 +462,7 @@ final class ManagedDocumentStepProcessorTest {
     }
 
     @Test
-    void classifiesCanonicalTriggeredEmbeddedAndUpdateRoutesWithoutCharging() {
+    void classifiesCanonicalRoutesAndChargesEmbeddedChannelCandidates() {
         AffectedClosureSnapshot state = acyclicContainingState();
         try (Fixture fixture = new Fixture(Action.PATCH);
              ManagedDocumentStepRuntime classifier =
@@ -471,7 +488,17 @@ final class ManagedDocumentStepProcessorTest {
                     classifier.classifyEmbeddedEventRoutes(
                             state.managedDocument(B).document(),
                             "/child",
-                            exactEvent);
+                            exactEvent,
+                            GasChargeContext.closure(
+                                    B.value(),
+                                    "/",
+                                    Long.valueOf(0L),
+                                    Long.valueOf(state.managedDocument(B)
+                                            .componentGeneration()),
+                                    null,
+                                    null,
+                                    null,
+                                    "test.embedded-classification"));
             LocalDocumentStepResult patched = fixture.stepper.process(input(
                     state, B, WorkKind.TRIGGERED_EVENT,
                     "trigger", "patch"));
@@ -495,7 +522,68 @@ final class ManagedDocumentStepProcessorTest {
                     routeKeys(updates));
             assertEquals(ManagedDocumentWorkKind.DOCUMENT_UPDATE,
                     updates.get(0).workKind());
-            assertEquals(before, classifier.totalGas());
+            assertEquals(
+                    before + GasSchedule.contracts10().weight(
+                            GasScheduleConstants.Namespace.PROCESSOR,
+                            GasScheduleConstants.ProcessorCounter
+                                    .CHANNEL_CANDIDATE_TESTED),
+                    classifier.totalGas());
+        }
+    }
+
+    @Test
+    void classifiesInjectedCollectionChannelStructurallyAndMetersItsWork() {
+        Node event = new Node().properties(
+                "kind", new Node().value("route"));
+        String eventBlueId = DirectBlueIdCalculator.calculateBlueId(event);
+        ExactEventIdentityEvidence exactEvent =
+                ExactEventIdentityEvidence.verify(
+                        null, event, eventBlueId, null);
+        Node document = collectionChannelDocument();
+
+        try (Fixture fixture = new Fixture(Action.OBSERVE);
+             ManagedDocumentStepRuntime classifier =
+                     new ManagedDocumentStepRuntime(
+                             fixture.owner, fixture.hook)) {
+            List<ManagedDocumentStepRoute> direct =
+                    classifier.classifyEmbeddedEventRoutes(
+                            document,
+                            "/orders/order-1",
+                            exactEvent,
+                            routeClassificationContext("direct"));
+            List<ManagedDocumentStepRoute> nested =
+                    classifier.classifyEmbeddedEventRoutes(
+                            document,
+                            "/orders/order-1/payment",
+                            exactEvent,
+                            routeClassificationContext("nested"));
+            List<ManagedDocumentStepRoute> other =
+                    classifier.classifyEmbeddedEventRoutes(
+                            document,
+                            "/orders-old/order-1",
+                            exactEvent,
+                            routeClassificationContext("other"));
+
+            assertEquals(Arrays.asList(
+                            "collectionDirect", "collectionTree"),
+                    routeKeys(direct));
+            assertEquals(Collections.singletonList("collectionTree"),
+                    routeKeys(nested));
+            assertTrue(other.isEmpty());
+            assertEquals(ManagedDocumentWorkKind.EMBEDDED_EVENT,
+                    direct.get(0).workKind());
+            assertEquals(9L, traceQuantity(
+                    classifier,
+                    GasScheduleConstants.ProcessorCounter
+                            .CHANNEL_CANDIDATE_TESTED));
+            assertEquals(9L, traceQuantity(
+                    classifier,
+                    GasScheduleConstants.ProcessorCounter
+                            .EMBEDDED_PATH_ENTRY_READ));
+            assertEquals(7L, traceQuantity(
+                    classifier,
+                    GasScheduleConstants.ProcessorCounter
+                            .EMBEDDED_PATH_SEGMENT_VALIDATED));
         }
     }
 
@@ -551,6 +639,73 @@ final class ManagedDocumentStepProcessorTest {
             keys.add(route.channelKey());
         }
         return keys;
+    }
+
+    private static Node collectionChannelDocument() {
+        return new Node()
+                .name("Collection channel receiver")
+                .properties("orders", Nodes.emptyObject())
+                .contracts(new Node()
+                        .properties(
+                                "embedded",
+                                typed(RuntimeBlueIds.PROCESS_EMBEDDED)
+                                        .properties(
+                                                "collectionPaths",
+                                                new Node().items(
+                                                        new Node().value(
+                                                                "/orders"))))
+                        .properties(
+                                "collectionDirect",
+                                typed(COLLECTION_CHANNEL_BLUE_ID)
+                                        .properties(
+                                                "collectionPath",
+                                                new Node().value("/orders")))
+                        .properties(
+                                "collectionTree",
+                                typed(COLLECTION_CHANNEL_BLUE_ID)
+                                        .properties(
+                                                "collectionPath",
+                                                new Node().value("/orders"))
+                                        .properties(
+                                                "includeDescendants",
+                                                new Node().value(
+                                                        Boolean.TRUE)))
+                        .properties(
+                                "collectionFiltered",
+                                typed(COLLECTION_CHANNEL_BLUE_ID)
+                                        .properties(
+                                                "collectionPath",
+                                                new Node().value("/orders"))
+                                        .properties(
+                                                "event",
+                                                new Node().blueId(
+                                                        FILTERED_COLLECTION_EVENT_BLUE_ID))));
+    }
+
+    private static GasChargeContext routeClassificationContext(
+            String reason) {
+        return GasChargeContext.closure(
+                B.value(),
+                "/",
+                Long.valueOf(0L),
+                Long.valueOf(1L),
+                null,
+                null,
+                null,
+                "test.collection-route." + reason);
+    }
+
+    private static long traceQuantity(
+            ManagedDocumentStepRuntime runtime,
+            String counter) {
+        long result = 0L;
+        for (blue.language.processor.GasTraceEntry entry
+                : runtime.gasTrace()) {
+            if (counter.equals(entry.counter())) {
+                result += entry.quantity();
+            }
+        }
+        return result;
     }
 
     private static Node embeddedWrapper(
@@ -1229,6 +1384,10 @@ final class ManagedDocumentStepProcessorTest {
             ContractProcessorRegistry registry =
                     ContractProcessorRegistryBuilder.create()
                             .register(
+                                    COLLECTION_CHANNEL_BLUE_ID,
+                                    COLLECTION_CHANNEL_TYPE,
+                                    new TestCollectionChannelProcessor())
+                            .register(
                                     EXTERNAL_BLUE_ID,
                                     EXTERNAL_TYPE,
                                     new TestExternalChannelProcessor())
@@ -1291,6 +1450,15 @@ final class ManagedDocumentStepProcessorTest {
         @Override
         public Class<TestExternalChannel> contractType() {
             return TestExternalChannel.class;
+        }
+    }
+
+    private static final class TestCollectionChannelProcessor
+            implements ChannelProcessor<EmbeddedCollectionEventChannel> {
+
+        @Override
+        public Class<EmbeddedCollectionEventChannel> contractType() {
+            return EmbeddedCollectionEventChannel.class;
         }
     }
 }

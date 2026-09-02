@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.api.NodeProviderOutcome;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.provider.NodeProvider;
@@ -217,6 +218,66 @@ final class EmbeddedScopePlannerTest {
     }
 
     @Test
+    void shouldTreatExplicitEmptyObjectCollectionAsPresentWithZeroMembers() {
+        Node scope = new Node().properties(
+                "lessons", Nodes.emptyObject());
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                Collections.emptyList(),
+                plan.collectionMemberKeysByDeclaration().get("/lessons"));
+    }
+
+    @Test
+    void shouldTreatEmptyDictionaryCollectionAsPresentWithZeroMembers() {
+        Node dictionary = new Node().type(new Node().blueId(
+                BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID));
+        Node scope = new Node().properties("lessons", dictionary);
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(
+                Collections.emptyList(),
+                plan.collectionMemberKeysByDeclaration().get("/lessons"));
+    }
+
+    @Test
+    void shouldTreatVerifiedReferenceToEmptyObjectAsZeroMemberCollection() {
+        Node empty = Nodes.emptyObject();
+        String emptyBlueId = DirectBlueIdCalculator.calculateBlueId(empty);
+        AtomicInteger materializations = new AtomicInteger();
+        EmbeddedScopePlanner planner = new EmbeddedScopePlanner(reference -> {
+            materializations.incrementAndGet();
+            assertEquals(emptyBlueId, reference.getReferenceBlueId());
+            return FrozenNode.fromResolvedNode(empty);
+        });
+
+        EmbeddedScopePlan plan = planner.plan(
+                new Node().properties(
+                        "lessons", new Node().blueId(emptyBlueId)),
+                "/",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/lessons"),
+                GasSchedule.contracts10());
+
+        assertEquals(Collections.emptyList(), plan.concreteChildPaths());
+        assertEquals(1, materializations.get());
+    }
+
+    @Test
     void shouldRejectListCollectionTargetWithStableCategory() {
         // given
         Node scope = new Node().properties(
@@ -234,6 +295,25 @@ final class EmbeddedScopePlannerTest {
                         GasSchedule.contracts10()));
 
         // then
+        assertEquals(
+                ProcessorErrorCategory.EmbeddedCollectionMustBeObject,
+                failure.diagnostic().category());
+    }
+
+    @Test
+    void shouldRejectScalarCollectionTargetWithStableCategory() {
+        Node scope = new Node().properties(
+                "lessons", new Node().value("not an object"));
+
+        SubscriptionSurfaceInvalidException failure = assertThrows(
+                SubscriptionSurfaceInvalidException.class,
+                () -> new EmbeddedScopePlanner().plan(
+                        scope,
+                        "/",
+                        Collections.<String>emptyList(),
+                        Collections.singletonList("/lessons"),
+                        GasSchedule.contracts10()));
+
         assertEquals(
                 ProcessorErrorCategory.EmbeddedCollectionMustBeObject,
                 failure.diagnostic().category());
