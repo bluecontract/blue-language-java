@@ -49,6 +49,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.EmbeddedCollectionEventChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.InitializationMarker;
@@ -597,6 +598,11 @@ abstract class ContractsFixtureHarnessDataSupport {
                     RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL,
                     exactSourceFields(
                             TriggeredEventChannel.class,
+                            Collections.<String>emptyList()));
+            fields.put(
+                    RuntimeBlueIds.EMBEDDED_COLLECTION_EVENT_CHANNEL,
+                    exactSourceFields(
+                            EmbeddedCollectionEventChannel.class,
                             Collections.<String>emptyList()));
             fields.put(
                     RuntimeBlueIds.EMBEDDED_NODE_CHANNEL,

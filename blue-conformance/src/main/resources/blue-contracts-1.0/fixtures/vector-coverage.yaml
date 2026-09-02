@@ -76,6 +76,16 @@ vectors:
   - emb/c-emb-15.yaml
   C-EMB-16:
   - emb/c-emb-16.yaml
+  C-EMB-EMPTY-01:
+  - emb/c-emb-empty-01.yaml
+  C-EMB-EMPTY-02:
+  - emb/c-emb-empty-02.yaml
+  C-EMB-EMPTY-03:
+  - emb/c-emb-empty-03.yaml
+  C-EMB-EMPTY-04:
+  - emb/c-emb-empty-04.yaml
+  C-EMB-EMPTY-05:
+  - emb/c-emb-empty-05.yaml
   C-EVO-01:
   - evo/c-evo-01.yaml
   C-EVO-02:
@@ -116,6 +126,20 @@ vectors:
   - evt/c-evt-04.yaml
   C-EVT-05:
   - evt/c-evt-05.yaml
+  C-EVT-COLLECTION-01:
+  - evt/c-evt-collection-01.yaml
+  C-EVT-COLLECTION-02:
+  - evt/c-evt-collection-02.yaml
+  C-EVT-COLLECTION-03:
+  - evt/c-evt-collection-03.yaml
+  C-EVT-COLLECTION-04:
+  - evt/c-evt-collection-04.yaml
+  C-EVT-COLLECTION-05:
+  - evt/c-evt-collection-05.yaml
+  C-EVT-COLLECTION-06:
+  - evt/c-evt-collection-06.yaml
+  C-EVT-COLLECTION-07:
+  - evt/c-evt-collection-07.yaml
   C-FAIL-01:
   - fail/c-fail-01.yaml
   C-FAIL-02:
@@ -306,3 +330,7 @@ vectors:
   - upd/c-upd-02.yaml
   C-UPD-03:
   - upd/c-upd-03.yaml
+  C-UPD-PARENT-01:
+  - upd/c-upd-parent-01.yaml
+  C-UPD-PARENT-02:
+  - upd/c-upd-parent-02.yaml

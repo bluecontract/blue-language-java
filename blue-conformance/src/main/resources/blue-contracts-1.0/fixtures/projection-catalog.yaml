@@ -150,6 +150,9 @@ entries:
 - path: result.document.contracts.checkpoint.entries.old
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
+- path: result.document.contracts.checkpoint.entries.internalOrders
+  type: value
+  definition: Must remain absent because Embedded Collection Event Channel is processor-internal and owns no external checkpoint.
 - path: result.document.contracts.checkpoint.entries.source
   type: value
   definition: Checkpoint entry owned by the raw source Channel.
@@ -257,6 +260,15 @@ entries:
 - path: result.document.lessons.reference.value
   type: value
   definition: Resulting value in the scope using a pure-reference exact Channel binding.
+- path: result.document.orders
+  type: value
+  definition: Exact embedded collection container, whose absence and present empty value are semantically distinct.
+- path: result.document.orders.order-1.state
+  type: scalar-or-node
+  definition: State written with a newly admitted direct collection member.
+- path: result.document.orders.order-1.value
+  type: value
+  definition: Value written with a newly admitted direct collection member.
 - path: result.document.postInitRan
   type: value
   definition: Exact value selected from the resulting Root at the suffix path.
