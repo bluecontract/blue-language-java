@@ -1,0 +1,7 @@
+id: R_empty_object_child_field_count
+category: Schema
+operation: validate
+description: an exact empty object has zero ordinary fields
+source: {}
+expectedFieldCount: 0
+expectedValid: true

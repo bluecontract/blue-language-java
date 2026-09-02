@@ -1,0 +1,25 @@
+id: R_empty_object_over_inherited_list_conflicts
+category: Resolution
+operation: resolveVariants
+description: omission and Source null inherit a list while an exact empty-object payload conflicts
+fieldDeclaration:
+  x:
+    items: [A, B]
+variants:
+- name: omitted
+  source: {}
+  expectedValid: true
+  expectedValue:
+    /x/0: A
+    /x/1: B
+- name: source-null
+  source:
+    x: null
+  expectedValid: true
+  expectedValue:
+    /x/0: A
+    /x/1: B
+- name: exact-empty-object
+  source:
+    x: {}
+  expectedErrorCategory: TypeCompatibilityViolation

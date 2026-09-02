@@ -460,3 +460,77 @@
   - R_positional_canonical_final_payload
   - R_positional_minimized_round_trip
   - R_positional_inline_item_type_identity_parity
+- id: L-EMPTY-01
+  fixtures:
+  - B_root_empty_object
+- id: L-EMPTY-02
+  fixtures:
+  - B_empty_object_child_reference_equivalence
+  - R_empty_object_canonical_identity
+- id: L-EMPTY-03
+  fixtures:
+  - R_source_empty_object_distinctions
+- id: L-EMPTY-04
+  fixtures:
+  - B_empty_object_child_reference_equivalence
+  - R_empty_object_canonical_identity
+- id: L-EMPTY-05
+  fixtures:
+  - R_source_empty_object_distinctions
+- id: L-EMPTY-LIST-01
+  fixtures:
+  - R_source_null_list_to_empty
+- id: L-EMPTY-LIST-02
+  fixtures:
+  - R_source_empty_object_list_retained
+- id: L-EMPTY-LIST-03
+  fixtures:
+  - R_source_recursive_empty_object_list_retained
+- id: L-EMPTY-LIST-04
+  fixtures:
+  - R_source_empty_object_distinctions
+- id: L-EMPTY-LIST-05
+  fixtures:
+  - B_empty_object_list_element_identity
+- id: L-EMPTY-LIST-06
+  fixtures:
+  - B_null_list_element_rejected
+- id: L-EMPTY-SCHEMA-01
+  fixtures:
+  - R_required_empty_object_present
+- id: L-EMPTY-SCHEMA-02
+  fixtures:
+  - R_minfields_rejects_empty_object
+- id: L-EMPTY-SCHEMA-03
+  fixtures:
+  - R_empty_object_parent_field_count
+- id: L-EMPTY-SCHEMA-04
+  fixtures:
+  - R_empty_object_child_field_count
+- id: L-EMPTY-CANON-01
+  fixtures:
+  - R_empty_object_canonical_identity
+- id: L-EMPTY-CANON-02
+  fixtures:
+  - R_inherited_empty_object_omitted_by_provenance
+- id: L-EMPTY-CANON-03
+  fixtures:
+  - R_inline_empty_type_reference_identity_parity
+- id: L-EMPTY-CANON-04
+  fixtures:
+  - R_empty_object_minimized_overlay_round_trip
+- id: L-EMPTY-CANON-05
+  fixtures:
+  - F_empty_object_reference_cache_parity
+- id: L-EMPTY-CANON-06
+  fixtures:
+  - R_empty_object_reference_unavailable_not_absent
+- id: L-EMPTY-MERGE-01
+  fixtures:
+  - R_empty_object_over_inherited_scalar_conflicts
+- id: L-EMPTY-MERGE-02
+  fixtures:
+  - R_empty_object_over_inherited_list_conflicts
+- id: L-EMPTY-TYPE-NULL-01
+  fixtures:
+  - R_source_null_and_empty_type_distinction

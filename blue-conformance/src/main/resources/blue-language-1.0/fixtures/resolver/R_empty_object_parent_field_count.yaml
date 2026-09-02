@@ -1,0 +1,8 @@
+id: R_empty_object_parent_field_count
+category: Schema
+operation: validate
+description: a parent containing one exact empty-object child has one ordinary field
+source:
+  x: {}
+expectedFieldCount: 1
+expectedValid: true

@@ -7,5 +7,6 @@ input:
 alsoEquivalentTo:
   x:
     blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+alsoDifferentFrom: {}
 expectedNodeBlueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
 note: The expected identity was independently derived from the RFC 8785 parent reference input.
