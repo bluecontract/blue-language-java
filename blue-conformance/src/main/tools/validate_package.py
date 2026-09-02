@@ -3352,14 +3352,36 @@ def validate_vector_coverage(ordinary: list[Path], closure: list[Path]) -> dict[
         contract_evolution == {f"C-EVO-{i:02d}" for i in range(1, 24)},
         "contract-evolution vectors must be exactly C-EVO-01..23",
     )
-    require(len(actual) == 168, "final vector count must be 168")
+    embedded_empty = set(
+        v for v in actual if v.startswith("C-EMB-EMPTY-")
+    )
+    require(
+        embedded_empty == {f"C-EMB-EMPTY-{i:02d}" for i in range(1, 6)},
+        "empty embedded-object vectors must be exactly C-EMB-EMPTY-01..05",
+    )
+    parent_updates = set(
+        v for v in actual if v.startswith("C-UPD-PARENT-")
+    )
+    require(
+        parent_updates == {f"C-UPD-PARENT-{i:02d}" for i in range(1, 3)},
+        "parent-update vectors must be exactly C-UPD-PARENT-01..02",
+    )
+    collection_events = set(
+        v for v in actual if v.startswith("C-EVT-COLLECTION-")
+    )
+    require(
+        collection_events
+        == {f"C-EVT-COLLECTION-{i:02d}" for i in range(1, 8)},
+        "collection-event vectors must be exactly C-EVT-COLLECTION-01..07",
+    )
+    require(len(actual) == 182, "final vector count must be 182")
     require(
         len([vector for vector in actual if is_closure_vector(vector)]) == 54,
         "final closure vector count must be 54",
     )
     require(
-        len([vector for vector in actual if not is_closure_vector(vector)]) == 114,
-        "final ordinary vector count must be 114",
+        len([vector for vector in actual if not is_closure_vector(vector)]) == 128,
+        "final ordinary vector count must be 128",
     )
     return actual
 
@@ -9674,11 +9696,11 @@ def main() -> None:
     progress("checksums")
     validate_checksum_manifest()
     ordinary, closure = fixture_files()
-    require(len(ordinary) == 183, "final ordinary fixture count must be 183")
+    require(len(ordinary) == 197, "final ordinary fixture count must be 197")
     require(len(closure) == 93, "final closure fixture count must be 93")
     require(
-        len(ordinary) + len(closure) == 276,
-        "final Contracts fixture count must be 276",
+        len(ordinary) + len(closure) == 290,
+        "final Contracts fixture count must be 290",
     )
     actual_full_lifecycle_names = {
         path.name

@@ -33,10 +33,10 @@ CANONICAL_CLOSURE_EVO_ROOT = (
     / "resources/blue-contracts-closure-1.0/fixtures/evo"
 )
 
-EXPECTED_EXECUTABLE_COUNT = 170
-EXPECTED_BEHAVIOR_COUNT = 112
+EXPECTED_EXECUTABLE_COUNT = 184
+EXPECTED_BEHAVIOR_COUNT = 126
 EXPECTED_GAS_COUNT = 58
-EXPECTED_VECTOR_COUNT = 114
+EXPECTED_VECTOR_COUNT = 128
 EXPECTED_EVO_NAMES = frozenset(
     {
         *(f"c-evo-{ordinal:02d}.yaml" for ordinal in range(1, 7)),

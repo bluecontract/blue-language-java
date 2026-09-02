@@ -41,6 +41,12 @@ LANGUAGE_SPECIFICATION = Path(
     "blue-language-core/src/main/resources/specifications/"
     "blue-language-specification-1.0.md"
 )
+CANONICAL_ORDINARY_FIXTURES = Path(
+    "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures"
+)
+CANONICAL_RUNTIME_REGISTRY = Path(
+    "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0"
+)
 BASELINE_SOURCE_PATHS = (
     "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
     "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
@@ -121,6 +127,21 @@ def stage_release_shell(
         release_root / "reference/blue-language-specification-1.0.md",
     )
     shutil.copytree(package_root, release_root / "conformance/contracts")
+    # The closure release is the published superset of the ordinary fixture
+    # package and the production runtime registry.  Refresh those mirrors from
+    # their canonical repository locations before any generated surface reads
+    # them, while retaining closure-only fixtures, gas microfixtures and the
+    # conformance-only ScriptedOperation adapter.
+    shutil.copytree(
+        repository_root / CANONICAL_ORDINARY_FIXTURES,
+        release_root / "conformance/contracts/fixtures",
+        dirs_exist_ok=True,
+    )
+    shutil.copytree(
+        repository_root / CANONICAL_RUNTIME_REGISTRY,
+        release_root / "conformance/contracts/registry",
+        dirs_exist_ok=True,
+    )
     shutil.copytree(
         TOOLS_ROOT,
         release_root / "tools",
@@ -261,11 +282,11 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
     vectors = load_mapping(package_root / "fixtures/vector-coverage.yaml")
     release = load_mapping(package_root / "release-manifest.yaml")
     expected_fixture_counts = {
-        "ordinaryFixtureCount": 183,
+        "ordinaryFixtureCount": 197,
         "closureFixtureCount": 93,
-        "totalExecutableFixtureCount": 276,
-        "vectorCount": 168,
-        "ordinaryVectorCount": 114,
+        "totalExecutableFixtureCount": 290,
+        "vectorCount": 182,
+        "ordinaryVectorCount": 128,
         "closureVectorCount": 54,
     }
     for field, expected in expected_fixture_counts.items():
@@ -276,8 +297,8 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
                 f"expected {expected}"
             )
     expected_vector_counts = {
-        "vectorCount": 168,
-        "ordinaryVectorCount": 114,
+        "vectorCount": 182,
+        "ordinaryVectorCount": 128,
         "closureVectorCount": 54,
     }
     for field, expected in expected_vector_counts.items():
@@ -323,13 +344,13 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
         raise RegenerationFailure(
             "release manifest has no fixturePackage binding"
         )
-    if fixture_binding.get("vectorCount") != 168:
+    if fixture_binding.get("vectorCount") != 182:
         raise RegenerationFailure(
-            "release fixture-package vectorCount is not 168"
+            "release fixture-package vectorCount is not 182"
         )
-    if fixture_binding.get("fixtureCount") != 276:
+    if fixture_binding.get("fixtureCount") != 290:
         raise RegenerationFailure(
-            "release fixture-package fixtureCount is not 276"
+            "release fixture-package fixtureCount is not 290"
         )
 
 
@@ -437,6 +458,20 @@ def validate_inputs(
     if missing_sources:
         raise RegenerationFailure(
             f"repository root lacks release source inputs: {missing_sources}"
+        )
+    required_directories = (
+        CANONICAL_ORDINARY_FIXTURES,
+        CANONICAL_RUNTIME_REGISTRY,
+    )
+    missing_directories = [
+        str(relative)
+        for relative in required_directories
+        if not (repository_root / relative).is_dir()
+    ]
+    if missing_directories:
+        raise RegenerationFailure(
+            "repository root lacks canonical release input directories: "
+            f"{missing_directories}"
         )
     if fixture_source_root is not None and not fixture_source_root.is_dir():
         raise RegenerationFailure(

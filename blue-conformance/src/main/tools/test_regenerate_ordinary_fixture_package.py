@@ -175,15 +175,15 @@ class RegenerateOrdinaryFixturePackageTest(unittest.TestCase):
             )
             gas_value = yaml.safe_load(gas.read_text())
 
-            self.assertEqual(114, manifest["vectorCount"])
-            self.assertEqual(112, manifest["behaviorFixtureCount"])
+            self.assertEqual(128, manifest["vectorCount"])
+            self.assertEqual(126, manifest["behaviorFixtureCount"])
             self.assertEqual(58, manifest["gasFixtureCount"])
             self.assertEqual(
-                170,
+                184,
                 manifest["behaviorFixtureCount"]
                 + manifest["gasFixtureCount"],
             )
-            self.assertEqual(114, len(coverage["vectors"]))
+            self.assertEqual(128, len(coverage["vectors"]))
             self.assertEqual(
                 regenerator.EXPECTED_EVO_VECTORS,
                 {
