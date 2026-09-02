@@ -11,7 +11,7 @@ public final class RuntimeBlueIds {
 
     /** SHA-256 identity of the complete runtime-registry package. */
     public static final String REGISTRY_PACKAGE_IDENTITY =
-            "sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1";
+            "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4";
 
     /**
      * Legacy BlueId meta-type identity retained for binary/source
@@ -30,7 +30,7 @@ public final class RuntimeBlueIds {
             "CaFMD5Tpz4LbGjJsftT3465hKBWa7Ti6dutYHnCSRQyR";
     /** Published BlueId of the Channel Event Checkpoint runtime type. */
     public static final String CHANNEL_EVENT_CHECKPOINT =
-            "9cZbgd8aMa9wmFZyFxz6TCXBDEHqLMhrdZmhH7su96XR";
+            "Ag2NpsQnNpn8nNRopURxcWVHRnYu5REDZeS8YJcfvQUS";
     /** Published BlueId of the Checkpoint Entry runtime type. */
     public static final String CHECKPOINT_ENTRY =
             "2uJq8ZJGyUpMiZckxopH2koa7ZFRavVacpu2eGdK2UwY";
@@ -39,7 +39,7 @@ public final class RuntimeBlueIds {
             "4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4";
     /** Published BlueId of the Contract Execution Result runtime type. */
     public static final String CONTRACT_EXECUTION_RESULT =
-            "3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv";
+            "QAGTb2Kecxf1vVuysfWD8B9rehhCAtnWkiB2Ssni5BV";
     /** Published BlueId of the processing-initiated lifecycle event. */
     public static final String DOCUMENT_PROCESSING_INITIATED =
             "Gck5z8qnbcUvJNkawzKPghj14dJBw8GxkC9mh6cL5e5C";
@@ -58,6 +58,9 @@ public final class RuntimeBlueIds {
     /** Published BlueId of the Embedded Node Channel runtime type. */
     public static final String EMBEDDED_NODE_CHANNEL =
             "7ZgUJxCyokHf84uibaQz138mFRLarykWLewVAn8bibTN";
+    /** Published BlueId of the Embedded Collection Event Channel runtime type. */
+    public static final String EMBEDDED_COLLECTION_EVENT_CHANNEL =
+            "FodJjjdNVR5gYf8Eiv6X1UmSAg8GZA6tbpKxfkAeDwpg";
     /** Published BlueId of the External Channel runtime type. */
     public static final String EXTERNAL_CHANNEL =
             "4wXKQivSASbs6PLnR562Q2XcT52x1bBViGk7cxhQ3swq";
@@ -78,7 +81,7 @@ public final class RuntimeBlueIds {
             "8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD";
     /** Published BlueId of the Process Embedded runtime type. */
     public static final String PROCESS_EMBEDDED =
-            "EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e";
+            "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3";
     /** Published BlueId of the initialized processor marker. */
     public static final String PROCESSING_INITIALIZED_MARKER =
             "Hp3fNbpFxKwLiTwWAf3swpN7gKbsr6ofwEDMntiwXPaB";
@@ -90,19 +93,19 @@ public final class RuntimeBlueIds {
             "2fQHvWpJRfkPW9rqcqZKdcEKx4586LDkYR2bWTPRDZEo";
     /** Published BlueId of the runtime gas ledger. */
     public static final String RUNTIME_LEDGER =
-            "EEcehN6F5zKoZbLFvoAqa8hiWKzPY2VFbd3j5qGDELS2";
+            "D8eB7VDLhpQJmcf1UYtHF9ShTdZoW5xYGKWSgs4f4Jqh";
     /** Published BlueId of the conformance Scripted External Channel. */
     public static final String SCRIPTED_EXTERNAL_CHANNEL =
             "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt";
     /** Published BlueId of the conformance Scripted Handler. */
     public static final String SCRIPTED_HANDLER =
-            "6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw";
+            "9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8";
     /** Published BlueId of the Triggered Event Channel runtime type. */
     public static final String TRIGGERED_EVENT_CHANNEL =
             "DRxc8GkSGPbdENdB8ZK976i1Jzc6M1QdG8UsVMHcqQcf";
     /** Published BlueId of the Type Generalization Policy runtime type. */
     public static final String TYPE_GENERALIZATION_POLICY =
-            "8VeXb3GgP88WtosVLu2mamHmbvY8f5cxA9z6yAETbbFz";
+            "EDE6SzFj2saVRDYunxDTMDZdZNjSLHFHeHUzzB74bBdP";
     /** Published BlueId of an individual Type Generalization Rule. */
     public static final String TYPE_GENERALIZATION_RULE =
             "5BwjjfvodMVCfD2cKChbUMmjEBd83vv5kbEQwAFHcSnv";
@@ -141,6 +144,8 @@ public final class RuntimeBlueIds {
                 return EMBEDDED_EVENT_DELIVERY;
             case EMBEDDED_NODE_CHANNEL:
                 return EMBEDDED_NODE_CHANNEL;
+            case EMBEDDED_COLLECTION_EVENT_CHANNEL:
+                return EMBEDDED_COLLECTION_EVENT_CHANNEL;
             case EXTERNAL_CHANNEL:
                 return EXTERNAL_CHANNEL;
             case FIXTURE_EVENT:

@@ -1,15 +1,17 @@
 package blue.language.processor.model;
 
 import blue.language.model.Node;
+import blue.language.model.TypeBlueId;
+import blue.language.processor.registry.RuntimeBlueIds;
 
 /**
  * Processor-managed bridge for events emitted by members of one declared
  * embedded collection.
  *
- * <p>The exact runtime BlueId is supplied by the generated Contracts runtime
- * registry. This model deliberately carries no provisional identity while
- * that registry is being regenerated.</p>
+ * <p>The exact runtime BlueId is supplied by the verified Contracts runtime
+ * registry.</p>
  */
+@TypeBlueId(RuntimeBlueIds.EMBEDDED_COLLECTION_EVENT_CHANNEL)
 public class EmbeddedCollectionEventChannel extends ChannelContract {
 
     private String collectionPath;
