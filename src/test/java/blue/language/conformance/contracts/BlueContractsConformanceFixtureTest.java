@@ -153,6 +153,42 @@ class BlueContractsConformanceFixtureTest {
     }
 
     @Test
+    void shouldExecuteEmptyObjectAndCollectionRevisionFixtures()
+            throws IOException {
+        String[] fixtures = {
+                "emb/c-emb-empty-01.yaml",
+                "emb/c-emb-empty-02.yaml",
+                "emb/c-emb-empty-03.yaml",
+                "emb/c-emb-empty-04.yaml",
+                "emb/c-emb-empty-05.yaml",
+                "upd/c-upd-parent-01.yaml",
+                "upd/c-upd-parent-02.yaml",
+                "evt/c-evt-collection-01.yaml",
+                "evt/c-evt-collection-02.yaml",
+                "evt/c-evt-collection-03.yaml",
+                "evt/c-evt-collection-04.yaml",
+                "evt/c-evt-collection-05.yaml",
+                "evt/c-evt-collection-06.yaml",
+                "evt/c-evt-collection-07.yaml"
+        };
+
+        int executed = 0;
+        for (String fixture : fixtures) {
+            try {
+                JsonNode input = resource(fixture);
+                ContractsConformanceSuite.validateFixture(input);
+                new ContractsFixtureHarness().execute(input, false);
+            } catch (Throwable failure) {
+                throw new AssertionError(
+                        "Failed revision fixture " + fixture, failure);
+            }
+            executed++;
+        }
+
+        assertEquals(fixtures.length, executed);
+    }
+
+    @Test
     void shouldNotAdmitArbitraryOrderMismatchForDeliveryHintTieOrdinal()
             throws IOException {
         // given
