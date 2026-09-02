@@ -1,10 +1,10 @@
 # Blue Contracts and Processor Specification 1.0
 
-> **Status.** Final normative specification. This release defines deterministic processing for ordinary acyclic Roots and bounded finite cyclic `Process Embedded` closures. The machine-readable runtime registry, gas manifest, conformance fixtures, and release manifest distributed with this document are part of the release.
+> **Status.** Proposed release-candidate revision; not a published release. This draft is based on the current inline-type identity-evidence worktree and adds exact empty-object semantics, a corrected BEX-to-Blue null boundary, absent-collection semantics, and an explicit collection-scoped embedded-event Channel. Runtime registry BlueIds, fixture identities, gas expectations/package manifests, and release bindings MUST be regenerated after implementation; earlier exact values are not authoritative for this draft.
 
 > **Scope.** This document defines contracts, Channels, Handlers, exact processing inputs, managed document boundaries, finite directed `Process Embedded` graphs, deterministic activation initialization, dynamic graph formation, cyclic processing, patches, Document Updates, internal events, checkpoints, lifecycle, termination, gas, exact failure semantics, and atomic publication. Blue content, BlueId, typing, resolution, canonicalization, and cyclic-set identity are defined by **Blue Language Specification 1.0**. Concrete business runtimes and external coordination policies are selected separately by exact identity.
 
-> **Compatibility.** No existing core runtime type node changes in this release. `Process Embedded`, `Channel`, processor-managed Channels, lifecycle types, and their released BlueIds remain unchanged. The Contracts specification, fixture package, gas manifest, and implementation release identities bind the processing behavior defined here.
+> **Compatibility.** This is an incompatible pre-stable RC revision. The Language empty-object change rotates affected content identities transitively. BEX execution-time `null` no longer converts unconditionally to Blue `{}`: object-member null is omitted, list null becomes `{ $empty: true }`, and root/patch/event null fails Blue output admission. `Process Embedded` also receives revised absent-collection semantics and its canonical registry description/BlueId MUST be rebuilt; no old affected identity may be silently aliased to the new one. The existing `Embedded Node Channel` keeps its current exact-path behavior, while `Embedded Collection Event Channel` is a new runtime type. Runtime-registry, fixture, implementation, gas-expectation, and release-package identities MUST be regenerated from the completed implementation.
 
 Blue Language defines exact content and identity. Blue Contracts defines how exact content changes deterministically when one exact cause is processed.
 
@@ -143,6 +143,17 @@ For `PROCESS`:
 - `ProcessResult.document` is the exact resulting Root;
 - `ProcessResult.events` contains only events emitted by that Root;
 - all tentative effects either commit together or are discarded.
+
+When a registered Handler or Workflow uses BEX, Contracts MUST receive only values that have crossed the BEX 2.0 Blue output boundary. Execution-time BEX `null` is not a Blue content value. In particular:
+
+```text
+null object member -> omitted before patch/event/request admission
+null list item     -> exact { $empty: true } placeholder
+root/patch/event null -> boundary failure
+explicit {}        -> present exact empty object
+```
+
+Contracts MUST NOT reinterpret BEX `null` as `{}`, bypass the BEX boundary, or let host-language `null` silently enter an exact patch value, emitted event, request, or identity calculation. Boundary failure remains noncommitting under the ordinary Handler/result rollback rules.
 
 For `PROCESS_CLOSURE`:
 
@@ -462,7 +473,9 @@ The canonical runtime registry is part of the Contracts 1.0 release. For every c
 
 Registry source, calculated BlueIds, prose, fixtures, and gas manifest MUST agree. Implementations MUST NOT guess when they conflict.
 
-The core runtime registry package identity remains the identity published in the machine-readable registry manifest distributed with this release. No existing core runtime node is changed by cyclic closure support.
+This revision adds the exact processor runtime type `Embedded Collection Event Channel`. Its canonical node, BlueId, dispatch fields, structural path matcher, runtime role, gas behavior, and conformance fixtures MUST be published in the regenerated registry. The existing `Embedded Node Channel` keeps exact-path semantics and is not silently reinterpreted.
+
+This proposal intentionally publishes no final core-runtime-registry package identity. The registry MUST be regenerated after the Language identity cascade, the revised `Process Embedded` node, and the new `Embedded Collection Event Channel` node are final. A byte-identical gas manifest may retain its own file identity, but every release binding and package manifest must be recalculated and verified rather than copied from an earlier RC.
 
 The closure executor and cyclic-set finalizer are processor/platform capabilities, not new application runtime types. The release manifest MUST bind the exact Blue Language cyclic-set implementation and proof verifier used by closure processing.
 
@@ -2675,7 +2688,7 @@ The two forms identify the same Channel value. They do not create a live link to
 
 Contracts 1.0 defines no informal `Parent Channel`, ancestor-key lookup, nearest-parent lookup, or context-dependent channel port. A future runtime may define an explicit cross-scope binding type only through a separately published exact runtime-type BlueId and complete dependency, subscription, checkpoint, invalidation, cycle, and gas semantics. Implementations MUST NOT infer such behavior from ordinary embedding or raw key equality.
 
-A child event reaches an ancestor only through an Embedded Node Channel. A descendant field change reaches an ancestor through a Document Update Channel.
+A child event reaches an ancestor only through an `Embedded Node Channel` or `Embedded Collection Event Channel`. A descendant field change reaches an ancestor through a `Document Update Channel`.
 
 ### 4.10 Effective protected state
 
@@ -2785,6 +2798,7 @@ document in the closure.
 
 ### 5.2 Process Embedded
 
+
 An effective `Process Embedded` declaration contains:
 
 ```yaml
@@ -2804,13 +2818,35 @@ exactly one verified inactive prospective occurrence row reserves it. An
 absent path contributes no graph edge, component membership, initialization,
 event target, or delivery.
 
-For `collectionPaths`, the collection itself MUST be present and resolve to an
-object. An empty object represents zero active occurrences. Every direct member
-value is one concrete occurrence. An exact inactive prospective or retirement-
-successor row MAY reserve one absent direct member key immediately below that
-collection path; it contributes no active occurrence, and deeper absent paths
-remain invalid. Lists, wildcards, recursive selectors, and implicit descendant
-enumeration are unsupported.
+For `collectionPaths`, each entry MUST be a normalized absolute Runtime Pointer
+relative to the managed document Root. The collection path MAY be semantically
+absent. Proven absence means that the collection currently contains zero active
+occurrences. It is not an invalid declaration and does not cause the processor
+to synthesize a collection node.
+
+When a collection path is present, it MUST resolve to an object-compatible Blue
+value. Reserved metadata on that collection is not a managed occurrence. Every
+ordinary direct member value is one concrete occurrence. A present empty object
+`{}`, or a present collection whose effective type is `Dictionary` and which has
+zero ordinary members, represents zero active occurrences.
+
+Absence must be established from complete Language evidence. An unexpanded
+reference, unavailable provider resource, direct-node limit, or incomplete
+resolution MUST NOT be treated as an absent collection. A present scalar, list,
+pure reference to a non-object value, or otherwise object-incompatible value is
+invalid.
+
+An exact inactive prospective or retirement-successor row MAY reserve one
+concrete direct member path `C/<member-key>` under a declared collection path
+`C`, whether `C` is currently present or absent. That reservation contributes
+no active occurrence. It may activate only when the same completed output makes
+`C` present as an object-compatible collection, makes that exact direct member
+present, verifies the member's exact value and lineage, and retains an effective
+declaration covering `C`. A reservation below `C/<member-key>` is not authorized
+by the collection declaration; deeper absent paths remain invalid.
+
+Lists, wildcard syntax, recursive selectors, and implicit descendant
+enumeration are unsupported. `/orders/*` is not a portable collection selector.
 
 The declaration-to-row requirements above are complete in the declaration
 direction, but do not exhaust the authoritative inactive row set. The input MAY
@@ -2824,7 +2860,9 @@ occurrence identity. This permits declaration introduction in a later
 invocation and retention of a successor after declaration removal without an
 ambient staging map.
 
-The same source path MUST NOT be generated by two declarations. One declaration MUST NOT be a strict ancestor or descendant of another immediate declaration in the same managed document.
+The same source path MUST NOT be generated by two declarations. One declaration
+MUST NOT be a strict ancestor or descendant of another immediate declaration in
+the same managed document.
 
 `Process Embedded` is the only authored dependency graph. Active platform
 occurrence rows identify continuing managed lineage for the exact values already
@@ -3276,6 +3314,7 @@ Handlers are freshly discovered under the exact latest tentative source document
 
 ### 6.7 Embedded Node Channel
 
+
 After local Triggered handling, the same occurrence is offered through every frozen active containing occurrence target in canonical order.
 
 The target receives an exact wrapper conceptually equivalent to:
@@ -3289,13 +3328,59 @@ event:
 
 The target managed document sees its own latest exact `$document`, including the latest tentatively finalized source member reference.
 
+An `Embedded Node Channel` with no `sourcePath` matches every descendant
+embedded-event delivery visible to that receiving scope, subject to its optional
+event matcher. When `sourcePath` is present, it is one normalized exact source
+occurrence path. It matches only an equal `sourcePath`; it is not a prefix,
+collection selector, glob, or wildcard.
+
+An `Embedded Collection Event Channel` matches events by structural membership
+under one effective `Process Embedded.collectionPaths` declaration in the same
+receiving scope. Its `collectionPath` MUST be a normalized absolute Runtime
+Pointer and MUST equal one effective collection declaration. Its
+`includeDescendants` field is optional and defaults to `false`:
+
+```text
+includeDescendants absent or false:
+    sourcePath has exactly one additional decoded Runtime Pointer segment
+    after collectionPath
+
+includeDescendants true:
+    sourcePath begins with collectionPath plus at least one decoded member
+    segment and may contain further descendant segments
+```
+
+The collection path itself never matches. Matching compares decoded Runtime
+Pointer segments, not raw string prefixes; `/orders-old/x` does not match
+`/orders`, and escaped `~0`/`~1` segments are handled under the ordinary pointer
+rules. If the declared collection is absent or currently empty, the Channel is
+valid and has no matching source occurrence.
+
+Both embedded-event Channel types may carry the same optional exact event
+pattern. They receive the same `Embedded Event Delivery` payload and participate
+in the ordinary deterministic Channel and Handler order. They are
+processor-managed internal Channels, not external Timeline sources, and create
+no provider subscription or checkpoint surface merely by existing.
+
+Both types use the existing `EMBEDDED_EVENT` work kind and the existing
+`embeddedEventDelivered` charge for an actual delivery; no new work kind or
+public event family is introduced. Candidate discovery pays the ordinary
+`channelCandidateTested` charge. For an `Embedded Collection Event Channel`,
+header validation of `collectionPath` against effective `collectionPaths`, and
+event-time structural comparison of decoded path segments, pay the existing
+`embeddedPathEntryRead` and `embeddedPathSegmentValidated` counters at the exact
+read/comparison points. Comparison stops on the first mismatch or once the mode's
+length condition is decided. Implementations MUST NOT hide unbounded path work
+inside one flat candidate charge, and warm/cold or cached path parsing MUST NOT
+change the portable trace.
+
 Observation does not make the nested event public. The receiving public Root must explicitly emit an event for it to appear in the public result.
 
 For a managed-revision cause carrying a complete source transition receipt, the
 processor first verifies that receipt and advances the named inactive occurrence
 from `beforeBlueId` to `afterBlueId` through the ordinary containing-reference
 update. It then enqueues every receipt Root-event occurrence, in receipt order,
-through exactly that occurrence and classifies the normal Embedded Event routes
+through exactly that occurrence and classifies the normal embedded-event routes
 against the latest tentative containing document. The imported occurrence keeps
 its source event BlueId, exact value, occurrence ordinal, and occurrence
 identity. Equal source events therefore cause equal-but-distinct deliveries.
@@ -4262,6 +4347,7 @@ A Blue Runtime Pointer is an RFC 6901 pointer over the current Root's abstract B
 
 ### 8.2 Json Patch Entry
 
+
 Core supports:
 
 ```yaml
@@ -4275,6 +4361,31 @@ Operations are applied in result order. A later patch observes all earlier tenta
 `replace` on an object member is an upsert: the final member may be absent before the operation. `remove` of a missing member is invalid.
 
 The parent container of the final path segment MUST already exist and have the required object or list kind. Core patch semantics do not synthesize missing intermediate objects or lists. A runtime that wants to create a nested structure must add or replace an admitted complete subtree at an existing parent, or issue earlier patches that create each required parent explicitly. Arrays are never silently invented.
+
+This patch rule is independent of `Process Embedded.collectionPaths`. A declared
+but absent collection is valid and means zero current occurrences; it is not a
+hidden object that permits a deep patch. Therefore, when `/orders` is absent:
+
+```yaml
+op: add
+path: /orders/order-1
+```
+
+is invalid because the patch parent does not exist. The runtime may instead add
+the complete collection subtree at the existing Root:
+
+```yaml
+op: add
+path: /orders
+val:
+  order-1:
+    blueId: <exact-order-state>
+```
+
+or first add `/orders` as `{}` and then add `/orders/order-1` in a later ordered
+patch. Any member that becomes processable still requires the exact prospective
+managed-occurrence evidence required by §§2 and 5; the patch does not invent
+`DocumentId`, lineage, or binding evidence.
 
 ### 8.3 Insertion normalization
 
@@ -5697,7 +5808,31 @@ C-SND      soundness and diagnostics
 C-FAIL     failure and retry
 C-GAS      gas and limits
 C-E2E      end-to-end ordinary results
+C-BEX      BEX-to-Blue output-boundary integration
 ```
+
+The executable corpus MUST additionally cover:
+
+- **C-BEX-NULL-01.** A BEX patch or emitted-event value whose boundary root is `null` fails before any patch, event, checkpoint, or document mutation commits.
+- **C-BEX-NULL-02.** A BEX object patch containing `{request: null}` admits no `request` member, while `{request: {}}` admits a present exact empty-object member; the two exact outputs remain distinct.
+- **C-BEX-NULL-03.** A BEX list value `[null, {}, []]` is admitted as `[{ $empty: true }, {}, []]`; position, multiplicity, distinct element identity, and portable gas are deterministic.
+- **C-BEX-NULL-04.** `{x: {y: null}}` is admitted as `{x: {}}`; the explicit container remains and may satisfy presence, while a scalar-typed `x` fails normal Language validation rather than being treated as absent.
+
+
+- **C-EMB-EMPTY-01.** An absent declared collection is valid and contributes zero active occurrences.
+- **C-EMB-EMPTY-02.** An inline `{}` collection and a verified pure reference to the exact empty-object BlueId each contribute zero active occurrences and produce representation-equivalent graph behavior. Both differ in containing-document identity from an absent collection.
+- **C-EMB-EMPTY-03.** A present scalar, list, or object-incompatible collection target fails deterministically.
+- **C-EMB-EMPTY-04.** Incomplete or unavailable collection evidence produces `NeedsResources` or the applicable incomplete outcome, never successful absence.
+- **C-EMB-EMPTY-05.** A prospective row may reserve `C/member` while `C` is absent and activates only when one successful result creates the object-compatible collection and exact member.
+- **C-UPD-PARENT-01.** Adding `C/member` while `C` is absent fails patch-parent validation.
+- **C-UPD-PARENT-02.** Adding the complete `C` subtree at an existing parent can activate its reserved direct members.
+- **C-EVT-COLLECTION-01.** Existing `Embedded Node Channel` with an exact `sourcePath` remains exact-only.
+- **C-EVT-COLLECTION-02.** Existing `Embedded Node Channel` with omitted `sourcePath` receives every eligible descendant emission.
+- **C-EVT-COLLECTION-03.** `Embedded Collection Event Channel` in member-root mode matches `/orders/o1` and `/orders/o2` but not `/orders/o1/payment`.
+- **C-EVT-COLLECTION-04.** Descendant mode also matches `/orders/o1/payment`.
+- **C-EVT-COLLECTION-05.** `/orders-old/o1` does not match `/orders`; escaped pointer segments match structurally.
+- **C-EVT-COLLECTION-06.** Collection-scoped internal Channels do not enter external subscription, completeness, or checkpoint surfaces.
+- **C-EVT-COLLECTION-07.** Exact, mismatch, member-root, descendant, escaped-segment, warm/cold, and inline/reference variants assert identical `channelCandidateTested`, `embeddedPathEntryRead`, `embeddedPathSegmentValidated`, `embeddedEventDelivered`, queue, and work-occurrence traces.
 
 ### 15.2 Closure and cyclic families
 
@@ -5828,11 +5963,12 @@ absent from this family and is not a Contracts 1.0 conformance requirement.
 generalization to reveal an inherited declaration previously suppressed by the
 subtype.
 
-The canonical executable inventories contain 153 Language fixtures and 276
-Contracts fixtures, including 93 closure fixtures.  Existing
-`PROCESS_CLOSURE` business results remain frozen; specification, invocation,
-work, event, and trace identities may be mechanically rebound only when the
-identity-delta audit classifies them and reports zero unexpected changes.
+This proposal intentionally claims no final Language or Contracts fixture
+count or package identity. Existing business-result semantics outside the
+explicitly changed areas remain regression baselines, but specification,
+invocation, work, event, trace, registry, and package identities may be updated
+only after an identity-delta audit classifies every change and reports zero
+unexplained differences.
 
 ### 15.3 Gas and execution fixtures
 
@@ -6238,9 +6374,19 @@ runtimeLedger:
 
 ### A.7 Process Embedded
 
-The existing canonical `Process Embedded` type is unchanged and retains its exact BlueId.
 
-Its `paths` and `collectionPaths` fields define immediate owned managed-document occurrences, mutation boundaries, propagation edges, and the recursive subscription surface.
+The revised canonical `Process Embedded` type keeps the same authored fields
+`paths` and `collectionPaths`; no new field is added. Its identity-bearing
+description MUST state that a semantically absent declared collection contributes
+zero occurrences. Because that is a runtime semantic change, and because the
+Language/core registry also changes transitively, the pre-stable RC BlueId MUST
+be rebuilt rather than retained or aliased.
+
+Its `paths` and `collectionPaths` fields define immediate owned managed-document
+occurrences, mutation boundaries, propagation edges, and the recursive
+subscription surface. A semantically absent `collectionPaths` target represents
+zero current occurrences. A present object contributes one occurrence per
+ordinary direct member.
 
 Under Contracts 1.0, the concrete directed occurrence graph may contain a finite verified cycle. The type itself does not contain a cycle mode, component ID, consistency mode, or scheduling field. Component membership is derived from the exact graph and complete cyclic-set evidence.
 
@@ -6358,12 +6504,48 @@ Processor Channel receiving Document Processing Initiated or Document Processing
 
 ### A.17 Embedded Node Channel
 
-Processor Channel receiving Embedded Event Delivery for descendant emissions. It may declare:
 
-```text
-sourcePath: optional relative source-scope pattern
- event: optional event pattern
+Processor Channel receiving `Embedded Event Delivery` for descendant emissions.
+
+It may declare:
+
+```yaml
+sourcePath:
+  type: Text
+event:
+  description: Optional exact event pattern.
 ```
+
+An absent `sourcePath` matches every descendant source. A present `sourcePath`
+matches exactly one normalized source occurrence path. It has no wildcard or
+prefix semantics.
+
+### A.17a Embedded Collection Event Channel
+
+New processor Channel receiving `Embedded Event Delivery` for members of one
+declared embedded collection.
+
+```yaml
+name: Embedded Collection Event Channel
+type: Channel
+collectionPath:
+  type: Text
+  schema:
+    required: true
+includeDescendants:
+  type: Boolean
+event:
+  description: Optional exact event pattern.
+```
+
+`collectionPath` MUST equal one effective `Process Embedded.collectionPaths`
+entry in the same scope. `includeDescendants` defaults to `false`. False matches
+only member-root source paths; true also matches nested source paths below each
+member. The collection path itself never matches. Matching uses decoded Runtime
+Pointer segments, not raw string prefixes.
+
+This is a new exact runtime type and requires a new registry entry and BlueId.
+It does not change the existing `Embedded Node Channel` type.
 
 ### A.18 Document Update
 
@@ -6670,7 +6852,26 @@ Cross-source order must satisfy the totality, per-source consistency, stable tie
 
 ### D.20 Do not interpret lists or wildcards as embedded collections
 
-`/lessons/*` has no wildcard meaning, and `collectionPaths: [/lessons]` requires an object-compatible collection with stable direct keys. Contracts 1.0 does not implicitly turn list positions into scope identities.
+
+`/lessons/*` has no wildcard meaning. `collectionPaths: [/lessons]` selects the
+ordinary direct members of an object-compatible collection when that collection
+is present. A semantically absent collection contributes zero occurrences.
+Contracts 1.0 does not implicitly turn list positions into scope identities and
+does not synthesize an absent collection object.
+
+### D.20a Do not confuse a declared absent collection with a patch parent
+
+A missing collection may validly contribute zero `Process Embedded`
+occurrences, but it is still absent Blue content. A patch to
+`/orders/order-1` therefore fails until `/orders` is created. Declaration,
+content existence, patch navigation, and prospective occurrence evidence are
+separate questions.
+
+### D.20b Do not implement collection-event matching with raw string prefixes
+
+Compare normalized decoded Runtime Pointer segments. `/orders-old/x` is not a
+member of `/orders`, and escaped member names must be interpreted before
+structural comparison.
 
 ### D.21 Do not invent live parent-channel inheritance
 
