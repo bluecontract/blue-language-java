@@ -5,7 +5,6 @@ import blue.language.model.Node;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.CheckpointEntry;
 import blue.language.processor.model.MarkerContract;
-import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.snapshot.FrozenNode;
 
@@ -219,8 +218,7 @@ final class ContractRefreshService {
                             selectedNode,
                             effectiveNode,
                             typeIdentities);
-            if (markerValue == null
-                    || markerValue.marker() instanceof ProcessEmbedded) {
+            if (markerValue == null) {
                 continue;
             }
             MarkerContract marker = markerValue.marker();

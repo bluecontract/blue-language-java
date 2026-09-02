@@ -8,20 +8,20 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Marker selecting immediate descendants that participate as embedded
+ * Contract selecting immediate descendants that participate as embedded
  * processing scopes, either by exact path or by direct collection membership.
  *
- * <p>The marker independently owns both mutable declaration lists.
+ * <p>The contract independently owns both mutable declaration lists.
  * Replacement values are copied, and access is provided through
  * unmodifiable live views.</p>
  */
 @TypeBlueId(RuntimeBlueIds.PROCESS_EMBEDDED)
-public class ProcessEmbedded extends MarkerContract {
+public class ProcessEmbedded extends Contract {
 
     private List<String> paths = new ArrayList<>();
     private List<String> collectionPaths = new ArrayList<>();
 
-    /** Creates a marker with no selected embedded paths. */
+    /** Creates a contract with no selected embedded paths. */
     public ProcessEmbedded() {
     }
 
@@ -52,7 +52,7 @@ public class ProcessEmbedded extends MarkerContract {
      * Adds a selected path.
      *
      * @param path path to append; {@code null} is ignored
-     * @return this marker
+     * @return this contract
      */
     public ProcessEmbedded addPath(String path) {
         if (path != null) {
@@ -89,7 +89,7 @@ public class ProcessEmbedded extends MarkerContract {
      * Adds a collection path.
      *
      * @param collectionPath collection path to append; {@code null} is ignored
-     * @return this marker
+     * @return this contract
      */
     public ProcessEmbedded addCollectionPath(String collectionPath) {
         if (collectionPath != null) {
