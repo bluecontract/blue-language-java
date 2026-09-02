@@ -362,6 +362,11 @@ public final class NodeToBlueIdInput {
         if (node == null) {
             throw new IllegalArgumentException("BlueId input must not contain null nodes. Path: " + path);
         }
+        if (Nodes.isSourceNullLiteral(node)) {
+            throw new IllegalArgumentException(
+                    "Source null is not valid direct BlueId input. Path: "
+                            + path);
+        }
         if (context == Context.METADATA && isTypePosition(path) && node.isInlineValue()) {
             throw new IllegalArgumentException("Direct BlueId input must not contain unresolved type aliases. Path: " + path);
         }
@@ -396,7 +401,7 @@ public final class NodeToBlueIdInput {
         int payloadKinds = 0;
         if (node.getValue() != null) payloadKinds++;
         if (node.getItems() != null) payloadKinds++;
-        if (node.getProperties() != null && !node.getProperties().isEmpty()) payloadKinds++;
+        if (Nodes.hasObjectPayload(node)) payloadKinds++;
         if (payloadKinds > 1) {
             throw new IllegalArgumentException("A Blue node may contain only one payload kind: value, items, or object fields. Path: " + path);
         }

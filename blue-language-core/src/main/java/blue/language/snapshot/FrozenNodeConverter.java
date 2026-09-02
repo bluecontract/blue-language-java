@@ -270,6 +270,7 @@ public final class FrozenNodeConverter {
         if (node == null) {
             throw new NullPointerException("node");
         }
+        rejectSourceNullMarkers(node);
         IdentityHashMap<Node, FrozenNode> ordinary = new IdentityHashMap<>();
         IdentityHashMap<Node, FrozenNode> anchors = new IdentityHashMap<>();
         Set<Node> active = Collections.newSetFromMap(
@@ -398,17 +399,54 @@ public final class FrozenNodeConverter {
             Map<String, Node> source,
             IdentityHashMap<Node, FrozenNode> ordinary,
             boolean strictCanonical) {
-        if (source == null || source.isEmpty()) {
+        if (source == null) {
             return null;
         }
         Map<String, FrozenNode> result = new LinkedHashMap<>();
         for (Map.Entry<String, Node> entry : source.entrySet()) {
             FrozenNode child = ordinary.get(entry.getValue());
-            if (!strictCanonical || !child.isEmptyNode()) {
-                result.put(entry.getKey(), child);
+            result.put(entry.getKey(), child);
+        }
+        return result;
+    }
+
+    private static void rejectSourceNullMarkers(Node root) {
+        Deque<Node> pending = new ArrayDeque<>();
+        Set<Node> visited = Collections.newSetFromMap(
+                new IdentityHashMap<Node, Boolean>());
+        pending.push(root);
+        while (!pending.isEmpty()) {
+            Node node = pending.pop();
+            if (!visited.add(node)) {
+                continue;
+            }
+            if (blue.language.model.Nodes.isSourceNullLiteral(node)) {
+                throw new IllegalArgumentException(
+                        "Source null must be consumed before freezing Blue content");
+            }
+            pushNode(pending, node.getType());
+            pushNode(pending, node.getItemType());
+            pushNode(pending, node.getKeyType());
+            pushNode(pending, node.getValueType());
+            pushNode(pending, node.getBlue());
+            pushNode(pending, node.getContracts());
+            if (node.getItems() != null) {
+                for (Node child : node.getItems()) {
+                    pushNode(pending, child);
+                }
+            }
+            if (node.getProperties() != null) {
+                for (Node child : node.getProperties().values()) {
+                    pushNode(pending, child);
+                }
             }
         }
-        return result.isEmpty() ? null : result;
+    }
+
+    private static void pushNode(Deque<Node> pending, Node node) {
+        if (node != null) {
+            pending.push(node);
+        }
     }
 
     private static final class FreezeVisit {

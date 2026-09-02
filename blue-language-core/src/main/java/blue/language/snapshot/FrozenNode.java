@@ -83,12 +83,14 @@ public final class FrozenNode {
     }
 
     /**
-     * Creates a strict canonical node with no modeled fields.
+     * Creates the strict canonical exact empty-object value {@code {}}.
      *
      * @return the shared semantics of an empty strict canonical value
      */
     public static FrozenNode empty() {
-        return FrozenNodeBuilder.builder().build();
+        return FrozenNodeBuilder.builder()
+                .properties(java.util.Collections.emptyMap())
+                .build();
     }
 
     /**

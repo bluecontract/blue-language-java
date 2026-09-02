@@ -232,6 +232,12 @@ final class MinimizedOverlayReconstructor {
         if (resolved.getProperties() == null) {
             return;
         }
+        if (resolved.getProperties().isEmpty()) {
+            if (inherited == null || inherited.getProperties() == null) {
+                minimized.properties(new LinkedHashMap<>());
+            }
+            return;
+        }
         Map<String, Node> properties = new LinkedHashMap<>();
         for (Map.Entry<String, Node> entry
                 : resolved.getProperties().entrySet()) {

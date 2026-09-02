@@ -226,7 +226,7 @@ public final class FrozenNodeToBlueIdInput {
         int payloadKinds = 0;
         if (node.getValue() != null) payloadKinds++;
         if (node.getItems() != null) payloadKinds++;
-        if (node.getProperties() != null && !node.getProperties().isEmpty()) payloadKinds++;
+        if (node.getProperties() != null) payloadKinds++;
         if (payloadKinds > 1) {
             throw new IllegalArgumentException("A Blue node may contain only one payload kind: value, items, or object fields. Path: " + path);
         }

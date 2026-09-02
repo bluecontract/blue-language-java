@@ -115,24 +115,20 @@ public final class FrozenNodeBuilder {
             FrozenNode child,
             boolean deferBlueId) {
         if (OBJECT_CONTRACTS.equals(key)) {
-            FrozenNodeBuilder next = from(node).contracts(
-                    child == null
-                            || node.strictCanonical && child.isEmptyNode()
-                            ? null
-                            : child);
+            FrozenNodeBuilder next = from(node).contracts(child);
             return finish(next, deferBlueId);
         }
         Map<String, FrozenNode> next = node.properties != null
                 ? new LinkedHashMap<>(node.properties)
                 : new LinkedHashMap<String, FrozenNode>();
-        if (child == null
-                || node.strictCanonical && child.isEmptyNode()) {
+        if (child == null) {
             next.remove(key);
         } else {
             next.put(key, child);
         }
         return finish(
-                from(node).properties(next.isEmpty() ? null : next),
+                from(node).properties(next.isEmpty()
+                        && node.properties == null ? null : next),
                 deferBlueId);
     }
 
@@ -224,7 +220,7 @@ public final class FrozenNodeBuilder {
         int payloadKinds = 0;
         if (node.value != null) payloadKinds++;
         if (node.items != null) payloadKinds++;
-        if (node.properties != null && !node.properties.isEmpty()) {
+        if (node.properties != null) {
             payloadKinds++;
         }
         if (payloadKinds > 1) {
@@ -397,7 +393,7 @@ public final class FrozenNodeBuilder {
 
     static Map<String, FrozenNode> freezeMap(
             Map<String, FrozenNode> source) {
-        return source == null || source.isEmpty()
+        return source == null
                 ? null
                 : Collections.unmodifiableMap(new LinkedHashMap<>(source));
     }

@@ -194,7 +194,6 @@ public final class FrozenNodeIdentity {
         for (FrozenNode property : node.properties.values()) {
             if (property.type != null
                     && property.properties != null
-                    && !property.properties.isEmpty()
                     || property.containsNestedTypedObjectPayload) {
                 return true;
             }

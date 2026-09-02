@@ -228,6 +228,17 @@ final class CanonicalIdentityInputReconstructor {
         if (resolved.getProperties() == null) {
             return;
         }
+        if (resolved.getProperties().isEmpty()) {
+            if (source != null
+                    && source.getProperties() != null
+                    && source.getProperties().isEmpty()
+                    || source == null
+                    && (inherited == null
+                    || inherited.getProperties() == null)) {
+                canonical.properties(new LinkedHashMap<>());
+            }
+            return;
+        }
         Map<String, Node> properties = new LinkedHashMap<>();
         for (Map.Entry<String, Node> entry
                 : resolved.getProperties().entrySet()) {

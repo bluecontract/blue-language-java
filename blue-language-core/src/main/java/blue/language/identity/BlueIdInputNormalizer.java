@@ -106,8 +106,7 @@ public final class BlueIdInputNormalizer {
             return null;
         }
         if (value instanceof Map) {
-            Map<String, Object> cleaned = cleanMap(castMap(value), false);
-            return cleaned.isEmpty() ? null : cleaned;
+            return cleanMap(castMap(value), false);
         }
         if (value instanceof List) {
             return cleanList(castList(value));
@@ -125,15 +124,7 @@ public final class BlueIdInputNormalizer {
             if (map.containsKey(LIST_CONTROL_EMPTY)) {
                 validateEmptyPlaceholder(map);
             }
-            if (map.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Direct BlueId input must use { \"$empty\": true } for empty object list placeholders.");
-            }
             Map<String, Object> cleaned = cleanMap(map, false);
-            if (cleaned.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Direct BlueId input must use { \"$empty\": true } for empty object list placeholders.");
-            }
             return cleaned;
         }
         if (value instanceof List) {
