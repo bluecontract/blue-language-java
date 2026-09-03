@@ -816,9 +816,12 @@ final class ClosedContractsFixtureValidator {
                     ContractsFixtureConstants.Field.EXPECTED);
             if (assertion.has(
                     ContractsFixtureConstants.Field.EXPECTED_PROJECTION)) {
-                fail(path + ".expectedProjection",
+                fail(
+                        path + "." + ContractsFixtureConstants.Field
+                                .EXPECTED_PROJECTION,
                         "only projection comparison operators accept "
-                                + "expectedProjection");
+                                + ContractsFixtureConstants.Field
+                                        .EXPECTED_PROJECTION);
             }
         }
     }

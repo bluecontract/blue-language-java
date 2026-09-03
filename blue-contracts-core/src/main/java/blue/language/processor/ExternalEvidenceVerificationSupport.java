@@ -7,8 +7,10 @@ import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.util.PointerUtils;
 import blue.language.model.wire.JsonPointer;
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /** Shared deterministic primitives for external-delivery evidence checks. */
@@ -88,6 +90,59 @@ final class ExternalEvidenceVerificationSupport {
 
     static int depth(String scopePath) {
         return JsonPointer.split(scopePath).size();
+    }
+
+    static void verifyActiveInterval(
+            EffectiveContractSnapshot snapshot,
+            SubscriptionDelta.Entry interval,
+            ExternalSubscriptionEvaluation evaluation,
+            String scopePath,
+            long indexedRootRevision) {
+        List<String> mismatches = new ArrayList<>();
+        addMismatch(mismatches, "scopePath",
+                scopePath.equals(interval.scopePath()));
+        addMismatch(mismatches, "channelKey",
+                snapshot.key().equals(interval.channelKey()));
+        addMismatch(mismatches, "effectiveTypeBlueId",
+                snapshot.effectiveTypeBlueId().equals(
+                        interval.effectiveTypeBlueId()));
+        addMismatch(mismatches, "sourceContributionNodeBlueIds",
+                snapshot.sourceContributionNodeBlueIds().equals(
+                        interval.sourceContributionNodeBlueIds()));
+        addMismatch(mismatches, "order",
+                snapshot.order() == interval.order());
+        addMismatch(
+                mismatches,
+                ProcessorContractConstants.KEY_SUBSCRIPTION_KEYS,
+                evaluation.channelKeys.equals(interval.subscriptionKeys()));
+        addMismatch(mismatches, "checkpointDomainBlueId",
+                evaluation.checkpointDomainBlueId.equals(
+                        interval.checkpointDomainBlueId()));
+        addMismatch(mismatches, "dependencies",
+                evaluation.dependencies.equals(interval.dependencies()));
+        if (!mismatches.isEmpty()) {
+            throw invalid(
+                    "Retained active subscription interval header mismatch "
+                            + mismatches + " at " + scopePath + "/"
+                            + snapshot.key());
+        }
+        if (interval.activationRootRevision() == null
+                || interval.activationRootRevision() > indexedRootRevision
+                || interval.endAtRootRevision() != null) {
+            throw invalid(
+                    "Retained subscription interval is not active at indexed "
+                            + "Root revision " + indexedRootRevision + " at "
+                            + scopePath + "/" + snapshot.key());
+        }
+    }
+
+    private static void addMismatch(
+            List<String> mismatches,
+            String field,
+            boolean matches) {
+        if (!matches) {
+            mismatches.add(field);
+        }
     }
 
     static boolean requiresEmbeddedRouting(

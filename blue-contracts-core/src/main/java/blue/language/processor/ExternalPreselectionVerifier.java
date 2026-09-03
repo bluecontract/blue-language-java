@@ -314,7 +314,7 @@ final class ExternalPreselectionVerifier {
                                             "runtimeWorkSession"));
                     verifySubscriptionLaws(
                             evaluation, scopePath, snapshot.key());
-                    verifyActiveInterval(
+                    ExternalEvidenceVerificationSupport.verifyActiveInterval(
                             snapshot,
                             activeInterval,
                             evaluation,
@@ -705,57 +705,6 @@ final class ExternalPreselectionVerifier {
             builder.subscriptionKey(key);
         }
         return builder.build();
-    }
-
-    private void verifyActiveInterval(
-            EffectiveContractSnapshot snapshot,
-            SubscriptionDelta.Entry interval,
-            ExternalSubscriptionEvaluation evaluation,
-            String scopePath,
-            long indexedRootRevision) {
-        List<String> mismatches = new ArrayList<>();
-        addMismatch(mismatches, "scopePath",
-                scopePath.equals(interval.scopePath()));
-        addMismatch(mismatches, "channelKey",
-                snapshot.key().equals(interval.channelKey()));
-        addMismatch(mismatches, "effectiveTypeBlueId",
-                snapshot.effectiveTypeBlueId().equals(
-                        interval.effectiveTypeBlueId()));
-        addMismatch(mismatches, "sourceContributionNodeBlueIds",
-                snapshot.sourceContributionNodeBlueIds().equals(
-                        interval.sourceContributionNodeBlueIds()));
-        addMismatch(mismatches, "order",
-                snapshot.order() == interval.order());
-        addMismatch(mismatches, "subscriptionKeys",
-                evaluation.channelKeys.equals(interval.subscriptionKeys()));
-        addMismatch(mismatches, "checkpointDomainBlueId",
-                evaluation.checkpointDomainBlueId.equals(
-                        interval.checkpointDomainBlueId()));
-        addMismatch(mismatches, "dependencies",
-                evaluation.dependencies.equals(interval.dependencies()));
-        if (!mismatches.isEmpty()) {
-            throw ExternalEvidenceVerificationSupport.invalid(
-                    "Retained active subscription interval header mismatch "
-                            + mismatches + " "
-                            + "at " + scopePath + "/" + snapshot.key());
-        }
-        if (interval.activationRootRevision() == null
-                || interval.activationRootRevision() > indexedRootRevision
-                || interval.endAtRootRevision() != null) {
-            throw ExternalEvidenceVerificationSupport.invalid(
-                    "Retained subscription interval is not active at indexed "
-                            + "Root revision " + indexedRootRevision + " at "
-                            + scopePath + "/" + snapshot.key());
-        }
-    }
-
-    private static void addMismatch(
-            List<String> mismatches,
-            String field,
-            boolean matches) {
-        if (!matches) {
-            mismatches.add(field);
-        }
     }
 
     private boolean reachableScope(
