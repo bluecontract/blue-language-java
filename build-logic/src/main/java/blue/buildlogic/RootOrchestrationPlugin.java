@@ -31,6 +31,7 @@ import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.JavaExec;
 import org.gradle.api.tasks.Delete;
+import org.gradle.api.tasks.Exec;
 import org.gradle.api.tasks.GradleBuild;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -316,6 +317,21 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                         PUBLISHED_MODULES,
                         apiUnion,
                         moduleStructure);
+        TaskProvider<Exec> verifyEmptySentinelAudit = generatedPythonCheck(
+                project,
+                "verifyEmptySentinelAudit",
+                "Verifies the exhaustive production empty-sentinel classification inventory.",
+                "blue-conformance/src/main/tools/generate_empty_sentinel_audit.py");
+        TaskProvider<Exec> verifyIdentityImpactInventory = generatedPythonCheck(
+                project,
+                "verifyIdentityImpactInventory",
+                "Verifies the exact old-to-new Language/Contracts identity migration inventory.",
+                "blue-conformance/src/main/tools/generate_identity_impact_inventory.py");
+        TaskProvider<Exec> verifyAggregateReleaseManifest = generatedPythonCheck(
+                project,
+                "verifyAggregateReleaseManifest",
+                "Verifies that the aggregate release manifest binds authoritative package inputs.",
+                "blue-conformance/src/main/tools/regenerate_aggregate_release_manifest.py");
 
         project.getGradle().projectsEvaluated(gradle -> configureModuleGraph(
                 project,
@@ -356,6 +372,9 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 sourceRelease.verification,
                 semanticEvidence.releaseEvidenceVerification,
                 semanticEvidence.semanticBaselineVerification,
+                verifyEmptySentinelAudit,
+                verifyIdentityImpactInventory,
+                verifyAggregateReleaseManifest,
                 verifyReceipt));
         FinalQualityOrchestration.register(
                 project,
@@ -367,6 +386,20 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 documentation);
         lifecycle(project, "rcVerify", "Alias for releaseVerify.")
                 .configure(task -> task.dependsOn(releaseVerify));
+    }
+
+    private static TaskProvider<Exec> generatedPythonCheck(
+            Project project,
+            String name,
+            String description,
+            String script) {
+        return project.getTasks().register(name, Exec.class, task -> {
+            task.setGroup(GROUP);
+            task.setDescription(description);
+            task.setWorkingDir(project.getRootDir());
+            task.commandLine(
+                    "python3", script, "--repository-root", ".", "--check");
+        });
     }
 
     private static void configureRootJava(Project project) {
