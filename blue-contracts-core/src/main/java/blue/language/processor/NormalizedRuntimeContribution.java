@@ -48,7 +48,7 @@ final class NormalizedRuntimeContribution {
                 Objects.requireNonNull(typeIdentities, "typeIdentities"));
         NodeToBlueIdInput.stripResolvedBlueIdMetadata(source);
         if (snapshotManager == null) {
-            return FrozenNode.fromResolvedNode(source);
+            return FrozenNode.fromNode(source);
         }
 
         Set<String> preserved = new LinkedHashSet<>(

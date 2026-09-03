@@ -35,6 +35,28 @@ final class ManagedRootSettlementServiceTest {
             DirectBlueIdCalculator.calculateBlueId(SOURCE_TYPE);
 
     @Test
+    void freezesManagerlessNormalizedChannelsAsCanonicalSource() {
+        // given
+        Node exactChannel = sourceContract();
+
+        // when
+        FrozenNode normalized = NormalizedRuntimeContribution.channel(
+                FrozenNode.fromNode(exactChannel),
+                SOURCE_BLUE_ID,
+                Collections.<String>emptyList(),
+                CanonicalTypeIdentityLookup.incomplete(),
+                null);
+
+        // then
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(exactChannel),
+                normalized.blueId());
+        assertEquals(
+                FrozenNode.fromNode(exactChannel).resolvedStructuralKey(),
+                normalized.resolvedStructuralKey());
+    }
+
+    @Test
     void normalizesWholeChannelReferencesWithoutChangingSourceEvidence() {
         // given
         Node exactChannel = sourceContract();
