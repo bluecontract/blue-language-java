@@ -69,6 +69,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 
 /** Builds immutable fixture inputs, providers, checkpoints, and delivery plans. */
@@ -811,6 +812,11 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                 registry.exactSourceFieldsByType().get(typeBlueId));
         Node header = new Node().type(
                 new Node().blueId(typeBlueId));
+        List<String> executableBodyFields =
+                registry.executableBodyFieldsByType().get(typeBlueId);
+        Set<String> executable = executableBodyFields != null
+                ? new LinkedHashSet<>(executableBodyFields)
+                : Collections.<String>emptySet();
         if (effectiveContract.getProperties() != null) {
             List<String> names =
                     new ArrayList<>(
@@ -821,12 +827,14 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                     ExternalOrderKey
                             ::compareTextCodePoints);
             for (String name : names) {
-                header.properties(
-                        name,
-                        effectiveContract
-                                .getProperties()
-                                .get(name)
-                                .clone());
+                if (!executable.contains(name)) {
+                    header.properties(
+                            name,
+                            effectiveContract
+                                    .getProperties()
+                                    .get(name)
+                                    .clone());
+                }
             }
         }
         List<String> deterministicDependencies =
@@ -844,8 +852,7 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
                     effectiveContract.getProperties()
                             .get(ContractsFixtureConstants.Field.EVENT);
             deterministicDependencies.add(
-                    FrozenNode.fromResolvedNode(event)
-                            .blueId());
+                    sourceIdentity(event, providerNodes, false).blueId());
         }
         FixtureResolvedSourceProjection.project(
                 header,
