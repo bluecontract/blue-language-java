@@ -3359,13 +3359,13 @@ The canonical fixture package is part of the Blue Language 1.0 conformance relea
 Its fixture-package identity is:
 
 ```text
-<TO-BE-REGENERATED-AFTER-IMPLEMENTATION>
+sha256:c59f2bc4e4ceafb8d7e20875003fa281f79f2f77ac7ae991fcebdc6dde0977cc
 ```
 
 The canonical core-registry package identity bound by this fixture package is:
 
 ```text
-<TO-BE-REGENERATED-AFTER-IMPLEMENTATION>
+sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321
 ```
 
 The release manifest MUST bind this exact fixture package and the canonical registry manifest. Any fixture or registry change requires a newly calculated package identity.

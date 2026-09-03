@@ -343,6 +343,22 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
                 readNode(requirePresent(spec, FixtureField.SOURCE)), limits);
         assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
         assertDemandedValue(spec, result, limits);
+        if (spec.has(FixtureField.EXPECTED_ABSENT)) {
+            assertEquals(spec.get(FixtureField.EXPECTED_ABSENT).asBoolean(),
+                    result.isAbsent());
+        }
+        if (spec.has(FixtureField.EXPECTED_OUTSTANDING_BLUE_IDS)) {
+            assertTextSet(
+                    spec.get(FixtureField.EXPECTED_OUTSTANDING_BLUE_IDS),
+                    result.outstandingBlueIds());
+        }
+        if (spec.has(FixtureField.EXPECTED_PROVIDER_OUTCOME)) {
+            assertEquals(
+                    providerOutcome(requireText(
+                            spec,
+                            FixtureField.EXPECTED_PROVIDER_OUTCOME)),
+                    result.providerOutcome().orElse(null));
+        }
         assertRequestedIds(spec.get(FixtureField.EXPECTED_REQUESTED_BLUE_IDS),
                 provider.provider.requestedBlueIds, true);
         assertRequestedIds(spec.get(FixtureField.EXPECTED_NOT_REQUESTED_BLUE_IDS),

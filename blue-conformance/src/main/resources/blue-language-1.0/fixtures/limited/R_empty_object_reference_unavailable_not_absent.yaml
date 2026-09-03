@@ -1,6 +1,6 @@
 id: R_empty_object_reference_unavailable_not_absent
-category: LimitedResolution
-operation: resolveLimited
+category: LimitedExpansion
+operation: expandLimited
 description: unavailable evidence for an exact empty-object reference is incomplete, never semantic absence
 source:
   x:
@@ -15,3 +15,5 @@ expectedAbsent: false
 expectedOutstandingBlueIds:
 - 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
 expectedProviderOutcome: Unavailable
+expectedRequestedBlueIds:
+- 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK

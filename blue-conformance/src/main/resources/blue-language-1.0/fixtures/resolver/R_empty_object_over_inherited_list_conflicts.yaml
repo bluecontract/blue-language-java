@@ -10,15 +10,15 @@ variants:
   source: {}
   expectedValid: true
   expectedValue:
-    /x/0: A
-    /x/1: B
+    /x/items/0: A
+    /x/items/1: B
 - name: source-null
   source:
     x: null
   expectedValid: true
   expectedValue:
-    /x/0: A
-    /x/1: B
+    /x/items/0: A
+    /x/items/1: B
 - name: exact-empty-object
   source:
     x: {}
