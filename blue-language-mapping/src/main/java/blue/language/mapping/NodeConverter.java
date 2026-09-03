@@ -13,6 +13,10 @@ public class NodeConverter implements Converter<Node> {
 
     @Override
     public Node convert(Node node, Type targetType) {
+        if (node == null) {
+            return null;
+        }
+        MappingPayload.requireCompatible(node, targetType, "node mapping");
         if (targetType instanceof Class<?> && Node.class.isAssignableFrom((Class<?>) targetType)) {
             return node.clone();
         } else {

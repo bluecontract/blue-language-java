@@ -16,6 +16,15 @@ import java.util.Objects;
 /**
  * Public entry point for recursively materializing Blue nodes as Java object
  * graphs.
+ *
+ * <p>Mapping preserves primary payload kind. Object payloads map to maps,
+ * {@link Object}, or constructible object models; list payloads map to arrays,
+ * collections, or {@code Object}; and scalar payloads map to supported scalar
+ * targets, enums, or {@code Object}. Absent a compatible registered Blue type
+ * mapping, {@code Object} is an explicit dynamic target: it produces a map,
+ * list, or scalar value rather than erasing the payload shape. A Java
+ * {@code null} node means host-side absence. A parsed Source-null wrapper is
+ * not semantic content and is rejected if it reaches this boundary.</p>
  */
 public class NodeToObjectConverter {
     private final TypeClassResolver typeClassResolver;

@@ -55,9 +55,10 @@ public class MapConverter implements Converter<Map<?, ?>> {
 
     @Override
     public Map<?, ?> convert(Node node, Type targetType) {
-        if (node == null || node.getProperties() == null) {
+        if (node == null) {
             return null;
         }
+        MappingPayload.requireCompatible(node, targetType, "map mapping");
 
         Class<?> rawType = getRawType(targetType);
         Map<Object, Object> result;
@@ -79,9 +80,15 @@ public class MapConverter implements Converter<Map<?, ?>> {
         }
 
         for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
-            Object key = convertKey(entry.getKey(), keyType);
-            Object value = convertValue(entry.getValue(), valueType);
-            result.put(key, value);
+            try {
+                Object key = convertKey(entry.getKey(), keyType);
+                Object value = convertValue(entry.getValue(), valueType);
+                result.put(key, value);
+            } catch (RuntimeException e) {
+                throw MappingPayload.nestedFailure(
+                        "map value for key '" + entry.getKey() + "'",
+                        e);
+            }
         }
 
         return result;
@@ -105,24 +112,10 @@ public class MapConverter implements Converter<Map<?, ?>> {
             Converter<?> converter = converterFactory.getConverter(valueNode, resolvedClass);
             return converter.convert(valueNode, resolvedClass);
         } else {
-            if (valueType == Object.class) {
-                return convertToAppropriateType(valueNode);
-            } else {
-                Converter<?> converter = converterFactory.getConverter(valueNode, getRawType(valueType));
-                return converter.convert(valueNode, valueType);
-            }
-        }
-    }
-
-    private Object convertToAppropriateType(Node valueNode) {
-        if (valueNode.getValue() != null) {
-            return valueNode.getValue();
-        } else if (valueNode.getProperties() != null) {
-            return convert(valueNode, Map.class);
-        } else if (valueNode.getItems() != null) {
-            return converterFactory.getConverter(valueNode, List.class).convert(valueNode, List.class);
-        } else {
-            return null;
+            Converter<?> converter = converterFactory.getConverter(
+                    valueNode,
+                    getRawType(valueType));
+            return converter.convert(valueNode, valueType);
         }
     }
 

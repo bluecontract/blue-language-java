@@ -6,7 +6,6 @@ import blue.language.model.BlueDescription;
 import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
-import blue.language.model.Nodes;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -68,21 +67,50 @@ public class ComplexObjectConverter implements Converter<Object> {
             return null;
         }
 
+        MappingPayload.Kind payloadKind = MappingPayload.requireCompatible(
+                node,
+                targetType,
+                "mapping root");
+
         Class<?> resolvedClass = converterFactory.resolveClass(
                 node, typeClassResolver);
         Class<?> classToInstantiate;
 
         if (prioritizeTargetType) {
-            classToInstantiate = getRawType(targetType);
+            classToInstantiate = MappingPayload.rawType(targetType);
         } else {
-            classToInstantiate = resolvedClass != null ? resolvedClass : getRawType(targetType);
+            classToInstantiate = resolvedClass != null
+                    ? resolvedClass
+                    : MappingPayload.rawType(targetType);
+        }
+
+        if (classToInstantiate == Object.class && resolvedClass == null) {
+            switch (payloadKind) {
+                case SCALAR:
+                    return ValueConverter.convertValue(node, Object.class);
+                case LIST:
+                    return converterFactory.getConverter(node, List.class)
+                            .convert(node, List.class);
+                case OBJECT:
+                    return converterFactory.convertMap(node, Map.class);
+                case NONE:
+                    throw MappingPayload.failure(
+                            "mapping root",
+                            "metadata-only node has no resolvable dynamic "
+                                    + "Java target");
+                default:
+                    throw new IllegalStateException(
+                            "Unhandled payload kind: " + payloadKind);
+            }
         }
 
         if (classToInstantiate.isPrimitive() || ValueConverter.isSupportedType(classToInstantiate)) {
             return ValueConverter.convertValue(node, classToInstantiate);
         }
 
-        if (resolvedClass != null && getRawType(targetType).isAssignableFrom(resolvedClass)) {
+        if (resolvedClass != null
+                && MappingPayload.rawType(targetType)
+                        .isAssignableFrom(resolvedClass)) {
             classToInstantiate = resolvedClass;
         }
 
@@ -90,8 +118,15 @@ public class ComplexObjectConverter implements Converter<Object> {
             Object instance = objectFactories.create(classToInstantiate);
             convertFields(node, classToInstantiate, instance);
             return instance;
-        } catch (Exception e) {
-            throw new RuntimeException("Error creating instance of " + classToInstantiate.getName(), e);
+        } catch (RuntimeException e) {
+            throw MappingPayload.nestedFailure(
+                    "mapping target " + classToInstantiate.getName(),
+                    e);
+        } catch (IllegalAccessException e) {
+            throw new IllegalArgumentException(
+                    "mapping target " + classToInstantiate.getName()
+                            + ": cannot access mapped field",
+                    e);
         }
     }
 
@@ -121,25 +156,20 @@ public class ComplexObjectConverter implements Converter<Object> {
                     Node fieldNode = propertyNode(node, propertyName);
 
                     if (fieldNode != null) {
-                        if (Nodes.isEmptyNode(fieldNode)) {
-                            // Set to null for explicitly defined null fields
-                            fieldValue = null;
-                        } else {
-                            Type fieldType = field.getGenericType();
-                            Class<?> resolvedFieldClass =
-                                    converterFactory.resolveClass(
-                                            fieldNode,
-                                            typeClassResolver);
+                        Type fieldType = field.getGenericType();
+                        Class<?> resolvedFieldClass =
+                                converterFactory.resolveClass(
+                                        fieldNode,
+                                        typeClassResolver);
 
-                            if (resolvedFieldClass != null && field.getType().isAssignableFrom(resolvedFieldClass)) {
-                                Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, resolvedFieldClass);
-                                fieldValue = fieldConverter.convert(fieldNode, resolvedFieldClass);
-                            } else if (Map.class.isAssignableFrom(field.getType())) {
-                                fieldValue = converterFactory.convertMap(fieldNode, fieldType);
-                            } else {
-                                Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, field.getType());
-                                fieldValue = fieldConverter.convert(fieldNode, fieldType);
-                            }
+                        if (resolvedFieldClass != null && field.getType().isAssignableFrom(resolvedFieldClass)) {
+                            Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, resolvedFieldClass);
+                            fieldValue = fieldConverter.convert(fieldNode, resolvedFieldClass);
+                        } else if (Map.class.isAssignableFrom(field.getType())) {
+                            fieldValue = converterFactory.convertMap(fieldNode, fieldType);
+                        } else {
+                            Converter<?> fieldConverter = converterFactory.getConverter(fieldNode, field.getType());
+                            fieldValue = fieldConverter.convert(fieldNode, fieldType);
                         }
                     } else if (BlueLanguageConstants.OBJECT_NAME.equals(propertyName)) {
                         fieldValue = node.getName();
@@ -154,8 +184,11 @@ public class ComplexObjectConverter implements Converter<Object> {
                 }
 
                 field.set(instance, fieldValue);
-            } catch (Exception e) {
-                throw new RuntimeException("Error converting field: " + fieldName + " of type: " + field.getGenericType(), e);
+            } catch (RuntimeException e) {
+                throw MappingPayload.nestedFailure(
+                        "field '" + fieldName + "' ("
+                                + field.getGenericType().getTypeName() + ")",
+                        e);
             }
         }
     }
@@ -189,19 +222,4 @@ public class ComplexObjectConverter implements Converter<Object> {
         return node.getProperties() != null ? node.getProperties().get(propertyName) : null;
     }
 
-    private Class<?> getRawType(Type type) {
-        if (type instanceof Class<?>) {
-            return (Class<?>) type;
-        } else if (type instanceof ParameterizedType) {
-            return getRawType(((ParameterizedType) type).getRawType());
-        } else if (type instanceof GenericArrayType) {
-            Type componentType = ((GenericArrayType) type).getGenericComponentType();
-            return Array.newInstance(getRawType(componentType), 0).getClass();
-        } else if (type instanceof TypeVariable) {
-            return Object.class;
-        } else if (type instanceof WildcardType) {
-            return getRawType(((WildcardType) type).getUpperBounds()[0]);
-        }
-        throw new IllegalArgumentException("Unsupported type: " + type);
-    }
 }

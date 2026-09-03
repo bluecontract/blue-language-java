@@ -14,6 +14,10 @@ public class EnumConverter implements Converter<Enum<?>> {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Enum<?> convert(Node node, Type targetType) {
+        if (node == null) {
+            return null;
+        }
+        MappingPayload.requireCompatible(node, targetType, "enum mapping");
         if (targetType instanceof Class<?> && ((Class<?>) targetType).isEnum()) {
             String value = node.getValue().toString();
             return Enum.valueOf((Class<Enum>) targetType, value);

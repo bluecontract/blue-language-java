@@ -15,8 +15,9 @@ import static blue.language.model.wire.BlueLanguageConstants.*;
  * Converts Blue scalar payloads to supported Java scalar classes.
  *
  * <p>The Blue primitive type identity controls interpretation when present.
- * Absent values become null for reference types and Java defaults for
- * primitives. Numeric narrowing follows the corresponding JDK number
+ * A host-absent node becomes null for reference types and the Java default for
+ * primitives. A present node without a scalar payload is not absence and is
+ * rejected. Numeric narrowing follows the corresponding JDK number
  * conversion.</p>
  */
 public class ValueConverter {
@@ -28,18 +29,29 @@ public class ValueConverter {
     /**
      * Converts one scalar node.
      *
-     * @param node source scalar node, possibly {@code null}
+     * @param node source scalar node, or {@code null} for host absence
      * @param targetClass requested Java scalar class
      * @return converted value, or {@code null} for an absent reference value
      * @throws IllegalArgumentException when the requested conversion is not
      *                                  supported
      */
     public static Object convertValue(Node node, Class<?> targetClass) {
-        if (node == null || node.getValue() == null) {
+        if (node == null) {
             if (targetClass.isPrimitive()) {
                 return getDefaultPrimitiveValue(targetClass);
             }
             return null;
+        }
+
+        MappingPayload.Kind payloadKind = MappingPayload.requireCompatible(
+                node,
+                targetClass,
+                "scalar mapping");
+        if (payloadKind != MappingPayload.Kind.SCALAR) {
+            throw MappingPayload.failure(
+                    "scalar mapping",
+                    "expected scalar payload but found "
+                            + payloadKind.displayName());
         }
 
         String typeBlueId = node.getType() != null ? node.getType().getBlueId() : null;
@@ -80,6 +92,7 @@ public class ValueConverter {
     }
 
     private static Object convertFromBigDecimal(BigDecimal value, Class<?> targetClass) {
+        if (targetClass == Object.class) return value;
         if (targetClass == BigDecimal.class) return value;
         if (targetClass == double.class || targetClass == Double.class) return value.doubleValue();
         if (targetClass == float.class || targetClass == Float.class) return value.floatValue();
@@ -91,6 +104,7 @@ public class ValueConverter {
     }
 
     private static Object convertFromBigInteger(BigInteger value, Class<?> targetClass) {
+        if (targetClass == Object.class) return value;
         if (targetClass == BigInteger.class) return value;
         if (targetClass == int.class || targetClass == Integer.class) return value.intValue();
         if (targetClass == long.class || targetClass == Long.class) return value.longValue();
@@ -104,6 +118,7 @@ public class ValueConverter {
     }
 
     private static Object convertFromBoolean(Boolean value, Class<?> targetClass) {
+        if (targetClass == Object.class) return value;
         if (targetClass == boolean.class || targetClass == Boolean.class) return value;
         if (targetClass == String.class) return value.toString();
         throw new IllegalArgumentException("Cannot convert Boolean to " + targetClass);

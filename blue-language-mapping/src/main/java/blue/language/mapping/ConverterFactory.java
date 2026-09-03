@@ -135,7 +135,8 @@ public class ConverterFactory {
             return new NullConverter();
         }
 
-        Class<?> rawType = getRawType(targetType);
+        MappingPayload.requireCompatible(node, targetType, "mapping root");
+        Class<?> rawType = MappingPayload.rawType(targetType);
 
         if (rawType.isEnum()) {
             return converters.get(Enum.class);
@@ -157,22 +158,6 @@ public class ConverterFactory {
                     objectFactories);
         }
         return converter;
-    }
-
-    private Class<?> getRawType(Type type) {
-        if (type instanceof Class<?>) {
-            return (Class<?>) type;
-        } else if (type instanceof ParameterizedType) {
-            return getRawType(((ParameterizedType) type).getRawType());
-        } else if (type instanceof GenericArrayType) {
-            Type componentType = ((GenericArrayType) type).getGenericComponentType();
-            return Array.newInstance(getRawType(componentType), 0).getClass();
-        } else if (type instanceof TypeVariable) {
-            return Object.class;
-        } else if (type instanceof WildcardType) {
-            return getRawType(((WildcardType) type).getUpperBounds()[0]);
-        }
-        throw new IllegalArgumentException("Unsupported type: " + type);
     }
 
     /**

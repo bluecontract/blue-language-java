@@ -56,6 +56,11 @@ public class CollectionConverter implements Converter<Object> {
             return null;
         }
 
+        MappingPayload.requireCompatible(
+                node,
+                targetType,
+                "collection mapping");
+
         Class<?> rawType = getRawType(targetType);
         if (rawType.isArray()) {
             return convertToArray(node, getComponentType(targetType));
@@ -67,10 +72,6 @@ public class CollectionConverter implements Converter<Object> {
     }
 
     private Object convertToCollection(Node node, Type targetType, Class<?> rawType) {
-        if (node == null || Nodes.isEmptyNode(node)) {
-            return null;
-        }
-
         if (rawType.isArray()) {
             return convertToArray(node, getComponentType(targetType));
         }
@@ -88,21 +89,28 @@ public class CollectionConverter implements Converter<Object> {
 
         Type itemType = getItemType(targetType);
 
-        for (Node item : node.getItems()) {
-            if (item == null) {
-                result.add(null);
-            } else {
-                Class<?> resolvedClass = converterFactory.resolveClass(
-                        item, typeClassResolver);
-                Object convertedItem;
-                if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
-                    Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
-                    convertedItem = itemConverter.convert(item, resolvedClass);
+        for (int index = 0; index < node.getItems().size(); index++) {
+            Node item = node.getItems().get(index);
+            try {
+                if (item == null || Nodes.isEmptyPlaceholder(item)) {
+                    result.add(null);
                 } else {
-                    Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
-                    convertedItem = itemConverter.convert(item, itemType);
+                    Class<?> resolvedClass = converterFactory.resolveClass(
+                            item, typeClassResolver);
+                    Object convertedItem;
+                    if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
+                        Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
+                        convertedItem = itemConverter.convert(item, resolvedClass);
+                    } else {
+                        Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
+                        convertedItem = itemConverter.convert(item, itemType);
+                    }
+                    result.add(convertedItem);
                 }
-                result.add(convertedItem);
+            } catch (RuntimeException e) {
+                throw MappingPayload.nestedFailure(
+                        "collection item [" + index + "]",
+                        e);
             }
         }
 
@@ -149,19 +157,26 @@ public class CollectionConverter implements Converter<Object> {
         if (node.getItems() == null) {
             return result;
         }
-        for (Node item : node.getItems()) {
-            if (item == null) {
-                result.add(null);
-            } else {
-                Class<?> resolvedClass = converterFactory.resolveClass(
-                        item, typeClassResolver);
-                if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
-                    Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
-                    result.add(itemConverter.convert(item, resolvedClass));
+        for (int index = 0; index < node.getItems().size(); index++) {
+            Node item = node.getItems().get(index);
+            try {
+                if (item == null || Nodes.isEmptyPlaceholder(item)) {
+                    result.add(null);
                 } else {
-                    Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
-                    result.add(itemConverter.convert(item, itemType));
+                    Class<?> resolvedClass = converterFactory.resolveClass(
+                            item, typeClassResolver);
+                    if (resolvedClass != null && isAssignableToItemType(resolvedClass, itemType)) {
+                        Converter<?> itemConverter = converterFactory.getConverter(item, resolvedClass);
+                        result.add(itemConverter.convert(item, resolvedClass));
+                    } else {
+                        Converter<?> itemConverter = converterFactory.getConverter(item, getRawType(itemType));
+                        result.add(itemConverter.convert(item, itemType));
+                    }
                 }
+            } catch (RuntimeException e) {
+                throw MappingPayload.nestedFailure(
+                        "array item [" + index + "]",
+                        e);
             }
         }
         return result;
