@@ -4,12 +4,12 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 526,
-    "publicTypeIdentity": "sha256:9fbe2aac00dcc3cb11a41342ad053dabe62490a96901487bdc9bc9f9a6c7cc0e",
+    "publicProductionTypeCount": 534,
+    "publicTypeIdentity": "sha256:496ec9c0de6995a3f840915160d71a3199c882110be0aaddd25ba6baa342b267",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
-      "internal-type-removed-from-public-surface": 259,
-      "new-supported-api-spi": 67
+      "internal-type-removed-from-public-surface": 272,
+      "new-supported-api-spi": 62
     }
   },
   "allowedClassifications": [
@@ -798,6 +798,28 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.identity.CanonicalTypeIdentityEvidence",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityEvidence.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.CanonicalTypeIdentityEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.identity.CanonicalTypeIdentityLookup",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityLookup.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.identity.CanonicalTypeIdentityLookup",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
       "type": "blue.language.identity.CircularSetIdentityCalculator",
       "sourcePath": "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
       "currentArtifact": "blue.language:blue-language-core",
@@ -1264,28 +1286,6 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
-      "type": "blue.language.merge.Merger$SnapshotResolution",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/merge/Merger.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.merge.Merger$SnapshotResolution",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
-      "type": "blue.language.merge.Merger$VerifiedReferenceResolution",
-      "sourcePath": "blue-language-core/src/main/java/blue/language/merge/Merger.java",
-      "currentArtifact": "blue.language:blue-language-core",
-      "targetModule": ":blue-language-core",
-      "targetType": "blue.language.merge.Merger$VerifiedReferenceResolution",
-      "previousTypes": [],
-      "relocationHistory": [],
-      "classification": "internal-type-removed-from-public-surface",
-      "reason": "Fixture implementation or legacy adapter becomes module-internal."
-    },
-    {
       "type": "blue.language.merge.MergingProcessor",
       "sourcePath": "blue-language-core/src/main/java/blue/language/merge/MergingProcessor.java",
       "currentArtifact": "blue.language:blue-language-core",
@@ -1409,6 +1409,17 @@
       "relocationHistory": [],
       "classification": "new-supported-api-spi",
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.merge.TypeEvidenceResolution",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/merge/TypeEvidenceResolution.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.merge.TypeEvidenceResolution",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.merge.VerifiedReferenceResolution",
@@ -2480,6 +2491,17 @@
       "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
+      "type": "blue.language.processor.ExactEventIdentityEvidence",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ExactEventIdentityEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ExactEventIdentityEvidence",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
       "type": "blue.language.processor.ExecutableBodySourceDescriptor",
       "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodySourceDescriptor.java",
       "currentArtifact": "blue.language:blue-contracts-core",
@@ -3215,8 +3237,8 @@
       "targetType": "blue.language.processor.ManagedGeneralizationWrite",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.ManagedProcessEmbeddedPath",
@@ -3635,6 +3657,17 @@
       "relocationHistory": [],
       "classification": "new-supported-api-spi",
       "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+    },
+    {
+      "type": "blue.language.processor.ProcessorStateReferencePaths",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorStateReferencePaths.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.ProcessorStateReferencePaths",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.ProcessorStatus",
@@ -4271,8 +4304,8 @@
       "targetType": "blue.language.processor.closure.ClosureProcessRetryInput",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ClosureProcessor",
@@ -4458,8 +4491,41 @@
       "targetType": "blue.language.processor.closure.DocumentTransitionEvidence",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentTransitionEvidence$AuthoredContractPatch",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentTransitionEvidence$AuthoredContractPatch",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentTransitionEvidence$GeneratedGeneralizationWrite",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentTransitionEvidence$GeneratedGeneralizationWrite",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.DocumentTransitionEvidence$Operation",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/DocumentTransitionEvidence.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.DocumentTransitionEvidence$Operation",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ExactNodeDemand",
@@ -4614,8 +4680,8 @@
       "targetType": "blue.language.processor.closure.ManagedDocumentTransitionReceipt",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ManagedOccurrenceBinding",
@@ -4647,8 +4713,8 @@
       "targetType": "blue.language.processor.closure.ManagedOccurrenceEvidenceResolution",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ManagedRevisionCause",
@@ -4669,8 +4735,8 @@
       "targetType": "blue.language.processor.closure.ManagedRootEventOccurrence",
       "previousTypes": [],
       "relocationHistory": [],
-      "classification": "new-supported-api-spi",
-      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
     },
     {
       "type": "blue.language.processor.closure.ManagedScopeKey",
@@ -5058,6 +5124,17 @@
       "relocationHistory": [],
       "classification": "compatible-relocation-through-aggregate-facade",
       "reason": "Established supported use moved to its published module; runtime modules remain reachable through the aggregate facade."
+    },
+    {
+      "type": "blue.language.processor.model.EmbeddedCollectionEventChannel",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/model/EmbeddedCollectionEventChannel.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.model.EmbeddedCollectionEventChannel",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "new-supported-api-spi",
+      "reason": "Supported API or SPI introduced after the 1.0 API baseline."
     },
     {
       "type": "blue.language.processor.model.EmbeddedEventDelivery",
@@ -5735,6 +5812,17 @@
       "currentArtifact": "blue.language:blue-language-core",
       "targetModule": ":blue-language-core",
       "targetType": "blue.language.runtime.LanguageProcessing",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.runtime.LanguageProcessing$ExactResolutionOverlay",
+      "sourcePath": "blue-language-core/src/main/java/blue/language/runtime/LanguageProcessing.java",
+      "currentArtifact": "blue.language:blue-language-core",
+      "targetModule": ":blue-language-core",
+      "targetType": "blue.language.runtime.LanguageProcessing$ExactResolutionOverlay",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",

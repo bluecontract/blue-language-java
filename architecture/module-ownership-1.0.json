@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 748,
-    "productionResourceCount": 749,
-    "productionSourcePathIdentity": "sha256:10d7ca1fc9c364f74ba4c1dcf1d76dff6950a408c8aaa2a9880cda053f19c07e",
-    "productionResourcePathIdentity": "sha256:8e70a74e54701ead9d8756d767c7289ca1ad99265bb5425270791bec940e5b12"
+    "productionSourceCount": 785,
+    "productionResourceCount": 808,
+    "productionSourcePathIdentity": "sha256:fbc4d702db50965f45d3308845d472d6a8592d53892a5ea706093b88102e1e74",
+    "productionResourcePathIdentity": "sha256:805a241d432bfe00a2e2d39089e785223efa416ed20f33adc2bb240bf150bbb1"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -378,6 +378,20 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FixtureResolvedSourceProjection.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FixtureResolvedSourceProjection.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FixtureSourceIdentityResolver.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FixtureSourceIdentityResolver.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureAssertions.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
@@ -609,10 +623,31 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalEffectSourceProjection.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalEffectSourceProjection.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalIdentityEvidence.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalIdentityEvidence.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalIdentityGasProjection.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalIdentityGasProjection.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalTypeIdentityEvidenceUnion.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalTypeIdentityEvidenceUnion.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -760,6 +795,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractHeaderLoader.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractHeaderMappingEvidence.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ContractHeaderMappingEvidence.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1057,6 +1099,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedCollectionEventChannelSupport.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedCollectionEventChannelSupport.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedConcretePath.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1155,6 +1204,20 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ExactContractNodeFieldRestorer.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ExactContractNodeFieldRestorer.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ExactEventIdentityEvidence.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ExactEventIdentityEvidence.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodyLoader.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1173,6 +1236,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodySourceDescriptor.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodyTypeIdentity.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodyTypeIdentity.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1771,17 +1841,17 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootSurfaceResolver.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedRootSurfaceResolver.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedSemanticGasBridge.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedSemanticGasBridge.java",
-      "targetPackage": "blue.language.processor"
-    },
-    {
-      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/MaterializationProvenance.java",
-      "currentPackage": "blue.language.processor",
-      "targetModule": ":blue-contracts-core",
-      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/MaterializationProvenance.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1869,6 +1939,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningCanonicalIdentityEvidence.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningCanonicalIdentityEvidence.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningContext.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1876,10 +1953,24 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningContextFactory.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningContextFactory.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningEngine.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningEngine.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningPathInspection.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningPathInspection.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1957,6 +2048,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingCheckpointTransaction.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingCommittedEvidence.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingCommittedEvidence.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -2170,6 +2268,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingSnapshotEvidence.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingSnapshotEvidence.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessingSnapshotManager.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -2324,6 +2429,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorStateReferencePaths.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorStateReferencePaths.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ProcessorStatus.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -2356,6 +2468,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/RegisteredContractScopeIdentitySnapshotManager.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ResolvedScopeView.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ResolvedScopeView.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -2566,6 +2685,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceRules.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceTypeInspector.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceTypeInspector.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -2947,6 +3073,13 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ContainingEventTargetPlanner.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ContainingEventTargetPlanner.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/CyclicCanonicalLimitProjection.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
@@ -3035,6 +3168,13 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FinalizedDocumentEvidence.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenContainingEventTarget.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenContainingEventTarget.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {
@@ -3287,6 +3427,13 @@
       "currentPackage": "blue.language.processor.model",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/model/DocumentUpdateChannel.java",
+      "targetPackage": "blue.language.processor.model"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/model/EmbeddedCollectionEventChannel.java",
+      "currentPackage": "blue.language.processor.model",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/model/EmbeddedCollectionEventChannel.java",
       "targetPackage": "blue.language.processor.model"
     },
     {
@@ -3724,6 +3871,20 @@
       "targetPackage": "blue.language.identity"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityEvidence.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityEvidence.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityLookup.java",
+      "currentPackage": "blue.language.identity",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityLookup.java",
+      "targetPackage": "blue.language.identity"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
       "currentPackage": "blue.language.identity",
       "targetModule": ":blue-language-core",
@@ -3843,10 +4004,24 @@
       "targetPackage": "blue.language.matching"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/matching/FrozenTypeMatcherCacheKeys.java",
+      "currentPackage": "blue.language.matching",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/matching/FrozenTypeMatcherCacheKeys.java",
+      "targetPackage": "blue.language.matching"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/matching/LabelNeutralTypeIdentity.java",
       "currentPackage": "blue.language.matching",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/matching/LabelNeutralTypeIdentity.java",
+      "targetPackage": "blue.language.matching"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/matching/MatchingCanonicalTypeIdentityEvidence.java",
+      "currentPackage": "blue.language.matching",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/matching/MatchingCanonicalTypeIdentityEvidence.java",
       "targetPackage": "blue.language.matching"
     },
     {
@@ -3892,10 +4067,38 @@
       "targetPackage": "blue.language.merge"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/CanonicalTypeIdentityGraphTraversal.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/CanonicalTypeIdentityGraphTraversal.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/CanonicalTypeIdentityIndex.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/CanonicalTypeIdentityIndex.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/CanonicalTypeIdentityRecorder.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/CanonicalTypeIdentityRecorder.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java",
       "currentPackage": "blue.language.merge",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/DeclaredTypeContributionResolver.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/DeclaredTypeContributionResolver.java",
       "targetPackage": "blue.language.merge"
     },
     {
@@ -3917,6 +4120,13 @@
       "currentPackage": "blue.language.merge",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/merge/IncrementalValueResolutionRequest.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/InlineTypeCycleValidator.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/InlineTypeCycleValidator.java",
       "targetPackage": "blue.language.merge"
     },
     {
@@ -4060,10 +4270,45 @@
       "targetPackage": "blue.language.merge"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/SchemaValueTypeResolver.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/SchemaValueTypeResolver.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/SemanticTypeEvidenceKey.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/SemanticTypeEvidenceKey.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/SemanticValueEvidenceKey.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/SemanticValueEvidenceKey.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/merge/SnapshotResolution.java",
       "currentPackage": "blue.language.merge",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/merge/SnapshotResolution.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/TypeEvidenceResolution.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/TypeEvidenceResolution.java",
+      "targetPackage": "blue.language.merge"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/TypeMetadataResolver.java",
+      "currentPackage": "blue.language.merge",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/TypeMetadataResolver.java",
       "targetPackage": "blue.language.merge"
     },
     {
@@ -4106,6 +4351,13 @@
       "currentPackage": "blue.language.merge.processor",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/merge/processor/DictionaryProcessor.java",
+      "targetPackage": "blue.language.merge.processor"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/processor/EffectiveTypeChecks.java",
+      "currentPackage": "blue.language.merge.processor",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/processor/EffectiveTypeChecks.java",
       "targetPackage": "blue.language.merge.processor"
     },
     {
@@ -5012,6 +5264,13 @@
       "targetPackage": "blue.language.mapping"
     },
     {
+      "currentPath": "blue-language-mapping/src/main/java/blue/language/mapping/CanonicalContentIdentityLookup.java",
+      "currentPackage": "blue.language.mapping",
+      "targetModule": ":blue-language-mapping",
+      "targetPath": "blue-language-mapping/src/main/java/blue/language/mapping/CanonicalContentIdentityLookup.java",
+      "targetPackage": "blue.language.mapping"
+    },
+    {
       "currentPath": "blue-language-mapping/src/main/java/blue/language/mapping/CollectionConverter.java",
       "currentPackage": "blue.language.mapping",
       "targetModule": ":blue-language-mapping",
@@ -5534,6 +5793,31 @@
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-16.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/emb/c-emb-empty-05.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-01.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evo/c-evo-01.yaml"
@@ -5637,6 +5921,41 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-05.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-07.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/evt/c-evt-collection-07.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/fail/c-fail-01.yaml",
@@ -6212,6 +6531,16 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/upd/c-upd-03.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/upd/c-upd-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/upd/c-upd-parent-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/upd/c-upd-parent-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/upd/c-upd-parent-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/upd/c-upd-parent-02.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-1.0/fixtures/vector-coverage.yaml",
@@ -6909,6 +7238,31 @@
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-16.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/emb/c-emb-empty-05.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-01.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evo/c-evo-01.yaml"
@@ -7012,6 +7366,41 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-05.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-02.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-03.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-03.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-04.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-04.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-05.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-05.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-06.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-06.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-07.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/evt/c-evt-collection-07.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/fail/c-fail-01.yaml",
@@ -7654,6 +8043,16 @@
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-03.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-parent-01.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-parent-01.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-parent-02.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/upd/c-upd-parent-02.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/vector-coverage.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/vector-coverage.yaml"
@@ -7929,6 +8328,11 @@
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/DocumentUpdateChannel.blue"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/EmbeddedCollectionEventChannel.blue",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/EmbeddedCollectionEventChannel.blue"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/EmbeddedEventDelivery.blue",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/registry/EmbeddedEventDelivery.blue"
@@ -8069,9 +8473,14 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_empty_list.yaml"
     },
     {
-      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_empty_object_list_element_rejected.yaml",
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_empty_object_child_reference_equivalence.yaml",
       "targetModule": ":blue-conformance",
-      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_empty_object_list_element_rejected.yaml"
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_empty_object_child_reference_equivalence.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_empty_object_list_element_identity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_empty_object_list_element_identity.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_empty_placeholder.yaml",
@@ -8114,14 +8523,29 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_nested_list_not_flattened.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_item_type_blueid_rejected.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_item_type_blueid_rejected.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_key_type_blueid_rejected.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_key_type_blueid_rejected.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_list_element_rejected.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_list_element_rejected.yaml"
     },
     {
-      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_object_field_null_removal.yaml",
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_type_blueid_rejected.yaml",
       "targetModule": ":blue-conformance",
-      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_object_field_null_removal.yaml"
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_type_blueid_rejected.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_value_type_blueid_rejected.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_null_value_type_blueid_rejected.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/blueid/B_payload_only_scalar_typed_identity.yaml",
@@ -8234,6 +8658,11 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/fixture-schema.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_empty_object_reference_cache_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_empty_object_reference_cache_parity.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_inline_reference_partial_equivalence.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_inline_reference_partial_equivalence.yaml"
@@ -8252,6 +8681,11 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_unrelated_missing_reference_does_not_block.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_unrelated_missing_reference_does_not_block.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/R_empty_object_reference_unavailable_not_absent.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/R_empty_object_reference_unavailable_not_absent.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/R_incomplete_cannot_canonicalize.yaml",
@@ -8407,6 +8841,21 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/R_blue_unused_import_no_effect.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/R_blue_unused_import_no_effect.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/R_source_empty_object_distinctions.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/R_source_empty_object_distinctions.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/R_source_null_and_empty_type_distinction.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/R_source_null_and_empty_type_distinction.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/R_source_object_null_omission.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/R_source_object_null_omission.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/preprocessing/registry/AppendRootTextTransformation.blue",
@@ -8639,6 +9088,36 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_dictionary_key_canonicalization.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_canonical_identity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_canonical_identity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_child_field_count.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_child_field_count.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_minimized_overlay_round_trip.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_minimized_overlay_round_trip.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_over_inherited_list_conflicts.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_over_inherited_list_conflicts.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_over_inherited_scalar_conflicts.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_over_inherited_scalar_conflicts.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_parent_field_count.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_empty_object_parent_field_count.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_enum_integer_vs_double.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_enum_integer_vs_double.yaml"
@@ -8654,6 +9133,11 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inherited_append_only_policy.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inherited_empty_object_omitted_by_provenance.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inherited_empty_object_omitted_by_provenance.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inherited_integer_large_text.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inherited_integer_large_text.yaml"
@@ -8667,6 +9151,41 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inherited_keyType_valueType.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inherited_keyType_valueType.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_empty_type_reference_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_empty_type_reference_identity_parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_item_type_reference_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_item_type_reference_identity_parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_key_type_reference_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_key_type_reference_identity_parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_type_false_convergence_guard.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_type_false_convergence_guard.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_type_parent_chain_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_type_parent_chain_identity_parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_type_reference_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_type_reference_identity_parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_value_type_reference_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_inline_value_type_reference_identity_parity.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_instance_field_kept.yaml",
@@ -8689,9 +9208,24 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_minfields_counts_ordinary_fields.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_minfields_rejects_empty_object.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_minfields_rejects_empty_object.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_minimized_overlay_round_trip.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_minimized_overlay_round_trip.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_nested_collection_type_reference_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_nested_collection_type_reference_identity_parity.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_nested_inline_type_reference_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_nested_inline_type_reference_identity_parity.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_noncanonical_inherited_integer_rejected.yaml",
@@ -8702,6 +9236,11 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_positional_canonical_final_payload.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_positional_canonical_final_payload.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_positional_inline_item_type_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_positional_inline_item_type_identity_parity.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_positional_minimized_round_trip.yaml",
@@ -8732,6 +9271,11 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_quoted_decimal_without_integer_is_text.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_quoted_decimal_without_integer_is_text.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_required_empty_object_present.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_required_empty_object_present.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_required_semantic_presence.yaml",
@@ -8794,9 +9338,9 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_schema_wrong_kind_keywords_rejected.yaml"
     },
     {
-      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_empty_object_list_to_empty.yaml",
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_empty_object_list_retained.yaml",
       "targetModule": ":blue-conformance",
-      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_empty_object_list_to_empty.yaml"
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_empty_object_list_retained.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_null_list_to_empty.yaml",
@@ -8804,9 +9348,9 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_null_list_to_empty.yaml"
     },
     {
-      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_recursive_empty_object_list_to_empty.yaml",
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_recursive_empty_object_list_retained.yaml",
       "targetModule": ":blue-conformance",
-      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_recursive_empty_object_list_to_empty.yaml"
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_source_recursive_empty_object_list_retained.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_specialization_creates_new_node.yaml",
@@ -8842,6 +9386,11 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_view_path_root_is_empty_string.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_view_path_root_is_empty_string.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_wholly_inherited_collection_metadata_identity_parity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_wholly_inherited_collection_metadata_identity_parity.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/vector-coverage.yaml",
@@ -8912,6 +9461,11 @@
       "currentPath": "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0/DocumentUpdateChannel.blue",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0/DocumentUpdateChannel.blue"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0/EmbeddedCollectionEventChannel.blue",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0/EmbeddedCollectionEventChannel.blue"
     },
     {
       "currentPath": "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0/EmbeddedEventDelivery.blue",
