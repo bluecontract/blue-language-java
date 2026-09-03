@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -23,6 +24,18 @@ class IdentityImpactInventoryTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.repository = TOOLS.parents[3]
         cls.report = inventory.generate(cls.repository)
+
+    def _full_lifecycle_sources(self) -> tuple[dict[str, str], bytes]:
+        baseline = inventory._full_lifecycle_oracle_baseline(
+            self.repository
+        )["oracles"]
+        current = inventory._current_bytes(
+            self.repository,
+            inventory.FULL_LIFECYCLE_JAVA_TEST,
+        )
+        self.assertIsNotNone(current)
+        assert current is not None
+        return baseline, current
 
     def test_classifies_direct_transitive_new_and_unchanged(self) -> None:
         self.assertEqual(
@@ -259,8 +272,8 @@ class IdentityImpactInventoryTest(unittest.TestCase):
     def test_closure_rotation_inventory_is_complete_and_excludes_invalid_proof(self) -> None:
         summary = self.report["summary"]
         self.assertEqual(34, summary["closureCorpusRotationCount"])
-        self.assertEqual(2, summary["specializedJavaRotationCount"])
-        self.assertEqual(36, summary["modeledClosureRotationCount"])
+        self.assertEqual(10, summary["specializedJavaRotationCount"])
+        self.assertEqual(44, summary["modeledClosureRotationCount"])
         self.assertEqual(1, summary["excludedInvalidVectorCount"])
 
         artifacts = {
@@ -298,6 +311,451 @@ class IdentityImpactInventoryTest(unittest.TestCase):
         excluded = self.report["excludedIdentityVectors"]
         self.assertEqual(inventory.INVALID_CYCLIC_PROOF_MASTER, excluded[0]["identity"])
         self.assertIn("BAD_CYCLIC_PROOF", excluded[0]["reason"])
+
+    def test_full_lifecycle_oracle_rotations_are_role_preserving_and_complete(self) -> None:
+        baseline, current = self._full_lifecycle_sources()
+        rotations = inventory._full_lifecycle_oracle_identity_rotations(
+            baseline,
+            current,
+        )
+        actual = {
+            value["stableKey"]: (value["old"], value["new"])
+            for value in rotations
+        }
+        self.assertEqual(
+            {
+                "fixture:full-lifecycle:duplicate-event:invocation-identity": (
+                    "sha256:6c4dedf7301ee2e6d87423d04762705ccf701861ca1c41acfc2a7ebbbc640f97",
+                    "sha256:1cc88d5f61fb903567342efeb2feae1331ab05e3db54e2ffed0e99f5c1c3f561",
+                ),
+                "fixture:full-lifecycle:duplicate-event:first-occurrence-identity": (
+                    "sha256:53365d2d325dca5499055a7780b3848ad597697ca244e3ab86f7f112c8663095",
+                    "sha256:9754c1af9e30b527b317e19106acff7238f93150c72aa13a7ec204778c551a95",
+                ),
+                "fixture:full-lifecycle:duplicate-event:second-occurrence-identity": (
+                    "sha256:7dde48d6e83e259960c1bd6edf6d1f6d54bd8798d91fd1d4c7a3cd9056eec9a8",
+                    "sha256:f0f923f35df45e850aa1c1605456b415c204313e66296c0337b6ff14765fee53",
+                ),
+                "fixture:full-lifecycle:gas-failure:invocation-identity": (
+                    "sha256:f866ec935ec5e02c380033741a667dcd182ca3835a7dc33a5ec2fda94d6ac7e7",
+                    "sha256:469145475ec0d4b1f8f5320a9c0da8cf791f7688f968ce0b3c96ef755e517ceb",
+                ),
+                "fixture:full-lifecycle:gas-failure:gas-trace-identity": (
+                    "sha256:8d9e5c8892401acc8eecb26acb39a8c172879bc6d6bf4f1ea5203f7564304491",
+                    "sha256:0d657d72910752d0ae93785673768f7bf8e6d98e1fbb2385ef184885d904a907",
+                ),
+                "fixture:full-lifecycle:gas-failure:rejected-charge-identity": (
+                    "sha256:509be835825c819657ede50dbea8468e175af60511ad113584ce5b680a6db300",
+                    "sha256:a3e16c97b22c3ca4422280c40da11d565a2ae8942e5d84f7bd1c7c80bcd6f223",
+                ),
+                "fixture:full-lifecycle:gas-failure:embedded-work-identity": (
+                    "sha256:77b934032184b1206ebf6a711c51c76d6c84c08652495ed43a917f8db2992b8a",
+                    "sha256:6c03056d56b095edba7cfb83fa6b89b327455d64a9a447d9b19157ac62a25186",
+                ),
+                "fixture:full-lifecycle:gas-failure:initialization-work-identity": (
+                    "sha256:d12892b30044cd6a7264080c609756d2662f855bd68eecef1de697584efbea6c",
+                    "sha256:18a30d91089c0ba3f678c4e265571f69d694ee54a60fbf410dac16898393635c",
+                ),
+            },
+            actual,
+        )
+        embedded = next(
+            value
+            for value in rotations
+            if value["role"] == "embedded-work-identity"
+        )
+        self.assertEqual([7, 9], embedded["positions"])
+        self.assertEqual(8, len(rotations))
+
+        artifacts = {
+            value["stableKey"]: value
+            for value in self.report["artifacts"]
+        }
+        for stable_key in actual:
+            artifact = artifacts[stable_key]
+            self.assertEqual("transitively-changed", artifact["classification"])
+            self.assertEqual(
+                inventory.FULL_LIFECYCLE_ORACLE_BASELINE_PATH,
+                artifact["closureRotationEvidence"]["oracleBaselineInput"],
+            )
+            self.assertEqual(
+                "91a0cf80ddf238a9a9648f85432884f005e75425",
+                artifact["closureRotationEvidence"]
+                ["oracleBaselineProvenanceCommit"],
+            )
+            self.assertTrue(artifact["firstChangedDependency"])
+
+    def test_full_lifecycle_oracle_parser_rejects_malformed_or_missing_constant(self) -> None:
+        baseline, current = self._full_lifecycle_sources()
+        malformed = current.replace(
+            b"DUPLICATE_EVENT_IDENTITY_ORACLE =",
+            b"DUPLICATE_EVENT_IDENTITY_ORACLE_REMOVED =",
+            1,
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "Missing or malformed FullLifecycleAdmissionTest oracle: "
+            "DUPLICATE_EVENT_IDENTITY_ORACLE",
+        ):
+            inventory._full_lifecycle_oracle_identity_rotations(
+                baseline,
+                malformed,
+            )
+
+    def test_full_lifecycle_oracle_parser_rejects_skeleton_and_layout_drift(self) -> None:
+        baseline, current = self._full_lifecycle_sources()
+        skeleton_drift = current.replace(
+            b"|20000|2123",
+            b"|20001|2123",
+            1,
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "GAS_FAILURE_ORACLE non-identity skeleton changed",
+        ):
+            inventory._full_lifecycle_oracle_identity_rotations(
+                baseline,
+                skeleton_drift,
+            )
+
+        baseline_layout_drift = dict(baseline)
+        baseline_layout_drift["DUPLICATE_EVENT_IDENTITY_ORACLE"] = (
+            baseline_layout_drift["DUPLICATE_EVENT_IDENTITY_ORACLE"].replace(
+                "sha256:6c4dedf7301ee2e6d87423d04762705ccf701861ca1c41acfc2a7ebbbc640f97",
+                "not-an-identity",
+                1,
+            )
+        )
+        current_layout_drift = current.replace(
+            b"sha256:1cc88d5f61fb903567342efeb2feae1331ab05e3db54e2ffed0e99f5c1c3f561",
+            b"not-an-identity",
+            1,
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "DUPLICATE_EVENT_IDENTITY_ORACLE has an unexpected exact identity layout",
+        ):
+            inventory._full_lifecycle_oracle_identity_rotations(
+                baseline_layout_drift,
+                current_layout_drift,
+            )
+
+    def test_full_lifecycle_baseline_has_strict_reviewed_shape(self) -> None:
+        baseline_path = self.repository / (
+            inventory.FULL_LIFECYCLE_ORACLE_BASELINE_PATH
+        )
+        parsed = inventory._parse_full_lifecycle_oracle_baseline(
+            baseline_path.read_bytes()
+        )
+        self.assertEqual(
+            inventory.FULL_LIFECYCLE_ORACLE_BASELINE_SCHEMA,
+            parsed["schema"],
+        )
+        self.assertEqual(
+            inventory.FULL_LIFECYCLE_ORACLE_NAMES,
+            set(parsed["oracles"]),
+        )
+        self.assertIn(
+            inventory.FULL_LIFECYCLE_ORACLE_BASELINE_PATH,
+            inventory.REVIEWED_IDENTITY_BASELINE_INPUTS,
+        )
+        self.assertIn(
+            inventory.FULL_LIFECYCLE_ORACLE_BASELINE_PATH,
+            inventory.SELF_PATHS,
+        )
+        reviewed = self.report["scope"]["reviewedBaselineInputs"]
+        self.assertEqual(1, len(reviewed))
+        self.assertEqual(
+            "excluded-reviewed-generator-input",
+            reviewed[0]["referenceScanDisposition"],
+        )
+
+    def test_full_lifecycle_baseline_rejects_malformed_inputs(self) -> None:
+        baseline_path = self.repository / (
+            inventory.FULL_LIFECYCLE_ORACLE_BASELINE_PATH
+        )
+        valid = json.loads(baseline_path.read_text(encoding="utf-8"))
+
+        with self.assertRaisesRegex(ValueError, "Invalid reviewed.*JSON"):
+            inventory._parse_full_lifecycle_oracle_baseline(b"{")
+
+        extra_key = dict(valid)
+        extra_key["unexpected"] = True
+        with self.assertRaisesRegex(ValueError, "exact reviewed shape"):
+            inventory._parse_full_lifecycle_oracle_baseline(
+                json.dumps(extra_key).encode("utf-8")
+            )
+
+        missing_oracle = dict(valid)
+        missing_oracle["oracles"] = dict(valid["oracles"])
+        del missing_oracle["oracles"]["GAS_FAILURE_ORACLE"]
+        with self.assertRaisesRegex(ValueError, "exactly the two reviewed"):
+            inventory._parse_full_lifecycle_oracle_baseline(
+                json.dumps(missing_oracle).encode("utf-8")
+            )
+
+        invalid_provenance = dict(valid)
+        invalid_provenance["provenanceCommit"] = "main"
+        with self.assertRaisesRegex(ValueError, "lowercase 40-hex"):
+            inventory._parse_full_lifecycle_oracle_baseline(
+                json.dumps(invalid_provenance).encode("utf-8")
+            )
+
+    def test_full_lifecycle_oracle_parser_rejects_anchor_and_duplicate_drift(self) -> None:
+        baseline, current = self._full_lifecycle_sources()
+        stable_anchor_drift = current.replace(
+            b"31JtLEZds6saFSDKKWh4XZrWf63BQywpRUB4wDt766Jo",
+            b"44444444444444444444444444444444444444444444",
+            1,
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "stable identity anchor rotated: event-blue-id",
+        ):
+            inventory._full_lifecycle_oracle_identity_rotations(
+                baseline,
+                stable_anchor_drift,
+            )
+
+        embedded = (
+            b"sha256:6c03056d56b095edba7cfb83fa6b89b327455d64a9a447d9b19157ac62a25186"
+        )
+        prefix, separator, suffix = current.rpartition(embedded)
+        self.assertEqual(embedded, separator)
+        duplicate_drift = (
+            prefix
+            + b"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            + suffix
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "duplicate semantic role diverged: embedded-work-identity",
+        ):
+            inventory._full_lifecycle_oracle_identity_rotations(
+                baseline,
+                duplicate_drift,
+            )
+
+    def test_java_identity_oracle_audit_is_explicit_and_fails_closed(self) -> None:
+        audit = self.report["javaIdentityOracleAudit"]
+        self.assertEqual(
+            {
+                "DUPLICATE_EVENT_IDENTITY_ORACLE": 4,
+                "GAS_FAILURE_ORACLE": 10,
+            },
+            {
+                value["constant"]: value["exactIdentifierCount"]
+                for value in audit
+            },
+        )
+        self.assertTrue(all(
+            value["classification"]
+            == inventory.FULL_LIFECYCLE_ORACLE_CLASSIFICATION
+            for value in audit
+        ))
+
+        unknown = (
+            b'class Unknown { static final String SURPRISE_ORACLE = "sha256:'
+            + b"a" * 64
+            + b'"; }'
+        )
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unclassified nonhistorical Java identity oracle: "
+            "src/test/java/Unknown.java#SURPRISE_ORACLE",
+        ):
+            inventory._classify_java_identity_oracles(
+                {"src/test/java/Unknown.java": unknown},
+                {},
+            )
+
+    def test_java_identity_oracle_audit_rejects_every_computed_declaration(self) -> None:
+        sources = {
+            "constant": (
+                'class Computed { String CONSTANT_ORACLE = "ready" '
+                '+ SUFFIX; }'
+            ),
+            "property": (
+                'class Computed { String PROPERTY_ORACLE = '
+                'System.getProperty("oracle", "ready"); }'
+            ),
+        }
+        for name, source in sources.items():
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Java oracle must be a literal-only String concatenation: "
+                    "src/test/java/Computed.java#",
+                ):
+                    inventory._classify_java_identity_oracles(
+                        {"src/test/java/Computed.java": source.encode("utf-8")},
+                        {},
+                    )
+
+    def test_java_identity_oracle_audit_finds_hidden_multi_declarator(self) -> None:
+        identity = "sha256:" + "c" * 64
+        source = (
+            'class Hidden { String status = "ready", '
+            'HIDDEN_ORACLE = "' + identity + '"; }'
+        ).encode("utf-8")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unclassified nonhistorical Java identity oracle: "
+            "src/test/java/Hidden.java#HIDDEN_ORACLE",
+        ):
+            inventory._classify_java_identity_oracles(
+                {"src/test/java/Hidden.java": source},
+                {},
+            )
+
+    def test_java_identity_oracle_backstop_rejects_generic_comma_hiding(self) -> None:
+        identity = "sha256:" + "d" * 64
+        initializers = {
+            "constructor": "new Pair<String, String>().toString()",
+            "explicit-method-types": "Util.<String, String>render()",
+        }
+        for name, initializer in initializers.items():
+            source = (
+                "class Hidden { String status = " + initializer
+                + ', HIDDEN_ORACLE = "' + identity + '"; }'
+            ).encode("utf-8")
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Unparsed uppercase Java oracle assignment: "
+                    "src/test/java/Hidden.java#HIDDEN_ORACLE",
+                ):
+                    inventory._classify_java_identity_oracles(
+                        {"src/test/java/Hidden.java": source},
+                        {},
+                    )
+
+    def test_java_identity_oracle_rejects_empty_argument_annotation_decoration(self) -> None:
+        identity = "sha256:" + "2" * 64
+        source = (
+            'class Hidden { String HIDDEN_ORACLE @Ann() [] = {"'
+            + identity + '"}; }'
+        ).encode("utf-8")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Post-name Java oracle decoration is forbidden: "
+            "src/test/java/Hidden.java#HIDDEN_ORACLE",
+        ):
+            inventory._classify_java_identity_oracles(
+                {"src/test/java/Hidden.java": source},
+                {},
+            )
+
+    def test_java_identity_oracle_rejects_argument_annotation_decoration(self) -> None:
+        identity = "sha256:" + "3" * 64
+        source = (
+            'class Hidden { String HIDDEN_ORACLE @Ann(value = 1) [] = {"'
+            + identity + '"}; }'
+        ).encode("utf-8")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Post-name Java oracle decoration is forbidden: "
+            "src/test/java/Hidden.java#HIDDEN_ORACLE",
+        ):
+            inventory._classify_java_identity_oracles(
+                {"src/test/java/Hidden.java": source},
+                {},
+            )
+
+    def test_java_identity_oracle_backstop_rejects_annotated_array(self) -> None:
+        identity = "sha256:" + "e" * 64
+        source = (
+            'class Hidden { String @Ann [] HIDDEN_ORACLE = "'
+            + identity + '"; }'
+        ).encode("utf-8")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unparsed uppercase Java oracle assignment: "
+            "src/test/java/Hidden.java#HIDDEN_ORACLE",
+        ):
+            inventory._classify_java_identity_oracles(
+                {"src/test/java/Hidden.java": source},
+                {},
+            )
+
+    def test_java_identity_oracle_audit_rejects_augmented_assignment(self) -> None:
+        identity = "sha256:" + "f" * 64
+        source = (
+            'class Hidden { String HIDDEN_ORACLE = ""; '
+            'HIDDEN_ORACLE += "' + identity + '"; }'
+        ).encode("utf-8")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Augmented Java oracle assignment is forbidden: "
+            "src/test/java/Hidden.java#HIDDEN_ORACLE",
+        ):
+            inventory._classify_java_identity_oracles(
+                {"src/test/java/Hidden.java": source},
+                {},
+            )
+
+    def test_java_identity_oracle_backstop_rejects_post_name_array_dims(self) -> None:
+        identity = "sha256:" + "1" * 64
+        declarations = {
+            "multidimensional": (
+                'String HIDDEN_ORACLE[][] = {{"' + identity + '"}};'
+            ),
+            "annotated": (
+                'String HIDDEN_ORACLE @Ann [] = {"' + identity + '"};'
+            ),
+        }
+        for name, declaration in declarations.items():
+            source = ("class Hidden { " + declaration + " }").encode("utf-8")
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Post-name Java oracle decoration is forbidden: "
+                    "src/test/java/Hidden.java#HIDDEN_ORACLE",
+                ):
+                    inventory._classify_java_identity_oracles(
+                        {"src/test/java/Hidden.java": source},
+                        {},
+                    )
+
+    def test_java_identity_oracle_audit_classifies_identity_free_and_ignores_decoys(self) -> None:
+        identity = "sha256:" + "b" * 64
+        source = (
+            "class Legitimate {\n"
+            "  static final String STATUS_ORACLE = \"ready\";\n"
+            "  // static final String COMMENT_ORACLE = \"" + identity + "\";\n"
+            "  // String COMMENT_DECORATED_ORACLE @Ann() [] = \""
+            + identity + "\";\n"
+            "  static final String DESCRIPTION = \"String TEXT_ORACLE = "
+            + identity + ";\";\n"
+            "  static final String DECORATED_DESCRIPTION = \"String "
+            "TEXT_DECORATED_ORACLE @Ann(value = 1) [] = " + identity + ";\";\n"
+            "}\n"
+        ).encode("utf-8")
+        self.assertEqual(
+            [
+                {
+                    "path": "src/test/java/Legitimate.java",
+                    "constant": "STATUS_ORACLE",
+                    "classification": "identity-free-java-oracle",
+                    "exactIdentifierCount": 0,
+                }
+            ],
+            inventory._classify_java_identity_oracles(
+                {"src/test/java/Legitimate.java": source},
+                {},
+            ),
+        )
+        self.assertEqual(
+            [],
+            inventory._classify_java_identity_oracles(
+                {"reports/modernization/Archived.java": (
+                    b'class Archived { static final String OLD_ORACLE = "'
+                    + identity.encode("utf-8")
+                    + b'"; }'
+                )},
+                {},
+            ),
+        )
 
     def test_cclo10_reordered_limit_form_matches_stable_document_identity(self) -> None:
         document_a = "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"

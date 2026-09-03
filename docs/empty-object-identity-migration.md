@@ -10,7 +10,9 @@ The exact empty-object identity remains `5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6
 No old-to-new BlueId aliases or redirects are introduced. Registry BlueIds in this report are read from the Java-verified release manifests.
 Active old-identity references remaining: 0. Historical references retained as immutable evidence: 172.
 Unresolved identity surfaces: 0. Canonical/mirror byte mismatches: 0.
-Modeled closure identity rotations: 36 (34 corpus-derived and 2 specialized Java oracle bindings). Intentionally excluded invalid vectors: 1.
+Modeled closure identity rotations: 44 (34 corpus-derived and 10 specialized Java oracle bindings). Intentionally excluded invalid vectors: 1.
+Reviewed nonhistorical uppercase Java `String *_ORACLE` identity declarations: 2. Identity-free literal-only declarations classified separately: 0. Every such declaration must decode as a literal-only concatenation; every exact-identity declaration also requires explicit reviewed classification, and later `*_ORACLE +=` mutation is forbidden.
+Current Java oracle correctness is established by Java runtime tests. Python only inventories and classifies role-preserving rotations; it does not recompute the oracle hashes.
 
 | Classification | Count |
 | --- | ---: |
@@ -18,9 +20,26 @@ Modeled closure identity rotations: 36 (34 corpus-derived and 2 specialized Java
 | `newly-introduced` | 1 |
 | `obsolete-pre-stable-rc` | 0 |
 | `stale-binding-regenerated` | 1 |
-| `transitively-changed` | 49 |
+| `transitively-changed` | 57 |
 | `unchanged-direct` | 28 |
 | `unresolved` | 0 |
+
+## Java identity-oracle audit
+
+Every nonhistorical uppercase Java `String *_ORACLE` declaration is audited deterministically, including non-final fields, locals, and multi-declarator statements. Structured declarations must be successfully decoded literal-only concatenations, and a conservative masked-code backstop rejects any direct uppercase `*_ORACLE =` assignment the structured parser did not consume. Post-name `[` or `@` decoration is forbidden outright rather than incompletely parsing Java annotation syntax. Any later `*_ORACLE +=` mutation is also forbidden. Exact-identity literals additionally require a reviewed specialized parser; identity-free literal-only oracles remain explicit and do not enter the rotation set.
+
+| Path | Constant | Classification | Exact identifiers |
+| --- | --- | --- | ---: |
+| `blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java` | `DUPLICATE_EVENT_IDENTITY_ORACLE` | `reviewed-full-lifecycle-identity-projection` | 4 |
+| `blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java` | `GAS_FAILURE_ORACLE` | `reviewed-full-lifecycle-identity-projection` | 10 |
+
+## Reviewed identity baseline inputs
+
+These migration-only inputs are checked-in review evidence and are explicitly excluded from active stale-binding scans.
+
+| Path | Classification | Source | Provenance commit | Scan disposition |
+| --- | --- | --- | --- | --- |
+| `blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json` | `reviewed-migration-baseline-excluded-from-active-bindings` | `blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java` | `91a0cf80ddf238a9a9648f85432884f005e75425` | `excluded-reviewed-generator-input` |
 
 ## Exact identity changes
 
@@ -90,6 +109,14 @@ Modeled closure identity rotations: 36 (34 corpus-derived and 2 specialized Java
 | `fixture:closure-rotation:sha256:f201416a678dd218ee3fb60b25eab0ce4e51f8c4ee25ad966c214ed6ed8a6858` | `transitively-changed` | `sha256:f201416a678dd218ee3fb60b25eab0ce4e51f8c4ee25ad966c214ed6ed8a6858` | `sha256:e166f34649e7ff062265e74822aa892763dfbaa5a9e30915fb3f2d1491234a5e` | regenerated closure fixture/oracle corpus |
 | `fixture:closure-rotation:sha256:fbb8e227a353e5c688dcbb467161979c72297ff1ca337eaf44fcf0e67728fe07` | `transitively-changed` | `sha256:fbb8e227a353e5c688dcbb467161979c72297ff1ca337eaf44fcf0e67728fe07` | `sha256:b5f4f42d492de95b8e6a3d026bd240278240ae15aa18a472390390e759295669` | regenerated closure fixture/oracle corpus |
 | `fixture:closure-rotation:sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7` | `transitively-changed` | `sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7` | `sha256:5eacd13e1e98a75f80713bce3c4168ec69abe257bf27f938b8b582232018a697` | regenerated closure fixture/oracle corpus |
+| `fixture:full-lifecycle:duplicate-event:first-occurrence-identity` | `transitively-changed` | `sha256:53365d2d325dca5499055a7780b3848ad597697ca244e3ab86f7f112c8663095` | `sha256:9754c1af9e30b527b317e19106acff7238f93150c72aa13a7ec204778c551a95` | fixture:full-lifecycle:duplicate-event:invocation-identity |
+| `fixture:full-lifecycle:duplicate-event:invocation-identity` | `transitively-changed` | `sha256:6c4dedf7301ee2e6d87423d04762705ccf701861ca1c41acfc2a7ebbbc640f97` | `sha256:1cc88d5f61fb903567342efeb2feae1331ab05e3db54e2ffed0e99f5c1c3f561` | package:contracts-registry |
+| `fixture:full-lifecycle:duplicate-event:second-occurrence-identity` | `transitively-changed` | `sha256:7dde48d6e83e259960c1bd6edf6d1f6d54bd8798d91fd1d4c7a3cd9056eec9a8` | `sha256:f0f923f35df45e850aa1c1605456b415c204313e66296c0337b6ff14765fee53` | fixture:full-lifecycle:duplicate-event:invocation-identity |
+| `fixture:full-lifecycle:gas-failure:embedded-work-identity` | `transitively-changed` | `sha256:77b934032184b1206ebf6a711c51c76d6c84c08652495ed43a917f8db2992b8a` | `sha256:6c03056d56b095edba7cfb83fa6b89b327455d64a9a447d9b19157ac62a25186` | fixture:full-lifecycle:gas-failure:invocation-identity |
+| `fixture:full-lifecycle:gas-failure:gas-trace-identity` | `transitively-changed` | `sha256:8d9e5c8892401acc8eecb26acb39a8c172879bc6d6bf4f1ea5203f7564304491` | `sha256:0d657d72910752d0ae93785673768f7bf8e6d98e1fbb2385ef184885d904a907` | fixture:full-lifecycle:gas-failure:embedded-work-identity |
+| `fixture:full-lifecycle:gas-failure:initialization-work-identity` | `transitively-changed` | `sha256:d12892b30044cd6a7264080c609756d2662f855bd68eecef1de697584efbea6c` | `sha256:18a30d91089c0ba3f678c4e265571f69d694ee54a60fbf410dac16898393635c` | fixture:full-lifecycle:gas-failure:invocation-identity |
+| `fixture:full-lifecycle:gas-failure:invocation-identity` | `transitively-changed` | `sha256:f866ec935ec5e02c380033741a667dcd182ca3835a7dc33a5ec2fda94d6ac7e7` | `sha256:469145475ec0d4b1f8f5320a9c0da8cf791f7688f968ce0b3c96ef755e517ceb` | contracts:ProcessEmbedded |
+| `fixture:full-lifecycle:gas-failure:rejected-charge-identity` | `transitively-changed` | `sha256:509be835825c819657ede50dbea8468e175af60511ad113584ce5b680a6db300` | `sha256:a3e16c97b22c3ca4422280c40da11d565a2ae8942e5d84f7bd1c7c80bcd6f223` | fixture:full-lifecycle:gas-failure:embedded-work-identity |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java` | `transitively-changed` | `50a7a207850c43c3e4d6159a6d9c83b9af252fd74261296227d1816d6c58a966` | `81a54840d50bc836321f3ca2ece052c8a0d6c3723f52d13bf6317c787833977c` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java` | `transitively-changed` | `de88deaef42954f9d2d95a42eb3d7593296ce42fa357f8a9a2293fe82f207540` | `55dc9ac99a5860b5be843d61114c5aed4695c145ed32fbdada9ba3181dbea434` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java` | `transitively-changed` | `b3682178602d5db2a5c74333782dece9a2256c95092a472fe107f5ce8d23124e` | `bcc7ebe6be7eb9f86b6b079248cc2f1382e6ef3ad422827634c1483e643d0bcf` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java |

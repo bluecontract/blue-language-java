@@ -76,6 +76,35 @@ C_CLO_34_JAVA_TEST = (
     "blue-contracts-core/src/test/java/blue/language/processor/closure/"
     "ClosureInvocationVerifierTest.java"
 )
+FULL_LIFECYCLE_JAVA_TEST = (
+    "blue-contracts-core/src/test/java/blue/language/processor/closure/"
+    "FullLifecycleAdmissionTest.java"
+)
+FULL_LIFECYCLE_ORACLE_BASELINE_PATH = (
+    "blue-conformance/src/main/tools/migration/"
+    "full-lifecycle-identity-oracle-baseline.json"
+)
+FULL_LIFECYCLE_ORACLE_BASELINE_SCHEMA = (
+    "blue-full-lifecycle-identity-oracle-baseline/1.0"
+)
+FULL_LIFECYCLE_ORACLE_CLASSIFICATION = (
+    "reviewed-full-lifecycle-identity-projection"
+)
+FULL_LIFECYCLE_ORACLE_NAMES = frozenset((
+    "DUPLICATE_EVENT_IDENTITY_ORACLE",
+    "GAS_FAILURE_ORACLE",
+))
+REVIEWED_JAVA_IDENTITY_ORACLES = {
+    FULL_LIFECYCLE_JAVA_TEST + "#" + name: (
+        FULL_LIFECYCLE_ORACLE_CLASSIFICATION
+    )
+    for name in FULL_LIFECYCLE_ORACLE_NAMES
+}
+REVIEWED_IDENTITY_BASELINE_INPUTS = {
+    FULL_LIFECYCLE_ORACLE_BASELINE_PATH: (
+        "reviewed-migration-baseline-excluded-from-active-bindings"
+    ),
+}
 INVALID_CYCLIC_PROOF_MASTER = (
     "6Rnjv8oquG4RqPwo55MZgF7jcUZGd7HdYZMPiFmBQUQ7"
 )
@@ -119,6 +148,7 @@ SELF_PATHS = frozenset(
         "generate_identity_impact_inventory.py",
         "blue-conformance/src/main/tools/"
         "test_generate_identity_impact_inventory.py",
+        *REVIEWED_IDENTITY_BASELINE_INPUTS,
     )
 )
 
@@ -149,6 +179,36 @@ DIRECTLY_CHANGED = frozenset(
 )
 
 DEPENDENCIES = {
+    "fixture:full-lifecycle:duplicate-event:invocation-identity": (
+        "package:contracts-registry",
+        "implementation:cyclic-set-finalizer",
+        "implementation:cyclic-set-proof-verifier",
+    ),
+    "fixture:full-lifecycle:duplicate-event:first-occurrence-identity": (
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+    ),
+    "fixture:full-lifecycle:duplicate-event:second-occurrence-identity": (
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+    ),
+    "fixture:full-lifecycle:gas-failure:invocation-identity": (
+        "contracts:ProcessEmbedded",
+        "package:contracts-registry",
+        "implementation:cyclic-set-finalizer",
+        "implementation:cyclic-set-proof-verifier",
+    ),
+    "fixture:full-lifecycle:gas-failure:initialization-work-identity": (
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+    ),
+    "fixture:full-lifecycle:gas-failure:embedded-work-identity": (
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+    ),
+    "fixture:full-lifecycle:gas-failure:rejected-charge-identity": (
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+    ),
+    "fixture:full-lifecycle:gas-failure:gas-trace-identity": (
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+    ),
     "fixture:c-clo-23-05-a9-to-a10:masterBlueId": (
         "contracts:ProcessEmbedded",
     ),
@@ -243,6 +303,19 @@ EXACT_IDENTIFIER = re.compile(
     r"(?![1-9A-HJ-NP-Za-km-z])"
 )
 JAVA_STRING_LITERAL = re.compile(r'"(?:\\.|[^"\\])*"', re.DOTALL)
+JAVA_STRING_DECLARATION = re.compile(
+    r"\b(?:java\.lang\.)?String\b",
+)
+JAVA_ORACLE_NAME = re.compile(r"[A-Z][A-Z0-9_]*_ORACLE")
+JAVA_ORACLE_ASSIGNMENT = re.compile(
+    r"\b(?P<name>[A-Z][A-Z0-9_]*_ORACLE)\s*=(?!=)",
+)
+JAVA_ORACLE_AUGMENTED_ASSIGNMENT = re.compile(
+    r"\b(?P<name>[A-Z][A-Z0-9_]*_ORACLE)\s*\+=(?!=)",
+)
+JAVA_ORACLE_POST_NAME_DECORATION = re.compile(
+    r"\b(?P<name>[A-Z][A-Z0-9_]*_ORACLE)\s*(?P<decoration>[\[@])",
+)
 SHA256_BARE = re.compile(r"[0-9a-f]{64}")
 
 
@@ -1014,6 +1087,647 @@ def _java_string_constant(data: bytes | None, constant: str) -> str | None:
         ) from exception
 
 
+def _concatenated_java_string_expression(expression: str) -> str | None:
+    """Decodes an expression made exclusively from `+`-joined literals."""
+    literals = list(JAVA_STRING_LITERAL.finditer(expression))
+    if not literals:
+        return None
+    cursor = 0
+    for index, literal in enumerate(literals):
+        separator = expression[cursor:literal.start()]
+        if index == 0:
+            if separator.strip():
+                return None
+        elif re.fullmatch(r"\s*\+\s*", separator) is None:
+            return None
+        cursor = literal.end()
+    if expression[cursor:].strip():
+        return None
+    try:
+        return "".join(json.loads(value.group(0)) for value in literals)
+    except json.JSONDecodeError as exception:
+        raise ValueError("Invalid Java string literal in oracle") from exception
+
+
+def _ordered_exact_identifiers(value: str) -> list[str]:
+    return [
+        _normalized_identifier(match.group(0))
+        for match in EXACT_IDENTIFIER.finditer(value)
+    ]
+
+
+def _java_code_mask(text: str) -> str:
+    """Preserves Java code offsets while blanking literals and comments."""
+    masked = list(text)
+    index = 0
+    state = "code"
+    escaped = False
+    while index < len(text):
+        if state == "code":
+            if text.startswith('"""', index):
+                masked[index:index + 3] = "   "
+                state = "text-block"
+                index += 3
+                continue
+            if text.startswith("//", index):
+                masked[index:index + 2] = "  "
+                state = "line-comment"
+                index += 2
+                continue
+            if text.startswith("/*", index):
+                masked[index:index + 2] = "  "
+                state = "block-comment"
+                index += 2
+                continue
+            if text[index] == '"':
+                masked[index] = " "
+                state = "string"
+            elif text[index] == "'":
+                masked[index] = " "
+                state = "character"
+        elif state == "line-comment":
+            if text[index] in "\r\n":
+                state = "code"
+            else:
+                masked[index] = " "
+        elif state == "block-comment":
+            if text.startswith("*/", index):
+                masked[index:index + 2] = "  "
+                state = "code"
+                index += 2
+                continue
+            if text[index] not in "\r\n":
+                masked[index] = " "
+        elif state == "text-block":
+            if text.startswith('"""', index):
+                masked[index:index + 3] = "   "
+                state = "code"
+                index += 3
+                continue
+            if text[index] not in "\r\n":
+                masked[index] = " "
+        else:
+            masked[index] = " "
+            if escaped:
+                escaped = False
+            elif text[index] == "\\":
+                escaped = True
+            elif state == "string" and text[index] == '"':
+                state = "code"
+            elif state == "character" and text[index] == "'":
+                state = "code"
+        index += 1
+    return "".join(masked)
+
+
+def _java_declarator_delimiter(
+    code: str,
+    start: int,
+) -> tuple[int, str | None]:
+    """Finds the next declaration delimiter outside initializer nesting."""
+    parentheses = 0
+    brackets = 0
+    braces = 0
+    for index in range(start, len(code)):
+        character = code[index]
+        if character == "(":
+            parentheses += 1
+        elif character == ")":
+            if parentheses:
+                parentheses -= 1
+            elif brackets == 0 and braces == 0:
+                return index, character
+        elif character == "[":
+            brackets += 1
+        elif character == "]" and brackets:
+            brackets -= 1
+        elif character == "{":
+            braces += 1
+        elif character == "}" and braces:
+            braces -= 1
+        elif (
+            character in ",;"
+            and parentheses == 0
+            and brackets == 0
+            and braces == 0
+        ):
+            return index, character
+    return len(code), None
+
+
+def _java_string_declarators(
+    code: str,
+    start: int,
+) -> list[tuple[str, int | None, int | None, int | None]]:
+    """Parses scalar/array names in one possibly multi-declarator statement."""
+    result: list[tuple[str, int | None, int | None, int | None]] = []
+    name_pattern = re.compile(
+        r"\s*(?:\[\s*\]\s*)?"
+        r"(?P<name>[A-Za-z_$][A-Za-z0-9_$]*)"
+        r"(?:\s*\[\s*\])?\s*",
+    )
+    position = start
+    while position < len(code):
+        name_match = name_pattern.match(code, position)
+        if name_match is None:
+            break
+        name = name_match.group("name")
+        cursor = name_match.end()
+        if cursor < len(code) and code[cursor] == "=":
+            if cursor + 1 < len(code) and code[cursor + 1] == "=":
+                break
+            expression_start: int | None = cursor + 1
+            assignment_position: int | None = cursor
+            delimiter, delimiter_kind = _java_declarator_delimiter(
+                code,
+                expression_start,
+            )
+            expression_end: int | None = delimiter
+        elif cursor < len(code) and code[cursor] in ",;):":
+            expression_start = None
+            expression_end = None
+            assignment_position = None
+            delimiter = cursor
+            delimiter_kind = code[cursor]
+        else:
+            break
+        result.append((
+            name,
+            expression_start,
+            expression_end,
+            assignment_position,
+        ))
+        if delimiter_kind != ",":
+            break
+        position = delimiter + 1
+    return result
+
+
+def _java_oracle_declarations(
+    data: bytes | None,
+    path: str,
+) -> list[dict[str, Any]]:
+    """Audits uppercase Java `String *_ORACLE` declarators conservatively."""
+    if data is None:
+        return []
+    text = data.decode("utf-8", errors="replace")
+    code = _java_code_mask(text)
+    result: list[dict[str, Any]] = []
+    names: set[str] = set()
+    consumed_assignments: set[tuple[str, int]] = set()
+    for type_match in JAVA_STRING_DECLARATION.finditer(code):
+        for (
+            name,
+            expression_start,
+            expression_end,
+            assignment_position,
+        ) in _java_string_declarators(
+            code,
+            type_match.end(),
+        ):
+            if JAVA_ORACLE_NAME.fullmatch(name) is None:
+                continue
+            if name in names:
+                raise ValueError(
+                    "Duplicate Java oracle declaration: " + path + "#" + name
+                )
+            names.add(name)
+            if assignment_position is not None:
+                consumed_assignments.add((name, assignment_position))
+            if expression_start is None or expression_end is None:
+                expression = ""
+                value = None
+            else:
+                expression = text[expression_start:expression_end]
+                value = _concatenated_java_string_expression(expression)
+            if value is None:
+                # Retain conservative evidence for diagnostics even though the
+                # classifier rejects every computed/non-literal oracle.
+                fragments: list[str] = []
+                for literal in JAVA_STRING_LITERAL.finditer(expression):
+                    try:
+                        fragments.append(json.loads(literal.group(0)))
+                    except json.JSONDecodeError:
+                        fragments.append(literal.group(0)[1:-1])
+                identifiers = sorted(set(
+                    _ordered_exact_identifiers(expression)
+                    + _ordered_exact_identifiers("".join(fragments))
+                ))
+            else:
+                identifiers = _ordered_exact_identifiers(value)
+            result.append(
+                {
+                    "constant": name,
+                    "value": value,
+                    "exactIdentifiers": identifiers,
+                }
+            )
+    augmented = JAVA_ORACLE_AUGMENTED_ASSIGNMENT.search(code)
+    if augmented is not None:
+        raise ValueError(
+            "Augmented Java oracle assignment is forbidden: "
+            + path + "#" + augmented.group("name")
+        )
+    decorated = JAVA_ORACLE_POST_NAME_DECORATION.search(code)
+    if decorated is not None:
+        raise ValueError(
+            "Post-name Java oracle decoration is forbidden: "
+            + path + "#" + decorated.group("name")
+        )
+    for assignment in JAVA_ORACLE_ASSIGNMENT.finditer(code):
+        assignment_key = (assignment.group("name"), assignment.end() - 1)
+        if assignment_key not in consumed_assignments:
+            raise ValueError(
+                "Unparsed uppercase Java oracle assignment: "
+                + path + "#" + assignment.group("name")
+            )
+    return result
+
+
+def _classify_java_identity_oracles(
+    sources: dict[str, bytes],
+    reviewed: dict[str, str],
+) -> list[dict[str, Any]]:
+    """Fails closed for unreviewed exact identities in Java oracle literals."""
+    result: list[dict[str, Any]] = []
+    reviewed_found: set[str] = set()
+    for path in sorted(sources):
+        if _is_declared_history(path):
+            continue
+        for declaration in _java_oracle_declarations(sources[path], path):
+            key = path + "#" + declaration["constant"]
+            if declaration["value"] is None:
+                raise ValueError(
+                    "Java oracle must be a literal-only String concatenation: "
+                    + key
+                )
+            identities = declaration["exactIdentifiers"]
+            if not identities:
+                classification = "identity-free-java-oracle"
+            elif key not in reviewed:
+                raise ValueError(
+                    "Unclassified nonhistorical Java identity oracle: " + key
+                )
+            else:
+                classification = reviewed[key]
+                reviewed_found.add(key)
+            result.append(
+                {
+                    "path": path,
+                    "constant": declaration["constant"],
+                    "classification": classification,
+                    "exactIdentifierCount": len(identities),
+                }
+            )
+    missing = sorted(set(reviewed) - reviewed_found)
+    if missing:
+        raise ValueError(
+            "Reviewed Java identity oracle is missing or identity-free: "
+            + ", ".join(missing)
+        )
+    return result
+
+
+def _java_identity_oracle_audit(repository: Path) -> list[dict[str, Any]]:
+    sources = {
+        path: data
+        for path in _tracked_text_files(repository)
+        if path.endswith(".java")
+        for data in (_current_bytes(repository, path),)
+        if data is not None
+    }
+    return _classify_java_identity_oracles(
+        sources,
+        REVIEWED_JAVA_IDENTITY_ORACLES,
+    )
+
+
+def _java_oracle_literal(
+    data: bytes | None,
+    path: str,
+    constant: str,
+) -> str | None:
+    for declaration in _java_oracle_declarations(data, path):
+        if declaration["constant"] == constant:
+            value = declaration["value"]
+            return value if isinstance(value, str) else None
+    return None
+
+
+def _parse_full_lifecycle_oracle_baseline(
+    data: bytes | None,
+) -> dict[str, Any]:
+    """Loads the reviewed, repository-owned lifecycle identity baseline."""
+    if data is None:
+        raise ValueError(
+            "Missing reviewed FullLifecycle oracle baseline: "
+            + FULL_LIFECYCLE_ORACLE_BASELINE_PATH
+        )
+
+    def strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(
+                    "Duplicate key in FullLifecycle oracle baseline: " + key
+                )
+            result[key] = value
+        return result
+
+    try:
+        document = json.loads(
+            data.decode("utf-8"),
+            object_pairs_hook=strict_object,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exception:
+        raise ValueError(
+            "Invalid reviewed FullLifecycle oracle baseline JSON"
+        ) from exception
+    if not isinstance(document, dict) or set(document) != {
+        "schema",
+        "sourcePath",
+        "provenanceCommit",
+        "oracles",
+    }:
+        raise ValueError(
+            "FullLifecycle oracle baseline must have the exact reviewed shape"
+        )
+    if document["schema"] != FULL_LIFECYCLE_ORACLE_BASELINE_SCHEMA:
+        raise ValueError("Unexpected FullLifecycle oracle baseline schema")
+    if document["sourcePath"] != FULL_LIFECYCLE_JAVA_TEST:
+        raise ValueError("Unexpected FullLifecycle oracle baseline source path")
+    provenance = document["provenanceCommit"]
+    if (
+        not isinstance(provenance, str)
+        or re.fullmatch(r"[0-9a-f]{40}", provenance) is None
+    ):
+        raise ValueError(
+            "FullLifecycle oracle baseline provenanceCommit must be a "
+            "lowercase 40-hex commit id"
+        )
+    oracles = document["oracles"]
+    if (
+        not isinstance(oracles, dict)
+        or set(oracles) != FULL_LIFECYCLE_ORACLE_NAMES
+        or any(
+            not isinstance(value, str) or not value
+            for value in oracles.values()
+        )
+    ):
+        raise ValueError(
+            "FullLifecycle oracle baseline must contain exactly the two "
+            "reviewed non-empty oracle strings"
+        )
+    return document
+
+
+def _full_lifecycle_oracle_baseline(
+    repository: Path,
+) -> dict[str, Any]:
+    return _parse_full_lifecycle_oracle_baseline(
+        _current_bytes(repository, FULL_LIFECYCLE_ORACLE_BASELINE_PATH)
+    )
+
+
+def _masked_identity_skeleton(value: str) -> str:
+    return EXACT_IDENTIFIER.sub("<exact-identity>", value)
+
+
+def _require_identity_kind(
+    identity: str,
+    kind: str,
+    constant: str,
+    position: int,
+) -> None:
+    if kind == "sha256":
+        valid = re.fullmatch(r"sha256:[0-9a-f]{64}", identity) is not None
+    elif kind == "blue-id":
+        valid = (
+            not identity.startswith("sha256:")
+            and re.fullmatch(
+                r"[1-9A-HJ-NP-Za-km-z]{40,60}(?:#[0-9]+)?",
+                identity,
+            ) is not None
+        )
+    else:
+        raise AssertionError("Unknown identity kind " + kind)
+    if not valid:
+        raise ValueError(
+            constant + " identity position " + str(position)
+            + " must be " + kind + ": " + identity
+        )
+
+
+def _full_lifecycle_oracle_identity_rotations(
+    baseline_oracles: dict[str, str],
+    current_java: bytes | None,
+) -> list[dict[str, Any]]:
+    """Extracts reviewed role-preserving rotations from lifecycle oracles."""
+    specifications: dict[str, dict[str, Any]] = {
+        "DUPLICATE_EVENT_IDENTITY_ORACLE": {
+            "roles": (
+                ("invocation-identity", "sha256"),
+                ("event-blue-id", "blue-id"),
+                ("first-occurrence-identity", "sha256"),
+                ("second-occurrence-identity", "sha256"),
+            ),
+            "stableRoles": frozenset(("event-blue-id",)),
+            "rotations": {
+                "invocation-identity": (
+                    "fixture:full-lifecycle:duplicate-event:invocation-identity",
+                    "package:contracts-registry",
+                ),
+                "first-occurrence-identity": (
+                    "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+                    "fixture:full-lifecycle:duplicate-event:invocation-identity",
+                ),
+                "second-occurrence-identity": (
+                    "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+                    "fixture:full-lifecycle:duplicate-event:invocation-identity",
+                ),
+            },
+            "exactSkeleton": (
+                "<exact-identity>|<exact-identity>|"
+                "<exact-identity>|<exact-identity>"
+            ),
+            "anchors": (),
+        },
+        "GAS_FAILURE_ORACLE": {
+            "roles": (
+                ("invocation-identity", "sha256"),
+                ("gas-trace-identity", "sha256"),
+                ("binding-b-identity", "sha256"),
+                ("binding-b-identity", "sha256"),
+                ("binding-a-identity", "sha256"),
+                ("binding-a-identity", "sha256"),
+                ("rejected-charge-identity", "sha256"),
+                ("embedded-work-identity", "sha256"),
+                ("initialization-work-identity", "sha256"),
+                ("embedded-work-identity", "sha256"),
+            ),
+            "stableRoles": frozenset((
+                "binding-a-identity",
+                "binding-b-identity",
+            )),
+            "rotations": {
+                "invocation-identity": (
+                    "fixture:full-lifecycle:gas-failure:invocation-identity",
+                    "contracts:ProcessEmbedded",
+                ),
+                "gas-trace-identity": (
+                    "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+                    "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+                ),
+                "rejected-charge-identity": (
+                    "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
+                    "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+                ),
+                "embedded-work-identity": (
+                    "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+                    "fixture:full-lifecycle:gas-failure:invocation-identity",
+                ),
+                "initialization-work-identity": (
+                    "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+                    "fixture:full-lifecycle:gas-failure:invocation-identity",
+                ),
+            },
+            "exactSkeleton": None,
+            "anchors": (
+                (
+                    "<exact-identity>|20000|2123|<exact-identity>|"
+                    "GasLimitExceeded|Gas limit exceeded before "
+                    "processor.embeddedEventDelivered|"
+                ),
+                (
+                    "|g4:4:PROCESSOR:managedOccurrenceBindingVerified:1:5:5:"
+                    "b:null:null:admission.binding.<exact-identity>"
+                    "|g5:5:PROCESSOR:processEmbeddedEdgeExamined:1:2:2:"
+                    "b:null:null:admission.edge.<exact-identity>"
+                ),
+                (
+                    "|g6:6:PROCESSOR:managedOccurrenceBindingVerified:1:5:5:"
+                    "a:null:null:admission.binding.<exact-identity>"
+                    "|g7:7:PROCESSOR:processEmbeddedEdgeExamined:1:2:2:"
+                    "a:null:null:admission.edge.<exact-identity>"
+                ),
+                (
+                    "|rejected:[<exact-identity>, PROCESSOR, "
+                    "embeddedEventDelivered, 1, 10, 10, SHARED, null, 0, "
+                    "WORK, <exact-identity>, null, null, null]"
+                ),
+                (
+                    "|works:136:0|INITIALIZATION|a|<exact-identity>"
+                    ":135|EMBEDDED_EVENT|b|<exact-identity>"
+                ),
+            ),
+        },
+    }
+    rotations: list[dict[str, Any]] = []
+    old_to_new: dict[str, tuple[str, str]] = {}
+    for constant, specification in specifications.items():
+        old_value = baseline_oracles.get(constant)
+        new_value = _java_oracle_literal(
+            current_java,
+            FULL_LIFECYCLE_JAVA_TEST,
+            constant,
+        )
+        if old_value is None or new_value is None:
+            raise ValueError(
+                "Missing or malformed FullLifecycleAdmissionTest oracle: "
+                + constant
+            )
+        old_skeleton = _masked_identity_skeleton(old_value)
+        new_skeleton = _masked_identity_skeleton(new_value)
+        if old_skeleton != new_skeleton:
+            raise ValueError(
+                constant + " non-identity skeleton changed"
+            )
+        exact_skeleton = specification["exactSkeleton"]
+        if exact_skeleton is not None and old_skeleton != exact_skeleton:
+            raise ValueError(
+                constant + " has an unexpected exact identity layout"
+            )
+        for anchor in specification["anchors"]:
+            if anchor not in old_skeleton:
+                raise ValueError(
+                    constant + " is missing stable semantic anchor: " + anchor
+                )
+
+        roles = specification["roles"]
+        old_identities = _ordered_exact_identifiers(old_value)
+        new_identities = _ordered_exact_identifiers(new_value)
+        if len(old_identities) != len(roles) or len(new_identities) != len(roles):
+            raise ValueError(
+                constant + " exact identity layout count changed: expected "
+                + str(len(roles)) + ", baseline " + str(len(old_identities))
+                + ", current " + str(len(new_identities))
+            )
+
+        values_by_role: dict[str, dict[str, Any]] = {}
+        for position, ((role, kind), old, new) in enumerate(zip(
+            roles,
+            old_identities,
+            new_identities,
+        )):
+            _require_identity_kind(old, kind, constant, position)
+            _require_identity_kind(new, kind, constant, position)
+            role_values = values_by_role.setdefault(
+                role,
+                {"old": set(), "new": set(), "positions": []},
+            )
+            role_values["old"].add(old)
+            role_values["new"].add(new)
+            role_values["positions"].append(position)
+
+        expected_roles = (
+            set(specification["stableRoles"])
+            | set(specification["rotations"])
+        )
+        if set(values_by_role) != expected_roles:
+            raise ValueError(constant + " semantic role layout changed")
+        for role, role_values in values_by_role.items():
+            if len(role_values["old"]) != 1 or len(role_values["new"]) != 1:
+                raise ValueError(
+                    constant + " duplicate semantic role diverged: " + role
+                )
+            old = next(iter(role_values["old"]))
+            new = next(iter(role_values["new"]))
+            if role in specification["stableRoles"]:
+                if old != new:
+                    raise ValueError(
+                        constant + " stable identity anchor rotated: " + role
+                    )
+                continue
+            if old == new:
+                raise ValueError(
+                    constant + " expected identity rotation is unchanged: " + role
+                )
+            prior = old_to_new.get(old)
+            if prior is not None and prior != (new, role):
+                raise ValueError(
+                    "Full lifecycle identity rotation is ambiguous for " + old
+                )
+            old_to_new[old] = (new, role)
+            stable_key, dependency = specification["rotations"][role]
+            rotations.append(
+                {
+                    "constant": constant,
+                    "role": role,
+                    "stableKey": stable_key,
+                    "old": old,
+                    "new": new,
+                    "firstDependency": dependency,
+                    "positions": list(role_values["positions"]),
+                }
+            )
+    if len(rotations) != 8:
+        raise ValueError(
+            "Full lifecycle oracle rotation count changed: "
+            + str(len(rotations))
+        )
+    return rotations
+
+
 def _json_pointer_segment(value: Any) -> str:
     return str(value).replace("~", "~0").replace("/", "~1")
 
@@ -1477,6 +2191,63 @@ def _cclo34_specialized_rotations(
     return result
 
 
+def _full_lifecycle_specialized_rotations(
+    repository: Path,
+    baseline_input: dict[str, Any],
+    reference_index: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    """Models Java-built lifecycle projections absent from the YAML corpus."""
+    rotations = _full_lifecycle_oracle_identity_rotations(
+        baseline_input["oracles"],
+        _current_bytes(repository, FULL_LIFECYCLE_JAVA_TEST),
+    )
+    result: list[dict[str, Any]] = []
+    for rotation in rotations:
+        role = rotation["role"]
+        positions = rotation["positions"]
+        result.append(
+            _artifact(
+                reference_index,
+                stable_key=rotation["stableKey"],
+                kind="java-frozen-runtime-oracle-identity",
+                module="blue-contracts-core",
+                path=(
+                    FULL_LIFECYCLE_JAVA_TEST
+                    + "#" + rotation["constant"] + "/" + role
+                ),
+                old=rotation["old"],
+                new=rotation["new"],
+                first_dependency=rotation["firstDependency"],
+                closure_rotation_evidence={
+                    "matchedLocationCount": len(positions),
+                    "semanticRole": role,
+                    "identifierPositions": positions,
+                    "oracleBaselineInput": (
+                        FULL_LIFECYCLE_ORACLE_BASELINE_PATH
+                    ),
+                    "oracleBaselineProvenanceCommit": (
+                        baseline_input["provenanceCommit"]
+                    ),
+                    "representativeLocations": [
+                        {
+                            "path": FULL_LIFECYCLE_JAVA_TEST,
+                            "baselineJsonPointer": (
+                                "#" + rotation["constant"] + "/identity/"
+                                + str(position)
+                            ),
+                            "currentJsonPointer": (
+                                "#" + rotation["constant"] + "/identity/"
+                                + str(position)
+                            ),
+                        }
+                        for position in positions
+                    ],
+                },
+            )
+        )
+    return result
+
+
 def _implementation_bindings(
     document: dict[str, Any] | None,
 ) -> dict[str, str]:
@@ -1535,6 +2306,10 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
     baseline_commit = _revision(repository, baseline)
     head_commit = _revision(repository, "HEAD")
     _require_ancestor(repository, baseline_commit, head_commit)
+    full_lifecycle_oracle_baseline = _full_lifecycle_oracle_baseline(
+        repository
+    )
+    java_identity_oracle_audit = _java_identity_oracle_audit(repository)
     reference_index = _reference_index(repository, baseline_commit)
     artifacts: list[dict[str, Any]] = []
     artifacts.append(
@@ -1782,6 +2557,13 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
         baseline_commit,
         reference_index,
     )
+    specialized_rotations.extend(
+        _full_lifecycle_specialized_rotations(
+            repository,
+            full_lifecycle_oracle_baseline,
+            reference_index,
+        )
+    )
     artifacts.extend(specialized_rotations)
     specialized_rotation_count = sum(
         value["oldExactIdentity"] != value["newExactIdentity"]
@@ -1878,6 +2660,24 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
                 "Language canonical registry, fixtures, specification, and release bindings",
                 "Contracts canonical registry, ordinary/closure fixtures, oracles, specification, and release bindings",
             ],
+            "reviewedBaselineInputs": [
+                {
+                    "path": FULL_LIFECYCLE_ORACLE_BASELINE_PATH,
+                    "classification": REVIEWED_IDENTITY_BASELINE_INPUTS[
+                        FULL_LIFECYCLE_ORACLE_BASELINE_PATH
+                    ],
+                    "schema": full_lifecycle_oracle_baseline["schema"],
+                    "sourcePath": full_lifecycle_oracle_baseline[
+                        "sourcePath"
+                    ],
+                    "provenanceCommit": full_lifecycle_oracle_baseline[
+                        "provenanceCommit"
+                    ],
+                    "referenceScanDisposition": (
+                        "excluded-reviewed-generator-input"
+                    ),
+                }
+            ],
             "downstreamClosure": [
                 {
                     "repository": "blue-bex-java",
@@ -1894,8 +2694,11 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
         },
         "identityAuthority": (
             "Registry node BlueIds are read from manifests generated and "
-            "verified by DirectBlueIdCalculator; this report does not "
-            "recalculate schema-heavy BlueIds in Python."
+            "verified by DirectBlueIdCalculator. Java runtime tests establish "
+            "the correctness of current FullLifecycle oracle values. Python "
+            "only inventories and classifies reviewed role-preserving "
+            "rotations; it does not recompute registry BlueIds or runtime "
+            "oracle hashes."
         ),
         "noCompatibilityAliases": no_compatibility_aliases,
         "summary": {
@@ -1914,7 +2717,17 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
                 len(corpus_rotations) + specialized_rotation_count
             ),
             "excludedInvalidVectorCount": len(excluded_identity_vectors),
+            "reviewedJavaIdentityOracleCount": sum(
+                value["classification"]
+                == FULL_LIFECYCLE_ORACLE_CLASSIFICATION
+                for value in java_identity_oracle_audit
+            ),
+            "identityFreeJavaOracleCount": sum(
+                value["classification"] == "identity-free-java-oracle"
+                for value in java_identity_oracle_audit
+            ),
         },
+        "javaIdentityOracleAudit": java_identity_oracle_audit,
         "excludedIdentityVectors": excluded_identity_vectors,
         "artifacts": artifacts,
     }
@@ -1936,12 +2749,50 @@ def render_markdown(report: dict[str, Any]) -> str:
         "Active old-identity references remaining: " + str(summary["activeStoredReferenceCount"]) + ". Historical references retained as immutable evidence: " + str(summary["historicalReferenceCount"]) + ".",
         "Unresolved identity surfaces: " + str(summary["unresolvedArtifactCount"]) + ". Canonical/mirror byte mismatches: " + str(summary["mirrorMismatchCount"]) + ".",
         "Modeled closure identity rotations: " + str(summary["modeledClosureRotationCount"]) + " (" + str(summary["closureCorpusRotationCount"]) + " corpus-derived and " + str(summary["specializedJavaRotationCount"]) + " specialized Java oracle bindings). Intentionally excluded invalid vectors: " + str(summary["excludedInvalidVectorCount"]) + ".",
+        "Reviewed nonhistorical uppercase Java `String *_ORACLE` identity declarations: " + str(summary["reviewedJavaIdentityOracleCount"]) + ". Identity-free literal-only declarations classified separately: " + str(summary["identityFreeJavaOracleCount"]) + ". Every such declaration must decode as a literal-only concatenation; every exact-identity declaration also requires explicit reviewed classification, and later `*_ORACLE +=` mutation is forbidden.",
+        "Current Java oracle correctness is established by Java runtime tests. Python only inventories and classifies role-preserving rotations; it does not recompute the oracle hashes.",
         "",
         "| Classification | Count |",
         "| --- | ---: |",
     ]
     for key, count in summary["classifications"].items():
         lines.append("| `" + key + "` | " + str(count) + " |")
+    lines.extend(
+        [
+            "",
+            "## Java identity-oracle audit",
+            "",
+            "Every nonhistorical uppercase Java `String *_ORACLE` declaration is audited deterministically, including non-final fields, locals, and multi-declarator statements. Structured declarations must be successfully decoded literal-only concatenations, and a conservative masked-code backstop rejects any direct uppercase `*_ORACLE =` assignment the structured parser did not consume. Post-name `[` or `@` decoration is forbidden outright rather than incompletely parsing Java annotation syntax. Any later `*_ORACLE +=` mutation is also forbidden. Exact-identity literals additionally require a reviewed specialized parser; identity-free literal-only oracles remain explicit and do not enter the rotation set.",
+            "",
+            "| Path | Constant | Classification | Exact identifiers |",
+            "| --- | --- | --- | ---: |",
+        ]
+    )
+    for oracle in report["javaIdentityOracleAudit"]:
+        lines.append(
+            "| `" + oracle["path"] + "` | `" + oracle["constant"]
+            + "` | `" + oracle["classification"] + "` | "
+            + str(oracle["exactIdentifierCount"]) + " |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Reviewed identity baseline inputs",
+            "",
+            "These migration-only inputs are checked-in review evidence and are explicitly excluded from active stale-binding scans.",
+            "",
+            "| Path | Classification | Source | Provenance commit | Scan disposition |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    for baseline_input in report["scope"]["reviewedBaselineInputs"]:
+        lines.append(
+            "| `" + baseline_input["path"] + "` | `"
+            + baseline_input["classification"] + "` | `"
+            + baseline_input["sourcePath"] + "` | `"
+            + baseline_input["provenanceCommit"] + "` | `"
+            + baseline_input["referenceScanDisposition"] + "` |"
+        )
     lines.extend(
         [
             "",

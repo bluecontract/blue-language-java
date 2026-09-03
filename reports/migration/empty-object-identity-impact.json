@@ -71,6 +71,14 @@
       "stableKey": "contracts:ChannelEventCheckpoint",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -162,6 +170,14 @@
       "transitiveDependents": [
         "closure:ScriptedOperation",
         "contracts:ScriptedHandler",
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -288,6 +304,14 @@
       "stableKey": "contracts:EmbeddedCollectionEventChannel",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -571,6 +595,14 @@
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
         "fixture:c-clo-23-05-a9-to-a10:masterBlueId",
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -676,6 +708,14 @@
         "closure:ScriptedOperation",
         "contracts:ContractExecutionResult",
         "contracts:ScriptedHandler",
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -746,6 +786,14 @@
       "stableKey": "contracts:ScriptedHandler",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -800,6 +848,14 @@
       "stableKey": "contracts:TypeGeneralizationPolicy",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -3257,6 +3313,297 @@
       "transitiveDependents": []
     },
     {
+      "artifactKind": "java-frozen-runtime-oracle-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "identifierPositions": [
+          2
+        ],
+        "matchedLocationCount": 1,
+        "oracleBaselineInput": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "oracleBaselineProvenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "#DUPLICATE_EVENT_IDENTITY_ORACLE/identity/2",
+            "currentJsonPointer": "#DUPLICATE_EVENT_IDENTITY_ORACLE/identity/2",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          }
+        ],
+        "semanticRole": "first-occurrence-identity"
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "fixture:full-lifecycle:duplicate-event:invocation-identity",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:9754c1af9e30b527b317e19106acff7238f93150c72aa13a7ec204778c551a95",
+      "oldExactIdentity": "sha256:53365d2d325dca5499055a7780b3848ad597697ca244e3ab86f7f112c8663095",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java#DUPLICATE_EVENT_IDENTITY_ORACLE/first-occurrence-identity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: fixture:full-lifecycle:duplicate-event:invocation-identity.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "java-frozen-runtime-oracle-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "identifierPositions": [
+          0
+        ],
+        "matchedLocationCount": 1,
+        "oracleBaselineInput": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "oracleBaselineProvenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "#DUPLICATE_EVENT_IDENTITY_ORACLE/identity/0",
+            "currentJsonPointer": "#DUPLICATE_EVENT_IDENTITY_ORACLE/identity/0",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          }
+        ],
+        "semanticRole": "invocation-identity"
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "package:contracts-registry",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:1cc88d5f61fb903567342efeb2feae1331ab05e3db54e2ffed0e99f5c1c3f561",
+      "oldExactIdentity": "sha256:6c4dedf7301ee2e6d87423d04762705ccf701861ca1c41acfc2a7ebbbc640f97",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java#DUPLICATE_EVENT_IDENTITY_ORACLE/invocation-identity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: package:contracts-registry.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:full-lifecycle:duplicate-event:invocation-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": [
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity"
+      ]
+    },
+    {
+      "artifactKind": "java-frozen-runtime-oracle-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "identifierPositions": [
+          3
+        ],
+        "matchedLocationCount": 1,
+        "oracleBaselineInput": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "oracleBaselineProvenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "#DUPLICATE_EVENT_IDENTITY_ORACLE/identity/3",
+            "currentJsonPointer": "#DUPLICATE_EVENT_IDENTITY_ORACLE/identity/3",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          }
+        ],
+        "semanticRole": "second-occurrence-identity"
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "fixture:full-lifecycle:duplicate-event:invocation-identity",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:f0f923f35df45e850aa1c1605456b415c204313e66296c0337b6ff14765fee53",
+      "oldExactIdentity": "sha256:7dde48d6e83e259960c1bd6edf6d1f6d54bd8798d91fd1d4c7a3cd9056eec9a8",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java#DUPLICATE_EVENT_IDENTITY_ORACLE/second-occurrence-identity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: fixture:full-lifecycle:duplicate-event:invocation-identity.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "java-frozen-runtime-oracle-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "identifierPositions": [
+          7,
+          9
+        ],
+        "matchedLocationCount": 2,
+        "oracleBaselineInput": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "oracleBaselineProvenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "#GAS_FAILURE_ORACLE/identity/7",
+            "currentJsonPointer": "#GAS_FAILURE_ORACLE/identity/7",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          },
+          {
+            "baselineJsonPointer": "#GAS_FAILURE_ORACLE/identity/9",
+            "currentJsonPointer": "#GAS_FAILURE_ORACLE/identity/9",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          }
+        ],
+        "semanticRole": "embedded-work-identity"
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "fixture:full-lifecycle:gas-failure:invocation-identity",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:6c03056d56b095edba7cfb83fa6b89b327455d64a9a447d9b19157ac62a25186",
+      "oldExactIdentity": "sha256:77b934032184b1206ebf6a711c51c76d6c84c08652495ed43a917f8db2992b8a",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java#GAS_FAILURE_ORACLE/embedded-work-identity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: fixture:full-lifecycle:gas-failure:invocation-identity.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": [
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity"
+      ]
+    },
+    {
+      "artifactKind": "java-frozen-runtime-oracle-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "identifierPositions": [
+          1
+        ],
+        "matchedLocationCount": 1,
+        "oracleBaselineInput": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "oracleBaselineProvenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "#GAS_FAILURE_ORACLE/identity/1",
+            "currentJsonPointer": "#GAS_FAILURE_ORACLE/identity/1",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          }
+        ],
+        "semanticRole": "gas-trace-identity"
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:0d657d72910752d0ae93785673768f7bf8e6d98e1fbb2385ef184885d904a907",
+      "oldExactIdentity": "sha256:8d9e5c8892401acc8eecb26acb39a8c172879bc6d6bf4f1ea5203f7564304491",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java#GAS_FAILURE_ORACLE/gas-trace-identity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: fixture:full-lifecycle:gas-failure:embedded-work-identity.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "java-frozen-runtime-oracle-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "identifierPositions": [
+          8
+        ],
+        "matchedLocationCount": 1,
+        "oracleBaselineInput": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "oracleBaselineProvenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "#GAS_FAILURE_ORACLE/identity/8",
+            "currentJsonPointer": "#GAS_FAILURE_ORACLE/identity/8",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          }
+        ],
+        "semanticRole": "initialization-work-identity"
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "fixture:full-lifecycle:gas-failure:invocation-identity",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:18a30d91089c0ba3f678c4e265571f69d694ee54a60fbf410dac16898393635c",
+      "oldExactIdentity": "sha256:d12892b30044cd6a7264080c609756d2662f855bd68eecef1de697584efbea6c",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java#GAS_FAILURE_ORACLE/initialization-work-identity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: fixture:full-lifecycle:gas-failure:invocation-identity.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": [
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity"
+      ]
+    },
+    {
+      "artifactKind": "java-frozen-runtime-oracle-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "identifierPositions": [
+          0
+        ],
+        "matchedLocationCount": 1,
+        "oracleBaselineInput": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "oracleBaselineProvenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "#GAS_FAILURE_ORACLE/identity/0",
+            "currentJsonPointer": "#GAS_FAILURE_ORACLE/identity/0",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          }
+        ],
+        "semanticRole": "invocation-identity"
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "contracts:ProcessEmbedded",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:469145475ec0d4b1f8f5320a9c0da8cf791f7688f968ce0b3c96ef755e517ceb",
+      "oldExactIdentity": "sha256:f866ec935ec5e02c380033741a667dcd182ca3835a7dc33a5ec2fda94d6ac7e7",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java#GAS_FAILURE_ORACLE/invocation-identity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: contracts:ProcessEmbedded.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:full-lifecycle:gas-failure:invocation-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": [
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity"
+      ]
+    },
+    {
+      "artifactKind": "java-frozen-runtime-oracle-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "identifierPositions": [
+          6
+        ],
+        "matchedLocationCount": 1,
+        "oracleBaselineInput": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "oracleBaselineProvenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "#GAS_FAILURE_ORACLE/identity/6",
+            "currentJsonPointer": "#GAS_FAILURE_ORACLE/identity/6",
+            "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+          }
+        ],
+        "semanticRole": "rejected-charge-identity"
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:a3e16c97b22c3ca4422280c40da11d565a2ae8942e5d84f7bd1c7c80bcd6f223",
+      "oldExactIdentity": "sha256:509be835825c819657ede50dbea8468e175af60511ad113584ce5b680a6db300",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java#GAS_FAILURE_ORACLE/rejected-charge-identity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: fixture:full-lifecycle:gas-failure:embedded-work-identity.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
       "artifactKind": "source-sha256",
       "classification": "transitively-changed",
       "closureRotationEvidence": null,
@@ -3381,6 +3728,14 @@
       "stableKey": "implementation:cyclic-set-finalizer",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-release"
       ]
     },
@@ -3446,6 +3801,14 @@
       "stableKey": "implementation:cyclic-set-proof-verifier",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-release"
       ]
     },
@@ -3487,6 +3850,14 @@
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
         "contracts:ChannelEventCheckpoint",
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -3557,6 +3928,14 @@
         "contracts:RuntimeLedger",
         "contracts:ScriptedHandler",
         "contracts:TypeGeneralizationPolicy",
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -3848,6 +4227,14 @@
       "stableKey": "package:contracts-registry",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "fixture:full-lifecycle:duplicate-event:first-occurrence-identity",
+        "fixture:full-lifecycle:duplicate-event:invocation-identity",
+        "fixture:full-lifecycle:duplicate-event:second-occurrence-identity",
+        "fixture:full-lifecycle:gas-failure:embedded-work-identity",
+        "fixture:full-lifecycle:gas-failure:gas-trace-identity",
+        "fixture:full-lifecycle:gas-failure:initialization-work-identity",
+        "fixture:full-lifecycle:gas-failure:invocation-identity",
+        "fixture:full-lifecycle:gas-failure:rejected-charge-identity",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-release",
@@ -4151,7 +4538,21 @@
       "reason": "Intentionally invalid BAD_CYCLIC_PROOF master; it is unchanged between baseline and current corpora and is not a valid canonical identity rotation."
     }
   ],
-  "identityAuthority": "Registry node BlueIds are read from manifests generated and verified by DirectBlueIdCalculator; this report does not recalculate schema-heavy BlueIds in Python.",
+  "identityAuthority": "Registry node BlueIds are read from manifests generated and verified by DirectBlueIdCalculator. Java runtime tests establish the correctness of current FullLifecycle oracle values. Python only inventories and classifies reviewed role-preserving rotations; it does not recompute registry BlueIds or runtime oracle hashes.",
+  "javaIdentityOracleAudit": [
+    {
+      "classification": "reviewed-full-lifecycle-identity-projection",
+      "constant": "DUPLICATE_EVENT_IDENTITY_ORACLE",
+      "exactIdentifierCount": 4,
+      "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+    },
+    {
+      "classification": "reviewed-full-lifecycle-identity-projection",
+      "constant": "GAS_FAILURE_ORACLE",
+      "exactIdentifierCount": 10,
+      "path": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+    }
+  ],
   "noCompatibilityAliases": true,
   "repository": "blue-language-java",
   "schema": "blue-identity-impact/1.0",
@@ -4175,17 +4576,27 @@
       "Language canonical registry, fixtures, specification, and release bindings",
       "Contracts canonical registry, ordinary/closure fixtures, oracles, specification, and release bindings"
     ],
+    "reviewedBaselineInputs": [
+      {
+        "classification": "reviewed-migration-baseline-excluded-from-active-bindings",
+        "path": "blue-conformance/src/main/tools/migration/full-lifecycle-identity-oracle-baseline.json",
+        "provenanceCommit": "91a0cf80ddf238a9a9648f85432884f005e75425",
+        "referenceScanDisposition": "excluded-reviewed-generator-input",
+        "schema": "blue-full-lifecycle-identity-oracle-baseline/1.0",
+        "sourcePath": "blue-contracts-core/src/test/java/blue/language/processor/closure/FullLifecycleAdmissionTest.java"
+      }
+    ],
     "unifiedClosureOwner": "cross-repository implementation report assembled after downstream bindings"
   },
   "summary": {
     "activeStoredReferenceCount": 0,
-    "artifactCount": 85,
+    "artifactCount": 93,
     "classifications": {
       "directly-changed": 6,
       "newly-introduced": 1,
       "obsolete-pre-stable-rc": 0,
       "stale-binding-regenerated": 1,
-      "transitively-changed": 49,
+      "transitively-changed": 57,
       "unchanged-direct": 28,
       "unresolved": 0
     },
@@ -4194,10 +4605,12 @@
     "excludedInvalidVectorCount": 1,
     "fixtureConstantReferenceCount": 0,
     "historicalReferenceCount": 172,
+    "identityFreeJavaOracleCount": 0,
     "manifestReceiptReferenceCount": 0,
     "mirrorMismatchCount": 0,
-    "modeledClosureRotationCount": 36,
-    "specializedJavaRotationCount": 2,
+    "modeledClosureRotationCount": 44,
+    "reviewedJavaIdentityOracleCount": 2,
+    "specializedJavaRotationCount": 10,
     "unresolvedArtifactCount": 0
   }
 }
