@@ -6585,7 +6585,20 @@ def validate_fixture_harness(
         set(required) <= set(provider["expectedLoads"]),
         f"provider does not record a load for every required BlueId in {path.name}",
     )
-
+    physical_fields = {"cache", "batching"}
+    if physical_fields & set(provider):
+        require(
+            physical_fields <= set(provider),
+            f"provider physical mode is incomplete in {path.name}",
+        )
+        require(
+            len(nodes) >= 2 and len(provider["expectedLoads"]) >= 2,
+            f"provider physical mode is not load-bearing in {path.name}",
+        )
+        require(
+            set(provider["expectedLoads"]) <= set(nodes),
+            f"provider physical expectedLoads are not exact backing nodes in {path.name}",
+        )
     locality = fixture["locality"]
     require(
         locality["expectedUnrelatedDocumentsOpened"]

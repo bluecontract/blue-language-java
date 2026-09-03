@@ -1,0 +1,255 @@
+schema: blue-contracts-full-lifecycle-source/1.0
+id: c-evt-collection-07-closure-work-order
+scenario: C-EVT-COLLECTION-07
+description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection paths, and queue/gas evidence across representation and physical provider modes.
+operation: admit-closure
+events:
+  order:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: c-evt-collection-07
+    id: ORDER
+  leaf:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: c-evt-collection-07
+    id: LEAF
+  never:
+    type: {$registryBlueId: FixtureEvent}
+    subscriptionKey: c-evt-collection-07
+    id: NEVER
+documents:
+  c-evt-collection-07-root:
+    publicRoot: true
+    document:
+      documentId: c-evt-collection-07-root
+      name: Collection closure public root
+      orders:
+        order-1: {$documentBlueId: c-evt-collection-07-order}
+      orders-old:
+        order-1: {$documentBlueId: c-evt-collection-07-leaf}
+      "a/b":
+        one: {$documentBlueId: c-evt-collection-07-leaf}
+      "a~b":
+        two: {$documentBlueId: c-evt-collection-07-leaf}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          collectionPaths: [/orders, /orders-old, /a~1b, /a~0b]
+        exactOrder:
+          type: {$registryBlueId: EmbeddedNodeChannel}
+          sourcePath: /orders/order-1
+          event: {$eventBlueId: order}
+          order: 0
+        receiveExactOrder:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: exactOrder
+          order: 0
+        directOrders:
+          type: {$registryBlueId: EmbeddedCollectionEventChannel}
+          collectionPath: /orders
+          event: {$eventBlueId: order}
+          order: 1
+        receiveDirectOrders:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: directOrders
+          order: 0
+        orderTree:
+          type: {$registryBlueId: EmbeddedCollectionEventChannel}
+          collectionPath: /orders
+          includeDescendants: true
+          order: 2
+        receiveOrderTree:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: orderTree
+          order: 0
+        wrongEvent:
+          type: {$registryBlueId: EmbeddedCollectionEventChannel}
+          collectionPath: /orders
+          includeDescendants: true
+          event: {$eventBlueId: never}
+          order: 3
+        mustNotReceiveWrongEvent:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: wrongEvent
+          order: 0
+        slashCollection:
+          type: {$registryBlueId: EmbeddedCollectionEventChannel}
+          collectionPath: /a~1b
+          event: {$eventBlueId: leaf}
+          order: 4
+        receiveSlashCollection:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: slashCollection
+          order: 0
+        tildeCollection:
+          type: {$registryBlueId: EmbeddedCollectionEventChannel}
+          collectionPath: /a~0b
+          event: {$eventBlueId: leaf}
+          order: 5
+        receiveTildeCollection:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: tildeCollection
+          order: 0
+  c-evt-collection-07-order:
+    publicRoot: false
+    document:
+      documentId: c-evt-collection-07-order
+      name: Collection closure order
+      payment: {$documentBlueId: c-evt-collection-07-leaf}
+      contracts:
+        embedded:
+          type: {$registryBlueId: ProcessEmbedded}
+          paths: [/payment]
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        emitOrder:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+  c-evt-collection-07-leaf:
+    publicRoot: false
+    document:
+      documentId: c-evt-collection-07-leaf
+      name: Collection closure leaf
+      contracts:
+        lifecycle:
+          type: {$registryBlueId: LifecycleEventChannel}
+          order: 0
+        emitLeaf:
+          type: {$registryBlueId: ScriptedHandler}
+          channel: lifecycle
+          event:
+            type: {$registryBlueId: DocumentProcessingInitiated}
+          order: 0
+occurrences:
+- sourceDocumentId: c-evt-collection-07-root
+  sourcePath: /orders/order-1
+  activationGeneration: 1
+  targetDocumentId: c-evt-collection-07-order
+  active: true
+- sourceDocumentId: c-evt-collection-07-root
+  sourcePath: /orders-old/order-1
+  activationGeneration: 1
+  targetDocumentId: c-evt-collection-07-leaf
+  active: true
+- sourceDocumentId: c-evt-collection-07-root
+  sourcePath: /a~1b/one
+  activationGeneration: 1
+  targetDocumentId: c-evt-collection-07-leaf
+  active: true
+- sourceDocumentId: c-evt-collection-07-root
+  sourcePath: /a~0b/two
+  activationGeneration: 1
+  targetDocumentId: c-evt-collection-07-leaf
+  active: true
+- sourceDocumentId: c-evt-collection-07-order
+  sourcePath: /payment
+  activationGeneration: 1
+  targetDocumentId: c-evt-collection-07-leaf
+  active: true
+runtime:
+  initializationHandlers:
+    c-evt-collection-07-order/emitOrder:
+      events:
+      - {$eventValue: order}
+    c-evt-collection-07-leaf/emitLeaf:
+      events:
+      - {$eventValue: leaf}
+  handlers:
+    c-evt-collection-07-root/receiveExactOrder: {}
+    c-evt-collection-07-root/receiveDirectOrders: {}
+    c-evt-collection-07-root/receiveOrderTree: {}
+    c-evt-collection-07-root/mustNotReceiveWrongEvent: {}
+    c-evt-collection-07-root/receiveSlashCollection: {}
+    c-evt-collection-07-root/receiveTildeCollection: {}
+gas:
+  sharedLimit: release-default
+cases:
+- suffix: inline-cold
+  representation:
+    documentId: c-evt-collection-07-root
+    path: /orders/order-1
+    form: inline
+  providerMode:
+    cache: cold
+    batching: unbatched
+  exactForms:
+  - {documentId: c-evt-collection-07-root, path: /contracts/embedded, form: inline}
+  - {documentId: c-evt-collection-07-root, path: /contracts/directOrders, form: inline}
+  - {documentId: c-evt-collection-07-root, path: /contracts/receiveExactOrder, form: pure-reference}
+  - {documentId: c-evt-collection-07-root, path: /contracts/receiveDirectOrders, form: pure-reference}
+- suffix: inline-warm
+  representation:
+    documentId: c-evt-collection-07-root
+    path: /orders/order-1
+    form: inline
+  providerMode:
+    cache: warm
+    batching: batched
+  exactForms:
+  - {documentId: c-evt-collection-07-root, path: /contracts/embedded, form: inline}
+  - {documentId: c-evt-collection-07-root, path: /contracts/directOrders, form: inline}
+  - {documentId: c-evt-collection-07-root, path: /contracts/receiveExactOrder, form: pure-reference}
+  - {documentId: c-evt-collection-07-root, path: /contracts/receiveDirectOrders, form: pure-reference}
+  parityWith: inline-cold
+  parityProjections: [invocationIdentity, processResult, gas, workTrace, finalizations]
+- suffix: reference-cold
+  representation:
+    documentId: c-evt-collection-07-root
+    path: /orders/order-1
+    form: pure-reference
+  providerMode:
+    cache: cold
+    batching: batched
+  exactForms:
+  - {documentId: c-evt-collection-07-root, path: /contracts/embedded, form: pure-reference}
+  - {documentId: c-evt-collection-07-root, path: /contracts/directOrders, form: pure-reference}
+  - {documentId: c-evt-collection-07-root, path: /contracts/receiveExactOrder, form: pure-reference}
+  - {documentId: c-evt-collection-07-root, path: /contracts/receiveDirectOrders, form: pure-reference}
+  parityWith: inline-cold
+  parityProjections: [invocationIdentity, processResult, gas, workTrace, finalizations]
+- suffix: reference-warm
+  representation:
+    documentId: c-evt-collection-07-root
+    path: /orders/order-1
+    form: pure-reference
+  providerMode:
+    cache: warm
+    batching: unbatched
+  exactForms:
+  - {documentId: c-evt-collection-07-root, path: /contracts/embedded, form: pure-reference}
+  - {documentId: c-evt-collection-07-root, path: /contracts/directOrders, form: pure-reference}
+  - {documentId: c-evt-collection-07-root, path: /contracts/receiveExactOrder, form: pure-reference}
+  - {documentId: c-evt-collection-07-root, path: /contracts/receiveDirectOrders, form: pure-reference}
+  parityWith: inline-cold
+  parityProjections: [invocationIdentity, processResult, gas, workTrace, finalizations]
+expect:
+  # The focused exporter oracle derives matcher gas from this exact matrix:
+  # five propagated source occurrences test six Channels; five are Collection
+  # Channels. The three direct leaf members compare five path segments each,
+  # its nested descendant compares only the two descendant-enabled candidates,
+  # and the direct order occurrence compares five (30 candidates, 25 path
+  # reads, 22 compared segments, six accepted deliveries).
+  status: success
+  atomic: true
+  rollbackToInput: false
+  documents:
+  - {documentId: c-evt-collection-07-root, initialized: true, terminated: false}
+  - {documentId: c-evt-collection-07-order, initialized: true, terminated: false}
+  - {documentId: c-evt-collection-07-leaf, initialized: true, terminated: false}
+  workCounts:
+  - {kind: INITIALIZATION, count: 3}
+  - {kind: LIFECYCLE, count: 2}
+  - {kind: EMBEDDED_EVENT, count: 6}
+  publicEvents: []
+  distinctEventOccurrenceIdentities: 2
+  checkpointWrites: 0
+  commitCompanion: present
+  parityAcrossCases:
+  - invocationIdentity
+  - processResult
+  - gas
+  - workTrace
+  - finalizations

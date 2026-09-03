@@ -85,7 +85,6 @@ import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.dele
 import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.emptyAbsoluteDirectory;
 import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.existingAbsoluteDirectory;
 import static blue.language.conformance.contracts.FullLifecycleFixtureFiles.require;
-import static blue.language.conformance.contracts.FullLifecycleFixtureSourceValidator.validateSourceFamily;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.deterministicYaml;
 import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.readYaml;
 
@@ -99,17 +98,17 @@ import static blue.language.conformance.contracts.FullLifecycleFixtureSupport.re
  */
 public final class FullLifecycleFixtureExporter {
 
-    static final int SOURCE_COUNT = 16;
-    static final int FIXTURE_COUNT = 26;
+    static final int SOURCE_COUNT = 18;
+    static final int FIXTURE_COUNT = 31;
     static final String SOURCE_SCHEMA =
             "blue-contracts-full-lifecycle-source/1.0";
     static final String FIXTURE_SCHEMA =
             "blue-contracts-closure-fixture/1.0";
     static final String SUCCESS_MARKER =
-            "FULL_LIFECYCLE_FIXTURES_EXPORTED count=26";
+            "FULL_LIFECYCLE_FIXTURES_EXPORTED count=31";
 
     static final Map<String, String> EXPECTED_SOURCE_IDS =
-            FullLifecycleFixtureSourceValidator.expectedSourceIds();
+            FullLifecycleFixtureSourceCatalog.expectedSourceIds();
 
     private FullLifecycleFixtureExporter() {
     }
@@ -150,18 +149,22 @@ public final class FullLifecycleFixtureExporter {
         try (Stream<Path> files = Files.list(sources)) {
             sourceFiles = files
                     .filter(path -> path.getFileName().toString()
-                            .matches("(?:fl-adm|c-evo)-[0-9]{2}.*\\.yaml"))
+                            .matches("(?:(?:fl-adm|c-evo)-[0-9]{2}"
+                                    + "|c-emb-empty-[0-9]{2}"
+                                    + "|c-evt-collection-[0-9]{2})"
+                                    + ".*\\.yaml"))
                     .sorted()
                     .collect(Collectors.toList());
         }
         require(sourceFiles.size() == SOURCE_COUNT,
-                "source root must contain exactly 16 FL-ADM/C-EVO YAML sources");
+                "source root must contain exactly 18 full-lifecycle YAML sources");
         LinkedHashSet<String> sourceNames = sourceFiles.stream()
                 .map(path -> path.getFileName().toString())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         require(sourceNames.equals(EXPECTED_SOURCE_IDS.keySet()),
                 "source root must contain the exact FL-ADM-01..10 and "
-                        + "C-EVO-18..23 family files; "
+                        + "C-EVO-18..23 plus C-EMB-EMPTY-05 and "
+                        + "C-EVT-COLLECTION-07 family files; "
                         + "expected " + EXPECTED_SOURCE_IDS.keySet()
                         + " but found " + sourceNames);
 
@@ -176,7 +179,8 @@ public final class FullLifecycleFixtureExporter {
             for (Path sourceFile : sourceFiles) {
                 try {
                     JsonNode source = readYaml(sourceFile);
-                    validateSourceFamily(sourceFile, source);
+                    FullLifecycleFixtureSourceCatalog.validateSourceFamily(
+                            sourceFile, source, EXPECTED_SOURCE_IDS);
                     compiler.preflight(source);
                     parsedSources.add(source);
                 } catch (RuntimeException failure) {
@@ -211,7 +215,7 @@ public final class FullLifecycleFixtureExporter {
                 }
             }
             require(generated.size() == FIXTURE_COUNT,
-                    "sources must compile to exactly 26 fixtures");
+                    "sources must compile to exactly 31 fixtures");
             ArrayList<String> names = generated.stream()
                     .map(path -> path.getFileName().toString())
                     .sorted()
