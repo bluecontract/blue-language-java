@@ -348,6 +348,12 @@ final class PatchPlanningEngine {
             BatchPatchRecord record = new BatchPatchRecord(resolvedPatch,
                     canonicalPlan,
                     resolvedPlan,
+                    exactUpdateSnapshot(
+                            canonicalPlan.before(),
+                            resolvedPlan.before()),
+                    exactUpdateSnapshot(
+                            canonicalPlan.after(),
+                            resolvedPlan.after()),
                     objectMemberTarget,
                     impact,
                     isProcessorManagedConformanceBypass(canonicalPlan));
@@ -466,10 +472,19 @@ final class PatchPlanningEngine {
         }
         List<BatchPatchResult.GeneralizationMetadataWrite> metadataWrites =
                 conformancePlanning.metadataWrites();
+        CanonicalTypeIdentityLookup preConformanceCanonicalTypeIdentities =
+                metadataWrites.isEmpty()
+                        ? canonicalIdentityEvidence.available()
+                        : canonicalIdentityEvidence.forResolvedGraph(
+                                preConformanceResolved);
         BatchPatchResult.UpdatePlan updatePlan = new BatchPatchResult.UpdatePlan(records,
                 preConformanceCanonical,
                 preConformanceResolved,
+                preConformanceCanonicalTypeIdentities,
+                finalCanonical,
                 finalResolved,
+                finalCanonicalTypeIdentities,
+                invocationEvidenceSnapshotManager,
                 metadataWrites,
                 true);
         long buildUpdatesNanos = 0L;
@@ -785,6 +800,18 @@ final class PatchPlanningEngine {
                 patch.canonicalValue().toNode());
         canonicalIdentityEvidence.include(resolvedValue);
         return patch.withResolvedValue(resolvedValue.frozenResolvedRoot());
+    }
+
+    private FrozenNode exactUpdateSnapshot(
+            FrozenNode selected,
+            FrozenNode resolved) {
+        return BatchPatchRecord.exactInputSnapshot(
+                selected,
+                resolved,
+                resolved != null && selected == null
+                        ? canonicalIdentityEvidence.forResolvedGraph(resolved)
+                        : canonicalIdentityEvidence.available(),
+                invocationEvidenceSnapshotManager);
     }
 
     private ImmutableJsonPatch selectedDocumentPatch(

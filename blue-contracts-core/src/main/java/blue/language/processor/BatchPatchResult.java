@@ -1,6 +1,8 @@
 package blue.language.processor;
 
 import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.model.Node;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.snapshot.FrozenNode;
@@ -162,11 +164,15 @@ final class BatchPatchResult {
     }
 
     List<DocumentUpdateData> updatesAgainst(
-            FrozenNode authoritativeResolvedRoot,
+            ResolvedSnapshot authoritativeSnapshot,
+            ProcessingSnapshotManager authoritativeSnapshotManager,
             UpdateMaterializationMetrics materializationMetrics) {
         if (updatePlan != null) {
-            return updatePlan.build(materializationMetrics,
-                    Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
+            return authoritativeSnapshot != null
+                    ? updatePlan.build(materializationMetrics,
+                            authoritativeSnapshot,
+                            authoritativeSnapshotManager)
+                    : updatePlan.build(materializationMetrics);
         }
         List<DocumentUpdateData> rebound = new ArrayList<>(updates.size());
         for (DocumentUpdateData update : updates) {
@@ -273,10 +279,21 @@ final class BatchPatchResult {
     }
 
     static final class UpdatePlan {
+        /*
+         * "Canonical" in these retained field names means the exact selected
+         * input lane. It may be Source or Canonical Identity Input; every
+         * resolved lane is kept with the exact lane and evidence from the same
+         * snapshot.
+         */
         private final List<BatchPatchRecord> records;
         private final FrozenNode preConformanceCanonicalRoot;
         private final FrozenNode preConformanceResolvedRoot;
+        private final CanonicalTypeIdentityLookup
+                preConformanceCanonicalTypeIdentities;
+        private final FrozenNode finalCanonicalRoot;
         private final FrozenNode finalResolvedRoot;
+        private final CanonicalTypeIdentityLookup finalCanonicalTypeIdentities;
+        private final ProcessingSnapshotManager snapshotManager;
         private final List<GeneralizationMetadataWrite> generatedWrites;
         private final boolean includeGeneratedUpdates;
         private final boolean[] laterOverlaps;
@@ -284,7 +301,12 @@ final class BatchPatchResult {
         UpdatePlan(List<BatchPatchRecord> records,
                    FrozenNode preConformanceCanonicalRoot,
                    FrozenNode preConformanceResolvedRoot,
+                   CanonicalTypeIdentityLookup
+                           preConformanceCanonicalTypeIdentities,
+                   FrozenNode finalCanonicalRoot,
                    FrozenNode finalResolvedRoot,
+                   CanonicalTypeIdentityLookup finalCanonicalTypeIdentities,
+                   ProcessingSnapshotManager snapshotManager,
                    List<GeneralizationMetadataWrite> generatedWrites,
                    boolean includeGeneratedUpdates) {
             this.records = Collections.unmodifiableList(new ArrayList<>(
@@ -294,7 +316,17 @@ final class BatchPatchResult {
                     "preConformanceCanonicalRoot");
             this.preConformanceResolvedRoot = Objects.requireNonNull(preConformanceResolvedRoot,
                     "preConformanceResolvedRoot");
+            this.preConformanceCanonicalTypeIdentities =
+                    Objects.requireNonNull(
+                            preConformanceCanonicalTypeIdentities,
+                            "preConformanceCanonicalTypeIdentities");
+            this.finalCanonicalRoot = Objects.requireNonNull(
+                    finalCanonicalRoot, "finalCanonicalRoot");
             this.finalResolvedRoot = Objects.requireNonNull(finalResolvedRoot, "finalResolvedRoot");
+            this.finalCanonicalTypeIdentities = Objects.requireNonNull(
+                    finalCanonicalTypeIdentities,
+                    "finalCanonicalTypeIdentities");
+            this.snapshotManager = snapshotManager;
             this.generatedWrites = generatedWrites == null
                     ? Collections.<GeneralizationMetadataWrite>emptyList()
                     : Collections.unmodifiableList(new ArrayList<>(generatedWrites));
@@ -304,15 +336,28 @@ final class BatchPatchResult {
 
         List<DocumentUpdateData> build(
                 UpdateMaterializationMetrics materializationMetrics) {
-            return build(materializationMetrics, finalResolvedRoot);
+            return build(materializationMetrics,
+                    new SnapshotLanes(
+                            finalCanonicalRoot,
+                            finalResolvedRoot,
+                            finalCanonicalTypeIdentities,
+                            snapshotManager));
         }
 
         List<DocumentUpdateData> build(
                 UpdateMaterializationMetrics materializationMetrics,
-                FrozenNode authoritativeResolvedRoot) {
+                ResolvedSnapshot authoritativeSnapshot,
+                ProcessingSnapshotManager authoritativeSnapshotManager) {
+            return build(materializationMetrics,
+                    SnapshotLanes.from(
+                            authoritativeSnapshot,
+                            authoritativeSnapshotManager));
+        }
+
+        List<DocumentUpdateData> build(
+                UpdateMaterializationMetrics materializationMetrics,
+                SnapshotLanes authoritative) {
             List<DocumentUpdateData> built = new ArrayList<>();
-            ImmutablePatchPlanner finalResolvedPlanner = ImmutablePatchPlanner.forFrozen(
-                    Objects.requireNonNull(authoritativeResolvedRoot, "authoritativeResolvedRoot"));
             Map<Integer, List<GeneralizationMetadataWrite>> generatedBeforeUpdates =
                     generatedWritesByRequiringRecord();
             for (int recordIndex = 0; recordIndex < records.size(); recordIndex++) {
@@ -321,17 +366,18 @@ final class BatchPatchResult {
                         generatedBeforeUpdates.get(recordIndex),
                         materializationMetrics);
                 BatchPatchRecord record = records.get(recordIndex);
-                FrozenNode before = record.beforeAtPatchTime();
+                FrozenNode before = record.exactBeforeAtPatchTime();
                 FrozenNode after = null;
                 if (record.op() != JsonPatch.Op.REMOVE) {
                     after = laterOverlaps[recordIndex]
-                            ? record.afterAtPatchTime()
-                            : finalResolvedPlanner.read(record.path());
+                            ? record.exactAfterAtPatchTime()
+                            : authoritative.exactAt(record.path());
                 }
                 built.add(new DocumentUpdateData(record.path(),
                         before,
                         after,
-                        semanticOperation(record, before),
+                        semanticOperation(
+                                record, record.beforeAtPatchTime()),
                         record.originScope(),
                         record.cascadeScopes(),
                         materializationMetrics));
@@ -385,14 +431,12 @@ final class BatchPatchResult {
             }
             for (GeneralizationMetadataWrite write : writes) {
                 String path = write.path();
-                FrozenNode before = readGeneralizationMetadata(
+                FrozenNode before = new SnapshotLanes(
                         preConformanceCanonicalRoot,
-                        path);
-                if (before == null) {
-                    before = readGeneralizationMetadata(
-                            preConformanceResolvedRoot,
-                            path);
-                }
+                        preConformanceResolvedRoot,
+                        preConformanceCanonicalTypeIdentities,
+                        snapshotManager)
+                        .exactMetadataAt(path);
                 target.add(new DocumentUpdateData(path,
                         before,
                         write.value(),
@@ -403,34 +447,6 @@ final class BatchPatchResult {
                         Collections.singletonList(JsonPointer.ROOT),
                         materializationMetrics));
             }
-        }
-
-        private FrozenNode readGeneralizationMetadata(
-                FrozenNode root,
-                String path) {
-            List<String> segments = JsonPointer.split(path);
-            if (segments.isEmpty()) {
-                return null;
-            }
-            String field = segments.get(segments.size() - 1);
-            FrozenNode parent = root.at(
-                    segments.subList(0, segments.size() - 1));
-            if (parent == null) {
-                return null;
-            }
-            if (BlueLanguageConstants.OBJECT_TYPE.equals(field)) {
-                return parent.getType();
-            }
-            if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)) {
-                return parent.getItemType();
-            }
-            if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)) {
-                return parent.getKeyType();
-            }
-            if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field)) {
-                return parent.getValueType();
-            }
-            return null;
         }
 
         /**
@@ -464,6 +480,91 @@ final class BatchPatchResult {
                 later.add(segments);
             }
             return overlaps;
+        }
+
+        /** Matched exact-input, effective, and identity-evidence lanes. */
+        private static final class SnapshotLanes {
+            private final ImmutablePatchPlanner selected;
+            private final ImmutablePatchPlanner resolved;
+            private final CanonicalTypeIdentityLookup identities;
+            private final ProcessingSnapshotManager snapshotManager;
+
+            private SnapshotLanes(
+                    FrozenNode selectedRoot,
+                    FrozenNode resolvedRoot,
+                    CanonicalTypeIdentityLookup identities,
+                    ProcessingSnapshotManager snapshotManager) {
+                this.selected = ImmutablePatchPlanner.forFrozen(
+                        Objects.requireNonNull(selectedRoot, "selectedRoot"));
+                this.resolved = ImmutablePatchPlanner.forFrozen(
+                        Objects.requireNonNull(resolvedRoot, "resolvedRoot"));
+                this.identities = Objects.requireNonNull(
+                        identities, "canonicalTypeIdentities");
+                this.snapshotManager = snapshotManager;
+            }
+
+            private static SnapshotLanes from(
+                    ResolvedSnapshot snapshot,
+                    ProcessingSnapshotManager snapshotManager) {
+                ResolvedSnapshot checked = Objects.requireNonNull(
+                        snapshot, "authoritativeSnapshot");
+                FrozenNode selectedRoot = checked.isSourceBacked()
+                        ? checked.frozenSourceRoot()
+                        : checked.frozenCanonicalRoot();
+                return new SnapshotLanes(
+                        selectedRoot,
+                        checked.frozenResolvedRoot(),
+                        checked.canonicalTypeIdentities(),
+                        snapshotManager);
+            }
+
+            private FrozenNode exactAt(String path) {
+                return BatchPatchRecord.exactInputSnapshot(
+                        selected.read(path),
+                        resolved.read(path),
+                        identities,
+                        snapshotManager);
+            }
+
+            private FrozenNode exactMetadataAt(String path) {
+                FrozenNode selectedValue = readMetadata(selected.root(), path);
+                FrozenNode resolvedValue = readMetadata(resolved.root(), path);
+                if (selectedValue != null || resolvedValue == null) {
+                    return selectedValue;
+                }
+                return FrozenNode.fromNode(
+                        new Node().blueId(
+                                identities.requireCanonicalTypeBlueId(
+                                        resolvedValue.toNode())));
+            }
+
+            private static FrozenNode readMetadata(
+                    FrozenNode root,
+                    String path) {
+                List<String> segments = JsonPointer.split(path);
+                if (segments.isEmpty()) {
+                    return null;
+                }
+                String field = segments.get(segments.size() - 1);
+                FrozenNode parent = root.at(
+                        segments.subList(0, segments.size() - 1));
+                if (parent == null) {
+                    return null;
+                }
+                if (BlueLanguageConstants.OBJECT_TYPE.equals(field)) {
+                    return parent.getType();
+                }
+                if (BlueLanguageConstants.OBJECT_ITEM_TYPE.equals(field)) {
+                    return parent.getItemType();
+                }
+                if (BlueLanguageConstants.OBJECT_KEY_TYPE.equals(field)) {
+                    return parent.getKeyType();
+                }
+                if (BlueLanguageConstants.OBJECT_VALUE_TYPE.equals(field)) {
+                    return parent.getValueType();
+                }
+                return null;
+            }
         }
 
         private static final class PathTrie {

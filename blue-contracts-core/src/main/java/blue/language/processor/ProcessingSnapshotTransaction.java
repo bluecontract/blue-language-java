@@ -125,10 +125,8 @@ final class ProcessingSnapshotTransaction {
             List<DocumentUpdateData> updates;
             try {
                 updates = exactResult.updatesAgainst(
-                        authoritative != null
-                                ? authoritative.frozenResolvedRoot()
-                                : FrozenNode.fromResolvedNode(
-                                        tentativeSelected),
+                        authoritative,
+                        commitManager,
                         runtime.updateMaterializationMetrics());
             } finally {
                 long nanos = System.nanoTime() - buildUpdatesStart;

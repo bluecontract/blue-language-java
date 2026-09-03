@@ -371,6 +371,8 @@ final class ContractConsumerCanonicalIdentityEvidenceTest {
                         .plan("/", patch),
                 ImmutablePatchPlanner.forFrozen(resolvedRoot)
                         .plan("/", patch),
+                null,
+                FrozenNode.fromNode(new Node().value("value")),
                 true,
                 null,
                 false);
