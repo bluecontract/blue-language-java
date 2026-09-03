@@ -102,12 +102,28 @@ class IdentityImpactInventoryTest(unittest.TestCase):
                 "line": 9,
                 "disposition": "retained-immutable-history",
             },
+            {
+                "path": "blue-contracts-core/src/test/java/x/OracleTest.java",
+                "line": 10,
+                "disposition": "requires-review-or-update",
+            },
+            {
+                "path": "reports/modernization/ArchivedTest.java",
+                "line": 11,
+                "disposition": "retained-immutable-history",
+            },
         ]
         partitions = inventory._reference_partitions(references)
-        self.assertEqual(references[:2], partitions["active"])
-        self.assertEqual([references[0]], partitions["fixtures"])
+        self.assertEqual(references[:2] + [references[3]], partitions["active"])
+        self.assertEqual(
+            [references[0], references[3]],
+            partitions["fixtures"],
+        )
         self.assertEqual([references[1]], partitions["manifests"])
-        self.assertEqual([references[2]], partitions["historical"])
+        self.assertEqual(
+            [references[2], references[4]],
+            partitions["historical"],
+        )
 
     def test_generated_reference_summaries_equal_artifact_partitions(self) -> None:
         artifacts = self.report["artifacts"]
@@ -222,9 +238,138 @@ class IdentityImpactInventoryTest(unittest.TestCase):
             .encode("utf-8")
         )
         self.assertEqual(
-            sorted([digest, raw_digest, commit, blue_id]),
+            sorted([digest, "sha256:" + raw_digest, commit, blue_id]),
             actual,
         )
+
+    def test_exact_reference_scan_normalizes_sha_and_joins_java_literals(self) -> None:
+        digest = "sha256:" + "a" * 64
+        member = "4ZMfXZbSNVnEaqHVwYyYFHSfJ4JYs6VbR2oLZNqNkScr#1"
+        text = (
+            'private static final String HASH = "sha256:' + "a" * 20 + '"\n'
+            '        + "' + "a" * 44 + '";\n'
+            'private static final String MEMBER = "' + member + '";\n'
+        )
+        occurrences = inventory._identifier_occurrences("OracleTest.java", text)
+        self.assertIn((digest, 1), occurrences)
+        self.assertIn((member, 3), occurrences)
+        self.assertEqual(digest, inventory._normalized_identifier("a" * 64))
+        self.assertEqual(digest, inventory._normalized_identifier(digest))
+
+    def test_closure_rotation_inventory_is_complete_and_excludes_invalid_proof(self) -> None:
+        summary = self.report["summary"]
+        self.assertEqual(34, summary["closureCorpusRotationCount"])
+        self.assertEqual(2, summary["specializedJavaRotationCount"])
+        self.assertEqual(36, summary["modeledClosureRotationCount"])
+        self.assertEqual(1, summary["excludedInvalidVectorCount"])
+
+        artifacts = {
+            value["stableKey"]: value for value in self.report["artifacts"]
+        }
+        invocation = artifacts[
+            "fixture:c-clo-34:java-invocation-identity"
+        ]
+        self.assertEqual(
+            "sha256:7a602429b3959efe5bddf701231474a42c9cafe4c58abd65d655dc46265f9a06",
+            invocation["oldExactIdentity"],
+        )
+        self.assertEqual(
+            "sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90",
+            invocation["newExactIdentity"],
+        )
+        contracts_specification = artifacts[
+            "fixture:c-clo-34:java-contracts-specification-identity"
+        ]
+        self.assertEqual(
+            "sha256:e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193",
+            contracts_specification["oldExactIdentity"],
+        )
+        self.assertEqual(
+            "sha256:62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9",
+            contracts_specification["newExactIdentity"],
+        )
+        current_binding = artifacts[
+            "fixture:c-clo-34:java-invocation-binding"
+        ]
+        self.assertEqual(
+            current_binding["newExactIdentity"],
+            current_binding["oldExactIdentity"],
+        )
+        excluded = self.report["excludedIdentityVectors"]
+        self.assertEqual(inventory.INVALID_CYCLIC_PROOF_MASTER, excluded[0]["identity"])
+        self.assertIn("BAD_CYCLIC_PROOF", excluded[0]["reason"])
+
+    def test_cclo10_reordered_limit_form_matches_stable_document_identity(self) -> None:
+        document_a = "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"
+        document_b = "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"
+        old_a = "7iWdksGRG7vaHczbr18QqK8Ex598ZBjQJdMZbAe3nRHB"
+        old_b = "DwqgPP4QrvY1f96zSo7k6hgoq1YRi2CD8Hkvu2YTLgNA"
+        new_a = "ERrv83b9RbGZSg2vyzFmzQiU2KoLyfzkuEn234gm7oFA"
+        new_b = "8uvxz52uKPTRgGi4bB9HDnd5wVi4uGZ9ot1jtZppXA7Z"
+        baseline = {
+            "canonicalLimitForm": [
+                {
+                    "documentId": {"blueId": document_b},
+                    "contracts": {"blueId": old_b},
+                },
+                {
+                    "documentId": {"blueId": document_a},
+                    "contracts": {"blueId": old_a},
+                },
+            ]
+        }
+        current = {
+            "canonicalLimitForm": [
+                {
+                    "documentId": {"blueId": document_a},
+                    "contracts": {"blueId": new_a},
+                },
+                {
+                    "documentId": {"blueId": document_b},
+                    "contracts": {"blueId": new_b},
+                },
+            ]
+        }
+        pairs = inventory._paired_identity_scalars(baseline, current)
+        rotations = {
+            old: (new, old_pointer, new_pointer)
+            for old, new, old_pointer, new_pointer in pairs
+            if old in {old_a, old_b}
+        }
+        self.assertEqual(
+            {
+                old_a: (
+                    new_a,
+                    "/canonicalLimitForm/1/contracts/blueId",
+                    "/canonicalLimitForm/0/contracts/blueId",
+                ),
+                old_b: (
+                    new_b,
+                    "/canonicalLimitForm/0/contracts/blueId",
+                    "/canonicalLimitForm/1/contracts/blueId",
+                ),
+            },
+            rotations,
+        )
+
+        artifacts = {
+            value["oldExactIdentity"]: value
+            for value in self.report["artifacts"]
+        }
+        self.assertEqual(new_a, artifacts[old_a]["newExactIdentity"])
+        self.assertEqual(new_b, artifacts[old_b]["newExactIdentity"])
+
+    def test_ambiguous_repeated_identity_shapes_are_not_paired_by_index(self) -> None:
+        old = [
+            {"blueId": "7iWdksGRG7vaHczbr18QqK8Ex598ZBjQJdMZbAe3nRHB"},
+            {"blueId": "DwqgPP4QrvY1f96zSo7k6hgoq1YRi2CD8Hkvu2YTLgNA"},
+        ]
+        new = [
+            {"blueId": "8uvxz52uKPTRgGi4bB9HDnd5wVi4uGZ9ot1jtZppXA7Z"},
+            {"blueId": "ERrv83b9RbGZSg2vyzFmzQiU2KoLyfzkuEn234gm7oFA"},
+        ]
+        self.assertEqual([], inventory._aligned_list_indexes(old, new))
+        self.assertEqual([], inventory._paired_identity_scalars(old, new))
 
     def test_optional_cross_repository_mode_limits_itself_to_identity_surfaces(self) -> None:
         self.assertTrue(inventory._is_identity_surface("docs/bex-specification.md"))

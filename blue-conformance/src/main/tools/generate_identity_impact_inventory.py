@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 from pathlib import Path
 import re
 import subprocess
+import tarfile
 from typing import Any, Iterable
 
 import yaml
@@ -54,6 +56,28 @@ HISTORICAL_CYCLE_FIXTURE = (
     "blue-conformance/src/main/resources/"
     "blue-contracts-closure-1.0/fixtures/closure/"
     "c-clo-23-05-a9-to-a10.yaml"
+)
+CLOSURE_FIXTURE_DATA_ROOT = (
+    "blue-conformance/src/main/resources/"
+    "blue-contracts-closure-1.0/fixtures/closure"
+)
+CLOSURE_ORACLE_DATA_ROOT = (
+    "blue-conformance/src/main/resources/"
+    "blue-contracts-closure-1.0/oracles"
+)
+BASELINE_JAVA_TEST_ROOTS = (
+    "blue-conformance/src/test/java",
+    "blue-contracts-core/src/test/java",
+)
+C_CLO_34_FIXTURE = CLOSURE_FIXTURE_DATA_ROOT + (
+    "/c-clo-34-separate-document-steps.yaml"
+)
+C_CLO_34_JAVA_TEST = (
+    "blue-contracts-core/src/test/java/blue/language/processor/closure/"
+    "ClosureInvocationVerifierTest.java"
+)
+INVALID_CYCLIC_PROOF_MASTER = (
+    "6Rnjv8oquG4RqPwo55MZgF7jcUZGd7HdYZMPiFmBQUQ7"
 )
 CONTRACTS_RELEASE = (
     "blue-conformance/src/main/resources/"
@@ -188,6 +212,7 @@ DEPENDENCIES = {
 
 HISTORICAL_PREFIXES = (
     "api/semantic-baseline-1.0.json",
+    "CLOSURE_INVENTORY_REBASE_EVIDENCE.md",
     "reports/modernization/",
     "docs/collection-paths-and-cohesion-migration-report.md",
     "docs/language-1.0-contracts-kernel-1.0-migration.md",
@@ -214,8 +239,11 @@ EXACT_IDENTIFIER = re.compile(
     r"|(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])"
     r"|(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])"
     r"|(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{40,60}"
+    r"(?:#[0-9]+)?"
     r"(?![1-9A-HJ-NP-Za-km-z])"
 )
+JAVA_STRING_LITERAL = re.compile(r'"(?:\\.|[^"\\])*"', re.DOTALL)
+SHA256_BARE = re.compile(r"[0-9a-f]{64}")
 
 
 def _git(repository: Path, *args: str) -> bytes:
@@ -247,6 +275,39 @@ def _baseline_bytes(repository: Path, baseline: str, path: str) -> bytes | None:
     return completed.stdout
 
 
+def _revision_files(
+    repository: Path,
+    revision: str,
+    roots: Iterable[str],
+) -> dict[str, bytes]:
+    """Reads a revision subtree in one Git operation.
+
+    Fixture identity discovery touches many large YAML documents.  A single
+    archive keeps the inventory deterministic without issuing one `git show`
+    process per file.
+    """
+    archive = _git(
+        repository,
+        "archive",
+        "--format=tar",
+        revision,
+        "--",
+        *tuple(roots),
+    )
+    result: dict[str, bytes] = {}
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as values:
+        for member in values.getmembers():
+            if not member.isfile():
+                continue
+            extracted = values.extractfile(member)
+            if extracted is None:
+                raise ValueError(
+                    "Unable to read archived revision path: " + member.name
+                )
+            result[member.name] = extracted.read()
+    return result
+
+
 def _revision(repository: Path, revision: str) -> str:
     return _git(repository, "rev-parse", "--verify", revision).decode("utf-8").strip()
 
@@ -274,7 +335,8 @@ def _current_bytes(repository: Path, path: str) -> bytes | None:
 def _yaml(data: bytes | None) -> dict[str, Any] | None:
     if data is None:
         return None
-    loaded = yaml.safe_load(data)
+    loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+    loaded = yaml.load(data, Loader=loader)
     if not isinstance(loaded, dict):
         raise ValueError("Expected a YAML mapping")
     return loaded
@@ -370,6 +432,66 @@ def _is_declared_history(path: str) -> bool:
     return path.startswith(HISTORICAL_TOP_LEVEL_PREFIXES)
 
 
+def _normalized_identifier(identity: str) -> str:
+    """Uses one lookup form for prefixed and bare SHA-256 identities."""
+    if identity.startswith("sha256:"):
+        return identity
+    if SHA256_BARE.fullmatch(identity):
+        return "sha256:" + identity
+    return identity
+
+
+def _identifier_occurrences(path: str, text: str) -> list[tuple[str, int]]:
+    """Finds exact identities, including Java literals split with `+`.
+
+    The ordinary pass preserves references in comments, YAML and Markdown.
+    Java receives a second pass over adjacent string-literal chains because
+    frozen canonical JSON is intentionally line-wrapped in tests.  Results are
+    de-duplicated by normalized identity and source line.
+    """
+    result: set[tuple[str, int]] = set()
+    for number, line in enumerate(text.splitlines(), 1):
+        for match in EXACT_IDENTIFIER.finditer(line):
+            result.add((_normalized_identifier(match.group(0)), number))
+    if not path.endswith(".java"):
+        return sorted(result, key=lambda value: (value[1], value[0]))
+
+    literals = list(JAVA_STRING_LITERAL.finditer(text))
+    index = 0
+    while index < len(literals):
+        last = index
+        while last + 1 < len(literals) and re.fullmatch(
+            r"\s*\+\s*",
+            text[literals[last].end():literals[last + 1].start()],
+        ):
+            last += 1
+        if last > index:
+            combined = ""
+            segments: list[tuple[int, int, int]] = []
+            for literal in literals[index:last + 1]:
+                content = literal.group(0)[1:-1]
+                start = len(combined)
+                combined += content
+                segments.append(
+                    (
+                        start,
+                        len(combined),
+                        text.count("\n", 0, literal.start()) + 1,
+                    )
+                )
+            for match in EXACT_IDENTIFIER.finditer(combined):
+                source_line = next(
+                    line
+                    for start, end, line in segments
+                    if start <= match.start() < end
+                )
+                result.add(
+                    (_normalized_identifier(match.group(0)), source_line)
+                )
+        index = last + 1
+    return sorted(result, key=lambda value: (value[1], value[0]))
+
+
 def _reference_index(
     repository: Path,
     baseline: str,
@@ -381,8 +503,9 @@ def _reference_index(
         if data is None:
             continue
         declared_history = _is_declared_history(path)
-        immutable_history = declared_history and (
-            _baseline_bytes(repository, baseline, path) == data
+        immutable_history = declared_history and data in (
+            _baseline_bytes(repository, baseline, path),
+            _baseline_bytes(repository, "HEAD", path),
         )
         disposition = (
             "retained-immutable-history"
@@ -390,17 +513,14 @@ def _reference_index(
             else "requires-review-or-update"
         )
         text = data.decode("utf-8", errors="replace")
-        for number, line in enumerate(text.splitlines(), 1):
-            for identity in set(
-                match.group(0) for match in EXACT_IDENTIFIER.finditer(line)
-            ):
-                result.setdefault(identity, []).append(
-                    {
-                        "path": path,
-                        "line": number,
-                        "disposition": disposition,
-                    }
-                )
+        for identity, number in _identifier_occurrences(path, text):
+            result.setdefault(identity, []).append(
+                {
+                    "path": path,
+                    "line": number,
+                    "disposition": disposition,
+                }
+            )
     return result
 
 
@@ -408,7 +528,12 @@ def _exact_identifiers(data: bytes | None) -> list[str]:
     if data is None:
         return []
     text = data.decode("utf-8", errors="replace")
-    return sorted(set(match.group(0) for match in EXACT_IDENTIFIER.finditer(text)))
+    return sorted(
+        set(
+            _normalized_identifier(match.group(0))
+            for match in EXACT_IDENTIFIER.finditer(text)
+        )
+    )
 
 
 def _is_identity_surface(path: str) -> bool:
@@ -608,7 +733,7 @@ def _references(
 ) -> list[dict[str, Any]]:
     if not identity:
         return []
-    return list(reference_index.get(identity, ()))
+    return list(reference_index.get(_normalized_identifier(identity), ()))
 
 
 def _is_fixture_or_constant_reference(path: str) -> bool:
@@ -616,6 +741,7 @@ def _is_fixture_or_constant_reference(path: str) -> bool:
     return (
         "/fixtures/" in path
         or "/oracles/" in path
+        or ("/src/test/java/" in path and name.endswith("Test.java"))
         or name.endswith("Fixture.java")
         or "Fixture" in name
         or name in {
@@ -712,6 +838,7 @@ def _artifact(
     first_dependency: str | None = None,
     mirrored_paths: list[dict[str, Any]] | None = None,
     component_binding_changes: list[dict[str, Any]] | None = None,
+    closure_rotation_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     classification = _classification(stable_key, old, new)
     effective_dependency = (
@@ -734,6 +861,7 @@ def _artifact(
         "transitiveDependents": _transitive_dependents(stable_key),
         "mirroredPaths": mirrored_paths or [],
         "componentBindingChanges": component_binding_changes or [],
+        "closureRotationEvidence": closure_rotation_evidence,
         "storedReferencesRequiringUpdate": reference_partitions["active"],
         "fixtureConstantsRequiringUpdate": reference_partitions["fixtures"],
         "manifestReceiptEntriesRequiringUpdate": reference_partitions["manifests"],
@@ -857,11 +985,496 @@ def _java_string_constant(data: bytes | None, constant: str) -> str | None:
         return None
     text = data.decode("utf-8", errors="replace")
     pattern = re.compile(
-        r"\b" + re.escape(constant)
-        + r"\s*=\s*(?:\r?\n\s*)?\"([^\"]+)\"\s*;"
+        r"\b" + re.escape(constant) + r"\s*=\s*(.*?);",
+        re.DOTALL,
     )
     match = pattern.search(text)
-    return match.group(1) if match is not None else None
+    if match is None:
+        return None
+    expression = match.group(1)
+    literals = list(JAVA_STRING_LITERAL.finditer(expression))
+    if not literals:
+        return None
+    cursor = 0
+    for index, literal in enumerate(literals):
+        separator = expression[cursor:literal.start()]
+        if index == 0:
+            if separator.strip():
+                return None
+        elif re.fullmatch(r"\s*\+\s*", separator) is None:
+            return None
+        cursor = literal.end()
+    if expression[cursor:].strip():
+        return None
+    try:
+        return "".join(json.loads(value.group(0)) for value in literals)
+    except json.JSONDecodeError as exception:
+        raise ValueError(
+            "Invalid Java string literal for constant " + constant
+        ) from exception
+
+
+def _json_pointer_segment(value: Any) -> str:
+    return str(value).replace("~", "~0").replace("/", "~1")
+
+
+def _identity_scalar(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    match = EXACT_IDENTIFIER.fullmatch(value)
+    return _normalized_identifier(value) if match is not None else None
+
+
+def _identity_scalars(
+    value: Any,
+    pointer: str = "",
+) -> dict[str, str]:
+    result: dict[str, str] = {}
+    if isinstance(value, dict):
+        for key, child in value.items():
+            result.update(
+                _identity_scalars(
+                    child,
+                    pointer + "/" + _json_pointer_segment(key),
+                )
+            )
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            result.update(
+                _identity_scalars(child, pointer + "/" + str(index))
+            )
+    else:
+        identity = _identity_scalar(value)
+        if identity is not None:
+            result[pointer] = identity
+    return result
+
+
+STABLE_LIST_SELECTORS = (
+    "documentId",
+    "memberIdentity",
+    "stableId",
+    "stableKey",
+    "id",
+    "name",
+    "key",
+)
+
+
+def _selector_value(value: Any) -> str | None:
+    """Returns a deterministic scalar identity for a semantic list key."""
+    if isinstance(value, (str, int, bool)):
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))
+    if isinstance(value, dict) and len(value) == 1:
+        key, child = next(iter(value.items()))
+        if key in {"blueId", "id", "name", "value"} and isinstance(
+            child, (str, int, bool)
+        ):
+            return key + ":" + json.dumps(
+                child,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+    return None
+
+
+def _list_selector_index(
+    values: list[Any],
+    selector: str,
+) -> dict[str, int] | None:
+    result: dict[str, int] = {}
+    for index, value in enumerate(values):
+        if not isinstance(value, dict) or selector not in value:
+            return None
+        selected = _selector_value(value[selector])
+        if selected is None or selected in result:
+            return None
+        result[selected] = index
+    return result
+
+
+def _identity_agnostic_value(value: Any) -> Any:
+    """Keeps semantic shape while removing values expected to rotate."""
+    if _identity_scalar(value) is not None:
+        return {"$exactIdentity": True}
+    if isinstance(value, dict):
+        return {
+            str(key): _identity_agnostic_value(child)
+            for key, child in value.items()
+        }
+    if isinstance(value, list):
+        return [_identity_agnostic_value(child) for child in value]
+    return value
+
+
+def _identity_agnostic_signature(value: Any) -> str:
+    return json.dumps(
+        _identity_agnostic_value(value),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _contains_exact_identity(value: Any) -> bool:
+    if _identity_scalar(value) is not None:
+        return True
+    if isinstance(value, dict):
+        return any(_contains_exact_identity(child) for child in value.values())
+    if isinstance(value, list):
+        return any(_contains_exact_identity(child) for child in value)
+    return False
+
+
+def _aligned_list_indexes(
+    old: list[Any],
+    new: list[Any],
+) -> list[tuple[int, int]]:
+    """Aligns list members only when their semantic correspondence is proven."""
+    for selector in STABLE_LIST_SELECTORS:
+        old_index = _list_selector_index(old, selector)
+        new_index = _list_selector_index(new, selector)
+        if (
+            old_index is not None
+            and new_index is not None
+            and set(old_index) == set(new_index)
+        ):
+            return [
+                (old_index[value], new_index[value])
+                for value in old_index
+            ]
+
+    old_signatures = [_identity_agnostic_signature(value) for value in old]
+    new_signatures = [_identity_agnostic_signature(value) for value in new]
+    if (
+        len(set(old_signatures)) == len(old_signatures)
+        and len(set(new_signatures)) == len(new_signatures)
+        and set(old_signatures) == set(new_signatures)
+    ):
+        new_index = {
+            signature: index
+            for index, signature in enumerate(new_signatures)
+        }
+        return [
+            (index, new_index[signature])
+            for index, signature in enumerate(old_signatures)
+        ]
+
+    # Positional comparison remains safe for unchanged, unique semantic
+    # shapes. Repeated identity-bearing shapes are ambiguous and deliberately
+    # yield no pairs rather than silently treating list order as identity.
+    if len(old) == len(new) and old_signatures == new_signatures:
+        if len(set(old_signatures)) != len(old_signatures) and any(
+            _contains_exact_identity(value) for value in old + new
+        ):
+            return []
+        return [(index, index) for index in range(len(old))]
+    return []
+
+
+def _paired_identity_scalars(
+    old: Any,
+    new: Any,
+    old_pointer: str = "",
+    new_pointer: str = "",
+) -> list[tuple[str, str, str, str]]:
+    """Pairs exact scalars through mapping keys and stable list semantics."""
+    result: list[tuple[str, str, str, str]] = []
+    if isinstance(old, dict) and isinstance(new, dict):
+        for key in old.keys() & new.keys():
+            segment = "/" + _json_pointer_segment(key)
+            result.extend(
+                _paired_identity_scalars(
+                    old[key],
+                    new[key],
+                    old_pointer + segment,
+                    new_pointer + segment,
+                )
+            )
+        return result
+    if isinstance(old, list) and isinstance(new, list):
+        for old_index, new_index in _aligned_list_indexes(old, new):
+            result.extend(
+                _paired_identity_scalars(
+                    old[old_index],
+                    new[new_index],
+                    old_pointer + "/" + str(old_index),
+                    new_pointer + "/" + str(new_index),
+                )
+            )
+        return result
+    old_identity = _identity_scalar(old)
+    new_identity = _identity_scalar(new)
+    if old_identity is not None and new_identity is not None:
+        result.append(
+            (old_identity, new_identity, old_pointer, new_pointer)
+        )
+    return result
+
+
+def _yaml_value(data: bytes, path: str) -> Any:
+    loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+    try:
+        return yaml.load(data, Loader=loader)
+    except yaml.YAMLError as exception:
+        raise ValueError("Unable to parse identity corpus YAML: " + path) from exception
+
+
+def _baseline_java_test_identifiers(
+    repository: Path,
+    baseline: str,
+) -> set[str]:
+    files = _revision_files(
+        repository,
+        baseline,
+        BASELINE_JAVA_TEST_ROOTS,
+    )
+    result: set[str] = set()
+    for path, data in files.items():
+        if not path.endswith(".java"):
+            continue
+        text = data.decode("utf-8", errors="replace")
+        result.update(
+            identity for identity, _ in _identifier_occurrences(path, text)
+        )
+    return result
+
+
+def _closure_corpus_rotations(
+    repository: Path,
+    baseline: str,
+) -> list[dict[str, Any]]:
+    """Discovers exact fixture/oracle rotations used by Java test vectors.
+
+    Mapping children are paired by key. List members are paired only by a
+    unique stable selector or a unique identity-agnostic semantic shape; an
+    ambiguous identity-bearing list is never paired by position. Limiting the
+    candidate set to exact identifiers committed in baseline Java tests keeps
+    the inventory focused on release constants that can otherwise go stale.
+    """
+    roots = (CLOSURE_FIXTURE_DATA_ROOT, CLOSURE_ORACLE_DATA_ROOT)
+    baseline_files = _revision_files(repository, baseline, roots)
+    current_files = {
+        path: _current_bytes(repository, path)
+        for path in _tracked_text_files(repository)
+        if path.endswith((".yaml", ".yml"))
+        and any(path.startswith(root + "/") for root in roots)
+        and not path.endswith("/manifest.yaml")
+    }
+    comparisons: list[tuple[str, Any, Any]] = []
+    baseline_identities: set[str] = set()
+    current_identities: set[str] = set()
+    for path in sorted(set(baseline_files) & set(current_files)):
+        current_data = current_files[path]
+        if current_data is None:
+            continue
+        old_value = _yaml_value(baseline_files[path], path)
+        new_value = _yaml_value(current_data, path)
+        old_scalars = _identity_scalars(old_value)
+        new_scalars = _identity_scalars(new_value)
+        baseline_identities.update(old_scalars.values())
+        current_identities.update(new_scalars.values())
+        comparisons.append((path, old_value, new_value))
+
+    candidates = (
+        _baseline_java_test_identifiers(repository, baseline)
+        & baseline_identities
+        - current_identities
+    )
+    alternatives: dict[str, dict[str, set[tuple[str, str, str]]]] = {
+        old: {} for old in candidates
+    }
+    for path, old_value, new_value in comparisons:
+        for old, new, old_pointer, new_pointer in _paired_identity_scalars(
+            old_value,
+            new_value,
+        ):
+            if old not in candidates:
+                continue
+            if new == old or new in baseline_identities:
+                continue
+            alternatives[old].setdefault(new, set()).add(
+                (path, old_pointer, new_pointer)
+            )
+
+    rotations: list[dict[str, Any]] = []
+    for old in sorted(candidates):
+        replacements = alternatives[old]
+        if len(replacements) != 1:
+            raise ValueError(
+                "Closure identity rotation is not one-to-one for "
+                + old
+                + ": "
+                + ", ".join(sorted(replacements))
+            )
+        new, locations = next(iter(replacements.items()))
+        ordered = sorted(locations)
+        rotations.append(
+            {
+                "old": old,
+                "new": new,
+                "evidence": {
+                    "matchedLocationCount": len(ordered),
+                    "representativeLocations": [
+                        {
+                            "path": path,
+                            "baselineJsonPointer": old_pointer,
+                            "currentJsonPointer": new_pointer,
+                        }
+                        for path, old_pointer, new_pointer in ordered[:8]
+                    ],
+                },
+            }
+        )
+    return rotations
+
+
+def _fixture_rotation_kind(rotation: dict[str, Any]) -> str:
+    old = rotation["old"]
+    if "#" in old:
+        return "fixture-cyclic-member"
+    locations = rotation["evidence"]["representativeLocations"]
+    if any(
+        value["currentJsonPointer"].endswith("/masterBlueId")
+        for value in locations
+    ):
+        return "fixture-cyclic-master"
+    return "fixture-derived-identity"
+
+
+def _attach_closure_rotations(
+    artifacts: list[dict[str, Any]],
+    rotations: list[dict[str, Any]],
+    reference_index: dict[str, list[dict[str, Any]]],
+) -> None:
+    by_old: dict[str, dict[str, Any]] = {}
+    for artifact in artifacts:
+        old = artifact["oldExactIdentity"]
+        if old is None or old == artifact["newExactIdentity"]:
+            continue
+        by_old[_normalized_identifier(old)] = artifact
+
+    for rotation in rotations:
+        existing = by_old.get(rotation["old"])
+        if existing is not None:
+            if _normalized_identifier(existing["newExactIdentity"]) != rotation["new"]:
+                raise ValueError(
+                    "Closure corpus disagrees with modeled identity rotation for "
+                    + rotation["old"]
+                )
+            existing["closureRotationEvidence"] = rotation["evidence"]
+            continue
+        first = rotation["evidence"]["representativeLocations"][0]
+        artifacts.append(
+            _artifact(
+                reference_index,
+                stable_key="fixture:closure-rotation:" + rotation["old"],
+                kind=_fixture_rotation_kind(rotation),
+                module="blue-conformance",
+                path=first["path"] + "#" + first["currentJsonPointer"],
+                old=rotation["old"],
+                new=rotation["new"],
+                first_dependency="regenerated closure fixture/oracle corpus",
+                closure_rotation_evidence=rotation["evidence"],
+            )
+        )
+
+
+def _cclo34_specialized_rotations(
+    repository: Path,
+    baseline: str,
+    reference_index: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    """Models the hand-frozen C-CLO-34 Java oracle outside the YAML corpus."""
+    old_java = _baseline_bytes(repository, baseline, C_CLO_34_JAVA_TEST)
+    current_java = _current_bytes(repository, C_CLO_34_JAVA_TEST)
+    old_envelope = _java_string_constant(
+        old_java,
+        "C_CLO_34_CANONICAL_INVOCATION_ENVELOPE",
+    )
+    if old_envelope is None:
+        old_contracts_specification = None
+    else:
+        try:
+            envelope_value = json.loads(old_envelope)
+        except json.JSONDecodeError as exception:
+            raise ValueError(
+                "Unable to parse baseline C-CLO-34 canonical invocation envelope"
+            ) from exception
+        old_contracts_specification = _nested_value(
+            envelope_value,
+            "value",
+            "contractsSpecificationIdentity",
+        )
+
+    current_fixture = _yaml(_current_bytes(repository, C_CLO_34_FIXTURE))
+    current_contracts_specification = _sha256(
+        _current_bytes(repository, CONTRACTS_SPEC)
+    )
+    if current_contracts_specification is not None:
+        current_contracts_specification = (
+            "sha256:" + current_contracts_specification
+        )
+    values = (
+        (
+            "fixture:c-clo-34:java-invocation-identity",
+            C_CLO_34_JAVA_TEST + "#C_CLO_34_INVOCATION_IDENTITY",
+            _java_string_constant(
+                old_java,
+                "C_CLO_34_INVOCATION_IDENTITY",
+            ),
+            _nested_value(current_fixture, "input", "invocationIdentity"),
+            C_CLO_34_FIXTURE + "#/input/invocationIdentity",
+            "current C-CLO-34 invocation fixture",
+        ),
+        (
+            "fixture:c-clo-34:java-contracts-specification-identity",
+            (
+                C_CLO_34_JAVA_TEST
+                + "#C_CLO_34_CANONICAL_INVOCATION_ENVELOPE/"
+                + "contractsSpecificationIdentity"
+            ),
+            old_contracts_specification,
+            current_contracts_specification,
+            CONTRACTS_SPEC,
+            "current Contracts specification bytes",
+        ),
+        (
+            "fixture:c-clo-34:java-invocation-binding",
+            C_CLO_34_JAVA_TEST + "#C_CLO_34_INVOCATION_IDENTITY",
+            _java_string_constant(
+                current_java,
+                "C_CLO_34_INVOCATION_IDENTITY",
+            ),
+            _nested_value(current_fixture, "input", "invocationIdentity"),
+            C_CLO_34_FIXTURE + "#/input/invocationIdentity",
+            "authoritative current C-CLO-34 invocation fixture",
+        ),
+    )
+    result: list[dict[str, Any]] = []
+    for stable_key, path, old, new, authority, dependency in values:
+        result.append(
+            _artifact(
+                reference_index,
+                stable_key=stable_key,
+                kind="java-frozen-fixture-identity",
+                module="blue-contracts-core",
+                path=path,
+                old=old,
+                new=new,
+                first_dependency=dependency,
+                closure_rotation_evidence={
+                    "matchedLocationCount": 1,
+                    "representativeLocations": [
+                        {
+                            "path": authority,
+                            "baselineJsonPointer": "",
+                            "currentJsonPointer": "",
+                        }
+                    ],
+                },
+            )
+        )
+    return result
 
 
 def _implementation_bindings(
@@ -1164,6 +1777,26 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
             )
         )
 
+    specialized_rotations = _cclo34_specialized_rotations(
+        repository,
+        baseline_commit,
+        reference_index,
+    )
+    artifacts.extend(specialized_rotations)
+    specialized_rotation_count = sum(
+        value["oldExactIdentity"] != value["newExactIdentity"]
+        for value in specialized_rotations
+    )
+    corpus_rotations = _closure_corpus_rotations(
+        repository,
+        baseline_commit,
+    )
+    _attach_closure_rotations(
+        artifacts,
+        corpus_rotations,
+        reference_index,
+    )
+
     old_aggregate = _yaml(
         _baseline_bytes(repository, baseline_commit, AGGREGATE_RELEASE)
     )
@@ -1214,6 +1847,22 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
     no_compatibility_aliases = (
         active_reference_count == 0 and unresolved_count == 0
     )
+    excluded_identity_vectors = [
+        {
+            "identity": INVALID_CYCLIC_PROOF_MASTER,
+            "path": (
+                CLOSURE_FIXTURE_DATA_ROOT
+                + "/c-clo-14-invalid-cyclic-proof.yaml"
+                + "#/input/admissionCandidate/evidence/"
+                + "candidateCyclicProof/masterBlueId"
+            ),
+            "reason": (
+                "Intentionally invalid BAD_CYCLIC_PROOF master; it is "
+                "unchanged between baseline and current corpora and is not "
+                "a valid canonical identity rotation."
+            ),
+        }
+    ]
     return {
         "schema": "blue-identity-impact/1.0",
         "repository": "blue-language-java",
@@ -1259,7 +1908,14 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
             "manifestReceiptReferenceCount": manifest_reference_count,
             "unresolvedArtifactCount": unresolved_count,
             "mirrorMismatchCount": mirror_mismatch_count,
+            "closureCorpusRotationCount": len(corpus_rotations),
+            "specializedJavaRotationCount": specialized_rotation_count,
+            "modeledClosureRotationCount": (
+                len(corpus_rotations) + specialized_rotation_count
+            ),
+            "excludedInvalidVectorCount": len(excluded_identity_vectors),
         },
+        "excludedIdentityVectors": excluded_identity_vectors,
         "artifacts": artifacts,
     }
 
@@ -1279,6 +1935,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         "No old-to-new BlueId aliases or redirects are introduced. Registry BlueIds in this report are read from the Java-verified release manifests.",
         "Active old-identity references remaining: " + str(summary["activeStoredReferenceCount"]) + ". Historical references retained as immutable evidence: " + str(summary["historicalReferenceCount"]) + ".",
         "Unresolved identity surfaces: " + str(summary["unresolvedArtifactCount"]) + ". Canonical/mirror byte mismatches: " + str(summary["mirrorMismatchCount"]) + ".",
+        "Modeled closure identity rotations: " + str(summary["modeledClosureRotationCount"]) + " (" + str(summary["closureCorpusRotationCount"]) + " corpus-derived and " + str(summary["specializedJavaRotationCount"]) + " specialized Java oracle bindings). Intentionally excluded invalid vectors: " + str(summary["excludedInvalidVectorCount"]) + ".",
         "",
         "| Classification | Count |",
         "| --- | ---: |",
@@ -1302,6 +1959,23 @@ def render_markdown(report: dict[str, Any]) -> str:
             "| `" + artifact["stableKey"] + "` | `"
             + artifact["classification"] + "` | `" + old + "` | `"
             + new + "` | " + dependency.replace("|", "\\|") + " |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Intentionally excluded invalid vectors",
+            "",
+            "Invalid negative-test identities are documented explicitly and are never presented as canonical old-to-new rotations.",
+            "",
+            "| Identity | Location | Reason |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for vector in report["excludedIdentityVectors"]:
+        lines.append(
+            "| `" + vector["identity"] + "` | `"
+            + vector["path"] + "` | "
+            + vector["reason"].replace("|", "\\|") + " |"
         )
     aggregate = next(
         artifact

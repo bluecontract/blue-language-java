@@ -3,6 +3,7 @@
     {
       "artifactKind": "java-verified-conformance-registry-node",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "contracts:ContractExecutionResult",
       "fixtureConstantsRequiringUpdate": [],
@@ -26,6 +27,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -49,6 +51,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "language:Dictionary",
       "fixtureConstantsRequiringUpdate": [],
@@ -78,6 +81,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -101,6 +105,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -124,6 +129,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "contracts:RuntimeLedger",
       "fixtureConstantsRequiringUpdate": [],
@@ -166,6 +172,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -189,6 +196,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -212,6 +220,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -235,6 +244,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -258,6 +268,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "newly-introduced",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -287,6 +298,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -310,6 +322,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -333,6 +346,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -356,6 +370,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -379,6 +394,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -402,6 +418,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -425,6 +442,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -448,6 +466,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -471,6 +490,51 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "directly-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 2532,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/0/document/contracts/embedded/type/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/0/document/contracts/embedded/type/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/document/contracts/embedded/type/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/document/contracts/embedded/type/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/simple-a/document/b/contracts/embedded/type/blueId",
+            "currentJsonPointer": "/input/documents/simple-a/document/b/contracts/embedded/type/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/simple-a/document/contracts/embedded/type/blueId",
+            "currentJsonPointer": "/input/documents/simple-a/document/contracts/embedded/type/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/simple-b/document/contracts/embedded/type/blueId",
+            "currentJsonPointer": "/input/documents/simple-b/document/contracts/embedded/type/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/0/document/contracts/embedded/type/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/0/document/contracts/embedded/type/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/document/contracts/embedded/type/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/document/contracts/embedded/type/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/simple-a/document/contracts/embedded/type/blueId",
+            "currentJsonPointer": "/input/documents/simple-a/document/contracts/embedded/type/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          }
+        ]
+      },
       "componentBindingChanges": [],
       "firstChangedDependency": "Process Embedded.collectionPaths",
       "fixtureConstantsRequiringUpdate": [],
@@ -517,6 +581,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -540,6 +605,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -563,6 +629,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -586,6 +653,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "language:List",
       "fixtureConstantsRequiringUpdate": [],
@@ -618,6 +686,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -641,6 +710,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "contracts:ContractExecutionResult",
       "fixtureConstantsRequiringUpdate": [],
@@ -686,6 +756,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -709,6 +780,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "language:List",
       "fixtureConstantsRequiringUpdate": [],
@@ -738,6 +810,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -761,6 +834,7 @@
     {
       "artifactKind": "specification-sha256",
       "classification": "directly-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "Process Embedded.collectionPaths and Embedded Collection Event Channel normative text",
       "fixtureConstantsRequiringUpdate": [],
@@ -803,6 +877,7 @@
     {
       "artifactKind": "normative-input-sha256",
       "classification": "directly-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "revised exact identity-constructor vectors",
       "fixtureConstantsRequiringUpdate": [],
@@ -829,6 +904,51 @@
     {
       "artifactKind": "specification-sha256",
       "classification": "directly-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 125,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/blueLanguageSpecificationIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/blueLanguageSpecificationIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/blueLanguageSpecificationIdentity",
+            "currentJsonPointer": "/input/environment/blueLanguageSpecificationIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/blueLanguageSpecificationIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/blueLanguageSpecificationIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/blueLanguageSpecificationIdentity",
+            "currentJsonPointer": "/input/environment/blueLanguageSpecificationIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/blueLanguageSpecificationIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/blueLanguageSpecificationIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/blueLanguageSpecificationIdentity",
+            "currentJsonPointer": "/input/environment/blueLanguageSpecificationIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/blueLanguageSpecificationIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/blueLanguageSpecificationIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/blueLanguageSpecificationIdentity",
+            "currentJsonPointer": "/input/environment/blueLanguageSpecificationIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          }
+        ]
+      },
       "componentBindingChanges": [],
       "firstChangedDependency": "exact empty-object normative text",
       "fixtureConstantsRequiringUpdate": [],
@@ -886,6 +1006,21 @@
     {
       "artifactKind": "fixture-cyclic-master",
       "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 2,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/stages/0/masterBlueId",
+            "currentJsonPointer": "/stages/0/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-23-05-a9-to-a10.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/1/masterBlueId",
+            "currentJsonPointer": "/stages/1/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-23-05-a9-to-a10.yaml"
+          }
+        ]
+      },
       "componentBindingChanges": [],
       "firstChangedDependency": "contracts:ProcessEmbedded",
       "fixtureConstantsRequiringUpdate": [],
@@ -906,8 +1041,2225 @@
       ]
     },
     {
+      "artifactKind": "java-frozen-fixture-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 1,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "",
+            "currentJsonPointer": "",
+            "path": "blue-contracts-core/src/main/resources/specifications/blue-contracts-and-processor-specification-1.0.md"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "current Contracts specification bytes",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [
+        {
+          "disposition": "retained-immutable-history",
+          "line": 61,
+          "path": "CLOSURE_INVENTORY_REBASE_EVIDENCE.md"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 861,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 891,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 1703,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 1733,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 2545,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 2575,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 3639,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 3717,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 4781,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 4859,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 5923,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 6001,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 7065,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 7143,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 16379,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 16951,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 17175,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 17205,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 17537,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 17609,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 17743,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 17761,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 19150,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 19510,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 19992,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 20016,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 20366,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 20396,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21094,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21124,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21540,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21606,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21920,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21950,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21981,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 22012,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 33576,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 33594,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 33625,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 34437,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 34467,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 34703,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 34757,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 35347,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 35437,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 35559,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 35601,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 36233,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37045,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37075,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37100,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37294,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37318,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37488,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37512,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37682,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37706,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37876,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 37900,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 38070,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 38094,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 38420,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 38444,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 39508,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 39586,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 40158,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 40418,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 40552,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 40576,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 40848,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 40872,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 41570,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 41600,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 41631,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 42695,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 42773,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 42804,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 43082,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 44146,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 44224,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 45288,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 45366,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 45782,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 45848,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 46180,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 46204,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 122603,
+          "path": "full-lifecycle-identity-delta.json"
+        }
+      ],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9",
+      "oldExactIdentity": "sha256:e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/ClosureInvocationVerifierTest.java#C_CLO_34_CANONICAL_INVOCATION_ENVELOPE/contractsSpecificationIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: current Contracts specification bytes.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:c-clo-34:java-contracts-specification-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "java-frozen-fixture-identity",
+      "classification": "unchanged-direct",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 1,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "",
+            "currentJsonPointer": "",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-34-separate-document-steps.yaml#/input/invocationIdentity"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "authoritative current C-CLO-34 invocation fixture",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90",
+      "oldExactIdentity": "sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/ClosureInvocationVerifierTest.java#C_CLO_34_INVOCATION_IDENTITY",
+      "reason": "Canonical content and all identity-bearing dependencies are unchanged.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:c-clo-34:java-invocation-binding",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "java-frozen-fixture-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 1,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "",
+            "currentJsonPointer": "",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-34-separate-document-steps.yaml#/input/invocationIdentity"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "current C-CLO-34 invocation fixture",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [
+        {
+          "disposition": "retained-immutable-history",
+          "line": 3627,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 3651,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 3723,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 4769,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 4793,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 4865,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 5911,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 5935,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 6007,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 7053,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 7077,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 7149,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 39496,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 39520,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 39592,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 42683,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 42707,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 42779,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 45276,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 45300,
+          "path": "full-lifecycle-identity-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 45372,
+          "path": "full-lifecycle-identity-delta.json"
+        }
+      ],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90",
+      "oldExactIdentity": "sha256:7a602429b3959efe5bddf701231474a42c9cafe4c58abd65d655dc46265f9a06",
+      "pathOrStableKey": "blue-contracts-core/src/test/java/blue/language/processor/closure/ClosureInvocationVerifierTest.java#C_CLO_34_INVOCATION_IDENTITY",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: current C-CLO-34 invocation fixture.",
+      "repositoryModule": "blue-contracts-core",
+      "stableKey": "fixture:c-clo-34:java-invocation-identity",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-cyclic-member",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 59,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/graphChanges/0/beforeTargetBlueId",
+            "currentJsonPointer": "/expected/graphChanges/0/beforeTargetBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/managedTransitionReceipts/1/beforeBlueId",
+            "currentJsonPointer": "/expected/managedTransitionReceipts/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/1/blueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/1/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/1/beforeBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/beforeBlueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/3/beforeDocumentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/3/beforeDocumentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/3/beforeSubscription/documentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/3/beforeSubscription/documentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/memberStates/1/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/memberStates/1/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "8M3d43KXskYr7rrdiaXPiPHmypFEjtU4uUyECtU7Tiyx#1",
+      "oldExactIdentity": "4ZMfXZbSNVnEaqHVwYyYFHSfJ4JYs6VbR2oLZNqNkScr#1",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml#/expected/graphChanges/0/beforeTargetBlueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:4ZMfXZbSNVnEaqHVwYyYFHSfJ4JYs6VbR2oLZNqNkScr#1",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-cyclic-master",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 5,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-10-split-to-singletons.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/2/masterBlueId",
+            "currentJsonPointer": "/stages/2/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/0/masterBlueId",
+            "currentJsonPointer": "/stages/0/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-10-split-to-singletons.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/2/masterBlueId",
+            "currentJsonPointer": "/stages/2/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-18-locality-1000-unrelated.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/2/masterBlueId",
+            "currentJsonPointer": "/stages/2/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-21-admission-zero-direct.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "2MFwcUowEYvgMfGp9QS8nwqM75H4n2CUfccLKkq1yynS",
+      "oldExactIdentity": "6RYTLq7gAjpmrfcExL43ZmPW1vUPdhuWLmMYb9bVYuF2",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-10-split-to-singletons.yaml#/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:6RYTLq7gAjpmrfcExL43ZmPW1vUPdhuWLmMYb9bVYuF2",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 70,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/managedTransitionReceipts/1/beforeBlueId",
+            "currentJsonPointer": "/expected/managedTransitionReceipts/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/1/blueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/1/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/1/beforeBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/beforeBlueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/3/beforeDocumentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/3/beforeDocumentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/3/beforeSubscription/documentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/3/beforeSubscription/documentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/1/orderedMemberBlueIds/0",
+            "currentJsonPointer": "/input/components/1/orderedMemberBlueIds/0",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/b/blueId",
+            "currentJsonPointer": "/input/documents/b/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6",
+      "oldExactIdentity": "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/expected/managedTransitionReceipts/1/beforeBlueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 88,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/b/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/input/documents/b/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/b/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/input/documents/b/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/b/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/input/documents/b/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/b/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/input/documents/b/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "4Hf87W63SbbxXUUfPg8tyfqdMHky4HmvnCj9by5Hv4qQ",
+      "oldExactIdentity": "6ynL7bPCMB5R5kQpqzVaNZs3YVmAopDLkdHneoeexjrm",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:6ynL7bPCMB5R5kQpqzVaNZs3YVmAopDLkdHneoeexjrm",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 15,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/requiredBlueIds/0",
+            "currentJsonPointer": "/expected/requiredBlueIds/0",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resourceDemands/0/blueId",
+            "currentJsonPointer": "/expected/resourceDemands/0/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resourceDemands/0/suppliedValueBlueId",
+            "currentJsonPointer": "/expected/resourceDemands/0/suppliedValueBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/1/expectedTargetBlueId",
+            "currentJsonPointer": "/input/occurrences/1/expectedTargetBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+          },
+          {
+            "baselineJsonPointer": "/provider/expectedLoads/0",
+            "currentJsonPointer": "/provider/expectedLoads/0",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+          },
+          {
+            "baselineJsonPointer": "/provider/expectedRequiredBlueIds/0",
+            "currentJsonPointer": "/provider/expectedRequiredBlueIds/0",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+          },
+          {
+            "baselineJsonPointer": "/runtime/handlers/history-b~1start/patches/0/val/blueId",
+            "currentJsonPointer": "/runtime/handlers/history-b~1start/patches/0/val/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/occurrenceBindings/1/expectedTargetBlueId",
+            "currentJsonPointer": "/expected/occurrenceBindings/1/expectedTargetBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-00-attach-a5-retry.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21764,
+          "path": "dynamic-contract-evolution-fixture-delta.json"
+        },
+        {
+          "disposition": "retained-immutable-history",
+          "line": 21770,
+          "path": "dynamic-contract-evolution-fixture-delta.json"
+        }
+      ],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "2kpAUcknjsY6eoij8s6u3vKHKNzFBWyweaekTpMkK7E8",
+      "oldExactIdentity": "78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-22-a10-attach-a5-needs-resources.yaml#/expected/requiredBlueIds/0",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 4,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/stages/2/canonicalLimitForm/1/contracts/blueId",
+            "currentJsonPointer": "/stages/2/canonicalLimitForm/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/0/canonicalLimitForm/1/contracts/blueId",
+            "currentJsonPointer": "/stages/0/canonicalLimitForm/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-10-split-to-singletons.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/2/canonicalLimitForm/1/contracts/blueId",
+            "currentJsonPointer": "/stages/2/canonicalLimitForm/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-18-locality-1000-unrelated.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/2/canonicalLimitForm/1/contracts/blueId",
+            "currentJsonPointer": "/stages/2/canonicalLimitForm/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-21-admission-zero-direct.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "ERrv83b9RbGZSg2vyzFmzQiU2KoLyfzkuEn234gm7oFA",
+      "oldExactIdentity": "7iWdksGRG7vaHczbr18QqK8Ex598ZBjQJdMZbAe3nRHB",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-01-static-cycle-admission.yaml#/stages/2/canonicalLimitForm/0/contracts/blueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:7iWdksGRG7vaHczbr18QqK8Ex598ZBjQJdMZbAe3nRHB",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 104,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/graphChanges/1/beforeTargetBlueId",
+            "currentJsonPointer": "/expected/graphChanges/1/beforeTargetBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/managedTransitionReceipts/0/beforeBlueId",
+            "currentJsonPointer": "/expected/managedTransitionReceipts/0/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/0/blueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/0/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/0/beforeBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/0/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/0/beforeBlueId",
+            "currentJsonPointer": "/expected/resultingDocuments/0/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/0/beforeDocumentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/0/beforeDocumentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/0/beforeSubscription/documentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/0/beforeSubscription/documentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/1/beforeDocumentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/1/beforeDocumentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ",
+      "oldExactIdentity": "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/expected/graphChanges/1/beforeTargetBlueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 23,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingComponents/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "currentJsonPointer": "/expected/resultingComponents/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/admissionCandidate/evidence/candidateCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "currentJsonPointer": "/input/admissionCandidate/evidence/candidateCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-18-locality-1000-unrelated.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-21-admission-zero-direct.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg",
+      "oldExactIdentity": "AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/input/components/0/completeCyclicProof/declaredPlaceholderSet/0/contracts/blueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-cyclic-master",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 40,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/masterBlueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/masterBlueId",
+            "currentJsonPointer": "/input/components/0/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/masterBlueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/masterBlueId",
+            "currentJsonPointer": "/input/components/0/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/masterBlueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/masterBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW",
+      "oldExactIdentity": "AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/expected/platformCommitCompanion/expectedInputComponents/0/masterBlueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-cyclic-member",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 117,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/graphChanges/1/beforeTargetBlueId",
+            "currentJsonPointer": "/expected/graphChanges/1/beforeTargetBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/managedTransitionReceipts/0/beforeBlueId",
+            "currentJsonPointer": "/expected/managedTransitionReceipts/0/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/0/blueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/0/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/0/beforeBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/0/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/0/beforeBlueId",
+            "currentJsonPointer": "/expected/resultingDocuments/0/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/0/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/0/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/0/beforeDocumentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/0/beforeDocumentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/0/beforeSubscription/documentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/0/beforeSubscription/documentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW#0",
+      "oldExactIdentity": "AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#0",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/expected/graphChanges/1/beforeTargetBlueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#0",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-cyclic-member",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 116,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/graphChanges/0/beforeTargetBlueId",
+            "currentJsonPointer": "/expected/graphChanges/0/beforeTargetBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/managedTransitionReceipts/1/beforeBlueId",
+            "currentJsonPointer": "/expected/managedTransitionReceipts/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/1/blueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputDocuments/1/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/1/beforeBlueId",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingDocuments/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/beforeBlueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/beforeBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/1/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/1/beforeDocumentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/1/beforeDocumentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/subscriptionDeltas/1/beforeSubscription/documentBlueId",
+            "currentJsonPointer": "/expected/subscriptionDeltas/1/beforeSubscription/documentBlueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW#1",
+      "oldExactIdentity": "AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#1",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/expected/graphChanges/0/beforeTargetBlueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#1",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 4,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/stages/2/canonicalLimitForm/0/contracts/blueId",
+            "currentJsonPointer": "/stages/2/canonicalLimitForm/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/0/canonicalLimitForm/0/contracts/blueId",
+            "currentJsonPointer": "/stages/0/canonicalLimitForm/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-10-split-to-singletons.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/2/canonicalLimitForm/0/contracts/blueId",
+            "currentJsonPointer": "/stages/2/canonicalLimitForm/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-18-locality-1000-unrelated.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/2/canonicalLimitForm/0/contracts/blueId",
+            "currentJsonPointer": "/stages/2/canonicalLimitForm/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-21-admission-zero-direct.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "8uvxz52uKPTRgGi4bB9HDnd5wVi4uGZ9ot1jtZppXA7Z",
+      "oldExactIdentity": "DwqgPP4QrvY1f96zSo7k6hgoq1YRi2CD8Hkvu2YTLgNA",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-01-static-cycle-admission.yaml#/stages/2/canonicalLimitForm/1/contracts/blueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:DwqgPP4QrvY1f96zSo7k6hgoq1YRi2CD8Hkvu2YTLgNA",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 23,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingComponents/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "currentJsonPointer": "/expected/resultingComponents/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/admissionCandidate/evidence/candidateCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "currentJsonPointer": "/input/admissionCandidate/evidence/candidateCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-18-locality-1000-unrelated.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "currentJsonPointer": "/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-21-admission-zero-direct.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9",
+      "oldExactIdentity": "F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/input/components/0/completeCyclicProof/declaredPlaceholderSet/1/contracts/blueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-cyclic-member",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 8,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/0/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/expected/resultingDocuments/0/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-07-self-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/documents/self/document/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/input/documents/self/document/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-07-self-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/0/materializedDocuments/0/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/stages/0/materializedDocuments/0/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-07-self-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/0/sourceDocumentsWithThisReferences/0/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/stages/0/sourceDocumentsWithThisReferences/0/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-07-self-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/1/materializedDocuments/0/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/stages/1/materializedDocuments/0/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-07-self-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/stages/1/sourceDocumentsWithThisReferences/0/contracts/initialized/document/blueId",
+            "currentJsonPointer": "/stages/1/sourceDocumentsWithThisReferences/0/contracts/initialized/document/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/c-clo-07-self-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/sets/1/stages/0/materializedDocuments/0/self/blueId",
+            "currentJsonPointer": "/sets/1/stages/0/materializedDocuments/0/self/blueId",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/static-and-self-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/sets/1/stages/0/memberBlueIdsInSourceOrder/0",
+            "currentJsonPointer": "/sets/1/stages/0/memberBlueIdsInSourceOrder/0",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/oracles/static-and-self-cycle.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "2Rh775x5AkBuDgFmaTuWKfuZjFiWBpxLhh1ARRmUpVQ3#0",
+      "oldExactIdentity": "J6MGqn8npgKGY1B9JzayUziZqBbZqAvYrFvPm7kBB6ap#0",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-07-self-cycle.yaml#/expected/resultingDocuments/0/document/contracts/initialized/document/blueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:J6MGqn8npgKGY1B9JzayUziZqBbZqAvYrFvPm7kBB6ap#0",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 22,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/componentStateIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/0/componentStateIdentity",
+            "currentJsonPointer": "/expected/resultingDocuments/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/componentStateIdentity",
+            "currentJsonPointer": "/expected/resultingDocuments/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/oracle/componentStages/1/componentStateIdentity",
+            "currentJsonPointer": "/oracle/componentStages/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/componentStateIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/0/componentStateIdentity",
+            "currentJsonPointer": "/expected/resultingDocuments/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingDocuments/1/componentStateIdentity",
+            "currentJsonPointer": "/expected/resultingDocuments/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/oracle/componentStages/1/componentStateIdentity",
+            "currentJsonPointer": "/oracle/componentStages/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:c171b091b8896ee5eba8f08dac57ed95b2b9b4acb8a390711921eee6ac431577",
+      "oldExactIdentity": "sha256:00bf502877d64f4a4380414906113f6fae50f4bf8d3b1a1222876bb92dbf9da6",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/expected/platformCommitCompanion/resultingComponents/0/componentStateIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:00bf502877d64f4a4380414906113f6fae50f4bf8d3b1a1222876bb92dbf9da6",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 7,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-24-occurrence-continuity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-30-language-cyclic-oracles.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-34-separate-document-steps.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:738a6433193982338d641f8759dae92bbb5b4b9093bc8b30d42e296baa2e9be6",
+      "oldExactIdentity": "sha256:161a924802ff3740fe56c60641fdd72368ca6d1000f6a9721a518e440bf2d464",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/input/occurrences/1/bindingIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:161a924802ff3740fe56c60641fdd72368ca6d1000f6a9721a518e440bf2d464",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 7,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/components/1/componentStateIdentity",
+            "currentJsonPointer": "/input/components/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/1/componentStateIdentity",
+            "currentJsonPointer": "/input/components/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/1/componentStateIdentity",
+            "currentJsonPointer": "/input/components/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/1/componentStateIdentity",
+            "currentJsonPointer": "/input/components/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/1/componentStateIdentity",
+            "currentJsonPointer": "/input/components/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-24-occurrence-continuity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/1/componentStateIdentity",
+            "currentJsonPointer": "/input/components/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-30-language-cyclic-oracles.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/1/componentStateIdentity",
+            "currentJsonPointer": "/input/components/1/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-34-separate-document-steps.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:871712178cfc249c05203b57c92b8d696a54a2c4e9a8591621ba324a76ca1f85",
+      "oldExactIdentity": "sha256:23c1237df89ee70ad0257df724270fc614a74964a3254935de319f553ec77e29",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/input/components/1/componentStateIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:23c1237df89ee70ad0257df724270fc614a74964a3254935de319f553ec77e29",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 13,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "currentJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "currentJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "currentJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingComponents/0/cyclicProofIdentity",
+            "currentJsonPointer": "/expected/resultingComponents/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "currentJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "currentJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-18-locality-1000-unrelated.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "currentJsonPointer": "/input/components/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-21-admission-zero-direct.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/resultingComponents/0/cyclicProofIdentity",
+            "currentJsonPointer": "/expected/resultingComponents/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-29-active-edge-path-validation.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:22090c938702e4d83792a7534ab991825463a5fadb19ef4fe6bcb7d000e0824c",
+      "oldExactIdentity": "sha256:8853187f6535f16f427ab7ba5e40e59ef799b5b28c6ee8843ffd88685369835e",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/input/components/0/cyclicProofIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:8853187f6535f16f427ab7ba5e40e59ef799b5b28c6ee8843ffd88685369835e",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 10,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/graphChanges/0/beforeBindingIdentity",
+            "currentJsonPointer": "/expected/graphChanges/0/beforeBindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/1/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/graphChanges/0/beforeBindingIdentity",
+            "currentJsonPointer": "/expected/graphChanges/0/beforeBindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-19-public-event-boundary.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/2/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/2/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-19-public-event-boundary.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/occurrenceBindings/2/bindingIdentity",
+            "currentJsonPointer": "/expected/occurrenceBindings/2/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-20-late-outer-failure.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/2/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/2/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-20-late-outer-failure.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/graphChanges/0/beforeBindingIdentity",
+            "currentJsonPointer": "/expected/graphChanges/0/beforeBindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-28-containing-spine-identity-gas.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/3/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/3/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-28-containing-spine-identity-gas.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:3fbebd6496cb09548de8512b0806acc9bc98d2b0b32cbff3556954adace09af2",
+      "oldExactIdentity": "sha256:8e0adfdc7abea06d373ff4aa63d4b828da81abc01479d4a94cc7afdfe7b0e6e8",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-12-frozen-edge-removal.yaml#/expected/graphChanges/0/beforeBindingIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:8e0adfdc7abea06d373ff4aa63d4b828da81abc01479d4a94cc7afdfe7b0e6e8",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 1,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/admissionCandidateIdentity",
+            "currentJsonPointer": "/input/admissionCandidateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-29-active-edge-path-validation.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:d1d5cc1cd4d2874a41f0a9e166c00019bac93505ae103c3badcedadc4e78ef09",
+      "oldExactIdentity": "sha256:8e75fb2a179bf07d157a1dc402e399f5cfe6f62731dab93d8e35acc694560af7",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-29-active-edge-path-validation.yaml#/input/admissionCandidateIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:8e75fb2a179bf07d157a1dc402e399f5cfe6f62731dab93d8e35acc694560af7",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 5,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-18-locality-1000-unrelated.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-21-admission-zero-direct.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:03d27c18f26381aa18f7184ae61882da94dce8120fbd77fce26e46818f42ca04",
+      "oldExactIdentity": "sha256:b6e849416f7fffcff5db620afaba19fa75bd7a935a435ece0d5fb2f89ab241ec",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/expected/platformCommitCompanion/resultingComponents/0/cyclicProofIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:b6e849416f7fffcff5db620afaba19fa75bd7a935a435ece0d5fb2f89ab241ec",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 1,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/admissionCandidate/evidence/candidateOccurrenceBindings/0/bindingIdentity",
+            "currentJsonPointer": "/input/admissionCandidate/evidence/candidateOccurrenceBindings/0/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-29-active-edge-path-validation.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:e1a055c184d22ac4acdde2716af5fbd42ec3ca6a524168577617e0d7c80bb361",
+      "oldExactIdentity": "sha256:bc8de9cc44900c0b9c637b880ee55eee51d947a08592b454723d2bf06b9d17e7",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-29-active-edge-path-validation.yaml#/input/admissionCandidate/evidence/candidateOccurrenceBindings/0/bindingIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:bc8de9cc44900c0b9c637b880ee55eee51d947a08592b454723d2bf06b9d17e7",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 14,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrenceBindingSetIdentity",
+            "currentJsonPointer": "/input/occurrenceBindingSetIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrenceBindingSetIdentity",
+            "currentJsonPointer": "/input/occurrenceBindingSetIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrenceBindingSetIdentity",
+            "currentJsonPointer": "/input/occurrenceBindingSetIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrenceBindingSetIdentity",
+            "currentJsonPointer": "/input/occurrenceBindingSetIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:c8f3bd1bbefdc74425c9648e1db070982cd02021f7c8f5239142e0c3d8824f72",
+      "oldExactIdentity": "sha256:bf684fafcc3901aedb2c6f7154b15a1cfa36958dbc8d479113317fd5cd0588ee",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/expected/platformCommitCompanion/inputOccurrenceBindingSetIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:bf684fafcc3901aedb2c6f7154b15a1cfa36958dbc8d479113317fd5cd0588ee",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 39,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/componentStateIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/oracle/componentStages/0/componentStateIdentity",
+            "currentJsonPointer": "/oracle/componentStages/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/componentStateIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/oracle/componentStages/0/componentStateIdentity",
+            "currentJsonPointer": "/oracle/componentStages/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/componentStateIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/expectedInputComponents/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:cdfd54d28552cfc08c9bcf5633a2a2e1f06709b2564b8f87e2163c6d79ee8c19",
+      "oldExactIdentity": "sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml#/expected/platformCommitCompanion/expectedInputComponents/0/componentStateIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 21,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/inputClosureIdentity",
+            "currentJsonPointer": "/expected/inputClosureIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/inputClosureIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/inputClosureIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/closureIdentity",
+            "currentJsonPointer": "/input/closureIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/inputClosureIdentity",
+            "currentJsonPointer": "/expected/inputClosureIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/inputClosureIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/inputClosureIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/closureIdentity",
+            "currentJsonPointer": "/input/closureIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/inputClosureIdentity",
+            "currentJsonPointer": "/expected/inputClosureIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/inputClosureIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/inputClosureIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:c65ef11c664373426353af741b2ccd5f2297bcc522d91a98e6abcfe0e5883db2",
+      "oldExactIdentity": "sha256:ed4ac428e31d3960b96bb4d26d816e77247942b7438404a79fb27cba3d67726d",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/expected/inputClosureIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:ed4ac428e31d3960b96bb4d26d816e77247942b7438404a79fb27cba3d67726d",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 7,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-24-occurrence-continuity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-30-language-cyclic-oracles.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/components/0/componentStateIdentity",
+            "currentJsonPointer": "/input/components/0/componentStateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-34-separate-document-steps.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:e166f34649e7ff062265e74822aa892763dfbaa5a9e30915fb3f2d1491234a5e",
+      "oldExactIdentity": "sha256:f201416a678dd218ee3fb60b25eab0ce4e51f8c4ee25ad966c214ed6ed8a6858",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/input/components/0/componentStateIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:f201416a678dd218ee3fb60b25eab0ce4e51f8c4ee25ad966c214ed6ed8a6858",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 1,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/input/admissionCandidateIdentity",
+            "currentJsonPointer": "/input/admissionCandidateIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:b5f4f42d492de95b8e6a3d026bd240278240ae15aa18a472390390e759295669",
+      "oldExactIdentity": "sha256:fbb8e227a353e5c688dcbb467161979c72297ff1ca337eaf44fcf0e67728fe07",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml#/input/admissionCandidateIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:fbb8e227a353e5c688dcbb467161979c72297ff1ca337eaf44fcf0e67728fe07",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
+      "artifactKind": "fixture-derived-identity",
+      "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 14,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/graphChanges/1/beforeBindingIdentity",
+            "currentJsonPointer": "/expected/graphChanges/1/beforeBindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/0/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/0/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/graphChanges/1/beforeBindingIdentity",
+            "currentJsonPointer": "/expected/graphChanges/1/beforeBindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/0/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/0/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/graphChanges/1/beforeBindingIdentity",
+            "currentJsonPointer": "/expected/graphChanges/1/beforeBindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/0/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/0/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-dynamic-finite-cycle.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/graphChanges/1/beforeBindingIdentity",
+            "currentJsonPointer": "/expected/graphChanges/1/beforeBindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/occurrences/0/bindingIdentity",
+            "currentJsonPointer": "/input/occurrences/0/bindingIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-03-exact-tentative-identity-visibility.yaml"
+          }
+        ]
+      },
+      "componentBindingChanges": [],
+      "firstChangedDependency": "regenerated closure fixture/oracle corpus",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "sha256:5eacd13e1e98a75f80713bce3c4168ec69abe257bf27f938b8b582232018a697",
+      "oldExactIdentity": "sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml#/expected/graphChanges/1/beforeBindingIdentity",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: regenerated closure fixture/oracle corpus.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:closure-rotation:sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": []
+    },
+    {
       "artifactKind": "source-sha256",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java",
       "fixtureConstantsRequiringUpdate": [],
@@ -928,6 +3280,7 @@
     {
       "artifactKind": "source-sha256",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
       "fixtureConstantsRequiringUpdate": [],
@@ -948,6 +3301,7 @@
     {
       "artifactKind": "source-sha256",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java",
       "fixtureConstantsRequiringUpdate": [],
@@ -968,6 +3322,51 @@
     {
       "artifactKind": "implementation-identity",
       "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 125,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/cyclicFinalizerIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/cyclicFinalizerIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/cyclicFinalizerIdentity",
+            "currentJsonPointer": "/input/environment/cyclicFinalizerIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/cyclicFinalizerIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/cyclicFinalizerIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/cyclicFinalizerIdentity",
+            "currentJsonPointer": "/input/environment/cyclicFinalizerIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/cyclicFinalizerIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/cyclicFinalizerIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/cyclicFinalizerIdentity",
+            "currentJsonPointer": "/input/environment/cyclicFinalizerIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/cyclicFinalizerIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/cyclicFinalizerIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/cyclicFinalizerIdentity",
+            "currentJsonPointer": "/input/environment/cyclicFinalizerIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          }
+        ]
+      },
       "componentBindingChanges": [],
       "firstChangedDependency": "revised cyclic finalization implementation",
       "fixtureConstantsRequiringUpdate": [],
@@ -988,6 +3387,51 @@
     {
       "artifactKind": "implementation-identity",
       "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 125,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/cyclicProofVerifierIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/cyclicProofVerifierIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/cyclicProofVerifierIdentity",
+            "currentJsonPointer": "/input/environment/cyclicProofVerifierIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/cyclicProofVerifierIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/cyclicProofVerifierIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/cyclicProofVerifierIdentity",
+            "currentJsonPointer": "/input/environment/cyclicProofVerifierIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/cyclicProofVerifierIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/cyclicProofVerifierIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/cyclicProofVerifierIdentity",
+            "currentJsonPointer": "/input/environment/cyclicProofVerifierIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/cyclicProofVerifierIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/cyclicProofVerifierIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/cyclicProofVerifierIdentity",
+            "currentJsonPointer": "/input/environment/cyclicProofVerifierIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          }
+        ]
+      },
       "componentBindingChanges": [],
       "firstChangedDependency": "revised cyclic proof verification implementation",
       "fixtureConstantsRequiringUpdate": [],
@@ -1008,6 +3452,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -1026,6 +3471,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "directly-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "Dictionary identity-bearing empty-object semantics",
       "fixtureConstantsRequiringUpdate": [],
@@ -1053,6 +3499,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -1071,6 +3518,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -1089,6 +3537,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "directly-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "List identity-bearing empty-object element semantics",
       "fixtureConstantsRequiringUpdate": [],
@@ -1120,6 +3569,7 @@
     {
       "artifactKind": "canonical-registry-node",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -1138,6 +3588,7 @@
     {
       "artifactKind": "canonical-value",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": null,
       "fixtureConstantsRequiringUpdate": [],
@@ -1156,6 +3607,7 @@
     {
       "artifactKind": "fixture-package",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "package:contracts-ordinary-fixtures",
       "fixtureConstantsRequiringUpdate": [],
@@ -1188,6 +3640,7 @@
     {
       "artifactKind": "gas-package",
       "classification": "unchanged-direct",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "unchanged normative gas schedule",
       "fixtureConstantsRequiringUpdate": [],
@@ -1209,6 +3662,7 @@
     {
       "artifactKind": "oracle-package",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "revised independent oracle vectors",
       "fixtureConstantsRequiringUpdate": [],
@@ -1260,6 +3714,7 @@
     {
       "artifactKind": "fixture-package",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "package:contracts-registry",
       "fixtureConstantsRequiringUpdate": [],
@@ -1293,6 +3748,51 @@
     {
       "artifactKind": "registry-package",
       "classification": "transitively-changed",
+      "closureRotationEvidence": {
+        "matchedLocationCount": 125,
+        "representativeLocations": [
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/runtimeRegistryIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/runtimeRegistryIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/runtimeRegistryIdentity",
+            "currentJsonPointer": "/input/environment/runtimeRegistryIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/runtimeRegistryIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/runtimeRegistryIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/runtimeRegistryIdentity",
+            "currentJsonPointer": "/input/environment/runtimeRegistryIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-cyclic-pure-reference-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/runtimeRegistryIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/runtimeRegistryIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/runtimeRegistryIdentity",
+            "currentJsonPointer": "/input/environment/runtimeRegistryIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-01-static-cycle-admission.yaml"
+          },
+          {
+            "baselineJsonPointer": "/expected/platformCommitCompanion/runtimeRegistryIdentity",
+            "currentJsonPointer": "/expected/platformCommitCompanion/runtimeRegistryIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          },
+          {
+            "baselineJsonPointer": "/input/environment/runtimeRegistryIdentity",
+            "currentJsonPointer": "/input/environment/runtimeRegistryIdentity",
+            "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-02-acyclic-materialized-parity.yaml"
+          }
+        ]
+      },
       "componentBindingChanges": [],
       "firstChangedDependency": "contracts:ProcessEmbedded",
       "fixtureConstantsRequiringUpdate": [],
@@ -1357,6 +3857,7 @@
     {
       "artifactKind": "release-identity",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "document:contracts-specification",
       "fixtureConstantsRequiringUpdate": [],
@@ -1386,6 +3887,7 @@
     {
       "artifactKind": "release-package",
       "classification": "stale-binding-regenerated",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [
         {
           "component": "contractsBehaviorFixtureCount",
@@ -1536,6 +4038,7 @@
     {
       "artifactKind": "fixture-package",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "package:language-registry",
       "fixtureConstantsRequiringUpdate": [],
@@ -1587,6 +4090,7 @@
     {
       "artifactKind": "registry-package",
       "classification": "transitively-changed",
+      "closureRotationEvidence": null,
       "componentBindingChanges": [],
       "firstChangedDependency": "language:Dictionary",
       "fixtureConstantsRequiringUpdate": [],
@@ -1640,6 +4144,13 @@
   "baselineCommit": "be2260217d1dbab0c7b60bcbd28073a5955e2b7b",
   "baselineRevision": "be2260217d1dbab0c7b60bcbd28073a5955e2b7b",
   "currentTree": "tracked-and-untracked-worktree",
+  "excludedIdentityVectors": [
+    {
+      "identity": "6Rnjv8oquG4RqPwo55MZgF7jcUZGd7HdYZMPiFmBQUQ7",
+      "path": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml#/input/admissionCandidate/evidence/candidateCyclicProof/masterBlueId",
+      "reason": "Intentionally invalid BAD_CYCLIC_PROOF master; it is unchanged between baseline and current corpora and is not a valid canonical identity rotation."
+    }
+  ],
   "identityAuthority": "Registry node BlueIds are read from manifests generated and verified by DirectBlueIdCalculator; this report does not recalculate schema-heavy BlueIds in Python.",
   "noCompatibilityAliases": true,
   "repository": "blue-language-java",
@@ -1668,21 +4179,25 @@
   },
   "summary": {
     "activeStoredReferenceCount": 0,
-    "artifactCount": 54,
+    "artifactCount": 85,
     "classifications": {
       "directly-changed": 6,
       "newly-introduced": 1,
       "obsolete-pre-stable-rc": 0,
       "stale-binding-regenerated": 1,
-      "transitively-changed": 19,
-      "unchanged-direct": 27,
+      "transitively-changed": 49,
+      "unchanged-direct": 28,
       "unresolved": 0
     },
+    "closureCorpusRotationCount": 34,
     "emptyObjectIdentityUnchanged": true,
+    "excludedInvalidVectorCount": 1,
     "fixtureConstantReferenceCount": 0,
-    "historicalReferenceCount": 61,
+    "historicalReferenceCount": 172,
     "manifestReceiptReferenceCount": 0,
     "mirrorMismatchCount": 0,
+    "modeledClosureRotationCount": 36,
+    "specializedJavaRotationCount": 2,
     "unresolvedArtifactCount": 0
   }
 }

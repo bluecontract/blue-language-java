@@ -8,8 +8,9 @@ Its exact old-to-new entries cover the Language/Contracts repository. BEX and Co
 
 The exact empty-object identity remains `5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK`.
 No old-to-new BlueId aliases or redirects are introduced. Registry BlueIds in this report are read from the Java-verified release manifests.
-Active old-identity references remaining: 0. Historical references retained as immutable evidence: 61.
+Active old-identity references remaining: 0. Historical references retained as immutable evidence: 172.
 Unresolved identity surfaces: 0. Canonical/mirror byte mismatches: 0.
+Modeled closure identity rotations: 36 (34 corpus-derived and 2 specialized Java oracle bindings). Intentionally excluded invalid vectors: 1.
 
 | Classification | Count |
 | --- | ---: |
@@ -17,8 +18,8 @@ Unresolved identity surfaces: 0. Canonical/mirror byte mismatches: 0.
 | `newly-introduced` | 1 |
 | `obsolete-pre-stable-rc` | 0 |
 | `stale-binding-regenerated` | 1 |
-| `transitively-changed` | 19 |
-| `unchanged-direct` | 27 |
+| `transitively-changed` | 49 |
+| `unchanged-direct` | 28 |
 | `unresolved` | 0 |
 
 ## Exact identity changes
@@ -58,6 +59,37 @@ Unresolved identity surfaces: 0. Canonical/mirror byte mismatches: 0.
 | `document:identity-constructors` | `directly-changed` | `f7eb196a46ff2176f245342a27ffb76ec2c90c3502612191cd5425230ac947dc` | `baf6463876edad5f79f41389289778d5a619df192cb4d9632e866b9416916706` | revised exact identity-constructor vectors |
 | `document:language-specification` | `directly-changed` | `01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d` | `019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37` | exact empty-object normative text |
 | `fixture:c-clo-23-05-a9-to-a10:masterBlueId` | `transitively-changed` | `B4s6BMi4HbXS48DC1GTuozEfbSdbBepRnpP5TrsJTdkE` | `AqxN3nEKymbTyHrfjFhHcEH35YRyz3Ggcoch3dEzMkH5` | contracts:ProcessEmbedded |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `transitively-changed` | `sha256:e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193` | `sha256:62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9` | current Contracts specification bytes |
+| `fixture:c-clo-34:java-invocation-binding` | `unchanged-direct` | `sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90` | `sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90` | authoritative current C-CLO-34 invocation fixture |
+| `fixture:c-clo-34:java-invocation-identity` | `transitively-changed` | `sha256:7a602429b3959efe5bddf701231474a42c9cafe4c58abd65d655dc46265f9a06` | `sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90` | current C-CLO-34 invocation fixture |
+| `fixture:closure-rotation:4ZMfXZbSNVnEaqHVwYyYFHSfJ4JYs6VbR2oLZNqNkScr#1` | `transitively-changed` | `4ZMfXZbSNVnEaqHVwYyYFHSfJ4JYs6VbR2oLZNqNkScr#1` | `8M3d43KXskYr7rrdiaXPiPHmypFEjtU4uUyECtU7Tiyx#1` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:6RYTLq7gAjpmrfcExL43ZmPW1vUPdhuWLmMYb9bVYuF2` | `transitively-changed` | `6RYTLq7gAjpmrfcExL43ZmPW1vUPdhuWLmMYb9bVYuF2` | `2MFwcUowEYvgMfGp9QS8nwqM75H4n2CUfccLKkq1yynS` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ` | `transitively-changed` | `6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ` | `BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:6ynL7bPCMB5R5kQpqzVaNZs3YVmAopDLkdHneoeexjrm` | `transitively-changed` | `6ynL7bPCMB5R5kQpqzVaNZs3YVmAopDLkdHneoeexjrm` | `4Hf87W63SbbxXUUfPg8tyfqdMHky4HmvnCj9by5Hv4qQ` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA` | `transitively-changed` | `78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA` | `2kpAUcknjsY6eoij8s6u3vKHKNzFBWyweaekTpMkK7E8` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:7iWdksGRG7vaHczbr18QqK8Ex598ZBjQJdMZbAe3nRHB` | `transitively-changed` | `7iWdksGRG7vaHczbr18QqK8Ex598ZBjQJdMZbAe3nRHB` | `ERrv83b9RbGZSg2vyzFmzQiU2KoLyfzkuEn234gm7oFA` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8` | `transitively-changed` | `8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8` | `8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ` | `transitively-changed` | `AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ` | `Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR` | `transitively-changed` | `AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR` | `9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#0` | `transitively-changed` | `AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#0` | `9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW#0` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#1` | `transitively-changed` | `AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR#1` | `9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW#1` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:DwqgPP4QrvY1f96zSo7k6hgoq1YRi2CD8Hkvu2YTLgNA` | `transitively-changed` | `DwqgPP4QrvY1f96zSo7k6hgoq1YRi2CD8Hkvu2YTLgNA` | `8uvxz52uKPTRgGi4bB9HDnd5wVi4uGZ9ot1jtZppXA7Z` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz` | `transitively-changed` | `F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz` | `fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:J6MGqn8npgKGY1B9JzayUziZqBbZqAvYrFvPm7kBB6ap#0` | `transitively-changed` | `J6MGqn8npgKGY1B9JzayUziZqBbZqAvYrFvPm7kBB6ap#0` | `2Rh775x5AkBuDgFmaTuWKfuZjFiWBpxLhh1ARRmUpVQ3#0` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:00bf502877d64f4a4380414906113f6fae50f4bf8d3b1a1222876bb92dbf9da6` | `transitively-changed` | `sha256:00bf502877d64f4a4380414906113f6fae50f4bf8d3b1a1222876bb92dbf9da6` | `sha256:c171b091b8896ee5eba8f08dac57ed95b2b9b4acb8a390711921eee6ac431577` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:161a924802ff3740fe56c60641fdd72368ca6d1000f6a9721a518e440bf2d464` | `transitively-changed` | `sha256:161a924802ff3740fe56c60641fdd72368ca6d1000f6a9721a518e440bf2d464` | `sha256:738a6433193982338d641f8759dae92bbb5b4b9093bc8b30d42e296baa2e9be6` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:23c1237df89ee70ad0257df724270fc614a74964a3254935de319f553ec77e29` | `transitively-changed` | `sha256:23c1237df89ee70ad0257df724270fc614a74964a3254935de319f553ec77e29` | `sha256:871712178cfc249c05203b57c92b8d696a54a2c4e9a8591621ba324a76ca1f85` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:8853187f6535f16f427ab7ba5e40e59ef799b5b28c6ee8843ffd88685369835e` | `transitively-changed` | `sha256:8853187f6535f16f427ab7ba5e40e59ef799b5b28c6ee8843ffd88685369835e` | `sha256:22090c938702e4d83792a7534ab991825463a5fadb19ef4fe6bcb7d000e0824c` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:8e0adfdc7abea06d373ff4aa63d4b828da81abc01479d4a94cc7afdfe7b0e6e8` | `transitively-changed` | `sha256:8e0adfdc7abea06d373ff4aa63d4b828da81abc01479d4a94cc7afdfe7b0e6e8` | `sha256:3fbebd6496cb09548de8512b0806acc9bc98d2b0b32cbff3556954adace09af2` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:8e75fb2a179bf07d157a1dc402e399f5cfe6f62731dab93d8e35acc694560af7` | `transitively-changed` | `sha256:8e75fb2a179bf07d157a1dc402e399f5cfe6f62731dab93d8e35acc694560af7` | `sha256:d1d5cc1cd4d2874a41f0a9e166c00019bac93505ae103c3badcedadc4e78ef09` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:b6e849416f7fffcff5db620afaba19fa75bd7a935a435ece0d5fb2f89ab241ec` | `transitively-changed` | `sha256:b6e849416f7fffcff5db620afaba19fa75bd7a935a435ece0d5fb2f89ab241ec` | `sha256:03d27c18f26381aa18f7184ae61882da94dce8120fbd77fce26e46818f42ca04` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:bc8de9cc44900c0b9c637b880ee55eee51d947a08592b454723d2bf06b9d17e7` | `transitively-changed` | `sha256:bc8de9cc44900c0b9c637b880ee55eee51d947a08592b454723d2bf06b9d17e7` | `sha256:e1a055c184d22ac4acdde2716af5fbd42ec3ca6a524168577617e0d7c80bb361` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:bf684fafcc3901aedb2c6f7154b15a1cfa36958dbc8d479113317fd5cd0588ee` | `transitively-changed` | `sha256:bf684fafcc3901aedb2c6f7154b15a1cfa36958dbc8d479113317fd5cd0588ee` | `sha256:c8f3bd1bbefdc74425c9648e1db070982cd02021f7c8f5239142e0c3d8824f72` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18` | `transitively-changed` | `sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18` | `sha256:cdfd54d28552cfc08c9bcf5633a2a2e1f06709b2564b8f87e2163c6d79ee8c19` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:ed4ac428e31d3960b96bb4d26d816e77247942b7438404a79fb27cba3d67726d` | `transitively-changed` | `sha256:ed4ac428e31d3960b96bb4d26d816e77247942b7438404a79fb27cba3d67726d` | `sha256:c65ef11c664373426353af741b2ccd5f2297bcc522d91a98e6abcfe0e5883db2` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:f201416a678dd218ee3fb60b25eab0ce4e51f8c4ee25ad966c214ed6ed8a6858` | `transitively-changed` | `sha256:f201416a678dd218ee3fb60b25eab0ce4e51f8c4ee25ad966c214ed6ed8a6858` | `sha256:e166f34649e7ff062265e74822aa892763dfbaa5a9e30915fb3f2d1491234a5e` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:fbb8e227a353e5c688dcbb467161979c72297ff1ca337eaf44fcf0e67728fe07` | `transitively-changed` | `sha256:fbb8e227a353e5c688dcbb467161979c72297ff1ca337eaf44fcf0e67728fe07` | `sha256:b5f4f42d492de95b8e6a3d026bd240278240ae15aa18a472390390e759295669` | regenerated closure fixture/oracle corpus |
+| `fixture:closure-rotation:sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7` | `transitively-changed` | `sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7` | `sha256:5eacd13e1e98a75f80713bce3c4168ec69abe257bf27f938b8b582232018a697` | regenerated closure fixture/oracle corpus |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java` | `transitively-changed` | `50a7a207850c43c3e4d6159a6d9c83b9af252fd74261296227d1816d6c58a966` | `81a54840d50bc836321f3ca2ece052c8a0d6c3723f52d13bf6317c787833977c` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java` | `transitively-changed` | `de88deaef42954f9d2d95a42eb3d7593296ce42fa357f8a9a2293fe82f207540` | `55dc9ac99a5860b5be843d61114c5aed4695c145ed32fbdada9ba3181dbea434` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java` | `transitively-changed` | `b3682178602d5db2a5c74333782dece9a2256c95092a472fe107f5ce8d23124e` | `bcc7ebe6be7eb9f86b6b079248cc2f1382e6ef3ad422827634c1483e643d0bcf` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java |
@@ -79,6 +111,14 @@ Unresolved identity surfaces: 0. Canonical/mirror byte mismatches: 0.
 | `package:language-contracts-aggregate` | `stale-binding-regenerated` | `sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6` | `sha256:f794dfd2c57969f81025387895e60a0e67919f677ccf7efeeac0f5ac189f938c` | document:language-specification |
 | `package:language-fixtures` | `transitively-changed` | `sha256:44465973c5c5a8c1e60712fc7970236015d9500e2e9e3fc904e364552ec74a55` | `sha256:c59f2bc4e4ceafb8d7e20875003fa281f79f2f77ac7ae991fcebdc6dde0977cc` | package:language-registry |
 | `package:language-registry` | `transitively-changed` | `sha256:b705171a6ca62c990792bcb78db9d921caf5b0ed06370648b9a81769d69dd71e` | `sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321` | language:Dictionary |
+
+## Intentionally excluded invalid vectors
+
+Invalid negative-test identities are documented explicitly and are never presented as canonical old-to-new rotations.
+
+| Identity | Location | Reason |
+| --- | --- | --- |
+| `6Rnjv8oquG4RqPwo55MZgF7jcUZGd7HdYZMPiFmBQUQ7` | `blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-14-invalid-cyclic-proof.yaml#/input/admissionCandidate/evidence/candidateCyclicProof/masterBlueId` | Intentionally invalid BAD_CYCLIC_PROOF master; it is unchanged between baseline and current corpora and is not a valid canonical identity rotation. |
 
 ## Aggregate component binding changes
 
@@ -116,6 +156,7 @@ These occurrences are deliberately retained in immutable migration or modernizat
 
 | Artifact | Reference | Disposition |
 | --- | --- | --- |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `CLOSURE_INVENTORY_REBASE_EVIDENCE.md:61` | `retained-immutable-history` |
 | `package:contracts-oracles` | `DYNAMIC_CONTRACT_EVOLUTION_CONTRACTS_RECEIPT.md:55` | `retained-immutable-history` |
 | `package:contracts-ordinary-fixtures` | `DYNAMIC_CONTRACT_EVOLUTION_RELEASE_GAP_AUDIT.md:159` | `retained-immutable-history` |
 | `package:contracts-registry` | `DYNAMIC_CONTRACT_EVOLUTION_RELEASE_GAP_AUDIT.md:161` | `retained-immutable-history` |
@@ -152,6 +193,8 @@ These occurrences are deliberately retained in immutable migration or modernizat
 | `package:language-fixtures` | `docs/language-1.0-contracts-kernel-1.0-migration.md:18` | `retained-immutable-history` |
 | `package:contracts-registry` | `docs/language-1.0-contracts-kernel-1.0-migration.md:20` | `retained-immutable-history` |
 | `package:contracts-oracles` | `dynamic-contract-evolution-contracts-receipt.json:59` | `retained-immutable-history` |
+| `fixture:closure-rotation:78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA` | `dynamic-contract-evolution-fixture-delta.json:21764` | `retained-immutable-history` |
+| `fixture:closure-rotation:78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA` | `dynamic-contract-evolution-fixture-delta.json:21770` | `retained-immutable-history` |
 | `contracts:ProcessEmbedded` | `dynamic-contract-evolution-fixture-delta.json:64264` | `retained-immutable-history` |
 | `contracts:ScriptedHandler` | `dynamic-contract-evolution-fixture-delta.json:64276` | `retained-immutable-history` |
 | `package:contracts-ordinary-fixtures` | `dynamic-contract-evolution-release-gap-audit.json:165` | `retained-immutable-history` |
@@ -162,8 +205,116 @@ These occurrences are deliberately retained in immutable migration or modernizat
 | `package:contracts-registry` | `dynamic-contract-evolution-semantic-baseline-delta.json:249` | `retained-immutable-history` |
 | `document:language-specification` | `full-lifecycle-contracts-final-receipt.json:24` | `retained-immutable-history` |
 | `package:language-contracts-aggregate` | `full-lifecycle-contracts-final-receipt.json:28` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:861` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:891` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:1703` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:1733` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:2545` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:2575` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:3627` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:3639` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:3651` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:3717` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:3723` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:4769` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:4781` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:4793` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:4859` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:4865` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:5911` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:5923` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:5935` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:6001` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:6007` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:7053` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:7065` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:7077` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:7143` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:7149` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:16379` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:16951` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:17175` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:17205` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:17537` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:17609` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:17743` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:17761` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:19150` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:19510` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:19992` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:20016` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:20366` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:20396` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:21094` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:21124` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:21540` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:21606` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:21920` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:21950` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:21981` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:22012` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:33576` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:33594` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:33625` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:34437` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:34467` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:34703` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:34757` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:35347` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:35437` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:35559` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:35601` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:36233` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37045` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37075` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37100` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37294` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37318` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37488` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37512` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37682` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37706` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37876` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:37900` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:38070` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:38094` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:38420` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:38444` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:39496` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:39508` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:39520` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:39586` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:39592` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:40158` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:40418` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:40552` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:40576` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:40848` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:40872` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:41570` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:41600` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:41631` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:42683` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:42695` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:42707` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:42773` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:42779` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:42804` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:43082` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:44146` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:44224` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:45276` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:45288` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:45300` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:45366` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-invocation-identity` | `full-lifecycle-identity-delta.json:45372` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:45782` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:45848` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:46180` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:46204` | `retained-immutable-history` |
 | `package:contracts-oracles` | `full-lifecycle-identity-delta.json:122535` | `retained-immutable-history` |
 | `package:contracts-oracles` | `full-lifecycle-identity-delta.json:122590` | `retained-immutable-history` |
+| `fixture:c-clo-34:java-contracts-specification-identity` | `full-lifecycle-identity-delta.json:122603` | `retained-immutable-history` |
 | `document:language-specification` | `full-lifecycle-semantic-baseline-delta.json:55` | `retained-immutable-history` |
 | `package:language-contracts-aggregate` | `full-lifecycle-semantic-baseline-delta.json:70` | `retained-immutable-history` |
 | `document:contracts-specification` | `managed-transition-receipt-contracts-receipt.json:58` | `retained-immutable-history` |
