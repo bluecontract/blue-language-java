@@ -72,6 +72,14 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
     @Input
     public abstract Property<String> getSourceCommit();
 
+    @Input
+    public abstract Property<String> getSourceTree();
+
+    @Input
+    public int getBuiltWithJava() {
+        return Runtime.version().feature();
+    }
+
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
     public abstract RegularFileProperty getContractsSpecification();
@@ -96,7 +104,10 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
         StagedRepositoryManifest.Bindings bindings = StagedRepositoryManifest.bindings(
                 getContractsSpecification().get().getAsFile().toPath(),
                 getContractsReleaseManifest().get().getAsFile().toPath(),
-                getSourceCommit().get());
+                getSourceCommit().get(),
+                getSourceTree().get(),
+                false,
+                getBuiltWithJava());
         StagedRepositoryManifest.Verification stagedVerification =
                 StagedRepositoryManifest.verify(
                         repository,
@@ -110,12 +121,8 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
             Path directory = repository.resolve(group.replace('.', File.separatorChar))
                     .resolve(artifact).resolve(version);
             Path jar = artifactFile(directory, artifact, version, ".jar");
-            Path sources = artifactFile(directory, artifact, version, "-sources.jar");
-            Path javadoc = artifactFile(directory, artifact, version, "-javadoc.jar");
             Path pom = artifactFile(directory, artifact, version, ".pom");
             require(jar, artifact, violations);
-            require(sources, artifact, violations);
-            require(javadoc, artifact, violations);
             require(pom, artifact, violations);
             int classCount = jar != null && Files.isRegularFile(jar)
                     ? inspectJar(artifact, jar, violations) : 0;
@@ -127,12 +134,8 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
             record.put("classCount", classCount);
             record.put("jarIdentity", jar != null && Files.isRegularFile(jar)
                     ? DeterministicHashing.sha256(jar) : null);
-            record.put("javadocIdentity", javadoc != null && Files.isRegularFile(javadoc)
-                    ? DeterministicHashing.sha256(javadoc) : null);
             record.put("pomIdentity", pom != null && Files.isRegularFile(pom)
                     ? DeterministicHashing.sha256(pom) : null);
-            record.put("sourcesIdentity", sources != null && Files.isRegularFile(sources)
-                    ? DeterministicHashing.sha256(sources) : null);
             artifacts.add(record);
         }
         cycles(expected, observedEdges).forEach(cycle ->
@@ -149,7 +152,7 @@ public abstract class VerifyPublishedRepositoryTask extends DefaultTask {
         report.put("coordinateCount", artifacts.size());
         report.put("groupId", group);
         report.put("observedModuleEdges", new ArrayList<>(observedEdges));
-        report.put("schema", "blue-published-repository-verification/2.0");
+        report.put("schema", "blue-published-repository-verification/3.0");
         report.put("sourceCommit", bindings.getSourceCommit());
         report.put("valid", violations.isEmpty());
         report.put("version", version);

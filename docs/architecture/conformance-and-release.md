@@ -35,27 +35,44 @@ release ZIP is checked against an exact entry manifest and checksum.
 
 ## Published behavior
 
-Seven publications first enter a disposable invocation-owned Maven repository.
-The release lane then copies only each exact POM, runtime JAR, sources JAR and
-Javadoc JAR into a separate non-overwriting dependency repository. Every copied
-file has a SHA-256 companion. The root `artifact-manifest.json` binds those
-paths and hashes to the source commit, Contracts specification identity,
-Contracts fixture-package identity and Contracts release identity. The
-manifest deliberately excludes its own byte identity; the adjacent
-`artifact-manifest.json.sha256` and downstream receipts bind that value without
-self-reference.
+Seven normal publications first enter a disposable invocation-owned Maven
+repository. The immutable development handoff selects the six runtime modules
+used by downstream builds: `blue-language-model`, `blue-language-core`,
+`blue-language-mapping`, `blue-language-ipfs`, `blue-contracts-core`, and the
+`blue-language-java` aggregate. `blue-conformance` remains part of the normal
+publication and source conformance gates, but is not a downstream runtime
+dependency.
+
+For those six coordinates the handoff copies only each exact POM and runtime
+JAR into a separate non-overwriting repository. Every copied file has a SHA-256
+companion, producing twelve manifest records and a closed 26-file repository.
+Sources and Javadoc archives remain normal release artifacts; they are not
+duplicated in this runtime dependency handoff.
+
+The root `artifact-manifest.json` uses schema
+`blue-development-maven-repository/1.0`. It declares `DEVELOPMENT` purpose,
+does not claim release readiness, records the actual Java 17 build JVM, and
+binds paths and hashes to the exact clean Git commit and tree, Contracts
+specification identity, Contracts fixture-package identity, and Contracts
+release identity. The manifest deliberately excludes its own byte identity;
+the adjacent `artifact-manifest.json.sha256` and downstream receipts bind that
+value without self-reference.
 
 A separate consumer build has no `includeBuild`, project substitution or Maven
 Local. Gradle resolves the `blue.language` group exclusively from this sealed
-repository, with no remote fallback. It enforces Java 8 bytecode and allowed
-POM edges and exercises the aggregate and conformance entry points. The
-disposable publication task may delete only `build/staging-deploy`; it never
-deletes or overwrites the repository already handed to a downstream consumer.
-Create an explicit handoff repository with:
+repository, with no remote fallback. It enforces Java 8 artifact bytecode and
+allowed POM edges, resolves all six coordinates, and exercises the aggregate
+parse/write entry points. The 182 Language and 295 Contracts fixture suites
+remain mandatory source conformance gates. The disposable publication task may
+delete only `build/staging-deploy`; it never deletes or overwrites the
+repository already handed to a downstream consumer. From a clean checkout,
+create an explicit commit-bound handoff repository with a Java 17 Gradle JVM:
 
 ```bash
+COMMIT=$(git rev-parse HEAD)
 ./gradlew assembleImmutableStagedRepository \
-  -PstagedDependencyRepository=/absolute/path/to/contracts-maven-repository
+  -PreleaseVersion=3.1.0-dev.$COMMIT \
+  -PstagedDependencyRepository=/absolute/path/to/blue-development-maven-repository
 ```
 
 The destination must be outside `build/staging-deploy`. If it already exists,

@@ -32,19 +32,19 @@ public final class StagedRepositoryManifest {
 
     public static final String MANIFEST_FILE = "artifact-manifest.json";
     public static final String MANIFEST_CHECKSUM_FILE = MANIFEST_FILE + ".sha256";
-    public static final String SCHEMA = "blue-staged-dependency-repository/1.0";
+    public static final String SCHEMA = "blue-development-maven-repository/1.0";
+    public static final int REQUIRED_BUILD_JAVA = 17;
 
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final Pattern COMMIT = Pattern.compile("[0-9a-f]{40}|[0-9a-f]{64}");
+    private static final Pattern TREE = Pattern.compile("[0-9a-f]{40}");
     private static final Pattern GROUP = Pattern.compile(
             "[A-Za-z0-9][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9][A-Za-z0-9_-]*)+");
     private static final Pattern MAVEN_TOKEN = Pattern.compile("[A-Za-z0-9][A-Za-z0-9_.-]*");
     private static final Pattern SHA_256 = Pattern.compile("sha256:[0-9a-f]{64}");
     private static final List<ArtifactKind> KINDS = Collections.unmodifiableList(Arrays.asList(
-            new ArtifactKind("javadoc", "-javadoc.jar"),
             new ArtifactKind("pom", ".pom"),
-            new ArtifactKind("runtime", ".jar"),
-            new ArtifactKind("sources", "-sources.jar")));
+            new ArtifactKind("runtime", ".jar")));
 
     private StagedRepositoryManifest() {}
 
@@ -52,7 +52,10 @@ public final class StagedRepositoryManifest {
     public static Bindings bindings(
             Path contractsSpecification,
             Path contractsReleaseManifest,
-            String sourceCommit) {
+            String sourceCommit,
+            String sourceTree,
+            boolean sourceDirty,
+            int builtWithJava) {
         String commit = gitIdentity(sourceCommit);
         JsonNode release;
         try {
@@ -79,7 +82,14 @@ public final class StagedRepositoryManifest {
         String contractsRelease = sha256Identity(
                 requiredText(release, "releaseIdentity"),
                 "Contracts release identity");
-        return new Bindings(commit, specification, fixtures, contractsRelease);
+        return new Bindings(
+                commit,
+                sourceTree,
+                sourceDirty,
+                builtWithJava,
+                specification,
+                fixtures,
+                contractsRelease);
     }
 
     /**
@@ -250,6 +260,14 @@ public final class StagedRepositoryManifest {
             Bindings bindings) {
         String checkedGroup = mavenGroup(group);
         String checkedVersion = mavenToken(version, "version");
+        String expectedVersion = bindings.isSourceDirty()
+                ? "3.1.0-dev.tree." + bindings.getSourceTree()
+                : "3.1.0-dev." + bindings.getSourceCommit();
+        if (!checkedVersion.equals(expectedVersion)) {
+            throw new GradleException(
+                    "Development repository version is not bound to exact source provenance: "
+                            + checkedVersion + " != " + expectedVersion);
+        }
         List<Map<String, Object>> records = new ArrayList<>();
         for (ArtifactFile artifact : artifactFiles(
                 checkedGroup, checkedVersion, artifacts)) {
@@ -274,14 +292,19 @@ public final class StagedRepositoryManifest {
                 .thenComparing(record -> String.valueOf(record.get("path"))));
         Map<String, Object> manifest = new TreeMap<>();
         manifest.put("artifacts", records);
+        manifest.put("builtWithJava", bindings.getBuiltWithJava());
         manifest.put("contractsFixturePackageIdentity",
                 bindings.getContractsFixturePackageIdentity());
         manifest.put("contractsReleaseIdentity", bindings.getContractsReleaseIdentity());
         manifest.put("contractsSpecificationIdentity",
                 bindings.getContractsSpecificationIdentity());
         manifest.put("groupId", checkedGroup);
+        manifest.put("releaseReadinessClaimed", false);
         manifest.put("schema", SCHEMA);
         manifest.put("sourceCommit", bindings.getSourceCommit());
+        manifest.put("sourceDirty", bindings.isSourceDirty());
+        manifest.put("sourceTree", bindings.getSourceTree());
+        manifest.put("stagePurpose", "DEVELOPMENT");
         manifest.put("version", checkedVersion);
         return manifest;
     }
@@ -427,6 +450,24 @@ public final class StagedRepositoryManifest {
         return commit;
     }
 
+    private static String treeIdentity(String value) {
+        String tree = oneLine(value, "source tree");
+        if (!TREE.matcher(tree).matches()) {
+            throw new GradleException(
+                    "Development repository source tree is not a 40-character Git identity");
+        }
+        return tree;
+    }
+
+    private static int buildJava(int value) {
+        if (value != REQUIRED_BUILD_JAVA) {
+            throw new GradleException(
+                    "Development repository must be built with Java "
+                            + REQUIRED_BUILD_JAVA + "; received Java " + value);
+        }
+        return value;
+    }
+
     private static String mavenGroup(String value) {
         String group = oneLine(value, "group");
         if (!GROUP.matcher(group).matches()) {
@@ -495,16 +536,25 @@ public final class StagedRepositoryManifest {
     public static final class Bindings {
 
         private final String sourceCommit;
+        private final String sourceTree;
+        private final boolean sourceDirty;
+        private final int builtWithJava;
         private final String contractsSpecificationIdentity;
         private final String contractsFixturePackageIdentity;
         private final String contractsReleaseIdentity;
 
         public Bindings(
                 String sourceCommit,
+                String sourceTree,
+                boolean sourceDirty,
+                int builtWithJava,
                 String contractsSpecificationIdentity,
                 String contractsFixturePackageIdentity,
                 String contractsReleaseIdentity) {
             this.sourceCommit = gitIdentity(sourceCommit);
+            this.sourceTree = treeIdentity(sourceTree);
+            this.sourceDirty = sourceDirty;
+            this.builtWithJava = buildJava(builtWithJava);
             this.contractsSpecificationIdentity = sha256Identity(
                     contractsSpecificationIdentity, "specification identity");
             this.contractsFixturePackageIdentity = sha256Identity(
@@ -515,6 +565,18 @@ public final class StagedRepositoryManifest {
 
         public String getSourceCommit() {
             return sourceCommit;
+        }
+
+        public String getSourceTree() {
+            return sourceTree;
+        }
+
+        public boolean isSourceDirty() {
+            return sourceDirty;
+        }
+
+        public int getBuiltWithJava() {
+            return builtWithJava;
         }
 
         public String getContractsSpecificationIdentity() {

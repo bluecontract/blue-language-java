@@ -67,6 +67,14 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             "blue-contracts-core",
             "blue-conformance",
             AGGREGATE_MODULE));
+    private static final List<String> DEVELOPMENT_HANDOFF_MODULES =
+            Collections.unmodifiableList(Arrays.asList(
+                    "blue-language-model",
+                    "blue-language-core",
+                    "blue-language-mapping",
+                    "blue-language-ipfs",
+                    "blue-contracts-core",
+                    AGGREGATE_MODULE));
     private static final List<String> API_BASELINE_MODULES = Collections.unmodifiableList(Arrays.asList(
             "blue-language-model",
             "blue-language-core",
@@ -199,6 +207,10 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             spec.setWorkingDir(project.getRootDir());
             spec.commandLine("git", "rev-parse", "--verify", "HEAD^{commit}");
         }).getStandardOutput().getAsText().map(String::trim);
+        Provider<String> sourceTree = project.getProviders().exec(spec -> {
+            spec.setWorkingDir(project.getRootDir());
+            spec.commandLine("git", "rev-parse", "--verify", "HEAD^{tree}");
+        }).getStandardOutput().getAsText().map(String::trim);
         Provider<String> workingTreeStatus = project.getProviders().exec(spec -> {
             spec.setWorkingDir(project.getRootDir());
             spec.commandLine(
@@ -223,8 +235,9 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.getOutputRepository().set(immutableRepository);
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
-                            task.getExpectedArtifacts().set(PUBLISHED_MODULES);
+                            task.getExpectedArtifacts().set(DEVELOPMENT_HANDOFF_MODULES);
                             task.getSourceCommit().set(sourceCommit);
+                            task.getSourceTree().set(sourceTree);
                             task.getRepositoryHead().set(repositoryHead);
                             task.getWorkingTreeStatus().set(workingTreeStatus);
                             task.getContractsSpecification().set(project.getLayout()
@@ -250,9 +263,10 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.getRepositoryDirectory().set(immutableRepository);
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
-                            task.getExpectedArtifacts().set(PUBLISHED_MODULES);
+                            task.getExpectedArtifacts().set(DEVELOPMENT_HANDOFF_MODULES);
                             task.getAllowedModuleEdges().set(ALLOWED_MODULE_EDGES);
                             task.getSourceCommit().set(sourceCommit);
+                            task.getSourceTree().set(sourceTree);
                             task.getContractsSpecification().set(
                                     assembleRepository.flatMap(
                                             AssembleImmutableStagedRepositoryTask::

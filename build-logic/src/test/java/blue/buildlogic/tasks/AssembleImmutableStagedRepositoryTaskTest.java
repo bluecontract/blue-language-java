@@ -25,6 +25,8 @@ final class AssembleImmutableStagedRepositoryTaskTest {
     private static final String ARTIFACT = "blue-contracts-fixture";
     private static final String COMMIT =
             "0123456789abcdef0123456789abcdef01234567";
+    private static final String TREE =
+            "89abcdef0123456789abcdef0123456789abcdef";
     private static final String GROUP = "blue.language";
     private static final String VERSION = "3.1.0-dev." + COMMIT;
 
@@ -63,6 +65,7 @@ final class AssembleImmutableStagedRepositoryTaskTest {
         task.getVersionValue().set(VERSION);
         task.getExpectedArtifacts().set(Collections.singletonList(ARTIFACT));
         task.getSourceCommit().set(COMMIT);
+        task.getSourceTree().set(TREE);
         task.getRepositoryHead().set(COMMIT);
         task.getWorkingTreeStatus().set("");
         task.getContractsSpecification().set(specification.toFile());
@@ -77,13 +80,26 @@ final class AssembleImmutableStagedRepositoryTaskTest {
                 target.resolve(StagedRepositoryManifest.MANIFEST_FILE),
                 StandardCharsets.UTF_8);
         assertTrue(manifest.contains("\"sourceCommit\":\"" + COMMIT + "\""));
+        assertTrue(manifest.contains("\"sourceTree\":\"" + TREE + "\""));
+        assertTrue(manifest.contains("\"sourceDirty\":false"));
+        assertTrue(manifest.contains("\"builtWithJava\":17"));
+        assertTrue(manifest.contains("\"stagePurpose\":\"DEVELOPMENT\""));
+        assertTrue(manifest.contains("\"releaseReadinessClaimed\":false"));
+        assertTrue(manifest.contains(
+                "\"schema\":\"blue-development-maven-repository/1.0\""));
         assertTrue(manifest.contains("\"contractsSpecificationIdentity\":\"sha256:"
                 + specificationHash + "\""));
         assertTrue(Files.isRegularFile(
                 target.resolve(StagedRepositoryManifest.MANIFEST_CHECKSUM_FILE)));
         try (Stream<Path> paths = Files.walk(target)) {
-            assertEquals(10L, paths.filter(Files::isRegularFile).count());
+            assertEquals(6L, paths.filter(Files::isRegularFile).count());
         }
+        assertTrue(Files.notExists(target.resolve(
+                "blue/language/" + ARTIFACT + "/" + VERSION + "/"
+                        + ARTIFACT + "-" + VERSION + "-sources.jar")));
+        assertTrue(Files.notExists(target.resolve(
+                "blue/language/" + ARTIFACT + "/" + VERSION + "/"
+                        + ARTIFACT + "-" + VERSION + "-javadoc.jar")));
         assertTrue(AssembleImmutableStagedRepositoryTask.class.isAnnotationPresent(
                 DisableCachingByDefault.class));
         assertTrue(AssembleImmutableStagedRepositoryTask.class
@@ -155,6 +171,7 @@ final class AssembleImmutableStagedRepositoryTaskTest {
         task.getVersionValue().set(VERSION);
         task.getExpectedArtifacts().set(Collections.singletonList(ARTIFACT));
         task.getSourceCommit().set(COMMIT);
+        task.getSourceTree().set(TREE);
         task.getRepositoryHead().set(COMMIT);
         task.getWorkingTreeStatus().set("");
         task.getContractsSpecification().set(specification.toFile());

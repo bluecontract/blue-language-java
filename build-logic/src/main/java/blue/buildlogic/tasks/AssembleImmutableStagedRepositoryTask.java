@@ -4,6 +4,7 @@ import blue.buildlogic.support.CommitBoundDevelopmentCandidate;
 import blue.buildlogic.support.StagedRepositoryManifest;
 import java.nio.file.Path;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
@@ -58,6 +59,14 @@ public abstract class AssembleImmutableStagedRepositoryTask extends DefaultTask 
     public abstract Property<String> getSourceCommit();
 
     @Input
+    public abstract Property<String> getSourceTree();
+
+    @Input
+    public int getBuiltWithJava() {
+        return Runtime.version().feature();
+    }
+
+    @Input
     public abstract Property<String> getRepositoryHead();
 
     @Input
@@ -73,6 +82,13 @@ public abstract class AssembleImmutableStagedRepositoryTask extends DefaultTask 
 
     @TaskAction
     public void assemble() {
+        int builtWithJava = getBuiltWithJava();
+        if (builtWithJava != StagedRepositoryManifest.REQUIRED_BUILD_JAVA) {
+            throw new GradleException(
+                    "Immutable development repository must be built with Java "
+                            + StagedRepositoryManifest.REQUIRED_BUILD_JAVA
+                            + "; current Gradle JVM is Java " + builtWithJava);
+        }
         CommitBoundDevelopmentCandidate.verify(
                 getVersionValue().get(),
                 getSourceCommit().get(),
@@ -82,7 +98,10 @@ public abstract class AssembleImmutableStagedRepositoryTask extends DefaultTask 
         StagedRepositoryManifest.Bindings bindings = StagedRepositoryManifest.bindings(
                 specification,
                 getContractsReleaseManifest().get().getAsFile().toPath(),
-                getSourceCommit().get());
+                getSourceCommit().get(),
+                getSourceTree().get(),
+                false,
+                builtWithJava);
         StagedRepositoryManifest.assemble(
                 getSourceRepository().get().getAsFile().toPath(),
                 getOutputRepository().get().getAsFile().toPath(),
