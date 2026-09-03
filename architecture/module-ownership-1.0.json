@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 787,
+    "productionSourceCount": 789,
     "productionResourceCount": 813,
-    "productionSourcePathIdentity": "sha256:cd637031489c7e22df71d9e1849d1ca21edf4d700788fc174721a9599d16c94c",
+    "productionSourcePathIdentity": "sha256:92de23d5711c149ad8f6af9c6a172be87461c995b7c8c66c840b54d9823ad946",
     "productionResourcePathIdentity": "sha256:e7f14fbe67873a4dd5da88fb4a0b54197b98d68458c367d012cf67f22eb4c2b5"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -329,6 +329,13 @@
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixturePhysicalProvider.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixturePhysicalProvider.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureProjectionExtractor.java",
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
@@ -340,6 +347,13 @@
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureProjectionSupport.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureRegistryEnvironment.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureRegistryEnvironment.java",
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
