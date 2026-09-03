@@ -169,6 +169,9 @@ final class FullLifecycleFixtureExporterTest {
                     "c-evt-collection-07-closure-work-order-")) {
                 assertC07NormativeClosureOracle(name, fixture);
             }
+            if (name.equals("fl-adm-07-finite-cyclic-route.yaml")) {
+                assertFlAdm07CyclicEmptyCollection(fixture);
+            }
             JsonNode cause = fixture.path("input").path("cause");
             String admissionLabel = cause.path("label").textValue();
             AdmissionCause expectedCause =
@@ -344,10 +347,40 @@ final class FullLifecycleFixtureExporterTest {
                 "the non-public preinitialized target must not be queued");
     }
 
+    private static void assertFlAdm07CyclicEmptyCollection(
+            JsonNode fixture) {
+        JsonNode input = fixture.path("input");
+        JsonNode root = input.path("documents").path("fl-adm-07-a")
+                .path("document");
+        assertTrue(root.path("emptyPeers").isObject());
+        assertEquals(0, root.path("emptyPeers").size());
+        assertEquals("/emptyPeers", root.path("contracts")
+                .path("embedded").path("collectionPaths").path(0)
+                .textValue());
+        assertEquals("CYCLIC", input.path("components").path(0)
+                .path("kind").textValue());
+        JsonNode resultingCollection = resultingDocument(
+                fixture, "fl-adm-07-a").path("document")
+                .path("emptyPeers");
+        assertTrue(resultingCollection.isObject());
+        assertEquals(0, resultingCollection.size());
+        for (JsonNode occurrence : input.path("occurrenceBindings")) {
+            assertFalse(occurrence.path("sourcePath").textValue()
+                            .startsWith("/emptyPeers/"),
+                    "explicit {} in a cyclic containing graph contributes "
+                            + "no collection occurrence");
+        }
+    }
+
     private static void assertC07NormativeClosureOracle(
             String name,
             JsonNode fixture) {
         JsonNode expected = fixture.path("expected");
+        JsonNode representedMember = fixture.path("input")
+                .path("documents").path("c-evt-collection-07-root")
+                .path("document").path("orders").path("order-1");
+        boolean expandedMember = name.contains("inline-");
+        assertReferenceForm(representedMember, !expandedMember, name);
         JsonNode workTrace = expected.path("workTrace");
         List<String> actualWork = new ArrayList<String>();
         for (int index = 0; index < workTrace.size(); index++) {
@@ -495,14 +528,14 @@ final class FullLifecycleFixtureExporterTest {
             String name,
             JsonNode fixture,
             JsonNode provider) {
-        boolean physicalVariant = name.startsWith(
-                "c-evt-collection-07-closure-work-order-");
+        boolean physicalVariant = provider.has("cache");
         assertEquals(physicalVariant ? 5 : 3, provider.size(), name);
         JsonNode nodes = provider.path("nodes");
         assertTrue(nodes.isObject(), name);
         boolean referenceForms = name.contains("reference-");
-        assertEquals(physicalVariant
-                ? (referenceForms ? 5 : 2) : 0, nodes.size(), name);
+        if (physicalVariant) {
+            assertEquals(referenceForms ? 5 : 2, nodes.size(), name);
+        }
         JsonNode required = provider.path("expectedRequiredBlueIds");
         assertTrue(required.isArray(), name);
         assertEquals(fixture.path("expected")
@@ -513,6 +546,13 @@ final class FullLifecycleFixtureExporterTest {
         TreeSet<String> expectedLoads = new TreeSet<String>();
         required.forEach(value -> expectedLoads.add(value.textValue()));
         if (!physicalVariant) {
+            nodes.fields().forEachRemaining(field -> {
+                Node exact = UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                        field.getValue(), Node.class);
+                assertEquals(field.getKey(),
+                        DirectBlueIdCalculator.calculateBlueId(exact), name);
+                expectedLoads.add(field.getKey());
+            });
             assertEquals(expectedLoads,
                     new TreeSet<String>(textValues(loads)), name);
             return;

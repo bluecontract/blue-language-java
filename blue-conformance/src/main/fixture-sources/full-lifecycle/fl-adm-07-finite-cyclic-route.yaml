@@ -19,11 +19,13 @@ documents:
       documentId: fl-adm-07-a
       name: Full lifecycle finite cyclic A
       b: {blueId: this#1}
+      emptyPeers: {}
       finished: false
       contracts:
         embedded:
           type: {$registryBlueId: ProcessEmbedded}
           paths: [/b]
+          collectionPaths: [/emptyPeers]
         lifecycle:
           type: {$registryBlueId: LifecycleEventChannel}
           order: 0
@@ -96,6 +98,7 @@ expect:
   - {documentId: fl-adm-07-b, initialized: true, terminated: false}
   pointers:
   - {documentId: fl-adm-07-a, pointer: /finished, value: true}
+  - {documentId: fl-adm-07-a, pointer: /emptyPeers, value: {}}
   workCounts:
   - {kind: INITIALIZATION, count: 2}
   - {kind: LIFECYCLE, count: 1}
