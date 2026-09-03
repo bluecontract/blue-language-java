@@ -4,9 +4,9 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
-import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
 import blue.language.snapshot.FrozenNode;
@@ -712,24 +712,60 @@ class PreparedPatchSequenceTest {
     }
 
     @Test
-    void shouldVerifyGasUsesTheAuthoredValueBeforeCanonicalEmptyNodeElision() {
+    void shouldVerifyGasForExactEmptyAuthoredValuesUsesNamedCounters() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         ProcessorInvocationState execution = execution(new Node(), manager, new RecordingMetrics());
         Map<String, Node> authoredProperties = new LinkedHashMap<>();
         for (int index = 0; index < 40; index++) {
-            authoredProperties.put("empty-child-with-a-long-key-" + index, new Node());
+            authoredProperties.put(
+                    "empty-child-with-a-long-key-" + index,
+                    Nodes.emptyObject());
         }
         Node authoredValue = new Node().properties(authoredProperties);
-        long authoredSizeCharge = (NodeCanonicalizer.canonicalSize(authoredValue) + 99L) / 100L;
 
         // when
         execution.handlePatches("/", ContractBundle.builder().build(),
                 Arrays.asList(JsonPatch.add("/payload", authoredValue)), false);
 
         // then
-        assertEquals(2L + 20L + authoredSizeCharge + 109L,
-                execution.runtime().totalGas());
+        ProcessingConformanceTrace trace =
+                execution.runtime().conformanceTrace();
+        GasSchedule schedule = execution.runtime().gasMeter().schedule();
+        assertEquals(1L, trace.counterQuantity(
+                GasScheduleConstants.Namespace.PROCESSOR,
+                GasScheduleConstants.ProcessorCounter.PATCH_BOUNDARY_CHECKED));
+        assertEquals(1L, trace.counterQuantity(
+                GasScheduleConstants.Namespace.PROCESSOR,
+                GasScheduleConstants.ProcessorCounter.PATCH_ADD_OR_REPLACE));
+        assertEquals(41L, trace.counterQuantity(
+                GasScheduleConstants.Namespace.SEMANTIC,
+                GasScheduleConstants.SemanticCounter.OBJECT_MEMBER_REBUILT));
+        long expectedGas = schedule.weight(
+                GasScheduleConstants.Namespace.PROCESSOR,
+                GasScheduleConstants.ProcessorCounter.PATCH_BOUNDARY_CHECKED)
+                + schedule.weight(
+                GasScheduleConstants.Namespace.PROCESSOR,
+                GasScheduleConstants.ProcessorCounter.PATCH_ADD_OR_REPLACE)
+                + trace.counterQuantity(
+                GasScheduleConstants.Namespace.SEMANTIC,
+                GasScheduleConstants.SemanticCounter.NODE_IDENTITY_ESTABLISHED)
+                * schedule.weight(
+                GasScheduleConstants.Namespace.SEMANTIC,
+                GasScheduleConstants.SemanticCounter.NODE_IDENTITY_ESTABLISHED)
+                + trace.counterQuantity(
+                GasScheduleConstants.Namespace.SEMANTIC,
+                GasScheduleConstants.SemanticCounter.OBJECT_MEMBER_REBUILT)
+                * schedule.weight(
+                GasScheduleConstants.Namespace.SEMANTIC,
+                GasScheduleConstants.SemanticCounter.OBJECT_MEMBER_REBUILT)
+                + trace.counterQuantity(
+                GasScheduleConstants.Namespace.SEMANTIC,
+                GasScheduleConstants.SemanticCounter.DIRECT_IDENTITY_HASH_BLOCK)
+                * schedule.weight(
+                GasScheduleConstants.Namespace.SEMANTIC,
+                GasScheduleConstants.SemanticCounter.DIRECT_IDENTITY_HASH_BLOCK);
+        assertEquals(expectedGas, execution.runtime().totalGas());
     }
 
     @Test
