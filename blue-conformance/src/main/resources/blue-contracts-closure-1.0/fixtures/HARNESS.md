@@ -2,15 +2,12 @@
 
 ## 1. Purpose and authority
 
-The harness executes the normative ordinary envelope
-`blue-contracts-fixture/1.0` and the affected-closure envelope
-`blue-contracts-closure-fixture/1.0`.
+The harness executes the normative fixture envelope `blue-contracts-fixture/1.0`.
 
 These files are executable conformance data, not scenario sketches. A conforming runner MUST implement every operation, control, preparation rule, projection, and assertion defined by:
 
 ```text
 fixture-schema.yaml
-closure-fixture-schema.yaml
 CONTROL-LANGUAGE.md
 TRACE-SCHEMA.md
 projection-catalog.yaml
@@ -69,34 +66,6 @@ A platform fixture cannot create an alternative processor result. Whenever seman
 
 Evaluate one exact named counter or one formula declared by the bound Contracts gas manifest. No document processing is implied unless Root/event/runtime fields are also supplied. Trace entries and arithmetic are exact.
 
-### 3.5 `process-closure` and `admit-closure`
-
-Execute the one closed `ClosureInvocationInput` under the operation/cause
-coupling in the closure schema. `process-closure` accepts an external or
-`managed-revision` cause; `admit-closure` accepts an admission cause. Admission
-and managed revision have empty direct-delivery snapshots. Both operations
-return exactly `Complete(ClosureProcessResult)` or
-`NeedsResources(canonicallyOrderedTypedDemands,
-sortedExactBlueIdProjection)`.
-
-One `ManagedRevisionCause` is one invocation and one
-`CONTAINING_REFERENCE_UPDATE`; the runner MUST NOT pass a transition list or
-construct a historical queued work kind. A sequential A5→A10 campaign is six
-commits after the initial missing-resource attempt: the external A5 attachment,
-then five separately metered/committed one-step revision invocations.
-
-Every complete affected-closure expectation includes the exact ordered
-`managedTransitionReceipts` result and its
-`managedTransitionReceiptsIdentity`. Each receipt binds one changed managed
-Root, or one unchanged Root that emitted application events, to the complete
-ordered Root-boundary event sequence, exact event values, original occurrence
-identities, and its admitted gas partition. The sequence includes non-public
-managed Roots and preserves duplicate equal events. A rollback expectation has
-an empty receipt list. A committing `platformCommitCompanion` uses the additive
-1.1 constructor and repeats the exact aggregate identity. These fields are
-exported by executing the normative Java Contracts runtime; the Python package
-refiner does not reconstruct receipt semantics.
-
 ## 4. Fixture controls
 
 `CONTROL-LANGUAGE.md` defines every builder, provider, runtime, feeder, and variant control. Important constraints are:
@@ -106,58 +75,6 @@ refiner does not reconstruct receipt semantics.
 - `input.feeder.deliverySnapshot` is compact fixture shorthand and MUST be expanded and verified as the complete normative `ExternalDelivery` snapshot;
 - representation variants transform exact preparation only and cannot alter semantic values;
 - every variant is an object that explicitly names its transformation; a bare variant label is invalid.
-
-For an affected-closure fixture the following are closed **top-level harness
-fields**, not members of normative `input` or production `expected` result:
-
-- `runtime`: scripted Handler/initialization behavior;
-- `sharedLimitSource`: release-default versus explicit fixture-override
-  provenance for the normative gas-policy value;
-- `provider`: exact available nodes plus expected exact requests/loads;
-- `locality`: unrelated-document setup and expected open count;
-- `limit`: invocation probe or limit-micro generator;
-- `oracle`: oracle path plus component-state/finalization-stage routing.
-
-An availability-only provider retry preserves both normative
-`inputClosureIdentity` and `invocationIdentity`. The authoritative
-`resourceDemands` list contains exact-node and/or exact managed-occurrence
-evidence demands in canonical source order; its legacy `requiredBlueIds`
-projection contains exact-node demands only and can be empty. A runner must
-never turn either form into a range query or historical discovery operation.
-Resolving an occurrence-evidence demand retains the authoritative document
-heads and logical cause but constructs a new closed occurrence set, so the
-occurrence-set, input-closure, and invocation identities are recomputed. A
-byte-equal automatically derived prospective row and explicit prospective row
-must then produce byte-equal resolved invocation input and execution.
-Oracle stage labels never appear in component or finalization production API
-records.
-
-Prospective occurrence rows are closed invocation evidence except for the exact
-inactive successor derived when an active row retires. When exact resulting
-content lacks exact-node or prospective-row evidence, the harness expects the
-authoritative typed demand rather than a hidden row or invalid-surface shortcut.
-Every resulting Root's complete Process Embedded surface is projected and all
-demands are aggregated before any Root is reconciled.
-
-A pending-null row's declared path may be absent; a historical cursor value may
-be present while the row remains inactive. Root managed-scope generation is 0,
-and the first embedded reservation/activation is 1. Active removal allocates
-its same-lineage successor at exactly generation plus one; that successor is
-output-only until committed and supplied as a later invocation input, whose
-re-add preserves its generation and occurrence identity. An inactive row cannot
-retarget. An active different-lineage `REBIND` is atomic: it retains source path
-and binding policy, retires the old lineage, changes target DocumentId, uses the
-next generation and fresh occurrence/binding identities, advances the active
-graph generation, and does not redirect frozen old-lineage work.
-Same-invocation remove-then-re-add remains unsupported. Pure references,
-verified inline acyclic values, and verified materialized cyclic members are
-exact parity variants; mixed `blueId` objects are invalid.
-
-Direct initialized, terminated, and checkpoint state plus the effective
-generalization policy are protected. Workflow, Handler, Operation, Channel,
-lifecycle, actor-policy, and the complete Process Embedded declaration are
-application-owned; their mutation is admitted only through frozen-current-work
-and complete post-write reconciliation.
 
 ### 4.1 Portable contract-evolution family
 
@@ -215,19 +132,13 @@ checkpointDomainBlueId
 
 It MUST verify:
 
-1. `scopePath` is exactly `/` and its activation generation is exactly `0`;
-2. the selected managed Root exists as an object and is not terminated;
+1. every non-root path is transitively declared through either an exact `Process Embedded.paths` entry or a concrete direct member generated from `Process Embedded.collectionPaths`;
+2. the selected scope exists as an object and is not under a direct terminated scope;
 3. the effective contract at `channelKey` is an External Channel;
 4. any asserted `order` and activation frontier agree with the derived state;
 5. the complete ordered hint set equals the canonical preselected occurrence set for the fixture.
 
 The compact hints do not substitute for missing identity fields and are never passed to application contracts.
-The Contracts 1.0 affected-closure harness is deliberately Root-scoped. It
-MUST reject a non-Root direct delivery, WorkOccurrence, ChannelOccurrence,
-subscription delta, checkpoint receipt, or scoped gas context rather than
-silently applying ordinary `PROCESS` nested-scope behavior. Nested exact
-content and `Process Embedded` occurrence paths remain valid graph and patch
-evidence; they are not independent closure work scopes.
 
 ## 6. Projections
 
@@ -269,11 +180,6 @@ A string written in `expected` is always a literal string. Projection comparison
 `TRACE-SCHEMA.md` defines the canonical named entry, logical demand record, and every derived trace. `trace.namedEntries` is the authoritative gas trace. The weighted sum MUST equal `result.totalGas`.
 
 A runner MAY retain richer implementation diagnostics, but fixtures cannot observe them unless they are normalized into a catalogued projection. Host stack traces, object identities, thread schedules, cache hits, and physical provider details are nonportable.
-
-Every closure public-event record contains both ordinals:
-`publicEventOrdinal` is contiguous in the Root-only public projection, while
-`eventOccurrenceOrdinal` is the invocation-global emission ordinal bound by
-`eventOccurrenceIdentity` and may contain public-projection gaps.
 
 ## 9. Failure and rollback
 

@@ -10,7 +10,7 @@ stages:
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /b
       source:
@@ -23,7 +23,7 @@ stages:
         logicalDeliveryKey: loop
       start:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: source
         order: 0
       fromB:
@@ -35,7 +35,7 @@ stages:
         order: 0
       onLoopFromB:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: fromB
         order: 0
   - documentId: loop-b
@@ -45,7 +45,7 @@ stages:
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /a
       source:
@@ -58,7 +58,7 @@ stages:
         logicalDeliveryKey: loop
       start:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: source
         order: 0
       fromA:
@@ -70,46 +70,46 @@ stages:
         order: 0
       onLoopFromA:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: fromA
         order: 0
   preliminaryBlueIds:
-    '0': 12XuJwigYqhMqCF1Hp6GdUsnNacsTaPEeCGoNH1AhyPS
-    '1': 2Q3bgBwqMTdXfKEr5wRAdNUkjHPUEsJ2TmBM99d54ABf
+    '0': F9HQd5GbPfDebSASvJEfFuF8JciqFYZYHVfoSYVJ5bv8
+    '1': 4sj3LJewqwvVh4iUzMcLMuDgSiQvMyJixxh2xc6m7vJD
   sortedSourceIndices:
-  - 0
   - 1
+  - 0
   canonicalLimitForm:
-  - documentId:
-      blueId: 5BWGpRHfYx6CXWjTKnpRV6dr6GRxwZGpHqfNHQkvXwku
-    memberIdentity:
-      blueId: 5BWGpRHfYx6CXWjTKnpRV6dr6GRxwZGpHqfNHQkvXwku
-    b:
-      blueId: this#1
-    contracts:
-      blueId: 4CTLzra1DtTj6NP2AkBefY8MXEBegpu52xLukc8kxN49
   - documentId:
       blueId: Bs6UwPjKnDXQ6V8A5kv2ENhvimFGtSo5UTKubZGNv5r9
     memberIdentity:
       blueId: Bs6UwPjKnDXQ6V8A5kv2ENhvimFGtSo5UTKubZGNv5r9
     a:
+      blueId: this#1
+    contracts:
+      blueId: F1GG1ZTqDsqhgRiBMYDCSMab7YE3nLKWB9fxLCgpeVDz
+  - documentId:
+      blueId: 5BWGpRHfYx6CXWjTKnpRV6dr6GRxwZGpHqfNHQkvXwku
+    memberIdentity:
+      blueId: 5BWGpRHfYx6CXWjTKnpRV6dr6GRxwZGpHqfNHQkvXwku
+    b:
       blueId: this#0
     contracts:
-      blueId: H49Ni1be4HnT7RJn7Uug6xqbDWcA4WB7ahvrVMApYFNS
+      blueId: 5SBBo2ReaJQrNLtJh8c4z72R4ktbgXoNgd1jTAEHq8Z6
   canonicalMasterInputUtf8Bytes: 485
-  masterBlueId: 9PG1twfz93nyiUFZNZrvEcW8ranQ8Lkb6mAnGqrxUhc4
+  masterBlueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2
   memberBlueIdsInSourceOrder:
-  - 9PG1twfz93nyiUFZNZrvEcW8ranQ8Lkb6mAnGqrxUhc4#0
-  - 9PG1twfz93nyiUFZNZrvEcW8ranQ8Lkb6mAnGqrxUhc4#1
+  - DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#1
+  - DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#0
   materializedDocuments:
   - documentId: loop-a
     memberIdentity: loop-a
     b:
-      blueId: 9PG1twfz93nyiUFZNZrvEcW8ranQ8Lkb6mAnGqrxUhc4#1
+      blueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#0
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /b
       source:
@@ -122,7 +122,7 @@ stages:
         logicalDeliveryKey: loop
       start:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: source
         order: 0
       fromB:
@@ -134,17 +134,17 @@ stages:
         order: 0
       onLoopFromB:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: fromB
         order: 0
   - documentId: loop-b
     memberIdentity: loop-b
     a:
-      blueId: 9PG1twfz93nyiUFZNZrvEcW8ranQ8Lkb6mAnGqrxUhc4#0
+      blueId: DRDPDcc3LvCdSXVWXUVJNnUatrUvbkapGSyCqiBAbrQ2#1
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /a
       source:
@@ -157,7 +157,7 @@ stages:
         logicalDeliveryKey: loop
       start:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: source
         order: 0
       fromA:
@@ -169,6 +169,6 @@ stages:
         order: 0
       onLoopFromA:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: fromA
         order: 0

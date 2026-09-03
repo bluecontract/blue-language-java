@@ -293,7 +293,7 @@ def build_release_manifest(fixture_manifest: dict[str, Any], oracle_manifest: di
         "contractsRegistry": {
             "path": "registry/manifest.yaml",
             "packageIdentity": registry_manifest["packageIdentity"],
-            "unchangedCoreTypeNodes": True,
+            "unchangedCoreTypeNodes": False,
         },
         "gasManifest": {
             "path": "gas-manifest.yaml",

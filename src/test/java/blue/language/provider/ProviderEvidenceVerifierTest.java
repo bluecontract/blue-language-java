@@ -21,7 +21,7 @@ class ProviderEvidenceVerifierTest {
 
     private static final String CORRECTED_LANGUAGE_RELEASE_IDENTITY =
             "blue-language-contracts-embedded-modules-collection-paths@"
-                    + "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6";
+                    + "sha256:2f378989814265485fa202907b1d401d7e8115c69b7883bcf1330017872161a3";
 
     @Test
     void shouldBindSourceEvidenceToCorrectedReleasePackage() {

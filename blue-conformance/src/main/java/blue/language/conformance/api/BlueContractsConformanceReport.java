@@ -60,13 +60,13 @@ public final class BlueContractsConformanceReport {
             "blue-language-contracts-embedded-modules-collection-paths";
     /** Canonical identity declared by the exact supplied package manifest. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:0268c0adc8badf0d1ab5cdef4a323117b82253a3695f9125af750437a23014b6";
+            "sha256:2f378989814265485fa202907b1d401d7e8115c69b7883bcf1330017872161a3";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";
     /** Exact Language fixture package identity. */
     public static final String LANGUAGE_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:27c4aed817c768d7d217e129cda94c797d19adf1ae7a02d3c0190e0fa6d9a64c";
+            "sha256:c59f2bc4e4ceafb8d7e20875003fa281f79f2f77ac7ae991fcebdc6dde0977cc";
     /** Exact Contracts registry package identity. */
     public static final String CONTRACTS_REGISTRY_PACKAGE_IDENTITY =
             RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
@@ -75,17 +75,17 @@ public final class BlueContractsConformanceReport {
             "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a";
     /** Exact Contracts fixture package identity. */
     public static final String CONTRACTS_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c";
+            "sha256:7e15742bb09a0488b2beb58353b59cce1b6103fe8492b798f10dd89819d3f671";
 
     /** Expected digests for release-bound manifests and specifications. */
     public static final String CONTRACTS_GAS_MANIFEST_SHA256 =
             "54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8";
     /** Published SHA-256 digest of the Contracts specification. */
     public static final String CONTRACTS_SPECIFICATION_SHA256 =
-            "0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc";
+            "62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9";
     /** Published SHA-256 digest of the Language specification. */
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
-            "01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d";
+            "019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37";
 
 
     private final String specVersion;

@@ -19,7 +19,7 @@ input:
         checkpointDomain: evolution-v1
       requiredWorkflow:
         type:
-          blueId: FE68gr14jPkb9RfHbQH1tHGE4YALJbZvgC6CtdHwYheX
+          blueId: 3awNZ6spv8gmjB9m5Sihj73diGVjVN33e14Vg67zEGFp
         channel: in
         operationId: EVO-UNRELATED-REQUIRED-WORKFLOW
       generalize:

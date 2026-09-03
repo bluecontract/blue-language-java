@@ -20,7 +20,7 @@ input:
           checkpointDomain: domain-v1
         emitA:
           type:
-            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
           channel: in
           order: 0
           result:
@@ -32,13 +32,13 @@ input:
           order: 0
         localObserver:
           type:
-            blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+            blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
           channel: triggered
           order: 0
     contracts:
       embedded:
         type:
-          blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+          blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
         paths:
         - /child
       childEvents:
@@ -48,7 +48,7 @@ input:
         order: 0
       rootObserver:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: childEvents
         order: 0
   event:

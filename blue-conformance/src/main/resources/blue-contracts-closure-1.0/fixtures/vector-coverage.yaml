@@ -1,6 +1,6 @@
 specification: blue-contracts/1.0
-vectorCount: 168
-ordinaryVectorCount: 114
+vectorCount: 182
+ordinaryVectorCount: 128
 closureVectorCount: 54
 vectors:
   C-CHK-01:

@@ -4,15 +4,15 @@ specificationVersion: '1.0'
 status: final-normative-implementation-target
 specificationDocument:
   path: ../../specifications/blue-contracts-and-processor-specification-1.0.md
-  sha256: 0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
+  sha256: 62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9
 languageDependency:
   specification: Blue Language Specification 1.0
   referencePath: ../../reference/blue-language-specification-1.0.md
-  specificationSha256: 01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
+  specificationSha256: 019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37
   cyclicSetSemanticAlgorithm: Blue Language 1.0 section 15
   cyclicMemberIdentityFormat: MASTER#index
-  cyclicSetFinalizerBaselineIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
-  cyclicSetProofVerifierBaselineIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+  cyclicSetFinalizerBaselineIdentity: sha256:d71ec19247a32f7f40107f512e4eb567b4cb41ae8e73c16d2ebe10b0e8517c76
+  cyclicSetProofVerifierBaselineIdentity: sha256:0768d22420c5bb01109861eb9e090b758aa66b25c2df7b4708dff36a969cefdd
   inputImplementationBaseline:
   - path: blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java
     sha256: 66a5d2e70757c9426a5ab922bcdafd951c7145ae7dcefab491dc533e95922283
@@ -33,11 +33,11 @@ languageDependency:
   - path: blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java
     sha256: db33225ee9243fa4bae09572ac40733dffa5e7d90c9b3d446694caf39e33f83c
   - path: blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java
-    sha256: 50a7a207850c43c3e4d6159a6d9c83b9af252fd74261296227d1816d6c58a966
+    sha256: 81a54840d50bc836321f3ca2ece052c8a0d6c3723f52d13bf6317c787833977c
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java
-    sha256: b3682178602d5db2a5c74333782dece9a2256c95092a472fe107f5ce8d23124e
+    sha256: bcc7ebe6be7eb9f86b6b079248cc2f1382e6ef3ad422827634c1483e643d0bcf
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java
-    sha256: de88deaef42954f9d2d95a42eb3d7593296ce42fa357f8a9a2293fe82f207540
+    sha256: 55dc9ac99a5860b5be843d61114c5aed4695c145ed32fbdada9ba3181dbea434
   - path: blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java
     sha256: 2d17ebcd49932ef7cf36ffa4ac949f338fa5728d313a7f7f2fe17535859571c6
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java
@@ -48,8 +48,8 @@ languageDependency:
     sha256: 0ef97244ea90a43bab60e1708010bcca95a76d50517dc81c31aef3c0079509b6
 contractsRegistry:
   path: registry/manifest.yaml
-  packageIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
-  unchangedCoreTypeNodes: true
+  packageIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
+  unchangedCoreTypeNodes: false
 gasManifest:
   path: gas-manifest.yaml
   packageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
@@ -57,16 +57,16 @@ gasManifest:
   numericWeightsStatus: frozen for Blue Contracts and Processor Specification 1.0
 identityConstructors:
   path: identity-constructors.yaml
-  sha256: f7eb196a46ff2176f245342a27ffb76ec2c90c3502612191cd5425230ac947dc
+  sha256: baf6463876edad5f79f41389289778d5a619df192cb4d9632e866b9416916706
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:837e369b443b1c5ebab7f52d290e9d45fe385e40f91a683ac81a8ef7abb2b51c
-  vectorCount: 168
-  fixtureCount: 276
+  packageIdentity: sha256:7e15742bb09a0488b2beb58353b59cce1b6103fe8492b798f10dd89819d3f671
+  vectorCount: 182
+  fixtureCount: 290
 oraclePackage:
   path: oracles/manifest.yaml
-  packageIdentity: sha256:6c2ad2b484aa259e2b0a609172ac56882a0b1cb588209809cab979605b98af9d
+  packageIdentity: sha256:713eb07c7136c02594ed14682d407283647bde1ee4e5037486a6f36f55d6c5e9
   oracleCount: 42
 normativeExclusions:
 - delegated-authority eligibility and authority-evidence resolution
@@ -93,4 +93,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:130218cd088651b64b13ffe2a0bd1ae4c0220c000a543f3e8346fec08459dbb3
+releaseIdentity: sha256:6c339a4d59e3596a598b95bc44edd0b95976aa447ab311f85b940051b580c038

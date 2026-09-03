@@ -597,8 +597,8 @@ final class ClosureInvocationVerifierTest {
 
     private static ClosureEnvironment releasedEnvironment() {
         return new ClosureEnvironment(
-                "sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d",
-                "sha256:e88147e8d6b6e8f1b0975979363ca21d3abbec96cfafeec5e106870cf5801193",
+                "sha256:019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37",
+                "sha256:62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9",
                 "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4",
                 "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
                 labeled(

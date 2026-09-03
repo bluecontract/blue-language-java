@@ -4,7 +4,7 @@ type:
 description: Direct processor state at contracts/checkpoint. Entries are created only after a complete successful external delivery and are keyed by raw Channel contract key. Writes produce no Document Update.
 entries:
   type:
-    blueId: Efkz9D1ARMM7rU43w3rDNVqat1naS6qXKCqP4eHin3yG
+    blueId: 5WQ4tVb4gUUdZa7EfaiUa2XKQwgAurvfYY3ALPauxcAF
   keyType:
     blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   valueType:

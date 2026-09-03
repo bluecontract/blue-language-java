@@ -1,30 +1,36 @@
 name: Process Embedded
 type:
-  blueId: 8nWeksYEXxp5TBnRcYF5u3VsFHvMfxo4zjAFT6MLW8ZD
+  blueId: 4ugZ87HaumAJezmgvi2QoqfEdqfwpviQavmak8C8ewF4
 description: >
-  Declares immediate owned embedded scope roots within one authoritative Root.
-  Exact paths identify one scope each. Collection paths identify object
-  collections whose direct ordinary members are scopes. The feeder derives
-  subscriptions transitively; the processor uses an immutable entry snapshot
-  and never recursively scans unrelated branches. Embedding does not import
-  parent contracts and never traverses the reserved contracts field.
+  Declares immediate owned managed-document occurrences within one authoritative
+  managed document. Exact paths identify one occurrence each when present.
+  Collection paths select the ordinary direct members of object-compatible
+  collections when present. A semantically absent declared collection contributes
+  zero current occurrences and does not cause the processor to synthesize a
+  collection object. The feeder derives subscriptions transitively; the processor
+  uses exact occurrence evidence and never scans unrelated branches. Embedding
+  does not import parent contracts, does not traverse the reserved contracts
+  field, and does not give wildcard or list-position semantics to collection paths.
 paths:
   type:
-    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
   itemType:
     blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   description: >
-    Optional exact Runtime Pointers, each identifying one immediate owned
-    embedded scope root.
+    Optional normalized absolute Runtime Pointers, each identifying one immediate
+    owned managed-document occurrence when present. A path may be absent only
+    under the exact prospective-occurrence rules of Contracts 1.0.
   schema:
     uniqueItems: true
 collectionPaths:
   type:
-    blueId: 8DSFoWG9MqRSUhStqoPLrwVQiYByRh18NWbDEarN8MKF
+    blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
   itemType:
     blueId: GX7CFUmSDrE2MzptunLCCdZwnuwwrenRQqEnHL4x3uoC
   description: >
-    Optional exact Runtime Pointers to object-compatible collections whose
-    direct ordinary members are immediate owned embedded scope roots.
+    Optional normalized absolute Runtime Pointers to object-compatible collections.
+    When a collection is present, each ordinary direct member is one immediate
+    owned managed-document occurrence. Proven absence means zero occurrences;
+    incomplete evidence is not absence.
   schema:
     uniqueItems: true

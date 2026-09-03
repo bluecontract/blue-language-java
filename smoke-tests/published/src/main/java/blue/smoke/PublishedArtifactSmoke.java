@@ -31,15 +31,15 @@ public final class PublishedArtifactSmoke {
         }
         BlueConformanceReport language = BlueConformanceSuiteRunner.run();
         if (!language.getFailures().isEmpty()
-                || language.getPassedFixtureIds().size() != 153) {
-            throw new IllegalStateException("Published conformance package did not pass 153 fixtures");
+                || language.getPassedFixtureIds().size() != 182) {
+            throw new IllegalStateException("Published conformance package did not pass 182 fixtures");
         }
         BlueContractsConformanceReport contracts =
                 BlueContractsConformanceSuiteRunner.run();
         if (!contracts.isConformant()
-                || contracts.getPassedFixtureIds().size() != 276
+                || contracts.getPassedFixtureIds().size() != 290
                 || contracts.getSkippedFixtureCount() != 0) {
-            throw new IllegalStateException("Published conformance package did not pass 276 fixtures");
+            throw new IllegalStateException("Published conformance package did not pass 290 fixtures");
         }
         Path report = Paths.get(args[0]);
         String current = new String(Files.readAllBytes(report), StandardCharsets.UTF_8).trim();

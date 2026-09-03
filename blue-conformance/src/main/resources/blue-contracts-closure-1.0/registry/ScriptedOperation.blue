@@ -8,4 +8,4 @@ operationId:
   description: Optional exact Fixture Event id required for external Operation invocation; absent accepts the bound Channel event normally.
 result:
   type:
-    blueId: 3aKiqpRW7E6kfk1LTrEijsQux49cx2T5xDX3faSzv3gv
+    blueId: QAGTb2Kecxf1vVuysfWD8B9rehhCAtnWkiB2Ssni5BV

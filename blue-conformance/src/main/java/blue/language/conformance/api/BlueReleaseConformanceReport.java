@@ -22,9 +22,9 @@ public final class BlueReleaseConformanceReport {
             ConformanceReportConstants.Schema.RELEASE;
 
     /** Exact fixture cardinalities bound by the final release package. */
-    public static final int LANGUAGE_FIXTURE_COUNT = 175;
+    public static final int LANGUAGE_FIXTURE_COUNT = 182;
     /** Exact Contracts fixture cardinality. */
-    public static final int CONTRACTS_FIXTURE_COUNT = 276;
+    public static final int CONTRACTS_FIXTURE_COUNT = 290;
     /** Exact combined fixture cardinality. */
     public static final int TOTAL_FIXTURE_COUNT =
             LANGUAGE_FIXTURE_COUNT + CONTRACTS_FIXTURE_COUNT;

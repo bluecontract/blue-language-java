@@ -22,13 +22,13 @@ input:
   documents:
     c-evo-20-a:
       documentId: c-evo-20-a
-      blueId: 7UVXH6qr5dCAFvS26XftcCmXkbzhZoUFXouQoV8oNDtN
+      blueId: FJbMMtycoBr9LwSRTDsYM4njFCT3BomkAtwy5kLGzsjz
       document:
         name: C-EVO 20 mixed demands A
         contracts:
           embedded:
             type:
-              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+              blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
             paths:
             - /zUnknown
             - /aKnown
@@ -44,13 +44,13 @@ input:
       componentGeneration: 1
     c-evo-20-b:
       documentId: c-evo-20-b
-      blueId: 83fxKN3BW4WzHZnxAdvKZYCR9FPyQ5U2xaeDch6cPy2e
+      blueId: 6va2XbL9XtXzG4uQQyRK87PwPQvXTcX8RSVDaEGbcDF
       document:
         name: C-EVO 20 known B
         contracts:
           embedded:
             type:
-              blueId: EVJk3e7MLRhtTfMBNyrWYz1pWFXsbDTkPczeTviUuB4e
+              blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
             paths:
             - /peer
         documentId: c-evo-20-b
@@ -86,21 +86,21 @@ input:
   occurrences: []
   components:
   - componentIdentity: sha256:b961b8638d6f4d521c4bf0f8076f19fa6cef24bbfd30228575b3cbbb4170e314
-    componentStateIdentity: sha256:2b469e2c4fb8691c7cd06692821f2a4b6812e3023c6c7bbd32a0b42b209eb5df
+    componentStateIdentity: sha256:fec947f887d4a05fcda17ab9d1ad59f2f4cb7b5447981bfcd1d99d358093edfa
     componentGeneration: 1
     kind: ACYCLIC
     orderedMemberDocumentIds:
     - c-evo-20-a
     orderedMemberBlueIds:
-    - 7UVXH6qr5dCAFvS26XftcCmXkbzhZoUFXouQoV8oNDtN
+    - FJbMMtycoBr9LwSRTDsYM4njFCT3BomkAtwy5kLGzsjz
   - componentIdentity: sha256:2a6858f7ea82be85517f9b85d8cbb9c1674c44d3b59ab3d7a383b5e8e0f6269f
-    componentStateIdentity: sha256:3541374cec3342565e447efd45ca0a08fbc9885db09287d465d49707c1226b32
+    componentStateIdentity: sha256:56b485f21388d918283ab2e71f5e18f7dd5fd3c526a833ba6a4bedd0ad42ca07
     componentGeneration: 1
     kind: ACYCLIC
     orderedMemberDocumentIds:
     - c-evo-20-b
     orderedMemberBlueIds:
-    - 83fxKN3BW4WzHZnxAdvKZYCR9FPyQ5U2xaeDch6cPy2e
+    - 6va2XbL9XtXzG4uQQyRK87PwPQvXTcX8RSVDaEGbcDF
   - componentIdentity: sha256:e4b0a40a4b7fa9c31e3f9c611d4d12f5a2cdaad77c5dceaf4f454b47f2a88800
     componentStateIdentity: sha256:9e004f29d406940b0618dead3d519b9f8c3fd14fb64bf220cd3abd3bd2f08590
     componentGeneration: 1
@@ -122,17 +122,17 @@ input:
   - c-evo-20-a
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
-  closureIdentity: sha256:fff518a3bc5d1103f1c8a14a825859ead16966a0d69be3c7d7a29c0a39d903de
-  invocationIdentity: sha256:bcbdd7c8c63b9073c0b413f8e6f6dbb5d272231311fcb5024ebeefa7fa40b655
+  closureIdentity: sha256:5cc9963cfb47eb1ba329bef3c13e56cb495e167b5ab3d0cd92e9def1170ed806
+  invocationIdentity: sha256:cfe180b0db5874e96a6d8894d9a01a401e7ea921348d585464441733a6c9aad4
   gasPolicy:
     policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
     sharedLimit: 100000
     localLimits: {}
     label: release-default
   environment:
-    blueLanguageSpecificationIdentity: sha256:01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d
-    contractsSpecificationIdentity: sha256:0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc
-    runtimeRegistryIdentity: sha256:46a7744c1cbfa4b00e1d8a99f6ca3f0089ef697de968fee08547894ab02b0ca1
+    blueLanguageSpecificationIdentity: sha256:019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37
+    contractsSpecificationIdentity: sha256:62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9
+    runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
     managedDocumentIdentityPolicy:
       identity: sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac
@@ -216,8 +216,8 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:0b4bd3bbe4380faa52d14bc6baf8bb0a6dbc01acc576985676155ea0115969b4
-    cyclicProofVerifierIdentity: sha256:eb0501a25ec5ac6a18fc86584c0afb6ecc2e6c1201c723f28ec56c80a2ae3bc5
+    cyclicFinalizerIdentity: sha256:d71ec19247a32f7f40107f512e4eb567b4cb41ae8e73c16d2ebe10b0e8517c76
+    cyclicProofVerifierIdentity: sha256:0768d22420c5bb01109861eb9e090b758aa66b25c2df7b4708dff36a969cefdd
 runtime:
   initializationHandlers: {}
   handlers: {}
@@ -227,14 +227,14 @@ expected:
   - 4p8NdN6PAkFpE6wEmd1nZcwyMBrZ3jsDqpFGZgK9MGeE
   resourceDemands:
   - kind: MANAGED_OCCURRENCE_EVIDENCE
-    demandIdentity: sha256:c200ed303f06aefe492f942788a002740a25514acd5f86a1ac9fc6893cc2b682
+    demandIdentity: sha256:be95fb0329b55f95e397c4f62c1abc7ba86765e656a9f3f29f03969f9e82611f
     sourceDocumentId: c-evo-20-a
     sourcePath: /aKnown
     suppliedValueBlueId: DAHcEhf6sfVt5h7zroHKA7bNG4L3f9LFQaebHKB33cbw
     logicalCauseIdentity: sha256:bee1c051245224e994ee50ceae8ed8f7a6e64378b32920f2a8dfe65d42fc0426
-    inputClosureIdentity: sha256:fff518a3bc5d1103f1c8a14a825859ead16966a0d69be3c7d7a29c0a39d903de
+    inputClosureIdentity: sha256:5cc9963cfb47eb1ba329bef3c13e56cb495e167b5ab3d0cd92e9def1170ed806
     inputGraphGeneration: 1
-    processEmbeddedDeclarationIdentity: JArY3JgYmjV8LmssC2V2nWvK3fAcJM2WRpENT1bpBFoD
+    processEmbeddedDeclarationIdentity: 2weVg6uqBjh7X9v3Sa8mXAMqzhCuNN9oBXcpyAKTk4PC
     demandOrdinal: 0
   - kind: EXACT_NODE
     demandIdentity: sha256:d3b9320e242d00018a0bb194d9d8747803aeb2f6581678f8c0ea8a78aef863ea
@@ -244,14 +244,14 @@ expected:
     blueId: 4p8NdN6PAkFpE6wEmd1nZcwyMBrZ3jsDqpFGZgK9MGeE
     logicalPath: /zUnknown
   - kind: MANAGED_OCCURRENCE_EVIDENCE
-    demandIdentity: sha256:79e3cc64cba7f1e3aaa056f29aee258241d0faa39cf89d54313e6c2c314e0e01
+    demandIdentity: sha256:888809c0bd7a1076478387c96efcee7a1ef3ddb79bc8b87931919536f6c52f5a
     sourceDocumentId: c-evo-20-b
     sourcePath: /peer
     suppliedValueBlueId: 34SyZPuw5B8goDZNZ23BhtgoG5thFQariTt6afyPQLMQ
     logicalCauseIdentity: sha256:bee1c051245224e994ee50ceae8ed8f7a6e64378b32920f2a8dfe65d42fc0426
-    inputClosureIdentity: sha256:fff518a3bc5d1103f1c8a14a825859ead16966a0d69be3c7d7a29c0a39d903de
+    inputClosureIdentity: sha256:5cc9963cfb47eb1ba329bef3c13e56cb495e167b5ab3d0cd92e9def1170ed806
     inputGraphGeneration: 1
-    processEmbeddedDeclarationIdentity: 6GLvxTgSnt3UyrZZa7VSN2pvqCnBZL5UjfyQK5AFx3h7
+    processEmbeddedDeclarationIdentity: 5Y5mU5TAJt7hV4aTysSKYN9sEEN4F2zdfDrxvAgkpdPL
     demandOrdinal: 0
 sharedLimitSource:
   kind: RELEASE_DEFAULT

@@ -32,16 +32,10 @@ subtotal: <quantity * weight>
 scopePath: <absolute runtime pointer, optional>
 contractKey: <raw contract key, optional>
 logicalPath: <absolute or value-local pointer, optional>
-reason: <free-form diagnostic text, optional>
+reason: <registered diagnostic reason, optional>
 ```
 
 The sum of subtotals is `result.totalGas`. A failed next charge is absent. Reuse of a previously counted semantic proof is represented by its dedicated counter, not by silently omitting required evidence.
-
-`reason` remains observable but is excluded from `gasTraceIdentity`, so changing
-only diagnostic wording does not change identity. Every other field is
-identity-bearing when present. `logicalPath` is exact semantic charge
-attribution, not a source-file or logging path, and therefore remains in the
-identity projection.
 
 ## 3. Logical demand record
 

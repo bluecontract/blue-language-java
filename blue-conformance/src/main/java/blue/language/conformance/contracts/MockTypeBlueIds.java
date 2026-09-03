@@ -15,7 +15,7 @@ final class MockTypeBlueIds {
             RuntimeBlueIds.SCRIPTED_HANDLER;
     /** BlueId of the conformance-only {@link MockOperation}. */
     public static final String MOCK_OPERATION =
-            "FE68gr14jPkb9RfHbQH1tHGE4YALJbZvgC6CtdHwYheX";
+            "3awNZ6spv8gmjB9m5Sihj73diGVjVN33e14Vg67zEGFp";
 
     private MockTypeBlueIds() {
     }
