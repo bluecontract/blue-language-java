@@ -4,8 +4,11 @@ import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +33,70 @@ final class ManagedRootSettlementServiceTest {
             new Node().name("Managed Root Settlement Source Channel");
     private static final String SOURCE_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(SOURCE_TYPE);
+
+    @Test
+    void normalizesWholeChannelReferencesWithoutChangingSourceEvidence() {
+        // given
+        Node exactChannel = sourceContract();
+        String exactChannelBlueId =
+                DirectBlueIdCalculator.calculateBlueId(exactChannel);
+        BasicNodeProvider provider = new BasicNodeProvider(
+                SOURCE_TYPE, exactChannel);
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                SOURCE_BLUE_ID,
+                                SOURCE_TYPE,
+                                new SourceProcessor())
+                        .build();
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(scope);
+            DocumentProcessor processor = DocumentProcessor.builder()
+                    .runtimeRegistry(registry)
+                    .nodeProvider(scope.runtimeAccess().getNodeProvider())
+                    .snapshotStore(manager)
+                    .matchingService(new ContractMatchingService(
+                            scope.runtimeAccess()))
+                    .build();
+            try (ManagedDocumentStepRuntime runtime =
+                         new ManagedDocumentStepRuntime(processor)) {
+                Node inline = documentWithSource(exactChannel.clone());
+                Node reference = documentWithSource(
+                        new Node().blueId(exactChannelBlueId));
+
+                // when
+                ManagedRootChannelOccurrence inlineOccurrence = runtime
+                        .projectRootChannelSurface(inline).get(0);
+                ManagedRootChannelOccurrence referenceOccurrence = runtime
+                        .projectRootChannelSurface(reference).get(0);
+
+                // then
+                assertEquals(
+                        DirectBlueIdCalculator.calculateBlueId(inline),
+                        DirectBlueIdCalculator.calculateBlueId(reference));
+                assertEquals(
+                        inlineOccurrence.effectiveRuntimeContributionBlueId(),
+                        referenceOccurrence
+                                .effectiveRuntimeContributionBlueId());
+                assertEquals(
+                        inlineOccurrence.subscriptionHeaderBlueId(),
+                        referenceOccurrence.subscriptionHeaderBlueId());
+                assertEquals(
+                        Collections.singletonList(exactChannelBlueId),
+                        inlineOccurrence.sourceContributionNodeBlueIds());
+                assertEquals(
+                        inlineOccurrence.sourceContributionNodeBlueIds(),
+                        referenceOccurrence.sourceContributionNodeBlueIds());
+            } finally {
+                processor.close();
+            }
+        }
+    }
 
     @Test
     void preservesAdmissionProvedCyclicMemberPayloadIdentity() {
@@ -912,6 +979,12 @@ final class ManagedRootSettlementServiceTest {
                                 .properties(
                                         "subscriptionKey",
                                         new Node().value("root"))));
+    }
+
+    private static Node documentWithSource(Node source) {
+        return new Node()
+                .name("Channel representation parity Root")
+                .contracts(new Node().properties("source", source));
     }
 
     private static Node twoSourceDocument() {

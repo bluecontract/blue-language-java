@@ -328,19 +328,29 @@ final class ContractHeaderLoader {
         contract.setKey(key);
         contract.setTypeBlueId(typeBlueId);
 
+        FrozenNode normalizedExecutable = contract instanceof ChannelContract
+                ? NormalizedRuntimeContribution.channel(
+                        exactExecutable,
+                        typeBlueId,
+                        exactSourceFields,
+                        typeIdentities,
+                        snapshotManager)
+                : exactExecutable;
+
         EffectiveContractSnapshot.Builder snapshot = snapshots.begin(
                 scopePath,
                 key,
                 typeBlueId,
                 contractOrder(contract),
                 sourceContributions);
-        snapshots.addHeaderFields(snapshot, exactExecutable, executableBodyFields);
+        snapshots.addHeaderFields(
+                snapshot, normalizedExecutable, executableBodyFields);
         classify(
                 bundle,
                 snapshot,
                 contract,
                 effectiveContract,
-                exactExecutable,
+                normalizedExecutable,
                 executableBodyFields,
                 binding,
                 scopePath,
