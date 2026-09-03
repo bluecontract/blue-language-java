@@ -93,17 +93,25 @@ def compare_packages(left: Path, right: Path) -> list[str]:
 
 
 def run(command: list[str], *, cwd: Path, environment: dict[str, str]) -> None:
-    result = subprocess.run(
-        command,
-        cwd=cwd,
-        env=environment,
-        text=True,
-        capture_output=True,
-    )
+    # Some nested generators invoke Gradle. A daemon can retain an inherited
+    # PIPE after the immediate child exits, causing communicate() to wait for
+    # EOF forever. Capture through a regular file so completion is tied only
+    # to the process we launched while preserving complete diagnostics.
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as output:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            env=environment,
+            text=True,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+        )
+        output.seek(0)
+        combined = output.read()
     if result.returncode != 0:
         raise RegenerationFailure(
             f"command failed ({' '.join(command)}):\n"
-            f"{result.stdout}\n{result.stderr}"
+            f"{combined}"
         )
 
 

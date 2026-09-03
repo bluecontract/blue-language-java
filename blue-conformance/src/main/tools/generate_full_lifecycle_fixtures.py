@@ -153,6 +153,7 @@ def run_exporter(
     command = [
         str(gradlew),
         ":blue-conformance:exportFullLifecycleFixtures",
+        "--no-daemon",
         "--no-parallel",
         f"-PfullLifecycleSourceRoot={source_root}",
         f"-PfullLifecyclePackageRoot={package_root}",
@@ -160,14 +161,21 @@ def run_exporter(
     ]
     environment = dict(os.environ)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
-    result = subprocess.run(
-        command,
-        cwd=repository_root,
-        env=environment,
-        text=True,
-        capture_output=True,
-    )
-    combined = result.stdout + "\n" + result.stderr
+    # A Gradle daemon can inherit a PIPE descriptor after the wrapper process
+    # exits, leaving subprocess.communicate() blocked even though the exporter
+    # completed. A regular temporary file has no pipe lifetime coupling and
+    # still gives us complete diagnostics plus the required success marker.
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as output:
+        result = subprocess.run(
+            command,
+            cwd=repository_root,
+            env=environment,
+            text=True,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+        )
+        output.seek(0)
+        combined = output.read()
     if result.returncode != 0:
         raise ExportFailure(
             f"normative Java exporter failed ({result.returncode}):\n{combined}"

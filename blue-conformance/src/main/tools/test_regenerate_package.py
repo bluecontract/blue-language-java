@@ -17,6 +17,8 @@ import release_regenerate_package as regenerate_package
 
 
 ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = ROOT.parents[2]
+RELEASED_PACKAGE = ROOT / "resources/blue-contracts-closure-1.0"
 ORACLE_STAGE_KEYS = {
     "name",
     "sourceDocumentsWithThisReferences",
@@ -27,10 +29,8 @@ ORACLE_STAGE_KEYS = {
 
 
 def fixture_gas_trace(package_root: Path, name: str) -> list[dict[str, Any]]:
-    """Read one complete generated closure trace from either released shape."""
-    fixture_path = (
-        package_root / "conformance/contracts/fixtures/closure" / name
-    )
+    """Read one complete generated closure trace from a package root."""
+    fixture_path = package_root / "fixtures/closure" / name
     fixture = yaml.safe_load(fixture_path.read_text(encoding="utf-8"))
     expected = fixture["expected"]
     if "gasTrace" in expected:
@@ -77,18 +77,39 @@ def oracle_stage_inventory(oracle_directory: Path) -> Counter[tuple[str, str]]:
 
 class RegeneratePackageTest(unittest.TestCase):
 
-    def test_generated_surfaces_keep_owned_oracles_and_prune_orphan(self) -> None:
-        """Exercise the real generator/refiner stage on a clean package copy."""
-        process_fixture = "c-clo-02-dynamic-finite-cycle.yaml"
-        baseline_process_trace = fixture_gas_trace(ROOT, process_fixture)
+    def test_generator_refiner_owns_oracles_and_admission_attribution(self) -> None:
+        """Exercise the pre-runtime-rebind stage on a clean package copy."""
         with tempfile.TemporaryDirectory(
             prefix="blue-oracle-regeneration-test-"
         ) as temporary:
             candidate = Path(temporary) / ROOT.name
             shutil.copytree(ROOT, candidate)
-            oracle_directory = candidate / "conformance/contracts/oracles"
+            candidate_package = candidate / "conformance/contracts"
+            shutil.copytree(
+                RELEASED_PACKAGE,
+                candidate_package,
+                dirs_exist_ok=True,
+            )
+            reference_directory = candidate / "reference"
+            specification_directory = candidate / "specifications"
+            reference_directory.mkdir()
+            specification_directory.mkdir()
+            shutil.copy2(
+                REPOSITORY_ROOT
+                / "blue-language-core/src/main/resources/specifications/"
+                "blue-language-specification-1.0.md",
+                reference_directory / "blue-language-specification-1.0.md",
+            )
+            shutil.copy2(
+                REPOSITORY_ROOT
+                / "blue-contracts-core/src/main/resources/specifications/"
+                "blue-contracts-and-processor-specification-1.0.md",
+                specification_directory
+                / "blue-contracts-and-processor-specification-1.0.md",
+            )
+            oracle_directory = candidate_package / "oracles"
             baseline_stage_inventory = oracle_stage_inventory(
-                ROOT / "conformance/contracts/oracles"
+                RELEASED_PACKAGE / "oracles"
             )
             orphan = oracle_directory / "preserved-only-orphan.yaml"
             orphan.write_text(
@@ -126,14 +147,15 @@ class RegeneratePackageTest(unittest.TestCase):
             )
             self.assertFalse(orphan.exists())
 
-            self.assertEqual(
-                baseline_process_trace,
-                fixture_gas_trace(candidate, process_fixture),
-                "the admission-only attribution rebase changed PROCESS_CLOSURE",
-            )
-
+            # This unit stops at the generator/refiner ownership boundary.
+            # The released package then receives authoritative Java-exported
+            # traces and runtime-owned receipts, so comparing those final
+            # traces with this intermediate model would conflate two stages.
+            # regenerate_package.py --check separately compares the complete
+            # post-rebind package byte-for-byte.
             admission_trace = fixture_gas_trace(
-                candidate, "c-clo-01-static-cycle-admission.yaml"
+                candidate_package,
+                "c-clo-01-static-cycle-admission.yaml",
             )
             planning = [
                 entry for entry in admission_trace

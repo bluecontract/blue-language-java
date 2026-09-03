@@ -82,10 +82,23 @@ def compare_packages(left: Path, right: Path) -> list[str]:
 
 
 def run(command: list[str], *, cwd: Path, environment: dict[str, str]) -> None:
-    result = subprocess.run(command, cwd=cwd, env=environment, text=True, capture_output=True)
+    # Nested generators may invoke Gradle. Avoid PIPE capture so an inherited
+    # descriptor in a daemon cannot keep communicate() blocked after the
+    # immediate child has exited.
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as output:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            env=environment,
+            text=True,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+        )
+        output.seek(0)
+        combined = output.read()
     if result.returncode != 0:
         raise RegenerationFailure(
-            f"command failed ({' '.join(command)}):\n{result.stdout}\n{result.stderr}"
+            f"command failed ({' '.join(command)}):\n{combined}"
         )
 
 
