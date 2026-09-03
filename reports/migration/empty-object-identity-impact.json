@@ -506,6 +506,7 @@
       "stableKey": "contracts:ProcessEmbedded",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "fixture:c-clo-23-05-a9-to-a10:masterBlueId",
         "package:contracts-closure-fixtures",
         "package:contracts-ordinary-fixtures",
         "package:contracts-registry",
@@ -878,6 +879,28 @@
       "stableKey": "document:language-specification",
       "storedReferencesRequiringUpdate": [],
       "transitiveDependents": [
+        "package:contracts-release",
+        "package:language-contracts-aggregate"
+      ]
+    },
+    {
+      "artifactKind": "fixture-cyclic-master",
+      "classification": "transitively-changed",
+      "componentBindingChanges": [],
+      "firstChangedDependency": "contracts:ProcessEmbedded",
+      "fixtureConstantsRequiringUpdate": [],
+      "historicalReferencesRetained": [],
+      "manifestReceiptEntriesRequiringUpdate": [],
+      "mirroredPaths": [],
+      "newExactIdentity": "AqxN3nEKymbTyHrfjFhHcEH35YRyz3Ggcoch3dEzMkH5",
+      "oldExactIdentity": "B4s6BMi4HbXS48DC1GTuozEfbSdbBepRnpP5TrsJTdkE",
+      "pathOrStableKey": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-23-05-a9-to-a10.yaml#/expected/resultingComponents/0/masterBlueId",
+      "reason": "Rotated because the first reviewed identity-bearing dependency or generation cause changed: contracts:ProcessEmbedded.",
+      "repositoryModule": "blue-conformance",
+      "stableKey": "fixture:c-clo-23-05-a9-to-a10:masterBlueId",
+      "storedReferencesRequiringUpdate": [],
+      "transitiveDependents": [
+        "package:contracts-closure-fixtures",
         "package:contracts-release",
         "package:language-contracts-aggregate"
       ]
@@ -1645,13 +1668,13 @@
   },
   "summary": {
     "activeStoredReferenceCount": 0,
-    "artifactCount": 53,
+    "artifactCount": 54,
     "classifications": {
       "directly-changed": 6,
       "newly-introduced": 1,
       "obsolete-pre-stable-rc": 0,
       "stale-binding-regenerated": 1,
-      "transitively-changed": 18,
+      "transitively-changed": 19,
       "unchanged-direct": 27,
       "unresolved": 0
     },

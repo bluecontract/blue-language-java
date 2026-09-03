@@ -50,6 +50,11 @@ CLOSURE_ORACLES = (
     "blue-conformance/src/main/resources/"
     "blue-contracts-closure-1.0/oracles/manifest.yaml"
 )
+HISTORICAL_CYCLE_FIXTURE = (
+    "blue-conformance/src/main/resources/"
+    "blue-contracts-closure-1.0/fixtures/closure/"
+    "c-clo-23-05-a9-to-a10.yaml"
+)
 CONTRACTS_RELEASE = (
     "blue-conformance/src/main/resources/"
     "blue-contracts-closure-1.0/release-manifest.yaml"
@@ -120,6 +125,9 @@ DIRECTLY_CHANGED = frozenset(
 )
 
 DEPENDENCIES = {
+    "fixture:c-clo-23-05-a9-to-a10:masterBlueId": (
+        "contracts:ProcessEmbedded",
+    ),
     "contracts:ChannelEventCheckpoint": ("language:Dictionary",),
     "contracts:RuntimeLedger": ("language:List",),
     "contracts:ContractExecutionResult": (
@@ -150,6 +158,7 @@ DEPENDENCIES = {
     "package:contracts-closure-fixtures": (
         "package:contracts-ordinary-fixtures",
         "closure:ScriptedOperation",
+        "fixture:c-clo-23-05-a9-to-a10:masterBlueId",
     ),
     "package:contracts-release": (
         "document:language-specification",
@@ -827,6 +836,22 @@ def _nested_value(
     return value if isinstance(value, str) else None
 
 
+def _cyclic_master(document: dict[str, Any] | None) -> str | None:
+    if document is None:
+        return None
+    expected = document.get("expected")
+    if not isinstance(expected, dict):
+        return None
+    components = expected.get("resultingComponents")
+    if not isinstance(components, list) or len(components) != 1:
+        return None
+    component = components[0]
+    if not isinstance(component, dict):
+        return None
+    value = component.get("masterBlueId")
+    return value if isinstance(value, str) else None
+
+
 def _java_string_constant(data: bytes | None, constant: str) -> str | None:
     if data is None:
         return None
@@ -1064,6 +1089,27 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
             old=_nested_value(old_release, "identityConstructors", "sha256"),
             new=_nested_value(new_release, "identityConstructors", "sha256"),
             first_dependency="revised exact identity-constructor vectors",
+        )
+    )
+    old_historical_cycle = _yaml(
+        _baseline_bytes(repository, baseline_commit, HISTORICAL_CYCLE_FIXTURE)
+    )
+    new_historical_cycle = _yaml(
+        _current_bytes(repository, HISTORICAL_CYCLE_FIXTURE)
+    )
+    artifacts.append(
+        _artifact(
+            reference_index,
+            stable_key="fixture:c-clo-23-05-a9-to-a10:masterBlueId",
+            kind="fixture-cyclic-master",
+            module="blue-conformance",
+            path=(
+                HISTORICAL_CYCLE_FIXTURE
+                + "#/expected/resultingComponents/0/masterBlueId"
+            ),
+            old=_cyclic_master(old_historical_cycle),
+            new=_cyclic_master(new_historical_cycle),
+            first_dependency="contracts:ProcessEmbedded",
         )
     )
     old_implementations = _implementation_bindings(old_release)

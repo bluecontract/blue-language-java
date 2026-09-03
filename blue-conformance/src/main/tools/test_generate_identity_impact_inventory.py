@@ -129,6 +129,7 @@ class IdentityImpactInventoryTest(unittest.TestCase):
             "document:contracts-specification",
             "document:identity-constructors",
             "document:language-specification",
+            "fixture:c-clo-23-05-a9-to-a10:masterBlueId",
             "implementation:cyclic-set-finalizer",
             "implementation:cyclic-set-proof-verifier",
             "language:Dictionary",
@@ -152,6 +153,18 @@ class IdentityImpactInventoryTest(unittest.TestCase):
             "3awNZ6spv8gmjB9m5Sihj73diGVjVN33e14Vg67zEGFp",
             artifacts["closure:ScriptedOperation"]["newExactIdentity"],
         )
+        cyclic_master = artifacts[
+            "fixture:c-clo-23-05-a9-to-a10:masterBlueId"
+        ]
+        self.assertEqual(
+            "B4s6BMi4HbXS48DC1GTuozEfbSdbBepRnpP5TrsJTdkE",
+            cyclic_master["oldExactIdentity"],
+        )
+        self.assertEqual(
+            "AqxN3nEKymbTyHrfjFhHcEH35YRyz3Ggcoch3dEzMkH5",
+            cyclic_master["newExactIdentity"],
+        )
+        self.assertEqual([], cyclic_master["fixtureConstantsRequiringUpdate"])
         for artifact in artifacts.values():
             self.assertNotEqual("unresolved", artifact["classification"])
             self.assertNotIn("None", artifact["reason"])

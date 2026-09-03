@@ -17,7 +17,7 @@ Unresolved identity surfaces: 0. Canonical/mirror byte mismatches: 0.
 | `newly-introduced` | 1 |
 | `obsolete-pre-stable-rc` | 0 |
 | `stale-binding-regenerated` | 1 |
-| `transitively-changed` | 18 |
+| `transitively-changed` | 19 |
 | `unchanged-direct` | 27 |
 | `unresolved` | 0 |
 
@@ -57,6 +57,7 @@ Unresolved identity surfaces: 0. Canonical/mirror byte mismatches: 0.
 | `document:contracts-specification` | `directly-changed` | `0653dbbfc3d8b8ec1de5bd5c1d4f50680d0ce490df899bc2f254969fac3ba0bc` | `62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9` | Process Embedded.collectionPaths and Embedded Collection Event Channel normative text |
 | `document:identity-constructors` | `directly-changed` | `f7eb196a46ff2176f245342a27ffb76ec2c90c3502612191cd5425230ac947dc` | `baf6463876edad5f79f41389289778d5a619df192cb4d9632e866b9416916706` | revised exact identity-constructor vectors |
 | `document:language-specification` | `directly-changed` | `01b038b64e3f0a9a11f3f70d544a63ff78a01d5169f1a03f8b8629cf73645a7d` | `019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37` | exact empty-object normative text |
+| `fixture:c-clo-23-05-a9-to-a10:masterBlueId` | `transitively-changed` | `B4s6BMi4HbXS48DC1GTuozEfbSdbBepRnpP5TrsJTdkE` | `AqxN3nEKymbTyHrfjFhHcEH35YRyz3Ggcoch3dEzMkH5` | contracts:ProcessEmbedded |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java` | `transitively-changed` | `50a7a207850c43c3e4d6159a6d9c83b9af252fd74261296227d1816d6c58a966` | `81a54840d50bc836321f3ca2ece052c8a0d6c3723f52d13bf6317c787833977c` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java` | `transitively-changed` | `de88deaef42954f9d2d95a42eb3d7593296ce42fa357f8a9a2293fe82f207540` | `55dc9ac99a5860b5be843d61114c5aed4695c145ed32fbdada9ba3181dbea434` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java |
 | `implementation:blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java` | `transitively-changed` | `b3682178602d5db2a5c74333782dece9a2256c95092a472fe107f5ce8d23124e` | `bcc7ebe6be7eb9f86b6b079248cc2f1382e6ef3ad422827634c1483e643d0bcf` | reviewed production source changed: blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java |
