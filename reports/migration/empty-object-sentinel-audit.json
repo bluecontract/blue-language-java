@@ -16237,14 +16237,14 @@
       "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 25,
+      "line": 26,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-contracts-core/src/main/java/blue/language/processor/model/EmbeddedCollectionEventChannel.java",
       "reason": "Broad required/presence vocabulary matched traversal, metadata, diagnostics, or a non-object constraint rather than an empty-object presence decision.",
       "relevance": "context-only",
       "reviewDisposition": "resolved-context-only",
-      "source": "/** Returns the required collection declaration path. */",
+      "source": "* Returns the required collection declaration path.",
       "symbol": "EmbeddedCollectionEventChannel#EmbeddedCollectionEventChannel"
     },
     {
