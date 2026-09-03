@@ -175,6 +175,8 @@ $defs:
         type: array
         uniqueItems: true
         items: {$ref: '#/$defs/blueId'}
+      cache: {enum: [warm, cold]}
+      batching: {enum: [batched, unbatched]}
   localityHarness:
     description: Harness-only locality setup and observation; neither field is production result API.
     type: object

@@ -1451,6 +1451,43 @@ abstract class ContractsFixtureHarnessDataSupport {
             }
         }
 
+        void verifyExactPhysicalLoads(Set<String> expectedBlueIds) {
+            Set<String> expected = new LinkedHashSet<String>(
+                    Objects.requireNonNull(expectedBlueIds,
+                            "expectedBlueIds"));
+            if (expected.size() < 2 || backing.size() < 2) {
+                throw new AssertionError(
+                        "Physical provider matrix requires at least two "
+                                + "exact dependencies and backing nodes");
+            }
+            if (!requestedBlueIds.equals(expected)) {
+                throw new AssertionError(
+                        "Physical provider requests differ from the exact "
+                                + "expected loads: expected=" + expected
+                                + ", actual=" + requestedBlueIds);
+            }
+            if ("warm".equals(cacheMode)) {
+                if (backendLoads != 0) {
+                    throw new AssertionError(
+                            "Warm provider performed a backend load");
+                }
+                return;
+            }
+            if ("batched".equals(batchingMode)) {
+                if (backendLoads != 1
+                        || largestBackendLoad != backing.size()) {
+                    throw new AssertionError(
+                            "Cold batched provider did not perform exactly "
+                                    + "one complete physical batch");
+                }
+            } else if (backendLoads != expected.size()
+                    || largestBackendLoad != 1) {
+                throw new AssertionError(
+                        "Cold unbatched provider did not perform one exact "
+                                + "backend load per required dependency");
+            }
+        }
+
         private static void copyAll(Map<String, Node> source,
                                     Map<String, Node> target) {
             for (Map.Entry<String, Node> entry : source.entrySet()) {

@@ -46,7 +46,8 @@ public final class ClosureFixtureRuntime
     private final BlueLanguage language;
     private final ContractsFixtureHarnessDataSupport.FixturePhysicalProvider
             provider;
-    private final Set<String> requiredProviderLoads;
+    private final Set<String> expectedProviderLoads;
+    private final boolean explicitPhysicalMode;
     private final ScriptedContractsRuntime scripted;
 
     private ClosureFixtureRuntime(
@@ -58,9 +59,12 @@ public final class ClosureFixtureRuntime
             throw new IllegalArgumentException(
                     "Closure fixture requires top-level runtime controls");
         }
-        Map<String, Node> providerNodes = new LinkedHashMap<String, Node>(
-                registry.nodesByBlueId);
+        Map<String, Node> providerNodes = new LinkedHashMap<String, Node>();
         LinkedHashSet<String> unavailable = new LinkedHashSet<String>();
+        LinkedHashSet<String> expectedLoads = new LinkedHashSet<String>();
+        String cacheMode = "cold";
+        String batchingMode = "unbatched";
+        boolean explicitMode = false;
         JsonNode providerHarness = selected.get("provider");
         if (providerHarness != null && providerHarness.isObject()) {
             JsonNode nodes = providerHarness.get("nodes");
@@ -77,13 +81,18 @@ public final class ClosureFixtureRuntime
                             "Closure fixture provider node has the wrong BlueId: "
                                     + entry.getKey());
                 }
+                if (registry.nodesByBlueId.containsKey(entry.getKey())) {
+                    throw new IllegalArgumentException(
+                            "Closure fixture provider duplicates the registry: "
+                                    + entry.getKey());
+                }
                 Node previous = providerNodes.put(
                         entry.getKey(), node.clone());
                 if (previous != null
                         && !NodeWireForm.get(previous).equals(
                                 NodeWireForm.get(node))) {
                     throw new IllegalArgumentException(
-                            "Closure fixture provider conflicts with the registry: "
+                            "Closure fixture provider contains a BlueId collision: "
                                     + entry.getKey());
                 }
             });
@@ -91,16 +100,45 @@ public final class ClosureFixtureRuntime
                     providerHarness.get("expectedRequiredBlueIds"),
                     unavailable,
                     "expectedRequiredBlueIds");
+            addTextValues(
+                    providerHarness.get("expectedLoads"),
+                    expectedLoads,
+                    "expectedLoads");
+            cacheMode = optionalText(
+                    providerHarness, "cache", "cold");
+            batchingMode = optionalText(
+                    providerHarness, "batching", "unbatched");
+            explicitMode = providerHarness.has("cache")
+                    || providerHarness.has("batching");
             if (!Collections.disjoint(
+                    unavailable, registry.nodesByBlueId.keySet())
+                    || !Collections.disjoint(
                     unavailable, providerNodes.keySet())) {
                 throw new IllegalArgumentException(
                         "Unavailable closure fixture provider nodes are present");
             }
+            if (!expectedLoads.containsAll(unavailable)) {
+                throw new IllegalArgumentException(
+                        "Closure fixture provider expectedLoads must include "
+                                + "every expectedRequiredBlueId");
+            }
+            LinkedHashSet<String> availableExpected =
+                    new LinkedHashSet<String>(expectedLoads);
+            availableExpected.removeAll(unavailable);
+            LinkedHashSet<String> availableNodes =
+                    new LinkedHashSet<String>(registry.nodesByBlueId.keySet());
+            availableNodes.addAll(providerNodes.keySet());
+            if (!availableNodes.containsAll(availableExpected)) {
+                throw new IllegalArgumentException(
+                        "Closure fixture provider expectedLoads names "
+                                + "unavailable exact content");
+            }
         }
         ContractsFixtureHarnessDataSupport.FixturePhysicalProvider provider =
                 new ContractsFixtureHarnessDataSupport.FixturePhysicalProvider(
-                        providerNodes, "cold", "unbatched", unavailable);
-        final BlueLanguage language = productionLanguage(provider);
+                        providerNodes, cacheMode, batchingMode, unavailable);
+        final BlueLanguage language = productionLanguage(
+                registry.nodesByBlueId, provider);
         final LanguageProcessingScopeSnapshotManager snapshots =
                 new LanguageProcessingScopeSnapshotManager(
                         language.processing().openScope());
@@ -137,8 +175,9 @@ public final class ClosureFixtureRuntime
         this.snapshots = snapshots;
         this.language = language;
         this.provider = provider;
-        this.requiredProviderLoads = Collections.unmodifiableSet(
-                new LinkedHashSet<String>(unavailable));
+        this.expectedProviderLoads = Collections.unmodifiableSet(
+                new LinkedHashSet<String>(expectedLoads));
+        this.explicitPhysicalMode = explicitMode;
         this.scripted = scripted;
     }
 
@@ -223,7 +262,11 @@ public final class ClosureFixtureRuntime
     @Override
     public void close() {
         provider.verifyPreparation();
-        provider.verifyExpectedLoads(requiredProviderLoads);
+        if (explicitPhysicalMode) {
+            provider.verifyExactPhysicalLoads(expectedProviderLoads);
+        } else {
+            provider.verifyExpectedLoads(expectedProviderLoads);
+        }
         try {
             processor.close();
         } finally {
@@ -257,13 +300,37 @@ public final class ClosureFixtureRuntime
         }
     }
 
-    private static BlueLanguage productionLanguage(NodeProvider provider) {
+    private static String optionalText(
+            JsonNode parent,
+            String field,
+            String fallback) {
+        JsonNode value = parent.get(field);
+        if (value == null) {
+            return fallback;
+        }
+        if (!value.isTextual() || value.textValue().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Closure fixture provider " + field
+                            + " must be non-empty text");
+        }
+        return value.textValue();
+    }
+
+    private static BlueLanguage productionLanguage(
+            Map<String, Node> registryNodes,
+            NodeProvider provider) {
+        NodeProvider candidateRegistry = blueId -> {
+            Node exact = registryNodes.get(blueId);
+            return exact == null ? null
+                    : Collections.singletonList(exact.clone());
+        };
         NodeProvider processorLanguageProvider =
                 new SequentialNodeProvider(
                         BootstrapProvider.INSTANCE,
                         new VerifiedNodeProvider(
                                 BlueRuntimeTypeRegistry.getDefault()
                                         .asProcessorSnapshotProvider()),
+                        candidateRegistry,
                         provider);
         return BlueLanguage.builder()
                 .nodeProvider(processorLanguageProvider)

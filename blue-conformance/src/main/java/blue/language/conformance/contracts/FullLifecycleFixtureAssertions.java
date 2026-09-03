@@ -105,6 +105,7 @@ static void assertAttemptExpectations(
         String id,
         JsonNode expect,
         Map<String, JsonNode> events,
+        ClosureInvocationInput input,
         ClosureAttemptResult attempt,
         ClosureImplementationEvidence evidence) {
     if ("NeedsResources".equals(nullableText(
@@ -138,13 +139,14 @@ static void assertAttemptExpectations(
     require(evidence != null && evidence.complete(),
             id + " complete attempt omitted implementation evidence");
     assertExpectations(
-            id, expect, events, attempt.processResult(), evidence);
+            id, expect, events, input, attempt.processResult(), evidence);
 }
 
 static void assertExpectations(
         String id,
         JsonNode expect,
         Map<String, JsonNode> events,
+        ClosureInvocationInput input,
         ClosureProcessResult result,
         ClosureImplementationEvidence evidence) {
     String expectedStatus = text(expect, "status");
@@ -155,7 +157,9 @@ static void assertExpectations(
                     + " (totalGas=" + result.totalGas()
                     + ", workOccurrences=" + evidence.workTrace().size()
                     + ", documentSteps="
-                    + evidence.documentStepTrace().size() + ")");
+                    + evidence.documentStepTrace().size()
+                    + ", diagnostic=" + diagnosticSummary(
+                    result.diagnostic()) + ")");
     require(requiredBoolean(expect, "atomic") == result.atomic(),
             id + " expected atomic disagrees with execution");
     require(requiredBoolean(expect, "rollbackToInput")
@@ -222,6 +226,7 @@ static void assertExpectations(
                 id + " expected pointer is present: "
                         + documentId + pointer);
     }
+    assertOccurrenceActivations(id, expect, input, result);
 
     Map<String, Long> workCounts = new LinkedHashMap<String, Long>();
     ArrayList<String> kinds = new ArrayList<String>();
@@ -343,6 +348,123 @@ static void assertExpectations(
                     text(expect, "commitCompanion")),
             id + " commitCompanion assertion failed");
 }
+
+private static String diagnosticSummary(ProcessorDiagnostic diagnostic) {
+    if (diagnostic == null) {
+        return "none";
+    }
+    return diagnostic.category().name() + ":" + diagnostic.message()
+            + diagnostic.details();
+}
+
+private static void assertOccurrenceActivations(
+        String id,
+        JsonNode expect,
+        ClosureInvocationInput input,
+        ClosureProcessResult result) {
+    for (JsonNode expected : optionalArray(
+            expect, "activatedOccurrences")) {
+        String sourceDocumentId = text(expected, "sourceDocumentId");
+        String sourcePath = text(expected, "sourcePath");
+        long activationGeneration = requiredLong(
+                expected, "activationGeneration");
+        String targetDocumentId = text(expected, "targetDocumentId");
+        ManagedOccurrenceBinding before = findOccurrence(
+                input.snapshot().occurrences(),
+                sourceDocumentId,
+                sourcePath,
+                activationGeneration,
+                targetDocumentId);
+        require(before != null && !before.active(),
+                id + " expected an exact inactive input occurrence at "
+                        + sourceDocumentId + sourcePath);
+        ManagedDocumentSnapshot beforeDocument = input.snapshot()
+                .managedDocument(new DocumentId(sourceDocumentId));
+        require(beforeDocument != null
+                        && NodePathEditor.getOrNull(
+                        beforeDocument.document(), sourcePath) == null,
+                id + " inactive prospective occurrence source must be "
+                        + "absent before the boundary");
+        ManagedOccurrenceBinding after = findOccurrence(
+                result.occurrenceBindings(),
+                sourceDocumentId,
+                sourcePath,
+                activationGeneration,
+                targetDocumentId);
+        require(after != null && after.active(),
+                id + " expected the same occurrence to be active at commit");
+        ResultingDocument afterDocument = findResultingDocument(
+                result.resultingDocuments(), sourceDocumentId);
+        Node afterValue = afterDocument == null
+                ? null
+                : NodePathEditor.getOrNull(
+                        afterDocument.document(), sourcePath);
+        require(afterValue != null,
+                id + " activated prospective occurrence source is absent "
+                        + "after the boundary");
+        String exactTargetBlueId = afterValue.isReferenceOnly()
+                ? afterValue.getBlueId()
+                : DirectBlueIdCalculator.calculateBlueId(afterValue);
+        require(after.expectedTargetBlueId().equals(exactTargetBlueId),
+                id + " activated occurrence source has the wrong exact "
+                        + "target identity");
+        require(before.occurrenceIdentity().equals(
+                        after.occurrenceIdentity()),
+                id + " activation changed stable occurrence lineage");
+        long matchingAdds = 0L;
+        for (GraphChange change : result.graphChanges()) {
+            if (change.changeKind() == GraphChange.Kind.ADD
+                    && sourceDocumentId.equals(
+                    change.sourceDocumentId().value())
+                    && sourcePath.equals(change.sourcePath())
+                    && change.before() == null
+                    && change.after() != null
+                    && after.occurrenceIdentity().equals(
+                    change.afterOccurrenceIdentity())
+                    && after.bindingIdentity().equals(
+                    change.afterBindingIdentity())
+                    && activationGeneration
+                    == change.afterActivationGeneration().longValue()
+                    && targetDocumentId.equals(
+                    change.afterTargetDocumentId().value())) {
+                matchingAdds++;
+            }
+        }
+        require(matchingAdds == 1L,
+                id + " expected one exact inactive-to-active ADD receipt");
+    }
+}
+
+private static ResultingDocument findResultingDocument(
+        List<ResultingDocument> documents,
+        String documentId) {
+    for (ResultingDocument document : documents) {
+        if (documentId.equals(document.documentId().value())) {
+            return document;
+        }
+    }
+    return null;
+}
+
+private static ManagedOccurrenceBinding findOccurrence(
+        List<ManagedOccurrenceBinding> occurrences,
+        String sourceDocumentId,
+        String sourcePath,
+        long activationGeneration,
+        String targetDocumentId) {
+    for (ManagedOccurrenceBinding occurrence : occurrences) {
+        if (sourceDocumentId.equals(
+                occurrence.sourceDocumentId().value())
+                && sourcePath.equals(occurrence.sourcePath())
+                && activationGeneration
+                == occurrence.activationGeneration()
+                && targetDocumentId.equals(
+                occurrence.targetDocumentId().value())) {
+            return occurrence;
+        }
+    }
+    return null;
+}
 static void verifyParity(
         JsonNode source,
         List<CompiledFixture> fixtures) {
@@ -401,6 +523,7 @@ private static JsonNode parityProjection(
         value.remove(Arrays.asList(
                 "workTrace", "documentStepTrace",
                 "tentativeFinalizations", "gasTrace"));
+        removeAcyclicPhysicalDocumentBodies(value);
         return value;
     }
     if ("resourceDemands".equals(projection)) {
@@ -418,15 +541,49 @@ private static JsonNode parityProjection(
             "unsupported parity projection " + projection);
 }
 
+private static void removeAcyclicPhysicalDocumentBodies(
+        ObjectNode processResult) {
+    JsonNode resultingDocuments = processResult.get("resultingDocuments");
+    if (resultingDocuments == null) {
+        return;
+    }
+    require(resultingDocuments.isArray(),
+            "processResult resultingDocuments must be an array");
+    for (JsonNode value : resultingDocuments) {
+        require(value.isObject(),
+                "processResult resultingDocuments must contain objects");
+        ObjectNode document = (ObjectNode) value;
+        JsonNode body = document.get("document");
+        if (body == null) {
+            continue;
+        }
+        String afterBlueId = text(document, "afterBlueId");
+        if (afterBlueId.indexOf('#') >= 0) {
+            continue;
+        }
+        String bodyBlueId = DirectBlueIdCalculator.calculateBlueId(
+                UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                        body, Node.class));
+        require(afterBlueId.equals(bodyBlueId),
+                "processResult document body disagrees with afterBlueId");
+        // Physical inline/reference syntax is intentionally outside semantic
+        // process parity once its exact resulting identity has been verified.
+        document.remove("document");
+    }
+}
+
 static void verifyCaseParity(
         String id,
         CompiledFixture baseline,
         CompiledFixture actual,
         List<String> projections) {
     for (String projection : projections) {
-        require(parityProjection(baseline, projection).equals(
-                        parityProjection(actual, projection)),
-                id + " parity failed for " + projection);
+        JsonNode expected = parityProjection(baseline, projection);
+        JsonNode observed = parityProjection(actual, projection);
+        require(expected.equals(observed),
+                id + " parity failed for " + projection
+                        + ": expected=" + expected
+                        + ", actual=" + observed);
     }
 }
 }

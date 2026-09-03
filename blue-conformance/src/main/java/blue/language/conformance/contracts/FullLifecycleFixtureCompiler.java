@@ -45,6 +45,8 @@ import blue.language.processor.closure.ScopeAddress;
 import blue.language.processor.closure.SubscriptionDelta;
 import blue.language.processor.closure.SubscriptionState;
 import blue.language.processor.closure.TentativeFinalization;
+import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.provider.CyclicSetProof;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -279,6 +281,13 @@ final class FullLifecycleFixtureCompiler {
         } catch (RuntimeException failure) {
             throw stageFailure(fixtureId, "parse exact input", failure);
         }
+        ObjectNode executableRuntime = (ObjectNode) resolveRuntimeDocumentMacros(
+                runtime, parsed.snapshot());
+        rejectUnresolvedMacros(executableRuntime, fixtureId + " runtime");
+        executionEnvelope.set("runtime", executableRuntime.deepCopy());
+        ObjectNode providerHarness = providerHarness(
+                source, caseValue, events);
+        executionEnvelope.set("provider", providerHarness.deepCopy());
         Capture capture = new Capture();
         ClosureAttemptResult attempt;
         JsonNode tentativeTranscript;
@@ -304,6 +313,7 @@ final class FullLifecycleFixtureCompiler {
                     fixtureId,
                     selectedExpect,
                     events,
+                    parsed,
                     attempt,
                     capture.evidence);
         } catch (RuntimeException failure) {
@@ -321,7 +331,7 @@ final class FullLifecycleFixtureCompiler {
         envelope.put("description", text(source, "description"));
         envelope.put("releaseManifest", "../../release-manifest.yaml");
         envelope.set("input", input.deepCopy());
-        envelope.set("runtime", runtime.deepCopy());
+        envelope.set("runtime", executableRuntime.deepCopy());
         try {
             envelope.set("expected", FullLifecycleFixtureJson.expected(
                     attempt, capture.evidence));
@@ -344,14 +354,19 @@ final class FullLifecycleFixtureCompiler {
             sharedLimitSource.put("sharedLimit",
                     authoredSharedLimit.longValue());
         }
-        ObjectNode provider = envelope.putObject("provider");
-        provider.putObject("nodes");
+        ObjectNode provider = providerHarness.deepCopy();
+        envelope.set("provider", provider);
         provider.set("expectedRequiredBlueIds",
                 FullLifecycleFixtureSupport.textArray(
                         attempt.requiredExactBlueIds()));
-        provider.set("expectedLoads",
-                FullLifecycleFixtureSupport.textArray(
-                        attempt.requiredExactBlueIds()));
+        LinkedHashSet<String> expectedLoads = new LinkedHashSet<String>(
+                textValues(array(provider, "expectedLoads")));
+        expectedLoads.addAll(attempt.requiredExactBlueIds());
+        ArrayList<String> sortedExpectedLoads =
+                new ArrayList<String>(expectedLoads);
+        Collections.sort(sortedExpectedLoads);
+        provider.set("expectedLoads", FullLifecycleFixtureSupport.textArray(
+                sortedExpectedLoads));
         ObjectNode locality = envelope.putObject("locality");
         locality.put("unrelatedDocumentCount", 0);
         locality.put("expectedUnrelatedDocumentsOpened", 0);
@@ -364,6 +379,131 @@ final class FullLifecycleFixtureCompiler {
                 attempt.processResult(),
                 capture.evidence,
                 tentativeTranscript);
+    }
+
+    private ObjectNode providerHarness(
+            JsonNode source,
+            JsonNode caseValue,
+            Map<String, JsonNode> events) {
+        ObjectNode provider = JSON.objectNode();
+        ObjectNode nodes = provider.putObject("nodes");
+        provider.set("expectedRequiredBlueIds", JSON.arrayNode());
+        provider.set("expectedLoads", JSON.arrayNode());
+        if (caseValue == null || !caseValue.has("providerMode")) {
+            return provider;
+        }
+        LinkedHashSet<String> expectedLoads = new LinkedHashSet<String>();
+        for (JsonNode form : array(caseValue, "exactForms")) {
+            String documentId = text(form, "documentId");
+            String path = text(form, "path");
+            JsonNode authoredDocument = requiredObject(
+                    object(source, "documents").get(documentId),
+                    "provider exact-form document " + documentId)
+                    .get("document");
+            JsonNode authoredValue = authoredDocument == null
+                    ? null : authoredDocument.at(path);
+            require(authoredValue != null && !authoredValue.isMissingNode(),
+                    "provider exactForms path is absent: "
+                            + documentId + path);
+            JsonNode resolved = resolveMacros(
+                    authoredValue, events, null);
+            rejectUnresolvedMacros(resolved,
+                    "provider exactForms " + documentId + path);
+            Node exact = node(resolved);
+            if ("pure-reference".equals(text(form, "form"))) {
+                addProviderNode(nodes, expectedLoads, wire(exact));
+                for (JsonNode event : events.values()) {
+                    String eventBlueId = text(event, "_exportedBlueId");
+                    if (containsReference(resolved, eventBlueId)) {
+                        ObjectNode exactEvent = ((ObjectNode) event).deepCopy();
+                        exactEvent.remove("_exportedBlueId");
+                        addProviderNode(nodes, expectedLoads, exactEvent);
+                    }
+                }
+            }
+        }
+        JsonNode mode = object(caseValue, "providerMode");
+        provider.put("cache", text(mode, "cache"));
+        provider.put("batching", text(mode, "batching"));
+        provider.set("expectedLoads", FullLifecycleFixtureSupport.textArray(
+                new ArrayList<String>(expectedLoads)));
+        return provider;
+    }
+
+    private void addProviderNode(ObjectNode nodes, Set<String> expected,
+            JsonNode exactWire) {
+        String blueId = DIRECT.directBlueId(node(exactWire));
+        JsonNode prior = nodes.get(blueId);
+        require(prior == null || prior.equals(exactWire),
+                "provider exactForms BlueId collision: " + blueId);
+        nodes.set(blueId, exactWire.deepCopy());
+        expected.add(blueId);
+    }
+
+    private boolean containsReference(JsonNode value, String blueId) {
+        if (value.isObject()) {
+            if (value.size() == 1 && blueId.equals(value.path(
+                    BlueLanguageConstants.OBJECT_BLUE_ID).textValue())) {
+                return true;
+            }
+            for (JsonNode child : value) {
+                if (containsReference(child, blueId)) {
+                    return true;
+                }
+            }
+        } else if (value.isArray()) {
+            for (JsonNode child : value) {
+                if (containsReference(child, blueId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private JsonNode resolveRuntimeDocumentMacros(
+            JsonNode value,
+            AffectedClosureSnapshot snapshot) {
+        if (value == null || value.isValueNode()) {
+            return value == null ? JSON.nullNode() : value.deepCopy();
+        }
+        if (value.isArray()) {
+            ArrayNode result = JSON.arrayNode();
+            for (JsonNode item : value) {
+                result.add(resolveRuntimeDocumentMacros(item, snapshot));
+            }
+            return result;
+        }
+        ObjectNode object = (ObjectNode) value;
+        if (object.size() == 1
+                && (object.has("$documentBlueId")
+                || object.has("$documentInline"))) {
+            boolean inline = object.has("$documentInline");
+            String macro = inline ? "$documentInline" : "$documentBlueId";
+            DocumentId documentId = new DocumentId(text(object, macro));
+            ManagedDocumentSnapshot document =
+                    snapshot.managedDocument(documentId);
+            require(document != null,
+                    "runtime document macro references unknown document "
+                            + documentId.value());
+            require(document.blueId().equals(
+                            DIRECT.directBlueId(document.document())),
+                    "runtime document macro requires an exact acyclic "
+                            + "document: " + documentId.value());
+            if (inline) {
+                return wire(document.document());
+            }
+            ObjectNode reference = JSON.objectNode();
+            reference.put(
+                    BlueLanguageConstants.OBJECT_BLUE_ID,
+                    document.blueId());
+            return reference;
+        }
+        ObjectNode result = JSON.objectNode();
+        object.fields().forEachRemaining(field -> result.set(
+                field.getKey(), resolveRuntimeDocumentMacros(
+                        field.getValue(), snapshot)));
+        return result;
     }
 
     private IllegalArgumentException stageFailure(
@@ -394,6 +534,8 @@ final class FullLifecycleFixtureCompiler {
                 new LinkedHashMap<DocumentId, Node>();
         LinkedHashMap<DocumentId, Boolean> publicRoots =
                 new LinkedHashMap<DocumentId, Boolean>();
+        LinkedHashMap<DocumentId, Boolean> initialized =
+                new LinkedHashMap<DocumentId, Boolean>();
         Iterator<Map.Entry<String, JsonNode>> fields = authored.fields();
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> entry = fields.next();
@@ -411,9 +553,15 @@ final class FullLifecycleFixtureCompiler {
                     "document wrapper key must equal authored documentId: "
                             + entry.getKey());
             DocumentId id = new DocumentId(entry.getKey());
+            boolean preinitialized = wrapper.has("initialized")
+                    && requiredBoolean(wrapper, "initialized");
+            if (preinitialized) {
+                installExactInitializedMarker(body);
+            }
             bodies.put(id, body);
             publicRoots.put(id, Boolean.valueOf(
                     requiredBoolean(wrapper, "publicRoot")));
+            initialized.put(id, Boolean.valueOf(preinitialized));
         }
 
         ArrayList<ManagedOccurrenceBinding> initialRows =
@@ -469,6 +617,7 @@ final class FullLifecycleFixtureCompiler {
             finalBodies.put(id, finalized.document(id).document());
         }
         applyRepresentation(caseValue, finalBodies, finalized);
+        applyExactForms(caseValue, finalBodies);
 
         ArrayList<ManagedDocumentSnapshot> documents =
                 new ArrayList<ManagedDocumentSnapshot>();
@@ -486,7 +635,7 @@ final class FullLifecycleFixtureCompiler {
                     id,
                     exact.blueId(),
                     represented,
-                    false,
+                    initialized.get(id).booleanValue(),
                     false,
                     publicRoots.get(id).booleanValue(),
                     0L,
@@ -509,6 +658,42 @@ final class FullLifecycleFixtureCompiler {
                 components,
                 roots,
                 order);
+    }
+
+    private void installExactInitializedMarker(Node body) {
+        String preInitializationBlueId = DIRECT.directBlueId(body);
+        Node marker = new Node()
+                .type(new Node().blueId(
+                        RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER))
+                .properties(
+                        ProcessorContractConstants.KEY_DOCUMENT,
+                        new Node().blueId(preInitializationBlueId));
+        NodePathEditor.put(body, "/contracts/initialized", marker);
+    }
+
+    private void applyExactForms(
+            JsonNode caseValue,
+            Map<DocumentId, Node> bodies) {
+        if (caseValue == null || !caseValue.has("exactForms")) {
+            return;
+        }
+        for (JsonNode form : array(caseValue, "exactForms")) {
+            DocumentId documentId = new DocumentId(text(
+                    form, "documentId"));
+            Node body = bodies.get(documentId);
+            require(body != null,
+                    "exactForms names unknown document "
+                            + documentId.value());
+            String path = text(form, "path");
+            Node exact = NodePathEditor.getOrNull(body, path);
+            require(exact != null && !exact.isReferenceOnly(),
+                    "exactForms must select inline exact content: "
+                            + documentId.value() + path);
+            if ("pure-reference".equals(text(form, "form"))) {
+                NodePathEditor.put(body, path,
+                        new Node().blueId(DIRECT.directBlueId(exact)));
+            }
+        }
     }
 
     private void applyRepresentation(
