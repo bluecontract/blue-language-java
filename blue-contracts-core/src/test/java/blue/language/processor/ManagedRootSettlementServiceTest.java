@@ -4,6 +4,7 @@ import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
@@ -54,6 +55,54 @@ final class ManagedRootSettlementServiceTest {
         assertEquals(
                 FrozenNode.fromNode(exactChannel).resolvedStructuralKey(),
                 normalized.resolvedStructuralKey());
+    }
+
+    @Test
+    void preservesExplicitEmptyHeaderWhileKeepingMissingHeaderAbsent() {
+        // given
+        Node channelType = new Node()
+                .name("Channel with optional Node header")
+                .properties(
+                        "payload",
+                        new Node().description("Optional payload"));
+        String channelTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(channelType);
+        BasicNodeProvider provider = new BasicNodeProvider(channelType);
+        Node absentSource = new Node()
+                .type(new Node().blueId(channelTypeBlueId));
+        Node emptySource = absentSource.clone()
+                .properties("payload", Nodes.emptyObject());
+
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            LanguageProcessingSnapshotManager manager =
+                    new LanguageProcessingSnapshotManager(scope);
+
+            // when
+            FrozenNode absent = NormalizedRuntimeContribution.channel(
+                    FrozenNode.fromNode(absentSource),
+                    channelTypeBlueId,
+                    Collections.singletonList("payload"),
+                    CanonicalTypeIdentityLookup.incomplete(),
+                    manager);
+            FrozenNode explicitEmpty = NormalizedRuntimeContribution.channel(
+                    FrozenNode.fromNode(emptySource),
+                    channelTypeBlueId,
+                    Collections.singletonList("payload"),
+                    CanonicalTypeIdentityLookup.incomplete(),
+                    manager);
+
+            // then
+            assertFalse(absent.getProperties().containsKey("payload"));
+            FrozenNode retained = explicitEmpty.getProperties().get("payload");
+            assertNotNull(retained);
+            assertNotNull(retained.getProperties());
+            assertTrue(retained.getProperties().isEmpty());
+            assertNotEquals(absent.blueId(), explicitEmpty.blueId());
+        }
     }
 
     @Test

@@ -8,7 +8,10 @@ import blue.language.processor.util.PointerUtils;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -53,12 +56,23 @@ final class NormalizedRuntimeContribution {
 
         Set<String> preserved = new LinkedHashSet<>(
                 ExecutableBodyPathCatalog.ordinaryReferencePaths(source));
+        Set<String> absentExactHeaderFields = new LinkedHashSet<>();
         if (exactHeaderFields != null && source.getProperties() != null) {
             for (String field : exactHeaderFields) {
-                if (field != null
-                        && source.getProperties().containsKey(field)) {
+                if (field == null) {
+                    continue;
+                }
+                if (source.getProperties().containsKey(field)) {
                     preserved.add(PointerUtils.toPointer(
                             java.util.Collections.singletonList(field)));
+                } else {
+                    absentExactHeaderFields.add(field);
+                }
+            }
+        } else if (exactHeaderFields != null) {
+            for (String field : exactHeaderFields) {
+                if (field != null) {
+                    absentExactHeaderFields.add(field);
                 }
             }
         }
@@ -69,6 +83,7 @@ final class NormalizedRuntimeContribution {
                                 source, preserved),
                 "normalizedRuntimeContributionSnapshot");
         Node exact = resolved.frozenResolvedRoot().toNode();
+        removeAbsentExactHeaderFields(exact, absentExactHeaderFields);
         requireEffectiveType(
                 exact,
                 checkedTypeBlueId,
@@ -77,6 +92,22 @@ final class NormalizedRuntimeContribution {
                 exact, resolved.canonicalTypeIdentities());
         NodeToBlueIdInput.stripResolvedBlueIdMetadata(exact);
         return FrozenNode.fromNode(exact);
+    }
+
+    private static void removeAbsentExactHeaderFields(
+            Node resolved,
+            Set<String> absentFields) {
+        if (absentFields.isEmpty() || resolved.getProperties() == null) {
+            return;
+        }
+        Map<String, Node> retained = new LinkedHashMap<>(
+                resolved.getProperties());
+        for (String field : absentFields) {
+            retained.remove(field);
+        }
+        resolved.properties(retained.isEmpty()
+                ? Collections.<String, Node>emptyMap()
+                : retained);
     }
 
     private static void requireEffectiveType(
