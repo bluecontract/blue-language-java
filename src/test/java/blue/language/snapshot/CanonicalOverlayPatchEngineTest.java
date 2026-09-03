@@ -9,10 +9,12 @@ import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CanonicalOverlayPatchEngineTest {
 
@@ -52,6 +54,31 @@ class CanonicalOverlayPatchEngineTest {
         assertNull(root.property("a"));
         assertEquals(3, result.root().toNode().getAsInteger("/a/b/c/value"));
         assertEquals(DirectBlueIdCalculator.calculateBlueId(result.root().toNode()), result.blueId());
+    }
+
+    @Test
+    void shouldRetainCreatedAncestorsAsExactEmptyObjectsInEveryRootMode() {
+        FrozenNode[] roots = new FrozenNode[]{
+                FrozenNode.empty(),
+                FrozenNode.fromUncheckedCanonicalNode(
+                        blue.language.model.Nodes.emptyObject()),
+                FrozenNode.fromResolvedNode(
+                        blue.language.model.Nodes.emptyObject())
+        };
+
+        for (FrozenNode root : roots) {
+            FrozenNode withLeaf = new CanonicalOverlayPatchEngine(root)
+                    .apply(JsonPatch.add("/a/b", new Node().value("value")))
+                    .root();
+            FrozenNode withoutLeaf = new CanonicalOverlayPatchEngine(withLeaf)
+                    .apply(JsonPatch.remove("/a/b"))
+                    .root();
+
+            FrozenNode parent = withoutLeaf.property("a");
+            assertNotNull(parent);
+            assertNotNull(parent.getProperties());
+            assertTrue(parent.getProperties().isEmpty());
+        }
     }
 
     @Test
