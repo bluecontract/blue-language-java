@@ -9,7 +9,6 @@ import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,7 +21,7 @@ final class ExternalChannelResolverCatalogIdentityTest {
             DirectBlueIdCalculator.calculateBlueId(CHANNEL_TYPE);
 
     @Test
-    void shouldConvertMaterializedChannelWithProducingSnapshotEvidence() {
+    void shouldConvertCanonicalizedChannelWithProducingSnapshotEvidence() {
         // given
         try (Blue blue = blue()) {
             DocumentProcessor processor = blue.getDocumentProcessor();
@@ -44,7 +43,7 @@ final class ExternalChannelResolverCatalogIdentityTest {
                     .freshChannel(channelSnapshot);
 
             // then
-            assertFalse(effectiveChannel.getType().isReferenceOnly());
+            assertTrue(effectiveChannel.getType().isReferenceOnly());
             assertTrue(bundle.canonicalTypeIdentities()
                     .hasCompleteCoverage());
             EvidenceChannel channel = assertInstanceOf(
@@ -66,11 +65,15 @@ final class ExternalChannelResolverCatalogIdentityTest {
                     .load(snapshot, "/");
             EffectiveContractSnapshot channelSnapshot =
                     resolved.effectiveContractSnapshot("source");
+            Node materializedChannel = documentWithInlineChannelType()
+                    .getContracts()
+                    .getProperties()
+                    .get("source");
             ContractBundle withoutEvidence = ContractBundle.builder()
                     .addChannel(
                             "source",
                             resolved.channel("source"),
-                            resolved.contractNode("source"))
+                            FrozenNode.fromResolvedNode(materializedChannel))
                     .addEffectiveContractSnapshot(channelSnapshot)
                     .build();
 

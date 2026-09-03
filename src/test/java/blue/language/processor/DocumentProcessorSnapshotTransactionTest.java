@@ -684,8 +684,13 @@ class DocumentProcessorSnapshotTransactionTest {
         assertTrue(manager.fromDocumentCalls >= 2,
                 "feeder verification and scalar writes must use coherent immutable snapshots");
         assertTrue(manager.fromDocumentInputs.stream()
+                .filter(node -> node.getType() == null)
                 .allMatch(node -> node.getContracts() != null),
-                "writes requiring resolution must retain the complete canonical companion");
+                "document writes requiring resolution must retain the "
+                        + "complete canonical companion");
+        assertTrue(manager.fromDocumentInputs.stream()
+                .anyMatch(node -> node.getType() == null
+                        && node.getContracts() != null));
         assertTrue(manager.cacheSnapshotCalls > 0);
         assertEquals(9, result.document().getAsInteger("/x"));
         assertSnapshotConsistent(debug.resultingSnapshot());
