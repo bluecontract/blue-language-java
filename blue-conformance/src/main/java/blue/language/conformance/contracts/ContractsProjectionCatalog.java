@@ -80,10 +80,25 @@ final class ContractsProjectionCatalog {
      * @throws IllegalArgumentException when {@code path} is null or undeclared
      */
     public void requireDeclared(String path, String source) {
-        if (path == null || !paths.contains(path)) {
+        String declaredPath = withoutVariantPrefix(path);
+        if (declaredPath == null || !paths.contains(declaredPath)) {
             throw new IllegalArgumentException(
                     source + ": undeclared Contracts conformance projection " + path);
         }
+    }
+
+    private static String withoutVariantPrefix(String path) {
+        if (path == null || !path.startsWith("variants.")) {
+            return path;
+        }
+        int nameStart = "variants.".length();
+        int nameEnd = path.indexOf('.', nameStart);
+        if (nameEnd <= nameStart
+                || !path.substring(nameStart, nameEnd)
+                .matches("[a-z0-9][a-z0-9-]*")) {
+            return null;
+        }
+        return path.substring(nameEnd + 1);
     }
 
     private static Set<String> load() {

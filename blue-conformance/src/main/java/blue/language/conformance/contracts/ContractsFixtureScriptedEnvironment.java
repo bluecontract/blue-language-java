@@ -432,6 +432,13 @@ abstract class ContractsFixtureScriptedEnvironment extends ContractsFixtureInput
                 setPointer(root, override.getKey(), override.getValue());
             }
         }
+        if (variant.has(
+                ContractsFixtureConstants.Field.ROOT_REMOVALS)) {
+            for (JsonNode removal : variant.get(
+                    ContractsFixtureConstants.Field.ROOT_REMOVALS)) {
+                removePointer(root, removal.textValue());
+            }
+        }
         if (variant.has(ContractsFixtureConstants.Field.ACCEPT)) {
             setAllScriptedChannelAcceptance(root, variant.get(ContractsFixtureConstants.Field.ACCEPT).asBoolean());
         }

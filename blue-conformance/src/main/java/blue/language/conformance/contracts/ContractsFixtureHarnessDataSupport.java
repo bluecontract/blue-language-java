@@ -292,6 +292,29 @@ abstract class ContractsFixtureHarnessDataSupport {
         current.set(segments.get(segments.size() - 1), value.deepCopy());
     }
 
+    static void removePointer(ObjectNode root, String pointer) {
+        List<String> segments = pointerSegments(pointer);
+        if (segments.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Fixture control cannot remove the Root");
+        }
+        ObjectNode current = root;
+        for (int index = 0; index < segments.size() - 1; index++) {
+            JsonNode child = current.get(segments.get(index));
+            if (child == null || !child.isObject()) {
+                throw new IllegalArgumentException(
+                        "Fixture removal crosses an absent or non-object path");
+            }
+            current = (ObjectNode) child;
+        }
+        String leaf = segments.get(segments.size() - 1);
+        if (!current.has(leaf)) {
+            throw new IllegalArgumentException(
+                    "Fixture removal selects an absent path: " + pointer);
+        }
+        current.remove(leaf);
+    }
+
     static JsonNode jsonAt(JsonNode root, String pointer) {
         JsonNode current = root;
         for (String segment : pointerSegments(pointer)) {

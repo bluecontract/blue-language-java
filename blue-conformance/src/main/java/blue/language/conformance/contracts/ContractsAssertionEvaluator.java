@@ -247,16 +247,28 @@ final class ContractsAssertionEvaluator {
                 : null;
 
         if (ContractsFixtureConstants.AssertionOperator.EQUALS_PROJECTION
-                .equals(op)) {
+                .equals(op)
+                || ContractsFixtureConstants.AssertionOperator
+                .NOT_EQUALS_PROJECTION.equals(op)) {
             String expectedPath = assertion.path(
                     ContractsFixtureConstants.Field.EXPECTED_PROJECTION)
                     .asText();
             ContractsConformanceProjection.Presence other = projection.project(expectedPath);
             check(other.isPresent(), message + " expected projection is absent: " + expectedPath);
-            check(exactProjectionEquals(actualValue, other.getValue()),
-                    message + " mismatch: actual=" + debug(actualValue)
-                            + ", expectedProjection=" + expectedPath
-                            + " value=" + debug(other.getValue()));
+            boolean equal = exactProjectionEquals(
+                    actualValue, other.getValue());
+            if (ContractsFixtureConstants.AssertionOperator
+                    .EQUALS_PROJECTION.equals(op)) {
+                check(equal,
+                        message + " mismatch: actual=" + debug(actualValue)
+                                + ", expectedProjection=" + expectedPath
+                                + " value=" + debug(other.getValue()));
+            } else {
+                check(!equal,
+                        message + " unexpectedly matched expectedProjection="
+                                + expectedPath + " value="
+                                + debug(other.getValue()));
+            }
         } else if (ContractsFixtureConstants.AssertionOperator.EQUALS
                 .equals(op)
                 || ContractsFixtureConstants.AssertionOperator.FAILS_WITH

@@ -207,6 +207,11 @@ $defs:
         minProperties: 1
         propertyNames: {pattern: '^/'}
         additionalProperties: {$ref: '#/$defs/blueValue'}
+      rootRemovals:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {type: string, pattern: '^/'}
       rootRevision: {type: integer, minimum: 0}
       sameEvent: {type: boolean}
   input:
@@ -258,7 +263,7 @@ $defs:
     properties:
       actual: {type: string}
       op:
-        enum: [equals, notEquals, equalsProjection, absent, present, sequenceEquals, contains, notContains, lessThan, greaterThan, sameAcrossVariants, failsWith, all, none]
+        enum: [equals, notEquals, equalsProjection, notEqualsProjection, absent, present, sequenceEquals, contains, notContains, lessThan, greaterThan, sameAcrossVariants, failsWith, all, none]
       expected: {}
       expectedProjection: {type: string}
       variant: {type: string}

@@ -114,6 +114,7 @@ final class ClosedContractsFixtureValidator {
             "newEmbeddedSurface",
             ContractsFixtureConstants.Field.ROOT_FORM,
             ContractsFixtureConstants.Field.ROOT_OVERRIDES,
+            ContractsFixtureConstants.Field.ROOT_REMOVALS,
             ContractsFixtureConstants.Field.ROOT_REVISION,
             ContractsFixtureConstants.Field.SAME_EVENT);
     private static final Set<String> LIST_OPERATION = set(
@@ -151,6 +152,7 @@ final class ClosedContractsFixtureValidator {
             ContractsFixtureConstants.AssertionOperator.EQUALS,
             ContractsFixtureConstants.AssertionOperator.NOT_EQUALS,
             ContractsFixtureConstants.AssertionOperator.EQUALS_PROJECTION,
+            ContractsFixtureConstants.AssertionOperator.NOT_EQUALS_PROJECTION,
             ContractsFixtureConstants.AssertionOperator.ABSENT,
             ContractsFixtureConstants.AssertionOperator.PRESENT,
             ContractsFixtureConstants.AssertionOperator.SEQUENCE_EQUALS,
@@ -297,6 +299,33 @@ final class ClosedContractsFixtureValidator {
                         } catch (IllegalArgumentException invalidPointer) {
                             fail(path + ".rootOverrides",
                                     "invalid JSON Pointer " + pointer);
+                        }
+                    }
+                }
+                if (variant.has(
+                        ContractsFixtureConstants.Field.ROOT_REMOVALS)) {
+                    JsonNode removals = variant.get(
+                            ContractsFixtureConstants.Field.ROOT_REMOVALS);
+                    requireArray(removals, path + ".rootRemovals");
+                    if (removals.size() == 0) {
+                        fail(path + ".rootRemovals",
+                                "must contain at least one pointer removal");
+                    }
+                    for (JsonNode removal : removals) {
+                        if (!removal.isTextual()) {
+                            fail(path + ".rootRemovals",
+                                    "must contain only JSON Pointer text");
+                        }
+                        try {
+                            if (ParsedJsonPointer.parse(
+                                    removal.textValue()).isRoot()) {
+                                fail(path + ".rootRemovals",
+                                        "cannot remove the fixture Root");
+                            }
+                        } catch (IllegalArgumentException invalidPointer) {
+                            fail(path + ".rootRemovals",
+                                    "invalid JSON Pointer "
+                                            + removal.textValue());
                         }
                     }
                 }
@@ -752,7 +781,9 @@ final class ClosedContractsFixtureValidator {
         optionalBoolean(
                 assertion, path, ContractsFixtureConstants.Field.ORDERED);
         if (ContractsFixtureConstants.AssertionOperator.EQUALS_PROJECTION
-                .equals(op)) {
+                .equals(op)
+                || ContractsFixtureConstants.AssertionOperator
+                .NOT_EQUALS_PROJECTION.equals(op)) {
             requireFields(
                     assertion,
                     path,
@@ -763,7 +794,8 @@ final class ClosedContractsFixtureValidator {
                     ContractsFixtureConstants.Field.EXPECTED_PROJECTION);
             if (assertion.has(
                     ContractsFixtureConstants.Field.EXPECTED)) {
-                fail(path + ".expected", "equalsProjection must not also declare expected");
+                fail(path + ".expected",
+                        op + " must not also declare expected");
             }
         } else if (ContractsFixtureConstants.AssertionOperator.ABSENT
                 .equals(op)
@@ -785,7 +817,8 @@ final class ClosedContractsFixtureValidator {
             if (assertion.has(
                     ContractsFixtureConstants.Field.EXPECTED_PROJECTION)) {
                 fail(path + ".expectedProjection",
-                        "only equalsProjection accepts expectedProjection");
+                        "only projection comparison operators accept "
+                                + "expectedProjection");
             }
         }
     }

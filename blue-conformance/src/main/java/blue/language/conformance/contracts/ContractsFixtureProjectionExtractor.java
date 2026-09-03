@@ -92,6 +92,9 @@ abstract class ContractsFixtureProjectionExtractor extends ContractsFixtureScrip
                         .put(ContractsFixtureConstants.Field.RESULT, publicResult(result))
                         .put("result.status", result.status().wireValue())
                         .put("result.document", result.document())
+                        .put("result.documentBlueId",
+                                DirectBlueIdCalculator.calculateBlueId(
+                                        result.document()))
                         .put("result.events", result.events())
                         .put("result.totalGas", result.totalGas())
                         .put("demands.semantic", trace.semanticDemands())
@@ -268,6 +271,26 @@ abstract class ContractsFixtureProjectionExtractor extends ContractsFixtureScrip
                         GasScheduleConstants.Namespace.PROCESSOR,
                         GasScheduleConstants.ProcessorCounter
                                 .CONTRACT_HEADER_RECOGNIZED));
+        projection.put("trace.counters.channelCandidateTested",
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .CHANNEL_CANDIDATE_TESTED));
+        projection.put("trace.counters.embeddedPathEntryRead",
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_PATH_ENTRY_READ));
+        projection.put("trace.counters.embeddedPathSegmentValidated",
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_PATH_SEGMENT_VALIDATED));
+        projection.put("trace.counters.embeddedEventDelivered",
+                trace.counterQuantity(
+                        GasScheduleConstants.Namespace.PROCESSOR,
+                        GasScheduleConstants.ProcessorCounter
+                                .EMBEDDED_EVENT_DELIVERED));
         projection.put("trace.counters.directIdentityHashBlock",
                 trace.counterQuantity(
                         GasScheduleConstants.Namespace.SEMANTIC,
@@ -453,11 +476,18 @@ abstract class ContractsFixtureProjectionExtractor extends ContractsFixtureScrip
         projection.put(
                 "trace.logicalDeliveryGroups",
                 logicalDeliveryGroups);
-        projection.put(
-                "trace.handlerExecutionCount",
-                (long) trace.records(
-                        ProcessingTraceRecord.Kind
-                                .HANDLER_EXECUTION).size());
+        List<String> handlerExecutionOrder = new ArrayList<>();
+        for (ProcessingTraceRecord record : trace.records(
+                ProcessingTraceRecord.Kind.HANDLER_EXECUTION)) {
+            handlerExecutionOrder.add(
+                    record.scopePath() + ":" + record.contractKey()
+                            + ":" + record.detail(
+                            ProcessingTraceConstants.FIELD_CHANNEL_KEY));
+        }
+        projection.put("trace.handlerExecutionOrder",
+                handlerExecutionOrder);
+        projection.put("trace.handlerExecutionCount",
+                (long) handlerExecutionOrder.size());
 
         List<String> checkpointCleanup = new ArrayList<>();
         for (ProcessingTraceRecord record : trace.records()) {

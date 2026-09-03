@@ -67,6 +67,7 @@ final class ContractsFixtureConstants {
         static final String NAME = "name";
         static final String ROOT_FORM = "rootForm";
         static final String ROOT_OVERRIDES = "rootOverrides";
+        static final String ROOT_REMOVALS = "rootRemovals";
         static final String CACHE = "cache";
         static final String BATCHING = "batching";
         static final String ACCEPT = "accept";
@@ -125,6 +126,8 @@ final class ContractsFixtureConstants {
         static final String NOT_EQUALS = "notEquals";
         static final String EQUALS_PROJECTION =
                 "equalsProjection";
+        static final String NOT_EQUALS_PROJECTION =
+                "notEqualsProjection";
         static final String ABSENT = "absent";
         static final String PRESENT = "present";
         static final String SEQUENCE_EQUALS = "sequenceEquals";
