@@ -8,7 +8,7 @@ Its exact old-to-new entries cover the Language/Contracts repository. BEX and Co
 
 The exact empty-object identity remains `5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK`.
 No old-to-new BlueId aliases or redirects are introduced. Registry BlueIds in this report are read from the Java-verified release manifests.
-Active old-identity references remaining: 0. Historical references retained as immutable evidence: 172.
+Active old-identity references remaining: 0. Historical references retained as immutable evidence: 162.
 Unresolved identity surfaces: 0. Canonical/mirror byte mismatches: 0.
 Modeled closure identity rotations: 44 (34 corpus-derived and 10 specialized Java oracle bindings). Intentionally excluded invalid vectors: 1.
 Reviewed nonhistorical uppercase Java `String *_ORACLE` identity declarations: 2. Identity-free literal-only declarations classified separately: 0. Every such declaration must decode as a literal-only concatenation; every exact-identity declaration also requires explicit reviewed classification, and later `*_ORACLE +=` mutation is forbidden.
@@ -194,16 +194,6 @@ These occurrences are deliberately retained in immutable migration or modernizat
 | `document:language-specification` | `FULL_LIFECYCLE_SEMANTIC_BASELINE_DELTA.md:53` | `retained-immutable-history` |
 | `package:language-contracts-aggregate` | `FULL_LIFECYCLE_SEMANTIC_BASELINE_DELTA.md:61` | `retained-immutable-history` |
 | `document:contracts-specification` | `MANAGED_TRANSITION_RECEIPT_CONTRACTS_RECEIPT.md:65` | `retained-immutable-history` |
-| `document:language-specification` | `api/semantic-baseline-1.0.json:8` | `retained-immutable-history` |
-| `document:contracts-specification` | `api/semantic-baseline-1.0.json:9` | `retained-immutable-history` |
-| `package:language-contracts-aggregate` | `api/semantic-baseline-1.0.json:12` | `retained-immutable-history` |
-| `package:contracts-release` | `api/semantic-baseline-1.0.json:13` | `retained-immutable-history` |
-| `package:language-registry` | `api/semantic-baseline-1.0.json:16` | `retained-immutable-history` |
-| `package:language-fixtures` | `api/semantic-baseline-1.0.json:17` | `retained-immutable-history` |
-| `package:contracts-registry` | `api/semantic-baseline-1.0.json:18` | `retained-immutable-history` |
-| `package:contracts-closure-fixtures` | `api/semantic-baseline-1.0.json:20` | `retained-immutable-history` |
-| `package:contracts-release` | `api/semantic-baseline-1.0.json:21` | `retained-immutable-history` |
-| `package:contracts-closure-fixtures` | `api/semantic-baseline-1.0.json:34` | `retained-immutable-history` |
 | `package:language-fixtures` | `docs/blue-language-1.0-final-clarifications.md:172` | `retained-immutable-history` |
 | `package:language-registry` | `docs/blue-language-1.0-final-clarifications.md:175` | `retained-immutable-history` |
 | `package:language-contracts-aggregate` | `docs/collection-paths-and-cohesion-migration-report.md:38` | `retained-immutable-history` |

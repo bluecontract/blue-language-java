@@ -902,11 +902,6 @@
         },
         {
           "disposition": "retained-immutable-history",
-          "line": 9,
-          "path": "api/semantic-baseline-1.0.json"
-        },
-        {
-          "disposition": "retained-immutable-history",
           "line": 58,
           "path": "managed-transition-receipt-contracts-receipt.json"
         }
@@ -1018,11 +1013,6 @@
           "disposition": "retained-immutable-history",
           "line": 53,
           "path": "FULL_LIFECYCLE_SEMANTIC_BASELINE_DELTA.md"
-        },
-        {
-          "disposition": "retained-immutable-history",
-          "line": 8,
-          "path": "api/semantic-baseline-1.0.json"
         },
         {
           "disposition": "retained-immutable-history",
@@ -3990,18 +3980,7 @@
       "componentBindingChanges": [],
       "firstChangedDependency": "package:contracts-ordinary-fixtures",
       "fixtureConstantsRequiringUpdate": [],
-      "historicalReferencesRetained": [
-        {
-          "disposition": "retained-immutable-history",
-          "line": 20,
-          "path": "api/semantic-baseline-1.0.json"
-        },
-        {
-          "disposition": "retained-immutable-history",
-          "line": 34,
-          "path": "api/semantic-baseline-1.0.json"
-        }
-      ],
+      "historicalReferencesRetained": [],
       "manifestReceiptEntriesRequiringUpdate": [],
       "mirroredPaths": [],
       "newExactIdentity": "sha256:5c6c6ca1ae10cff5e3afa4ee3a816b9e9f1a0bca802c71662f06951001473783",
@@ -4183,11 +4162,6 @@
         },
         {
           "disposition": "retained-immutable-history",
-          "line": 18,
-          "path": "api/semantic-baseline-1.0.json"
-        },
-        {
-          "disposition": "retained-immutable-history",
           "line": 43,
           "path": "docs/collection-paths-and-cohesion-migration-report.md"
         },
@@ -4248,18 +4222,7 @@
       "componentBindingChanges": [],
       "firstChangedDependency": "document:contracts-specification",
       "fixtureConstantsRequiringUpdate": [],
-      "historicalReferencesRetained": [
-        {
-          "disposition": "retained-immutable-history",
-          "line": 13,
-          "path": "api/semantic-baseline-1.0.json"
-        },
-        {
-          "disposition": "retained-immutable-history",
-          "line": 21,
-          "path": "api/semantic-baseline-1.0.json"
-        }
-      ],
+      "historicalReferencesRetained": [],
       "manifestReceiptEntriesRequiringUpdate": [],
       "mirroredPaths": [],
       "newExactIdentity": "sha256:ed634d06aa95153fd34ae991c901131714a2a303980c49dc12ba9ce498364c5c",
@@ -4372,11 +4335,6 @@
         },
         {
           "disposition": "retained-immutable-history",
-          "line": 12,
-          "path": "api/semantic-baseline-1.0.json"
-        },
-        {
-          "disposition": "retained-immutable-history",
           "line": 38,
           "path": "docs/collection-paths-and-cohesion-migration-report.md"
         },
@@ -4432,11 +4390,6 @@
       "historicalReferencesRetained": [
         {
           "disposition": "retained-immutable-history",
-          "line": 17,
-          "path": "api/semantic-baseline-1.0.json"
-        },
-        {
-          "disposition": "retained-immutable-history",
           "line": 172,
           "path": "docs/blue-language-1.0-final-clarifications.md"
         },
@@ -4482,11 +4435,6 @@
       "firstChangedDependency": "language:Dictionary",
       "fixtureConstantsRequiringUpdate": [],
       "historicalReferencesRetained": [
-        {
-          "disposition": "retained-immutable-history",
-          "line": 16,
-          "path": "api/semantic-baseline-1.0.json"
-        },
         {
           "disposition": "retained-immutable-history",
           "line": 175,
@@ -4604,7 +4552,7 @@
     "emptyObjectIdentityUnchanged": true,
     "excludedInvalidVectorCount": 1,
     "fixtureConstantReferenceCount": 0,
-    "historicalReferenceCount": 172,
+    "historicalReferenceCount": 162,
     "identityFreeJavaOracleCount": 0,
     "manifestReceiptReferenceCount": 0,
     "mirrorMismatchCount": 0,
