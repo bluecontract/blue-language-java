@@ -242,18 +242,18 @@ final class ExactEmptyObjectSemanticsTest {
                                 + "scalar: null\n"
                                 + "list: null\n",
                         Node.class)));
-        IllegalArgumentException scalarConflict = assertThrows(
-                IllegalArgumentException.class,
-                () -> blue.resolve(new Node()
-                        .type(reference(holderId))
-                        .properties("scalar", Nodes.emptyObject())));
-        IllegalArgumentException listConflict = assertThrows(
-                IllegalArgumentException.class,
-                () -> blue.resolve(new Node()
-                        .type(reference(holderId))
-                        .properties("list", Nodes.emptyObject())));
+        Runnable scalarAction = () -> blue.resolve(new Node()
+                .type(reference(holderId))
+                .properties("scalar", Nodes.emptyObject()));
+        Runnable listAction = () -> blue.resolve(new Node()
+                .type(reference(holderId))
+                .properties("list", Nodes.emptyObject()));
 
         // then
+        IllegalArgumentException scalarConflict = assertThrows(
+                IllegalArgumentException.class, scalarAction::run);
+        IllegalArgumentException listConflict = assertThrows(
+                IllegalArgumentException.class, listAction::run);
         assertEquals("fixed", inherited.getProperties()
                 .get("scalar").getValue());
         assertEquals(2, inherited.getProperties().get("list")

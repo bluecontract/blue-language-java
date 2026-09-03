@@ -567,6 +567,8 @@ class DocumentProcessorInitializationTest {
 
         // when
         DocumentProcessingResult initResult = blue.initializeDocument(original);
+
+        // then
         assertEquals(ProcessorStatus.SUCCESS, initResult.status(),
                 () -> initResult.diagnostic() != null
                         ? initResult.diagnostic().category() + ": "
@@ -579,8 +581,6 @@ class DocumentProcessorInitializationTest {
         Node aNode = processed.getProperties().get("a");
         Node firstX = aNode.getProperties().get("x");
         Node explicit = firstX.getProperties().get("x");
-
-        // then
         assertEquals(new BigInteger("3"), processed.getProperties().get("x").getValue());
         assertNotNull(nested);
         assertNotNull(branch);

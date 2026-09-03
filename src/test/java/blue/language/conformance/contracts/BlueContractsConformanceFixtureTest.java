@@ -155,6 +155,7 @@ class BlueContractsConformanceFixtureTest {
     @Test
     void shouldExecuteEmptyObjectAndCollectionRevisionFixtures()
             throws IOException {
+        // given
         String[] fixtures = {
                 "emb/c-emb-empty-01.yaml",
                 "emb/c-emb-empty-02.yaml",
@@ -172,6 +173,7 @@ class BlueContractsConformanceFixtureTest {
                 "evt/c-evt-collection-07.yaml"
         };
 
+        // when
         int executed = 0;
         for (String fixture : fixtures) {
             try {
@@ -185,12 +187,14 @@ class BlueContractsConformanceFixtureTest {
             executed++;
         }
 
+        // then
         assertEquals(fixtures.length, executed);
     }
 
     @Test
     void shouldExecuteOpaqueDiscoveryAndOccurrenceContinuityFixtures()
             throws IOException {
+        // given
         String[] fixtures = {
                 "disc/c-disc-01.yaml",
                 "disc/c-disc-02.yaml",
@@ -200,6 +204,7 @@ class BlueContractsConformanceFixtureTest {
                 "emb/c-emb-13.yaml"
         };
 
+        // when
         int executed = 0;
         for (String fixture : fixtures) {
             JsonNode input = resource(fixture);
@@ -208,6 +213,7 @@ class BlueContractsConformanceFixtureTest {
             executed++;
         }
 
+        // then
         assertEquals(fixtures.length, executed);
     }
 

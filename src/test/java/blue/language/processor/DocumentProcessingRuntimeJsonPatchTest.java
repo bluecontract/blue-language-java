@@ -38,10 +38,12 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
     @Test
     void shouldPreserveCollectionParentRuleAcrossOrderedPatches() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(document);
 
+        // when
         IllegalStateException missingParent = captureFailure(
                 () -> runtime.applyPatch(
                         "/",
@@ -49,12 +51,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
                                 "/orders/order-1",
                                 new Node().properties(
                                         "state", new Node().value("new")))));
-
-        assertEquals(
-                "Final parent does not exist for patch path: "
-                        + "/orders/order-1",
-                missingParent.getMessage());
-        assertNull(document.getProperties());
+        Node afterMissingParent = document.clone();
 
         runtime.applyPatch(
                 "/", JsonPatch.add("/orders", Nodes.emptyObject()));
@@ -65,6 +62,12 @@ class DocumentProcessingRuntimeJsonPatchTest {
                         new Node().properties(
                                 "state", new Node().value("new"))));
 
+        // then
+        assertEquals(
+                "Final parent does not exist for patch path: "
+                        + "/orders/order-1",
+                missingParent.getMessage());
+        assertNull(afterMissingParent.getProperties());
         assertEquals(
                 "new",
                 property(property(document, "orders"), "order-1")
@@ -73,6 +76,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
     @Test
     void shouldAllowAddingCompleteCollectionSubtreeAtExistingParent() {
+        // given
         Node document = new Node();
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(document);
@@ -81,8 +85,10 @@ class DocumentProcessingRuntimeJsonPatchTest {
                 new Node().properties(
                         "state", new Node().value("new")));
 
+        // when
         runtime.applyPatch("/", JsonPatch.add("/orders", orders));
 
+        // then
         assertEquals(
                 "new",
                 property(property(document, "orders"), "order-1")

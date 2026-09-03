@@ -58,6 +58,7 @@ class CanonicalOverlayPatchEngineTest {
 
     @Test
     void shouldRetainCreatedAncestorsAsExactEmptyObjectsInEveryRootMode() {
+        // given
         FrozenNode[] roots = new FrozenNode[]{
                 FrozenNode.empty(),
                 FrozenNode.fromUncheckedCanonicalNode(
@@ -65,16 +66,22 @@ class CanonicalOverlayPatchEngineTest {
                 FrozenNode.fromResolvedNode(
                         blue.language.model.Nodes.emptyObject())
         };
+        FrozenNode[] parents = new FrozenNode[roots.length];
 
-        for (FrozenNode root : roots) {
+        // when
+        for (int index = 0; index < roots.length; index++) {
+            FrozenNode root = roots[index];
             FrozenNode withLeaf = new CanonicalOverlayPatchEngine(root)
                     .apply(JsonPatch.add("/a/b", new Node().value("value")))
                     .root();
             FrozenNode withoutLeaf = new CanonicalOverlayPatchEngine(withLeaf)
                     .apply(JsonPatch.remove("/a/b"))
                     .root();
+            parents[index] = withoutLeaf.property("a");
+        }
 
-            FrozenNode parent = withoutLeaf.property("a");
+        // then
+        for (FrozenNode parent : parents) {
             assertNotNull(parent);
             assertNotNull(parent.getProperties());
             assertTrue(parent.getProperties().isEmpty());

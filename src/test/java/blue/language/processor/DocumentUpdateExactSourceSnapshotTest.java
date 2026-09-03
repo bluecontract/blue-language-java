@@ -25,6 +25,7 @@ class DocumentUpdateExactSourceSnapshotTest {
 
     @Test
     void shouldRetainPureReferencesInExactSourceBeforeSnapshot() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleNodes(new Node()
                 .name("Referenced Initial Document")
@@ -54,13 +55,17 @@ class DocumentUpdateExactSourceSnapshotTest {
                 blue.getDocumentProcessor().conformanceEngine(),
                 blue.getDocumentProcessor().snapshotManager());
 
+        // when
         DocumentUpdateData update = runtime.applyPatch(
                 "/", JsonPatch.remove("/child"));
 
         Node before = update.before();
+        Node referencedDocument = before == null
+                ? null
+                : before.getAsNode("/contracts/marker/document");
+
+        // then
         assertNotNull(before);
-        Node referencedDocument = before.getAsNode(
-                "/contracts/marker/document");
         assertNotNull(referencedDocument);
         assertTrue(referencedDocument.isReferenceOnly(),
                 "Document Update must retain the exact Source reference");
@@ -73,6 +78,7 @@ class DocumentUpdateExactSourceSnapshotTest {
 
     @Test
     void shouldProjectDerivedBeforeValueWhenSelectedInputHasNoNode() {
+        // given
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleNodes(new Node()
                 .name("Derived Value Type")
@@ -96,14 +102,12 @@ class DocumentUpdateExactSourceSnapshotTest {
         Blue blue = ProcessorTestSupport.blue(provider);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(
                 new Node().type(new Node().blueId(documentTypeBlueId)));
-        assertNull(snapshot.sourceAt("/derived"));
-        assertNull(snapshot.canonicalAt("/derived"));
-        assertNotNull(snapshot.resolvedAt("/derived"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 snapshot,
                 blue.getDocumentProcessor().conformanceEngine(),
                 blue.getDocumentProcessor().snapshotManager());
 
+        // when
         DocumentUpdateData update = runtime.applyPatch(
                 "/",
                 JsonPatch.add(
@@ -112,19 +116,22 @@ class DocumentUpdateExactSourceSnapshotTest {
                                 "content", new Node().value("authored"))));
 
         Node before = update.before();
-        assertNotNull(before);
-        assertTrue(before.isReferenceOnly(),
-                "verified materialized references stay exact references");
-        assertEquals(derivedBlueId, blue.calculateSourceDocumentBlueId(before));
-        assertTrue(FrozenNode.fromNode(before).isStrictCanonical(),
-                "derived fallback must be Canonical Identity Input");
-
         DocumentUpdateData fixedUpdate = runtime.applyPatch(
                 "/",
                 JsonPatch.add(
                         "/fixedText",
                         new Node().value("from type")));
 
+        // then
+        assertNull(snapshot.sourceAt("/derived"));
+        assertNull(snapshot.canonicalAt("/derived"));
+        assertNotNull(snapshot.resolvedAt("/derived"));
+        assertNotNull(before);
+        assertTrue(before.isReferenceOnly(),
+                "verified materialized references stay exact references");
+        assertEquals(derivedBlueId, blue.calculateSourceDocumentBlueId(before));
+        assertTrue(FrozenNode.fromNode(before).isStrictCanonical(),
+                "derived fallback must be Canonical Identity Input");
         assertNotNull(fixedUpdate.before());
         assertEquals("from type", fixedUpdate.before().getValue());
         assertTrue(FrozenNode.fromNode(fixedUpdate.before())
@@ -134,6 +141,7 @@ class DocumentUpdateExactSourceSnapshotTest {
 
     @Test
     void shouldUseMatchedAuthoritativeInputAndResolvedLanes() {
+        // given
         CanonicalTypeIdentityLookup identities = completeUntypedLookup();
         FrozenNode initial = FrozenNode.fromNode(Nodes.emptyObject());
         Node exactValue = new Node()
@@ -193,9 +201,11 @@ class DocumentUpdateExactSourceSnapshotTest {
                 identities,
                 true);
 
+        // when
         Node after = result.updatesAgainst(authoritative, null, null)
                 .get(0).after();
 
+        // then
         assertNotNull(after);
         assertTrue(after.isReferenceOnly());
         assertEquals(valueBlueId, after.getBlueId());
@@ -203,23 +213,29 @@ class DocumentUpdateExactSourceSnapshotTest {
 
     @Test
     void shouldFailClosedForUnverifiedMaterializedReferenceFallback() {
+        // given
         Node exactValue = new Node()
                 .properties("value", new Node().value("content"));
         String valueBlueId = FrozenNode.fromNode(exactValue).blueId();
         FrozenNode resolved = FrozenNode.fromResolvedNode(
                 exactValue.clone().blueId(valueBlueId));
 
+        // when
+        Runnable action = () -> BatchPatchRecord.exactInputSnapshot(
+                null,
+                resolved,
+                completeUntypedLookup(),
+                null);
+
+        // then
         assertThrows(
                 IllegalStateException.class,
-                () -> BatchPatchRecord.exactInputSnapshot(
-                        null,
-                        resolved,
-                        completeUntypedLookup(),
-                        null));
+                action::run);
     }
 
     @Test
     void shouldRetainVerifiedIdentityForMaterializedReferenceFallback() {
+        // given
         Node exactValue = new Node()
                 .name("Referenced Exact Value")
                 .properties("content", new Node().value("source"));
@@ -256,18 +272,21 @@ class DocumentUpdateExactSourceSnapshotTest {
             }
         };
 
+        // when
         FrozenNode projected = BatchPatchRecord.exactInputSnapshot(
                 null,
                 capturedResolved,
                 completeUntypedLookup(),
                 manager);
 
+        // then
         assertTrue(projected.isReferenceOnly());
         assertEquals(valueBlueId, projected.getReferenceBlueId());
     }
 
     @Test
     void shouldUseTypeEvidenceForGeneratedMetadataBeforeValue() {
+        // given
         Node completedType = new Node().name("Prior Generated Type");
         String typeBlueId = FrozenNode.fromNode(completedType).blueId();
         CanonicalTypeIdentityLookup identities = completeLookupFor(
@@ -300,8 +319,10 @@ class DocumentUpdateExactSourceSnapshotTest {
                         Collections.singletonList(write),
                         true);
 
+        // when
         Node before = plan.build(null).get(0).before();
 
+        // then
         assertNotNull(before);
         assertTrue(before.isReferenceOnly());
         assertEquals(typeBlueId, before.getBlueId());
