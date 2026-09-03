@@ -60,10 +60,10 @@ final class ClosureIdentityServiceTest {
                         id("b"), ScopeAddress.embedded("/a", 1L), id("a"),
                         BINDING_POLICY));
         assertEquals(
-                "sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7",
+                "sha256:5eacd13e1e98a75f80713bce3c4168ec69abe257bf27f938b8b582232018a697",
                 IDS.managedOccurrenceBindingIdentity(
                         id("b"), ScopeAddress.embedded("/a", 1L), id("a"),
-                        "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8",
+                        "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ",
                         BINDING_POLICY));
         assertEquals(
                 "sha256:1daa50609cd58f0d3ffb483be2ed6b3cf340e3d1f3de96d5101778a58fa4aa9e",
@@ -146,42 +146,42 @@ final class ClosureIdentityServiceTest {
     void shouldMatchReleasedBindingSetAndAffectedClosureVectors() {
         ManagedOccurrenceBinding bToA = binding(
                 "sha256:f1e82f9a16ec41c5b9d4c5d37d0e412f4c0cdf05a639cc507aedfee2e8d3f232",
-                "sha256:fcaa81273fa0de871bacd9150a4110c2d680d5498a1595940a72dd79d40e2fb7",
+                "sha256:5eacd13e1e98a75f80713bce3c4168ec69abe257bf27f938b8b582232018a697",
                 "b", "/a", "a",
-                "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8", true);
+                "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ", true);
         ManagedOccurrenceBinding aToB = binding(
                 "sha256:f5d1cd1ca17ac4fa6547d53f85dadb18f4b37e1bca42588f5cb4fb9090023eca",
-                "sha256:161a924802ff3740fe56c60641fdd72368ca6d1000f6a9721a518e440bf2d464",
+                "sha256:738a6433193982338d641f8759dae92bbb5b4b9093bc8b30d42e296baa2e9be6",
                 "a", "/b", "b",
-                "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ", false);
+                "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6", false);
         List<ManagedOccurrenceBinding> occurrences = Arrays.asList(bToA, aToB);
         String bindingSet = IDS.occurrenceBindingSetIdentity(occurrences);
         assertEquals(
-                "sha256:bf684fafcc3901aedb2c6f7154b15a1cfa36958dbc8d479113317fd5cd0588ee",
+                "sha256:c8f3bd1bbefdc74425c9648e1db070982cd02021f7c8f5239142e0c3d8824f72",
                 bindingSet);
 
         ComponentSnapshot componentA = acyclic(
                 "sha256:7f65ed079664f9e8c2c38b1294f739ad105bc718dd96d98ec67e0a91cd4cd9d7",
-                "sha256:f201416a678dd218ee3fb60b25eab0ce4e51f8c4ee25ad966c214ed6ed8a6858",
-                "a", "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8");
+                "sha256:e166f34649e7ff062265e74822aa892763dfbaa5a9e30915fb3f2d1491234a5e",
+                "a", "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ");
         ComponentSnapshot componentB = acyclic(
                 "sha256:1cabaeee5d923ae59beee6f049ee2a69fefdd44ae4752428f184d3fb4496f058",
-                "sha256:23c1237df89ee70ad0257df724270fc614a74964a3254935de319f553ec77e29",
-                "b", "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ");
+                "sha256:871712178cfc249c05203b57c92b8d696a54a2c4e9a8591621ba324a76ca1f85",
+                "b", "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6");
         assertEquals(componentA.componentStateIdentity(),
                 IDS.componentStateIdentity(componentA));
         assertEquals(componentB.componentStateIdentity(),
                 IDS.componentStateIdentity(componentB));
 
         AffectedClosureSnapshot snapshot = new AffectedClosureSnapshot(
-                "sha256:ed4ac428e31d3960b96bb4d26d816e77247942b7438404a79fb27cba3d67726d",
+                "sha256:c65ef11c664373426353af741b2ccd5f2297bcc522d91a98e6abcfe0e5883db2",
                 1L,
                 Arrays.asList(
                         document("a",
-                                "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8",
+                                "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ",
                                 true),
                         document("b",
-                                "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ",
+                                "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6",
                                 false)),
                 occurrences,
                 bindingSet,

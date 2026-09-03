@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class HistoricalProviderSuspensionBoundaryTest {
 
     private static final String HISTORICAL_A5 =
-            "78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA";
+            "2kpAUcknjsY6eoij8s6u3vKHKNzFBWyweaekTpMkK7E8";
 
     @Test
     void unavailableExactHistoricalNodeSuspendsWithoutCompletedEvidence() {

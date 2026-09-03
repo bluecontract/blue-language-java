@@ -16,9 +16,9 @@ final class ClosureDirectSeedPlannerTest {
     private static final String SHA_B =
             "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     private static final String BLUE_A =
-            "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8";
+            "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ";
     private static final String BLUE_B =
-            "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ";
+            "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6";
 
     @Test
     void shouldMatchReleasedCclo34FirstSeedIdentities() {

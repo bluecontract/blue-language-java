@@ -24,7 +24,7 @@ final class ComponentFinalizationKernelTest {
     private static final String BINDING_POLICY =
             "sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35";
     private static final String CLO_01_MASTER =
-            "AUy8JhB5oRViCnC7CYpbL1hJdRY2sKDJUNaogzJ13xgR";
+            "9J59XHipxtMwoMTY7r7HaicepUCtDPkMPFMAzLfdp4iW";
 
     @Test
     void shouldMatchReleasedClo01CyclicIdentityAndProofOracle() {
@@ -51,10 +51,10 @@ final class ComponentFinalizationKernelTest {
                 "sha256:b27694341619d5d0835f99889e08eed563c00a8124aaf5945b115826c8b7e4b9",
                 component.componentIdentity());
         assertEquals(
-                "sha256:8853187f6535f16f427ab7ba5e40e59ef799b5b28c6ee8843ffd88685369835e",
+                "sha256:22090c938702e4d83792a7534ab991825463a5fadb19ef4fe6bcb7d000e0824c",
                 component.cyclicProofIdentity());
         assertEquals(
-                "sha256:d92f1fdf1384e6066c507ce8e5172434ac0da4578c8ae0eb03495328f5ba8c18",
+                "sha256:cdfd54d28552cfc08c9bcf5633a2a2e1f06709b2564b8f87e2163c6d79ee8c19",
                 component.componentStateIdentity());
         assertEquals(CLO_01_MASTER + "#0", result.document(a).blueId());
         assertEquals(CLO_01_MASTER + "#1", result.document(b).blueId());
@@ -130,38 +130,38 @@ final class ComponentFinalizationKernelTest {
     void shouldRetainReleasedClo10DocumentToCanonicalPermutation() {
         DocumentId a = new DocumentId("simple-a");
         DocumentId b = new DocumentId("simple-b");
-        String master = "6RYTLq7gAjpmrfcExL43ZmPW1vUPdhuWLmMYb9bVYuF2";
+        String master = "2MFwcUowEYvgMfGp9QS8nwqM75H4n2CUfccLKkq1yynS";
         ManagedOccurrenceBinding aToB = binding(
-                a, "/b", b, master + "#0", true, 1L);
+                a, "/b", b, master + "#1", true, 1L);
         ManagedOccurrenceBinding bToA = binding(
-                b, "/a", a, master + "#1", true, 1L);
+                b, "/a", a, master + "#0", true, 1L);
         List<ManagedOccurrenceBinding> rows = Arrays.asList(aToB, bToA);
 
         ComponentFinalizationResult result = finalize(
                 bodies(
-                        a, clo10A(master + "#0"),
-                        b, clo10B(master + "#1")),
+                        a, clo10A(master + "#1"),
+                        b, clo10B(master + "#0")),
                 rows,
                 rows,
                 generations(a, 1L, b, 1L));
 
         ComponentSnapshot component = result.components().get(0).component();
         assertEquals(master, component.masterBlueId());
-        assertEquals(Arrays.asList(master + "#1", master + "#0"),
+        assertEquals(Arrays.asList(master + "#0", master + "#1"),
                 component.orderedMemberBlueIds());
-        assertEquals(Integer.valueOf(1), result.document(a)
+        assertEquals(Integer.valueOf(0), result.document(a)
                 .cyclicMemberIndex());
-        assertEquals(Integer.valueOf(0), result.document(b)
+        assertEquals(Integer.valueOf(1), result.document(b)
                 .cyclicMemberIndex());
         assertEquals(
-                "sha256:b6e849416f7fffcff5db620afaba19fa75bd7a935a435ece0d5fb2f89ab241ec",
+                "sha256:03d27c18f26381aa18f7184ae61882da94dce8120fbd77fce26e46818f42ca04",
                 component.cyclicProofIdentity());
         assertEquals(
-                "sha256:00bf502877d64f4a4380414906113f6fae50f4bf8d3b1a1222876bb92dbf9da6",
+                "sha256:c171b091b8896ee5eba8f08dac57ed95b2b9b4acb8a390711921eee6ac431577",
                 component.componentStateIdentity());
-        assertEquals(master + "#0", result.document(a).document()
+        assertEquals(master + "#1", result.document(a).document()
                 .getNode("/b").getBlueId());
-        assertEquals(master + "#1", result.document(b).document()
+        assertEquals(master + "#0", result.document(b).document()
                 .getNode("/a").getBlueId());
     }
 
@@ -402,7 +402,7 @@ final class ComponentFinalizationKernelTest {
                         "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
                 "b", reference(targetBlueId),
                 "contracts", reference(
-                        "AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ"));
+                        "Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg"));
     }
 
     private static Node clo01B(String targetBlueId) {
@@ -413,7 +413,7 @@ final class ComponentFinalizationKernelTest {
                         "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
                 "a", reference(targetBlueId),
                 "contracts", reference(
-                        "F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz"));
+                        "fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9"));
     }
 
     private static Node clo10A(String targetBlueId) {
@@ -424,7 +424,7 @@ final class ComponentFinalizationKernelTest {
                         "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
                 "b", reference(targetBlueId),
                 "contracts", reference(
-                        "7iWdksGRG7vaHczbr18QqK8Ex598ZBjQJdMZbAe3nRHB"));
+                        "ERrv83b9RbGZSg2vyzFmzQiU2KoLyfzkuEn234gm7oFA"));
     }
 
     private static Node clo10B(String targetBlueId) {
@@ -435,7 +435,7 @@ final class ComponentFinalizationKernelTest {
                         "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
                 "a", reference(targetBlueId),
                 "contracts", reference(
-                        "DwqgPP4QrvY1f96zSo7k6hgoq1YRi2CD8Hkvu2YTLgNA"));
+                        "8uvxz52uKPTRgGi4bB9HDnd5wVi4uGZ9ot1jtZppXA7Z"));
     }
 
     private static Node reference(String blueId) {

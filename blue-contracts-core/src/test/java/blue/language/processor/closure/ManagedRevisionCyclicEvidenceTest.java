@@ -486,7 +486,7 @@ final class ManagedRevisionCyclicEvidenceTest {
                         "3fbe7KHmQAtqGDkqzPrPkfhJCD1nMFXJa9ckCUZxxxNR"),
                 "b", reference("this#1"),
                 "contracts", reference(
-                        "AKdg7JuRiCbPdRARLfWhCoSFQz4htgjc2pcDPWkNPfQJ"));
+                        "Fiod9ArSxfZhdRe3rC5dqM78x2CBfW3zdzSbaY9a6ujg"));
     }
 
     private static Node authoredPlaceholderB() {
@@ -497,7 +497,7 @@ final class ManagedRevisionCyclicEvidenceTest {
                         "8i8RsDeMbU4U3nudF7pWdTH1imR2aRenUqnXb6xAWu3a"),
                 "a", reference("this#0"),
                 "contracts", reference(
-                        "F4GdSvomgpBDpomh3VuFEg3L6yu2gLsBQeCEyGmYpeuz"));
+                        "fyDiUQNFeL6UYVyezYDUYSbHfPX6gZCTQwsJudgNGq9"));
     }
 
     private static Node bodyA() {

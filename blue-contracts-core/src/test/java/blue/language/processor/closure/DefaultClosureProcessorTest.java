@@ -54,9 +54,9 @@ final class DefaultClosureProcessorTest {
     private static final DocumentId C = new DocumentId("c");
     private static final DocumentId D = new DocumentId("d");
     private static final String C34_A_BLUE_ID =
-            "8XQVkfrtGJ5kK3UBM7yR33SBME13vkumTvXo7kRJe3p8";
+            "8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ";
     private static final String C34_B_BLUE_ID =
-            "6ZEqCbcDrgozabAdvxqbUVsG8z8NGxFv86ot2Go55xRZ";
+            "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6";
     private static final String C34_X_BLUE_ID =
             "EUX3vKa2wK4c1ZQvryFrytQWuVAwZ2vbCk4BvgMjzKAR";
     private static final String C34_Y_BLUE_ID =
@@ -2263,7 +2263,7 @@ final class DefaultClosureProcessorTest {
                         .properties(
                                 "document",
                                 new Node().blueId(
-                                        "6ynL7bPCMB5R5kQpqzVaNZs3YVmAopDLkdHneoeexjrm")));
+                                        "4Hf87W63SbbxXUUfPg8tyfqdMHky4HmvnCj9by5Hv4qQ")));
         return document;
     }
 

@@ -162,8 +162,8 @@ APPROVED_EXACT_NODE_DEMAND = {
     "demandIdentity": "sha256:8c1e312399e706565572986d131bdf829e57666285b6486fb931cfe9dd41920f",
     "sourceDocumentId": "blue-contracts/exact-node-provider",
     "sourcePath": "/",
-    "suppliedValueBlueId": "78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA",
-    "blueId": "78AbUme4Zpip36sWMsx1fvvfdEy1LFKfTUgtP68LHZBA",
+    "suppliedValueBlueId": "2kpAUcknjsY6eoij8s6u3vKHKNzFBWyweaekTpMkK7E8",
+    "blueId": "2kpAUcknjsY6eoij8s6u3vKHKNzFBWyweaekTpMkK7E8",
     "logicalPath": "/",
 }
 
