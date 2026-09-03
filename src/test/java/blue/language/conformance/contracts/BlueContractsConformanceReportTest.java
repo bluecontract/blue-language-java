@@ -40,7 +40,7 @@ class BlueContractsConformanceReportTest {
                     + "(sha256:[0-9a-f]{64})\\s*```");
     private static final Pattern RELEASE_LANGUAGE_REGISTRY_IDENTITY =
             Pattern.compile(
-                    "(?m)^\\s*languageRegistryPackage:\\s*"
+                    "(?m)^\\s*languageRegistryPackageIdentity:\\s*"
                             + "(sha256:[0-9a-f]{64})\\s*$");
     private static final Pattern MACHINE_LANGUAGE_REGISTRY_IDENTITY =
             Pattern.compile(
