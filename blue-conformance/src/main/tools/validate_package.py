@@ -9710,10 +9710,10 @@ def main() -> None:
     validate_checksum_manifest()
     ordinary, closure = fixture_files()
     require(len(ordinary) == 197, "final ordinary fixture count must be 197")
-    require(len(closure) == 93, "final closure fixture count must be 93")
+    require(len(closure) == 98, "final closure fixture count must be 98")
     require(
-        len(ordinary) + len(closure) == 290,
-        "final Contracts fixture count must be 290",
+        len(ordinary) + len(closure) == 295,
+        "final Contracts fixture count must be 295",
     )
     actual_full_lifecycle_names = {
         path.name

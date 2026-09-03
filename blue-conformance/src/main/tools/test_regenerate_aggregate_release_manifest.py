@@ -37,10 +37,10 @@ class AggregateReleaseManifestTest(unittest.TestCase):
     def test_missing_new_count_is_inserted_once(self) -> None:
         source = "components:\n  contractsGasFixtureCount: 1\npackageIdentity: old\n"
         updated = aggregate._replace_component(
-            source, "contractsClosureFixtureCount", 93
+            source, "contractsClosureFixtureCount", 98
         )
         self.assertEqual(1, updated.count("contractsClosureFixtureCount"))
-        self.assertIn("contractsClosureFixtureCount: 93", updated)
+        self.assertIn("contractsClosureFixtureCount: 98", updated)
 
 
 if __name__ == "__main__":

@@ -25,14 +25,14 @@ import generate_closure_fixtures as closure_generator
 from gas_reference import gas_trace_identity
 
 
-SUCCESS_MARKER = "CLOSURE_RUNTIME_FIXTURES_EXPORTED count=75"
+SUCCESS_MARKER = "CLOSURE_RUNTIME_FIXTURES_EXPORTED count=80"
 REPORT_SCHEMA = (
     "blue-contracts-closure-runtime-fixture-export/1.0"
 )
-EXPECTED_INVENTORY = 93
-EXPECTED_EXECUTED = 75
+EXPECTED_INVENTORY = 98
+EXPECTED_EXECUTED = 80
 EXPECTED_LIMITS = 18
-EXPECTED_COMPLETE = 66
+EXPECTED_COMPLETE = 71
 RUNTIME_WEIGHTS = {"scriptedResultApplied": 1}
 REJECTED_CHARGE_FIELDS = (
     "namespace",
@@ -344,7 +344,10 @@ def rebind(package_root: Path, report: dict[str, Any]) -> None:
     require_count(report, "skippedLimitFixtureCount", EXPECTED_LIMITS)
     entries = report.get("entries")
     if not isinstance(entries, list) or len(entries) != EXPECTED_INVENTORY:
-        raise RebindFailure("receipt report does not contain exactly 93 entries")
+        raise RebindFailure(
+            "receipt report does not contain exactly "
+            f"{EXPECTED_INVENTORY} entries"
+        )
 
     seen: set[str] = set()
     changed = 0

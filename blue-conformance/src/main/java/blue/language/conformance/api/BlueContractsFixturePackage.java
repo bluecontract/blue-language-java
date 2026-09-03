@@ -39,7 +39,7 @@ final class BlueContractsFixturePackage {
             16 * 1024 * 1024;
 
     static final String CONTRACTS_RELEASE_IDENTITY =
-            "sha256:6c339a4d59e3596a598b95bc44edd0b95976aa447ab311f85b940051b580c038";
+            "sha256:ed634d06aa95153fd34ae991c901131714a2a303980c49dc12ba9ce498364c5c";
     private static final String CONTRACTS_RELEASE_MANIFEST_RESOURCE =
             "blue-contracts-closure-1.0/release-manifest.yaml";
 
@@ -275,7 +275,7 @@ final class BlueContractsFixturePackage {
                         .CONTRACTS_CLOSURE) {
             throw new IllegalStateException(
                     "Contracts fixture inventory must contain exactly 126 "
-                            + "ordinary behavior, 71 ordinary gas, and 93 "
+                            + "ordinary behavior, 71 ordinary gas, and 98 "
                             + "closure fixtures");
         }
         if (!CONTRACTS_FIXTURE_PACKAGE_IDENTITY.equals(computeFixturePackageIdentity())) {
@@ -539,7 +539,7 @@ final class BlueContractsFixturePackage {
                 != BlueReleaseConformanceReport.CONTRACTS_FIXTURE_COUNT) {
             throw new IllegalStateException(
                     "Contracts executable inventory must contain exactly "
-                            + "126 ordinary behavior, 71 ordinary gas, and 93 "
+                            + "126 ordinary behavior, 71 ordinary gas, and 98 "
                             + "closure fixtures; found " + behavior
                             + " ordinary behavior, " + gas
                             + " ordinary gas, and " + closure + " closure");

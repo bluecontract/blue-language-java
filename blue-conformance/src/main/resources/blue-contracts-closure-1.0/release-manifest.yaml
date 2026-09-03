@@ -61,9 +61,9 @@ identityConstructors:
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:7e15742bb09a0488b2beb58353b59cce1b6103fe8492b798f10dd89819d3f671
+  packageIdentity: sha256:5c6c6ca1ae10cff5e3afa4ee3a816b9e9f1a0bca802c71662f06951001473783
   vectorCount: 182
-  fixtureCount: 290
+  fixtureCount: 295
 oraclePackage:
   path: oracles/manifest.yaml
   packageIdentity: sha256:713eb07c7136c02594ed14682d407283647bde1ee4e5037486a6f36f55d6c5e9
@@ -93,4 +93,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:6c339a4d59e3596a598b95bc44edd0b95976aa447ab311f85b940051b580c038
+releaseIdentity: sha256:ed634d06aa95153fd34ae991c901131714a2a303980c49dc12ba9ce498364c5c

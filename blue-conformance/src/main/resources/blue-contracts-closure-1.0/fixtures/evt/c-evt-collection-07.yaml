@@ -3,12 +3,12 @@ id: c-evt-collection-07
 vectors:
 - C-EVT-COLLECTION-07
 category: evt
-description: Escaped direct-member routing is representation, cache, and batching independent with one portable gas trace.
+description: Escaped collection and member segments plus exact event filtering are representation, cache, and batching independent.
 operation: process
 input:
   root:
-    orders:
-      "a/b":
+    "a/b":
+      "a~b":
         contracts:
           in:
             type:
@@ -30,16 +30,30 @@ input:
       embedded:
         type:
           blueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
-        collectionPaths: [/orders]
-      escapedOrders:
+        collectionPaths: [/a~1b]
+      escapedCollection:
         type:
           blueId: FodJjjdNVR5gYf8Eiv6X1UmSAg8GZA6tbpKxfkAeDwpg
-        collectionPath: /orders
+        collectionPath: /a~1b
+        event:
+          id: A
         order: 0
       observe:
         type:
           blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
-        channel: escapedOrders
+        channel: escapedCollection
+        order: 0
+      eventMismatch:
+        type:
+          blueId: FodJjjdNVR5gYf8Eiv6X1UmSAg8GZA6tbpKxfkAeDwpg
+        collectionPath: /a~1b
+        event:
+          id: never
+        order: 1
+      mustNotRun:
+        type:
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
+        channel: eventMismatch
         order: 0
   event:
     type:
@@ -51,7 +65,7 @@ input:
     indexedRootRevision: 7
     eventOrderKey: [1000, escaped, 1]
     deliverySnapshot:
-    - scopePath: /orders/a~1b
+    - scopePath: /a~1b/a~0b
       channelKey: in
       order: 0
   provider:
@@ -64,10 +78,18 @@ input:
     rootForm: inline
     cache: cold
     batching: unbatched
+  - name: inline-warm
+    rootForm: inline
+    cache: warm
+    batching: batched
+  - name: reference-cold
+    rootForm: reference
+    cache: cold
+    batching: batched
   - name: reference-warm
     rootForm: reference
     cache: warm
-    batching: batched
+    batching: unbatched
 expected:
   assertions:
   - actual: result.status
@@ -76,6 +98,21 @@ expected:
   - actual: trace.handlerExecutionCount
     op: equals
     expected: 2
+  - actual: trace.counters.channelCandidateTested
+    op: equals
+    expected: 3
+  - actual: trace.counters.embeddedPathEntryRead
+    op: equals
+    expected: 12
+  - actual: trace.counters.embeddedPathSegmentValidated
+    op: equals
+    expected: 13
+  - actual: trace.counters.embeddedEventDelivered
+    op: equals
+    expected: 1
+  - actual: result.events
+    op: sequenceEquals
+    expected: []
   - actual: result.{status,document,events,totalGas}
     op: sameAcrossVariants
     variant: all
@@ -83,5 +120,8 @@ expected:
     op: sameAcrossVariants
     variant: all
   - actual: demands.semantic
+    op: sameAcrossVariants
+    variant: all
+  - actual: trace.handlerExecutionOrder
     op: sameAcrossVariants
     variant: all

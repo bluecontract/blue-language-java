@@ -2,6 +2,7 @@ schema: blue-contracts-fixture/1.0
 id: c-evt-collection-04
 vectors:
 - C-EVT-COLLECTION-04
+- C-EVT-COLLECTION-07
 category: evt
 description: Descendant mode accepts an event from below a direct collection member through a transitive managed occurrence.
 operation: process

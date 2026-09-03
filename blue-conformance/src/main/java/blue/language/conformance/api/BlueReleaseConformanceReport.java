@@ -24,7 +24,7 @@ public final class BlueReleaseConformanceReport {
     /** Exact fixture cardinalities bound by the final release package. */
     public static final int LANGUAGE_FIXTURE_COUNT = 182;
     /** Exact Contracts fixture cardinality. */
-    public static final int CONTRACTS_FIXTURE_COUNT = 290;
+    public static final int CONTRACTS_FIXTURE_COUNT = 295;
     /** Exact combined fixture cardinality. */
     public static final int TOTAL_FIXTURE_COUNT =
             LANGUAGE_FIXTURE_COUNT + CONTRACTS_FIXTURE_COUNT;

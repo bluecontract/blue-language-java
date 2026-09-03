@@ -772,8 +772,11 @@ def generate() -> None:
     dump(FIXTURE_DIR/"c-clo-17-limit-above-bound.yaml",base_fixture("c-clo-17-limit-above-bound",["C-CLO-17"],"limits","admit-closure","The first member count above the exact configured bound is rejected before member execution.","static-and-self-cycle.yaml",limit_over,over_expected))
 
     # Locality.
-    loc_input=deepcopy(admit_input);loc_input["unrelatedDocumentCount"]=1000;loc_input["requestedProviderNodes"]=simple_ids
-    loc_expected=deepcopy(admit_expected);loc_expected["providerLoads"]=list(simple_ids);loc_expected["unrelatedDocumentsOpened"]=0
+    # Both cyclic members are exact invocation documents, so admitting this
+    # closure must not fetch them again through the external node provider.
+    # Locality is witnessed by the closed unrelated-document counter instead.
+    loc_input=deepcopy(admit_input);loc_input["unrelatedDocumentCount"]=1000
+    loc_expected=deepcopy(admit_expected);loc_expected["unrelatedDocumentsOpened"]=0
     dump(FIXTURE_DIR/"c-clo-18-locality-1000-unrelated.yaml",base_fixture("c-clo-18-locality-1000-unrelated",["C-CLO-18"],"locality","admit-closure","A two-member cyclic component among 1,000 unrelated documents opens only the exact component and required containing spine.","static-and-self-cycle.yaml",loc_input,loc_expected))
 
     # Public events under outer root and late rollback (structural exact scenario).

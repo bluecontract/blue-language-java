@@ -11,13 +11,13 @@ components:
   languageBehaviorFixtureCount: 182
   contractsSpecificationSha256: 62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9
   contractsRegistryPackageIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
-  contractsFixturePackageIdentity: sha256:7e15742bb09a0488b2beb58353b59cce1b6103fe8492b798f10dd89819d3f671
+  contractsFixturePackageIdentity: sha256:5c6c6ca1ae10cff5e3afa4ee3a816b9e9f1a0bca802c71662f06951001473783
   contractsGasPackageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
   contractsVectorCount: 182
   contractsBehaviorFixtureCount: 126
   contractsGasFixtureCount: 71
-  contractsTotalExecutableFixtureCount: 290
-  contractsClosureFixtureCount: 93
+  contractsTotalExecutableFixtureCount: 295
+  contractsClosureFixtureCount: 98
   processEmbeddedBlueId: 9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3
 identityAlgorithm:
   digest: sha256
@@ -1143,4 +1143,4 @@ files:
 - path: validation/pandoc-parse.txt
   sha256: b4197468496c71ded2a1ccfe394c549813a5151c091c5828b06db171bd6292be
   bytes: 360
-packageIdentity: sha256:2f378989814265485fa202907b1d401d7e8115c69b7883bcf1330017872161a3
+packageIdentity: sha256:f794dfd2c57969f81025387895e60a0e67919f677ccf7efeeac0f5ac189f938c

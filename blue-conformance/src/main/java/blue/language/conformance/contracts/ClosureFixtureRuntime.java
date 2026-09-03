@@ -128,10 +128,16 @@ public final class ClosureFixtureRuntime
             LinkedHashSet<String> availableNodes =
                     new LinkedHashSet<String>(registry.nodesByBlueId.keySet());
             availableNodes.addAll(providerNodes.keySet());
-            if (!availableNodes.containsAll(availableExpected)) {
+            if (explicitMode
+                    && !availableNodes.containsAll(availableExpected)) {
+                LinkedHashSet<String> missing =
+                        new LinkedHashSet<String>(availableExpected);
+                missing.removeAll(availableNodes);
                 throw new IllegalArgumentException(
-                        "Closure fixture provider expectedLoads names "
-                                + "unavailable exact content");
+                        "Closure fixture physical provider expectedLoads "
+                                + "names absent backing content in "
+                                + selected.path("id").asText("<unknown>")
+                                + ": " + missing);
             }
         }
         ContractsFixtureHarnessDataSupport.FixturePhysicalProvider provider =

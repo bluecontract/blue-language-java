@@ -117,7 +117,7 @@ final class ConformanceReportConstants {
     static final class FixtureCount {
         static final int CONTRACTS_ORDINARY_BEHAVIOR = 126;
         static final int CONTRACTS_ORDINARY_GAS = 71;
-        static final int CONTRACTS_CLOSURE = 93;
+        static final int CONTRACTS_CLOSURE = 98;
 
         private FixtureCount() {
         }

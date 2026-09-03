@@ -33,7 +33,7 @@ final class ClosureConformanceHarnessTest {
                 ClosureConformanceSuite.inventory();
         List<ClosureFixtureInventory.Entry> inventory = report.fixtures();
 
-        assertEquals(93, inventory.size());
+        assertEquals(98, inventory.size());
         assertTrue(report.closureInventoryExact());
         assertFalse(report.implementationConformanceClaimed());
         assertEquals(
@@ -50,9 +50,9 @@ final class ClosureConformanceHarnessTest {
                 Collections.singletonList("C-CLO-34"),
                 separateDocuments.vectors());
         assertEquals(
-                "b0e6578a0845098dfd2d8de3d13874556483fa83d773c0429f0b7a121d90a42b",
+                "bfc56b2520ba51f02dcec797996a5369ff3d3326990a907dc09d4da927fd4cf3",
                 separateDocuments.sha256());
-        assertEquals(120198L, separateDocuments.bytes());
+        assertEquals(119322L, separateDocuments.bytes());
     }
 
     @Test

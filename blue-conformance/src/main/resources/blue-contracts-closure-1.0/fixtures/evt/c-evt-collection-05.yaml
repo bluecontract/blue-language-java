@@ -2,6 +2,7 @@ schema: blue-contracts-fixture/1.0
 id: c-evt-collection-05
 vectors:
 - C-EVT-COLLECTION-05
+- C-EVT-COLLECTION-07
 category: evt
 description: Decoded segment matching rejects the raw-prefix lookalike orders-old for a channel bound to orders.
 operation: process

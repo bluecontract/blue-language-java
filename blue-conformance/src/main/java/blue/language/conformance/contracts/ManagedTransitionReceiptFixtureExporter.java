@@ -47,7 +47,7 @@ import java.util.Set;
  */
 public final class ManagedTransitionReceiptFixtureExporter {
 
-    private static final int EXPECTED_CLOSURE_FIXTURES = 93;
+    private static final int EXPECTED_CLOSURE_FIXTURES = 98;
     private static final String REPORT_SCHEMA =
             "blue-contracts-closure-runtime-fixture-export/1.0";
     private static final String SUCCESS_MARKER =
@@ -111,7 +111,7 @@ public final class ManagedTransitionReceiptFixtureExporter {
                 packageRoot.resolve("fixtures/manifest.yaml"));
         require(manifest.path("closureFixtureCount").asInt(-1)
                         == EXPECTED_CLOSURE_FIXTURES,
-                "candidate does not inventory exactly 93 closure fixtures");
+                "candidate does not inventory exactly 98 closure fixtures");
         JsonNode files = manifest.get("files");
         require(files != null && files.isArray(),
                 "candidate fixture manifest has no files array");

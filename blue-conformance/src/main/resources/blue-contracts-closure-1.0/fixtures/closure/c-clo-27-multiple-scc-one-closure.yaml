@@ -822,9 +822,9 @@ expected:
   - subscriptionDeltaOrdinal: 0
     operation: REPLACE
     targetManagedScopeIdentity: sha256:67228775f2dd1a5efca06829d861fbb3f3e3777c6e4a3b537f66ec37eed61851
-    channelOccurrenceIdentity: sha256:50d69b4f53f77494105b07acc0dc14687febc8e8712464bc93868082722a32ed
-    beforeSubscriptionIdentity: sha256:3fd1fe5d2a64cac666f29a0afb961517776aa79732d221ac1fa9878a0fef4b72
-    afterSubscriptionIdentity: sha256:bf6269c05e10eab256e76f7aa195cacc484da22923636bac2496a510d1679207
+    channelOccurrenceIdentity: sha256:a88fa54da2fd9835deeb4660c5ff518595677399d822ab1de3613150a5b5971b
+    beforeSubscriptionIdentity: sha256:3fb6fd402e495df7deeb34e91322c26d3d3e25f9587ba6caf2fcb433a269a2a8
+    afterSubscriptionIdentity: sha256:880a98e35117b89357ba930dd4b9d89b92f4f6d0aac7badd8992ee8ab5142fe7
     beforeDocumentBlueId: 7xTn9iDFHmWLJ4j5Y1EKraFaF7BWEdd6mTA9t9dn7YbJ#1
     afterDocumentBlueId: 5HMEbgJU81bxjZbpwhAHPnSv47rbcGUZox5EyL4x73a5#0
     beforeGraphGeneration: 1
@@ -832,27 +832,27 @@ expected:
     beforeComponentGeneration: 1
     afterComponentGeneration: 1
     beforeSubscription:
-      subscriptionIdentity: sha256:3fd1fe5d2a64cac666f29a0afb961517776aa79732d221ac1fa9878a0fef4b72
+      subscriptionIdentity: sha256:3fb6fd402e495df7deeb34e91322c26d3d3e25f9587ba6caf2fcb433a269a2a8
       channelOccurrence:
-        channelOccurrenceIdentity: sha256:50d69b4f53f77494105b07acc0dc14687febc8e8712464bc93868082722a32ed
+        channelOccurrenceIdentity: sha256:a88fa54da2fd9835deeb4660c5ff518595677399d822ab1de3613150a5b5971b
         managedDocumentId: ma
         scopePath: /
         scopeActivationGeneration: 0
         rawChannelKey: source
-        effectiveRuntimeContributionBlueId: Gx8tkKh1TDiF9gGK8jz1s56vqBDqWuNvUXt5A9XNq8MR
+        effectiveRuntimeContributionBlueId: 6jRnXQKopqMbX68gi7mFTSRt2CPJo8S61RisRqbGNkfN
         subscriptionHeaderBlueId: 6jRnXQKopqMbX68gi7mFTSRt2CPJo8S61RisRqbGNkfN
       documentBlueId: 7xTn9iDFHmWLJ4j5Y1EKraFaF7BWEdd6mTA9t9dn7YbJ#1
       graphGeneration: 1
       componentGeneration: 1
     afterSubscription:
-      subscriptionIdentity: sha256:bf6269c05e10eab256e76f7aa195cacc484da22923636bac2496a510d1679207
+      subscriptionIdentity: sha256:880a98e35117b89357ba930dd4b9d89b92f4f6d0aac7badd8992ee8ab5142fe7
       channelOccurrence:
-        channelOccurrenceIdentity: sha256:50d69b4f53f77494105b07acc0dc14687febc8e8712464bc93868082722a32ed
+        channelOccurrenceIdentity: sha256:a88fa54da2fd9835deeb4660c5ff518595677399d822ab1de3613150a5b5971b
         managedDocumentId: ma
         scopePath: /
         scopeActivationGeneration: 0
         rawChannelKey: source
-        effectiveRuntimeContributionBlueId: Gx8tkKh1TDiF9gGK8jz1s56vqBDqWuNvUXt5A9XNq8MR
+        effectiveRuntimeContributionBlueId: 6jRnXQKopqMbX68gi7mFTSRt2CPJo8S61RisRqbGNkfN
         subscriptionHeaderBlueId: 6jRnXQKopqMbX68gi7mFTSRt2CPJo8S61RisRqbGNkfN
       documentBlueId: 5HMEbgJU81bxjZbpwhAHPnSv47rbcGUZox5EyL4x73a5#0
       graphGeneration: 1
@@ -860,9 +860,9 @@ expected:
   - subscriptionDeltaOrdinal: 1
     operation: REPLACE
     targetManagedScopeIdentity: sha256:e313ace13c10a3deb8f815bd679679ef9bbd01c3abacd7cd557526ef9aee31c4
-    channelOccurrenceIdentity: sha256:4fcfe223a91e2fc6e3fcdb80353e2321f76467862e225a4053ee78b9305d98a6
-    beforeSubscriptionIdentity: sha256:3b7097fd13e6932025ee78ab792c9a9bfd9044cc3f63da44118f00e4efdd4340
-    afterSubscriptionIdentity: sha256:28a4d79746de2468656afdf87c87b2d4ef2a5859c020f67f9d0d10189edb4cc5
+    channelOccurrenceIdentity: sha256:65b70a969d9720395b2c9a33dd3acf532b2b24bbf0b574701047b594cca99fac
+    beforeSubscriptionIdentity: sha256:f5757e55edf8563eba325eb6c040a1295b460f61d8931bbffab16361ae297b95
+    afterSubscriptionIdentity: sha256:fb479ce7cbccf3ca6533512b706d33b2abc614cf7224195b04b4ec60d57f6ab5
     beforeDocumentBlueId: 9UwqBpGXhXrf7AfemxJ8ASikakSbfCGJULpnLc7oiW4V#1
     afterDocumentBlueId: 9VmD3NSyXu9JkdV6d6RKoWYMQrGwA8evNg9Eqhd15qU7#1
     beforeGraphGeneration: 1
@@ -870,32 +870,32 @@ expected:
     beforeComponentGeneration: 1
     afterComponentGeneration: 1
     beforeSubscription:
-      subscriptionIdentity: sha256:3b7097fd13e6932025ee78ab792c9a9bfd9044cc3f63da44118f00e4efdd4340
+      subscriptionIdentity: sha256:f5757e55edf8563eba325eb6c040a1295b460f61d8931bbffab16361ae297b95
       channelOccurrence:
-        channelOccurrenceIdentity: sha256:4fcfe223a91e2fc6e3fcdb80353e2321f76467862e225a4053ee78b9305d98a6
+        channelOccurrenceIdentity: sha256:65b70a969d9720395b2c9a33dd3acf532b2b24bbf0b574701047b594cca99fac
         managedDocumentId: mc
         scopePath: /
         scopeActivationGeneration: 0
         rawChannelKey: source
-        effectiveRuntimeContributionBlueId: 7jbwvFBXzVE3Lmmi51Q1narhUMJ45Gy1q86iPrPdKyon
+        effectiveRuntimeContributionBlueId: 8VMuFjJd9NkKk9zm6THR6RhurLNdbA9EzoDx51Ryj6SB
         subscriptionHeaderBlueId: 8VMuFjJd9NkKk9zm6THR6RhurLNdbA9EzoDx51Ryj6SB
       documentBlueId: 9UwqBpGXhXrf7AfemxJ8ASikakSbfCGJULpnLc7oiW4V#1
       graphGeneration: 1
       componentGeneration: 1
     afterSubscription:
-      subscriptionIdentity: sha256:28a4d79746de2468656afdf87c87b2d4ef2a5859c020f67f9d0d10189edb4cc5
+      subscriptionIdentity: sha256:fb479ce7cbccf3ca6533512b706d33b2abc614cf7224195b04b4ec60d57f6ab5
       channelOccurrence:
-        channelOccurrenceIdentity: sha256:4fcfe223a91e2fc6e3fcdb80353e2321f76467862e225a4053ee78b9305d98a6
+        channelOccurrenceIdentity: sha256:65b70a969d9720395b2c9a33dd3acf532b2b24bbf0b574701047b594cca99fac
         managedDocumentId: mc
         scopePath: /
         scopeActivationGeneration: 0
         rawChannelKey: source
-        effectiveRuntimeContributionBlueId: 7jbwvFBXzVE3Lmmi51Q1narhUMJ45Gy1q86iPrPdKyon
+        effectiveRuntimeContributionBlueId: 8VMuFjJd9NkKk9zm6THR6RhurLNdbA9EzoDx51Ryj6SB
         subscriptionHeaderBlueId: 8VMuFjJd9NkKk9zm6THR6RhurLNdbA9EzoDx51Ryj6SB
       documentBlueId: 9VmD3NSyXu9JkdV6d6RKoWYMQrGwA8evNg9Eqhd15qU7#1
       graphGeneration: 1
       componentGeneration: 1
-  subscriptionDeltasIdentity: sha256:99ddb351b251a2753699f4622ebdd3b79bf19ad1508bcf0c24628eb88f9264da
+  subscriptionDeltasIdentity: sha256:cfb18483023877dc17e289dade8c7fc0836d6549700f1c8165ae58543c096051
   checkpointWrites:
   - checkpointWriteOrdinal: 0
     targetManagedScopeIdentity: sha256:67228775f2dd1a5efca06829d861fbb3f3e3777c6e4a3b537f66ec37eed61851
@@ -2020,7 +2020,7 @@ expected:
     componentGeneration: 1
     reason: checkpoint-settlement.0.component.1.member-finalized.1
   platformCommitCompanion:
-    companionIdentity: sha256:119f5c396195c2a463b90a52b21a6039b31e4d11f60790bba3a1746e20e5f8bf
+    companionIdentity: sha256:4e0403bb389f98549ac2efbd22339d5611d93da6072c0ecbadd2d88c44dd0bec
     invocationIdentity: sha256:36e8e4fd39406e134e1b38b05b75400edee2fb24fac94f19d984d22a9ef4ee9e
     inputClosureIdentity: sha256:cfabcf8c4d29e85e1299d85c924254c367f212936e78a90cdbc3734fae2ffde1
     outputClosureIdentity: sha256:632282275a7ba30b59c4a54309eef23371c41e7a6e40a1ca8b9a893b8652e44e
@@ -2068,7 +2068,7 @@ expected:
     occurrenceBindingSetIdentity: sha256:5f0a61104626ee20205508bacdd9f656da5561852dd95e3f52d8e7d4634f498c
     graphChangesIdentity: sha256:af6581e7b735e2ea4c336e3a6e7556d2a892609db99a263174faf52044d78731
     checkpointWritesIdentity: sha256:feabfdac6e5d19018fc792f9fa4a0c07f9911dc3b9e7fc8fd8c0386d6acc9cd7
-    subscriptionDeltasIdentity: sha256:99ddb351b251a2753699f4622ebdd3b79bf19ad1508bcf0c24628eb88f9264da
+    subscriptionDeltasIdentity: sha256:cfb18483023877dc17e289dade8c7fc0836d6549700f1c8165ae58543c096051
     publicEventsIdentity: sha256:d8fd7e401fed8157e318c9576078d8c7f865aacd3f394479c3460f05117569c0
     gasTraceIdentity: sha256:e34c012efffc1af066150f4f6cb109d6588ebd216deaccc8873c5808983ebf61
     managedTransitionReceiptsIdentity: sha256:dab81343d9a3ef36ff3912f301328da34011662b51d2741cbc3e61050049d783

@@ -2,6 +2,7 @@ schema: blue-contracts-fixture/1.0
 id: c-evt-collection-01
 vectors:
 - C-EVT-COLLECTION-01
+- C-EVT-COLLECTION-07
 category: evt
 description: Embedded Node Channel with sourcePath matches only that exact normalized source occurrence.
 operation: process

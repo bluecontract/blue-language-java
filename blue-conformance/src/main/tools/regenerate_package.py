@@ -265,6 +265,11 @@ def regenerate(
         repository_root,
         environment,
     )
+    # The lifecycle exporter may add or remove fixture files. Rebuild the
+    # candidate inventory before the normative runtime walks it; otherwise a
+    # stale pre-export manifest can silently omit newly generated fixtures
+    # from receipt execution and only fail at the final package-count gate.
+    run(manifest_command, cwd=release_root.parent, environment=environment)
     run_managed_transition_receipt_rebind(
         release_root,
         repository_root,
@@ -291,8 +296,8 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
     release = load_mapping(package_root / "release-manifest.yaml")
     expected_fixture_counts = {
         "ordinaryFixtureCount": 197,
-        "closureFixtureCount": 93,
-        "totalExecutableFixtureCount": 290,
+        "closureFixtureCount": 98,
+        "totalExecutableFixtureCount": 295,
         "vectorCount": 182,
         "ordinaryVectorCount": 128,
         "closureVectorCount": 54,
@@ -356,9 +361,9 @@ def validate_full_lifecycle_package_counts(package_root: Path) -> None:
         raise RegenerationFailure(
             "release fixture-package vectorCount is not 182"
         )
-    if fixture_binding.get("fixtureCount") != 290:
+    if fixture_binding.get("fixtureCount") != 295:
         raise RegenerationFailure(
-            "release fixture-package fixtureCount is not 290"
+            "release fixture-package fixtureCount is not 295"
         )
 
 

@@ -50,7 +50,7 @@ final class SemanticBaselineSupport {
             "blue-language-locality-evidence/1.0";
     static final String SHA_256_PREFIX = "sha256:";
     static final int LANGUAGE_FIXTURE_COUNT = 182;
-    static final int CONTRACTS_FIXTURE_COUNT = 290;
+    static final int CONTRACTS_FIXTURE_COUNT = 295;
     static final int GAS_FIXTURE_COUNT = 71;
     static final int RELEASE_FIXTURE_COUNT =
             LANGUAGE_FIXTURE_COUNT + CONTRACTS_FIXTURE_COUNT;
