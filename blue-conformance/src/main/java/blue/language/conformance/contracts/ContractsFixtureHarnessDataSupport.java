@@ -85,6 +85,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -473,6 +474,76 @@ abstract class ContractsFixtureHarnessDataSupport {
                     registry.executableBodyFieldsByType());
         } finally {
             canonicalizer.close();
+        }
+    }
+
+    final boolean deferUnknownContractCapabilityToRuntime(Node contract) {
+        Node declaredType = contract != null ? contract.getType() : null;
+        return declaredType != null
+                && declaredType.isReferenceOnly()
+                && !registry.isSubtype(
+                        declaredType.getBlueId(), RuntimeBlueIds.CONTRACT);
+    }
+
+    final Set<String> opaqueUnknownContractPaths(Node source) {
+        Set<String> result = new LinkedHashSet<>();
+        collectOpaqueUnknownContractPaths(
+                source,
+                JsonPointer.ROOT,
+                result,
+                new IdentityHashMap<Node, Boolean>());
+        return result;
+    }
+
+    private void collectOpaqueUnknownContractPaths(
+            Node source,
+            String path,
+            Set<String> result,
+            IdentityHashMap<Node, Boolean> active) {
+        if (source == null
+                || source.isReferenceOnly()
+                || active.put(source, Boolean.TRUE) != null) {
+            return;
+        }
+        try {
+            Node contracts = source.getContracts();
+            if (contracts != null
+                    && !contracts.isReferenceOnly()
+                    && contracts.getProperties() != null) {
+                for (Map.Entry<String, Node> entry
+                        : contracts.getProperties().entrySet()) {
+                    if (deferUnknownContractCapabilityToRuntime(
+                            entry.getValue())) {
+                        result.add(JsonPointer.append(
+                                JsonPointer.append(
+                                        path,
+                                        ProcessorContractConstants
+                                                .KEY_CONTRACTS),
+                                entry.getKey()));
+                    }
+                }
+            }
+            if (source.getProperties() != null) {
+                for (Map.Entry<String, Node> entry
+                        : source.getProperties().entrySet()) {
+                    collectOpaqueUnknownContractPaths(
+                            entry.getValue(),
+                            JsonPointer.append(path, entry.getKey()),
+                            result,
+                            active);
+                }
+            }
+            if (source.getItems() != null) {
+                for (int index = 0; index < source.getItems().size(); index++) {
+                    collectOpaqueUnknownContractPaths(
+                            source.getItems().get(index),
+                            JsonPointer.append(path, Integer.toString(index)),
+                            result,
+                            active);
+                }
+            }
+        } finally {
+            active.remove(source);
         }
     }
 

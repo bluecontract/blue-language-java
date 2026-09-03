@@ -596,6 +596,18 @@ final class FixtureSourceIdentityResolver {
                 resolver);
         List<String> exactFields = fields.exactFields(typeBlueId);
         if (exactFields == null) {
+            /*
+             * An unrecognized contract type is deliberately opaque to the
+             * fixture identity preparer.  Its capability classification
+             * belongs to the Contracts runtime, so preserve the authored
+             * declaration and do not demand its body in Language first.
+             * Preserving the declaration also works when the contract itself
+             * is the transient-resolution root, where preserving "/" would
+             * not establish a nested opacity boundary.
+             */
+            result.add(contractPath);
+            result.add(JsonPointer.append(
+                    contractPath, BlueLanguageConstants.OBJECT_TYPE));
             return;
         }
         Map<String, Node> properties = contract != null

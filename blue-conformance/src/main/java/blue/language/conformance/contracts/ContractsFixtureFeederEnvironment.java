@@ -170,6 +170,9 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                     continue;
                 }
                 Node contractNode = readNode(contract);
+                if (deferUnknownContractCapabilityToRuntime(contractNode)) {
+                    continue;
+                }
                 ResolvedSnapshot contractSnapshot =
                         fixtureContractSourceSnapshot(
                                 contractNode, providerNodes);
@@ -415,6 +418,9 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                     continue;
                 }
                 Node contractNode = readNode(contract);
+                if (deferUnknownContractCapabilityToRuntime(contractNode)) {
+                    continue;
+                }
                 ResolvedSnapshot contractSnapshot =
                         fixtureContractSourceSnapshot(
                                 contractNode, providerNodes);

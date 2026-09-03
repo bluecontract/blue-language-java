@@ -777,6 +777,9 @@ abstract class ContractsFixtureInputPreparer extends ContractsFixtureProjectionS
             return null;
         }
         Node exactContract = readNode(contract);
+        if (deferUnknownContractCapabilityToRuntime(exactContract)) {
+            return null;
+        }
         ResolvedSnapshot contractSnapshot =
                 fixtureContractSourceSnapshot(
                         exactContract, providerNodes);

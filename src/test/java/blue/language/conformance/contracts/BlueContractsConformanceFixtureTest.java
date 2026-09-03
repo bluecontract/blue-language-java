@@ -47,7 +47,7 @@ class BlueContractsConformanceFixtureTest {
         int fixtureCount = report.getFixtureIds().size();
 
         // then
-        assertEquals(276, fixtureCount);
+        assertEquals(290, fixtureCount);
         assertEquals(report.getFixtureIds(),
                 report.getPassedFixtureIds(),
                 report.getFailures()::toString);
@@ -182,6 +182,29 @@ class BlueContractsConformanceFixtureTest {
                 throw new AssertionError(
                         "Failed revision fixture " + fixture, failure);
             }
+            executed++;
+        }
+
+        assertEquals(fixtures.length, executed);
+    }
+
+    @Test
+    void shouldExecuteOpaqueDiscoveryAndOccurrenceContinuityFixtures()
+            throws IOException {
+        String[] fixtures = {
+                "disc/c-disc-01.yaml",
+                "disc/c-disc-02.yaml",
+                "disc/c-disc-04.yaml",
+                "emb/c-emb-10.yaml",
+                "emb/c-emb-11.yaml",
+                "emb/c-emb-13.yaml"
+        };
+
+        int executed = 0;
+        for (String fixture : fixtures) {
+            JsonNode input = resource(fixture);
+            ContractsConformanceSuite.validateFixture(input);
+            new ContractsFixtureHarness().execute(input, false);
             executed++;
         }
 

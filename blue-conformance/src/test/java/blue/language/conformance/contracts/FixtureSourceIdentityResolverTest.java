@@ -115,4 +115,39 @@ final class FixtureSourceIdentityResolverTest {
                             true));
         }
     }
+
+    @Test
+    void shouldPreserveContractWithUnknownTypeAsOpaqueSource() {
+        String unknownTypeBlueId =
+                "6dUnbVwUFYbg4oBjfbANb3MeDzXvuahShSUppq3YLpNh";
+        Node source = new Node().contracts(
+                new Node().properties(
+                        "unsupported",
+                        new Node()
+                                .type(new Node().blueId(unknownTypeBlueId))
+                                .properties("authored", new Node().value(true))));
+
+        FixtureSourceIdentityResolver.Identity identity;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(blueId -> null)
+                .build()) {
+            identity = FixtureSourceIdentityResolver.resolve(
+                    language,
+                    source,
+                    Collections.<String, java.util.List<String>>emptyMap(),
+                    true);
+        }
+
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(source),
+                identity.blueId());
+        assertEquals(
+                unknownTypeBlueId,
+                identity.canonicalInput()
+                        .getContracts()
+                        .getProperties()
+                        .get("unsupported")
+                        .getType()
+                        .getBlueId());
+    }
 }

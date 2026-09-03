@@ -19,7 +19,7 @@ input:
         checkpointDomain: domain-v1
       h:
         type:
-          blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+          blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
         channel: in
         order: 0
         result:
@@ -28,7 +28,7 @@ input:
             path: /value
             val: 1
     type:
-      blueId: 9iJE1p1FBrrunVBKUhxFh7cmvv2B6FWiNFR8HPtnDoBL
+      blueId: 5frb9mcRPwrayzWrd192dgTdgDbttBjLxgigYv8BiXDX
   event:
     type:
       blueId: 5KUZWsqRuW7SyRj1oCK7hRTmJKVCHTiVJboxy4nas8KX
@@ -53,11 +53,11 @@ input:
     mode: exact-node
     semanticDemandsOnly: true
     nodes:
-      9iJE1p1FBrrunVBKUhxFh7cmvv2B6FWiNFR8HPtnDoBL:
+      5frb9mcRPwrayzWrd192dgTdgDbttBjLxgigYv8BiXDX:
         contracts:
           h:
             type:
-              blueId: 6rznQbYVahD1UVqdRXbPy7wF1NV5LYhDyzThEL1znaFw
+              blueId: 9Wa77paaHDctnRmgwcXMGUkYeE5EzBcLf2ZRTbBhDA8
             channel: in
             order: 0
   runtime:

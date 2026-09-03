@@ -419,23 +419,36 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
                 new ProcessingSnapshotManager() {
             @Override
             public ResolvedSnapshot fromDocument(Node document) {
-                return fixtureLanguage.snapshots().resolve(document);
+                Set<String> opaquePaths =
+                        opaqueUnknownContractPaths(document);
+                return opaquePaths.isEmpty()
+                        ? fixtureLanguage.snapshots().resolve(document)
+                        : fixtureLanguage.snapshots().resolvePreservingPaths(
+                                document, opaquePaths);
             }
 
             @Override
             public ResolvedSnapshot fromDocumentPreservingPaths(
                     Node document,
                     Collection<String> preservedPaths) {
+                Set<String> allPreservedPaths =
+                        new LinkedHashSet<>(preservedPaths);
+                allPreservedPaths.addAll(
+                        opaqueUnknownContractPaths(document));
                 return fixtureLanguage.snapshots().resolvePreservingPaths(
-                        document, preservedPaths);
+                        document, allPreservedPaths);
             }
 
             @Override
             public ResolvedSnapshot fromDocumentTransientPreservingPaths(
                     Node document,
                     Collection<String> preservedPaths) {
+                Set<String> allPreservedPaths =
+                        new LinkedHashSet<>(preservedPaths);
+                allPreservedPaths.addAll(
+                        opaqueUnknownContractPaths(document));
                 return fixtureLanguage.snapshots().resolvePreservingPaths(
-                        document, preservedPaths);
+                        document, allPreservedPaths);
             }
 
             @Override
