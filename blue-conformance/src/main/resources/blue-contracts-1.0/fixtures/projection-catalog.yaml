@@ -467,12 +467,9 @@ entries:
 - path: trace.validationProofReused
   type: integer
   definition: Deterministic derived conformance projection defined by its final path component and normative processor phase.
-- path: variants.append.trace.semantic.listFoldStepRecomputed
-  type: value
-  definition: Projection from the explicitly named deterministic fixture variant.
-- path: variants.replace-head.trace.semantic.listFoldStepRecomputed
-  type: value
-  definition: Projection from the explicitly named deterministic fixture variant.
+- path: trace.semantic.listFoldStepRecomputed
+  type: integer
+  definition: Deterministic count of List fold steps recomputed for the selected fixture variant.
 - path: variants.retry-after-commit.result.events
   type: sequence-or-value
   definition: Projection from the explicitly named deterministic fixture variant.
