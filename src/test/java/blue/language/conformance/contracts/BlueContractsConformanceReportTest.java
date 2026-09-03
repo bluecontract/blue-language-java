@@ -367,6 +367,9 @@ class BlueContractsConformanceReportTest {
                             repository.relativize(path)
                                     .toString()
                                     .replace('\\', '/');
+                    if (isHistoricalIdentityRecord(relative)) {
+                        continue;
+                    }
                     String content = new String(
                             Files.readAllBytes(path),
                             StandardCharsets.UTF_8);
@@ -454,6 +457,14 @@ class BlueContractsConformanceReportTest {
                 || name.endsWith(".json")
                 || name.endsWith(".java")
                 || name.endsWith(".txt");
+    }
+
+    private static boolean isHistoricalIdentityRecord(String relative) {
+        // This migration record deliberately preserves the identities of the
+        // release it describes. It is evidence for an old-to-new transition,
+        // not an active registry binding.
+        return "docs/language-1.0-contracts-kernel-1.0-migration.md"
+                .equals(relative);
     }
 
     private static void collectBindings(
