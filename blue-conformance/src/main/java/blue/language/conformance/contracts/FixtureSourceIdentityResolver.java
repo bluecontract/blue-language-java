@@ -237,7 +237,8 @@ final class FixtureSourceIdentityResolver {
                     checkedFields,
                     exactNodeLoader,
                     resolver,
-                    preservedPaths);
+                    preservedPaths,
+                    true);
         }
         collectExactSourceFieldPaths(
                 sourceProjection,
@@ -303,7 +304,8 @@ final class FixtureSourceIdentityResolver {
                     fields,
                     exactNodeLoader,
                     resolver,
-                    result);
+                    result,
+                    true);
             if (current.getItems() != null) {
                 for (int index = current.getItems().size() - 1;
                         index >= 0;
@@ -441,7 +443,8 @@ final class FixtureSourceIdentityResolver {
                 fields,
                 exactNodeLoader,
                 resolver,
-                result);
+                result,
+                false);
         if (contribution.getProperties() != null) {
             for (Map.Entry<String, Node> entry
                     : contribution.getProperties().entrySet()) {
@@ -551,7 +554,8 @@ final class FixtureSourceIdentityResolver {
             ExactSourceFieldCatalog fields,
             ExactNodeLoader exactNodeLoader,
             SnapshotResolver resolver,
-            Set<String> result) {
+            Set<String> result,
+            boolean preserveUnknownContractSource) {
         Node recognizedContracts = contracts;
         if (recognizedContracts != null
                 && recognizedContracts.isReferenceOnly()) {
@@ -580,7 +584,8 @@ final class FixtureSourceIdentityResolver {
                     fields,
                     exactNodeLoader,
                     resolver,
-                    result);
+                    result,
+                    preserveUnknownContractSource);
         }
     }
 
@@ -590,12 +595,13 @@ final class FixtureSourceIdentityResolver {
             ExactSourceFieldCatalog fields,
             ExactNodeLoader exactNodeLoader,
             SnapshotResolver resolver,
-            Set<String> result) {
+            Set<String> result,
+            boolean preserveUnknownContractSource) {
         String typeBlueId = sourceTypeBlueId(
                 contract,
                 resolver);
         List<String> exactFields = fields.exactFields(typeBlueId);
-        if (exactFields == null) {
+        if (exactFields == null && preserveUnknownContractSource) {
             /*
              * An unrecognized contract type is deliberately opaque to the
              * fixture identity preparer.  Its capability classification
@@ -608,6 +614,9 @@ final class FixtureSourceIdentityResolver {
             result.add(contractPath);
             result.add(JsonPointer.append(
                     contractPath, BlueLanguageConstants.OBJECT_TYPE));
+            return;
+        }
+        if (exactFields == null) {
             return;
         }
         Map<String, Node> properties = contract != null

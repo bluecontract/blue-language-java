@@ -2,14 +2,19 @@ package blue.language.conformance.contracts;
 
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.model.Schema;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.runtime.BlueLanguage;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Regression coverage for fixture-only exact Source identity discovery. */
 final class FixtureSourceIdentityResolverTest {
@@ -149,5 +154,58 @@ final class FixtureSourceIdentityResolverTest {
                         .get("unsupported")
                         .getType()
                         .getBlueId());
+    }
+
+    @Test
+    void shouldResolveUntypedContractConstraintContributedByScopeType() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleNodes(new Node().name("Known zero-field contract"));
+        String knownContract = provider.getBlueIdByName(
+                "Known zero-field contract");
+        provider.addSingleNodes(new Node()
+                .name("Synthetic constrained scope")
+                .contracts(new Node().properties(
+                        "requiredWorkflow",
+                        new Node().schema(new Schema().required(true)))));
+        String scopeType = provider.getBlueIdByName(
+                "Synthetic constrained scope");
+        Node source = new Node()
+                .type(new Node().blueId(scopeType))
+                .contracts(new Node().properties(
+                        "requiredWorkflow",
+                        new Node()
+                                .type(new Node().blueId(knownContract))
+                                .properties("value", new Node().value("kept"))));
+        Map<String, List<String>> exactFields = Collections.singletonMap(
+                knownContract,
+                Collections.<String>emptyList());
+
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build()) {
+            FixtureSourceIdentityResolver.Identity identity =
+                    FixtureSourceIdentityResolver.resolve(
+                            language,
+                            source,
+                            exactFields,
+                            true);
+
+            assertEquals(
+                    language.identity().sourceDocumentBlueId(source),
+                    identity.blueId());
+        }
+    }
+
+    @Test
+    void shouldCatalogRegisteredZeroNodeFieldContractAsKnown() {
+        Map<String, List<String>> exactFields =
+                ContractsFixtureHarnessDataSupport.RegistryEnvironment
+                        .load()
+                        .exactSourceFieldsByType();
+
+        assertTrue(exactFields.containsKey(
+                RuntimeBlueIds.TYPE_GENERALIZATION_POLICY));
+        assertTrue(exactFields.get(
+                RuntimeBlueIds.TYPE_GENERALIZATION_POLICY).isEmpty());
     }
 }

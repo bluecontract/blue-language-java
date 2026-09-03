@@ -748,13 +748,11 @@ abstract class ContractsFixtureHarnessDataSupport {
                             "Cyclic Contracts registry type ancestry at "
                                     + current);
                 }
-                if (!inherited.isEmpty()) {
-                    List<String> ordered = new ArrayList<>(inherited);
-                    ordered.sort(ExternalOrderKey::compareTextCodePoints);
-                    complete.put(
-                            typeBlueId,
-                            Collections.unmodifiableList(ordered));
-                }
+                List<String> ordered = new ArrayList<>(inherited);
+                ordered.sort(ExternalOrderKey::compareTextCodePoints);
+                complete.put(
+                        typeBlueId,
+                        Collections.unmodifiableList(ordered));
             }
             return Collections.unmodifiableMap(complete);
         }
