@@ -1,5 +1,6 @@
 package blue.buildlogic.tasks;
 
+import blue.buildlogic.support.CommitBoundDevelopmentCandidate;
 import blue.buildlogic.support.StagedRepositoryManifest;
 import java.nio.file.Path;
 import org.gradle.api.DefaultTask;
@@ -56,6 +57,12 @@ public abstract class AssembleImmutableStagedRepositoryTask extends DefaultTask 
     @Input
     public abstract Property<String> getSourceCommit();
 
+    @Input
+    public abstract Property<String> getRepositoryHead();
+
+    @Input
+    public abstract Property<String> getWorkingTreeStatus();
+
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
     public abstract RegularFileProperty getContractsSpecification();
@@ -66,6 +73,11 @@ public abstract class AssembleImmutableStagedRepositoryTask extends DefaultTask 
 
     @TaskAction
     public void assemble() {
+        CommitBoundDevelopmentCandidate.verify(
+                getVersionValue().get(),
+                getSourceCommit().get(),
+                getRepositoryHead().get(),
+                getWorkingTreeStatus().get());
         Path specification = getContractsSpecification().get().getAsFile().toPath();
         StagedRepositoryManifest.Bindings bindings = StagedRepositoryManifest.bindings(
                 specification,

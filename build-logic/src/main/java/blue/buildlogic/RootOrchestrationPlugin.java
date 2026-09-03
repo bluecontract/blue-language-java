@@ -194,6 +194,15 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                     spec.setWorkingDir(project.getRootDir());
                     spec.commandLine("git", "rev-parse", "--verify", "HEAD^{commit}");
                 }).getStandardOutput().getAsText().map(String::trim));
+        Provider<String> repositoryHead = project.getProviders().exec(spec -> {
+            spec.setWorkingDir(project.getRootDir());
+            spec.commandLine("git", "rev-parse", "--verify", "HEAD^{commit}");
+        }).getStandardOutput().getAsText().map(String::trim);
+        Provider<String> workingTreeStatus = project.getProviders().exec(spec -> {
+            spec.setWorkingDir(project.getRootDir());
+            spec.commandLine(
+                    "git", "status", "--porcelain", "--untracked-files=all");
+        }).getStandardOutput().getAsText();
         Provider<Directory> immutableRepository = project.getLayout().dir(
                 project.getProviders().gradleProperty("stagedDependencyRepository")
                         .map(path -> project.file(path)))
@@ -215,6 +224,8 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                                     () -> project.getVersion().toString()));
                             task.getExpectedArtifacts().set(PUBLISHED_MODULES);
                             task.getSourceCommit().set(sourceCommit);
+                            task.getRepositoryHead().set(repositoryHead);
+                            task.getWorkingTreeStatus().set(workingTreeStatus);
                             task.getContractsSpecification().set(project.getLayout()
                                     .getProjectDirectory().file(
                                             "blue-contracts-core/src/main/resources/"
