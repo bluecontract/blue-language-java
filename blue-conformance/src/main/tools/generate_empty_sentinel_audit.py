@@ -43,8 +43,16 @@ AUDITS = (
     ),
     (
         "raw-blue-id-access",
-        re.compile(r"getBlueId\(\)"),
-        "A nullable authored BlueId may have been mistaken for verified semantic identity evidence.",
+        # Only nullable-identity predicates are relevant to the empty/sentinel
+        # audit.  General getters used for serialization, diagnostics, map
+        # keys, and already-verified identities belong to the separate exact
+        # identity inventory.  The negative lookbehind also excludes methods
+        # such as expectedTargetBlueId().
+        re.compile(
+            r"(?:(?<![A-Za-z0-9_$])getBlueId\(\)\s*(?:==|!=)\s*null|"
+            r"null\s*(?:==|!=)[^;]*(?<![A-Za-z0-9_$])getBlueId\(\))"
+        ),
+        "A nullable authored BlueId might have been used as value-absence evidence rather than identity-header evidence.",
     ),
     (
         "schema-presence",
@@ -153,6 +161,67 @@ EXACT_EMPTY_CONSTRUCTOR_OWNERS = (
 )
 
 
+# Exact production owners of same-line raw BlueId nullability predicates.  A
+# new owner fails report generation until its use is reviewed.  This is a
+# deliberately narrow audit: arbitrary getBlueId() consumers are covered by
+# the old-to-new identity inventory, while these predicates are the callsites
+# capable of confusing an absent identity header with an absent Blue value.
+RAW_BLUE_ID_NULLABILITY_OWNERS = (
+    "blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceFixtureTransformations.java",
+    "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureExecutionEngine.java",
+    "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureHarnessDataSupport.java",
+    "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureSupport.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/CheckpointIdentityCalculator.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/ContractContributionResolver.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/EffectiveFragmentationCatalogBuilder.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/ExternalEvidenceVerificationSupport.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/ProcessorRuntimeAccess.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/ProtectedStateGuard.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/RegisteredContractScopeIdentitySnapshotManager.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/ScopeSourceProjection.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/SemanticOutputBoundary.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/SubscriptionSurfaceTypeInspector.java",
+    "blue-contracts-core/src/main/java/blue/language/processor/TypeGeneralizationPolicyResolver.java",
+    "blue-language-core/src/main/java/blue/language/graph/NodeExpander.java",
+    "blue-language-core/src/main/java/blue/language/graph/NodeExpansionEngine.java",
+    "blue-language-core/src/main/java/blue/language/identity/BlueIdReferenceValidator.java",
+    "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputReconstructor.java",
+    "blue-language-core/src/main/java/blue/language/identity/CanonicalTypeIdentityEvidence.java",
+    "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
+    "blue-language-core/src/main/java/blue/language/identity/NodeToBlueIdInput.java",
+    "blue-language-core/src/main/java/blue/language/identity/SchemaEnumCanonicalizer.java",
+    "blue-language-core/src/main/java/blue/language/matching/LabelNeutralTypeIdentity.java",
+    "blue-language-core/src/main/java/blue/language/matching/NodeTypeMatcher.java",
+    "blue-language-core/src/main/java/blue/language/merge/CompletedValueValidator.java",
+    "blue-language-core/src/main/java/blue/language/merge/DeclaredTypeContributionResolver.java",
+    "blue-language-core/src/main/java/blue/language/merge/LabelProvenanceTracker.java",
+    "blue-language-core/src/main/java/blue/language/merge/ListOverlayMerger.java",
+    "blue-language-core/src/main/java/blue/language/merge/ReferenceResolver.java",
+    "blue-language-core/src/main/java/blue/language/merge/ResolutionEngine.java",
+    "blue-language-core/src/main/java/blue/language/merge/TypeMetadataResolver.java",
+    "blue-language-core/src/main/java/blue/language/merge/processor/EffectiveTypeChecks.java",
+    "blue-language-core/src/main/java/blue/language/merge/processor/SchemaVerifier.java",
+    "blue-language-core/src/main/java/blue/language/preprocess/DirectiveValidator.java",
+    "blue-language-core/src/main/java/blue/language/preprocess/StandardPreprocessingPipeline.java",
+    "blue-language-core/src/main/java/blue/language/provider/ExactFragmentAssembler.java",
+    "blue-language-core/src/main/java/blue/language/provider/ExactFragmentGraphValidator.java",
+    "blue-language-core/src/main/java/blue/language/provider/ExactFragmentSupport.java",
+    "blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java",
+    "blue-language-core/src/main/java/blue/language/provider/SelectiveExactFragmentAssembler.java",
+    "blue-language-core/src/main/java/blue/language/provider/Types.java",
+    "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
+    "blue-language-core/src/main/java/blue/language/resolve/MinimizedOverlayReconstructor.java",
+    "blue-language-core/src/main/java/blue/language/runtime/BlueLanguageRuntime.java",
+    "blue-language-core/src/main/java/blue/language/runtime/RuntimeLanguageProcessing.java",
+    "blue-language-core/src/main/java/blue/language/snapshot/FrozenCanonicalWriter.java",
+    "blue-language-model/src/main/java/blue/language/model/Node.java",
+    "blue-language-model/src/main/java/blue/language/model/NodeDeserializer.java",
+    "blue-language-model/src/main/java/blue/language/model/NodeWireForm.java",
+    "blue-language-model/src/main/java/blue/language/model/Nodes.java",
+    "blue-language-model/src/main/java/blue/language/model/SchemaWireForm.java",
+)
+
+
 def _git(repository: Path, *args: str) -> str:
     completed = subprocess.run(
         ("git",) + args,
@@ -215,6 +284,19 @@ def _symbol(lines: list[str], line_number: int) -> str:
 
 
 def _covering_test(path: str, audit: str, symbol: str) -> str:
+    if audit == "raw-blue-id-access":
+        if "blue-language-model/" in path:
+            return "NodeWireFormTest, ExactEmptyObjectSemanticsTest"
+        if "/identity/" in path:
+            return "BlueIdReferenceValidatorDepthTest, CanonicalIdentityInputReconstructorTest"
+        if "/provider/" in path or "/graph/" in path:
+            return "ProviderEvidenceVerifierTest, ProviderCanonicalIngestionTest"
+        if any(value in path for value in (
+                "/merge/", "/matching/", "/resolve/", "/preprocess/")):
+            return "CanonicalIdentityProvenanceFailClosedTest, ExactEmptyObjectSemanticsTest"
+        if "blue-contracts-core/" in path:
+            return "CanonicalIdentityEvidenceTest, SemanticOutputBoundaryTest"
+        return "BlueContractsConformanceFixtureTest, ExactEmptyObjectSemanticsTest"
     if path.endswith("/NodeDeserializer.java"):
         return "NodeDeserializerTest, ExactEmptyObjectSemanticsTest"
     if path.endswith("/Nodes.java") or path.endswith("/Node.java"):
@@ -265,7 +347,77 @@ def _decision(
     """
     tests = _covering_test(path, audit, symbol)
     if audit == "raw-blue-id-access":
-        return None
+        if _is_comment_or_declaration(line):
+            return None
+        if path not in RAW_BLUE_ID_NULLABILITY_OWNERS:
+            raise ValueError(
+                "Unclassified raw BlueId nullability owner: "
+                + path + ":" + symbol
+            )
+        if "blue-language-model/" in path:
+            classification = "B-nullable-identity-wire-header"
+            assumption = (
+                "A missing authored BlueId header could be treated as a "
+                "missing Blue value."
+            )
+            reason = (
+                symbol
+                + " uses BlueId nullability only to select or validate an "
+                "identity-bearing wire/header shape; object payload presence "
+                "is represented independently by the properties presence bit."
+            )
+        elif any(value in path for value in (
+                "/identity/", "/provider/", "/graph/", "/runtime/")):
+            classification = "B-unverified-identity-claim-boundary"
+            assumption = (
+                "A present raw BlueId could be accepted as authoritative "
+                "semantic identity, or a missing one as value absence."
+            )
+            reason = (
+                symbol
+                + " branches on an authored identity claim before separate "
+                "canonical/provider verification; exact `{}` is still a "
+                "present value through its empty properties payload."
+            )
+        elif any(value in path for value in (
+                "/merge/", "/matching/", "/resolve/", "/preprocess/",
+                "/snapshot/")):
+            classification = "B-identity-metadata-versus-value-payload"
+            assumption = (
+                "BlueId metadata nullability could substitute for semantic "
+                "value-presence provenance."
+            )
+            reason = (
+                symbol
+                + " uses identity-header presence only in reference/type/"
+                "overlay handling; ordinary payload presence, including `{}`, "
+                "is decided from value kind and contribution provenance."
+            )
+        elif "blue-contracts-core/" in path:
+            classification = "B-contracts-identity-evidence-boundary"
+            assumption = (
+                "A Contracts identity claim could be confused with the "
+                "presence or absence of its containing value."
+            )
+            reason = (
+                symbol
+                + " gates verification, reference projection, or identity "
+                "evidence; it does not erase a value merely because the raw "
+                "BlueId header is absent."
+            )
+        else:
+            classification = "B-conformance-identity-shape-control"
+            assumption = (
+                "Fixture identity-header shape could be reported as Blue "
+                "value absence."
+            )
+            reason = (
+                symbol
+                + " validates or constructs an explicit conformance identity "
+                "shape; the fixture engine separately preserves `{}` as a "
+                "present value."
+            )
+        return Decision(classification, assumption, reason, tests)
     if audit == "empty-shape-and-builder":
         if "FrozenNode.empty()" in line:
             if path not in EXACT_EMPTY_CONSTRUCTOR_OWNERS:
@@ -450,7 +602,7 @@ def _decision(
 
 def _context_reason(audit: str, line: str) -> str:
     if audit == "raw-blue-id-access":
-        return "Identity-search context only; this access does not classify an empty value. Canonical authority is audited in the separate identity-impact inventory and resolver evidence tests."
+        return "Comment/declaration context only within the narrowly scoped raw BlueId nullability predicate search."
     if audit == "schema-presence":
         return "Broad required/presence vocabulary matched traversal, metadata, diagnostics, or a non-object constraint rather than an empty-object presence decision."
     if audit == "empty-shape-and-builder" and "new Node()" in line:
@@ -549,7 +701,11 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
         "baselineCommit": baseline,
         "scope": (
             "complete lexical output of the prompt-mandated searches over "
-            "*/src/main/java/**/*.java; load-bearing decisions require an "
+            "*/src/main/java/**/*.java. Raw BlueId coverage is intentionally "
+            "limited to same-line nullability predicates capable of confusing "
+            "identity-header absence with value absence; general identity "
+            "consumers belong to the identity-impact inventory. Load-bearing "
+            "decisions require an "
             "explicit path/symbol rule and all other matches are retained as "
             "non-semantic search context"
         ),
@@ -585,7 +741,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         "- Matches in files changed since the RC baseline: " + str(summary["changedFileHitCount"]),
         "- Matches in unchanged files: " + str(summary["unchangedFileHitCount"]),
         "",
-        "Every entry has a resolved disposition. Context-only matches are retained to prove the broad search ran, but are not presented as semantic evidence and do not claim a covering behavior test. Every decision-relevant entry is selected by an explicit path/symbol rule and distinguishes Source null, exact `{}`, an explicit list placeholder, a temporary fieldless builder/control, host absence, or invalid reserved-position output.",
+        "Every entry has a resolved disposition. Context-only matches are retained to prove the broad searches ran, but are not presented as semantic evidence and do not claim a covering behavior test. Every decision-relevant entry is selected by an explicit path/symbol rule and distinguishes Source null, exact `{}`, an explicit list placeholder, a temporary fieldless builder/control, host absence, invalid reserved-position output, or nullable identity-header metadata.",
         "",
         "The classification prefix follows the required audit taxonomy: **A** exact empty-object value, **B** temporary builder/metadata/control, **C** Source null before preprocessing, **D** host-conversion absence, and **E** invalid or explicit reserved-position list control.",
         "",
@@ -615,7 +771,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             "| Area | Decision | Covering tests |",
             "| --- | --- | --- |",
             "| Mapping | A present empty properties map maps as `{}`; only Source-null/fieldless controls may map to host absence. | `NodeToObjectConverterNullHandlingTest`, `ExactEmptyObjectSemanticsTest` |",
-            "| Identity | `{}` is accepted as content and remains distinct from `$empty`; raw `getBlueId()` is never treated as verified identity evidence. | `DirectBlueIdCalculatorTest`, `FrozenNodeTest` |",
+            "| Identity | `{}` is accepted as content and remains distinct from `$empty`; every same-line raw BlueId nullability predicate is classified as identity-header/evidence handling, separate from value presence. General identity consumers are covered by the old-to-new identity inventory. | `BlueIdReferenceValidatorDepthTest`, `CanonicalIdentityProvenanceFailClosedTest`, `ExactEmptyObjectSemanticsTest` |",
             "| Resolution | Omitted/Source-null fields inherit; exact `{}` is a present object payload and conflicts with inherited scalar/list payloads. | `BlueLanguageConformanceFixtureTest`, `ExactEmptyObjectSemanticsTest` |",
             "| Schema | Exact `{}` satisfies `required`; `minFields` is the independent non-empty-object constraint. | `ResolvedInstanceSchemaValidationTest`, `ExactEmptyObjectSemanticsTest` |",
             "| Contracts | Explicit/referenced `{}` collection is present with zero members; unavailable evidence is incomplete. | `EmbeddedScopePlannerTest`, `BlueContractsConformanceFixtureTest` |",

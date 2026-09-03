@@ -102,15 +102,30 @@ class EmptySentinelAuditTest(unittest.TestCase):
             bare.classification,
         )
 
-    def test_raw_blue_id_search_is_recorded_without_empty_sentinel_claim(self) -> None:
+    def test_raw_blue_id_nullability_is_explicit_identity_header_decision(self) -> None:
         decision = audit._decision(
-            "blue-language-core/src/main/java/blue/language/identity/Example.java",
-            "return node.getBlueId();",
+            "blue-language-core/src/main/java/blue/language/identity/BlueIdReferenceValidator.java",
+            "return node.getBlueId() == null;",
             "",
-            "Example#blueId",
+            "BlueIdReferenceValidator#hasNoIdentityHeader",
             "raw-blue-id-access",
         )
-        self.assertIsNone(decision)
+        self.assertIsNotNone(decision)
+        self.assertEqual(
+            "B-unverified-identity-claim-boundary",
+            decision.classification,
+        )
+        self.assertIn("exact `{}`", decision.reason)
+
+    def test_raw_blue_id_search_excludes_general_getters_and_similar_names(self) -> None:
+        pattern = next(
+            value[1]
+            for value in audit.AUDITS
+            if value[0] == "raw-blue-id-access"
+        )
+        self.assertIsNone(pattern.search("return node.getBlueId();"))
+        self.assertIsNone(pattern.search("binding.expectedTargetBlueId() != null"))
+        self.assertIsNotNone(pattern.search("node.getBlueId() != null"))
 
     def test_inventory_covers_every_declared_audit_family(self) -> None:
         repository = TOOLS.parents[3]
@@ -158,6 +173,24 @@ class EmptySentinelAuditTest(unittest.TestCase):
                 entry["reviewDisposition"]
                 == "resolved-explicit-decision"
                 for entry in structural
+            )
+        )
+
+    def test_every_raw_blue_id_nullability_predicate_is_explicitly_classified(self) -> None:
+        report = audit.generate(TOOLS.parents[3])
+        decisions = [
+            entry
+            for entry in report["entries"]
+            if entry["audit"] == "raw-blue-id-access"
+            and entry["relevance"] == "decision-relevant"
+        ]
+        self.assertGreater(len(decisions), 0)
+        self.assertTrue(
+            all(
+                entry["reviewDisposition"]
+                == "resolved-explicit-decision"
+                and entry["newClassification"].startswith("B-")
+                for entry in decisions
             )
         )
 
