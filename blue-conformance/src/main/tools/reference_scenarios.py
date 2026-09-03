@@ -931,6 +931,21 @@ def derive_loop_trace(
         ):
             rejected_owner_work = None
             break
+        if not trace.charge(
+            "processor",
+            "channelCandidateTested",
+            1,
+            reason="acceptance",
+            context={
+                "documentId": next_work["targetDocumentId"],
+                "scopePath": "/",
+                "activationGeneration": 0,
+                "componentGeneration": 1,
+                "contractKey": next_work["channelKey"],
+            },
+        ):
+            rejected_owner_work = current
+            break
         if not charge(
             "processor", "closureWorkOccurrenceEnqueued", 1,
             f"event.{next_work['occurrenceOrdinal']}.delivery.0.enqueue",

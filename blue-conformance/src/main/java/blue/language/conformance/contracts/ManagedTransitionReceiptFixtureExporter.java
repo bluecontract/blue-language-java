@@ -7,6 +7,8 @@ import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.closure.BlueClosureContracts;
 import blue.language.processor.closure.ClosureAttemptResult;
 import blue.language.processor.closure.ClosureCommitCompanion;
+import blue.language.processor.closure.ClosureExecutionObserver;
+import blue.language.processor.closure.ClosureImplementationEvidence;
 import blue.language.processor.closure.ClosureInvocationInput;
 import blue.language.processor.closure.ClosureProcessResult;
 import blue.language.processor.closure.ManagedDocumentTransitionReceipt;
@@ -32,18 +34,24 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Executes a candidate closure fixture package and exports only the managed
- * transition-receipt evidence whose identities are owned by Contracts.
+ * Executes a candidate closure fixture package and exports runtime-owned
+ * identity, gas, and managed transition-receipt evidence.
  *
  * <p>The Python package generator uses this executable boundary after its
  * ordinary deterministic refinement pass.  This class never reads a fixture's
  * {@code expected} subtree while preparing or executing an invocation.  It
  * emits a disposable JSON report; the package generator remains the sole
- * writer of normative YAML.</p>
+ * writer of normative YAML. Semantic outcomes remain authored fixture input:
+ * the exporter checks attempt outcome and status before emitting any derived
+ * evidence.</p>
  */
 public final class ManagedTransitionReceiptFixtureExporter {
 
     private static final int EXPECTED_CLOSURE_FIXTURES = 93;
+    private static final String REPORT_SCHEMA =
+            "blue-contracts-closure-runtime-fixture-export/1.0";
+    private static final String SUCCESS_MARKER =
+            "CLOSURE_RUNTIME_FIXTURES_EXPORTED count=";
     private static final ObjectMapper YAML = new ObjectMapper(
             YAMLFactory.builder()
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -94,7 +102,7 @@ public final class ManagedTransitionReceiptFixtureExporter {
             Files.deleteIfExists(temporary);
         }
         System.out.println(
-                "MANAGED_TRANSITION_RECEIPT_FIXTURES_EXPORTED count="
+                SUCCESS_MARKER
                         + report.path("executedFixtureCount").asInt());
     }
 
@@ -110,7 +118,7 @@ public final class ManagedTransitionReceiptFixtureExporter {
 
         ObjectNode report = UncheckedObjectMapper.JSON_MAPPER.createObjectNode();
         report.put(BlueLanguageConstants.OBJECT_SCHEMA,
-                "blue-contracts-managed-transition-receipt-fixture-export/1.0");
+                REPORT_SCHEMA);
         ArrayNode entries = report.putArray("entries");
         Set<String> paths = new LinkedHashSet<String>();
         int inventoried = 0;
@@ -169,11 +177,12 @@ public final class ManagedTransitionReceiptFixtureExporter {
                 ClosureFixtureConformance.parseInvocationInput(
                         id, path, operation, vectors, executionFixture);
         ClosureAttemptResult attempt;
+        Capture capture = new Capture();
         try (ClosureFixtureRuntime runtime =
                      ClosureFixtureRuntime.fromFixture(
                              executionFixture, packageRoot);
              BlueClosureContracts contracts =
-                     new BlueClosureContracts(runtime.processor())) {
+                     new BlueClosureContracts(runtime.processor(), capture)) {
             attempt = "process-closure".equals(operation)
                     ? contracts.processClosure(input)
                     : contracts.admitClosureWithLifecycleQueue(input);
@@ -186,6 +195,9 @@ public final class ManagedTransitionReceiptFixtureExporter {
                 id + " has no expected object for cross-check");
         require(outcome.equals(requiredText(expected, "attemptOutcome")),
                 id + " regenerated attempt outcome changed");
+        ObjectNode runtimeExpected = FullLifecycleFixtureJson.expected(
+                attempt, capture.evidence);
+        report.set("runtimeExpected", runtimeExpected);
         if (!attempt.isComplete()) {
             return;
         }
@@ -298,6 +310,17 @@ public final class ManagedTransitionReceiptFixtureExporter {
     private static void require(boolean condition, String message) {
         if (!condition) {
             throw new IllegalStateException(message);
+        }
+    }
+
+    private static final class Capture implements ClosureExecutionObserver {
+        private ClosureImplementationEvidence evidence;
+
+        @Override
+        public void onExecutionEvidence(ClosureImplementationEvidence value) {
+            require(evidence == null,
+                    "one observer callback is allowed per invocation");
+            evidence = value;
         }
     }
 }
