@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 785,
-    "productionResourceCount": 808,
-    "productionSourcePathIdentity": "sha256:fbc4d702db50965f45d3308845d472d6a8592d53892a5ea706093b88102e1e74",
-    "productionResourcePathIdentity": "sha256:805a241d432bfe00a2e2d39089e785223efa416ed20f33adc2bb240bf150bbb1"
+    "productionSourceCount": 787,
+    "productionResourceCount": 813,
+    "productionSourcePathIdentity": "sha256:cd637031489c7e22df71d9e1849d1ca21edf4d700788fc174721a9599d16c94c",
+    "productionResourcePathIdentity": "sha256:e7f14fbe67873a4dd5da88fb4a0b54197b98d68458c367d012cf67f22eb4c2b5"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -424,6 +424,13 @@
       "currentPackage": "blue.language.conformance.contracts",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureJson.java",
+      "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureSourceCatalog.java",
+      "currentPackage": "blue.language.conformance.contracts",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/FullLifecycleFixtureSourceCatalog.java",
       "targetPackage": "blue.language.conformance.contracts"
     },
     {
@@ -1894,6 +1901,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/NoncommittingExecutionException.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/NormalizedRuntimeContribution.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/NormalizedRuntimeContribution.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -6953,6 +6967,11 @@
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-clo-35-01-readd-committed-successor.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-emb-empty-05-prospective-activation.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-emb-empty-05-prospective-activation.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-18-missing-exact-node.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-18-missing-exact-node.yaml"
@@ -7016,6 +7035,26 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/fixtures/closure/fl-adm-01-root-patch-event.yaml",
