@@ -100,7 +100,10 @@ class CanonicalOverlayPatchEngineTest {
         // then
         assertEquals("escaped", patched.property("a/b").property("c~d").getValue());
         assertEquals("updated", replaced.property("a/b").property("c~d").getValue());
-        assertNull(removed.property("a/b"));
+        FrozenNode emptyParent = removed.property("a/b");
+        assertNotNull(emptyParent);
+        assertNotNull(emptyParent.getProperties());
+        assertTrue(emptyParent.getProperties().isEmpty());
     }
 
     @Test

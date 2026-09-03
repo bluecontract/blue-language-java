@@ -504,7 +504,7 @@ class FrozenJsonPatchApiTest {
 
         // then
         assertEquals(101L, mutableSize);
-        assertEquals(90L, frozenSize);
+        assertEquals(101L, frozenSize);
         assertEquals(101L, converted.getAuthoredCanonicalSizeBytes());
         assertEquals(20L, mutable.totalGas());
         assertEquals(mutable.totalGas(), frozen.totalGas());
