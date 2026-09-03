@@ -407,8 +407,8 @@ abstract class ContractsFixtureExecutionEngine extends ContractsFixtureProjectio
         final Map<String, Node> providerNodes =
                 new LinkedHashMap<>(registry.nodesByBlueId);
         providerNodes.putAll(input.providerNodes);
-        FixturePhysicalProvider provider =
-                new FixturePhysicalProvider(
+        ContractsFixturePhysicalProvider provider =
+                new ContractsFixturePhysicalProvider(
                         providerNodes,
                         input.cacheMode,
                         input.batchingMode);

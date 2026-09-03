@@ -44,7 +44,7 @@ public final class ClosureFixtureRuntime
     private final ConformanceEngine conformance;
     private final LanguageProcessingScopeSnapshotManager snapshots;
     private final BlueLanguage language;
-    private final ContractsFixtureHarnessDataSupport.FixturePhysicalProvider
+    private final ContractsFixturePhysicalProvider
             provider;
     private final Set<String> expectedProviderLoads;
     private final boolean explicitPhysicalMode;
@@ -52,7 +52,7 @@ public final class ClosureFixtureRuntime
 
     private ClosureFixtureRuntime(
             JsonNode fixture,
-            ContractsFixtureHarnessDataSupport.RegistryEnvironment registry) {
+            ContractsFixtureRegistryEnvironment registry) {
         JsonNode selected = Objects.requireNonNull(fixture, "fixture");
         JsonNode controls = selected.get("runtime");
         if (controls == null || !controls.isObject()) {
@@ -140,8 +140,8 @@ public final class ClosureFixtureRuntime
                                 + ": " + missing);
             }
         }
-        ContractsFixtureHarnessDataSupport.FixturePhysicalProvider provider =
-                new ContractsFixtureHarnessDataSupport.FixturePhysicalProvider(
+        ContractsFixturePhysicalProvider provider =
+                new ContractsFixturePhysicalProvider(
                         providerNodes, cacheMode, batchingMode, unavailable);
         final BlueLanguage language = productionLanguage(
                 registry.nodesByBlueId, provider);
@@ -203,7 +203,7 @@ public final class ClosureFixtureRuntime
         }
         return new ClosureFixtureRuntime(
                 selected,
-                ContractsFixtureHarnessDataSupport.RegistryEnvironment.load());
+                ContractsFixtureRegistryEnvironment.load());
     }
 
     /**
@@ -225,7 +225,7 @@ public final class ClosureFixtureRuntime
         }
         return new ClosureFixtureRuntime(
                 selected,
-                ContractsFixtureHarnessDataSupport.RegistryEnvironment.load(
+                ContractsFixtureRegistryEnvironment.load(
                         Objects.requireNonNull(packageRoot, "packageRoot")));
     }
 

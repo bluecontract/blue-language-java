@@ -125,7 +125,7 @@ final class ContractsFixtureInputPreparerIdentityTest {
     @Test
     void shouldCatalogEveryRuntimeOwnedExactChannelField() {
         Map<String, List<String>> fields =
-                ContractsFixtureHarnessDataSupport.RegistryEnvironment
+                ContractsFixtureRegistryEnvironment
                         .load()
                         .exactSourceFieldsByType();
 

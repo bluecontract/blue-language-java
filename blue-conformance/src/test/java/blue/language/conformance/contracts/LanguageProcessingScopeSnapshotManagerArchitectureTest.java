@@ -62,32 +62,37 @@ final class LanguageProcessingScopeSnapshotManagerArchitectureTest {
             throws IOException {
         String relative = "src/main/java/blue/language/conformance/contracts/"
                 + "ContractsFixtureHarnessDataSupport.java";
-        String source = readModuleSource(relative);
+        String harnessSource = readModuleSource(relative);
+        String registrySource = readModuleSource(
+                "src/main/java/blue/language/conformance/contracts/"
+                        + "ContractsFixtureRegistryEnvironment.java");
 
-        assertTrue(source.contains(
-                "return RegistryEnvironment.load().idByKey.get(key);"),
+        assertTrue(harnessSource.contains(
+                "return ContractsFixtureRegistryEnvironment.load()"
+                        + ".idByKey.get(key);"),
                 "outer registry lookup must use the lazy default accessor");
-        assertTrue(source.contains(
-                "static RegistryEnvironment load() {\n"
-                        + "            return DefaultHolder.INSTANCE;\n"
-                        + "        }"),
+        assertTrue(registrySource.contains(
+                "static ContractsFixtureRegistryEnvironment load() {\n"
+                        + "        return DefaultHolder.INSTANCE;\n"
+                        + "    }"),
                 "classpath default must be reached only through DefaultHolder");
-        assertTrue(source.contains(
+        assertTrue(registrySource.contains(
                 "private static final class DefaultHolder {\n"
-                        + "            private static final RegistryEnvironment INSTANCE"
-                        + " = loadInternal();\n"
-                        + "        }"),
+                        + "        private static final "
+                        + "ContractsFixtureRegistryEnvironment INSTANCE =\n"
+                        + "                loadInternal();\n"
+                        + "    }"),
                 "default environment must be initialized inside the lazy holder");
 
-        int environment = source.indexOf(
-                "static final class RegistryEnvironment");
-        int holder = source.indexOf(
+        int environment = registrySource.indexOf(
+                "final class ContractsFixtureRegistryEnvironment");
+        int holder = registrySource.indexOf(
                 "private static final class DefaultHolder", environment);
         assertTrue(environment >= 0 && holder > environment,
-                "cannot locate RegistryEnvironment/DefaultHolder boundary");
-        String eagerRegion = source.substring(environment, holder);
+                "cannot locate registry environment/DefaultHolder boundary");
+        String eagerRegion = registrySource.substring(environment, holder);
         assertFalse(eagerRegion.contains(
-                "static final RegistryEnvironment INSTANCE"),
+                "static final ContractsFixtureRegistryEnvironment INSTANCE"),
                 "candidate load would initialize a classpath default eagerly");
     }
 

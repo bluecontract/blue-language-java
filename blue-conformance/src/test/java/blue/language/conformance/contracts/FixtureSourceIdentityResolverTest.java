@@ -199,7 +199,7 @@ final class FixtureSourceIdentityResolverTest {
     @Test
     void shouldCatalogRegisteredZeroNodeFieldContractAsKnown() {
         Map<String, List<String>> exactFields =
-                ContractsFixtureHarnessDataSupport.RegistryEnvironment
+                ContractsFixtureRegistryEnvironment
                         .load()
                         .exactSourceFieldsByType();
 

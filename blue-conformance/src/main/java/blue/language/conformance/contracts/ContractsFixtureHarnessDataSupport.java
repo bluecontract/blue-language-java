@@ -13,9 +13,7 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.runtime.BlueLanguage;
 import blue.language.runtime.BlueLanguageRuntime;
 import blue.language.conformance.ConformanceEngine;
-import blue.language.conformance.api.BlueContractsConformanceReport;
 import blue.language.provider.NodeProvider;
-import blue.language.provider.NodeProviderResult;
 import blue.language.registry.BootstrapProvider;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifiedNodeProvider;
@@ -72,12 +70,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -145,7 +140,8 @@ abstract class ContractsFixtureHarnessDataSupport {
             new ContractsAssertionEvaluator();
     final ContractsGasSchedule gasSchedule =
             new ContractsGasSchedule();
-    final RegistryEnvironment registry = RegistryEnvironment.load();
+    final ContractsFixtureRegistryEnvironment registry =
+            ContractsFixtureRegistryEnvironment.load();
 
     static Node readNode(JsonNode value) {
         if (value == null) {
@@ -463,7 +459,7 @@ abstract class ContractsFixtureHarnessDataSupport {
     }
 
     static String registryId(String key) {
-        return RegistryEnvironment.load().idByKey.get(key);
+        return ContractsFixtureRegistryEnvironment.load().idByKey.get(key);
     }
 
     final FixtureSourceIdentityResolver.Identity sourceIdentity(
@@ -598,369 +594,6 @@ abstract class ContractsFixtureHarnessDataSupport {
                 .build();
     }
 
-    static final class RegistryEnvironment {
-        final Map<String, Node> nodesByBlueId;
-        final Map<String, String> idByKey;
-        final String runtimeRegistryIdentity;
-
-        private RegistryEnvironment(Map<String, Node> nodesByBlueId,
-                                    Map<String, String> idByKey,
-                                    String runtimeRegistryIdentity) {
-            this.nodesByBlueId =
-                    Collections.unmodifiableMap(new LinkedHashMap<>(nodesByBlueId));
-            this.idByKey =
-                    Collections.unmodifiableMap(new LinkedHashMap<>(idByKey));
-            this.runtimeRegistryIdentity = Objects.requireNonNull(
-                    runtimeRegistryIdentity, "runtimeRegistryIdentity");
-        }
-
-        static RegistryEnvironment load() {
-            return DefaultHolder.INSTANCE;
-        }
-
-        static RegistryEnvironment load(Path packageRoot) {
-            Path root = Objects.requireNonNull(
-                    packageRoot, "packageRoot").toAbsolutePath().normalize();
-            if (!packageRoot.isAbsolute() || !Files.isDirectory(root)) {
-                throw new IllegalArgumentException(
-                        "Contracts package root must be an existing absolute directory");
-            }
-            JsonNode release = readYaml(root.resolve("release-manifest.yaml"));
-            JsonNode contractsRegistry = release.path("contractsRegistry");
-            String registryIdentity = contractsRegistry.path(
-                    "packageIdentity").asText(null);
-            if (registryIdentity == null || registryIdentity.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Candidate release manifest has no Contracts registry identity");
-            }
-            Path manifestPath = root.resolve(
-                    contractsRegistry.path("path").asText("registry/manifest.yaml"))
-                    .normalize();
-            if (!manifestPath.startsWith(root)) {
-                throw new IllegalArgumentException(
-                        "Candidate registry manifest escapes the package root");
-            }
-            Map<String, Node> nodes = new LinkedHashMap<>();
-            Map<String, String> keys = new LinkedHashMap<>();
-            loadRegistry(manifestPath, nodes, keys);
-            loadConformanceOperation(nodes, keys);
-            if (!MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL.equals(
-                    keys.get("ScriptedExternalChannel"))
-                    || !MockTypeBlueIds.MOCK_HANDLER.equals(
-                    keys.get("ScriptedHandler"))
-                    || !MockTypeBlueIds.MOCK_OPERATION.equals(
-                    keys.get("ScriptedOperation"))) {
-                throw new IllegalStateException(
-                        "Candidate fixture runtime registry identity mismatch");
-            }
-            return new RegistryEnvironment(
-                    nodes, keys, registryIdentity);
-        }
-
-        Node require(String blueId) {
-            Node value = nodesByBlueId.get(blueId);
-            if (value == null) {
-                throw new IllegalStateException(
-                        "Registry has no exact node " + blueId);
-            }
-            return value.clone();
-        }
-
-        Map<String, List<String>> exactSourceFieldsByType() {
-            Map<String, List<String>> fields = new LinkedHashMap<>();
-            fields.put(
-                    RuntimeBlueIds.CHANNEL,
-                    exactSourceFields(
-                            ChannelContract.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    RuntimeBlueIds.EXTERNAL_CHANNEL,
-                    exactSourceFields(
-                            ChannelContract.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    RuntimeBlueIds.HANDLER,
-                    exactSourceFields(
-                            HandlerContract.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    RuntimeBlueIds.DOCUMENT_UPDATE_CHANNEL,
-                    exactSourceFields(
-                            DocumentUpdateChannel.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    RuntimeBlueIds.TRIGGERED_EVENT_CHANNEL,
-                    exactSourceFields(
-                            TriggeredEventChannel.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    RuntimeBlueIds.EMBEDDED_COLLECTION_EVENT_CHANNEL,
-                    exactSourceFields(
-                            EmbeddedCollectionEventChannel.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    RuntimeBlueIds.EMBEDDED_NODE_CHANNEL,
-                    exactSourceFields(
-                            EmbeddedNodeChannel.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL,
-                    exactSourceFields(
-                            LifecycleChannel.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    RuntimeBlueIds.PROCESSING_INITIALIZED_MARKER,
-                    exactSourceFields(
-                            InitializationMarker.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL,
-                    exactSourceFields(
-                            MockExternalChannel.Value.class,
-                            Collections.<String>emptyList()));
-            fields.put(
-                    MockTypeBlueIds.MOCK_HANDLER,
-                    exactSourceFields(
-                            MockHandler.Value.class,
-                            Collections.singletonList(
-                                    ContractsFixtureConstants.Field.RESULT)));
-            fields.put(
-                    MockTypeBlueIds.MOCK_OPERATION,
-                    exactSourceFields(
-                            MockOperation.Value.class,
-                            Collections.singletonList(
-                                    ContractsFixtureConstants.Field.RESULT)));
-            return inheritedContractFields(fields);
-        }
-
-        Map<String, List<String>> executableBodyFieldsByType() {
-            Map<String, List<String>> fields = new LinkedHashMap<>();
-            fields.put(
-                    MockTypeBlueIds.MOCK_HANDLER,
-                    Collections.singletonList(
-                            ContractsFixtureConstants.Field.RESULT));
-            fields.put(
-                    MockTypeBlueIds.MOCK_OPERATION,
-                    Collections.singletonList(
-                            ContractsFixtureConstants.Field.RESULT));
-            return inheritedContractFields(fields);
-        }
-
-        private Map<String, List<String>> inheritedContractFields(
-                Map<String, List<String>> fields) {
-            Map<String, List<String>> complete = new LinkedHashMap<>();
-            for (String typeBlueId : nodesByBlueId.keySet()) {
-                if (!isSubtype(typeBlueId, RuntimeBlueIds.CONTRACT)) {
-                    continue;
-                }
-                Set<String> inherited = new LinkedHashSet<>();
-                Set<String> visited = new LinkedHashSet<>();
-                String current = typeBlueId;
-                while (current != null && visited.add(current)) {
-                    List<String> direct = fields.get(current);
-                    if (direct != null) {
-                        inherited.addAll(direct);
-                    }
-                    Node type = nodesByBlueId.get(current);
-                    current = type != null && type.getType() != null
-                            ? type.getType().getBlueId()
-                            : null;
-                }
-                if (current != null) {
-                    throw new IllegalStateException(
-                            "Cyclic Contracts registry type ancestry at "
-                                    + current);
-                }
-                List<String> ordered = new ArrayList<>(inherited);
-                ordered.sort(ExternalOrderKey::compareTextCodePoints);
-                complete.put(
-                        typeBlueId,
-                        Collections.unmodifiableList(ordered));
-            }
-            return Collections.unmodifiableMap(complete);
-        }
-
-        private static List<String> exactSourceFields(
-                Class<? extends Contract> contractType,
-                List<String> executableBodyFields) {
-            Set<String> fields = new LinkedHashSet<>();
-            Class<?> current = contractType;
-            while (current != null && current != Object.class) {
-                for (Field field : current.getDeclaredFields()) {
-                    if (!Modifier.isStatic(field.getModifiers())
-                            && !field.isSynthetic()
-                            && Node.class.isAssignableFrom(field.getType())) {
-                        fields.add(jsonPropertyName(field));
-                    }
-                }
-                current = current.getSuperclass();
-            }
-            List<String> nodeFields = new ArrayList<>(fields);
-            nodeFields.sort(ExternalOrderKey::compareTextCodePoints);
-            fields.clear();
-            fields.addAll(nodeFields);
-            fields.addAll(executableBodyFields);
-            return Collections.unmodifiableList(new ArrayList<>(fields));
-        }
-
-        private static String jsonPropertyName(Field field) {
-            JsonProperty property = field.getAnnotation(JsonProperty.class);
-            if (property != null
-                    && property.value() != null
-                    && !property.value().isEmpty()
-                    && !JsonProperty.USE_DEFAULT_NAME.equals(
-                            property.value())) {
-                return property.value();
-            }
-            return field.getName();
-        }
-
-        boolean isSubtype(String candidate, String parent) {
-            if (candidate == null || parent == null) {
-                return false;
-            }
-            Set<String> visited = new LinkedHashSet<>();
-            String current = candidate;
-            while (current != null && visited.add(current)) {
-                if (parent.equals(current)) {
-                    return true;
-                }
-                Node node = nodesByBlueId.get(current);
-                current = node != null && node.getType() != null
-                        ? node.getType().getBlueId()
-                        : null;
-            }
-            return false;
-        }
-
-        private static RegistryEnvironment loadInternal() {
-            Map<String, Node> nodes = new LinkedHashMap<>();
-            Map<String, String> keys = new LinkedHashMap<>();
-            loadRegistry(CONTRACTS_REGISTRY_ROOT, nodes, keys);
-            loadRegistry(LANGUAGE_REGISTRY_ROOT, nodes, keys);
-            loadConformanceOperation(nodes, keys);
-            if (!MockTypeBlueIds.MOCK_EXTERNAL_CHANNEL.equals(
-                    keys.get("ScriptedExternalChannel"))
-                    || !MockTypeBlueIds.MOCK_HANDLER.equals(
-                    keys.get("ScriptedHandler"))
-                    || !MockTypeBlueIds.MOCK_OPERATION.equals(
-                    keys.get("ScriptedOperation"))) {
-                throw new IllegalStateException(
-                        "Fixture runtime registry identity mismatch");
-            }
-            return new RegistryEnvironment(
-                    nodes,
-                    keys,
-                    BlueContractsConformanceReport
-                            .CONTRACTS_REGISTRY_PACKAGE_IDENTITY);
-        }
-
-        private static void loadConformanceOperation(
-                Map<String, Node> nodes,
-                Map<String, String> keys) {
-            /*
-             * This adapter is owned and package-inventoried by the
-             * conformance harness.  It is deliberately loaded beside the
-             * frozen Contracts runtime registry instead of changing that
-             * production registry's package identity.
-             */
-            Node node = readNode(readYaml(CONFORMANCE_OPERATION_RESOURCE));
-            String calculated = DirectBlueIdCalculator.calculateBlueId(node);
-            if (!MockTypeBlueIds.MOCK_OPERATION.equals(calculated)) {
-                throw new IllegalStateException(
-                        "Conformance Operation registry identity mismatch");
-            }
-            Node previous = nodes.put(calculated, node);
-            if (previous != null
-                    && !semanticEquals(
-                            normalizeNode(previous), normalizeNode(node))) {
-                throw new IllegalStateException(
-                        "Conformance Operation BlueId collision");
-            }
-            String previousKey = keys.put("ScriptedOperation", calculated);
-            if (previousKey != null && !previousKey.equals(calculated)) {
-                throw new IllegalStateException(
-                        "Conformance Operation registry key collision");
-            }
-        }
-
-        /** Defers classpath registry/runtime construction from candidate loads. */
-        private static final class DefaultHolder {
-            private static final RegistryEnvironment INSTANCE = loadInternal();
-        }
-
-        private static void loadRegistry(String root,
-                                         Map<String, Node> nodes,
-                                         Map<String, String> keys) {
-            JsonNode manifest = readYaml(root + "manifest.yaml");
-            JsonNode entries = manifest.get("entries");
-            if (entries == null || !entries.isArray()) {
-                throw new IllegalStateException(
-                        "Registry manifest has no entries: " + root);
-            }
-            for (JsonNode entry : entries) {
-                String key = entry.path("key").asText();
-                String blueId = entry.path(BlueLanguageConstants.OBJECT_BLUE_ID).asText();
-                String path = entry.path("path").asText();
-                Node node = readNode(readYaml(root + path));
-                String calculated = DirectBlueIdCalculator.calculateBlueId(node);
-                if (!blueId.equals(calculated)) {
-                    throw new IllegalStateException(
-                            "Registry node identity mismatch for "
-                                    + root + path);
-                }
-                Node duplicate = nodes.put(blueId, node);
-                if (duplicate != null
-                        && !semanticEquals(
-                        normalizeNode(duplicate), normalizeNode(node))) {
-                    throw new IllegalStateException(
-                            "Registry BlueId collision for " + blueId);
-                }
-                keys.put(key, blueId);
-            }
-        }
-
-        private static void loadRegistry(Path manifestPath,
-                                         Map<String, Node> nodes,
-                                         Map<String, String> keys) {
-            JsonNode manifest = readYaml(manifestPath);
-            JsonNode entries = manifest.get("entries");
-            if (entries == null || !entries.isArray()) {
-                throw new IllegalStateException(
-                        "Registry manifest has no entries: " + manifestPath);
-            }
-            Path registryRoot = manifestPath.getParent();
-            for (JsonNode entry : entries) {
-                String key = entry.path("key").asText();
-                String blueId = entry.path(
-                        BlueLanguageConstants.OBJECT_BLUE_ID).asText();
-                Path nodePath = registryRoot.resolve(
-                        entry.path("path").asText()).normalize();
-                if (!nodePath.startsWith(registryRoot)) {
-                    throw new IllegalStateException(
-                            "Registry entry escapes the candidate package: " + key);
-                }
-                Node node = readNode(readYaml(nodePath));
-                String calculated = DirectBlueIdCalculator.calculateBlueId(node);
-                if (!blueId.equals(calculated)) {
-                    throw new IllegalStateException(
-                            "Registry node identity mismatch for " + nodePath);
-                }
-                Node duplicate = nodes.put(blueId, node);
-                if (duplicate != null
-                        && !semanticEquals(
-                        normalizeNode(duplicate), normalizeNode(node))) {
-                    throw new IllegalStateException(
-                            "Registry BlueId collision for " + blueId);
-                }
-                String previous = keys.put(key, blueId);
-                if (previous != null && !previous.equals(blueId)) {
-                    throw new IllegalStateException(
-                            "Duplicate registry key with different BlueIds: " + key);
-                }
-            }
-        }
-    }
 
     static JsonNode readYaml(String resource) {
         try (InputStream input = ContractsFixtureHarness.class
@@ -1283,14 +916,14 @@ abstract class ContractsFixtureHarnessDataSupport {
         final FixtureGeneralizationPlanner generalization;
         final BlueLanguageRuntime language;
         final ConformanceEngine conformanceEngine;
-        final FixturePhysicalProvider provider;
+        final ContractsFixturePhysicalProvider provider;
 
         ProcessorBundle(DocumentProcessor processor,
                         ScriptedContractsRuntime runtime,
                         FixtureGeneralizationPlanner generalization,
                         BlueLanguageRuntime language,
                         ConformanceEngine conformanceEngine,
-                        FixturePhysicalProvider provider) {
+                        ContractsFixturePhysicalProvider provider) {
             this.processor = processor;
             this.runtime = runtime;
             this.generalization = generalization;
@@ -1313,188 +946,6 @@ abstract class ContractsFixtureHarnessDataSupport {
         }
     }
 
-    /**
-     * Physical fixture provider used to make warm/cold and
-     * batched/unbatched variants real preparation strategies. None of these
-     * counters are exposed through semantic projections or gas traces.
-     */
-    static final class FixturePhysicalProvider
-            implements NodeProvider {
-        private final Map<String, Node> backing = new LinkedHashMap<>();
-        private final Map<String, Node> cache = new LinkedHashMap<>();
-        private final String cacheMode;
-        private final String batchingMode;
-        private final Set<String> transientlyUnavailable;
-        private final Set<String> requestedBlueIds = new LinkedHashSet<>();
-        private final int initialCacheEntries;
-        private long requests;
-        private long backendLoads;
-        private int largestBackendLoad;
-
-        FixturePhysicalProvider(Map<String, Node> nodes,
-                                String cacheMode,
-                                String batchingMode) {
-            this(nodes, cacheMode, batchingMode,
-                    Collections.<String>emptySet());
-        }
-
-        FixturePhysicalProvider(Map<String, Node> nodes,
-                                String cacheMode,
-                                String batchingMode,
-                                Set<String> transientlyUnavailable) {
-            if (!"cold".equals(cacheMode)
-                    && !"warm".equals(cacheMode)) {
-                throw new IllegalArgumentException(
-                        "Unsupported fixture cache mode: " + cacheMode);
-            }
-            if (!"unbatched".equals(batchingMode)
-                    && !"batched".equals(batchingMode)) {
-                throw new IllegalArgumentException(
-                        "Unsupported fixture batching mode: "
-                                + batchingMode);
-            }
-            this.cacheMode = cacheMode;
-            this.batchingMode = batchingMode;
-            this.transientlyUnavailable = Collections.unmodifiableSet(
-                    new LinkedHashSet<String>(Objects.requireNonNull(
-                            transientlyUnavailable,
-                            "transientlyUnavailable")));
-            for (Map.Entry<String, Node> entry : nodes.entrySet()) {
-                backing.put(entry.getKey(), entry.getValue().clone());
-            }
-            if ("warm".equals(cacheMode)) {
-                copyAll(backing, cache);
-            }
-            this.initialCacheEntries = cache.size();
-        }
-
-        @Override
-        public List<Node> fetchByBlueId(String blueId) {
-            requestedBlueIds.add(blueId);
-            requests++;
-            Node cached = cache.get(blueId);
-            if (cached != null) {
-                return Collections.singletonList(cached.clone());
-            }
-            if ("batched".equals(batchingMode)) {
-                backendLoads++;
-                largestBackendLoad =
-                        Math.max(largestBackendLoad, backing.size());
-                copyAll(backing, cache);
-            } else {
-                backendLoads++;
-                Node exact = backing.get(blueId);
-                if (exact != null) {
-                    cache.put(blueId, exact.clone());
-                    largestBackendLoad =
-                            Math.max(largestBackendLoad, 1);
-                }
-            }
-            Node loaded = cache.get(blueId);
-            return loaded == null
-                    ? null
-                    : Collections.singletonList(loaded.clone());
-        }
-
-        @Override
-        public NodeProviderResult fetchResultByBlueId(String blueId) {
-            if (transientlyUnavailable.contains(blueId)) {
-                requestedBlueIds.add(blueId);
-                requests++;
-                backendLoads++;
-                largestBackendLoad = Math.max(largestBackendLoad, 1);
-                return NodeProviderResult.unavailable(
-                        "Fixture exact node is transiently unavailable");
-            }
-            return NodeProvider.super.fetchResultByBlueId(blueId);
-        }
-
-        void verifyPreparation() {
-            if ("cold".equals(cacheMode)
-                    && initialCacheEntries != 0) {
-                throw new AssertionError(
-                        "Cold provider began with cached content");
-            }
-            if ("warm".equals(cacheMode)
-                    && initialCacheEntries != backing.size()) {
-                throw new AssertionError(
-                        "Warm provider did not preload exact content");
-            }
-            if ("unbatched".equals(batchingMode)
-                    && largestBackendLoad > 1) {
-                throw new AssertionError(
-                        "Unbatched provider performed a bulk load");
-            }
-            if ("batched".equals(batchingMode)
-                    && backendLoads > 0
-                    && largestBackendLoad != backing.size()) {
-                throw new AssertionError(
-                        "Batched provider did not load one physical batch");
-            }
-            if (requests > 0
-                    && "cold".equals(cacheMode)
-                    && backendLoads == 0) {
-                throw new AssertionError(
-                        "Cold provider request bypassed physical storage");
-            }
-        }
-
-        void verifyExpectedLoads(Set<String> expectedBlueIds) {
-            Set<String> missing = new LinkedHashSet<String>(
-                    Objects.requireNonNull(expectedBlueIds,
-                            "expectedBlueIds"));
-            missing.removeAll(requestedBlueIds);
-            if (!missing.isEmpty()) {
-                throw new AssertionError(
-                        "Fixture provider did not load expected exact nodes: "
-                                + missing);
-            }
-        }
-
-        void verifyExactPhysicalLoads(Set<String> expectedBlueIds) {
-            Set<String> expected = new LinkedHashSet<String>(
-                    Objects.requireNonNull(expectedBlueIds,
-                            "expectedBlueIds"));
-            if (expected.size() < 2 || backing.size() < 2) {
-                throw new AssertionError(
-                        "Physical provider matrix requires at least two "
-                                + "exact dependencies and backing nodes");
-            }
-            if (!requestedBlueIds.equals(expected)) {
-                throw new AssertionError(
-                        "Physical provider requests differ from the exact "
-                                + "expected loads: expected=" + expected
-                                + ", actual=" + requestedBlueIds);
-            }
-            if ("warm".equals(cacheMode)) {
-                if (backendLoads != 0) {
-                    throw new AssertionError(
-                            "Warm provider performed a backend load");
-                }
-                return;
-            }
-            if ("batched".equals(batchingMode)) {
-                if (backendLoads != 1
-                        || largestBackendLoad != backing.size()) {
-                    throw new AssertionError(
-                            "Cold batched provider did not perform exactly "
-                                    + "one complete physical batch");
-                }
-            } else if (backendLoads != expected.size()
-                    || largestBackendLoad != 1) {
-                throw new AssertionError(
-                        "Cold unbatched provider did not perform one exact "
-                                + "backend load per required dependency");
-            }
-        }
-
-        private static void copyAll(Map<String, Node> source,
-                                    Map<String, Node> target) {
-            for (Map.Entry<String, Node> entry : source.entrySet()) {
-                target.put(entry.getKey(), entry.getValue().clone());
-            }
-        }
-    }
 
     static final class ProcessExecution {
         final DocumentProcessingResult result;
