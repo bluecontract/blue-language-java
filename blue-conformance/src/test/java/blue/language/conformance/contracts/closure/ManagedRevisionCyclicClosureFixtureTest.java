@@ -32,7 +32,7 @@ final class ManagedRevisionCyclicClosureFixtureTest {
     private static final String RELEASED_FIXTURE =
             "c-clo-23-05-a9-to-a10";
     private static final String MASTER =
-            "B4s6BMi4HbXS48DC1GTuozEfbSdbBepRnpP5TrsJTdkE";
+            "AqxN3nEKymbTyHrfjFhHcEH35YRyz3Ggcoch3dEzMkH5";
 
     // Frozen after the focused fixture is executed once against the release
     // gas schedule; it is intentionally not derived from the implementation.
@@ -46,13 +46,13 @@ final class ManagedRevisionCyclicClosureFixtureTest {
         Variant variant = variant(
                 seed,
                 seed.exactAfterDocument,
-                MASTER + "#1",
+                MASTER + "#0",
                 seed.exactProof);
         ManagedRevisionCause parsedCause = (ManagedRevisionCause)
                 variant.input.cause();
 
         assertTrue(parsedCause.afterCyclicProof().isPresent());
-        assertEquals(MASTER + "#1", parsedCause.afterBlueId());
+        assertEquals(MASTER + "#0", parsedCause.afterBlueId());
 
         ClosureAttemptResult attempt;
         try (ClosureFixtureRuntime runtime =
@@ -82,7 +82,7 @@ final class ManagedRevisionCyclicClosureFixtureTest {
         Variant cyclic = variant(
                 seed,
                 seed.exactAfterDocument,
-                MASTER + "#1",
+                MASTER + "#0",
                 seed.exactProof);
         ((ObjectNode) cyclic.envelope.path("input").path("cause"))
                 .remove("afterCyclicProof");
@@ -108,7 +108,7 @@ final class ManagedRevisionCyclicClosureFixtureTest {
         assertFacadeRejects(variant(
                 seed,
                 seed.exactAfterDocument,
-                MASTER + "#1",
+                MASTER + "#0",
                 CyclicSetProof.fromDeclaredPlaceholderSet(
                         tamperedMembers)));
 
@@ -116,7 +116,7 @@ final class ManagedRevisionCyclicClosureFixtureTest {
                 seed,
                 seed.exactAfterDocument.clone().properties(
                         "tampered", new Node().value(Boolean.TRUE)),
-                MASTER + "#1",
+                MASTER + "#0",
                 seed.exactProof));
 
         String anotherMaster = DirectBlueIdCalculator.calculateBlueId(
@@ -124,7 +124,7 @@ final class ManagedRevisionCyclicClosureFixtureTest {
         assertFacadeRejects(variant(
                 seed,
                 seed.exactAfterDocument,
-                anotherMaster + "#1",
+                anotherMaster + "#0",
                 seed.exactProof));
 
         assertFacadeRejects(variant(
@@ -219,7 +219,7 @@ final class ManagedRevisionCyclicClosureFixtureTest {
         Node exactAfterDocument = node(
                 ClosureFixtureInventory.requiredObject(
                         resultDocument, "document"));
-        assertEquals(MASTER + "#1",
+        assertEquals(MASTER + "#0",
                 ClosureFixtureInventory.requiredText(
                         resultDocument, "afterBlueId"));
 
