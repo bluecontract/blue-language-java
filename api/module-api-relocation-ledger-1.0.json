@@ -4,11 +4,11 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 534,
-    "publicTypeIdentity": "sha256:496ec9c0de6995a3f840915160d71a3199c882110be0aaddd25ba6baa342b267",
+    "publicProductionTypeCount": 535,
+    "publicTypeIdentity": "sha256:4b7f92da9bee9e38c98c4008fc2dbfd44a3cc5124a7b3f0b1b71d693b94dcb2e",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
-      "internal-type-removed-from-public-surface": 272,
+      "internal-type-removed-from-public-surface": 273,
       "new-supported-api-spi": 62
     }
   },
@@ -2463,6 +2463,17 @@
       "currentArtifact": "blue.language:blue-contracts-core",
       "targetModule": ":blue-contracts-core",
       "targetType": "blue.language.processor.EmbeddedScopePlanView",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.EmbeddedScopePlanView$CollectionState",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanView.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.EmbeddedScopePlanView$CollectionState",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",

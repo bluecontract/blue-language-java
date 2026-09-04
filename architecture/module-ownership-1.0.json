@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 792,
-    "productionResourceCount": 815,
-    "productionSourcePathIdentity": "sha256:b1a6b0c3d69ec9e16feff5443b93c75a7e476c80895c13bc57e34ea460f52415",
-    "productionResourcePathIdentity": "sha256:06a81db9c0ac4aa99f1aad6ed183445c926d6f0d522503e718af68a075cebfb0"
+    "productionSourceCount": 795,
+    "productionResourceCount": 816,
+    "productionSourcePathIdentity": "sha256:a883799e0bb8e037853cc95e3da153017471364af62a2182d86a6460cf576187",
+    "productionResourcePathIdentity": "sha256:ac3d9ad2d124e84dc7e9d156d341ff7acdc5610ab66fb3e86249b23fae60fb3b"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -644,6 +644,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalContributionIdentityMemo.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalContributionIdentityMemo.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/CanonicalEffectSourceProjection.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -1187,6 +1194,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeValueResolver.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopeValueResolver.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -1810,6 +1824,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRoute.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRouteClassifier.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/ManagedDocumentStepRouteClassifier.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -9655,6 +9676,11 @@
       "currentPath": "blue-language-core/src/main/resources/META-INF/services/blue.language.model.NodeIdentityProvider",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/resources/META-INF/services/blue.language.model.NodeIdentityProvider"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/resources/provider/blue-language-source-preprocessing-environment-1.0.yaml",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/resources/provider/blue-language-source-preprocessing-environment-1.0.yaml"
     },
     {
       "currentPath": "blue-language-core/src/main/resources/registry/blue-language-1.0/Boolean.blue",

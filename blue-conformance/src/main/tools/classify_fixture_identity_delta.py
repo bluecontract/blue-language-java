@@ -144,15 +144,15 @@ APPROVED_REMOVED_SOURCE_ARCHIVE_BASELINE = {
 APPROVED_LANGUAGE_DEPENDENCY_TRANSITION = {
     "specificationSha256": (
         "019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37",
-        "db56468955be462861cfcdf3451f46361c5e13fc4e31ac89a39115e402ac4cde",
+        "0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06",
     ),
     "cyclicSetFinalizerBaselineIdentity": (
         "sha256:d71ec19247a32f7f40107f512e4eb567b4cb41ae8e73c16d2ebe10b0e8517c76",
-        "sha256:d3ffac60d78fdb516a9f635181532e45dcb5bde05080ad161f63af8476eb1b48",
+        "sha256:a16e111c7d5e803e6551ff43a6beaa265149bf1cd0c73808ba7fb81650a079b3",
     ),
     "cyclicSetProofVerifierBaselineIdentity": (
         "sha256:0768d22420c5bb01109861eb9e090b758aa66b25c2df7b4708dff36a969cefdd",
-        "sha256:550c51d427f53b07a5d31cbdfdc1c143829466602356615452b27327f2080202",
+        "sha256:3a94850f63b8813e05fe38687e50ce95617a7748dbb8cc2f6d346572651d9372",
     ),
 }
 
@@ -206,7 +206,7 @@ def implementation_baseline_aggregate_identity(
 # Recompute deliberately when production source bytes or inventory membership
 # changes.  This pin approves one exact after-snapshot, not arbitrary hashes.
 APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY = (
-    "sha256:1ca65a42664aa1e17c96dae8d9874ead132ad01a36828f1eb23df238415650c7"
+    "sha256:871097440418646a3e206f3ee4a433736e031201358f635bfa8a08b6ffc295e1"
 )
 
 if any(

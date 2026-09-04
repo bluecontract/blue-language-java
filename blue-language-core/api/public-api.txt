@@ -65,7 +65,7 @@ field blue.language.provider.ProviderMode#BOUND_SOURCE_CONTENT descriptor=Lblue/
 field blue.language.provider.ProviderMode#DIRECT_NODE descriptor=Lblue/language/provider/ProviderMode; access=public,static,final signature=- constant=-
 field blue.language.provider.ProviderMode#SOURCE_DOCUMENT descriptor=Lblue/language/provider/ProviderMode; access=public,static,final,enum signature=- constant=-
 field blue.language.provider.SourceProviderEnvironment#EXPLICIT_VERIFIER_DOMAIN_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0:explicit-provider-evidence-verifier"
-field blue.language.provider.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-contracts-embedded-modules-collection-paths@sha256:f794dfd2c57969f81025387895e60a0e67919f677ccf7efeeac0f5ac189f938c"
+field blue.language.provider.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-source-preprocessing-environment-1.0@sha256:9fac19e527f17fc83b1cbca9e7e0355a27aad3a740b4cffb0b520ee6da376171"
 field blue.language.provider.SourceProviderEnvironment#LANGUAGE_CONTENT_STRATEGY_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0:source-content-canonicalization"
 field blue.language.registry.BlueCoreTypeRegistry#INSTANCE descriptor=Lblue/language/registry/BlueCoreTypeRegistry; access=public,static,final signature=- constant=-
 field blue.language.registry.BlueCoreTypeRegistry#RESOURCE_ROOT descriptor=Ljava/lang/String; access=public,static,final signature=- constant="registry/blue-language-1.0"
@@ -346,7 +346,6 @@ method blue.language.identity.NodeToBlueIdInput#get descriptor=(Lblue/language/m
 method blue.language.identity.NodeToBlueIdInput#getAllowingCyclicPlaceholders descriptor=(Lblue/language/model/Node;)Ljava/lang/Object; access=public,static signature=- throws=-
 method blue.language.identity.NodeToBlueIdInput#getListElement descriptor=(Lblue/language/model/Node;I)Ljava/lang/Object; access=public,static signature=- throws=-
 method blue.language.identity.NodeToBlueIdInput#getListElementAllowingCyclicPlaceholders descriptor=(Lblue/language/model/Node;I)Ljava/lang/Object; access=public,static signature=- throws=-
-method blue.language.identity.NodeToBlueIdInput#getWithResolvedBlueIdMetadata descriptor=(Lblue/language/model/Node;)Ljava/lang/Object; access=public,static signature=- throws=-
 method blue.language.identity.NodeToBlueIdInput#stripResolvedBlueIdMetadata descriptor=(Lblue/language/model/Node;)Lblue/language/model/Node; access=public,static signature=- throws=-
 method blue.language.identity.ObjectBlueIdHasher#<init> descriptor=(Ljava/util/function/Function;)V access=public signature=(Ljava/util/function/Function<Ljava/lang/Object;Ljava/lang/String;>;)V throws=-
 method blue.language.identity.ObjectBlueIdHasher#hash descriptor=(Ljava/util/Map;Ljava/util/function/Function;)Ljava/lang/String; access=public signature=(Ljava/util/Map<Ljava/lang/String;Ljava/lang/Object;>;Ljava/util/function/Function<Ljava/lang/Object;Ljava/lang/String;>;)Ljava/lang/String; throws=-
