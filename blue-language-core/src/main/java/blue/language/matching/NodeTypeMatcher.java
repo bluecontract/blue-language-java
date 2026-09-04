@@ -127,16 +127,17 @@ public class NodeTypeMatcher {
         TypeEvidenceResolution resolution = Objects.requireNonNull(
                 runtime.resolveTypeEvidenceForMatching(expanded, limits),
                 "matching resolution");
-        Node resolved = resolution.resolvedRoot().toNode();
-        restoreMissingStructure(resolved, expanded);
         return new MatchingCandidate(
-                FrozenNode.fromResolvedNode(resolved),
+                resolution.resolvedRoot(),
                 resolution.canonicalTypeIdentities());
     }
 
     private ResolutionLimits matchingLimits(ResolutionLimits globalLimits, Node targetPattern) {
         ResolutionLimits effectiveGlobalLimits = globalLimits != null ? globalLimits : ResolutionLimits.NO_LIMITS;
-        return ResolutionLimits.allOf(effectiveGlobalLimits, new TargetPatternLimits(targetPattern));
+        ResolutionLimits demandedPaths = ResolutionLimits.allOf(
+                effectiveGlobalLimits,
+                new TargetPatternLimits(targetPattern));
+        return new SourcePreservingMatchingLimits(demandedPaths);
     }
 
     private FrozenTypeMatcher matcherFor(
@@ -164,72 +165,61 @@ public class NodeTypeMatcher {
         }
     }
 
-    private void restoreMissingStructure(Node target, Node source) {
-        if (target == null || source == null) {
-            return;
+    /**
+     * Retains every authored branch as exact Source while allowing expansion
+     * only where both the caller and target pattern demand it.
+     *
+     * <p>Resolution therefore produces valid semantic Blue content even when
+     * the target selects no candidate path. An unselected branch is cloned at
+     * the resolver's existing cold boundary; it is never fetched,
+     * interpreted, or confused with the exact empty-object value
+     * {@code {}}.</p>
+     */
+    private static final class SourcePreservingMatchingLimits
+            implements ResolutionLimits {
+        private final ResolutionLimits demandedPaths;
+
+        private SourcePreservingMatchingLimits(
+                ResolutionLimits demandedPaths) {
+            this.demandedPaths = Objects.requireNonNull(
+                    demandedPaths, "demandedPaths");
         }
 
-        restoreItems(target, source);
-        restoreProperties(target, source);
+        @Override
+        public boolean shouldExpandPathSegment(
+                String pathSegment, Node currentNode) {
+            return demandedPaths.shouldExpandPathSegment(
+                    pathSegment, currentNode);
+        }
 
-        if (target.getBlueId() == null && source.getBlueId() != null) {
-            target.blueId(source.getBlueId());
+        @Override
+        public boolean shouldMergePathSegment(
+                String pathSegment, Node currentNode) {
+            return true;
         }
-        if (target.getValue() == null && source.getValue() != null) {
-            target.value(source.getValue());
-        }
-    }
 
-    private void restoreItems(Node target, Node source) {
-        List<Node> sourceItems = source.getItems();
-        if (sourceItems == null) {
-            return;
+        @Override
+        public boolean shouldReconstructList(
+                Node currentNode, List<Node> items) {
+            return demandedPaths.shouldReconstructList(
+                    currentNode, items);
         }
-        List<Node> targetItems = target.getItems();
-        if (targetItems == null || targetItems.isEmpty()) {
-            target.items(cloneItems(sourceItems));
-            return;
-        }
-        int commonSize = Math.min(targetItems.size(), sourceItems.size());
-        for (int i = 0; i < commonSize; i++) {
-            restoreMissingStructure(targetItems.get(i), sourceItems.get(i));
-        }
-    }
 
-    private List<Node> cloneItems(List<Node> items) {
-        java.util.ArrayList<Node> cloned = new java.util.ArrayList<>(items.size());
-        for (Node item : items) {
-            cloned.add(item.clone());
+        @Override
+        public boolean retainsEveryAuthoredPath() {
+            return true;
         }
-        return cloned;
-    }
 
-    private void restoreProperties(Node target, Node source) {
-        Map<String, Node> sourceProperties = source.getProperties();
-        if (sourceProperties == null) {
-            return;
+        @Override
+        public void enterPathSegment(
+                String pathSegment, Node currentNode) {
+            demandedPaths.enterPathSegment(pathSegment, currentNode);
         }
-        Map<String, Node> targetProperties = target.getProperties();
-        if (targetProperties == null) {
-            target.properties(cloneProperties(sourceProperties));
-            return;
-        }
-        for (Map.Entry<String, Node> entry : sourceProperties.entrySet()) {
-            Node targetChild = targetProperties.get(entry.getKey());
-            if (targetChild == null) {
-                targetProperties.put(entry.getKey(), entry.getValue().clone());
-            } else {
-                restoreMissingStructure(targetChild, entry.getValue());
-            }
-        }
-    }
 
-    private Map<String, Node> cloneProperties(Map<String, Node> properties) {
-        java.util.LinkedHashMap<String, Node> cloned = new java.util.LinkedHashMap<>();
-        for (Map.Entry<String, Node> entry : properties.entrySet()) {
-            cloned.put(entry.getKey(), entry.getValue().clone());
+        @Override
+        public void exitPathSegment() {
+            demandedPaths.exitPathSegment();
         }
-        return cloned;
     }
 
     private static final class TargetPatternLimits implements ResolutionLimits {

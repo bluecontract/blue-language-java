@@ -39,7 +39,8 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
 
     private Node normalizeRoot(Node node) {
         if (node == null) {
-            return null;
+            throw new IllegalArgumentException(
+                    "Root null is not a valid Blue document.");
         }
         if (Nodes.isSourceNullLiteral(node)) {
             throw new IllegalArgumentException(
@@ -159,9 +160,7 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
             for (int i = 0; i < schema.getEnum().size(); i++) {
                 String enumPath = append(path, KEY_ENUM, i);
                 Node enumValue = normalizeObjectField(schema.getEnum().get(i), enumPath);
-                if (enumValue == null
-                        || Nodes.isEmptyPlaceholder(enumValue)
-                        || (enumValue.getProperties() != null && enumValue.getProperties().containsKey(LIST_CONTROL_EMPTY))) {
+                if (!Nodes.isSchemaEnumValue(enumValue)) {
                     throw new IllegalArgumentException("schema.enum entries must be scalar values or explicit scalar nodes. Path: " + enumPath);
                 }
                 enumValues.add(enumValue);

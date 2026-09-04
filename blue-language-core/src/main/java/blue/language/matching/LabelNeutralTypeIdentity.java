@@ -1,6 +1,5 @@
 package blue.language.matching;
 
-import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
@@ -41,7 +40,7 @@ final class LabelNeutralTypeIdentity {
                 verifiedMaterializer,
                 new HashSet<String>());
         return COMPATIBILITY_PREFIX
-                + DirectBlueIdCalculator.calculateBlueId(normalized);
+                + FrozenNode.fromResolvedNode(normalized).blueId();
     }
 
     private static Node normalize(

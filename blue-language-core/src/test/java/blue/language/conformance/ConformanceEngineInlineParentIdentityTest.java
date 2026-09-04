@@ -1,5 +1,6 @@
 package blue.language.conformance;
 
+import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.merge.processor.BasicTypesVerifier;
 import blue.language.merge.processor.DictionaryProcessor;
 import blue.language.merge.processor.ListProcessor;
@@ -10,6 +11,8 @@ import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.runtime.BlueLanguage;
+import blue.language.runtime.LanguageProcessing;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -33,11 +36,19 @@ final class ConformanceEngineInlineParentIdentityTest {
                 .type(parent.clone())
                 .properties("local", new Node()
                         .type(reference(TEXT_TYPE_BLUE_ID)));
-        provider.addSingleNodes(child);
         String parentBlueId = provider.getBlueIdByName(
                 "Inline ancestry parent");
-        String childBlueId = provider.getBlueIdByName(
-                "Inline ancestry child");
+        CanonicalTypeIdentityEvidence childIdentity;
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(provider)
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            childIdentity = scope.resolveTypeDeclarationIdentity(child);
+        }
+        provider.addSingleNodes(
+                childIdentity.canonicalTypeIdentityInput());
+        String childBlueId = childIdentity.blueId();
 
         try (ConformanceEngine engine = new ConformanceEngine(
                 provider,

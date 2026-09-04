@@ -8,6 +8,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.provider.CyclicAwareNodeProvider;
 import blue.language.provider.CyclicSetProofResult;
@@ -445,7 +446,7 @@ final class LanguageProcessingTest {
             try (LanguageProcessing.Scope scope = language.processing()
                     .openScope(provider)) {
                 scope.materializeVerifiedExactReference(reference(blueId));
-                ResolvedSnapshot snapshot = scope.resolve(new Node());
+                ResolvedSnapshot snapshot = scope.resolve(Nodes.emptyObject());
                 scope.publish(snapshot);
             }
 

@@ -50,10 +50,14 @@ final class TypeMetadataResolver {
                 return metadataType;
             }
             Node authoredInlineType = metadataType.clone();
+            long incompleteEpoch = incompleteTraversalEpoch();
             Node resolved = engine.resolveWithContribution(
                     metadataType,
                     limits,
                     ResolutionEngine.Contribution.TYPE_METADATA);
+            if (incompleteEpoch != incompleteTraversalEpoch()) {
+                return null;
+            }
             identityRecorder.recordCompleted(
                     identityIndex, resolved, authoredInlineType, null);
             return resolved;
@@ -77,11 +81,15 @@ final class TypeMetadataResolver {
                 typeBlueId, engine.activeResolutionState().path.size());
         activeTypeStack.begin(key);
         try {
+            long incompleteEpoch = incompleteTraversalEpoch();
             referenceResolver.expandTypeReference(metadataType, typeBlueId);
             Node resolved = engine.resolveWithContribution(
                     metadataType,
                     limits,
                     ResolutionEngine.Contribution.TYPE_METADATA);
+            if (incompleteEpoch != incompleteTraversalEpoch()) {
+                return new Node().blueId(typeBlueId);
+            }
             identityRecorder.recordCompleted(
                     identityIndex, resolved, null, typeBlueId);
             referenceResolver.cacheResolvedReference(
@@ -90,5 +98,9 @@ final class TypeMetadataResolver {
         } finally {
             activeTypeStack.finish(key);
         }
+    }
+
+    private long incompleteTraversalEpoch() {
+        return engine.activeResolutionState().incompleteTraversalEpoch;
     }
 }

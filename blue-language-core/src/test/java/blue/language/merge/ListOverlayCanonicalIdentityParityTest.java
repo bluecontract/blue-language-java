@@ -89,9 +89,7 @@ final class ListOverlayCanonicalIdentityParityTest {
 
     @Test
     void reorderDetectionUsesCanonicalEvidenceAcrossInlineAndReferenceTypes() {
-        BasicNodeProvider provider = providerWithInlineTypedPositionalBase();
-        String baseBlueId = provider.getBlueIdByName(
-                "Inline typed positional base");
+        BasicNodeProvider provider = providerWithCanonicalItemType();
         String itemTypeBlueId = provider.getBlueIdByName(
                 "Canonical list item");
 
@@ -100,7 +98,11 @@ final class ListOverlayCanonicalIdentityParityTest {
                 .build()) {
             Node reordered = language.codec().parseSource(
                     "type:\n"
-                            + "  blueId: " + baseBlueId + "\n"
+                            + "  name: Inline typed positional base\n"
+                            + "  type: List\n"
+                            + "  items:\n"
+                            + inlineTypedItem("A", "    ")
+                            + inlineTypedItem("B", "    ")
                             + "items:\n"
                             + "  - type:\n"
                             + "      blueId: " + itemTypeBlueId + "\n"
@@ -138,18 +140,6 @@ final class ListOverlayCanonicalIdentityParityTest {
         return provider;
     }
 
-    private static BasicNodeProvider
-    providerWithInlineTypedPositionalBase() {
-        BasicNodeProvider provider = providerWithCanonicalItemType();
-        provider.addSingleDocs(
-                "name: Inline typed positional base\n"
-                        + "type: List\n"
-                        + "items:\n"
-                        + inlineTypedItem("A")
-                        + inlineTypedItem("B"));
-        return provider;
-    }
-
     private static BasicNodeProvider providerWithCanonicalItemType() {
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
@@ -160,13 +150,15 @@ final class ListOverlayCanonicalIdentityParityTest {
         return provider;
     }
 
-    private static String inlineTypedItem(String marker) {
-        return "  - type:\n"
-                + "      name: Canonical list item\n"
-                + "      type: Dictionary\n"
-                + "      marker:\n"
-                + "        type: Text\n"
-                + "    marker: " + marker + "\n";
+    private static String inlineTypedItem(
+            String marker,
+            String indentation) {
+        return indentation + "- type:\n"
+                + indentation + "    name: Canonical list item\n"
+                + indentation + "    type: Dictionary\n"
+                + indentation + "    marker:\n"
+                + indentation + "      type: Text\n"
+                + indentation + "  marker: " + marker + "\n";
     }
 
     private static boolean hasListControls(List<Node> items) {

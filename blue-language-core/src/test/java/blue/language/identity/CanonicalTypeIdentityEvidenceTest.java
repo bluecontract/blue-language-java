@@ -59,10 +59,22 @@ class CanonicalTypeIdentityEvidenceTest {
                 .schema(new Schema().required(
                         new Node().value(true).itemType(
                                 inlineNestedType.clone())));
+        String nestedBlueId = DirectBlueIdCalculator.calculateBlueId(
+                inlineNestedType);
+        Node canonicalOrdinaryType = new Node()
+                .name("Outer type")
+                .properties(
+                        "ordinary", new Node().type(
+                                new Node().blueId(nestedBlueId)));
+        Node canonicalSchemaType = new Node()
+                .name("Schema outer type")
+                .schema(new Schema().required(
+                        new Node().value(true).itemType(
+                                new Node().blueId(nestedBlueId))));
         String ordinaryBlueId = DirectBlueIdCalculator.calculateBlueId(
-                ordinaryNestedType);
+                canonicalOrdinaryType);
         String schemaBlueId = DirectBlueIdCalculator.calculateBlueId(
-                schemaNestedType);
+                canonicalSchemaType);
 
         assertThrows(
                 IllegalArgumentException.class,

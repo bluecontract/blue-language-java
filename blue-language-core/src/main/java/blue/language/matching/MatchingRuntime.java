@@ -47,7 +47,9 @@ public interface MatchingRuntime {
     /**
      * Resolves a candidate under the supplied target-driven limits while
      * retaining the canonical type identities issued by that same resolver
-     * invocation.
+     * invocation. Matching limits retain unexpanded paths as exact authored
+     * subtrees, so the returned graph remains semantic Blue content even when
+     * the target demands no candidate path.
      *
      * @param source candidate to resolve
      * @param limits target-driven resolution limits

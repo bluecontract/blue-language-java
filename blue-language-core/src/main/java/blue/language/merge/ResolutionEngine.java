@@ -666,7 +666,9 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     void markIncomplete(String segment) {
-        activeResolutionState().canonicalTypeIdentityIndex.noteCoverageGap();
+        ResolutionState state = activeResolutionState();
+        state.incompleteTraversalEpoch++;
+        state.canonicalTypeIdentityIndex.noteCoverageGap();
         completedValueValidator.markIncomplete(segment);
     }
 
@@ -782,6 +784,7 @@ final class ResolutionEngine implements NodeResolver {
         Map<Node, Set<String>> appliedTypeContributions;
         final Map<Node, String> completedTypeMaterializations =
                 new IdentityHashMap<>();
+        long incompleteTraversalEpoch;
         boolean rootInlineTypeDeclaration;
         Node rootSource;
 

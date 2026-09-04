@@ -346,8 +346,14 @@ class CanonicalIdentityInputReconstructorTest {
         Node completedParent = new Node()
                 .name("Completed parent")
                 .properties("child", sharedChild);
+        String nestedTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                nestedType);
+        Node canonicalParent = new Node()
+                .name("Completed parent")
+                .properties("child", new Node().type(
+                        reference(nestedTypeBlueId)));
         String parentBlueId = DirectBlueIdCalculator.calculateBlueId(
-                completedParent);
+                canonicalParent);
         CanonicalTypeIdentityLookup parentOnlyEvidence = completeEvidence(
                 identity(completedParent, parentBlueId));
         Node resolved = new Node()

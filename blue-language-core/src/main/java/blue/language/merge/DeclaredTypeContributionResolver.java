@@ -154,14 +154,22 @@ final class DeclaredTypeContributionResolver {
         ActiveTypeStack.Token deferred = null;
         try {
             if (!recursiveBoundary) {
+                long incompleteEpoch = state().incompleteTraversalEpoch;
                 Node resolvedType = cachedResolvedType != null
                         ? cachedType(cachedResolvedType, typeBlueId)
                         : resolveType(typeNode, typeBlueId, limits,
                                 contribution);
-                String canonicalBlueId = recordCompletedTypeIdentity(
-                        resolvedType, authoredInlineType, typeBlueId);
-                source.type(detachedTypeMetadata(
-                        resolvedType, canonicalBlueId));
+                boolean completeTypeMaterialization = incompleteEpoch
+                        == state().incompleteTraversalEpoch;
+                if (completeTypeMaterialization) {
+                    String canonicalBlueId = recordCompletedTypeIdentity(
+                            resolvedType, authoredInlineType, typeBlueId);
+                    source.type(detachedTypeMetadata(
+                            resolvedType, canonicalBlueId));
+                } else {
+                    source.type(detachedUnprovenTypeMetadata(
+                            resolvedType, typeBlueId));
+                }
                 if (!contributionApplied) {
                     mergeResolvedType(
                             target,
@@ -291,6 +299,15 @@ final class DeclaredTypeContributionResolver {
                         canonicalTypeBlueId,
                         "canonicalTypeBlueId"));
         return detached;
+    }
+
+    private Node detachedUnprovenTypeMetadata(
+            Node resolvedType,
+            String requestedBlueId) {
+        if (requestedBlueId != null) {
+            return new Node().blueId(requestedBlueId);
+        }
+        return null;
     }
 
     private Node cachedType(FrozenNode cached, String typeBlueId) {
