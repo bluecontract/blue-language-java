@@ -49,6 +49,47 @@ class NodeIdentityProviderTest {
     }
 
     @Test
+    void shouldCanonicalizeNestedResolvedTypePositionsThroughModelSpi() {
+        // given
+        Node baseType = new Node().name("Resolved base type");
+        Node itemType = new Node().name("Resolved item type");
+        Node keyType = new Node().name("Resolved key type");
+        Node valueType = new Node().name("Resolved value type");
+        String baseTypeBlueId = DirectBlueIdCalculator.calculateBlueId(baseType);
+        String itemTypeBlueId = DirectBlueIdCalculator.calculateBlueId(itemType);
+        String keyTypeBlueId = DirectBlueIdCalculator.calculateBlueId(keyType);
+        String valueTypeBlueId = DirectBlueIdCalculator.calculateBlueId(valueType);
+
+        Node canonicalOuterType = new Node()
+                .name("Resolved composite type")
+                .type(new Node().blueId(baseTypeBlueId))
+                .itemType(new Node().blueId(itemTypeBlueId))
+                .keyType(new Node().blueId(keyTypeBlueId))
+                .valueType(new Node().blueId(valueTypeBlueId));
+        String outerTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                canonicalOuterType);
+        Node expandedOuterType = new Node()
+                .name("Resolved composite type")
+                .type(baseType.clone().blueId(baseTypeBlueId))
+                .itemType(itemType.clone().blueId(itemTypeBlueId))
+                .keyType(keyType.clone().blueId(keyTypeBlueId))
+                .valueType(valueType.clone().blueId(valueTypeBlueId))
+                .blueId(outerTypeBlueId);
+        Node expanded = new Node()
+                .type(expandedOuterType)
+                .properties("own", new Node().value("kept"));
+        Node canonical = new Node()
+                .type(new Node().blueId(outerTypeBlueId))
+                .properties("own", new Node().value("kept"));
+
+        // when
+        String actual = expanded.getAsText("/blueId");
+
+        // then
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical), actual);
+    }
+
+    @Test
     void shouldReturnExplicitReferenceBlueIdThroughSameSpi() {
         // given
         Node reference = new Node().blueId(TEXT_TYPE_BLUE_ID);

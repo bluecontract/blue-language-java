@@ -97,6 +97,39 @@ public final class NodeToBlueIdInput {
     }
 
     /**
+     * Projects a resolved node for model-SPI identity calculation.
+     *
+     * <p>Resolved graphs may retain expanded type declarations as runtime
+     * evidence. Identity is nevertheless defined by the exact identity of
+     * each effective type position, so expanded type bodies are reduced to
+     * pure BlueId references before the enclosing value is hashed.</p>
+     */
+    static Object getResolvedForm(Node node) {
+        Node identityNode = node == null
+                ? null
+                : stripResolvedBlueIdMetadata(node.clone());
+        return get(identityNode, JsonPointer.ROOT, Context.ROOT, -1, false,
+                true);
+    }
+
+    /** Projects an ordered resolved-node sequence for model-SPI identity. */
+    static List<Object> getResolvedFormElements(List<Node> nodes) {
+        if (nodes == null) {
+            throw new IllegalArgumentException(
+                    "Node identity input list must not be null.");
+        }
+        List<Object> result = new ArrayList<>(nodes.size());
+        for (int i = 0; i < nodes.size(); i++) {
+            Node identityNode = nodes.get(i) == null
+                    ? null
+                    : stripResolvedBlueIdMetadata(nodes.get(i).clone());
+            result.add(get(identityNode, JsonPointer.ROOT + i,
+                    Context.LIST_ELEMENT, i, false, true));
+        }
+        return result;
+    }
+
+    /**
      * Recursively removes BlueIds that annotate expanded content.
      *
      * <p>The supplied graph is mutated and returned; pure references are
@@ -189,7 +222,31 @@ public final class NodeToBlueIdInput {
         METADATA
     }
 
-    private static Object get(Node node, String path, Context context, int listIndex, boolean allowCyclicPlaceholders) {
+    private static Object get(Node node, String path, Context context,
+                              int listIndex,
+                              boolean allowCyclicPlaceholders) {
+        return get(node, path, context, listIndex, allowCyclicPlaceholders,
+                false);
+    }
+
+    private static Object get(Node node, String path, Context context,
+                              int listIndex,
+                              boolean allowCyclicPlaceholders,
+                              boolean resolveTypeBodies) {
+        if (resolveTypeBodies
+                && node != null
+                && context == Context.METADATA
+                && isTypePosition(path)
+                && !node.isReferenceOnly()) {
+            Object typeInput = get(node, path, Context.ROOT, -1,
+                    allowCyclicPlaceholders, true);
+            Map<String, Object> reference = new LinkedHashMap<>();
+            reference.put(OBJECT_BLUE_ID,
+                    DirectBlueIdCalculator.INSTANCE
+                            .directBlueIdFromCanonicalInput(typeInput));
+            return reference;
+        }
+
         validateBlueIdInput(node, path, context, listIndex);
 
         if (context == Context.LIST_ELEMENT && Nodes.isEmptyPlaceholder(node)) {
@@ -221,7 +278,7 @@ public final class NodeToBlueIdInput {
         if (node.getItems() != null) {
             items = new ArrayList<>(node.getItems().size());
             for (int i = 0; i < node.getItems().size(); i++) {
-                items.add(get(node.getItems().get(i), appendPath(path, OBJECT_ITEMS, i), Context.LIST_ELEMENT, i, allowCyclicPlaceholders));
+                items.add(get(node.getItems().get(i), appendPath(path, OBJECT_ITEMS, i), Context.LIST_ELEMENT, i, allowCyclicPlaceholders, resolveTypeBodies));
             }
         }
 
@@ -245,16 +302,25 @@ public final class NodeToBlueIdInput {
                 result.put(OBJECT_TYPE, map);
             }
         } else if (node.getType() != null) {
-            valueTypeBlueId = node.getType().getBlueId();
-            result.put(OBJECT_TYPE, get(node.getType(), appendPath(path, OBJECT_TYPE), Context.METADATA, -1, allowCyclicPlaceholders));
+            Object typeInput = get(node.getType(),
+                    appendPath(path, OBJECT_TYPE), Context.METADATA, -1,
+                    allowCyclicPlaceholders, resolveTypeBodies);
+            result.put(OBJECT_TYPE, typeInput);
+            if (typeInput instanceof Map) {
+                Object projectedBlueId = ((Map<?, ?>) typeInput).get(
+                        OBJECT_BLUE_ID);
+                if (projectedBlueId instanceof String) {
+                    valueTypeBlueId = (String) projectedBlueId;
+                }
+            }
         }
 
         if (node.getItemType() != null)
-            result.put(OBJECT_ITEM_TYPE, get(node.getItemType(), appendPath(path, OBJECT_ITEM_TYPE), Context.METADATA, -1, allowCyclicPlaceholders));
+            result.put(OBJECT_ITEM_TYPE, get(node.getItemType(), appendPath(path, OBJECT_ITEM_TYPE), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies));
         if (node.getKeyType() != null)
-            result.put(OBJECT_KEY_TYPE, get(node.getKeyType(), appendPath(path, OBJECT_KEY_TYPE), Context.METADATA, -1, allowCyclicPlaceholders));
+            result.put(OBJECT_KEY_TYPE, get(node.getKeyType(), appendPath(path, OBJECT_KEY_TYPE), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies));
         if (node.getValueType() != null)
-            result.put(OBJECT_VALUE_TYPE, get(node.getValueType(), appendPath(path, OBJECT_VALUE_TYPE), Context.METADATA, -1, allowCyclicPlaceholders));
+            result.put(OBJECT_VALUE_TYPE, get(node.getValueType(), appendPath(path, OBJECT_VALUE_TYPE), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies));
         if (node.getMergePolicy() != null)
             result.put(OBJECT_MERGE_POLICY, node.getMergePolicy());
         if (value != null)
@@ -271,10 +337,10 @@ public final class NodeToBlueIdInput {
             }
             result.put(OBJECT_SCHEMA, SchemaWireForm.get(
                     identitySchema,
-                    child -> get(child, appendPath(path, OBJECT_SCHEMA), Context.METADATA, -1, allowCyclicPlaceholders)));
+                    child -> get(child, appendPath(path, OBJECT_SCHEMA), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies)));
         }
         if (node.getContracts() != null) {
-            result.put(OBJECT_CONTRACTS, get(node.getContracts(), appendPath(path, OBJECT_CONTRACTS), Context.METADATA, -1, allowCyclicPlaceholders));
+            result.put(OBJECT_CONTRACTS, get(node.getContracts(), appendPath(path, OBJECT_CONTRACTS), Context.METADATA, -1, allowCyclicPlaceholders, resolveTypeBodies));
         }
         if (node.getProperties() != null) {
             node.getProperties().forEach((key, propertyValue) -> {
@@ -295,7 +361,8 @@ public final class NodeToBlueIdInput {
                             appendPath(path, key),
                             Context.OBJECT_FIELD,
                             -1,
-                            allowCyclicPlaceholders));
+                            allowCyclicPlaceholders,
+                            resolveTypeBodies));
                 }
             });
         }
