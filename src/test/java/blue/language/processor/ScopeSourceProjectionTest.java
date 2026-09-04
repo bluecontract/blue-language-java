@@ -6,6 +6,7 @@ import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.provider.NodeProviderResult;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
@@ -27,6 +28,31 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ScopeSourceProjectionTest {
+
+    @Test
+    void shouldExposePresentEmptyContractsAsExactEmptyObject() {
+        // given
+        Blue blue = ProcessorTestSupport.blue();
+        Node source = blue.yamlToNode(
+                "name: Empty Contracts Projection\n"
+                        + "contracts: {}\n");
+        ResolvedSnapshot captured =
+                blue.resolveToSnapshot(source.clone());
+
+        // when
+        ScopeSourceProjection projection = ScopeSourceProjection.project(
+                "/",
+                captured.frozenCanonicalRoot(),
+                captured,
+                blue.getDocumentProcessor().snapshotManager());
+        FrozenNode contracts =
+                projection.standaloneSource().getContracts();
+
+        // then
+        assertNotNull(contracts);
+        assertTrue(Nodes.isExactEmptyObject(contracts.toNode()));
+        assertFalse(Nodes.isBareFieldlessBuilder(contracts.toNode()));
+    }
 
     @Test
     void shouldVerifyExactSnapshotIdentityDoesNotInvokeStandaloneProjectionOrReresolution() {

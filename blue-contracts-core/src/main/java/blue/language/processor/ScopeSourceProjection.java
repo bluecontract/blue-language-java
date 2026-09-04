@@ -213,21 +213,25 @@ final class ScopeSourceProjection {
                     : capturedResolvedScope.getDescription());
         }
 
+        Node capturedContracts = capturedResolvedScope.getContracts() != null
+                ? capturedResolvedScope.getContracts().toNode()
+                : null;
         Node selectedContracts = selectedContribution != null
                 ? selectedContribution.getContracts()
                 : null;
-        if (selectedContracts != null
-                && Nodes.isEmptyNode(selectedContracts)
-                && standaloneSource.getContracts() == null) {
-            standaloneSource.contracts(new Node());
-        }
-        if (capturedResolvedScope.getContracts() != null
-                && Nodes.isEmptyNode(capturedResolvedScope.getContracts().toNode())
-                && standaloneSource.getContracts() == null) {
-            // Empty contracts are hash-neutral but observable in the selected
-            // resolved scope. Retain them so the projection proof compares the
-            // complete structural view rather than a cleaned approximation.
-            standaloneSource.contracts(new Node());
+        Node sourceContracts = source != null ? source.getContracts() : null;
+        boolean observableEmptyContracts =
+                Nodes.isExactEmptyObject(selectedContracts)
+                || Nodes.isExactEmptyObject(sourceContracts)
+                || Nodes.isExactEmptyObject(capturedContracts);
+        Node standaloneContracts = standaloneSource.getContracts();
+        if (observableEmptyContracts
+                && (standaloneContracts == null
+                || Nodes.isBareFieldlessBuilder(standaloneContracts))) {
+            // An explicitly present empty contracts object is observable in
+            // the selected resolved scope. Retain its exact object shape so
+            // the projection proof compares the complete structural view.
+            standaloneSource.contracts(Nodes.emptyObject());
         }
     }
 
