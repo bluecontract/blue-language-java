@@ -452,6 +452,90 @@ final class EmbeddedScopePlannerTest {
     }
 
     @Test
+    void shouldTraverseTypedAdmittedScopeRootWithoutDictionaryLineage() {
+        Node applicationRootType = new Node().name(
+                "Application processing scope");
+        String applicationRootTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(applicationRootType);
+        Node scope = new Node()
+                .type(new Node().blueId(applicationRootTypeBlueId))
+                .properties("child", Nodes.emptyObject());
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/root",
+                Collections.singletonList("/child"),
+                Collections.<String>emptyList(),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/child"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldAcceptObjectBearingApplicationTypedExplicitTarget() {
+        Node applicationType = new Node().name(
+                "Application embedded document");
+        String applicationTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(applicationType);
+        Node child = new Node()
+                .type(new Node().blueId(applicationTypeBlueId))
+                .properties("state", new Node().value("ready"));
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                new Node().properties("child", child),
+                "/root",
+                Collections.singletonList("/child"),
+                Collections.<String>emptyList(),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/child"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldTreatContractsOnlyExplicitTargetAsPresentScope() {
+        Node child = new Node().contracts(Nodes.emptyObject());
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                new Node().properties("child", child),
+                "/root",
+                Collections.singletonList("/child"),
+                Collections.<String>emptyList(),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/child"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
+    void shouldAcceptObjectBearingApplicationTypedCollectionMember() {
+        Node applicationType = new Node().name(
+                "Application collection member");
+        String applicationTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(applicationType);
+        Node member = new Node()
+                .type(new Node().blueId(applicationTypeBlueId))
+                .properties("state", new Node().value("ready"));
+        Node scope = new Node().properties(
+                "members", new Node().properties("one", member));
+
+        EmbeddedScopePlan plan = new EmbeddedScopePlanner().plan(
+                scope,
+                "/root",
+                Collections.<String>emptyList(),
+                Collections.singletonList("/members"),
+                GasSchedule.contracts10());
+
+        assertEquals(
+                Collections.singletonList("/root/members/one"),
+                plan.concreteChildPaths());
+    }
+
+    @Test
     void shouldSuspendForPresentUnknownIntermediateObjectType() {
         Node customDictionary = customDictionaryType();
         String typeBlueId = DirectBlueIdCalculator.calculateBlueId(

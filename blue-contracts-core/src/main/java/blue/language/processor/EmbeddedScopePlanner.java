@@ -433,7 +433,7 @@ final class EmbeddedScopePlanner {
                         target, normalizedScope, declaration);
             }
             if (!target.isReferenceOnly()
-                    && !isScopeObjectCompatible(
+                    && !isSelectedScopeRootObject(
                             target,
                             declaration,
                             normalizedScope,
@@ -661,7 +661,7 @@ final class EmbeddedScopePlanner {
                         expectedManagedBlueIdsByPath,
                         scopePath);
                 if (!member.isReferenceOnly()
-                        && !isScopeObjectCompatible(
+                        && !isSelectedScopeRootObject(
                                 member,
                                 generatedDeclaration,
                                 scopePath,
@@ -681,7 +681,7 @@ final class EmbeddedScopePlanner {
                 rejectCyclicMember(member, scopePath, declaration, key);
                 member = materialize(member, scopePath,
                         generatedDeclaration);
-                if (!isScopeObjectCompatible(
+                if (!isSelectedScopeRootObject(
                         member,
                         generatedDeclaration,
                         scopePath,
@@ -802,11 +802,14 @@ final class EmbeddedScopePlanner {
                 return SelectedNode.absent();
             }
             current = materialize(current, scopePath, declaration);
-            if (!isTraversalObject(
-                    current,
-                    declaration,
-                    scopePath,
-                    schedule)) {
+            boolean traversable = scopeRoot
+                    ? isAdmittedScopeRootObject(current)
+                    : isTraversalObject(
+                            current,
+                            declaration,
+                            scopePath,
+                            schedule);
+            if (!traversable) {
                 throw invalid(
                         kind.invalidPathCategory(),
                         "Process Embedded declaration cannot traverse a non-object: "
@@ -938,6 +941,56 @@ final class EmbeddedScopePlanner {
                 declaration,
                 scopePath,
                 schedule);
+    }
+
+    /**
+     * Returns whether an already-admitted processing scope can be traversed
+     * as an object container.
+     *
+     * <p>The processor admits the effective scope before invoking this
+     * planner. Its application-specific nominal type therefore need not
+     * derive from the Language Dictionary type. Descendants remain subject
+     * to {@link #isTraversalObject(FrozenNode, String, String, GasSchedule)}
+     * so a declaration still cannot cross a list, reference shell, previous
+     * shell, or scalar without a direct Contracts envelope.</p>
+     */
+    private boolean isAdmittedScopeRootObject(FrozenNode node) {
+        if (node == null
+                || node.hasItems()
+                || node.isReferenceOnly()
+                || node.isPreviousOnly()) {
+            return false;
+        }
+        return node.getValue() == null || node.getContracts() != null;
+    }
+
+    /**
+     * Verifies a selected value that will become an independently processed
+     * embedded scope.
+     *
+     * <p>A non-empty resolved object envelope is positive value evidence even
+     * when its application-specific type does not derive from Dictionary.
+     * Exact empty values have no such structural proof, so a declared type on
+     * them must still establish Dictionary compatibility. This rejects, for
+     * example, an exact empty object declared as Text or List.</p>
+     */
+    private boolean isSelectedScopeRootObject(
+            FrozenNode node,
+            String declaration,
+            String scopePath,
+            GasSchedule schedule) {
+        if (!isAdmittedScopeRootObject(node)) {
+            return false;
+        }
+        if (node.getValue() != null || node.getContracts() != null) {
+            return true;
+        }
+        Map<String, FrozenNode> properties = node.getProperties();
+        if (properties != null && !properties.isEmpty()) {
+            return true;
+        }
+        return hasObjectCompatibleDeclaredType(
+                node, declaration, scopePath, schedule);
     }
 
     /** Verifies the nominal Dictionary lineage of a declared object type. */
@@ -1137,7 +1190,8 @@ final class EmbeddedScopePlanner {
                         || node.getReferenceBlueId() != null
                         || node.getValue() != null
                         || node.hasItems()
-                        || node.hasProperties());
+                        || node.hasProperties()
+                        || node.getContracts() != null);
     }
 
     private boolean isSelector(String segment) {
