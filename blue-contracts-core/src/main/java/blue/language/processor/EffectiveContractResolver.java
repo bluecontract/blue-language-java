@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
@@ -54,7 +55,9 @@ final class EffectiveContractResolver {
         if (selectedContracts != null) {
             selectedScope.contracts(selectedContracts.toNode());
         }
-        return selectedScope;
+        return Nodes.isBareFieldlessBuilder(selectedScope)
+                ? null
+                : selectedScope;
     }
 
     Node materializeSelectedContractsMap(Node selectedScope) {
@@ -229,22 +232,22 @@ final class EffectiveContractResolver {
         }
         FrozenNode contracts = property(scopeNode, ProcessorContractConstants.KEY_CONTRACTS);
         if (contracts == null) {
-            return filtered;
+            return Nodes.isBareFieldlessBuilder(filtered)
+                    ? null
+                    : filtered;
         }
         if (contracts.getProperties() == null) {
             filtered.contracts(contracts.toNode());
             return filtered;
         }
-        Node retained = new Node();
+        Node retained = Nodes.emptyObject();
         for (Map.Entry<String, FrozenNode> entry : contracts.getProperties().entrySet()) {
             if (isDirectProcessorStateKey(entry.getKey())
                     || retainedKeys.contains(entry.getKey())) {
                 retained.properties(entry.getKey(), entry.getValue().toNode());
             }
         }
-        if (retained.getProperties() != null && !retained.getProperties().isEmpty()) {
-            filtered.contracts(retained);
-        }
+        filtered.contracts(retained);
         return filtered;
     }
 

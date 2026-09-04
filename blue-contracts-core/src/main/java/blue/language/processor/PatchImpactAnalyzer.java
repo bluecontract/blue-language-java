@@ -600,7 +600,8 @@ final class PatchImpactAnalyzer {
     private boolean hasEmptyContractsNormalizationDependency(FrozenNode node) {
         return node != null
                 && node.getContracts() != null
-                && node.getContracts().isEmptyNode();
+                && node.getContracts().sameResolvedStructure(
+                        FrozenNode.empty());
     }
 
     private boolean isCollectionBoundary(FrozenNode node) {

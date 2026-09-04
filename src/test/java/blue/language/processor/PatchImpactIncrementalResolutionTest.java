@@ -11,6 +11,7 @@ import blue.language.merge.IncrementalValueResolutionRequest;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
@@ -677,7 +678,7 @@ class PatchImpactIncrementalResolutionTest {
             return blue.resolveToSnapshot(new Node()
                     .type(reference(documentTypeId))
                     .properties("status", new Node().value("draft"))
-                    .contracts(new Node()));
+                    .contracts(Nodes.emptyObject()));
         }
 
         private ResolvedSnapshot snapshotWithNonEmptyContracts() {
