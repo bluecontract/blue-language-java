@@ -4,6 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedReferenceCache;
 import blue.language.resolve.ReferenceCacheAdmissionPolicy;
@@ -750,7 +751,9 @@ final class ResolutionEngine implements NodeResolver {
                 labelProvenanceTracker.pushLabelProvenanceScope(
                         node, limits, false);
         try {
-            Node resultNode = new Node();
+            Node resultNode = node.getProperties() != null
+                    ? Nodes.emptyObject()
+                    : new Node();
             merge(resultNode, node, limits);
             resultNode.name(node.getName());
             resultNode.description(node.getDescription());
