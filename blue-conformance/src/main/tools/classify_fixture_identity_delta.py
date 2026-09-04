@@ -240,11 +240,11 @@ APPROVED_LANGUAGE_DEPENDENCY_TRANSITION = {
     ),
     "cyclicSetFinalizerBaselineIdentity": (
         "sha256:d71ec19247a32f7f40107f512e4eb567b4cb41ae8e73c16d2ebe10b0e8517c76",
-        "sha256:a16e111c7d5e803e6551ff43a6beaa265149bf1cd0c73808ba7fb81650a079b3",
+        "sha256:dfaee4ddc131ec000bd1e46692ffb6a840bd645f3b9db79a3babd684cad468fb",
     ),
     "cyclicSetProofVerifierBaselineIdentity": (
         "sha256:0768d22420c5bb01109861eb9e090b758aa66b25c2df7b4708dff36a969cefdd",
-        "sha256:3a94850f63b8813e05fe38687e50ce95617a7748dbb8cc2f6d346572651d9372",
+        "sha256:2eeab32b181001a872bb6f91c65405b7612cdc612bb381e32d57cf72fb570f53",
     ),
 }
 
@@ -290,7 +290,7 @@ def implementation_baseline_aggregate_identity(
 # Recompute deliberately when production source bytes or inventory membership
 # changes.  This pin approves one exact after-snapshot, not arbitrary hashes.
 APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY = (
-    "sha256:596556edc5f114d12da2c6ffcf4fe8e9fe2c5e5a9846426e6cc0ac90831a8422"
+    "sha256:c4f2d27f85b5ca92f9e15fe4340813c1beda9daf924969da6dcae5722f107842"
 )
 
 if any(
