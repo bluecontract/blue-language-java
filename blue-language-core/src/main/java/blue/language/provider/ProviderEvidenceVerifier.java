@@ -43,8 +43,9 @@ import static blue.language.model.wire.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
  * Verifies provider content under an explicitly selected ingestion mode.
  *
  * <p>Direct BlueId input is hashed as supplied. Source-document input is
- * accepted only when its release, registry, preprocessing configuration, and
- * exact source evidence all match the active runtime.</p>
+ * accepted only when its source-preprocessing baseline, registry,
+ * preprocessing configuration, and exact source evidence all match the
+ * active runtime.</p>
  */
 public final class ProviderEvidenceVerifier {
 
@@ -265,8 +266,9 @@ public final class ProviderEvidenceVerifier {
     }
 
     /**
-     * Binds the Language release, canonical registry, and configured directive
-     * aliases that define the active preprocessing environment.
+     * Binds the Language source-preprocessing baseline, canonical registry,
+     * and configured directive aliases that define the active preprocessing
+     * environment.
      *
      * @param runtime exact source-content verification runtime
      * @return lowercase hexadecimal environment identity prefixed with
@@ -334,7 +336,8 @@ public final class ProviderEvidenceVerifier {
         }
         if (!environment.isFullyBound()) {
             throw new IllegalArgumentException(
-                    "Bound source provider mode requires release, preprocessing, "
+                    "Bound source provider mode requires source-preprocessing "
+                            + "baseline, preprocessing, "
                             + "canonical registry, provider domain, mode, and "
                             + "exact imported source-evidence identity bindings.");
         }
@@ -351,7 +354,8 @@ public final class ProviderEvidenceVerifier {
         if (!SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY.equals(
                 environment.languageReleaseIdentity())) {
             throw new IllegalArgumentException(
-                    "Bound source provider release identity does not match Blue Language 1.0.");
+                    "Bound source provider source-preprocessing baseline "
+                            + "identity does not match Blue Language 1.0.");
         }
         if (!runtime.canonicalRegistryIdentity().equals(
                 environment.canonicalRegistryIdentity())) {

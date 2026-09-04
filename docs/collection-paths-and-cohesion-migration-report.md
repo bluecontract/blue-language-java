@@ -189,9 +189,12 @@ published-API union contains 387 public types; this is a different inventory
 from the binary baseline comparison, not a conflicting test count.
 
 One compatibility caveat is worth making explicit: the descriptor of
-`SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY` did not change, but
-Java clients may have inlined the former `public static final String`. Such
-clients must recompile to observe the corrected package identity.
+`SourceProviderEnvironment.LANGUAGE_1_0_RELEASE_IDENTITY` does not change,
+but its value now identifies the dedicated, acyclic Language 1.0
+source-preprocessing baseline rather than the aggregate Language/Contracts
+distribution package. No alias for the defective aggregate binding is retained.
+Java clients may have inlined the former `public static final String` and must
+recompile to observe the corrected semantic identity.
 
 The façade and conformance monoliths became materially smaller:
 
