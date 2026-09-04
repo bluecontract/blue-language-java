@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from copy import deepcopy
 import hashlib
+import json
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -39,6 +40,82 @@ def write_yaml(root: Path, relative: str, value: object) -> None:
 
 
 class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
+
+    def test_reviewed_implementation_baseline_input_is_exact(self) -> None:
+        data = classifier.IMPLEMENTATION_BASELINE_INPUT_PATH.read_bytes()
+        document = classifier.parse_implementation_baseline_input(data)
+        self.assertEqual(
+            classifier.IMPLEMENTATION_BASELINE_INPUT_SCHEMA,
+            document["schema"],
+        )
+        self.assertEqual(
+            classifier.IMPLEMENTATION_BASELINE_INPUT_SOURCE,
+            document["sourcePath"],
+        )
+        self.assertEqual(
+            classifier.IMPLEMENTATION_BASELINE_INPUT_PROVENANCE,
+            document["provenanceCommit"],
+        )
+        self.assertEqual(
+            classifier.IMPLEMENTATION_BASELINE_INPUT_SHA256,
+            hashlib.sha256(data).hexdigest(),
+        )
+        self.assertEqual(
+            classifier.APPROVED_IMPLEMENTATION_BASELINE_BEFORE,
+            tuple(
+                (entry["path"], entry["sha256"])
+                for entry in document["files"]
+            ),
+        )
+
+    def test_reviewed_implementation_baseline_input_fails_closed(self) -> None:
+        data = classifier.IMPLEMENTATION_BASELINE_INPUT_PATH.read_bytes()
+        valid = json.loads(data)
+
+        extra = deepcopy(valid)
+        extra["extra"] = True
+        with self.assertRaisesRegex(ValueError, "exact reviewed shape"):
+            classifier.parse_implementation_baseline_input(
+                json.dumps(extra).encode("utf-8")
+            )
+
+        missing = deepcopy(valid)
+        missing["files"].pop()
+        with self.assertRaisesRegex(ValueError, "exactly 16 files"):
+            classifier.parse_implementation_baseline_input(
+                json.dumps(missing).encode("utf-8")
+            )
+
+        duplicate_path = deepcopy(valid)
+        duplicate_path["files"][1]["path"] = duplicate_path["files"][0][
+            "path"
+        ]
+        with self.assertRaisesRegex(ValueError, "unique and non-empty"):
+            classifier.parse_implementation_baseline_input(
+                json.dumps(duplicate_path).encode("utf-8")
+            )
+
+        malformed_digest = deepcopy(valid)
+        malformed_digest["files"][0]["sha256"] = "not-a-digest"
+        with self.assertRaisesRegex(ValueError, "lowercase 64-hex"):
+            classifier.parse_implementation_baseline_input(
+                json.dumps(malformed_digest).encode("utf-8")
+            )
+
+        reordered = deepcopy(valid)
+        reordered["files"].reverse()
+        with self.assertRaisesRegex(ValueError, "reviewed input"):
+            classifier.parse_implementation_baseline_input(
+                (json.dumps(reordered, indent=2) + "\n").encode("utf-8")
+            )
+
+        duplicate_key = data.replace(
+            b'  "schema": ',
+            b'  "schema": "duplicate",\n  "schema": ',
+            1,
+        )
+        with self.assertRaisesRegex(ValueError, "duplicate key"):
+            classifier.parse_implementation_baseline_input(duplicate_key)
 
     def classify_pair(
         self, relative: str, before_value: object, after_value: object

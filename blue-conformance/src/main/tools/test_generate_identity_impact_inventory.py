@@ -440,7 +440,7 @@ class IdentityImpactInventoryTest(unittest.TestCase):
                 current_layout_drift,
             )
 
-    def test_full_lifecycle_baseline_has_strict_reviewed_shape(self) -> None:
+    def test_reviewed_baselines_have_strict_shapes(self) -> None:
         baseline_path = self.repository / (
             inventory.FULL_LIFECYCLE_ORACLE_BASELINE_PATH
         )
@@ -463,11 +463,54 @@ class IdentityImpactInventoryTest(unittest.TestCase):
             inventory.FULL_LIFECYCLE_ORACLE_BASELINE_PATH,
             inventory.SELF_PATHS,
         )
-        reviewed = self.report["scope"]["reviewedBaselineInputs"]
-        self.assertEqual(1, len(reviewed))
+        classifier_path = self.repository / (
+            inventory.CLASSIFIER_IMPLEMENTATION_BASELINE_PATH
+        )
+        classifier_baseline = (
+            inventory._parse_classifier_implementation_baseline(
+                classifier_path.read_bytes()
+            )
+        )
         self.assertEqual(
-            "excluded-reviewed-generator-input",
-            reviewed[0]["referenceScanDisposition"],
+            inventory.CLASSIFIER_IMPLEMENTATION_BASELINE_SCHEMA,
+            classifier_baseline["schema"],
+        )
+        self.assertEqual(
+            inventory.CLASSIFIER_IMPLEMENTATION_BASELINE_PROVENANCE,
+            classifier_baseline["provenanceCommit"],
+        )
+        self.assertIn(
+            inventory.CLASSIFIER_IMPLEMENTATION_BASELINE_PATH,
+            inventory.REVIEWED_IDENTITY_BASELINE_INPUTS,
+        )
+        self.assertIn(
+            inventory.CLASSIFIER_IMPLEMENTATION_BASELINE_PATH,
+            inventory.SELF_PATHS,
+        )
+        executable_classifier = (
+            "blue-conformance/src/main/tools/"
+            "classify_fixture_identity_delta.py"
+        )
+        self.assertNotIn(executable_classifier, inventory.SELF_PATHS)
+        self.assertFalse(inventory._is_declared_history(executable_classifier))
+        self.assertIn(
+            executable_classifier,
+            inventory._tracked_text_files(self.repository),
+        )
+        reviewed = self.report["scope"]["reviewedBaselineInputs"]
+        self.assertEqual(
+            {
+                inventory.FULL_LIFECYCLE_ORACLE_BASELINE_PATH,
+                inventory.CLASSIFIER_IMPLEMENTATION_BASELINE_PATH,
+            },
+            {entry["path"] for entry in reviewed},
+        )
+        self.assertTrue(
+            all(
+                entry["referenceScanDisposition"]
+                == "excluded-reviewed-generator-input"
+                for entry in reviewed
+            )
         )
 
     def test_full_lifecycle_baseline_rejects_malformed_inputs(self) -> None:

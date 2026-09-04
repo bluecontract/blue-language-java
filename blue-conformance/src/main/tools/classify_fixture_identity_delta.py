@@ -33,6 +33,98 @@ UNEXPECTED = "unexpected"
 CATEGORIES = (SPEC, INVOCATION, TRACE, SEMANTIC, FORMATTING, UNEXPECTED)
 LOWERCASE_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
+IMPLEMENTATION_BASELINE_INPUT_PATH = (
+    Path(__file__).resolve().parent
+    / "migration"
+    / "classify-fixture-identity-delta-implementation-baseline.json"
+)
+IMPLEMENTATION_BASELINE_INPUT_SCHEMA = (
+    "blue-classifier-implementation-baseline/1.0"
+)
+IMPLEMENTATION_BASELINE_INPUT_SOURCE = (
+    "blue-conformance/src/main/resources/blue-contracts-closure-1.0/"
+    "release-manifest.yaml#/languageDependency/inputImplementationBaseline"
+)
+IMPLEMENTATION_BASELINE_INPUT_PROVENANCE = (
+    "42e407c914c7813f327a0ed62e7599bab06a0ecb"
+)
+IMPLEMENTATION_BASELINE_INPUT_SHA256 = (
+    "c4220da1d2f0934c69768623f73c4bdbbd7f17bf0715a3231d82dd6cf2ec2d9d"
+)
+
+
+def parse_implementation_baseline_input(data: bytes) -> dict[str, Any]:
+    """Load the exact reviewed pre-transition implementation snapshot."""
+    def strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(
+                    "duplicate key in classifier implementation baseline: "
+                    + key
+                )
+            result[key] = value
+        return result
+
+    try:
+        document = json.loads(
+            data.decode("utf-8"), object_pairs_hook=strict_object
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exception:
+        raise ValueError(
+            "invalid classifier implementation baseline JSON"
+        ) from exception
+    if not isinstance(document, dict) or set(document) != {
+        "schema",
+        "sourcePath",
+        "provenanceCommit",
+        "files",
+    }:
+        raise ValueError(
+            "classifier implementation baseline must have the exact reviewed shape"
+        )
+    if document["schema"] != IMPLEMENTATION_BASELINE_INPUT_SCHEMA:
+        raise ValueError("unexpected classifier implementation baseline schema")
+    if document["sourcePath"] != IMPLEMENTATION_BASELINE_INPUT_SOURCE:
+        raise ValueError("unexpected classifier implementation baseline source path")
+    if (
+        document["provenanceCommit"]
+        != IMPLEMENTATION_BASELINE_INPUT_PROVENANCE
+    ):
+        raise ValueError(
+            "unexpected classifier implementation baseline provenance commit"
+        )
+    files = document["files"]
+    if not isinstance(files, list) or len(files) != 16:
+        raise ValueError(
+            "classifier implementation baseline must contain exactly 16 files"
+        )
+    paths: set[str] = set()
+    for entry in files:
+        if not isinstance(entry, dict) or set(entry) != {"path", "sha256"}:
+            raise ValueError(
+                "classifier implementation baseline file must contain path and sha256"
+            )
+        path = entry["path"]
+        digest = entry["sha256"]
+        if not isinstance(path, str) or not path or path in paths:
+            raise ValueError(
+                "classifier implementation baseline paths must be unique and non-empty"
+            )
+        if (
+            not isinstance(digest, str)
+            or LOWERCASE_SHA256_RE.fullmatch(digest) is None
+        ):
+            raise ValueError(
+                "classifier implementation baseline sha256 must be lowercase 64-hex"
+            )
+        paths.add(path)
+    if hashlib.sha256(data).hexdigest() != IMPLEMENTATION_BASELINE_INPUT_SHA256:
+        raise ValueError(
+            "classifier implementation baseline bytes do not match the reviewed input"
+        )
+    return document
+
 APPROVED_SUPPORT_DOCUMENTS = frozenset(
     {
         "fixtures/README.md",
@@ -117,19 +209,19 @@ APPROVED_CEVO_FIXTURE_IDENTITIES = {
     "fixtures/evo/c-evo-15.yaml": "4f97850da9597a5309e6d9d624b04f6c8930299ee25c8b6b2b2038cc35be8e83",
     "fixtures/evo/c-evo-16.yaml": "2a3949c61b15be5e47f5c23465c8923bb99ed80b827e8023b85fd091b8b9e70b",
     "fixtures/evo/c-evo-17.yaml": "5a9e57473811a43b4f477e307c57737810af82517b7f13e7d9b60c8632909202",
-    "fixtures/closure/c-evo-18-missing-exact-node.yaml": "47fe9d1ef70737834b8eaa9860fe025aa33c56e83b4bda25ce7b8be75f187c51",
-    "fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml": "815176feedd578ad8f40749ae16eb2b1b1c1e35b1c8fdbe49ee2995062961284",
-    "fixtures/closure/c-evo-20-canonical-demand-order.yaml": "e10ce6e2588992faef63f3e898b61d3655fe5164f29d28dffb801baef51f0017",
-    "fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml": "4c3f3a2f9272038fc4fb299a9934397f2c82040c24af239aa9aec153c9a495a6",
-    "fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml": "70f787247b62b71c9d61e8ce62518c757d4f89e432792b5a970793e5ba1e2e46",
-    "fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml": "c2d4fc4f75bf655b689aee1ba400e7f50511118bbb10b19054c599461e7361b9",
-    "fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml": "31c8bdf750c903e67df1e87fe7bfb26aad9e8d1491f916d846480a727ee0e9a0",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml": "a01957e8bfd6ffe93198b2641d9fdcf69f26a4690b6404d585944b7e1e5e454c",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml": "0d37dc4547267f0f2e7de51738d7207052f209648cbe60ed4d67a636e42c956a",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml": "79c40afebe1cfca1281b0840a75c18d9e59fb9c3453612630a41dbbc7a73a273",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml": "4c92e80b0dfa6ff83f9b96a8d5c334ab25a969e620a711f873497f96e4f90bd6",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml": "83851c5269e58eeed4c0896df7d01540c82cdb2bfb58463c0f5c4ed80ff9eda6",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml": "bac82eb7872230e85f0dad9f8b08398aab14208272418b3d9d88bf7f9ede38ec",
+    "fixtures/closure/c-evo-18-missing-exact-node.yaml": "fc9f92ca023b39a1fdb1db3c111af9095330f97de6350dd5f5817fee9d42c38a",
+    "fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml": "41a723958ed956748b498329307a2403ffb45e89f8d14415d511b2df301d8994",
+    "fixtures/closure/c-evo-20-canonical-demand-order.yaml": "9d43aaa0e9813be28b616483e4fe79b5c2ff9e9ae3804b76fa8503baae50670e",
+    "fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml": "aa86d7646ce2c3bb166d426d879ae87a3e35bcd56b84e67a7b5cb84017fb2b31",
+    "fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml": "2ec57efcb658b43e8d5887e0b57bfc4028047bda3eb1f99c04a6a961cfc7fc23",
+    "fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml": "827469cc9022e5fbec055604ee53e9f9011f54edae62a42e62007d5ff3a64adb",
+    "fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml": "4fc7068335b48c76dbc039788f5c76d160d803c2339b43b273e01d05d3bdd07e",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml": "fdc0e8612af87e0355430992e2548abd19c9de087b9dc03dd30dc7e0a4a8de28",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml": "1952b25ead068cb846970c4595ec7cadc6aed005dde1b05d44f1d1f50e484643",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml": "eb5bc738bb756560bfaef9cd18b64705b444c2b1addfc2f0b36c7b96aa2e4880",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml": "1a2c0ff30133fc4a861fd6b0c352f07dcb3aec2605bb5556cae37786328dadb6",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml": "47e7b855d3af0879a1d0a10fe7fd1fc960fe09dba9620b1c90532f9946337f87",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml": "a728202c3d988d252565b1e4d1b733f5d11d99dfe1cb3511efc689db11fe7e86",
 }
 
 APPROVED_CONTRACTS_SPECIFICATION_SHA256 = (
@@ -157,26 +249,18 @@ APPROVED_LANGUAGE_DEPENDENCY_TRANSITION = {
 }
 
 # The old release carried this exact, order-sensitive sixteen-file snapshot.
-# The new release carries the entire closed six-module inventory.  Its 722
-# digests are approved through a single canonical aggregate rather than an
-# unreviewable Python literal.  Array order remains part of the aggregate.
-APPROVED_IMPLEMENTATION_BASELINE_BEFORE = (
-    ("blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java", "66a5d2e70757c9426a5ab922bcdafd951c7145ae7dcefab491dc533e95922283"),
-    ("blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java", "38c4f46e1731247c25469d7d68f0bfff160b68cfa7ab9094ba81811d9ffccf62"),
-    ("blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java", "5c29563118ed6cb704e2b0f17445eb7d17ce8f9ac02f00ac0143dc0d753dd5b3"),
-    ("blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java", "0ab691e9295f77da991faf1f392411b6223a4feffb9898ef80c999f73611ee65"),
-    ("blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java", "3ce68fa55e89299e4c2e57ccba6db264cc9c3416706b1d29a79b7ab47eb071f1"),
-    ("blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java", "eaad1e3a012454b4486b7283275fc6025af2007608ebcfbf4f1c4e9abf107474"),
-    ("blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java", "618ee825785f86697ca06e3fb1670609617da58e0548775cc2717aee2d317204"),
-    ("blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java", "c14931e3e346f36cf5979aede4ec2c3623318b9b88e13a69801934e65de0cc36"),
-    ("blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java", "db33225ee9243fa4bae09572ac40733dffa5e7d90c9b3d446694caf39e33f83c"),
-    ("blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java", "81a54840d50bc836321f3ca2ece052c8a0d6c3723f52d13bf6317c787833977c"),
-    ("blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java", "bcc7ebe6be7eb9f86b6b079248cc2f1382e6ef3ad422827634c1483e643d0bcf"),
-    ("blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java", "55dc9ac99a5860b5be843d61114c5aed4695c145ed32fbdada9ba3181dbea434"),
-    ("blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java", "2d17ebcd49932ef7cf36ffa4ac949f338fa5728d313a7f7f2fe17535859571c6"),
-    ("blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java", "cfe0e418e87451d7d31f2522d4150514c197cee552f3cc3b0bab8a8f08c3abb2"),
-    ("blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java", "b049a54909bc111bf7921a3c4bb5424aea69f580ef389f6bc35bbad03960c302"),
-    ("blue-contracts-core/src/main/java/blue/language/processor/PlatformCommitCompanion.java", "0ef97244ea90a43bab60e1708010bcca95a76d50517dc81c31aef3c0079509b6"),
+# It is strict review data rather than an active source binding, so its bytes
+# live in the migration baseline file and are pinned above.  The new release
+# carries the entire closed six-module inventory.  Its 722 digests are
+# approved through one canonical aggregate.  Array order remains significant.
+APPROVED_IMPLEMENTATION_BASELINE_DOCUMENT = (
+    parse_implementation_baseline_input(
+        IMPLEMENTATION_BASELINE_INPUT_PATH.read_bytes()
+    )
+)
+APPROVED_IMPLEMENTATION_BASELINE_BEFORE = tuple(
+    (entry["path"], entry["sha256"])
+    for entry in APPROVED_IMPLEMENTATION_BASELINE_DOCUMENT["files"]
 )
 APPROVED_IMPLEMENTATION_BASELINE_BEFORE_ORDER = tuple(
     path for path, _ in APPROVED_IMPLEMENTATION_BASELINE_BEFORE

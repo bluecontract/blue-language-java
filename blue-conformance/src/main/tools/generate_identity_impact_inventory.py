@@ -90,6 +90,23 @@ FULL_LIFECYCLE_ORACLE_BASELINE_SCHEMA = (
 FULL_LIFECYCLE_ORACLE_CLASSIFICATION = (
     "reviewed-full-lifecycle-identity-projection"
 )
+CLASSIFIER_IMPLEMENTATION_BASELINE_PATH = (
+    "blue-conformance/src/main/tools/migration/"
+    "classify-fixture-identity-delta-implementation-baseline.json"
+)
+CLASSIFIER_IMPLEMENTATION_BASELINE_SCHEMA = (
+    "blue-classifier-implementation-baseline/1.0"
+)
+CLASSIFIER_IMPLEMENTATION_BASELINE_SOURCE = (
+    "blue-conformance/src/main/resources/blue-contracts-closure-1.0/"
+    "release-manifest.yaml#/languageDependency/inputImplementationBaseline"
+)
+CLASSIFIER_IMPLEMENTATION_BASELINE_PROVENANCE = (
+    "42e407c914c7813f327a0ed62e7599bab06a0ecb"
+)
+CLASSIFIER_IMPLEMENTATION_BASELINE_SHA256 = (
+    "c4220da1d2f0934c69768623f73c4bdbbd7f17bf0715a3231d82dd6cf2ec2d9d"
+)
 FULL_LIFECYCLE_ORACLE_NAMES = frozenset((
     "DUPLICATE_EVENT_IDENTITY_ORACLE",
     "GAS_FAILURE_ORACLE",
@@ -102,6 +119,9 @@ REVIEWED_JAVA_IDENTITY_ORACLES = {
 }
 REVIEWED_IDENTITY_BASELINE_INPUTS = {
     FULL_LIFECYCLE_ORACLE_BASELINE_PATH: (
+        "reviewed-migration-baseline-excluded-from-active-bindings"
+    ),
+    CLASSIFIER_IMPLEMENTATION_BASELINE_PATH: (
         "reviewed-migration-baseline-excluded-from-active-bindings"
     ),
 }
@@ -1489,6 +1509,100 @@ def _full_lifecycle_oracle_baseline(
     )
 
 
+def _parse_classifier_implementation_baseline(
+    data: bytes | None,
+) -> dict[str, Any]:
+    """Loads the classifier's strict reviewed pre-transition snapshot."""
+    if data is None:
+        raise ValueError(
+            "Missing reviewed classifier implementation baseline: "
+            + CLASSIFIER_IMPLEMENTATION_BASELINE_PATH
+        )
+
+    def strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(
+                    "Duplicate key in classifier implementation baseline: "
+                    + key
+                )
+            result[key] = value
+        return result
+
+    try:
+        document = json.loads(
+            data.decode("utf-8"), object_pairs_hook=strict_object
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exception:
+        raise ValueError(
+            "Invalid reviewed classifier implementation baseline JSON"
+        ) from exception
+    if not isinstance(document, dict) or set(document) != {
+        "schema",
+        "sourcePath",
+        "provenanceCommit",
+        "files",
+    }:
+        raise ValueError(
+            "Classifier implementation baseline must have the exact reviewed shape"
+        )
+    if document["schema"] != CLASSIFIER_IMPLEMENTATION_BASELINE_SCHEMA:
+        raise ValueError("Unexpected classifier implementation baseline schema")
+    if document["sourcePath"] != CLASSIFIER_IMPLEMENTATION_BASELINE_SOURCE:
+        raise ValueError(
+            "Unexpected classifier implementation baseline source path"
+        )
+    if (
+        document["provenanceCommit"]
+        != CLASSIFIER_IMPLEMENTATION_BASELINE_PROVENANCE
+    ):
+        raise ValueError(
+            "Unexpected classifier implementation baseline provenance commit"
+        )
+    files = document["files"]
+    if not isinstance(files, list) or len(files) != 16:
+        raise ValueError(
+            "Classifier implementation baseline must contain exactly 16 files"
+        )
+    paths: set[str] = set()
+    for entry in files:
+        if not isinstance(entry, dict) or set(entry) != {"path", "sha256"}:
+            raise ValueError(
+                "Classifier implementation baseline file must contain path and sha256"
+            )
+        path = entry["path"]
+        digest = entry["sha256"]
+        if not isinstance(path, str) or not path or path in paths:
+            raise ValueError(
+                "Classifier implementation baseline paths must be unique and non-empty"
+            )
+        if (
+            not isinstance(digest, str)
+            or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+        ):
+            raise ValueError(
+                "Classifier implementation baseline sha256 must be lowercase 64-hex"
+            )
+        paths.add(path)
+    if (
+        hashlib.sha256(data).hexdigest()
+        != CLASSIFIER_IMPLEMENTATION_BASELINE_SHA256
+    ):
+        raise ValueError(
+            "Classifier implementation baseline bytes do not match the reviewed input"
+        )
+    return document
+
+
+def _classifier_implementation_baseline(
+    repository: Path,
+) -> dict[str, Any]:
+    return _parse_classifier_implementation_baseline(
+        _current_bytes(repository, CLASSIFIER_IMPLEMENTATION_BASELINE_PATH)
+    )
+
+
 def _masked_identity_skeleton(value: str) -> str:
     return EXACT_IDENTIFIER.sub("<exact-identity>", value)
 
@@ -2309,6 +2423,9 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
     full_lifecycle_oracle_baseline = _full_lifecycle_oracle_baseline(
         repository
     )
+    classifier_implementation_baseline = (
+        _classifier_implementation_baseline(repository)
+    )
     java_identity_oracle_audit = _java_identity_oracle_audit(repository)
     reference_index = _reference_index(repository, baseline_commit)
     artifacts: list[dict[str, Any]] = []
@@ -2676,7 +2793,23 @@ def generate(repository: Path, baseline: str = DEFAULT_BASELINE) -> dict[str, An
                     "referenceScanDisposition": (
                         "excluded-reviewed-generator-input"
                     ),
-                }
+                },
+                {
+                    "path": CLASSIFIER_IMPLEMENTATION_BASELINE_PATH,
+                    "classification": REVIEWED_IDENTITY_BASELINE_INPUTS[
+                        CLASSIFIER_IMPLEMENTATION_BASELINE_PATH
+                    ],
+                    "schema": classifier_implementation_baseline["schema"],
+                    "sourcePath": classifier_implementation_baseline[
+                        "sourcePath"
+                    ],
+                    "provenanceCommit": classifier_implementation_baseline[
+                        "provenanceCommit"
+                    ],
+                    "referenceScanDisposition": (
+                        "excluded-reviewed-generator-input"
+                    ),
+                },
             ],
             "downstreamClosure": [
                 {
