@@ -18,6 +18,7 @@ import blue.language.provider.SequentialNodeProvider;
 import blue.language.provider.VerifiedNodeProvider;
 import blue.language.conformance.ConformancePlan;
 import blue.language.model.Node;
+import blue.language.model.NodeIdentities;
 import blue.language.model.wire.JsonPointer;
 import blue.language.processor.ConformanceChangedPath;
 import blue.language.processor.ConformancePlannerOverride;
@@ -551,8 +552,7 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                                          Set<String> ancestry,
                                          Map<String, Node> providerNodes) {
         result.add(new ScopeValue(path, scope));
-        String identity = sourceIdentity(
-                readNode(scope), providerNodes, true).blueId();
+        String identity = NodeIdentities.calculate(readNode(scope));
         if (!ancestry.add(identity)) {
             throw new IllegalArgumentException(
                     "Embedded scope ancestry cycle at " + path);
