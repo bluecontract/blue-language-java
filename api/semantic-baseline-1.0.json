@@ -1,37 +1,37 @@
 {
   "schema" : "blue-language-java-semantic-baseline/1.0",
   "source" : {
-    "commit" : "0a5fb194d58868622ebeb4fbb8c3d784306c2baa",
-    "sourceInputIdentity" : "sha256:ae75e337883accf57fcd3b5dd1da65f8b86200e9155ac51cb04d40dab656ffa5"
+    "commit" : "f30fc18fadd9deab672cbae74d17047a610b5ca1",
+    "sourceInputIdentity" : "sha256:145eb55502ac8f616f5ccfcb2ed86b55007d35f8a8e570e407e7bffbd8c61561"
   },
   "specifications" : {
-    "languageSha256" : "019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37",
-    "contractsSha256" : "62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9"
+    "languageSha256" : "0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06",
+    "contractsSha256" : "99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd"
   },
   "release" : {
-    "packageIdentity" : "sha256:f794dfd2c57969f81025387895e60a0e67919f677ccf7efeeac0f5ac189f938c",
-    "contractsReleaseIdentity" : "sha256:ed634d06aa95153fd34ae991c901131714a2a303980c49dc12ba9ce498364c5c"
+    "packageIdentity" : "sha256:ead931938c51e650533ac32dc2b0d83729790adf1a89d15765b75fb7da8dfc0d",
+    "contractsReleaseIdentity" : "sha256:80ea2db0481f55412304cd05cbc4185405dec0222b15175ff7b111808282f92c"
   },
   "packages" : {
     "languageRegistry" : "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321",
-    "languageFixtures" : "sha256:c59f2bc4e4ceafb8d7e20875003fa281f79f2f77ac7ae991fcebdc6dde0977cc",
+    "languageFixtures" : "sha256:83a0d7ec99d711577d6c08962b922aedd342d858a9bf12560ade790692d08cae",
     "contractsRegistry" : "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4",
     "contractsGas" : "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a",
-    "contractsFixtures" : "sha256:5c6c6ca1ae10cff5e3afa4ee3a816b9e9f1a0bca802c71662f06951001473783",
-    "contractsRelease" : "sha256:ed634d06aa95153fd34ae991c901131714a2a303980c49dc12ba9ce498364c5c"
+    "contractsFixtures" : "sha256:4c04a92450e782ec5ee834545c19bacc7c3372484cecc21c73942648cf26e182",
+    "contractsRelease" : "sha256:80ea2db0481f55412304cd05cbc4185405dec0222b15175ff7b111808282f92c"
   },
   "tests" : {
     "all" : {
-      "minimumTests" : 2614,
-      "tests" : 2614,
-      "passed" : 2614,
+      "minimumTests" : 2684,
+      "tests" : 2684,
+      "passed" : 2684,
       "failed" : 0,
       "skipped" : 0
     }
   },
   "gas" : {
     "fixtureCount" : 71,
-    "oraclePackageIdentity" : "sha256:5c6c6ca1ae10cff5e3afa4ee3a816b9e9f1a0bca802c71662f06951001473783",
+    "oraclePackageIdentity" : "sha256:4c04a92450e782ec5ee834545c19bacc7c3372484cecc21c73942648cf26e182",
     "fixtures" : [ {
       "resultKey" : "contracts:gas-composite-gas-exhaustion-prefix",
       "id" : "gas-composite-gas-exhaustion-prefix",
@@ -1334,10 +1334,10 @@
       "identity" : "sha256:a9f3e4e009ef09c8582fc3706ce126023dd9228dae44a043d2396768b002bf17",
       "path" : "src/test/java/blue/language/processor/FragmentedProcessingFailureMatrixTest.java"
     }, {
-      "identity" : "sha256:7e9967d7d4829a22373d9faaa054b7902c83402c2612420ad2ab40a61fd7bc8f",
+      "identity" : "sha256:c9111ca2b67f063d12f5a341c32d397db018df72c1f268f6c3ea69f31373d48c",
       "path" : "src/test/java/blue/language/processor/FragmentedProcessingLocalityIntegrationTest.java"
     }, {
-      "identity" : "sha256:6c089902054798f76e6cbaa2bab463aaa176beef15f12c0e828dca24c406f30c",
+      "identity" : "sha256:3d1587e2b683ac66195a3f2828a07c9234177ec70ee997ad596676d0ca70af08",
       "path" : "src/test/java/blue/language/provider/ExactNodeGraphFragmentsTest.java"
     } ],
     "requiredTests" : [ {
@@ -16804,9 +16804,9 @@
     }
   },
   "artifacts" : {
-    "jar" : "sha256:b8e68a814e9b6888e5fd59baa9c26aa097e59421e96a7da507ab26d4e649ff15",
-    "sourcesJar" : "sha256:68d1069c56f754c2e76f208a4126a967533cc91059062c2e86b70e098f33a518",
-    "javadocJar" : "sha256:628195935d46cd1b158c515b01476496ba6e905b7a7e4b065a86da13a6ff2c3c",
-    "sourceRelease" : "sha256:f8e6301ee9a5a8d02add477dab47e2941ffbd5bd0f637c3f29ce4dca2627ab8c"
+    "jar" : "sha256:41f8ffb297e7b96ad22029f9fc690d7bd71c4f2cd05e1844bcf1654f3d21d16f",
+    "sourcesJar" : "sha256:a61d6d72273f2d23dc6806c360b09d7e3a4128c0148460e56572430185b8acc8",
+    "javadocJar" : "sha256:a5695655a87b115df9b4b4c20ec1c56b677178031acbfcef03ec6b8d5171b670",
+    "sourceRelease" : "sha256:5f52084c88c8b3c95ecca92b547fc79bfbfdf9365e6a2e7269255e6757f26c48"
   }
 }
