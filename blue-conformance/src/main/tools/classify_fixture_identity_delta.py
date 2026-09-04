@@ -206,7 +206,7 @@ def implementation_baseline_aggregate_identity(
 # Recompute deliberately when production source bytes or inventory membership
 # changes.  This pin approves one exact after-snapshot, not arbitrary hashes.
 APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY = (
-    "sha256:871097440418646a3e206f3ee4a433736e031201358f635bfa8a08b6ffc295e1"
+    "sha256:596556edc5f114d12da2c6ffcf4fe8e9fe2c5e5a9846426e6cc0ac90831a8422"
 )
 
 if any(

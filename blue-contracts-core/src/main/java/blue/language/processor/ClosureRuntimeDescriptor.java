@@ -14,11 +14,11 @@ public final class ClosureRuntimeDescriptor {
 
     /** Released Language 1.0 cyclic-set finalizer semantic identity. */
     public static final String CYCLIC_FINALIZER_IDENTITY =
-            "sha256:d3ffac60d78fdb516a9f635181532e45dcb5bde05080ad161f63af8476eb1b48";
+            "sha256:a16e111c7d5e803e6551ff43a6beaa265149bf1cd0c73808ba7fb81650a079b3";
 
     /** Released Language 1.0 cyclic-proof verifier semantic identity. */
     public static final String CYCLIC_PROOF_VERIFIER_IDENTITY =
-            "sha256:550c51d427f53b07a5d31cbdfdc1c143829466602356615452b27327f2080202";
+            "sha256:3a94850f63b8813e05fe38687e50ce95617a7748dbb8cc2f6d346572651d9372";
 
     private final String runtimeRegistryIdentity;
     private final String gasManifestIdentity;
