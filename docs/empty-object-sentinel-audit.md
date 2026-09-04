@@ -7,8 +7,8 @@ This report records every prompt-mandated production Java search hit, then expli
 - Production matches: 2049
 - Decision-relevant matches: 252
 - Context-only broad-search matches: 1797
-- Matches in files changed since the RC baseline: 1115
-- Matches in unchanged files: 934
+- Matches in files changed since the RC baseline: 1116
+- Matches in unchanged files: 933
 
 Every entry has a resolved disposition. Context-only matches are retained to prove the broad searches ran, but are not presented as semantic evidence and do not claim a covering behavior test. Every decision-relevant entry is selected by an explicit path/symbol rule and distinguishes Source null, exact `{}`, an explicit list placeholder, a temporary fieldless builder/control, host absence, invalid reserved-position output, or nullable identity-header metadata.
 
