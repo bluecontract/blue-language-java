@@ -95,16 +95,27 @@ final class ResolvedScopeViewEvidenceTest {
         Node inlineType = new Node().name("Configured reference channel type");
         String inlineTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
                 inlineType);
-        Node exactRoot = scopeWithContract(
+        Node authoredRoot = scopeWithContract(
                 new Node()
                         .type(inlineType)
                         .properties("order", new Node().value(0)));
-        String exactRootBlueId = DirectBlueIdCalculator.calculateBlueId(
-                exactRoot);
+        Node exactRoot;
+        String exactRootBlueId;
+        try (Blue canonicalizer = ProcessorTestSupport.blue()) {
+            exactRoot = canonicalizer.canonicalize(authoredRoot);
+            exactRootBlueId = canonicalizer.calculateSourceDocumentBlueId(
+                    authoredRoot);
+        }
         Node rootReference = new Node().blueId(exactRootBlueId);
-        NodeProvider provider = blueId -> exactRootBlueId.equals(blueId)
-                ? Collections.singletonList(exactRoot.clone())
-                : null;
+        NodeProvider provider = blueId -> {
+            if (exactRootBlueId.equals(blueId)) {
+                return Collections.singletonList(exactRoot.clone());
+            }
+            if (inlineTypeBlueId.equals(blueId)) {
+                return Collections.singletonList(inlineType.clone());
+            }
+            return null;
+        };
 
         try (Blue blue = ProcessorTestSupport.blue(provider)) {
             DocumentProcessor processor = blue.getDocumentProcessor();
@@ -147,11 +158,16 @@ final class ResolvedScopeViewEvidenceTest {
     @Test
     void shouldKeepInlineContractTypeEvidenceDuringRecognitionMaterialization() {
         // given
-        Node exactContract = new Node()
+        Node authoredContract = new Node()
                 .type(new Node().name("TestEventChannel"))
                 .properties("order", new Node().value(0));
-        String contractBlueId = DirectBlueIdCalculator.calculateBlueId(
-                exactContract);
+        Node exactContract;
+        String contractBlueId;
+        try (Blue canonicalizer = ProcessorTestSupport.blue()) {
+            exactContract = canonicalizer.canonicalize(authoredContract);
+            contractBlueId = canonicalizer.calculateSourceDocumentBlueId(
+                    authoredContract);
+        }
         NodeProvider provider = blueId -> contractBlueId.equals(blueId)
                 ? Collections.singletonList(exactContract.clone())
                 : null;

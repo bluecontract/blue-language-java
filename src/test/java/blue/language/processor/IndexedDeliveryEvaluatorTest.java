@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -890,12 +889,12 @@ final class IndexedDeliveryEvaluatorTest {
                 inlinePlan.verifiedBinding();
         VerifiedExecutionEvidence referenceBinding =
                 referencePlan.verifiedBinding();
-        assertNotEquals(
-                DirectBlueIdCalculator.calculateBlueId(inlineRoot),
-                inlineBinding.rootBlueId());
-        assertNotEquals(
-                DirectBlueIdCalculator.calculateBlueId(inlineEvent),
-                inlineBinding.eventBlueId());
+        IllegalArgumentException inlineRootFailure = captureFailure(
+                () -> DirectBlueIdCalculator.calculateBlueId(inlineRoot));
+        IllegalArgumentException inlineEventFailure = captureFailure(
+                () -> DirectBlueIdCalculator.calculateBlueId(inlineEvent));
+        assertTrue(inlineRootFailure.getMessage().contains("pure references"));
+        assertTrue(inlineEventFailure.getMessage().contains("pure references"));
         assertEquals(
                 referenceBinding.rootBlueId(),
                 inlineBinding.rootBlueId());

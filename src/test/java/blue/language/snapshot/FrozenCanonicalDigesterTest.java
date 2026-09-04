@@ -654,9 +654,11 @@ class FrozenCanonicalDigesterTest {
                                 Nodes.emptyObject()))),
                 new Node().value(Collections.<String, Object>singletonMap(
                         "empty", Collections.emptyMap())),
-                new Node().schema(new Schema().enumValues(Collections.singletonList(
-                        new Node().value(Collections.<String, Object>singletonMap(
-                                "key", "value"))))),
+                new Node()
+                        .value(Collections.<String, Object>singletonMap(
+                                "key", "value"))
+                        .schema(new Schema().enumValues(Collections.singletonList(
+                                new Node().blueId(TEXT_TYPE_BLUE_ID)))),
                 new Node().schema(new Schema().minimum(new Node().value(
                         Collections.<String, Object>singletonMap("key", "value")))),
                 new Node().schema(new Schema().minLength(new Node().value(

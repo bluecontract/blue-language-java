@@ -81,14 +81,17 @@ final class ExecutableBodyPathCatalogStrictLocalityTest {
         Node inlineType = new Node()
                 .name("Unrelated inline sibling type")
                 .type(reference(typeAncestorBlueId));
+        String inlineTypeBlueId = blueId(inlineType);
         Node document = new Node().properties(
                 "sibling",
-                new Node().type(inlineType));
+                new Node().type(reference(inlineTypeBlueId)));
         List<String> providerRequests = new ArrayList<>();
+        Map<String, Node> content = new LinkedHashMap<>();
+        content.put(inlineTypeBlueId, inlineType);
+        content.put(typeAncestorBlueId, typeAncestor);
         NodeProvider provider = recordingProvider(
                 providerRequests,
-                Collections.singletonMap(
-                        typeAncestorBlueId, typeAncestor));
+                content);
 
         // when
         resolveStrict(

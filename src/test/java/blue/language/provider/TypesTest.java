@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static blue.language.TestUtils.useNodeNameAsBlueIdProvider;
 import static blue.language.provider.Types.isSubtype;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -41,12 +40,14 @@ public class TypesTest {
 
         // given
         Node a = new Node().name("A");
-        Node b = new Node().name("B").type(a);
-        Node c = new Node().name("C").type(b);
+        String aBlueId = DirectBlueIdCalculator.calculateBlueId(a);
+        Node b = new Node().name("B").type(new Node().blueId(aBlueId));
+        String bBlueId = DirectBlueIdCalculator.calculateBlueId(b);
+        Node c = new Node().name("C").type(new Node().blueId(bBlueId));
 
         List<Node> nodes = Arrays.asList(a, b, c);
         // when
-        NodeProvider nodeProvider = useNodeNameAsBlueIdProvider(nodes);
+        NodeProvider nodeProvider = new BasicNodeProvider(nodes);
         CanonicalTypeIdentityLookup identities = identities(a, b, c);
 
         // then
@@ -171,14 +172,22 @@ public class TypesTest {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         nodeProvider.addSingleDocs("name: Root Type");
         String rootBlueId = nodeProvider.getBlueIdByName("Root Type");
-        nodeProvider.addSingleDocs(
-                "name: Derived Type\n"
-                        + "type:\n"
-                        + "  name: Inline Parent\n"
-                        + "  type:\n"
-                        + "    blueId: " + rootBlueId);
-        String derivedBlueId = nodeProvider.getBlueIdByName("Derived Type");
         Blue blue = new Blue(nodeProvider);
+        Node authoredParent = new Node()
+                .name("Inline Parent")
+                .type(new Node().blueId(rootBlueId));
+        CanonicalTypeIdentityEvidence parentEvidence =
+                blue.resolveTypeDeclarationIdentity(authoredParent);
+        nodeProvider.addSingleNodes(
+                parentEvidence.canonicalTypeIdentityInput());
+        Node authoredDerived = new Node()
+                .name("Derived Type")
+                .type(authoredParent);
+        CanonicalTypeIdentityEvidence derivedEvidence =
+                blue.resolveTypeDeclarationIdentity(authoredDerived);
+        String derivedBlueId = derivedEvidence.blueId();
+        nodeProvider.addSingleNodes(
+                derivedEvidence.canonicalTypeIdentityInput());
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(
                 new Node().type(new Node().blueId(derivedBlueId)));
 
