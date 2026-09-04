@@ -14,6 +14,7 @@ import blue.language.provider.NodeProvider;
 
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.merge.MergingProcessor;
 import blue.language.merge.NodeResolver;
 import blue.language.processor.ContractProcessor;
@@ -237,7 +238,8 @@ class BlueCacheLifecycleTest {
         // when
         blue.clearResolvedSnapshotCache();
         boolean processorClosed = processor.isClosed();
-        Node initializedDocument = blue.initializeDocument(new Node()).document();
+        Node initializedDocument = blue.initializeDocument(
+                Nodes.emptyObject()).document();
 
         // then
         assertFalse(processorClosed);
@@ -255,7 +257,8 @@ class BlueCacheLifecycleTest {
         first.close();
         boolean closedAfterFirstClose = shared.isClosed();
         DocumentProcessor secondProcessor = second.getDocumentProcessor();
-        DocumentProcessingResult initialized = second.initializeDocument(new Node());
+        DocumentProcessingResult initialized = second.initializeDocument(
+                Nodes.emptyObject());
         second.close();
         boolean closedAfterSecondClose = shared.isClosed();
 
@@ -271,7 +274,7 @@ class BlueCacheLifecycleTest {
         // given
         Blue blue = new Blue();
         DocumentProcessor owned = blue.getDocumentProcessor();
-        owned.administration().markersFor(new Node(), "/");
+        owned.administration().markersFor(Nodes.emptyObject(), "/");
         DocumentProcessor borrowed = new DocumentProcessor();
 
         // when
@@ -1789,6 +1792,7 @@ class BlueCacheLifecycleTest {
                 Thread.currentThread().interrupt();
                 throw new AssertionError(exception);
             }
+            target.replaceWith(source);
         }
     }
 
@@ -1807,6 +1811,7 @@ class BlueCacheLifecycleTest {
                             CanonicalTypeIdentityLookup typeIdentities) {
             if (source.getProperties() != null
                     && source.getProperties().containsKey("typeMarker")) {
+                target.replaceWith(source);
                 target.properties(evidenceProperty, new Node().value(true));
             }
         }
