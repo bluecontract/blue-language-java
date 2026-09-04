@@ -400,6 +400,7 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                 documentation);
         lifecycle(project, "rcVerify", "Alias for releaseVerify.")
                 .configure(task -> task.dependsOn(releaseVerify));
+        DevelopmentVerificationOrchestration.register(project);
     }
 
     private static TaskProvider<Exec> generatedPythonCheck(
@@ -412,7 +413,9 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
             task.setDescription(description);
             task.setWorkingDir(project.getRootDir());
             task.commandLine(
-                    "python3", script, "--repository-root", ".", "--check");
+                    project.getProviders().gradleProperty("bluePythonExecutable")
+                            .orElse("python3").get(),
+                    script, "--repository-root", ".", "--check");
         });
     }
 

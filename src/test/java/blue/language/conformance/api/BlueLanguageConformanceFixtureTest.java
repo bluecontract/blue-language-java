@@ -42,20 +42,13 @@ public class BlueLanguageConformanceFixtureTest {
     @TestFactory
     Stream<DynamicTest> shouldPassAllBlueLanguage10Fixtures() {
         // given
+        String selector = System.getProperty(LanguageFixtureSelection.CASES_PROPERTY);
+
         // when
-        BlueConformanceReport report = BlueConformanceSuiteRunner.run();
-        Map<String, BlueConformanceFailure> failuresById = report.getFailures().stream()
-                .collect(Collectors.toMap(BlueConformanceFailure::getFixtureId, Function.identity()));
+        Stream<DynamicTest> selected = LanguageFixtureSelection.dynamicTests(selector);
 
         // then
-        return report.getFixtureIds().stream()
-                .map(id -> DynamicTest.dynamicTest(id, () -> {
-                    BlueConformanceFailure failure = failuresById.get(id);
-                    if (failure != null) {
-                        fail(failureMessage(failure));
-                    }
-                    assertTrue(report.getPassedFixtureIds().contains(id), "Fixture did not run: " + id);
-                }));
+        return selected;
     }
 
     @Test
