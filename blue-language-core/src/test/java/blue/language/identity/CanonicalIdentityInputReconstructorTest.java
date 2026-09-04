@@ -2,6 +2,7 @@ package blue.language.identity;
 
 import blue.language.model.Node;
 import blue.language.model.NodeWireForm;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.merge.Merger;
 import blue.language.merge.SnapshotResolution;
@@ -195,7 +196,7 @@ class CanonicalIdentityInputReconstructorTest {
                 identity(completedContainerType, containerId));
         Node source = new Node()
                 .type(reference(containerId))
-                .properties("child", new Node());
+                .properties("child", Nodes.emptyObject());
         Node resolved = new Node()
                 .type(completedContainerType.clone())
                 .properties("child", new Node()
@@ -225,19 +226,43 @@ class CanonicalIdentityInputReconstructorTest {
     }
 
     @Test
-    void canonicalizesEmptyInlineTypesToTheExactEmptyTypeReference() {
+    void canonicalizesEmptyInlineTypesInEveryTypePositionToTheExactReference() {
         String emptyTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
-                new Node());
+                Nodes.emptyObject());
         CanonicalTypeIdentityLookup evidence = completeEvidence(
-                identity(new Node(), emptyTypeBlueId));
+                identity(Nodes.emptyObject(), emptyTypeBlueId));
+        List<TypePosition> positions = Arrays.asList(
+                new TypePosition(Node::getType, Node::type),
+                new TypePosition(Node::getItemType, Node::itemType),
+                new TypePosition(Node::getKeyType, Node::keyType),
+                new TypePosition(Node::getValueType, Node::valueType));
 
-        Node source = new Node().name("X").type(new Node());
-        Node canonical = builder.build(source.clone(), source, evidence);
+        for (TypePosition position : positions) {
+            Node inlineSource = position.set(
+                    new Node().name("X"), Nodes.emptyObject());
+            Node referenceSource = position.set(
+                    new Node().name("X"), reference(emptyTypeBlueId));
 
-        assertTrue(canonical.getType().isReferenceOnly());
-        assertEquals(emptyTypeBlueId, canonical.getType().getBlueId());
+            Node inlineCanonical = builder.build(
+                    inlineSource.clone(), inlineSource, evidence);
+            Node referenceCanonical = builder.build(
+                    referenceSource.clone(), referenceSource,
+                    completeEvidence());
+            Node canonicalType = position.get(inlineCanonical);
+
+            assertTrue(canonicalType.isReferenceOnly());
+            assertEquals(emptyTypeBlueId, canonicalType.getBlueId());
+            assertEquals(
+                    NodeWireForm.get(referenceCanonical),
+                    NodeWireForm.get(inlineCanonical));
+            assertEquals(
+                    DirectBlueIdCalculator.calculateBlueId(
+                            referenceCanonical),
+                    DirectBlueIdCalculator.calculateBlueId(
+                            inlineCanonical));
+        }
         assertEquals(emptyTypeBlueId,
-                FrozenNode.fromNode(new Node()).blueId());
+                FrozenNode.empty().blueId());
     }
 
     @Test

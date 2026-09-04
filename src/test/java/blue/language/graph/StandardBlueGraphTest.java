@@ -8,6 +8,7 @@ import blue.language.api.BlueOperationResult;
 import blue.language.provider.NodeProvider;
 import blue.language.merge.NodeResolver;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.resolve.ResolutionLimits;
 import org.junit.jupiter.api.Test;
@@ -130,6 +131,40 @@ final class StandardBlueGraphTest {
                 DirectBlueIdCalculator.calculateBlueId(exact),
                 collapsed.getBlueId());
         assertEquals("collapse me", exact.getValue());
+    }
+
+    @Test
+    void shouldCollapseAndExpandExactEmptyObjectWithoutChangingParentIdentity() {
+        // given
+        Node emptyObject = Nodes.emptyObject();
+        String emptyObjectBlueId =
+                DirectBlueIdCalculator.calculateBlueId(emptyObject);
+        StandardBlueGraph graph = new StandardBlueGraph(
+                requested -> emptyObjectBlueId.equals(requested)
+                        ? Collections.singletonList(emptyObject)
+                        : null,
+                IDENTITY_RESOLVER);
+        Node inlineParent = new Node().properties(
+                "child", emptyObject.clone());
+
+        // when
+        Node collapsed = graph.collapse(emptyObject);
+        Node referencedParent = new Node().properties(
+                "child", collapsed);
+        Node expandedParent = graph.expand(referencedParent);
+
+        // then
+        assertTrue(collapsed.isReferenceOnly());
+        assertEquals(emptyObjectBlueId, collapsed.getBlueId());
+        assertTrue(Nodes.isExactEmptyObject(emptyObject));
+        assertTrue(Nodes.isExactEmptyObject(
+                expandedParent.getProperties().get("child")));
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(inlineParent),
+                DirectBlueIdCalculator.calculateBlueId(referencedParent));
+        assertEquals(
+                DirectBlueIdCalculator.calculateBlueId(inlineParent),
+                DirectBlueIdCalculator.calculateBlueId(expandedParent));
     }
 
     @Test

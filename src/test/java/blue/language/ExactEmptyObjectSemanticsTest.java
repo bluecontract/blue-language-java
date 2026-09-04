@@ -9,8 +9,10 @@ import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.mapping.TypeClassResolver;
+import blue.language.preprocess.NormalizeListPlaceholders;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.FrozenNodeToBlueIdInput;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -31,6 +33,45 @@ final class ExactEmptyObjectSemanticsTest {
 
     private static final String EMPTY_OBJECT_BLUE_ID =
             "5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK";
+
+    @Test
+    void shouldRejectHostNullAtTheSourceDocumentRootBoundary() {
+        // given
+        NormalizeListPlaceholders normalization =
+                new NormalizeListPlaceholders();
+
+        // when
+        Runnable action = () -> normalization.process(null);
+
+        // then
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                action::run);
+        assertEquals(
+                "Root null is not a valid Blue document.",
+                failure.getMessage());
+    }
+
+    @Test
+    void shouldRejectExactEmptyObjectsInSchemaEnumsDuringPreprocessing() {
+        // given
+        NormalizeListPlaceholders normalization =
+                new NormalizeListPlaceholders();
+        Node source = Nodes.emptyObject().schema(
+                new Schema().enumValues(Arrays.asList(
+                        Nodes.emptyObject())));
+
+        // when
+        Runnable action = () -> normalization.process(source);
+
+        // then
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                action::run);
+        assertTrue(failure.getMessage().contains(
+                "schema.enum entries must be scalar values"));
+        assertTrue(failure.getMessage().contains("/schema/enum/0"));
+    }
 
     @Test
     void shouldConsumeOnlySourceNullDuringMandatoryPreprocessing() {
@@ -331,6 +372,96 @@ final class ExactEmptyObjectSemanticsTest {
                 NodeWireForm.get(inlineCanonical));
         assertEquals(blue.calculateSourceDocumentBlueId(referenced),
                 blue.calculateSourceDocumentBlueId(inline));
+    }
+
+    @Test
+    void shouldRetainExactEmptyObjectInCanonicalAndMinimizedLists() {
+        // given
+        Blue blue = new Blue();
+        Node source = list(
+                new Node().value("A"),
+                Nodes.emptyObject(),
+                new Node().value("B"));
+
+        // when
+        Node canonical = blue.canonicalize(source);
+        Node minimized = blue.minimize(source);
+        Node roundTrip = blue.resolve(blue.preprocess(minimized.clone()));
+
+        // then
+        assertTrue(Nodes.isExactEmptyObject(
+                canonical.getItems().get(1)));
+        assertFalse(Nodes.isEmptyPlaceholder(
+                canonical.getItems().get(1)));
+        assertTrue(Nodes.isExactEmptyObject(
+                minimized.getItems().get(1)));
+        assertFalse(Nodes.isEmptyPlaceholder(
+                minimized.getItems().get(1)));
+        assertTrue(Nodes.isExactEmptyObject(
+                roundTrip.getItems().get(1)));
+        assertEquals(
+                NodeWireForm.get(blue.resolve(source.clone())),
+                NodeWireForm.get(roundTrip));
+        assertEquals(
+                blue.calculateSourceDocumentBlueId(source),
+                blue.calculateSourceDocumentBlueId(minimized));
+    }
+
+    @Test
+    void shouldRejectBareBuildersAtEveryMutableIdentityPosition() {
+        // given
+        // when
+        // then
+        assertBareBuilderRejected("/", () ->
+                DirectBlueIdCalculator.calculateBlueId(new Node()));
+        assertBareBuilderRejected("/child", () ->
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().properties("child", new Node())));
+        assertBareBuilderRejected("/items/0", () ->
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().items(new Node())));
+        assertBareBuilderRejected("/type", () ->
+                DirectBlueIdCalculator.calculateBlueId(
+                        new Node().type(new Node())));
+    }
+
+    @Test
+    void shouldRejectBareBuildersAtEveryStrictFrozenPosition() {
+        // given
+        // when
+        // then
+        assertBareBuilderRejected("/", () ->
+                FrozenNode.fromNode(new Node()));
+        assertBareBuilderRejected("/child", () ->
+                FrozenNode.fromNode(
+                        new Node().properties("child", new Node())));
+        assertBareBuilderRejected("/items/0", () ->
+                FrozenNode.fromNode(new Node().items(new Node())));
+        assertBareBuilderRejected("/type", () ->
+                FrozenNode.fromNode(new Node().type(new Node())));
+    }
+
+    @Test
+    void shouldRejectBareBuildersAtEveryFrozenIdentityProjectionPosition() {
+        // given
+        // when
+        // then
+        assertBareBuilderRejected("/", () ->
+                FrozenNodeToBlueIdInput.get(
+                        FrozenNode.fromUncheckedCanonicalNode(new Node())));
+    }
+
+    private static void assertBareBuilderRejected(
+            String path,
+            Runnable action) {
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                action::run);
+        assertEquals(
+                "Fieldless Node is an incomplete builder, not semantic Blue "
+                        + "content. Use Nodes.emptyObject() for {} or omit the "
+                        + "field for absence. Path: " + path,
+                failure.getMessage());
     }
 
     private static Node list(Node... items) {
