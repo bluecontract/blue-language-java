@@ -1,6 +1,7 @@
 package blue.language.snapshot;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import org.junit.jupiter.api.Test;
 
@@ -93,6 +94,45 @@ class FrozenNodeRetainedWeightTest {
         // then
         assertTrue(deepRootWeight <= shortRootWeight + 64L,
                 "a shallow entry weight must not walk and re-charge its descendant key graph");
+    }
+
+    @Test
+    void shouldChargeAnExactEmptyObjectChildWithoutComputingIdentity() throws Exception {
+        // given
+        FrozenNode emptyObject = FrozenNode.fromResolvedNode(
+                Nodes.emptyObject());
+        FrozenNode containingObject = FrozenNode.fromResolvedNode(
+                new Node().properties(
+                        "presentEmpty",
+                        Nodes.emptyObject()));
+        Object emptyBlueIdBeforeWeighting =
+                cachedBlueId(emptyObject);
+        Object containingBlueIdBeforeWeighting =
+                cachedBlueId(containingObject);
+
+        // when
+        long emptyRetainedWeight =
+                emptyObject.approximateRetainedWeightBytes();
+        long containingRetainedWeight =
+                containingObject.approximateRetainedWeightBytes();
+        long emptyShallowWeight =
+                emptyObject.approximateShallowRetainedWeightBytes();
+        long containingShallowWeight =
+                containingObject.approximateShallowRetainedWeightBytes();
+
+        // then
+        assertNull(emptyBlueIdBeforeWeighting);
+        assertNull(containingBlueIdBeforeWeighting);
+        assertTrue(containingRetainedWeight > emptyRetainedWeight,
+                "a present {} child and its parent edge must contribute retained weight");
+        assertTrue(containingShallowWeight > emptyShallowWeight,
+                "the parent property map, key, and edge must contribute shallow weight");
+        assertTrue(containingRetainedWeight > containingShallowWeight,
+                "the exact empty child must remain reachable and contribute graph weight");
+        assertNull(cachedBlueId(emptyObject),
+                "weighting an exact empty object must not compute BlueId");
+        assertNull(cachedBlueId(containingObject),
+                "weighting a graph containing {} must not compute BlueId");
     }
 
     private static Node chain(int depth) {
