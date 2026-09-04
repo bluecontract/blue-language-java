@@ -49,16 +49,13 @@ final class ManagedDocumentInitializationEligibility {
             if (!source && !target) {
                 continue;
             }
-            // A prospective-only document cannot itself own occurrence
-            // surface, even when every row it owns is presently inactive.
-            if (source) {
-                return false;
-            }
             if (binding.active()
                     || binding.pendingHistoricalEpoch() != null) {
                 return false;
             }
-            prospectiveTarget = true;
+            if (target) {
+                prospectiveTarget = true;
+            }
         }
         return prospectiveTarget;
     }

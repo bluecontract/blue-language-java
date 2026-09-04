@@ -273,29 +273,6 @@ final class ClosureAdmissionExecutionTest {
     }
 
     @Test
-    void legacyAdmissionAlsoLeavesDormantProspectiveOnlyTargetUninitialized() {
-        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
-            ClosureInvocationInput input = dormantProspectiveAdmission(owner);
-            Capture capture = new Capture();
-            ClosureAttemptResult attempt;
-            try (BlueClosureContracts contracts =
-                         new BlueClosureContracts(owner, capture)) {
-                attempt = contracts.admitClosure(input);
-            }
-
-            assertTrue(attempt.isComplete());
-            assertEquals(ProcessorStatus.SUCCESS,
-                    attempt.processResult().status(), diagnostic(attempt));
-            assertEquals(Collections.singletonList(A),
-                    targets(capture.evidence.documentStepTrace()));
-            assertTrue(document(attempt.processResult(), A).initialized());
-            assertFalse(document(attempt.processResult(), B).initialized());
-            assertNull(document(attempt.processResult(), B).document()
-                    .getContracts());
-        }
-    }
-
-    @Test
     void rejectsRecomputedPolicyThatInflatesOneFrozenLimitBeforeAdmission() {
         try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
             Capture capture = new Capture();

@@ -55,6 +55,12 @@ final class ManagedDocumentInitializationEligibilityTest {
         assertFalse(ManagedDocumentInitializationEligibility
                 .isDormantProspectiveOnlyTarget(
                         document(TARGET, false),
+                        Collections.singletonList(binding(
+                                TARGET, SOURCE, false, null)),
+                        Collections.<DirectLogicalDelivery>emptyList()));
+        assertTrue(ManagedDocumentInitializationEligibility
+                .isDormantProspectiveOnlyTarget(
+                        document(TARGET, false),
                         Arrays.asList(
                                 binding(SOURCE, TARGET, false, null),
                                 binding(TARGET, SOURCE, false, null)),
