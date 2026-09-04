@@ -192,8 +192,15 @@ public final class FrozenNodeToBlueIdInput {
         if (node == null) {
             throw new IllegalArgumentException("BlueId input must not contain null nodes. Path: " + path);
         }
-        if (context == Context.METADATA && isTypePosition(path) && node.isInlineValue()) {
-            throw new IllegalArgumentException("Direct BlueId input must not contain unresolved type aliases. Path: " + path);
+        if (node.isEmptyNode()) {
+            throw bareFieldlessBuilder(path);
+        }
+        if (context == Context.METADATA
+                && isTypePosition(path)
+                && !node.isReferenceOnly()) {
+            throw new IllegalArgumentException(
+                    "Direct BlueId input type positions must contain pure "
+                            + "references. Path: " + path);
         }
         if (node.getBlue() != null) {
             throw new IllegalArgumentException(
@@ -207,9 +214,6 @@ public final class FrozenNodeToBlueIdInput {
             throw new IllegalArgumentException("\"$replace\" overlays are not valid direct BlueId input. Path: " + path);
         }
         if (context == Context.LIST_ELEMENT) {
-            if (node.isEmptyNode()) {
-                throw new IllegalArgumentException("Direct BlueId input must use { \"$empty\": true } for empty list placeholders. Path: " + path);
-            }
             if (node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_EMPTY)) {
                 validateEmptyPlaceholder(node, path);
             }
@@ -220,6 +224,14 @@ public final class FrozenNodeToBlueIdInput {
             throw new IllegalArgumentException("\"$previous\" is valid only as the first list item in direct BlueId input. Path: " + path);
         }
         validatePayloadKind(node, path);
+    }
+
+    private static IllegalArgumentException bareFieldlessBuilder(
+            String path) {
+        return new IllegalArgumentException(
+                "Fieldless Node is an incomplete builder, not semantic Blue "
+                        + "content. Use Nodes.emptyObject() for {} or omit the "
+                        + "field for absence. Path: " + path);
     }
 
     private static void validatePayloadKind(FrozenNode node, String path) {
@@ -325,6 +337,7 @@ public final class FrozenNodeToBlueIdInput {
 
     private static void validateSchemaNode(blue.language.model.Node node, String path) {
         if (node != null) {
+            FrozenNodeConverter.validateSemanticNodeGraph(node, path);
             NodeToBlueIdInput.get(node);
         }
     }

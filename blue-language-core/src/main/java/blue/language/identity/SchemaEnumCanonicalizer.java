@@ -2,6 +2,7 @@ package blue.language.identity;
 
 import blue.language.codec.jackson.UncheckedObjectMapper;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 import java.io.IOException;
@@ -147,25 +148,7 @@ public final class SchemaEnumCanonicalizer {
     }
 
     private static void requireScalarIdentityShape(Node value) {
-        if (value != null && value.isReferenceOnly()) {
-            return;
-        }
-        if (value == null
-                || value.getValue() == null
-                || value.getName() != null
-                || value.getDescription() != null
-                || value.getItemType() != null
-                || value.getKeyType() != null
-                || value.getValueType() != null
-                || value.getItems() != null
-                || value.getProperties() != null
-                || value.getContracts() != null
-                || value.getBlueId() != null
-                || value.getSchema() != null
-                || value.getMergePolicy() != null
-                || value.getPreviousBlueId() != null
-                || value.getPosition() != null
-                || value.getBlue() != null) {
+        if (!Nodes.isSchemaEnumValue(value)) {
             throw new IllegalArgumentException(
                     "Schema enum entries must be scalar values, explicit "
                             + "type/value scalar nodes, or pure references.");

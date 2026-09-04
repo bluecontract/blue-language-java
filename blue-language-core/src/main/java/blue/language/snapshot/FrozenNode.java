@@ -172,10 +172,8 @@ public final class FrozenNode {
      * @param nodes canonical nodes to freeze, or {@code null}
      * @return an immutable frozen list, or {@code null} when {@code nodes} is
      *         {@code null}
-     * @throws NullPointerException when a supplied list element is
-     *         {@code null}
-     * @throws IllegalArgumentException when an element is not valid strict
-     *         canonical Blue input
+     * @throws IllegalArgumentException when a supplied list element is
+     *         {@code null} or is not valid strict canonical Blue input
      */
     public static List<FrozenNode> fromNodes(List<Node> nodes) {
         return FrozenNodeConverter.INSTANCE.fromNodes(nodes);
@@ -202,10 +200,10 @@ public final class FrozenNode {
     }
 
     /**
-     * Calculates the BlueId for an ordered canonical frozen sequence.
+     * Calculates the BlueId for an ordered frozen sequence through the strict
+     * or resolved identity lane represented by its elements.
      *
-     * @param nodes ordered canonical frozen nodes; {@code null} is treated as
-     *        an empty sequence
+     * @param nodes ordered frozen nodes
      * @return the deterministic sequence BlueId
      * @throws IllegalArgumentException when an element is {@code null} or is
      *         not valid canonical list input

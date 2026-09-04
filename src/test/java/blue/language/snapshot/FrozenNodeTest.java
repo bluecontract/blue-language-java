@@ -1,6 +1,7 @@
 package blue.language.snapshot;
 
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.wire.JsonPointer;
 
 import blue.language.model.Node;
 import blue.language.model.Schema;
@@ -28,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
@@ -868,6 +870,212 @@ class FrozenNodeTest {
                 instanceof IllegalArgumentException);
     }
 
+    @Test
+    void shouldRejectBareFieldlessNodesAtEveryMutableFreezeBoundary() {
+        // given
+
+        // when
+
+        // then
+        assertEveryMutableFreezeEntryPointRejects(
+                new Node(),
+                JsonPointer.ROOT,
+                "Fieldless Node is an incomplete builder");
+        assertEveryMutableFreezeEntryPointRejects(
+                new Node().properties("nested", new Node()),
+                "/nested",
+                "Fieldless Node is an incomplete builder");
+        assertEveryMutableFreezeEntryPointRejects(
+                new Node().schema(new Schema().required(new Node())),
+                "/schema/required",
+                "Fieldless Node is an incomplete builder");
+    }
+
+    @Test
+    void shouldRejectJavaNullCollectionMembersAtEveryMutableFreezeBoundary() {
+        // given
+
+        // when
+
+        // then
+        List<Node> items = new ArrayList<>();
+        items.add(new Node().value("present"));
+        items.add(null);
+        assertEveryMutableFreezeEntryPointRejects(
+                new Node().items(items),
+                "/items/1",
+                "Java-null list member is not semantic Blue content");
+
+        Map<String, Node> properties = new LinkedHashMap<>();
+        properties.put("missing", null);
+        assertEveryMutableFreezeEntryPointRejects(
+                new Node().properties(properties),
+                "/missing",
+                "Java-null property member is not semantic Blue content");
+
+        List<Node> enumValues = new ArrayList<>();
+        enumValues.add(null);
+        assertEveryMutableFreezeEntryPointRejects(
+                new Node().schema(new Schema().enumValues(enumValues)),
+                "/schema/enum/0",
+                "Java-null list member is not semantic Blue content");
+
+        List<Node> roots = new ArrayList<>();
+        roots.add(Nodes.emptyObject());
+        roots.add(null);
+        IllegalArgumentException rootListFailure = assertThrows(
+                IllegalArgumentException.class,
+                () -> FrozenNode.fromNodes(roots));
+        assertTrue(rootListFailure.getMessage().contains(
+                "Java-null list member is not semantic Blue content"));
+        assertTrue(rootListFailure.getMessage().contains("Path: /1"));
+    }
+
+    @Test
+    void shouldRejectObjectSchemaEnumsAndSchemaEdgeCycles() {
+        // given
+        Node objectEnum = Nodes.emptyObject().schema(
+                new Schema().enumValues(Collections.singletonList(
+                        Nodes.emptyObject())));
+        Node requiredCycle = Nodes.emptyObject();
+        requiredCycle.schema(new Schema().required(requiredCycle));
+        Node enumCycle = Nodes.emptyObject();
+        enumCycle.schema(new Schema().enumValues(
+                Collections.singletonList(enumCycle)));
+
+        // when
+
+        // then
+        assertEveryMutableFreezeEntryPointRejects(
+                objectEnum,
+                "/schema/enum/0",
+                "Schema enum member must be a scalar value");
+        assertEveryMutableFreezeEntryPointRejects(
+                requiredCycle,
+                "/schema/required",
+                "must not contain object cycles");
+        assertEveryMutableFreezeEntryPointRejects(
+                enumCycle,
+                "/schema/enum/0",
+                "must not contain object cycles");
+    }
+
+    @Test
+    void shouldRejectSourceNullInEverySchemaNodeField() {
+        // given
+
+        // when
+
+        // then
+        Map<String, Consumer<Schema>> fields = new LinkedHashMap<>();
+        fields.put("required", schema -> schema.required(sourceNullLiteral()));
+        fields.put("minLength", schema -> schema.minLength(sourceNullLiteral()));
+        fields.put("maxLength", schema -> schema.maxLength(sourceNullLiteral()));
+        fields.put("minimum", schema -> schema.minimum(sourceNullLiteral()));
+        fields.put("maximum", schema -> schema.maximum(sourceNullLiteral()));
+        fields.put("exclusiveMinimum",
+                schema -> schema.exclusiveMinimum(sourceNullLiteral()));
+        fields.put("exclusiveMaximum",
+                schema -> schema.exclusiveMaximum(sourceNullLiteral()));
+        fields.put("multipleOf", schema -> schema.multipleOf(sourceNullLiteral()));
+        fields.put("minItems", schema -> schema.minItems(sourceNullLiteral()));
+        fields.put("maxItems", schema -> schema.maxItems(sourceNullLiteral()));
+        fields.put("uniqueItems", schema -> schema.uniqueItems(sourceNullLiteral()));
+        fields.put("minFields", schema -> schema.minFields(sourceNullLiteral()));
+        fields.put("maxFields", schema -> schema.maxFields(sourceNullLiteral()));
+        fields.put("enum/0", schema -> schema.enumValues(
+                Collections.singletonList(sourceNullLiteral())));
+
+        for (Map.Entry<String, Consumer<Schema>> field : fields.entrySet()) {
+            Schema schema = new Schema();
+            field.getValue().accept(schema);
+            assertEveryMutableFreezeEntryPointRejects(
+                    new Node().schema(schema),
+                    "/schema/" + field.getKey(),
+                    "Source null must be consumed before freezing Blue content");
+        }
+    }
+
+    @Test
+    void shouldPreserveExactEmptyObjectAtEveryMutableFreezeBoundary() {
+        // given
+        String expectedBlueId = DirectBlueIdCalculator.calculateBlueId(
+                Nodes.emptyObject());
+
+        // when
+
+        // then
+        assertExactEmptyObject(
+                FrozenNode.fromNode(Nodes.emptyObject()), expectedBlueId);
+        assertExactEmptyObject(
+                FrozenNode.fromSourceNode(Nodes.emptyObject()), expectedBlueId);
+        assertExactEmptyObject(
+                FrozenNode.fromResolvedNode(Nodes.emptyObject()), expectedBlueId);
+        assertExactEmptyObject(
+                FrozenNode.fromResolvedNode(Nodes.emptyObject(), null),
+                expectedBlueId);
+        assertExactEmptyObject(
+                FrozenNode.fromUncheckedCanonicalNode(Nodes.emptyObject()),
+                expectedBlueId);
+        assertExactEmptyObject(
+                FrozenNode.fromNodes(Collections.singletonList(
+                        Nodes.emptyObject())).get(0),
+                expectedBlueId);
+        assertExactEmptyObject(FrozenNode.empty(), expectedBlueId);
+    }
+
+    private static void assertEveryMutableFreezeEntryPointRejects(
+            Node invalid,
+            String expectedPath,
+            String expectedMessage) {
+        Map<String, Consumer<Node>> boundaries = new LinkedHashMap<>();
+        boundaries.put("fromNode", node -> FrozenNode.fromNode(node));
+        boundaries.put("fromSourceNode",
+                node -> FrozenNode.fromSourceNode(node));
+        boundaries.put("fromResolvedNode",
+                node -> FrozenNode.fromResolvedNode(node));
+        boundaries.put("fromResolvedNodeWithInterner",
+                node -> FrozenNode.fromResolvedNode(node, null));
+        boundaries.put("fromUncheckedCanonicalNode",
+                node -> FrozenNode.fromUncheckedCanonicalNode(node));
+        boundaries.put("fromNodes", node -> FrozenNode.fromNodes(
+                Collections.singletonList(node)));
+
+        for (Map.Entry<String, Consumer<Node>> boundary
+                : boundaries.entrySet()) {
+            IllegalArgumentException failure = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> boundary.getValue().accept(invalid),
+                    boundary.getKey());
+            String boundaryPath = "fromNodes".equals(boundary.getKey())
+                    ? JsonPointer.ROOT.equals(expectedPath)
+                    ? "/0"
+                    : "/0" + expectedPath
+                    : expectedPath;
+            assertTrue(
+                    failure.getMessage().contains(expectedMessage),
+                    boundary.getKey() + ": " + failure.getMessage());
+            assertTrue(
+                    failure.getMessage().contains(
+                            "Path: " + boundaryPath),
+                    boundary.getKey() + ": " + failure.getMessage());
+        }
+    }
+
+    private static void assertExactEmptyObject(
+            FrozenNode frozen,
+            String expectedBlueId) {
+        assertFalse(frozen.isEmptyNode());
+        assertNotNull(frozen.getProperties());
+        assertTrue(frozen.getProperties().isEmpty());
+        assertTrue(Nodes.isExactEmptyObject(frozen.toNode()));
+        assertEquals(expectedBlueId, frozen.blueId());
+    }
+
+    private static Node sourceNullLiteral() {
+        return new Node().inlineValue(true);
+    }
+
     private static final class CustomJsonList extends ArrayList<Object> {
         private static final long serialVersionUID = 1L;
     }
@@ -1087,47 +1295,26 @@ class FrozenNodeTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void shouldDeeplyOwnRawJsonValuesAcrossFrozenSchemaBoundaries() {
+    void shouldRejectNonScalarSchemaEnumValuesAcrossFrozenBoundaries() {
         // given
         Map<String, Object> raw = new LinkedHashMap<>();
-        raw.put("label", "before");
-        Schema source = new Schema().enumValues(Collections.singletonList(
-                new Node().value(raw)));
-        FrozenNode frozen = FrozenNode.fromNode(new Node().schema(source));
-        String blueId = frozen.blueId();
-
-        raw.put("label", "after");
-        raw.put("extra", true);
+        raw.put("label", "not a scalar enum value");
+        List<Object> invalidValues = Arrays.asList(
+                raw,
+                new UnsupportedEnumValue("not a scalar enum value"));
 
         // when
-        Map<String, Object> returned = (Map<String, Object>) frozen.getSchema()
-                .getEnum().get(0).getValue();
-        Object returnedLabelBeforeMutation =
-                returned.get("label");
-        boolean returnedContainsExtra =
-                returned.containsKey("extra");
-        returned.put("label", "caller mutation");
-        Map<String, Object> reread = (Map<String, Object>) frozen.getSchema()
-                .getEnum().get(0).getValue();
-        Object rereadLabel = reread.get("label");
-        String identityAfterReturnedMutation =
-                frozen.blueId();
-        Map<String, Object> materialized = (Map<String, Object>) frozen.toNode()
-                .getSchema().getEnum().get(0).getValue();
-        materialized.put("label", "materialized mutation");
-        Object labelAfterMaterializedMutation =
-                ((Map<?, ?>) frozen.getSchema()
-                        .getEnum().get(0).getValue())
-                        .get("label");
 
         // then
-        assertEquals("before", returnedLabelBeforeMutation);
-        assertFalse(returnedContainsExtra);
-        assertEquals("before", rereadLabel);
-        assertEquals(blueId, identityAfterReturnedMutation);
-        assertEquals("before",
-                labelAfterMaterializedMutation);
+        for (Object invalidValue : invalidValues) {
+            Node invalid = Nodes.emptyObject().schema(
+                    new Schema().enumValues(Collections.singletonList(
+                            new Node().value(invalidValue))));
+            assertEveryMutableFreezeEntryPointRejects(
+                    invalid,
+                    "/schema/enum/0",
+                    "Schema enum member must be a scalar value");
+        }
     }
 
     @Test
@@ -1313,6 +1500,18 @@ class FrozenNodeTest {
         public Schema clone() {
             cloneCalls.incrementAndGet();
             return super.clone();
+        }
+    }
+
+    private static final class UnsupportedEnumValue {
+        private final String label;
+
+        private UnsupportedEnumValue(String label) {
+            this.label = label;
+        }
+
+        public String getLabel() {
+            return label;
         }
     }
 }

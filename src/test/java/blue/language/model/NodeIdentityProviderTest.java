@@ -3,7 +3,6 @@ package blue.language.model;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.identity.NodeToBlueIdInput;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -18,15 +17,35 @@ class NodeIdentityProviderTest {
         // given
         Node node = new Node()
                 .name("Identity subject")
-                .properties("value", new Node().value("stable"));
-        String expected = DirectBlueIdCalculator.INSTANCE.directBlueIdFromCanonicalInput(
-                NodeToBlueIdInput.getWithResolvedBlueIdMetadata(node));
+                .properties("field", new Node().value("stable"));
+        String expected = DirectBlueIdCalculator.calculateBlueId(node);
 
         // when
         String actual = node.getAsText("/blueId");
 
         // then
         assertEquals(expected, actual);
+    }
+
+    @Test
+    void shouldDeriveCanonicalIdentityFromExpandedTypeMetadata() {
+        // given
+        Node exactType = new Node()
+                .name("Expanded identity type")
+                .properties("inherited", new Node().value("fixed"));
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(exactType);
+        Node expanded = new Node()
+                .type(exactType.clone().blueId(typeBlueId))
+                .properties("own", new Node().value("kept"));
+        Node canonical = new Node()
+                .type(new Node().blueId(typeBlueId))
+                .properties("own", new Node().value("kept"));
+
+        // when
+        String actual = expanded.getAsText("/blueId");
+
+        // then
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical), actual);
     }
 
     @Test
@@ -54,6 +73,29 @@ class NodeIdentityProviderTest {
 
         // then
         assertEquals(expected, actual);
+    }
+
+    @Test
+    void shouldPreserveExpandedElementIdentityThroughListSpi() {
+        // given
+        Node exactType = new Node()
+                .name("Expanded list element type")
+                .properties("inherited", new Node().value("fixed"));
+        String typeBlueId = DirectBlueIdCalculator.calculateBlueId(exactType);
+        java.util.List<Node> expanded = Arrays.asList(
+                new Node()
+                        .type(exactType.clone().blueId(typeBlueId))
+                        .properties("own", new Node().value("kept")));
+        java.util.List<Node> canonical = Arrays.asList(
+                new Node()
+                        .type(new Node().blueId(typeBlueId))
+                        .properties("own", new Node().value("kept")));
+
+        // when
+        String actual = NodeIdentities.calculate(expanded);
+
+        // then
+        assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical), actual);
     }
 
     @Test

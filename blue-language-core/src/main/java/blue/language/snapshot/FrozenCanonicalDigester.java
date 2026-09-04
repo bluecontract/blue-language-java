@@ -558,7 +558,10 @@ final class FrozenCanonicalDigester {
                                     Context context,
                                     int listIndex,
                                     boolean typePosition) {
-        if (node == null || context == Context.METADATA && typePosition && node.isInlineValue()
+        if (node == null || node.isEmptyNode()
+                || context == Context.METADATA
+                && typePosition
+                && !node.isReferenceOnly()
                 || node.getBlue() != null || node.getPosition() != null
                 || node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_REPLACE)) {
             return false;
@@ -603,10 +606,13 @@ final class FrozenCanonicalDigester {
                     || canonical != null && canonical.getClass().isArray()) return false;
             if (!FrozenCanonicalWriter.supportsCanonicalValue(canonical)) return false;
         }
-        if (node.getType() != null && node.getType().isInlineValue()
-                || node.getItemType() != null && node.getItemType().isInlineValue()
-                || node.getKeyType() != null && node.getKeyType().isInlineValue()
-                || node.getValueType() != null && node.getValueType().isInlineValue()) {
+        if (node.getType() != null && !node.getType().isReferenceOnly()
+                || node.getItemType() != null
+                && !node.getItemType().isReferenceOnly()
+                || node.getKeyType() != null
+                && !node.getKeyType().isReferenceOnly()
+                || node.getValueType() != null
+                && !node.getValueType().isReferenceOnly()) {
             return false;
         }
         if (node.getProperties() != null) {

@@ -9,6 +9,8 @@ import blue.language.model.Node;
 import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.registry.RuntimeBlueIds;
+import blue.language.snapshot.FrozenNode;
+import blue.language.snapshot.FrozenNodeToBlueIdInput;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -707,6 +709,60 @@ public class DirectBlueIdCalculatorTest {
         }
 
         @Test
+        public void shouldRejectInlineBodiesInDirectIdentityTypePositions() {
+                // given
+                Node[] invalid = {
+                        new Node().type(Nodes.emptyObject()),
+                        new Node().itemType(Nodes.emptyObject()),
+                        new Node().keyType(Nodes.emptyObject()),
+                        new Node().valueType(Nodes.emptyObject())
+                };
+                String[] paths = {
+                        "/type", "/itemType", "/keyType", "/valueType"
+                };
+
+                // when
+
+                // then
+                for (int index = 0; index < invalid.length; index++) {
+                        Node candidate = invalid[index];
+                        String path = paths[index];
+                        assertPureTypePositionRejected(
+                                path,
+                                () -> DirectBlueIdCalculator.calculateBlueId(
+                                        candidate));
+                        assertPureTypePositionRejected(
+                                path,
+                                () -> FrozenNode.fromNode(candidate).blueId());
+                        assertPureTypePositionRejected(
+                                path,
+                                () -> FrozenNodeToBlueIdInput.get(
+                                        FrozenNode.fromUncheckedCanonicalNode(
+                                                candidate)));
+                }
+        }
+
+        @Test
+        public void shouldOmitHostNullObjectMembersBeforePayloadValidation() {
+                // given
+                Node scalar = new Node().value("same");
+                Node scalarWithOmittedMember = new Node().value("same");
+                java.util.LinkedHashMap<String, Node> properties =
+                        new java.util.LinkedHashMap<>();
+                properties.put("omitted", null);
+                scalarWithOmittedMember.properties(properties);
+
+                // when
+                String scalarId = DirectBlueIdCalculator.calculateBlueId(
+                        scalar);
+                String withOmissionId = DirectBlueIdCalculator.calculateBlueId(
+                        scalarWithOmittedMember);
+
+                // then
+                assertEquals(scalarId, withOmissionId);
+        }
+
+        @Test
         public void shouldRejectTypeAliasForDirectBlueId() {
                 // given
                 Node node = YAML_MAPPER.readValue("type: Integer\nvalue: 1", Node.class);
@@ -756,6 +812,15 @@ public class DirectBlueIdCalculatorTest {
 
                 // then
                 assertTrue(failure instanceof IllegalArgumentException);
+        }
+
+        private static void assertPureTypePositionRejected(
+                String path,
+                Runnable action) {
+                IllegalArgumentException failure =
+                        captureFailure(action::run);
+                assertTrue(failure.getMessage().contains("pure references"));
+                assertTrue(failure.getMessage().contains("Path: " + path));
         }
 
         @Test

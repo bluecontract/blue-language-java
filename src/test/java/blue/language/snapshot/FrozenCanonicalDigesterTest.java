@@ -33,9 +33,82 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FrozenCanonicalDigesterTest {
+
+    @Test
+    void shouldRejectFieldlessFrozenBuilderBeforeCanonicalDigest() {
+        // given
+        FrozenNode fieldless = FrozenNodeBuilder.builder()
+                .deferBlueId()
+                .build();
+
+        // when
+        Runnable action = () ->
+                FrozenCanonicalDigester.calculateBlueId(fieldless);
+
+        // then
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                action::run);
+        assertEquals(
+                "Fieldless Node is an incomplete builder, not semantic Blue "
+                        + "content. Use Nodes.emptyObject() for {} or omit the "
+                        + "field for absence. Path: /",
+                failure.getMessage());
+    }
+
+    @Test
+    void shouldRejectNestedFieldlessFrozenBuildersWithExactPaths() {
+        // given
+        FrozenNode property = nonStrictFrozenBuilder()
+                .properties(Collections.singletonMap(
+                        "child", nonStrictFieldlessNode()))
+                .build();
+        FrozenNode list = nonStrictFrozenBuilder()
+                .items(Collections.singletonList(
+                        nonStrictFieldlessNode()))
+                .build();
+        FrozenNode typed = nonStrictFrozenBuilder()
+                .type(nonStrictFieldlessNode())
+                .build();
+
+        // when
+
+        // then
+        assertFrozenBareBuilderRejected("/child", () ->
+                FrozenNodeToBlueIdInput.get(property));
+        assertFrozenBareBuilderRejected("/items/0", () ->
+                FrozenNodeToBlueIdInput.get(list));
+        assertFrozenBareBuilderRejected("/type", () ->
+                FrozenNodeToBlueIdInput.get(typed));
+    }
+
+    private static FrozenNodeBuilder nonStrictFrozenBuilder() {
+        return FrozenNodeBuilder.builder()
+                .strictCanonical(false)
+                .strictBlueIdValidation(false)
+                .deferBlueId();
+    }
+
+    private static FrozenNode nonStrictFieldlessNode() {
+        return nonStrictFrozenBuilder().build();
+    }
+
+    private static void assertFrozenBareBuilderRejected(
+            String path,
+            Runnable action) {
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                action::run);
+        assertEquals(
+                "Fieldless Node is an incomplete builder, not semantic Blue "
+                        + "content. Use Nodes.emptyObject() for {} or omit the "
+                        + "field for absence. Path: " + path,
+                failure.getMessage());
+    }
 
     @Test
     void shouldAcceptCanonicalEmptyListPlaceholderDuringDirectIdentitySizing() {
@@ -577,7 +650,8 @@ class FrozenCanonicalDigesterTest {
                         .type(new Node().blueId(TEXT_TYPE_BLUE_ID))
                         .properties(OBJECT_TYPE, new Node().value("override"))),
                 new Node().properties("child", new Node()
-                        .schema(new Schema().minimum(new Node()))),
+                        .schema(new Schema().minimum(
+                                Nodes.emptyObject()))),
                 new Node().value(Collections.<String, Object>singletonMap(
                         "empty", Collections.emptyMap())),
                 new Node().schema(new Schema().enumValues(Collections.singletonList(
@@ -648,7 +722,7 @@ class FrozenCanonicalDigesterTest {
 
     private static List<Node> representativeNodes() {
         List<Node> cases = new ArrayList<>();
-        cases.add(new Node());
+        cases.add(Nodes.emptyObject());
         cases.add(new Node().value("plain"));
         cases.add(new Node().value("controls\u0000\b\t\n\f\r\"\\/"));
         cases.add(new Node().value("zażółć-\uD83D\uDE80-\u2028"));

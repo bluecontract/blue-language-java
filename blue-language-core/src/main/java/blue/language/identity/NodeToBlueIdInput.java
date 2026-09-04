@@ -97,22 +97,6 @@ public final class NodeToBlueIdInput {
     }
 
     /**
-     * Returns strict identity input after excluding non-reference BlueId
-     * metadata from a defensive clone.
-     *
-     * @param node root node to clone and project
-     * @return canonical identity input without expanded-content BlueId metadata
-     */
-    public static Object getWithResolvedBlueIdMetadata(Node node) {
-        return get(
-                stripResolvedBlueIdMetadata(node.clone()),
-                JsonPointer.ROOT,
-                Context.ROOT,
-                -1,
-                false);
-    }
-
-    /**
      * Recursively removes BlueIds that annotate expanded content.
      *
      * <p>The supplied graph is mutated and returned; pure references are
@@ -294,6 +278,12 @@ public final class NodeToBlueIdInput {
         }
         if (node.getProperties() != null) {
             node.getProperties().forEach((key, propertyValue) -> {
+                if (propertyValue == null) {
+                    // Host-null object members represent omission. Source
+                    // preprocessing normally removes them before this point;
+                    // direct identity must never turn them into Blue values.
+                    return;
+                }
                 if (isTransformationConfigurationValue(
                         node, key)) {
                     result.put(key,
@@ -367,8 +357,15 @@ public final class NodeToBlueIdInput {
                     "Source null is not valid direct BlueId input. Path: "
                             + path);
         }
-        if (context == Context.METADATA && isTypePosition(path) && node.isInlineValue()) {
-            throw new IllegalArgumentException("Direct BlueId input must not contain unresolved type aliases. Path: " + path);
+        if (Nodes.isBareFieldlessBuilder(node)) {
+            throw bareFieldlessBuilder(path);
+        }
+        if (context == Context.METADATA
+                && isTypePosition(path)
+                && !node.isReferenceOnly()) {
+            throw new IllegalArgumentException(
+                    "Direct BlueId input type positions must contain pure "
+                            + "references. Path: " + path);
         }
         if (node.getBlue() != null) {
             throw new IllegalArgumentException(
@@ -382,9 +379,6 @@ public final class NodeToBlueIdInput {
             throw new IllegalArgumentException("\"$replace\" overlays are not valid direct BlueId input. Path: " + path);
         }
         if (context == Context.LIST_ELEMENT) {
-            if (Nodes.isEmptyNode(node)) {
-                throw new IllegalArgumentException("Direct BlueId input must use { \"$empty\": true } for empty list placeholders. Path: " + path);
-            }
             if (node.getProperties() != null && node.getProperties().containsKey(LIST_CONTROL_EMPTY)) {
                 Nodes.validateEmptyPlaceholder(node, path);
             }
@@ -397,11 +391,19 @@ public final class NodeToBlueIdInput {
         validatePayloadKind(node, path);
     }
 
+    private static IllegalArgumentException bareFieldlessBuilder(
+            String path) {
+        return new IllegalArgumentException(
+                "Fieldless Node is an incomplete builder, not semantic Blue "
+                        + "content. Use Nodes.emptyObject() for {} or omit the "
+                        + "field for absence. Path: " + path);
+    }
+
     private static void validatePayloadKind(Node node, String path) {
         int payloadKinds = 0;
         if (node.getValue() != null) payloadKinds++;
         if (node.getItems() != null) payloadKinds++;
-        if (Nodes.hasObjectPayload(node)) payloadKinds++;
+        if (hasRetainedDirectObjectPayload(node)) payloadKinds++;
         if (payloadKinds > 1) {
             throw new IllegalArgumentException("A Blue node may contain only one payload kind: value, items, or object fields. Path: " + path);
         }
@@ -434,6 +436,21 @@ public final class NodeToBlueIdInput {
                 && node.getBlueId() == null) {
             throw new IllegalArgumentException("\"$pos\" items must contain an overlay. Path: " + path);
         }
+    }
+
+    private static boolean hasRetainedDirectObjectPayload(Node node) {
+        if (node.getProperties() == null) {
+            return false;
+        }
+        if (node.getProperties().isEmpty()) {
+            return true;
+        }
+        for (Node child : node.getProperties().values()) {
+            if (child != null && !Nodes.isSourceNullLiteral(child)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void validateSchemaNodes(Schema schema, String path) {

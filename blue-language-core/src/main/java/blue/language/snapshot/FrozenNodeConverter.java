@@ -1,6 +1,9 @@
 package blue.language.snapshot;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
+import blue.language.model.Schema;
+import blue.language.model.wire.JsonPointer;
 
 import java.lang.reflect.Array;
 import java.math.BigInteger;
@@ -16,6 +19,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_BLUE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_CONTRACTS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_ITEMS;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_ITEM_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_KEY_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_SCHEMA;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE_TYPE;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_ENUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_EXCLUSIVE_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAX_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MAXIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_FIELDS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_ITEMS;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MIN_LENGTH;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MINIMUM;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_MULTIPLE_OF;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_REQUIRED;
+import static blue.language.model.wire.SchemaPropertyConstants.KEY_UNIQUE_ITEMS;
 
 /** Converts between mutable boundary nodes and exact immutable snapshots. */
 public final class FrozenNodeConverter {
@@ -37,7 +63,8 @@ public final class FrozenNodeConverter {
      *         canonical Blue input
      */
     public FrozenNode fromNode(Node node) {
-        return freeze(node, true, null, true, false);
+        return freeze(
+                node, true, null, true, false, JsonPointer.ROOT);
     }
 
     /**
@@ -55,7 +82,8 @@ public final class FrozenNodeConverter {
      *         value graph or incompatible payload shapes
      */
     public FrozenNode fromSourceNode(Node node) {
-        return freeze(node, false, null, false, false);
+        return freeze(
+                node, false, null, false, false, JsonPointer.ROOT);
     }
 
     /**
@@ -68,7 +96,8 @@ public final class FrozenNodeConverter {
      *         value graph or incompatible payload shapes
      */
     public FrozenNode fromResolvedNode(Node node) {
-        return freeze(node, false, null, false, false);
+        return freeze(
+                node, false, null, false, false, JsonPointer.ROOT);
     }
 
     /**
@@ -84,7 +113,8 @@ public final class FrozenNodeConverter {
     public FrozenNode fromResolvedNode(
             Node node,
             FrozenNode.ResolvedStructuralInterner interner) {
-        return freeze(node, false, interner, false, false);
+        return freeze(
+                node, false, interner, false, false, JsonPointer.ROOT);
     }
 
     /**
@@ -97,7 +127,8 @@ public final class FrozenNodeConverter {
      *         payload shape or unsupported value graph
      */
     public FrozenNode fromUncheckedCanonicalNode(Node node) {
-        return freeze(node, true, null, false, false);
+        return freeze(
+                node, true, null, false, false, JsonPointer.ROOT);
     }
 
     /**
@@ -106,18 +137,23 @@ public final class FrozenNodeConverter {
      * @param nodes canonical nodes to freeze, or {@code null}
      * @return an immutable frozen list, or {@code null} when {@code nodes} is
      *         {@code null}
-     * @throws NullPointerException when a supplied list element is
-     *         {@code null}
-     * @throws IllegalArgumentException when an element is not valid strict
-     *         canonical Blue input
+     * @throws IllegalArgumentException when a supplied list element is
+     *         {@code null} or is not valid strict canonical Blue input
      */
     public List<FrozenNode> fromNodes(List<Node> nodes) {
         if (nodes == null) {
             return null;
         }
         List<FrozenNode> frozen = new ArrayList<>(nodes.size());
-        for (Node node : nodes) {
-            frozen.add(fromNode(node));
+        for (int index = 0; index < nodes.size(); index++) {
+            String path = appendPath(
+                    JsonPointer.ROOT, String.valueOf(index));
+            Node node = nodes.get(index);
+            if (node == null) {
+                throw nullListMember(path);
+            }
+            frozen.add(freeze(
+                    node, true, null, true, false, path));
         }
         return Collections.unmodifiableList(frozen);
     }
@@ -266,11 +302,12 @@ public final class FrozenNodeConverter {
             boolean strictCanonical,
             FrozenNode.ResolvedStructuralInterner interner,
             boolean strictBlueIdValidation,
-            boolean previousAnchorContext) {
+            boolean previousAnchorContext,
+            String rootPath) {
         if (node == null) {
             throw new NullPointerException("node");
         }
-        rejectSourceNullMarkers(node);
+        validateSemanticNodeGraph(node, rootPath);
         IdentityHashMap<Node, FrozenNode> ordinary = new IdentityHashMap<>();
         IdentityHashMap<Node, FrozenNode> anchors = new IdentityHashMap<>();
         Set<Node> active = Collections.newSetFromMap(
@@ -410,43 +447,175 @@ public final class FrozenNodeConverter {
         return result;
     }
 
-    private static void rejectSourceNullMarkers(Node root) {
-        Deque<Node> pending = new ArrayDeque<>();
+    static void validateSemanticNodeGraph(Node root, String rootPath) {
+        Deque<NodePathVisit> pending = new ArrayDeque<>();
         Set<Node> visited = Collections.newSetFromMap(
                 new IdentityHashMap<Node, Boolean>());
-        pending.push(root);
+        Set<Node> active = Collections.newSetFromMap(
+                new IdentityHashMap<Node, Boolean>());
+        pending.push(NodePathVisit.enter(
+                root, ValidationPath.root(rootPath)));
         while (!pending.isEmpty()) {
-            Node node = pending.pop();
-            if (!visited.add(node)) {
+            NodePathVisit visit = pending.pop();
+            if (visit.failure != null) {
+                throw new IllegalArgumentException(
+                        visit.failure + " Path: " + visit.path.render());
+            }
+            Node node = visit.node;
+            if (visit.exit) {
+                active.remove(node);
+                visited.add(node);
                 continue;
             }
-            if (blue.language.model.Nodes.isSourceNullLiteral(node)) {
+            if (visited.contains(node)) {
+                continue;
+            }
+            if (!active.add(node)) {
                 throw new IllegalArgumentException(
-                        "Source null must be consumed before freezing Blue content");
+                        "Frozen node graphs must not contain object cycles. "
+                                + "Path: " + visit.path.render());
             }
-            pushNode(pending, node.getType());
-            pushNode(pending, node.getItemType());
-            pushNode(pending, node.getKeyType());
-            pushNode(pending, node.getValueType());
-            pushNode(pending, node.getBlue());
-            pushNode(pending, node.getContracts());
-            if (node.getItems() != null) {
-                for (Node child : node.getItems()) {
-                    pushNode(pending, child);
-                }
+            if (Nodes.isSourceNullLiteral(node)) {
+                throw new IllegalArgumentException(
+                        "Source null must be consumed before freezing Blue "
+                                + "content. Path: " + visit.path.render());
             }
-            if (node.getProperties() != null) {
-                for (Node child : node.getProperties().values()) {
-                    pushNode(pending, child);
+            if (Nodes.isBareFieldlessBuilder(node)) {
+                throw new IllegalArgumentException(
+                        "Fieldless Node is an incomplete builder, not semantic "
+                                + "Blue content. Use Nodes.emptyObject() for {} "
+                                + "or omit the field for absence. Path: "
+                                + visit.path.render());
+            }
+            pending.push(NodePathVisit.exit(node, visit.path));
+            List<NodePathVisit> children = validationChildren(
+                    node, visit.path);
+            for (int index = children.size() - 1; index >= 0; index--) {
+                pending.push(children.get(index));
+            }
+        }
+    }
+
+    private static List<NodePathVisit> validationChildren(
+            Node node,
+            ValidationPath path) {
+        List<NodePathVisit> children = new ArrayList<>();
+        addOptionalChild(children, node.getType(), path, OBJECT_TYPE);
+        addOptionalChild(children, node.getItemType(), path, OBJECT_ITEM_TYPE);
+        addOptionalChild(children, node.getKeyType(), path, OBJECT_KEY_TYPE);
+        addOptionalChild(children, node.getValueType(), path, OBJECT_VALUE_TYPE);
+        if (node.getItems() != null) {
+            ValidationPath itemsPath = path.child(OBJECT_ITEMS);
+            for (int index = 0; index < node.getItems().size(); index++) {
+                addRequiredChild(
+                        children,
+                        node.getItems().get(index),
+                        itemsPath.child(String.valueOf(index)),
+                        "Java-null list member is not semantic Blue content.");
+            }
+        }
+        if (node.getProperties() != null) {
+            for (Map.Entry<String, Node> property
+                    : node.getProperties().entrySet()) {
+                addRequiredChild(
+                        children,
+                        property.getValue(),
+                        path.child(property.getKey()),
+                        "Java-null property member is not semantic Blue "
+                                + "content. Omit the property for absence.");
+            }
+        }
+        addOptionalChild(children, node.getContracts(), path, OBJECT_CONTRACTS);
+        addOptionalChild(children, node.getBlue(), path, OBJECT_BLUE);
+        addSchemaChildren(children, node.getSchema(), path.child(OBJECT_SCHEMA));
+        return children;
+    }
+
+    private static void addSchemaChildren(
+            List<NodePathVisit> children,
+            Schema schema,
+            ValidationPath path) {
+        if (schema == null) {
+            return;
+        }
+        addOptionalChild(children, schema.getRequired(), path, KEY_REQUIRED);
+        addOptionalChild(children, schema.getMinLength(), path, KEY_MIN_LENGTH);
+        addOptionalChild(children, schema.getMaxLength(), path, KEY_MAX_LENGTH);
+        addOptionalChild(children, schema.getMinimum(), path, KEY_MINIMUM);
+        addOptionalChild(children, schema.getMaximum(), path, KEY_MAXIMUM);
+        addOptionalChild(
+                children,
+                schema.getExclusiveMinimum(),
+                path,
+                KEY_EXCLUSIVE_MINIMUM);
+        addOptionalChild(
+                children,
+                schema.getExclusiveMaximum(),
+                path,
+                KEY_EXCLUSIVE_MAXIMUM);
+        addOptionalChild(children, schema.getMultipleOf(), path, KEY_MULTIPLE_OF);
+        addOptionalChild(children, schema.getMinItems(), path, KEY_MIN_ITEMS);
+        addOptionalChild(children, schema.getMaxItems(), path, KEY_MAX_ITEMS);
+        addOptionalChild(children, schema.getUniqueItems(), path, KEY_UNIQUE_ITEMS);
+        addOptionalChild(children, schema.getMinFields(), path, KEY_MIN_FIELDS);
+        addOptionalChild(children, schema.getMaxFields(), path, KEY_MAX_FIELDS);
+        if (schema.getEnum() != null) {
+            ValidationPath enumPath = path.child(KEY_ENUM);
+            for (int index = 0; index < schema.getEnum().size(); index++) {
+                ValidationPath valuePath = enumPath.child(
+                        String.valueOf(index));
+                Node enumValue = schema.getEnum().get(index);
+                if (enumValue == null) {
+                    children.add(NodePathVisit.failure(
+                            valuePath,
+                            "Java-null list member is not semantic Blue "
+                                    + "content."));
+                } else {
+                    children.add(NodePathVisit.enter(
+                            enumValue, valuePath));
+                    if (!Nodes.isSchemaEnumValue(enumValue)) {
+                        children.add(NodePathVisit.failure(
+                                valuePath,
+                                "Schema enum member must be a scalar value, "
+                                        + "explicit scalar node, or pure "
+                                        + "reference."));
+                    }
                 }
             }
         }
     }
 
-    private static void pushNode(Deque<Node> pending, Node node) {
-        if (node != null) {
-            pending.push(node);
+    private static void addOptionalChild(
+            List<NodePathVisit> children,
+            Node child,
+            ValidationPath parentPath,
+            String segment) {
+        if (child != null) {
+            children.add(NodePathVisit.enter(
+                    child, parentPath.child(segment)));
         }
+    }
+
+    private static void addRequiredChild(
+            List<NodePathVisit> children,
+            Node child,
+            ValidationPath path,
+            String failure) {
+        children.add(child != null
+                ? NodePathVisit.enter(child, path)
+                : NodePathVisit.failure(path, failure));
+    }
+
+    private static String appendPath(String path, String segment) {
+        return JsonPointer.ROOT.equals(path)
+                ? JsonPointer.ROOT + JsonPointer.escape(segment)
+                : path + JsonPointer.ROOT + JsonPointer.escape(segment);
+    }
+
+    private static IllegalArgumentException nullListMember(String path) {
+        return new IllegalArgumentException(
+                "Java-null list member is not semantic Blue content. Path: "
+                        + path);
     }
 
     private static final class FreezeVisit {
@@ -468,6 +637,76 @@ public final class FrozenNodeConverter {
         private MaterializeVisit(FrozenNode frozen, Node mutable) {
             this.frozen = frozen;
             this.mutable = mutable;
+        }
+    }
+
+    private static final class NodePathVisit {
+        private final Node node;
+        private final ValidationPath path;
+        private final boolean exit;
+        private final String failure;
+
+        private NodePathVisit(
+                Node node,
+                ValidationPath path,
+                boolean exit,
+                String failure) {
+            this.node = node;
+            this.path = path;
+            this.exit = exit;
+            this.failure = failure;
+        }
+
+        private static NodePathVisit enter(
+                Node node, ValidationPath path) {
+            return new NodePathVisit(node, path, false, null);
+        }
+
+        private static NodePathVisit exit(
+                Node node, ValidationPath path) {
+            return new NodePathVisit(node, path, true, null);
+        }
+
+        private static NodePathVisit failure(
+                ValidationPath path, String failure) {
+            return new NodePathVisit(null, path, false, failure);
+        }
+    }
+
+    private static final class ValidationPath {
+        private final ValidationPath parent;
+        private final String root;
+        private final String segment;
+
+        private ValidationPath(
+                ValidationPath parent,
+                String root,
+                String segment) {
+            this.parent = parent;
+            this.root = root;
+            this.segment = segment;
+        }
+
+        private static ValidationPath root(String root) {
+            return new ValidationPath(null, root, null);
+        }
+
+        private ValidationPath child(String segment) {
+            return new ValidationPath(this, null, segment);
+        }
+
+        private String render() {
+            Deque<String> segments = new ArrayDeque<>();
+            ValidationPath cursor = this;
+            while (cursor.parent != null) {
+                segments.push(cursor.segment);
+                cursor = cursor.parent;
+            }
+            String rendered = cursor.root;
+            while (!segments.isEmpty()) {
+                rendered = appendPath(rendered, segments.pop());
+            }
+            return rendered;
         }
     }
 

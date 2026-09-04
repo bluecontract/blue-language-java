@@ -78,15 +78,25 @@ public final class FrozenNodeIdentity {
     }
 
     /**
-     * Calculates the canonical BlueId of an ordered frozen sequence.
+     * Calculates the BlueId of an ordered frozen sequence through the strict
+     * or resolved identity lane represented by its elements.
      *
-     * @param nodes ordered canonical frozen nodes; {@code null} is treated as
-     *        an empty sequence
+     * @param nodes ordered frozen nodes
      * @return the deterministic sequence BlueId
      * @throws IllegalArgumentException when an element is {@code null} or is
      *         not valid canonical list input
      */
     public String blueId(java.util.List<FrozenNode> nodes) {
+        Objects.requireNonNull(nodes, "nodes");
+        for (FrozenNode node : nodes) {
+            if (node == null) {
+                throw new IllegalArgumentException(
+                        "Frozen identity input list must not contain null nodes.");
+            }
+            if (!node.strictCanonical) {
+                return resolvedListBlueId(nodes);
+            }
+        }
         return FrozenCanonicalDigester.calculateBlueId(nodes);
     }
 
