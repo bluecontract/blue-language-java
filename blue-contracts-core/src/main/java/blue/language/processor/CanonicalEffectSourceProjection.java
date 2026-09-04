@@ -117,16 +117,7 @@ final class CanonicalEffectSourceProjection {
                 .orElseThrow(() -> new IllegalStateException(
                         "Materialized resolved effect type lacks "
                                 + "resolver-issued identity evidence"));
-        if (evidence.hasReferenceSource()) {
-            return new Node().blueId(evidence.blueId());
-        }
-        Node authoredTypeSource = evidence.authoredTypeSource();
-        if (authoredTypeSource == null) {
-            throw new IllegalStateException(
-                    "Materialized resolved effect type lacks exact authored "
-                            + "Source evidence");
-        }
-        return authoredTypeSource;
+        return new Node().blueId(evidence.blueId());
     }
 
     private static void addSchemaValues(
