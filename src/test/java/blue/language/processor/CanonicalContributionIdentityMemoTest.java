@@ -17,12 +17,14 @@ final class CanonicalContributionIdentityMemoTest {
 
     @Test
     void shouldReuseExactSourceAcrossEquivalentNormalizedPathSets() {
+        // given
         CanonicalContributionIdentityMemo memo =
                 new CanonicalContributionIdentityMemo();
         AtomicInteger resolutions = new AtomicInteger();
         FrozenNode first = source("same");
         FrozenNode equivalent = source("same");
 
+        // when
         String firstIdentity = memo.resolve(
                 first,
                 Arrays.asList("/z", "/a", "/z"),
@@ -34,6 +36,7 @@ final class CanonicalContributionIdentityMemoTest {
                 Collections.singletonList("/z"),
                 () -> identity(resolutions));
 
+        // then
         assertEquals(firstIdentity, reusedIdentity);
         assertEquals(1, resolutions.get());
         assertEquals(1, memo.size());
@@ -41,10 +44,12 @@ final class CanonicalContributionIdentityMemoTest {
 
     @Test
     void shouldKeepSourceAndPathLanesDistinct() {
+        // given
         CanonicalContributionIdentityMemo memo =
                 new CanonicalContributionIdentityMemo();
         AtomicInteger resolutions = new AtomicInteger();
 
+        // when
         memo.resolve(
                 source("first"),
                 Collections.singletonList("/body"),
@@ -61,12 +66,14 @@ final class CanonicalContributionIdentityMemoTest {
                 Collections.<String>emptyList(),
                 () -> identity(resolutions));
 
+        // then
         assertEquals(3, resolutions.get());
         assertEquals(3, memo.size());
     }
 
     @Test
     void shouldResolveOneCanonicalIdentityForRepeated512EventContribution() {
+        // given
         CanonicalContributionIdentityMemo memo =
                 new CanonicalContributionIdentityMemo();
         AtomicInteger resolutions = new AtomicInteger();
@@ -81,6 +88,7 @@ final class CanonicalContributionIdentityMemoTest {
                 new Node().properties(
                         "events", new Node().items(events)));
 
+        // when
         memo.resolve(
                 contribution,
                 Collections.singletonList("/events"),
@@ -92,16 +100,20 @@ final class CanonicalContributionIdentityMemoTest {
                 Collections.singletonList("/events"),
                 () -> identity(resolutions));
 
+        // then
         assertEquals(1, resolutions.get());
         assertEquals(1, memo.size());
     }
 
     @Test
     void shouldNeverCacheAuthoritativeResolutionFailure() {
+        // given
         CanonicalContributionIdentityMemo memo =
                 new CanonicalContributionIdentityMemo();
         AtomicInteger resolutions = new AtomicInteger();
 
+        // when
+        // then
         for (int attempt = 0; attempt < 2; attempt++) {
             assertThrows(
                     IllegalStateException.class,
@@ -123,16 +135,19 @@ final class CanonicalContributionIdentityMemoTest {
 
     @Test
     void shouldValidateResolverEvenWhenIdentityIsWarm() {
+        // given
         CanonicalContributionIdentityMemo memo =
                 new CanonicalContributionIdentityMemo();
         FrozenNode contribution = source("warm");
 
+        // when
         memo.resolve(
                 contribution,
                 Collections.<String>emptyList(),
                 Collections.<String>emptyList(),
                 () -> "identity-warm");
 
+        // then
         NullPointerException failure = assertThrows(
                 NullPointerException.class,
                 () -> memo.resolve(
@@ -145,6 +160,7 @@ final class CanonicalContributionIdentityMemoTest {
 
     @Test
     void shouldEvictOldestSuccessfulIdentityAtEntryBound() {
+        // given
         CanonicalContributionIdentityMemo memo =
                 new CanonicalContributionIdentityMemo(
                         1,
@@ -152,6 +168,7 @@ final class CanonicalContributionIdentityMemoTest {
                         512L * 1024L);
         AtomicInteger resolutions = new AtomicInteger();
 
+        // when
         memo.resolve(
                 source("first"),
                 Collections.<String>emptyList(),
@@ -168,12 +185,14 @@ final class CanonicalContributionIdentityMemoTest {
                 Collections.<String>emptyList(),
                 () -> identity(resolutions));
 
+        // then
         assertEquals(3, resolutions.get());
         assertEquals(1, memo.size());
     }
 
     @Test
     void shouldEvictAtWeightBoundAndClearRetainedState() {
+        // given
         FrozenNode first = source("first!");
         FrozenNode second = source("second");
         String identity = "identity-1";
@@ -192,6 +211,7 @@ final class CanonicalContributionIdentityMemoTest {
                         singleEntryWeight);
         AtomicInteger resolutions = new AtomicInteger();
 
+        // when
         memo.resolve(
                 first,
                 Collections.<String>emptyList(),
@@ -208,6 +228,7 @@ final class CanonicalContributionIdentityMemoTest {
                 Collections.<String>emptyList(),
                 () -> identity(resolutions));
 
+        // then
         assertEquals(3, resolutions.get());
         assertEquals(1, memo.size());
         assertEquals(singleEntryWeight, memo.weightBytes());
@@ -220,11 +241,13 @@ final class CanonicalContributionIdentityMemoTest {
 
     @Test
     void shouldBypassEntriesAbovePerEntryWeightBound() {
+        // given
         CanonicalContributionIdentityMemo memo =
                 new CanonicalContributionIdentityMemo(10, 1L, 1L);
         AtomicInteger resolutions = new AtomicInteger();
         FrozenNode contribution = source("oversized");
 
+        // when
         memo.resolve(
                 contribution,
                 Collections.<String>emptyList(),
@@ -236,6 +259,7 @@ final class CanonicalContributionIdentityMemoTest {
                 Collections.<String>emptyList(),
                 () -> identity(resolutions));
 
+        // then
         assertEquals(2, resolutions.get());
         assertEquals(0, memo.size());
         assertEquals(0L, memo.weightBytes());
