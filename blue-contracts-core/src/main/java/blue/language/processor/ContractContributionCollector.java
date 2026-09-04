@@ -21,7 +21,16 @@ final class ContractContributionCollector {
     private final ContractContributionResolver resolver;
 
     ContractContributionCollector(NodeProvider provider) {
-        this.resolver = new ContractContributionResolver(provider);
+        this(provider, null);
+    }
+
+    ContractContributionCollector(
+            NodeProvider provider,
+            ProcessingSnapshotManager snapshotManager) {
+        this.resolver = new ContractContributionResolver(
+                provider,
+                GasSchedule.contracts10(),
+                snapshotManager);
     }
 
     void gasSchedule(GasSchedule gasSchedule) {
@@ -47,11 +56,28 @@ final class ContractContributionCollector {
             String contractKey,
             boolean effectiveContractExists,
             Collection<String> executableBodyFields) {
+        return collect(
+                selectedScope,
+                effectiveScope,
+                contractKey,
+                effectiveContractExists,
+                executableBodyFields,
+                executableBodyFields);
+    }
+
+    ContractContributionResolver.BindingResolution collect(
+            Node selectedScope,
+            FrozenNode effectiveScope,
+            String contractKey,
+            boolean effectiveContractExists,
+            Collection<String> exactSourceFields,
+            Collection<String> executableBodyFields) {
         return resolver.resolveBinding(
                 selectedScope,
                 effectiveScope,
                 contractKey,
                 effectiveContractExists,
+                exactSourceFields,
                 executableBodyFields);
     }
 }

@@ -88,7 +88,8 @@ final class ContractLoader {
         Objects.requireNonNull(typeResolver, "typeResolver");
         this.snapshotManager = snapshotManager;
         this.contributions = new ContractContributionCollector(
-                contributionProvider);
+                contributionProvider,
+                snapshotManager);
         this.effectiveContracts = new EffectiveContractResolver(
                 registry, converter, typeResolver, contributions);
         this.executableBodies = new ExecutableBodyLoader(converter);

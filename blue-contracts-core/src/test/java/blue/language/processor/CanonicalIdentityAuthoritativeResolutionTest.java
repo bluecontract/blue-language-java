@@ -216,11 +216,11 @@ final class CanonicalIdentityAuthoritativeResolutionTest {
                 inlineOperationType);
         Node referencedRoot = rootWithExecutablePatchValue(
                 new Node().blueId(operationTypeBlueId));
-        assertFalse(
-                DirectBlueIdCalculator.calculateBlueId(inlineRoot).equals(
-                        DirectBlueIdCalculator.calculateBlueId(
-                                referencedRoot)),
-                "the fixture must exercise noncanonical inline type Source");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> DirectBlueIdCalculator.calculateBlueId(inlineRoot),
+                "direct identity must reject an authored inline type in a "
+                        + "reserved type position");
 
         try (BlueLanguage language = BlueLanguage.builder()
                 .nodeProvider(provider)
@@ -356,10 +356,12 @@ final class CanonicalIdentityAuthoritativeResolutionTest {
                     "inline contract");
 
             assertEquals(expected, actual);
-            assertFalse(actual.equals(
-                    DirectBlueIdCalculator.calculateBlueId(
-                            new Node().type(inlineType.clone()))),
-                    "the enclosing probe document must not become the type ID");
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> DirectBlueIdCalculator.calculateBlueId(
+                            new Node().type(inlineType.clone())),
+                    "direct identity must reject an authored inline type in "
+                            + "the probe document's reserved type position");
         }
     }
 

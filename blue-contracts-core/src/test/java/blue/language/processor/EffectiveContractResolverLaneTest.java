@@ -46,7 +46,7 @@ final class EffectiveContractResolverLaneTest {
                 new TypeClassResolver());
 
         Node filtered = resolver.filterSelectedScopeContracts(
-                FrozenNode.fromNode(selectedScope),
+                FrozenNode.fromSourceNode(selectedScope),
                 Collections.singleton("retain"));
 
         Node retained = filtered.getContracts().getProperties().get("retain");

@@ -182,7 +182,7 @@ final class CanonicalIdentityEvidenceTest {
                     provider,
                     false,
                     manager);
-            FrozenNode selected = FrozenNode.fromNode(
+            FrozenNode selected = FrozenNode.fromSourceNode(
                     documentWithContractType(inlineContractType));
 
             assertDoesNotThrow(
@@ -252,7 +252,8 @@ final class CanonicalIdentityEvidenceTest {
                     handlerType,
                     channelTypeBlueId,
                     operationTypeBlueId,
-                    handlerTypeBlueId);
+                    handlerTypeBlueId,
+                    manager);
 
             RegistrationHandlerProcessor.reset();
             loader.load(registrationSnapshot, "/");
@@ -391,7 +392,8 @@ final class CanonicalIdentityEvidenceTest {
             Node handlerType,
             String channelTypeBlueId,
             String operationTypeBlueId,
-            String handlerTypeBlueId) {
+            String handlerTypeBlueId,
+            ProcessingSnapshotManager snapshotManager) {
         ContractProcessorRegistry registry =
                 ContractProcessorRegistryBuilder.create()
                         .register(
@@ -417,7 +419,8 @@ final class CanonicalIdentityEvidenceTest {
                 resolver,
                 BlueCachePolicy.boundedDefaults(),
                 provider,
-                false);
+                false,
+                snapshotManager);
     }
 
     private static Node registrationScope(
