@@ -87,6 +87,7 @@ final class EvidenceClassificationView {
                 runtime,
                 scopePath,
                 effectiveScope,
+                scope.canonicalTypeIdentities(),
                 structural);
     }
 

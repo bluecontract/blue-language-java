@@ -47,7 +47,7 @@ final class ExternalSubscriptionProjectionBuilder {
                 ? ExecutableBodyPathCatalog
                         .resolveCanonicalTransientIncludingTypeContracts(
                         snapshotManager,
-                        FrozenNode.fromNode(exactRoot),
+                        FrozenNode.fromSourceNode(exactRoot),
                         ExecutableBodyPathCatalog.authoredNodePaths(
                                 exactRoot),
                         exactSourceFieldsByType)
@@ -176,10 +176,13 @@ final class ExternalSubscriptionProjectionBuilder {
     }
 
     /** Creates a planner bound to this projection's verified provider view. */
-    EmbeddedScopePlanner embeddedScopePlanner() {
+    EmbeddedScopePlanner embeddedScopePlanner(
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         return snapshotManager != null
                 ? new EmbeddedScopePlanner(
-                        this::materializeVerifiedExactReference)
+                        this::materializeVerifiedExactReference,
+                        snapshotManager,
+                        canonicalTypeIdentities)
                 : new EmbeddedScopePlanner();
     }
 
@@ -755,6 +758,14 @@ final class ExternalSubscriptionProjectionBuilder {
                 .position(source.getPosition())
                 .blue(cloneNullable(source.getBlue()))
                 .inlineValue(source.isInlineValue());
+        if (source.getProperties() != null) {
+            /*
+             * Sparse projections may filter every child. Preserve the
+             * source object's payload-presence bit so an all-filtered object
+             * remains exact {} instead of becoming a bare builder.
+             */
+            copy.properties(new LinkedHashMap<>());
+        }
         if (source.isReferenceOnly()) {
             copy.blueId(source.getBlueId());
         }

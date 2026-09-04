@@ -1,6 +1,6 @@
 # schema: blue-java-public-api/1.0
 # module: blue-contracts-core
-# entryCount: 2946
+# entryCount: 2952
 field blue.language.processor.ChannelLookupResult$Kind#ABSENT descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ChannelLookupResult$Kind#NON_CHANNEL descriptor=Lblue/language/processor/ChannelLookupResult$Kind; access=public,static,final,enum signature=- constant=-
@@ -22,6 +22,8 @@ field blue.language.processor.EffectiveContractSnapshotConstants$Role#HANDLER de
 field blue.language.processor.EffectiveContractSnapshotConstants$Role#MARKER descriptor=Ljava/lang/String; access=public,static,final signature=- constant="marker"
 field blue.language.processor.EffectiveContractSnapshotConstants$Role#PROCESSOR_CHANNEL descriptor=Ljava/lang/String; access=public,static,final signature=- constant="processor-channel"
 field blue.language.processor.EffectiveContractSnapshotConstants$Role#PROCESS_EMBEDDED descriptor=Ljava/lang/String; access=public,static,final signature=- constant="process-embedded"
+field blue.language.processor.EmbeddedScopePlanView$CollectionState#ABSENT_ZERO_OCCURRENCES descriptor=Lblue/language/processor/EmbeddedScopePlanView$CollectionState; access=public,static,final,enum signature=- constant=-
+field blue.language.processor.EmbeddedScopePlanView$CollectionState#PRESENT_COLLECTION descriptor=Lblue/language/processor/EmbeddedScopePlanView$CollectionState; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.EmbeddedScopePlanView$Origin#COLLECTION_MEMBER descriptor=Lblue/language/processor/EmbeddedScopePlanView$Origin; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.EmbeddedScopePlanView$Origin#EXPLICIT descriptor=Lblue/language/processor/EmbeddedScopePlanView$Origin; access=public,static,final,enum signature=- constant=-
 field blue.language.processor.ExternalChannelDependencySnapshot$TypeMatchMode#ASSIGNABLE descriptor=Lblue/language/processor/ExternalChannelDependencySnapshot$TypeMatchMode; access=public,static,final,enum signature=- constant=-
@@ -946,10 +948,13 @@ method blue.language.processor.EffectiveFragmentationCatalog#rootBlueId descript
 method blue.language.processor.EffectiveFragmentationCatalog#scopePlansByScope descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/EmbeddedScopePlanView;>; throws=-
 method blue.language.processor.EmbeddedScopePlanView#collectionDeclarationPaths descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
 method blue.language.processor.EmbeddedScopePlanView#collectionMemberKeysByDeclaration descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/util/List<Ljava/lang/String;>;>; throws=-
+method blue.language.processor.EmbeddedScopePlanView#collectionStatesByDeclaration descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/EmbeddedScopePlanView$CollectionState;>; throws=-
 method blue.language.processor.EmbeddedScopePlanView#concreteChildPaths descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
 method blue.language.processor.EmbeddedScopePlanView#explicitDeclarationPaths descriptor=()Ljava/util/List; access=public signature=()Ljava/util/List<Ljava/lang/String;>; throws=-
 method blue.language.processor.EmbeddedScopePlanView#originsByConcretePath descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Lblue/language/processor/EmbeddedScopePlanView$Origin;>; throws=-
 method blue.language.processor.EmbeddedScopePlanView#scopePath descriptor=()Ljava/lang/String; access=public signature=- throws=-
+method blue.language.processor.EmbeddedScopePlanView$CollectionState#valueOf descriptor=(Ljava/lang/String;)Lblue/language/processor/EmbeddedScopePlanView$CollectionState; access=public,static signature=- throws=-
+method blue.language.processor.EmbeddedScopePlanView$CollectionState#values descriptor=()[Lblue/language/processor/EmbeddedScopePlanView$CollectionState; access=public,static signature=- throws=-
 method blue.language.processor.EmbeddedScopePlanView$Origin#valueOf descriptor=(Ljava/lang/String;)Lblue/language/processor/EmbeddedScopePlanView$Origin; access=public,static signature=- throws=-
 method blue.language.processor.EmbeddedScopePlanView$Origin#values descriptor=()[Lblue/language/processor/EmbeddedScopePlanView$Origin; access=public,static signature=- throws=-
 method blue.language.processor.ExactBlueValue#blueId descriptor=()Ljava/lang/String; access=public signature=- throws=-
@@ -2684,6 +2689,7 @@ type blue.language.processor.EffectiveContractSnapshotConstants$DispatchField ac
 type blue.language.processor.EffectiveContractSnapshotConstants$Role access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.EffectiveFragmentationCatalog access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.EmbeddedScopePlanView access=public,final super=java.lang.Object interfaces=- signature=-
+type blue.language.processor.EmbeddedScopePlanView$CollectionState access=public,final,enum super=java.lang.Enum interfaces=- signature=Ljava/lang/Enum<Lblue/language/processor/EmbeddedScopePlanView$CollectionState;>;
 type blue.language.processor.EmbeddedScopePlanView$Origin access=public,final,enum super=java.lang.Enum interfaces=- signature=Ljava/lang/Enum<Lblue/language/processor/EmbeddedScopePlanView$Origin;>;
 type blue.language.processor.ExactBlueValue access=public,final super=java.lang.Object interfaces=- signature=-
 type blue.language.processor.ExactEventIdentityEvidence access=public,final super=java.lang.Object interfaces=- signature=-

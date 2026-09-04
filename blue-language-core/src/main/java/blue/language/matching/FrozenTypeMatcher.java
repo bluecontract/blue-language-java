@@ -154,7 +154,7 @@ public final class FrozenTypeMatcher {
      * @param typeIdentities resolver-issued canonical type identity evidence
      * @return matcher confined to the supplied evidence boundary
      */
-    static FrozenTypeMatcher withVerifiedTypeEvidence(
+    public static FrozenTypeMatcher withVerifiedTypeEvidence(
             Function<FrozenNode, TypeEvidenceResolution> materializer,
             CanonicalTypeIdentityLookup typeIdentities) {
         return new FrozenTypeMatcher(

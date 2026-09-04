@@ -1,6 +1,11 @@
 package blue.language.processor;
 
+import blue.language.api.BlueLanguageErrorCategory;
+import blue.language.api.BlueLanguageErrorClassifier;
 import blue.language.identity.BlueIds;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.matching.FrozenTypeMatcher;
+import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.wire.JsonPointer;
@@ -18,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Builds the immutable, deterministic immediate-child plan for one effective
@@ -32,11 +38,20 @@ import java.util.Set;
  */
 final class EmbeddedScopePlanner {
 
+    private static final FrozenNode DICTIONARY_TYPE_REFERENCE =
+            FrozenNode.fromResolvedNode(new Node().blueId(
+                    BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID));
+
     private final ExactReferenceMaterializer referenceMaterializer;
+    private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
+    private final FrozenTypeMatcher typeMatcher;
 
     /** Creates a planner that suspends when verified reference content is needed. */
     EmbeddedScopePlanner() {
-        this(null);
+        this(
+                null,
+                EmbeddedScopePlanner::unavailableTypeEvidence,
+                CanonicalTypeIdentityLookup.incomplete());
     }
 
     /**
@@ -47,7 +62,67 @@ final class EmbeddedScopePlanner {
      */
     EmbeddedScopePlanner(
             ExactReferenceMaterializer referenceMaterializer) {
+        this(
+                referenceMaterializer,
+                EmbeddedScopePlanner::unavailableTypeEvidence,
+                CanonicalTypeIdentityLookup.incomplete());
+    }
+
+    /**
+     * Creates a planner bound atomically to one snapshot manager and the
+     * canonical type identities of the exact effective scope being planned.
+     */
+    EmbeddedScopePlanner(
+            ProcessingSnapshotManager snapshotManager,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        this(
+                Objects.requireNonNull(snapshotManager, "snapshotManager")
+                        ::materializeVerifiedExactReference,
+                reference -> materializeVerifiedTypeEvidence(
+                        snapshotManager, reference),
+                canonicalTypeIdentities);
+    }
+
+    /**
+     * Creates a planner with a caller-specific exact-content boundary and
+     * type evidence supplied by the same invocation's snapshot manager.
+     */
+    EmbeddedScopePlanner(
+            ExactReferenceMaterializer referenceMaterializer,
+            ProcessingSnapshotManager snapshotManager,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
+        this(
+                referenceMaterializer,
+                reference -> materializeVerifiedTypeEvidence(
+                        Objects.requireNonNull(
+                                snapshotManager, "snapshotManager"),
+                        reference),
+                canonicalTypeIdentities);
+    }
+
+    /**
+     * Creates a planner confined to one resolver invocation's verified type
+     * materialization and canonical identity evidence.
+     *
+     * @param referenceMaterializer exact content materializer, or
+     *         {@code null} to suspend
+     * @param verifiedTypeMaterializer verified exact type materializer
+     * @param canonicalTypeIdentities resolver-issued identities for completed
+     *         inline types already present in the effective scope
+     */
+    EmbeddedScopePlanner(
+            ExactReferenceMaterializer referenceMaterializer,
+            Function<FrozenNode, TypeEvidenceResolution>
+                    verifiedTypeMaterializer,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities) {
         this.referenceMaterializer = referenceMaterializer;
+        this.canonicalTypeIdentities = Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
+        this.typeMatcher = FrozenTypeMatcher.withVerifiedTypeEvidence(
+                Objects.requireNonNull(
+                        verifiedTypeMaterializer,
+                        "verifiedTypeMaterializer"),
+                canonicalTypeIdentities);
     }
 
     /** Builds an unmetered plan after defensively freezing a mutable scope. */
@@ -326,14 +401,17 @@ final class EmbeddedScopePlanner {
 
         List<EmbeddedConcretePath> concrete = new ArrayList<>();
         for (String declaration : explicitDeclarations) {
-            FrozenNode target = select(
+            SelectedNode selected = select(
                     effectiveScope,
                     declaration,
                     DeclarationKind.EXPLICIT,
-                    normalizedScope);
-            if (target == null) {
+                    normalizedScope,
+                    schedule);
+            if (!isSemanticallyPresent(
+                    selected.node, selected.presentByReference)) {
                 continue;
             }
+            FrozenNode target = selected.node;
             String absolutePath = PointerUtils.resolvePointer(
                     normalizedScope, declaration);
             if (targetPolicy == TargetPolicy.OPAQUE_MANAGED) {
@@ -355,7 +433,11 @@ final class EmbeddedScopePlanner {
                         target, normalizedScope, declaration);
             }
             if (!target.isReferenceOnly()
-                    && !isScopeObjectCompatible(target)) {
+                    && !isScopeObjectCompatible(
+                            target,
+                            declaration,
+                            normalizedScope,
+                            schedule)) {
                 throw invalid(
                         ProcessorErrorCategory.EmbeddedScopeNotObject,
                         "Process Embedded path must select an object: "
@@ -371,20 +453,20 @@ final class EmbeddedScopePlanner {
 
         Map<String, List<String>> memberKeysByDeclaration =
                 new LinkedHashMap<>();
-        Map<String, String> collectionDeclarationByIdentity =
+        Map<String, EmbeddedCollectionState> statesByDeclaration =
                 new LinkedHashMap<>();
         for (String declaration : collectionDeclarations) {
-            List<String> memberKeys = projectCollection(
+            CollectionProjection projection = projectCollection(
                     effectiveScope,
                     declaration,
                     normalizedScope,
                     schedule,
                     meter,
                     concrete,
-                    collectionDeclarationByIdentity,
                     targetPolicy,
                     expectedManagedBlueIdsByPath);
-            memberKeysByDeclaration.put(declaration, memberKeys);
+            memberKeysByDeclaration.put(declaration, projection.memberKeys);
+            statesByDeclaration.put(declaration, projection.state);
         }
 
         requireLimit(
@@ -414,6 +496,7 @@ final class EmbeddedScopePlanner {
                 explicitDeclarations,
                 collectionDeclarations,
                 memberKeysByDeclaration,
+                statesByDeclaration,
                 orderedConcrete);
     }
 
@@ -497,40 +580,38 @@ final class EmbeddedScopePlanner {
         return normalized;
     }
 
-    private List<String> projectCollection(
+    private CollectionProjection projectCollection(
             FrozenNode scope,
             String declaration,
             String scopePath,
             GasSchedule schedule,
             GasMeter meter,
             List<EmbeddedConcretePath> concrete,
-            Map<String, String> collectionDeclarationByIdentity,
             TargetPolicy targetPolicy,
             Map<String, String> expectedManagedBlueIdsByPath) {
-        FrozenNode collection = select(
+        SelectedNode selected = select(
                 scope,
                 declaration,
                 DeclarationKind.COLLECTION,
-                scopePath);
-        if (collection == null) {
-            return Collections.emptyList();
+                scopePath,
+                schedule);
+        if (!isSemanticallyPresent(
+                selected.node, selected.presentByReference)) {
+            return CollectionProjection.absent();
         }
+        FrozenNode collection = selected.node;
         collection = materialize(collection, scopePath, declaration);
-        if (!isCollectionObject(collection)) {
+        if (!isCollectionObject(
+                collection,
+                declaration,
+                scopePath,
+                schedule)) {
             throw invalid(
                     ProcessorErrorCategory.EmbeddedCollectionMustBeObject,
                     "Embedded collection must be an object: " + declaration,
                     scopePath);
         }
         String collectionIdentity = collection.blueId();
-        String previousDeclaration = collectionDeclarationByIdentity.put(
-                collectionIdentity, declaration);
-        if (previousDeclaration != null) {
-            throw overlap(
-                    "Graph-equivalent collection declarations: "
-                            + previousDeclaration + " and " + declaration,
-                    scopePath);
-        }
         Map<String, FrozenNode> properties = collection.getProperties();
         List<String> keys = properties != null
                 ? new ArrayList<>(properties.keySet())
@@ -555,6 +636,7 @@ final class EmbeddedScopePlanner {
                         routeContext(scopePath, declaration))
                 : Collections.unmodifiableList(keys);
 
+        List<String> presentKeys = new ArrayList<>();
         for (String key : orderedKeys) {
             requireLimit(
                     GasScheduleConstants.PortableLimit
@@ -564,6 +646,12 @@ final class EmbeddedScopePlanner {
             FrozenNode member = properties.get(key);
             String generatedDeclaration =
                     PointerUtils.appendPointer(declaration, key);
+            boolean presentByReference = member != null
+                    && member.getReferenceBlueId() != null;
+            if (!isSemanticallyPresent(member, presentByReference)) {
+                continue;
+            }
+            presentKeys.add(key);
             String absolutePath = PointerUtils.resolvePointer(
                     scopePath, generatedDeclaration);
             if (targetPolicy == TargetPolicy.OPAQUE_MANAGED) {
@@ -572,6 +660,15 @@ final class EmbeddedScopePlanner {
                         absolutePath,
                         expectedManagedBlueIdsByPath,
                         scopePath);
+                if (!member.isReferenceOnly()
+                        && !isScopeObjectCompatible(
+                                member,
+                                generatedDeclaration,
+                                scopePath,
+                                schedule)) {
+                    throw invalidCollectionMember(
+                            declaration, key, scopePath);
+                }
             } else if (targetPolicy
                     == TargetPolicy.MANAGED_RECONCILIATION
                     && member != null
@@ -584,14 +681,13 @@ final class EmbeddedScopePlanner {
                 rejectCyclicMember(member, scopePath, declaration, key);
                 member = materialize(member, scopePath,
                         generatedDeclaration);
-                if (!isScopeObjectCompatible(member)) {
-                    throw invalid(
-                            ProcessorErrorCategory
-                                    .EmbeddedCollectionMemberMustBeObject,
-                            "Embedded collection member must be an object: "
-                                    + declaration + "/"
-                                    + PointerUtils.escapeSegment(key),
-                            scopePath);
+                if (!isScopeObjectCompatible(
+                        member,
+                        generatedDeclaration,
+                        scopePath,
+                        schedule)) {
+                    throw invalidCollectionMember(
+                            declaration, key, scopePath);
                 }
             }
             validateGeneratedPath(
@@ -602,7 +698,19 @@ final class EmbeddedScopePlanner {
                     declaration,
                     key));
         }
-        return Collections.unmodifiableList(new ArrayList<>(orderedKeys));
+        return CollectionProjection.present(presentKeys);
+    }
+
+    private SubscriptionSurfaceInvalidException invalidCollectionMember(
+            String declaration,
+            String key,
+            String scopePath) {
+        return invalid(
+                ProcessorErrorCategory.EmbeddedCollectionMemberMustBeObject,
+                "Embedded collection member must be an object: "
+                        + declaration + "/"
+                        + PointerUtils.escapeSegment(key),
+                scopePath);
     }
 
     private void requireOpaqueManagedTarget(
@@ -678,16 +786,27 @@ final class EmbeddedScopePlanner {
         }
     }
 
-    private FrozenNode select(
+    private SelectedNode select(
             FrozenNode scope,
             String declaration,
             DeclarationKind kind,
-            String scopePath) {
+            String scopePath,
+            GasSchedule schedule) {
         FrozenNode current = scope;
+        boolean presentByReference = current.getReferenceBlueId() != null;
+        boolean scopeRoot = true;
         for (String segment : JsonPointer.split(declaration)) {
+            if (!scopeRoot
+                    && !isSemanticallyPresent(
+                            current, presentByReference)) {
+                return SelectedNode.absent();
+            }
             current = materialize(current, scopePath, declaration);
-            if (current.hasItems() || current.getValue() != null
-                    || current.isPreviousOnly()) {
+            if (!isTraversalObject(
+                    current,
+                    declaration,
+                    scopePath,
+                    schedule)) {
                 throw invalid(
                         kind.invalidPathCategory(),
                         "Process Embedded declaration cannot traverse a non-object: "
@@ -696,10 +815,12 @@ final class EmbeddedScopePlanner {
             }
             current = current.property(segment);
             if (current == null) {
-                return null;
+                return SelectedNode.absent();
             }
+            presentByReference = current.getReferenceBlueId() != null;
+            scopeRoot = false;
         }
-        return current;
+        return new SelectedNode(current, presentByReference);
     }
 
     private FrozenNode materialize(
@@ -786,12 +907,187 @@ final class EmbeddedScopePlanner {
                 context);
     }
 
-    private boolean isCollectionObject(FrozenNode node) {
-        return node != null
-                && node.getValue() == null
-                && !node.hasItems()
-                && !node.isReferenceOnly()
-                && !node.isPreviousOnly();
+    private boolean isCollectionObject(
+            FrozenNode node,
+            String declaration,
+            String scopePath,
+            GasSchedule schedule) {
+        if (node == null
+                || node.getValue() != null
+                || node.hasItems()
+                || node.isReferenceOnly()
+                || node.isPreviousOnly()) {
+            return false;
+        }
+        if (!node.hasProperties()
+                && node.getType() == null) {
+            return false;
+        }
+        return hasObjectCompatibleDeclaredType(
+                node, declaration, scopePath, schedule);
+    }
+
+    /** Returns whether a present, materialized intermediate is traversable. */
+    private boolean isTraversalObject(
+            FrozenNode node,
+            String declaration,
+            String scopePath,
+            GasSchedule schedule) {
+        return isScopeObjectCompatible(
+                node,
+                declaration,
+                scopePath,
+                schedule);
+    }
+
+    /** Verifies the nominal Dictionary lineage of a declared object type. */
+    private boolean hasObjectCompatibleDeclaredType(
+            FrozenNode node,
+            String declaration,
+            String scopePath,
+            GasSchedule schedule) {
+        FrozenNode declaredType = node.getType();
+        if (declaredType == null) {
+            return true;
+        }
+        requireInlineTypeIdentityEvidence(
+                declaredType, declaration, scopePath);
+        try {
+            return typeMatcher.isSubtypeOrSame(
+                    declaredType,
+                    DICTIONARY_TYPE_REFERENCE,
+                    schedule.portableLimit(
+                            GasScheduleConstants.PortableLimit
+                                    .TYPE_CHAIN_EDGES));
+        } catch (ExecutionEvidenceUnavailableException
+                | InvalidExecutionEvidenceException failure) {
+            throw failure;
+        } catch (IllegalArgumentException | IllegalStateException failure) {
+            throw invalidTypeEvidence(
+                    declaration, scopePath, failure);
+        }
+    }
+
+    private void requireInlineTypeIdentityEvidence(
+            FrozenNode declaredType,
+            String declaration,
+            String scopePath) {
+        if (declaredType.isReferenceOnly()) {
+            return;
+        }
+        final boolean covered;
+        try {
+            covered = canonicalTypeIdentities.findCanonicalTypeBlueId(
+                    declaredType.toNode()).isPresent();
+        } catch (IllegalArgumentException | IllegalStateException failure) {
+            throw invalidTypeEvidence(
+                    declaration, scopePath, failure);
+        }
+        if (!covered) {
+            throw new ExecutionEvidenceUnavailableException(
+                    "Resolver-issued canonical type identity evidence is "
+                            + "required for embedded object "
+                            + logicalPath(scopePath, declaration));
+        }
+    }
+
+    private InvalidExecutionEvidenceException invalidTypeEvidence(
+            String declaration,
+            String scopePath,
+            RuntimeException failure) {
+        String detail = failure.getMessage();
+        return new InvalidExecutionEvidenceException(
+                "Invalid embedded object type evidence at "
+                        + logicalPath(scopePath, declaration)
+                        + (detail != null && !detail.isEmpty()
+                                ? ": " + detail
+                                : ""),
+                ProcessorErrorCategory.InvalidProcessingDocument);
+    }
+
+    private static TypeEvidenceResolution unavailableTypeEvidence(
+            FrozenNode reference) {
+        Objects.requireNonNull(reference, "reference");
+        String blueId = reference.getReferenceBlueId();
+        throw new ExecutionEvidenceUnavailableException(
+                "Verified exact type evidence is required for embedded "
+                        + "object type " + blueId,
+                Collections.singletonList(blueId));
+    }
+
+    private static TypeEvidenceResolution materializeVerifiedTypeEvidence(
+            ProcessingSnapshotManager snapshotManager,
+            FrozenNode reference) {
+        String blueId = Objects.requireNonNull(
+                reference, "reference").getReferenceBlueId();
+        try {
+            TypeEvidenceResolution materialization = snapshotManager
+                    .materializeVerifiedTypeReference(reference);
+            if (materialization == null
+                    || materialization.resolvedRoot().isReferenceOnly()) {
+                throw new ExecutionEvidenceUnavailableException(
+                        "Verified exact type evidence is unavailable for "
+                                + blueId,
+                        Collections.singletonList(blueId));
+            }
+            return materialization;
+        } catch (ExecutionEvidenceUnavailableException
+                | InvalidExecutionEvidenceException failure) {
+            throw failure;
+        } catch (RuntimeException failure) {
+            if (BlueLanguageErrorClassifier.classify(failure)
+                    == BlueLanguageErrorCategory.ProviderUnavailable
+                    || failure instanceof UnsupportedOperationException) {
+                throw new ExecutionEvidenceUnavailableException(
+                        "Verified exact type evidence is unavailable for "
+                                + blueId,
+                        Collections.singletonList(blueId));
+            }
+            throw failure;
+        }
+    }
+
+    private static final class CollectionProjection {
+        private final EmbeddedCollectionState state;
+        private final List<String> memberKeys;
+
+        private CollectionProjection(
+                EmbeddedCollectionState state,
+                List<String> memberKeys) {
+            this.state = Objects.requireNonNull(state, "state");
+            this.memberKeys = Collections.unmodifiableList(
+                    new ArrayList<>(Objects.requireNonNull(
+                            memberKeys, "memberKeys")));
+        }
+
+        private static CollectionProjection absent() {
+            return new CollectionProjection(
+                    EmbeddedCollectionState.ABSENT_ZERO_OCCURRENCES,
+                    Collections.<String>emptyList());
+        }
+
+        private static CollectionProjection present(List<String> memberKeys) {
+            return new CollectionProjection(
+                    EmbeddedCollectionState.PRESENT_COLLECTION,
+                    memberKeys);
+        }
+    }
+
+    /** A selected node plus source-surface presence retained across opening. */
+    private static final class SelectedNode {
+        private final FrozenNode node;
+        private final boolean presentByReference;
+
+        private SelectedNode(
+                FrozenNode node,
+                boolean presentByReference) {
+            this.node = node;
+            this.presentByReference = presentByReference;
+        }
+
+        private static SelectedNode absent() {
+            return new SelectedNode(null, false);
+        }
     }
 
     /**
@@ -800,13 +1096,48 @@ final class EmbeddedScopePlanner {
      * member, while the envelope keeps values such as {@code value: 0} plus
      * local Channels processable as one owned occurrence.
      */
-    private boolean isScopeObjectCompatible(FrozenNode node) {
+    private boolean isScopeObjectCompatible(
+            FrozenNode node,
+            String declaration,
+            String scopePath,
+            GasSchedule schedule) {
+        if (node == null
+                || node.hasItems()
+                || node.isReferenceOnly()
+                || node.isPreviousOnly()) {
+            return false;
+        }
+        if (node.getValue() != null) {
+            return node.getContracts() != null;
+        }
+        if (!node.hasProperties()
+                && node.getType() == null) {
+            /*
+             * The already-admitted scope Root is allowed to consist solely
+             * of its Contracts envelope. Selected descendants still pass the
+             * semantic-presence gate first, where reserved metadata alone is
+             * absent and therefore never becomes an embedded occurrence.
+             */
+            return node.getContracts() != null;
+        }
+        return hasObjectCompatibleDeclaredType(
+                node, declaration, scopePath, schedule);
+    }
+
+    /**
+     * Applies Language semantic presence before interpreting a node's kind.
+     * Reserved metadata alone is a declaration, not a value. A retained exact
+     * reference is present even when opening it produces metadata-only content.
+     */
+    private boolean isSemanticallyPresent(
+            FrozenNode node,
+            boolean presentByReference) {
         return node != null
-                && !node.hasItems()
-                && !node.isReferenceOnly()
-                && !node.isPreviousOnly()
-                && (node.getValue() == null
-                        || node.getContracts() != null);
+                && (presentByReference
+                        || node.getReferenceBlueId() != null
+                        || node.getValue() != null
+                        || node.hasItems()
+                        || node.hasProperties());
     }
 
     private boolean isSelector(String segment) {

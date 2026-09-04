@@ -3,6 +3,8 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.snapshot.FrozenNode;
@@ -539,10 +541,10 @@ class EffectiveFragmentationCatalogTest {
         }
 
         // then
-        assertNotEquals(
-                DirectBlueIdCalculator.calculateBlueId(inlineRoot),
-                expectedRootBlueId,
-                "the fixture must exercise canonical Source minimization");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> DirectBlueIdCalculator.calculateBlueId(inlineRoot),
+                "direct input must reject an uncanonicalized inline type");
         assertEquals(expectedRootBlueId, inlineCatalog.rootBlueId());
         assertEquals(expectedRootBlueId, referenceCatalog.rootBlueId());
     }
@@ -654,6 +656,9 @@ class EffectiveFragmentationCatalogTest {
                 rootPlan.collectionMemberKeysByDeclaration()
                         .get("/lessons"));
         assertEquals(
+                EmbeddedScopePlanView.CollectionState.PRESENT_COLLECTION,
+                rootPlan.collectionStatesByDeclaration().get("/lessons"));
+        assertEquals(
                 Arrays.asList(
                         "/lessons/a~0c",
                         "/lessons/a~1b",
@@ -673,6 +678,49 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
+    void shouldDistinguishAbsentAndPresentEmptyCollectionsInPublicPlan() {
+        Node embedded = new Node()
+                .type(new Node().blueId(RuntimeBlueIds.PROCESS_EMBEDDED))
+                .properties(
+                        "collectionPaths",
+                        new Node().items(new Node().value("/lessons")));
+        Node contracts = new Node().properties("embedded", embedded);
+        Node absent = Nodes.emptyObject().contracts(contracts.clone());
+        Node presentEmpty = new Node()
+                .properties("lessons", Nodes.emptyObject())
+                .contracts(contracts.clone());
+
+        EmbeddedScopePlanView absentPlan;
+        EmbeddedScopePlanView presentPlan;
+        try (Blue blue = blue(
+                new LinkedHashMap<String, Node>(),
+                new ArrayList<String>())) {
+            absentPlan = blue.getDocumentProcessor().administration()
+                    .effectiveFragmentationCatalog(absent)
+                    .scopePlansByScope().get("/");
+            presentPlan = blue.getDocumentProcessor().administration()
+                    .effectiveFragmentationCatalog(presentEmpty)
+                    .scopePlansByScope().get("/");
+        }
+
+        assertEquals(
+                Collections.emptyList(),
+                absentPlan.collectionMemberKeysByDeclaration()
+                        .get("/lessons"));
+        assertEquals(
+                Collections.emptyList(),
+                presentPlan.collectionMemberKeysByDeclaration()
+                        .get("/lessons"));
+        assertEquals(
+                EmbeddedScopePlanView.CollectionState
+                        .ABSENT_ZERO_OCCURRENCES,
+                absentPlan.collectionStatesByDeclaration().get("/lessons"));
+        assertEquals(
+                EmbeddedScopePlanView.CollectionState.PRESENT_COLLECTION,
+                presentPlan.collectionStatesByDeclaration().get("/lessons"));
+    }
+
+    @Test
     void shouldDefineChildCatalogScopeFromInheritedProcessEmbeddedPath() {
         // given
         Node inheritedEmbedded =
@@ -688,6 +736,9 @@ class EffectiveFragmentationCatalogTest {
         Node rootType =
                 new Node()
                         .name("Embedded catalog root")
+                        .type(new Node().blueId(
+                                BlueLanguageConstants
+                                        .DICTIONARY_TYPE_BLUE_ID))
                         .contracts(
                                 new Node().properties(
                                         "embedded",

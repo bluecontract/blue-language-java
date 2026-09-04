@@ -23,6 +23,8 @@ final class EmbeddedScopePlan {
     private final List<String> collectionDeclarationPaths;
     private final Map<String, List<String>>
             collectionMemberKeysByDeclaration;
+    private final Map<String, EmbeddedCollectionState>
+            collectionStatesByDeclaration;
     private final List<EmbeddedConcretePath> concretePaths;
     private final List<String> concreteChildPaths;
     private final Map<String, EmbeddedPathOrigin> concretePathOrigins;
@@ -35,6 +37,8 @@ final class EmbeddedScopePlan {
      * @param collectionDeclarationPaths normalized collection declarations
      * @param collectionMemberKeysByDeclaration complete ordered member keys
      *        for every collection declaration
+     * @param collectionStatesByDeclaration successful state for every
+     *        collection declaration
      * @param concretePaths combined concrete paths in canonical order
      */
     EmbeddedScopePlan(
@@ -42,6 +46,7 @@ final class EmbeddedScopePlan {
             List<String> explicitDeclarationPaths,
             List<String> collectionDeclarationPaths,
             Map<String, List<String>> collectionMemberKeysByDeclaration,
+            Map<String, EmbeddedCollectionState> collectionStatesByDeclaration,
             List<EmbeddedConcretePath> concretePaths) {
         this.scopePath = Objects.requireNonNull(scopePath, "scopePath");
         this.explicitDeclarationPaths = immutableStrings(
@@ -51,6 +56,9 @@ final class EmbeddedScopePlan {
         this.collectionMemberKeysByDeclaration = immutableMemberKeys(
                 this.collectionDeclarationPaths,
                 collectionMemberKeysByDeclaration);
+        this.collectionStatesByDeclaration = immutableStates(
+                this.collectionDeclarationPaths,
+                collectionStatesByDeclaration);
         this.concretePaths = immutableConcretePaths(concretePaths);
 
         List<String> childPaths = new ArrayList<>(this.concretePaths.size());
@@ -89,6 +97,11 @@ final class EmbeddedScopePlan {
      */
     Map<String, List<String>> collectionMemberKeysByDeclaration() {
         return collectionMemberKeysByDeclaration;
+    }
+
+    /** Returns the successful projection state of each collection declaration. */
+    Map<String, EmbeddedCollectionState> collectionStatesByDeclaration() {
+        return collectionStatesByDeclaration;
     }
 
     /** Returns concrete paths with full declaration provenance. */
@@ -132,6 +145,25 @@ final class EmbeddedScopePlan {
         for (String declaration : declarations) {
             copy.put(declaration, immutableStrings(
                     source.get(declaration), "collection member key"));
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private static Map<String, EmbeddedCollectionState> immutableStates(
+            List<String> declarations,
+            Map<String, EmbeddedCollectionState> source) {
+        Objects.requireNonNull(source, "collectionStatesByDeclaration");
+        Set<String> uniqueDeclarations = new LinkedHashSet<>(declarations);
+        if (uniqueDeclarations.size() != declarations.size()
+                || !uniqueDeclarations.equals(source.keySet())) {
+            throw new IllegalArgumentException(
+                    "Collection states must match collection declarations");
+        }
+
+        Map<String, EmbeddedCollectionState> copy = new LinkedHashMap<>();
+        for (String declaration : declarations) {
+            copy.put(declaration, Objects.requireNonNull(
+                    source.get(declaration), "collection state"));
         }
         return Collections.unmodifiableMap(copy);
     }

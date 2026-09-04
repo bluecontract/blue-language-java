@@ -220,7 +220,8 @@ final class EffectiveFragmentationCatalogBuilder {
                 EmbeddedScopeDeclaration declaration =
                         bundle.embeddedScopeDeclaration();
                 embeddedPlan = new EmbeddedScopePlanner(
-                        sequence::materializeVerifiedExactReference)
+                        sequence,
+                        snapshot.canonicalTypeIdentities())
                         .plan(
                                 effective,
                                 frame.scopePath,

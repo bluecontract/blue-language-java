@@ -399,7 +399,13 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
         } else {
             EmbeddedScopeDeclaration declaration =
                     bundle.embeddedScopeDeclaration();
-            new EmbeddedScopePlanner().planForOpaqueManagedRoot(
+            ProcessingSnapshotManager manager = owner.snapshotManager();
+            EmbeddedScopePlanner planner = manager != null
+                    ? new EmbeddedScopePlanner(
+                            manager,
+                            surface.canonicalTypeIdentities())
+                    : new EmbeddedScopePlanner();
+            planner.planForOpaqueManagedRoot(
                     resolved,
                     JsonPointer.ROOT,
                     declaration.explicitPaths(),
@@ -445,8 +451,8 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 bundle.embeddedScopeDeclaration();
         EmbeddedScopePlanner planner = owner.snapshotManager() != null
                 ? new EmbeddedScopePlanner(
-                        owner.snapshotManager()
-                                ::materializeVerifiedExactReference)
+                        owner.snapshotManager(),
+                        surface.canonicalTypeIdentities())
                 : new EmbeddedScopePlanner();
         EmbeddedScopePlan plan = planner.planForManagedReconciliation(
                 surface.resolvedRoot(),

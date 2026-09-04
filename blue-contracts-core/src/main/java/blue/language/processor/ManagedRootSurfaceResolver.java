@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
 import blue.language.model.wire.JsonPointer;
 import blue.language.snapshot.FrozenNode;
@@ -64,7 +65,11 @@ final class ManagedRootSurfaceResolver {
             throw new IllegalStateException(
                     "Route classification must not charge shared gas");
         }
-        return new Surface(selected, resolved, bundle);
+        return new Surface(
+                selected,
+                resolved,
+                bundle,
+                scope.canonicalTypeIdentities());
     }
 
     EffectiveContractSnapshot effectiveProcessEmbeddedSnapshot(
@@ -93,16 +98,20 @@ final class ManagedRootSurfaceResolver {
         private final FrozenNode selectedRoot;
         private final FrozenNode resolvedRoot;
         private final ContractBundle bundle;
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
 
         Surface(
                 FrozenNode selectedRoot,
                 FrozenNode resolvedRoot,
-                ContractBundle bundle) {
+                ContractBundle bundle,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
             this.selectedRoot = Objects.requireNonNull(
                     selectedRoot, "selectedRoot");
             this.resolvedRoot = Objects.requireNonNull(
                     resolvedRoot, "resolvedRoot");
             this.bundle = Objects.requireNonNull(bundle, "bundle");
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities, "canonicalTypeIdentities");
         }
 
         FrozenNode selectedRoot() {
@@ -115,6 +124,10 @@ final class ManagedRootSurfaceResolver {
 
         ContractBundle bundle() {
             return bundle;
+        }
+
+        CanonicalTypeIdentityLookup canonicalTypeIdentities() {
+            return canonicalTypeIdentities;
         }
     }
 }

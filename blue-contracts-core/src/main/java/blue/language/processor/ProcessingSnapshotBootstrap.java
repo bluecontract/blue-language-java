@@ -233,7 +233,8 @@ final class ProcessingSnapshotBootstrap {
                 ProcessorErrorCategory.InvalidEmbeddedCollectionPath);
         EmbeddedScopePlanner planner = snapshotManager != null
                 ? new EmbeddedScopePlanner(
-                        snapshotManager::materializeVerifiedExactReference)
+                        snapshotManager,
+                        typeIdentities)
                 : new EmbeddedScopePlanner();
         return planner.plan(
                 effectiveScope,

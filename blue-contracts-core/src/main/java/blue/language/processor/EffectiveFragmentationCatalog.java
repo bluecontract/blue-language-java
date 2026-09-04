@@ -164,6 +164,7 @@ public final class EffectiveFragmentationCatalog {
                             entry.getValue(),
                             Collections.<String>emptyList(),
                             Collections.<String, List<String>>emptyMap(),
+                            Collections.<String, EmbeddedScopePlanView.CollectionState>emptyMap(),
                             concrete,
                             origins));
         }

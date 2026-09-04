@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -69,7 +70,7 @@ final class SubscriptionValidationServicesTest {
     @Test
     void shouldBuildReplacementDeltaWithExactCommitInterval() {
         // given
-        Node root = new Node();
+        Node root = Nodes.emptyObject();
         ExternalOrderKey previousOrder = ExternalOrderKey.of(
                 Arrays.asList(1, "source", 0));
         ExternalOrderKey committingOrder = ExternalOrderKey.of(
@@ -168,7 +169,7 @@ final class SubscriptionValidationServicesTest {
                 new Node().properties(CHANNEL_KEY, newChannel));
         Node root = rootWithCollection(
                 new Node()
-                        .properties("existing", new Node())
+                        .properties("existing", Nodes.emptyObject())
                         .properties("new", newMember));
         EmbeddedScopePlan entryPlan = collectionPlan(
                 "/lessons", "existing");
@@ -372,6 +373,9 @@ final class SubscriptionValidationServicesTest {
                 Collections.singletonMap(
                         declaration,
                         Collections.singletonList(memberKey)),
+                Collections.singletonMap(
+                        declaration,
+                        EmbeddedCollectionState.PRESENT_COLLECTION),
                 Collections.singletonList(
                         new EmbeddedConcretePath(
                                 memberPath,

@@ -34,7 +34,6 @@ final class EffectiveSubscriptionSurfaceProjector {
     private final NodeToObjectConverter converter;
     private final SubscriptionSurfaceRules rules;
     private final EmbeddedSubscriptionRouteProjector routes;
-    private final EmbeddedScopePlanner embeddedPlanner;
 
     EffectiveSubscriptionSurfaceProjector(
             ContractLoader contractLoader,
@@ -49,10 +48,6 @@ final class EffectiveSubscriptionSurfaceProjector {
         this.converter = converter;
         this.rules = Objects.requireNonNull(rules, "rules");
         this.routes = new EmbeddedSubscriptionRouteProjector(rules);
-        this.embeddedPlanner = snapshotManager != null
-                ? new EmbeddedScopePlanner(
-                        snapshotManager::materializeVerifiedExactReference)
-                : new EmbeddedScopePlanner();
     }
 
     /** Projects only occurrences whose effective dependencies changed. */
@@ -280,6 +275,12 @@ final class EffectiveSubscriptionSurfaceProjector {
                             ? validationContext.entryEmbeddedScopePlan(
                                     scopePath)
                             : null;
+                    EmbeddedScopePlanner embeddedPlanner =
+                            snapshotManager != null
+                                    ? new EmbeddedScopePlanner(
+                                            snapshotManager,
+                                            scope.canonicalTypeIdentities)
+                                    : new EmbeddedScopePlanner();
                     embeddedRoutes = routes.projectScope(
                             scope.effective,
                             bundle.embeddedScopeDeclaration(),
@@ -555,7 +556,7 @@ final class EffectiveSubscriptionSurfaceProjector {
                     ? ExecutableBodyPathCatalog
                             .resolveCanonicalTransientIncludingTypeContracts(
                                     snapshotManager,
-                                    FrozenNode.fromNode(root),
+                                    FrozenNode.fromSourceNode(root),
                                     ExecutableBodyPathCatalog
                                             .authoredNodePaths(root),
                                     registry.executableBodyFieldsByType())
@@ -603,7 +604,14 @@ final class EffectiveSubscriptionSurfaceProjector {
                         normalized,
                         CanonicalTypeIdentityLookup.incomplete());
             }
-            ScopeView created = new ScopeView(selected, effective, bundle);
+            CanonicalTypeIdentityLookup typeIdentities = snapshot != null
+                    ? snapshot.canonicalTypeIdentities()
+                    : CanonicalTypeIdentityLookup.incomplete();
+            ScopeView created = new ScopeView(
+                    selected,
+                    effective,
+                    bundle,
+                    typeIdentities);
             scopes.put(normalized, created);
             return created;
         }
@@ -642,7 +650,8 @@ final class EffectiveSubscriptionSurfaceProjector {
                             materialized,
                             openedSnapshot.frozenResolvedRoot(),
                             normalized,
-                            openedSnapshot.canonicalTypeIdentities()));
+                            openedSnapshot.canonicalTypeIdentities()),
+                    openedSnapshot.canonicalTypeIdentities());
             scopes.put(normalized, opened);
             return opened;
         }
@@ -653,14 +662,18 @@ final class EffectiveSubscriptionSurfaceProjector {
         private final Node selected;
         private final Node effective;
         private final ContractBundle bundle;
+        private final CanonicalTypeIdentityLookup canonicalTypeIdentities;
 
         private ScopeView(
                 Node selected,
                 Node effective,
-                ContractBundle bundle) {
+                ContractBundle bundle,
+                CanonicalTypeIdentityLookup canonicalTypeIdentities) {
             this.selected = selected;
             this.effective = effective;
             this.bundle = Objects.requireNonNull(bundle, "bundle");
+            this.canonicalTypeIdentities = Objects.requireNonNull(
+                    canonicalTypeIdentities, "canonicalTypeIdentities");
         }
     }
 }

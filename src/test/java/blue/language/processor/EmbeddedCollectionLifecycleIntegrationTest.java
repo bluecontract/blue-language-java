@@ -408,6 +408,9 @@ final class EmbeddedCollectionLifecycleIntegrationTest {
                 Collections.<String>emptyList(),
                 Collections.singletonList(COLLECTION_PATH),
                 members,
+                Collections.singletonMap(
+                        COLLECTION_PATH,
+                        EmbeddedCollectionState.PRESENT_COLLECTION),
                 concrete);
     }
 

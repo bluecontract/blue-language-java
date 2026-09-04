@@ -68,6 +68,12 @@ final class EmbeddedCollectionResourceCompletionTest {
                 completed.concreteChildPaths());
         assertEquals(expanded.collectionMemberKeysByDeclaration(),
                 completed.collectionMemberKeysByDeclaration());
+        assertEquals(expanded.collectionStatesByDeclaration(),
+                completed.collectionStatesByDeclaration());
+        assertEquals(
+                EmbeddedCollectionState.PRESENT_COLLECTION,
+                completed.collectionStatesByDeclaration().get(
+                        COLLECTION_PATH));
         assertEquals(expanded.concretePathOrigins(),
                 completed.concretePathOrigins());
         assertEquals(expandedGas.totalGas(), completedGas.totalGas());

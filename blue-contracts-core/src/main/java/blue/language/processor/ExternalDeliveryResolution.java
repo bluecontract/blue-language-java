@@ -99,7 +99,8 @@ final class ExternalDeliveryResolution implements AutoCloseable {
         }
         EmbeddedScopeDeclaration declaration =
                 bundle.embeddedScopeDeclaration();
-        return projectionBuilder.embeddedScopePlanner()
+        return projectionBuilder.embeddedScopePlanner(
+                        canonicalTypeIdentities())
                 .planForRevisionBoundEvent(
                 FrozenNode.fromResolvedNode(effective),
                 scopePath,

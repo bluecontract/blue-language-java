@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.snapshot.FrozenNode;
 
 import java.util.Map;
@@ -23,9 +24,12 @@ final class EmbeddedScopeEntryPlans {
             DocumentProcessingRuntime runtime,
             String scopePath,
             FrozenNode effectiveScope,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities,
             ContractBundle bundle) {
         Objects.requireNonNull(runtime, "runtime");
         Objects.requireNonNull(bundle, "bundle");
+        Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
         ScopeRuntimeContext context = runtime.scope(normalizedScope);
         EmbeddedScopePlan plan;
@@ -41,7 +45,8 @@ final class EmbeddedScopeEntryPlans {
                     runtime.currentSnapshotManager();
             EmbeddedScopePlanner planner = manager != null
                     ? new EmbeddedScopePlanner(
-                            manager::materializeVerifiedExactReference)
+                            manager,
+                            canonicalTypeIdentities)
                     : new EmbeddedScopePlanner();
             plan = planner.planForRevisionBoundEvent(
                     Objects.requireNonNull(
@@ -63,10 +68,13 @@ final class EmbeddedScopeEntryPlans {
             DocumentProcessingRuntime runtime,
             String scopePath,
             FrozenNode effectiveScope,
+            CanonicalTypeIdentityLookup canonicalTypeIdentities,
             ContractBundle bundle,
             Map<String, String> expectedManagedBlueIdsByPath) {
         Objects.requireNonNull(runtime, "runtime");
         Objects.requireNonNull(bundle, "bundle");
+        Objects.requireNonNull(
+                canonicalTypeIdentities, "canonicalTypeIdentities");
         Objects.requireNonNull(
                 expectedManagedBlueIdsByPath,
                 "expectedManagedBlueIdsByPath");
@@ -87,7 +95,14 @@ final class EmbeddedScopeEntryPlans {
         } else {
             EmbeddedScopeDeclaration declaration =
                     bundle.embeddedScopeDeclaration();
-            plan = new EmbeddedScopePlanner()
+            ProcessingSnapshotManager manager =
+                    runtime.currentSnapshotManager();
+            EmbeddedScopePlanner planner = manager != null
+                    ? new EmbeddedScopePlanner(
+                            manager,
+                            canonicalTypeIdentities)
+                    : new EmbeddedScopePlanner();
+            plan = planner
                     .planForOpaqueManagedRoot(
                             Objects.requireNonNull(
                                     effectiveScope, "effectiveScope"),

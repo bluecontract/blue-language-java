@@ -115,6 +115,7 @@ final class ScopeFrameFactory {
                     runtime,
                     normalizedScope,
                     scope.resolved(),
+                    scope.canonicalTypeIdentities(),
                     loaded,
                     expectedManagedBlueIdsByPath);
             for (EffectiveContractSnapshot snapshot
@@ -161,6 +162,7 @@ final class ScopeFrameFactory {
                         runtime,
                         normalizedScope,
                         scope.resolved(),
+                        scope.canonicalTypeIdentities(),
                         loaded);
             }
             for (EffectiveContractSnapshot snapshot
