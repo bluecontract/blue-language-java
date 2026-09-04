@@ -150,6 +150,11 @@ final class RuntimeBlueResolution implements BlueResolution {
     }
 
     @Override
+    public Node resolveDefinition(Node source) {
+        return runtime.resolveDefinition(source);
+    }
+
+    @Override
     public BlueOperationResult<Node> resolveLimited(
             Node source,
             BlueOperationLimits limits) {

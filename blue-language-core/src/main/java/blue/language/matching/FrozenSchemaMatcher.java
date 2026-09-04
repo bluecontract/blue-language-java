@@ -2,11 +2,11 @@ package blue.language.matching;
 
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.identity.ScalarNodeIdentity;
+import blue.language.identity.EnumConstraintMembership;
+import blue.language.identity.ScalarConstraintPayload;
 import blue.language.model.Node;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
-import blue.language.model.value.BlueNumbers;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -149,23 +149,22 @@ final class FrozenSchemaMatcher {
 
     private boolean verifyMultipleOf(Schema schema, FrozenNode node) {
         BigDecimal multipleOf = schema.getMultipleOfValue();
-        Object value = node.getValue();
         if (multipleOf == null || !hasPayload(node)) {
             return true;
         }
-        return value instanceof Number
-                && BlueNumbers.isExactBinary64Multiple(value, multipleOf);
+        Number value = ScalarConstraintPayload.numericValue(
+                node.toNode(), canonicalTypeIdentities);
+        Number divisor = ScalarConstraintPayload.numericValue(
+                schema.getMultipleOf(), canonicalTypeIdentities);
+        return ScalarConstraintPayload.isMultipleOf(value, divisor);
     }
 
     private int compareNumber(FrozenNode node, BigDecimal bound) {
-        Object value = node.getValue();
         if (bound == null || !hasPayload(node)) {
             return 0;
         }
-        if (!(value instanceof Number)) {
-            throw new IllegalArgumentException(
-                    "numeric schema keyword applies to wrong kind");
-        }
+        Number value = ScalarConstraintPayload.numericValue(
+                node.toNode(), canonicalTypeIdentities);
         return numberValue(value).compareTo(bound);
     }
 
@@ -322,14 +321,10 @@ final class FrozenSchemaMatcher {
         if (node.getValue() == null) {
             return !hasPayload(node);
         }
-        String nodeBlueId = ScalarNodeIdentity.resolvedBlueId(
-                node.toNode(), canonicalTypeIdentities);
+        Node candidate = node.toNode();
         for (Node enumValue : enumValues) {
-            String enumBlueId = enumValue.isReferenceOnly()
-                    ? enumValue.getBlueId()
-                    : ScalarNodeIdentity.resolvedBlueId(
-                            enumValue, canonicalTypeIdentities);
-            if (nodeBlueId.equals(enumBlueId)) {
+            if (EnumConstraintMembership.matches(
+                    candidate, enumValue, canonicalTypeIdentities)) {
                 return true;
             }
         }

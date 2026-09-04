@@ -590,9 +590,14 @@ public final class BlueLanguageRuntime implements NodeResolver,
         return call(() -> {
             Node preprocessed = rawPreprocess(
                     Objects.requireNonNull(source, "source").clone());
-            return merger(nodeProvider).resolveSnapshot(
-                    preprocessed,
-                    NO_LIMITS).canonicalRoot().toNode();
+            if (preprocessed.isReferenceOnly()) {
+                return preprocessed;
+            }
+            TypeEvidenceResolution definition = merger(nodeProvider)
+                    .resolveTypeDeclarationEvidence(preprocessed, NO_LIMITS);
+            return new blue.language.identity.CanonicalIdentityInputBuilder().build(
+                    definition.resolvedRoot().toNode(), preprocessed,
+                    definition.canonicalTypeIdentities());
         });
     }
 
@@ -607,6 +612,12 @@ public final class BlueLanguageRuntime implements NodeResolver,
                 rawPreprocess(Objects.requireNonNull(
                         source, "source").clone()),
                 NO_LIMITS));
+    }
+
+    Node resolveDefinition(Node source) {
+        return call(() -> merger(nodeProvider).resolveTypeDeclarationEvidence(
+                rawPreprocess(Objects.requireNonNull(source, "source").clone()),
+                NO_LIMITS).resolvedRoot().toNode());
     }
 
     Node resolvePreservingPaths(
@@ -640,10 +651,13 @@ public final class BlueLanguageRuntime implements NodeResolver,
 
     Node minimize(Node source) {
         return call(() -> {
-            SnapshotResolution resolution =
-                    merger(nodeProvider).resolveSnapshot(
-                        rawPreprocess(Objects.requireNonNull(
-                                source, "source").clone()),
+            Node preprocessed = rawPreprocess(Objects.requireNonNull(source, "source").clone());
+            if (preprocessed.isReferenceOnly()) {
+                return preprocessed;
+            }
+            TypeEvidenceResolution resolution =
+                    merger(nodeProvider).resolveTypeDeclarationEvidence(
+                        preprocessed,
                         NO_LIMITS);
             return new MinimizedOverlayBuilder().build(
                     resolution.resolvedRoot(),
@@ -664,7 +678,7 @@ public final class BlueLanguageRuntime implements NodeResolver,
                     new Node().type(superType.clone()));
             blue.language.merge.TypeEvidenceResolution resolution =
                     merger(nodeProvider)
-                    .resolveTypeEvidence(
+                    .resolveTypeDeclarationEvidence(
                             rawPreprocess(request),
                             NO_LIMITS);
             Node completed = resolution.resolvedRoot().toNode();

@@ -48,12 +48,15 @@ public class TypeAssigner implements MergingProcessor {
              */
             if (!isSubtype
                     && isExactCoreReference(sourceType)) {
-                isSubtype = EffectiveTypeChecks.isSubtype(
+                boolean inheritedSubtype = EffectiveTypeChecks.isSubtype(
                         targetType,
                         sourceType,
                         nodeProvider,
                         nodeResolver,
                         typeIdentities);
+                if (inheritedSubtype) {
+                    return; // Primitive syntax supplies payload, not a wider declared type.
+                }
             }
             if (!isSubtype) {
                 String errorMessage = String.format("The source type '%s' is not a subtype of the target type '%s'.",

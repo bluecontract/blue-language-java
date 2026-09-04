@@ -16,8 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPES;
-
 /**
  * Tracks semantic presence and validates only values completed by the current
  * resolution invocation.
@@ -36,6 +34,8 @@ final class CompletedValueValidator {
     private Map<String, ValidationCandidate> candidates;
     private Map<String, PresenceGate> presenceGates;
     private Set<String> incompletePaths;
+    private final List<ValidationCandidate> definitionCandidates = new ArrayList<>();
+    private final Map<Node, ValidationCandidate> definitionsByNode = new IdentityHashMap<>();
 
     CompletedValueValidator(
             ResolutionEngine engine,
@@ -107,7 +107,28 @@ final class CompletedValueValidator {
 
     void observeCompletedPath(Node target, Node source, ResolutionLimits limits) {
         ResolutionEngine.ResolutionState state = engine.activeResolutionState();
-        if (state == null || state.contribution == ResolutionEngine.Contribution.TYPE_METADATA) {
+        if (state == null) {
+            return;
+        }
+
+        if (state.definitionGoal || state.contribution == ResolutionEngine.Contribution.TYPE_METADATA) {
+            boolean needsContent = source.isReferenceOnly()
+                    && referenceResolver.requiresReferenceContent(target);
+            if (mergingProcessor.hasCompletedValidation(target) || needsContent) {
+                ValidationCandidate candidate = definitionsByNode.get(target);
+                if (candidate == null) {
+                    candidate = new ValidationCandidate();
+                    candidate.node = target;
+                    candidate.definitionPath = currentPath(state);
+                    definitionsByNode.put(target, candidate);
+                    definitionCandidates.add(candidate);
+                }
+                if (needsContent) {
+                    candidate.pendingReferenceBlueId = source.getBlueId();
+                    candidate.pendingReferenceLimits = limits;
+                    candidate.complete = state.referenceExpansionAllowed;
+                }
+            }
             return;
         }
 
@@ -126,10 +147,6 @@ final class CompletedValueValidator {
                 referenceResolver.materializeReferenceAtCurrentPath(
                         target, source.getBlueId(), limits, state);
             }
-            return;
-        }
-
-        if (isRootInlineSchemaDeclaration(state, source)) {
             return;
         }
 
@@ -210,7 +227,7 @@ final class CompletedValueValidator {
             if (node.isReferenceOnly()
                     || node.getValue() != null
                     || node.getItems() != null
-                    || Nodes.isExactEmptyObject(node)) {
+                    || (node.getProperties() != null && node.getProperties().isEmpty())) {
                 return true;
             }
             if (node.getProperties() != null) {
@@ -252,53 +269,6 @@ final class CompletedValueValidator {
                 .findCanonicalTypeBlueId(sourceType)
                 .map(target.getBlueId()::equals)
                 .orElse(false);
-    }
-
-    private boolean hasConcretePayload(Node node) {
-        if (node == null) {
-            return false;
-        }
-        if (node.getValue() != null || node.getItems() != null) {
-            return true;
-        }
-        return Nodes.hasObjectPayload(node);
-    }
-
-    boolean isInlineTypeDeclaration(Node node) {
-        return node != null
-                && node.getType() != null
-                && !node.getType().isReferenceOnly()
-                && !isBareCoreTypeAlias(node.getType());
-    }
-
-    private boolean isBareCoreTypeAlias(Node type) {
-        if (type.isInlineValue()
-                && type.getValue() instanceof String
-                && CORE_TYPES.contains(type.getValue())) {
-            return true;
-        }
-        return type.getName() != null
-                && CORE_TYPES.contains(type.getName())
-                && type.getDescription() == null
-                && type.getType() == null
-                && type.getItemType() == null
-                && type.getKeyType() == null
-                && type.getValueType() == null
-                && type.getValue() == null
-                && type.getItems() == null
-                && (type.getProperties() == null || type.getProperties().isEmpty())
-                && type.getContracts() == null
-                && type.getSchema() == null
-                && type.getMergePolicy() == null
-                && type.getPreviousBlueId() == null
-                && type.getPosition() == null
-                && type.getBlue() == null;
-    }
-
-    private boolean isRootInlineSchemaDeclaration(ResolutionEngine.ResolutionState state, Node source) {
-        return state.path.isEmpty()
-                && state.rootInlineTypeDeclaration
-                && !hasConcretePayload(source);
     }
 
     private ValidationCandidate candidate(ResolutionEngine.ResolutionState state, String path) {
@@ -351,6 +321,30 @@ final class CompletedValueValidator {
     }
 
     void validateCompletedCandidates(ResolutionEngine.ResolutionState state) {
+        for (int index = 0; index < definitionCandidates.size(); index++) {
+            ValidationCandidate definition = definitionCandidates.get(index);
+            if (definition.complete && !isIncomplete(state, definition.definitionPath)) {
+                if (definition.pendingReferenceBlueId != null) {
+                    enterPath(state, definition.definitionPath);
+                    int segments = enterLimitPath(definition.pendingReferenceLimits,
+                            definition.definitionPath, definition.node);
+                    boolean previousGoal = state.definitionGoal;
+                    state.definitionGoal = true;
+                    try {
+                        referenceResolver.materializeReferenceAtCurrentPath(definition.node,
+                                definition.pendingReferenceBlueId, definition.pendingReferenceLimits, state);
+                    } finally {
+                        state.definitionGoal = previousGoal;
+                        exitLimitPath(definition.pendingReferenceLimits, segments);
+                        state.path.clear();
+                    }
+                }
+                mergingProcessor.validateDefinition(definition.node,
+                        hasDeclaredInstancePayload(definition.node,
+                                Collections.newSetFromMap(new IdentityHashMap<>())),
+                        definition.definitionPath, engine.canonicalTypeIdentities());
+            }
+        }
         if (candidates == null) {
             return;
         }
@@ -503,6 +497,7 @@ final class CompletedValueValidator {
     }
 
     private static final class ValidationCandidate {
+        private String definitionPath;
         private Node node;
         private boolean observed;
         private PresenceGate presence;

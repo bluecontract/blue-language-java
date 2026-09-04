@@ -151,7 +151,8 @@ public final class Merger implements NodeResolver {
      *
      * <p>The declaration is never treated as a runtime instance of itself, so
      * instance-field requirements contributed by the declaration or an inline
-     * parent are not applied to the metadata probe.</p>
+     * parent are retained for descendants. Vocabulary, known applicability,
+     * contradictions and supplied fixed payloads are still validated.</p>
      *
      * @param declaration preprocessed authored type declaration
      * @param limits invocation-scoped traversal and reference budget
@@ -172,8 +173,8 @@ public final class Merger implements NodeResolver {
      * Materializes one pure type reference as declaration metadata rather
      * than as an instance of that type.
      *
-     * <p>Required-field and other instance-schema checks therefore do not run
-     * against the type declaration itself. The returned evidence is produced
+     * <p>Missing instance payload obligations are deferred, while supplied fixed
+     * content and known constraints are validated. The returned evidence is produced
      * by the same resolver invocation that materialized the declaration.</p>
      *
      * @param reference pure verified type reference

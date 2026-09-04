@@ -1,6 +1,7 @@
 package blue.language.model;
 
 import blue.language.model.wire.BlueLanguageConstants;
+import blue.language.model.value.BlueNumbers;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -92,6 +93,7 @@ public final class SchemaWireForm {
     private static boolean isPlainScalar(Node node) {
         return node != null
                 && node.getValue() != null
+                && isInteroperableScalar(node.getValue())
                 && node.getName() == null
                 && node.getDescription() == null
                 && isImplicitScalarType(
@@ -108,6 +110,17 @@ public final class SchemaWireForm {
                 && node.getPreviousBlueId() == null
                 && node.getPosition() == null
                 && node.getBlue() == null;
+    }
+
+    private static boolean isInteroperableScalar(Object value) {
+        if (!(value instanceof BigInteger)) {
+            return true;
+        }
+        BigInteger integer = (BigInteger) value;
+        // Large Integers require their explicit type when the wire value is
+        // quoted; plain schema sugar would turn the constraint into Text.
+        return integer.compareTo(BlueNumbers.MIN_INTEROPERABLE_INTEGER) >= 0
+                && integer.compareTo(BlueNumbers.MAX_INTEROPERABLE_INTEGER) <= 0;
     }
 
     private static boolean isImplicitScalarType(

@@ -1,6 +1,7 @@
 package blue.language.merge;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.resolve.ResolutionLimits;
 
@@ -38,7 +39,16 @@ final class SchemaValueTypeResolver {
         if (schema.getEnum() != null) {
             List<Node> resolvedEnum = new ArrayList<>(schema.getEnum().size());
             for (Node value : schema.getEnum()) {
-                resolvedEnum.add(resolveValue(value, limits));
+                if (!Nodes.isSchemaEnumValue(value)) {
+                    throw new IllegalArgumentException(
+                            "Schema enum entries must be scalar values, explicit type/value nodes, or pure references.");
+                }
+                Node completed = resolveValue(value, limits);
+                // Type contributions may add schema and labels. They are
+                // validated during completion, but are not enum value syntax.
+                resolvedEnum.add(completed.isReferenceOnly() ? completed
+                        : new Node().type(completed.getType())
+                                .value(completed.getRawValue()));
             }
             schema.enumValues(resolvedEnum);
         }

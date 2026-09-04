@@ -11,8 +11,8 @@ import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.model.value.BlueNumbers;
-import blue.language.identity.ScalarNodeIdentity;
+import blue.language.identity.ScalarConstraintPayload;
+import blue.language.identity.EnumConstraintMembership;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -24,6 +24,9 @@ import java.util.Set;
 
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID;
 import static blue.language.model.wire.BlueLanguageConstants.DICTIONARY_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
+import static blue.language.model.wire.BlueLanguageConstants.DOUBLE_TYPE_BLUE_ID;
+import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID;
 import static blue.language.model.wire.SchemaPropertyConstants.*;
 import static java.lang.Boolean.TRUE;
 
@@ -64,6 +67,104 @@ public class SchemaVerifier implements MergingProcessor {
             return;
 
         verifyWellFormed(schema);
+        verifyDeclaredApplicability(schema, target, nodeProvider, nodeResolver, typeIdentities);
+    }
+
+    private void verifyDeclaredApplicability(Schema schema, Node node,
+                                            NodeProvider provider, NodeResolver resolver,
+                                            CanonicalTypeIdentityLookup identities) {
+        Node type = node.getType();
+        if (type == null) {
+            return;
+        }
+        boolean scalar = EffectiveTypeChecks.isSubtypeOfBasicType(type, provider, resolver, identities);
+        boolean list = EffectiveTypeChecks.isListType(type, provider, resolver, identities);
+        boolean object = EffectiveTypeChecks.isDictionaryType(type, provider, resolver, identities);
+        if (!scalar && !list && !object) {
+            return; // No known primitive domain: retain the obligation.
+        }
+        if ((schema.getMinLength() != null || schema.getMaxLength() != null)
+                && !EffectiveTypeChecks.isTextType(type, provider, resolver, identities)) {
+            throw wrongKind("minLength/maxLength", "Text domain", node);
+        }
+        if ((schema.getMinimum() != null || schema.getMaximum() != null
+                || schema.getExclusiveMinimum() != null || schema.getExclusiveMaximum() != null
+                || schema.getMultipleOf() != null)
+                && !EffectiveTypeChecks.isNumberType(type, provider, resolver, identities)
+                && !EffectiveTypeChecks.isIntegerType(type, provider, resolver, identities)) {
+            throw wrongKind("numeric constraint", "numeric domain", node);
+        }
+        if ((schema.getMinItems() != null || schema.getMaxItems() != null
+                || schema.getUniqueItems() != null) && !list) {
+            throw wrongKind("list constraint", "List domain", node);
+        }
+        if ((schema.getMinFields() != null || schema.getMaxFields() != null) && !object) {
+            throw wrongKind("field constraint", "Dictionary domain", node);
+        }
+        if (schema.getEnum() != null && !scalar) {
+            throw wrongKind(KEY_ENUM, "scalar domain", node);
+        }
+        verifyKnownEnumDomainCompatibility(schema, node, identities);
+    }
+
+    private void verifyKnownEnumDomainCompatibility(
+            Schema schema, Node node, CanonicalTypeIdentityLookup identities) {
+        if (schema.getEnum() == null) {
+            return;
+        }
+        String declared = knownPrimitiveDomain(node.getType(), identities);
+        if (declared == null) {
+            return;
+        }
+        for (Node entry : schema.getEnum()) {
+            if (entry.isReferenceOnly()) {
+                return; // Opaque value evidence is not fetched for this check.
+            }
+            String entryDomain = entry.getType() == null
+                    ? inferredPrimitiveDomain(entry.getValue())
+                    : knownPrimitiveDomain(entry.getType(), identities);
+            if (entryDomain == null || declared.equals(entryDomain)) {
+                return;
+            }
+        }
+        throw new IllegalArgumentException(
+                "Schema enum has no entry compatible with the declared scalar domain.");
+    }
+
+    private String knownPrimitiveDomain(
+            Node type, CanonicalTypeIdentityLookup identities) {
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
+        while (type != null && visited.add(type)) {
+            String id = type.isReferenceOnly() ? type.getBlueId()
+                    : identities.findCanonicalTypeBlueId(type).orElse(null);
+            if (id == null) {
+                return null;
+            }
+            if (CORE_TYPE_BLUE_IDS.contains(id)) {
+                return id;
+            }
+            if (type.isReferenceOnly()) {
+                return null;
+            }
+            type = type.getType();
+        }
+        return null;
+    }
+
+    private String inferredPrimitiveDomain(Object value) {
+        if (value instanceof String) {
+            return BlueLanguageConstants.TEXT_TYPE_BLUE_ID;
+        }
+        if (value instanceof BigInteger) {
+            return INTEGER_TYPE_BLUE_ID;
+        }
+        if (value instanceof BigDecimal) {
+            return DOUBLE_TYPE_BLUE_ID;
+        }
+        if (value instanceof Boolean) {
+            return BlueLanguageConstants.BOOLEAN_TYPE_BLUE_ID;
+        }
+        return null;
     }
 
     @Override
@@ -123,11 +224,11 @@ public class SchemaVerifier implements MergingProcessor {
         }
         verifyMinLength(schema.getMinLengthExact(), target);
         verifyMaxLength(schema.getMaxLengthExact(), target);
-        verifyMinimum(schema.getMinimumValue(), target);
-        verifyMaximum(schema.getMaximumValue(), target);
-        verifyExclusiveMinimum(schema.getExclusiveMinimumValue(), target);
-        verifyExclusiveMaximum(schema.getExclusiveMaximumValue(), target);
-        verifyMultipleOf(schema.getMultipleOfValue(), target);
+        verifyMinimum(schema.getMinimumValue(), target, typeIdentities);
+        verifyMaximum(schema.getMaximumValue(), target, typeIdentities);
+        verifyExclusiveMinimum(schema.getExclusiveMinimumValue(), target, typeIdentities);
+        verifyExclusiveMaximum(schema.getExclusiveMaximumValue(), target, typeIdentities);
+        verifyMultipleOf(schema.getMultipleOfValue(), schema.getMultipleOf(), target, typeIdentities);
         verifyMinItems(schema.getMinItemsExact(), target);
         verifyMaxItems(schema.getMaxItemsExact(), target);
         verifyUniqueItems(
@@ -154,6 +255,9 @@ public class SchemaVerifier implements MergingProcessor {
     }
 
     private void verifyWellFormed(Schema schema) {
+        if (schema.getEnum() != null && schema.getEnum().isEmpty()) {
+            throw new IllegalArgumentException("Schema enum has no allowed values.");
+        }
         verifyNonNegative(KEY_MIN_LENGTH, schema.getMinLengthExact());
         verifyNonNegative(KEY_MAX_LENGTH, schema.getMaxLengthExact());
         verifyMinLessThanOrEqualMax(
@@ -248,11 +352,12 @@ public class SchemaVerifier implements MergingProcessor {
         return value.codePointCount(0, value.length());
     }
 
-    private void verifyMinimum(BigDecimal minimum, Node node) {
+    private void verifyMinimum(BigDecimal minimum, Node node,
+                               CanonicalTypeIdentityLookup typeIdentities) {
         if (minimum == null) {
             return;
         }
-        Object value = requireScalarPayload(KEY_MINIMUM, node, Number.class, "numeric scalar");
+        Number value = requireNumericPayload(KEY_MINIMUM, node, typeIdentities);
         if (value == null) {
             return;
         }
@@ -262,11 +367,12 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyMaximum(BigDecimal maximum, Node node) {
+    private void verifyMaximum(BigDecimal maximum, Node node,
+                               CanonicalTypeIdentityLookup typeIdentities) {
         if (maximum == null) {
             return;
         }
-        Object value = requireScalarPayload(KEY_MAXIMUM, node, Number.class, "numeric scalar");
+        Number value = requireNumericPayload(KEY_MAXIMUM, node, typeIdentities);
         if (value == null) {
             return;
         }
@@ -276,12 +382,12 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyExclusiveMinimum(BigDecimal exclusiveMinimum, Node node) {
+    private void verifyExclusiveMinimum(BigDecimal exclusiveMinimum, Node node,
+                                        CanonicalTypeIdentityLookup typeIdentities) {
         if (exclusiveMinimum == null) {
             return;
         }
-        Object value = requireScalarPayload(
-                KEY_EXCLUSIVE_MINIMUM, node, Number.class, "numeric scalar");
+        Number value = requireNumericPayload(KEY_EXCLUSIVE_MINIMUM, node, typeIdentities);
         if (value == null) {
             return;
         }
@@ -291,12 +397,12 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyExclusiveMaximum(BigDecimal exclusiveMaximum, Node node) {
+    private void verifyExclusiveMaximum(BigDecimal exclusiveMaximum, Node node,
+                                        CanonicalTypeIdentityLookup typeIdentities) {
         if (exclusiveMaximum == null) {
             return;
         }
-        Object value = requireScalarPayload(
-                KEY_EXCLUSIVE_MAXIMUM, node, Number.class, "numeric scalar");
+        Number value = requireNumericPayload(KEY_EXCLUSIVE_MAXIMUM, node, typeIdentities);
         if (value == null) {
             return;
         }
@@ -306,15 +412,17 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyMultipleOf(BigDecimal multipleOf, Node node) {
+    private void verifyMultipleOf(BigDecimal multipleOf, Node constraint, Node node,
+                                  CanonicalTypeIdentityLookup typeIdentities) {
         if (multipleOf == null) {
             return;
         }
-        Object value = requireScalarPayload(KEY_MULTIPLE_OF, node, Number.class, "numeric scalar");
+        Number value = requireNumericPayload(KEY_MULTIPLE_OF, node, typeIdentities);
         if (value == null) {
             return;
         }
-        if (!BlueNumbers.isExactBinary64Multiple(value, multipleOf)) {
+        Number divisor = requireNumericPayload(KEY_MULTIPLE_OF, constraint, typeIdentities);
+        if (!ScalarConstraintPayload.isMultipleOf(value, divisor)) {
             throw new IllegalArgumentException("Value " + value + " is not a multiple of " + multipleOf + ".");
         }
     }
@@ -490,14 +598,9 @@ public class SchemaVerifier implements MergingProcessor {
             throw wrongKind(KEY_ENUM, "scalar", node);
         }
 
-        String nodeBlueId = ScalarNodeIdentity.resolvedBlueId(
-                node, typeIdentities);
         boolean matched = enumValues.stream()
-                .map(enumValue -> enumValue.isReferenceOnly()
-                        ? enumValue.getBlueId()
-                        : ScalarNodeIdentity.resolvedBlueId(
-                                enumValue, typeIdentities))
-                .anyMatch(nodeBlueId::equals);
+                .anyMatch(enumValue -> EnumConstraintMembership.matches(
+                        node, enumValue, typeIdentities));
         if (!matched) {
             throw new IllegalArgumentException("Node value is not one of the allowed enum values.");
         }
@@ -509,6 +612,15 @@ public class SchemaVerifier implements MergingProcessor {
             throw wrongKind(keyword, expected, node);
         }
         return value;
+    }
+
+    private Number requireNumericPayload(String keyword, Node node,
+                                         CanonicalTypeIdentityLookup typeIdentities) {
+        try {
+            return ScalarConstraintPayload.numericValue(node, typeIdentities);
+        } catch (IllegalArgumentException wrongKind) {
+            throw wrongKind(keyword, "numeric scalar", node);
+        }
     }
 
     private void requireListPayload(String keyword, Node node) {

@@ -1,0 +1,35 @@
+build/test-results/test
+blue.language.BlueIdentityAndSpecializationTest	6	0	0	1.536
+blue.language.EmptyObjectCandidateConformanceTest	15	0	0	0.264
+blue.language.ExactEmptyObjectSemanticsTest	15	0	0	0.194
+blue.language.NodeDeserializerTest	54	0	0	0.232
+blue.language.ResolvedInstanceSchemaValidationTest	37	0	0	1.324
+blue.language.ResolvedSchemaValidationLifecycleTest	13	0	0	0.621
+blue.language.RootReferenceSnapshotTest	10	0	0	0.232
+blue.language.RootSchemaPayloadKindTest	11	0	0	0.056
+blue.language.SchemaVerifierMinLengthTest	7	0	0	0.049
+blue.language.SchemaVerifierTest	43	0	0	0.152
+blue.language.identity.EnumConstraintMembershipTest	20	0	0	0.56
+blue.language.identity.SchemaEnumCanonicalizerTest	6	0	0	0.023
+blue.language.matching.FrozenSchemaMatcherTest	7	0	0	0.04
+TOTAL 244 0 0 5.283
+blue-language-core/build/test-results/test
+blue.language.conformance.BasicScalarPayloadKindTest	4	0	0	1.098
+blue.language.conformance.ConformanceEngineInlineParentIdentityTest	1	0	0	0.071
+blue.language.conformance.InheritedScalarConformanceTest	5	0	0	0.258
+blue.language.identity.CanonicalIdentityInputReconstructorTest	12	0	0	0.088
+blue.language.identity.CanonicalTypeIdentityEvidenceTest	4	0	0	0.015
+blue.language.matching.FrozenTypeIdentityParityTest	8	0	0	0.075
+blue.language.matching.NodeTypeMatcherLimitedResolutionTest	1	0	0	0.005
+blue.language.merge.CanonicalIdentityProvenanceFailClosedTest	14	0	0	0.217
+blue.language.merge.CompletedValueValidatorPresenceTest	4	0	0	0.439
+blue.language.merge.ListOverlayCanonicalIdentityParityTest	3	0	0	0.193
+blue.language.resolve.MinimizedOverlayCanonicalIdentityParityTest	3	0	0	0.012
+blue.language.runtime.DefinitionPresenceContractTest	7	0	0	0.382
+blue.language.runtime.DefinitionReferenceValidationTest	4	0	0	0.28
+blue.language.runtime.DefinitionValidationTest	2	0	0	0.047
+blue.language.runtime.GenderDefinitionLifecycleTest	7	0	0	0.742
+TOTAL 79 0 0 3.922
+blue-language-model/build/test-results/test
+blue.language.model.wire.BlueLanguageConstantsTest	3	0	0	0.056
+TOTAL 3 0 0 0.056

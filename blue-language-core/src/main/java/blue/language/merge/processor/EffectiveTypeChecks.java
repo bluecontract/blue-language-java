@@ -311,9 +311,11 @@ final class EffectiveTypeChecks {
                 continue;
             }
             TypeEvidenceResolution proof = nodeResolver.resolveTypeEvidence(
-                    new Node().type(type.clone()),
+                    new Node().type(new Node().blueId(
+                            blue.language.model.wire.BlueLanguageConstants.LIST_TYPE_BLUE_ID))
+                            .itemType(type.clone()),
                     ResolutionLimits.NO_LIMITS);
-            Node provenType = proof.resolvedRoot().getType().toNode();
+            Node provenType = proof.resolvedRoot().getItemType().toNode();
             CanonicalTypeIdentityLookup provenIdentities = Objects.requireNonNull(
                     proof.canonicalTypeIdentities(),
                     "canonicalTypeIdentities");

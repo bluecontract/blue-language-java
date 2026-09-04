@@ -24,6 +24,9 @@ public interface BlueIdentity {
 
     /**
      * Calculates a BlueId through the complete Source Document identity path.
+     * Definition preparation checks fixed payloads and retains deferred schema
+     * obligations. Success establishes identity, not completed-value conformance;
+     * use {@code BlueResolution.resolve} to certify an instance.
      *
      * @param sourceDocument authored Source Document
      * @return canonical Base58 SHA-256 BlueId
@@ -32,6 +35,8 @@ public interface BlueIdentity {
 
     /**
      * Produces the unique direct identity input for a Source Document.
+     * Definitions without sample payloads are accepted when their currently
+     * evaluable constraints are valid. No validation goal enters this content.
      *
      * @param sourceDocument authored Source Document
      * @return canonical direct BlueId input

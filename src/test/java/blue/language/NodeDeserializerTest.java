@@ -16,6 +16,7 @@ import blue.language.model.Node;
 import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.identity.BlueIdReferenceValidator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -723,8 +724,6 @@ public class NodeDeserializerTest {
                 "schema:\n  enum:\n    - null",
                 "schema:\n  enum:\n    - {}",
                 "schema:\n  enum:\n    - $empty: true",
-                "schema:\n  enum:\n    - blueId: abc",
-                "schema:\n  enum:\n    - blueId: this#0",
                 "schema:\n  enum:\n    - value: 1\n      contracts: {}",
                 "schema:\n  enum:\n    - name: one\n      value: 1",
                 "schema:\n  enum:\n    - value: 1\n      schema:\n        minimum: 0",
@@ -753,6 +752,16 @@ public class NodeDeserializerTest {
         assertEquals(new BigInteger("9007199254740992"), node.getSchema().getMinimum().getValue());
         assertEquals(new BigInteger("9007199254740991"), safeLargeCount.getSchema().getMinItems().getValue());
         assertEquals(new BigInteger("9007199254740992"), enumNode.getSchema().getEnum().get(0).getValue());
+    }
+
+    @Test
+    public void shouldValidateEnumReferenceSyntaxAtTheExactReferenceBoundary() {
+        for (String id : new String[]{"abc", "this#0"}) {
+            Node parsed = YAML_MAPPER.readValue("schema:\n  enum:\n    - blueId: " + id, Node.class);
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> BlueIdReferenceValidator.validate(parsed));
+            assertTrue(failure.getMessage().contains("/schema/enum/0/blueId"));
+        }
     }
 
     @Test

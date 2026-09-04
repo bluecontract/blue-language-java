@@ -21,6 +21,7 @@ import static blue.language.model.wire.BlueLanguageConstants.OBJECT_ITEM_TYPE;
 import static blue.language.model.wire.BlueLanguageConstants.OBJECT_KEY_TYPE;
 import static blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE;
 import static blue.language.model.wire.BlueLanguageConstants.OBJECT_VALUE_TYPE;
+import static blue.language.model.wire.BlueLanguageConstants.CORE_TYPE_BLUE_IDS;
 
 /** Reconstructs unique direct identity input from resolution and provenance. */
 final class CanonicalIdentityInputReconstructor {
@@ -324,19 +325,52 @@ final class CanonicalIdentityInputReconstructor {
         if (resolvedType == null) {
             return;
         }
+        String inheritedTypeBlueId = inheritedType != null
+                ? effectiveTypeBlueId(inheritedType, "inherited " + fieldName)
+                : null;
+        Node authoredType = source != null ? getter.apply(source) : null;
+        if (inheritedTypeBlueId != null
+                && isInheritedPrimitiveContribution(
+                        resolvedType, authoredType, inheritedTypeBlueId)) {
+            return;
+        }
         String resolvedTypeBlueId = effectiveTypeBlueId(
                 resolvedType,
-                source != null ? getter.apply(source) : null,
+                authoredType,
                 fieldName);
-        if (inheritedType != null) {
-            String inheritedTypeBlueId = effectiveTypeBlueId(
-                    inheritedType, "inherited " + fieldName);
+        if (inheritedTypeBlueId != null) {
             if (resolvedTypeBlueId.equals(inheritedTypeBlueId)) {
                 return;
             }
         }
         setter.accept(canonical, pureTypeReference(
                 resolvedTypeBlueId, fieldName));
+    }
+
+    private boolean isInheritedPrimitiveContribution(
+            Node resolvedType, Node authoredType, String inheritedTypeBlueId) {
+        if (authoredType == null || !authoredType.isReferenceOnly()
+                || !CORE_TYPE_BLUE_IDS.contains(authoredType.getBlueId())
+                || !typeIdentities.findCanonicalTypeIdentityEvidence(
+                        resolvedType, new Node().blueId(inheritedTypeBlueId)).isPresent()) {
+            return false;
+        }
+        // Primitive inference contributes a payload to the retained inherited
+        // type. Its core reference is not the authored source of that custom
+        // type; select the proven inherited identity only when ancestry agrees.
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
+        Node current = resolvedType;
+        String currentBlueId = inheritedTypeBlueId;
+        while (current != null && visited.add(current)) {
+            if (authoredType.getBlueId().equals(currentBlueId)) {
+                return true;
+            }
+            current = current.getType();
+            if (current != null) {
+                currentBlueId = effectiveTypeBlueId(current, "primitive contribution ancestor");
+            }
+        }
+        return false;
     }
 
     private void preservePayloadTypeForMetadataOverride(

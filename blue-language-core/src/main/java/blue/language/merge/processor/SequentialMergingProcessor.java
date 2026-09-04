@@ -94,6 +94,16 @@ public class SequentialMergingProcessor implements MergingProcessor, Incremental
         }
     }
 
+    @Override
+    public void validateDefinition(Node node, boolean hasFixedPayload,
+                                   String path, CanonicalTypeIdentityLookup typeIdentities) {
+        for (MergingProcessor processor : mergingProcessors) {
+            if (processor.hasCompletedValidation(node)) {
+                processor.validateDefinition(node, hasFixedPayload, path, typeIdentities);
+            }
+        }
+    }
+
     /**
      * The built-in processor sequence has path-local behavior that the
      * patch-impact analyzer understands. A subclass or a sequence with any

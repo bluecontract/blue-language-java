@@ -66,17 +66,10 @@ final class TypeMetadataResolver {
         if (activeTypeStack.isMaterializing(typeBlueId)) {
             return new Node().blueId(typeBlueId);
         }
-        FrozenNode cached = referenceResolver.cachedResolvedReference(
-                typeBlueId, limits);
-        if (cached != null) {
-            Node resolved = cached.toNode();
-            if (resolved.getBlueId() == null) {
-                resolved.blueId(typeBlueId);
-            }
-            identityRecorder.recordCompleted(
-                    identityIndex, resolved, null, typeBlueId);
-            return resolved;
-        }
+        // A resolved cache entry proves identity, not this invocation's
+        // definition validation. Replay the exact canonical declaration (which
+        // can still come from the canonical cache) so fixed-content candidates
+        // and their deferred reference obligations cannot disappear on a hit.
         ActiveTypeStack.Token key = activeTypeStack.token(
                 typeBlueId, engine.activeResolutionState().path.size());
         activeTypeStack.begin(key);

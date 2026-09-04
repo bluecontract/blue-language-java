@@ -6,6 +6,7 @@ import blue.language.api.BlueOperationLimits;
 import blue.language.api.BlueOperationResult;
 import blue.language.api.BlueViewPath;
 import blue.language.provider.NodeProvider;
+import blue.language.provider.ProviderUnavailableException;
 
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
@@ -97,7 +98,7 @@ final class LanguageRuntimeLimitedResolution {
                 }
                 if (result.outcome()
                         == NodeProviderOutcome.UNAVAILABLE) {
-                    throw new IllegalStateException(
+                    throw new ProviderUnavailableException(blueId,
                             result.diagnostic().orElse(
                                     "Provider unavailable for " + blueId));
                 }
@@ -124,6 +125,19 @@ final class LanguageRuntimeLimitedResolution {
     private static BlueOperationResult<Node> classifyFailure(
             RuntimeException failure,
             ReferenceBudget budget) {
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ProviderUnavailableException) {
+                ProviderUnavailableException unavailable =
+                        (ProviderUnavailableException) cause;
+                unavailable.requiredExactBlueId().ifPresent(
+                        budget.outstandingBlueIds::add);
+                return BlueOperationResult.incomplete(
+                        null,
+                        budget.outstandingBlueIds,
+                        NodeProviderOutcome.UNAVAILABLE,
+                        failure.getMessage());
+            }
+        }
         BlueLanguageErrorCategory category =
                 BlueLanguageErrorClassifier.classify(failure);
         if (category == BlueLanguageErrorCategory.ProviderUnavailable) {

@@ -11,11 +11,29 @@ public interface BlueResolution {
 
     /**
      * Resolves a Source Document completely.
+     * Enforces completed-value presence and payload obligations regardless of
+     * inline/reference spelling. Use {@link #resolveDefinition(Node)} when
+     * preparing a declaration with obligations for future instances.
      *
      * @param source authored Source Document
      * @return completely resolved value
      */
     Node resolve(Node source);
+
+    /**
+     * Prepares a definition, checking fixed content and known constraints while
+     * retaining obligations that require a future instance payload. The returned
+     * graph is not a completed-value certificate. Neither this goal nor a sample
+     * payload is added to content or identity. The caller's source is unchanged.
+     *
+     * @param source authored definition, including optional imports
+     * @return resolved definition with retained schema obligations
+     * @throws UnsupportedOperationException if an alternate implementation
+     *         does not support definition preparation
+     */
+    default Node resolveDefinition(Node source) {
+        throw new UnsupportedOperationException("Definition preparation is not supported");
+    }
 
     /**
      * Resolves demanded content without conflating incomplete with absent.
@@ -39,6 +57,7 @@ public interface BlueResolution {
 
     /**
      * Produces an ordinary smaller Source overlay with the same meaning.
+     * Uses definition preparation; it is not a completed-value certificate.
      *
      * @param source authored Source Document
      * @return minimized Source overlay

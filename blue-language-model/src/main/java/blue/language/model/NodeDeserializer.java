@@ -568,7 +568,7 @@ public class NodeDeserializer extends StdDeserializer<Node> {
             throw new IllegalArgumentException("\"schema.enum\" entries must be scalar values or explicit scalar nodes. Path: " + path);
         }
         Node enumNode = handleNode(value, path, false);
-        if (!isExplicitSchemaScalar(enumNode, true)) {
+        if (!Nodes.isSchemaEnumValue(enumNode)) {
             throw new IllegalArgumentException("\"schema.enum\" entries must be scalar values or explicit scalar nodes. Path: " + path);
         }
     }

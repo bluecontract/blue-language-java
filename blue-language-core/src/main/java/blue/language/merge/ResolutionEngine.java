@@ -303,8 +303,6 @@ final class ResolutionEngine implements NodeResolver {
             InlineTypeCycleValidator.validate(source);
             state = new ResolutionState(
                     resolutionSession.canonicalTypeIdentityIndex());
-            state.rootInlineTypeDeclaration = completedValueValidator
-                    .isInlineTypeDeclaration(source);
             state.rootSource = source;
             resolutionSession.begin(state);
         }
@@ -594,6 +592,7 @@ final class ResolutionEngine implements NodeResolver {
         ResolutionState state = activeResolutionState();
         Contribution previous = state.contribution;
         state.contribution = previous == Contribution.MATERIALIZED_REFERENCE
+                || previous == Contribution.TYPE_METADATA
                 ? previous
                 : Contribution.CONTRACT_ROOT;
         try {
@@ -702,10 +701,9 @@ final class ResolutionEngine implements NodeResolver {
             BlueIdReferenceValidator.validate(node);
             state = new ResolutionState(
                     resolutionSession.canonicalTypeIdentityIndex());
-            state.rootInlineTypeDeclaration = completedValueValidator
-                    .isInlineTypeDeclaration(node);
             state.rootSource = node;
             state.contribution = rootContribution;
+            state.definitionGoal = rootContribution == Contribution.TYPE_METADATA;
             resolutionSession.begin(state);
         }
         try {
@@ -786,7 +784,7 @@ final class ResolutionEngine implements NodeResolver {
         final Map<Node, String> completedTypeMaterializations =
                 new IdentityHashMap<>();
         long incompleteTraversalEpoch;
-        boolean rootInlineTypeDeclaration;
+        boolean definitionGoal;
         Node rootSource;
 
         ResolutionState(

@@ -82,4 +82,21 @@ public interface MergingProcessor {
             CanonicalTypeIdentityLookup typeIdentities) {
         // default implementation
     }
+
+    /**
+     * Validates fixed content in a definition after its contributions merge.
+     * Declaration-only paths retain their instance obligations. Implementations
+     * must check vocabulary and known applicability during post-processing.
+     *
+     * @param node resolved declaration
+     * @param hasFixedPayload whether this path contains fixed instance content
+     * @param path RFC 6901 declaration path
+     * @param typeIdentities resolver-issued effective type identities
+     */
+    default void validateDefinition(Node node, boolean hasFixedPayload,
+                                    String path, CanonicalTypeIdentityLookup typeIdentities) {
+        if (hasFixedPayload) {
+            validateCompleted(node, true, path, typeIdentities);
+        }
+    }
 }

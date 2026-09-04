@@ -93,8 +93,10 @@ public final class SchemaEnumCanonicalizer {
     }
 
     /**
-     * Returns the collision-free canonical identity key used for enum set
-     * membership.
+     * Returns the collision-free canonical identity key used to normalize
+     * enum declarations. Constraint membership is evaluated separately by
+     * {@link EnumConstraintMembership}; subtype overlap does not erase an
+     * explicitly declared custom type from source identity.
      *
      * <p>This string is for equality only. Ordering always compares the
      * underlying unsigned UTF-8 bytes. Inline scalar types require
