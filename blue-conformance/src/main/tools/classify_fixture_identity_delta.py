@@ -52,7 +52,11 @@ INVOCATION_FIELDS = frozenset(
         "publicEventsIdentity",
         "commitCompanionIdentity",
         "companionIdentity",
+        "emittedRootEventsIdentity",
+        "managedTransitionReceiptsIdentity",
         "rejectedChargeIdentity",
+        "sourceInvocationIdentity",
+        "transitionReceiptIdentity",
     }
 )
 TRACE_FIELDS = frozenset(
@@ -65,8 +69,10 @@ TRACE_FIELDS = frozenset(
         "workIdentity",
         "eventOccurrenceId",
         "eventOccurrenceIdentity",
+        "occurrenceIdentity",
         "rootEventOccurrenceId",
         "sourceOccurrenceIdentity",
+        "transitionOccurrenceIdentity",
     }
 )
 ADMISSION_CONTEXT_FIELDS = frozenset(
@@ -83,6 +89,9 @@ SPEC_FIELDS = frozenset(
         "oraclePackageIdentity",
         "contractsReleaseIdentity",
         "contractsSpecificationIdentity",
+        "blueLanguageSpecificationIdentity",
+        "cyclicFinalizerIdentity",
+        "cyclicProofVerifierIdentity",
     }
 )
 
@@ -92,35 +101,35 @@ SPEC_FIELDS = frozenset(
 # stricter than accepting a filename prefix: changing status, gas, events,
 # checkpoints, or any other fixture evidence requires a new reviewed release.
 APPROVED_CEVO_FIXTURE_IDENTITIES = {
-    "fixtures/evo/c-evo-01.yaml": "2293214b979464fd87b251618d0462b75f3d661f1f8355e226ff7907836dca9d",
-    "fixtures/evo/c-evo-02.yaml": "74110197e82cca10f6d86c55400f0c1035766147c0ac8f8258db3a8a41a19567",
-    "fixtures/evo/c-evo-03.yaml": "67f70bbedae84635fc2dba0b7cba2a60bd8879c7cb65d6a7c69004475c886eea",
-    "fixtures/evo/c-evo-04.yaml": "bc91496f2d3a29d138abf4afcf9fe90238e5f517ee5c1584bac2731557b05468",
-    "fixtures/evo/c-evo-05.yaml": "7aba7f8ba014e239b870e31f83c3b2d54e39aac57b36475ea650cfc0c22fc82d",
-    "fixtures/evo/c-evo-06.yaml": "fccb64da8809682b03a8372003d1387ea3bdb9c0141beaf85302d1f29c736213",
-    "fixtures/evo/c-evo-07-checkpoint.yaml": "529e71f3ef49ef32d97bc545c38db7cbd57864f8fc2f5d9efc8267cc3962f9b2",
-    "fixtures/evo/c-evo-07-initialized.yaml": "8af8736373932c52d909a8b35159c7547cc5349e86baefb0e4b561364cf5e7da",
-    "fixtures/evo/c-evo-07-terminated.yaml": "3f759bd7c88de3c67484e8590288d0ad3c7c0f49c4a48b9ad3b88c7584649826",
-    "fixtures/evo/c-evo-08.yaml": "76bb22a18cd04482337e78b55be1eb9921141c36bfa3c45c12b50c2247164d54",
-    "fixtures/evo/c-evo-09.yaml": "8f560a0734caf915c85634844a8741f13a56525907c33dd205c6e28c6d45e26d",
-    "fixtures/evo/c-evo-10.yaml": "dc7ab97a8e56476534f64fb050ed0c74677fb77e93a2cbde7901ba796cc3e8d0",
-    "fixtures/evo/c-evo-14.yaml": "87169a55b0b4c14b10c0acfc607785e5500ae17447dec41355b21fcdf40c01cf",
-    "fixtures/evo/c-evo-15.yaml": "54d63b6c727bedce7d8882be24e8283d0ed7b18aef19736cb518b394c75f8cc1",
-    "fixtures/evo/c-evo-16.yaml": "b1752e7211108d89b9b1780a63c3146860bec1ca6f04a0faf86690885f4c265f",
-    "fixtures/evo/c-evo-17.yaml": "4043e7894b6568bedd0c932a8501defcce98d79d9ee39f516dbf883ee774b09a",
-    "fixtures/closure/c-evo-18-missing-exact-node.yaml": "02217cbae4dc66e755e58476c0d9fbe30ff885afd88650ddbfb3434a5233f463",
-    "fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml": "2c4462a4e6d4b95d13fda4862e892bcd15d147484d9a99311f80e7ab3c2b5295",
-    "fixtures/closure/c-evo-20-canonical-demand-order.yaml": "2243eaacca9254af004c01616381856241b1b3cc95e0dc4abfa9691666856063",
-    "fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml": "5e68a95bb266ab547f2bc108d46e93e39f23dd7d78cee5b568f40f7c6659c742",
-    "fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml": "48e8537ee92f514e50f72b3cb14555dec471129d6904d3f788d7795825da6c02",
-    "fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml": "257604b22e5b756376d6910dfec9432901ce77dcafbcf05188b037e22fafd558",
-    "fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml": "45ead3c1e0430c0891c9a31d3f09e50944f4577c0a5e3506a02c995f3fd77e82",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml": "0c3187976a9f7fa87f0c67a9ca805618889f016aed087baa7a4dabea48f499f7",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml": "71b9264c20bae63200cff67a49b5306e41c8c47c12bccbaaf31feadf60305074",
-    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml": "fc9da0d6f81bd19ee1aa18feba09ac11f945fca93047d283facd38ae21931f05",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml": "34a2adadd5e61f6acd7fdd81b64f6d5489db1960270c0d96dd405d357991cba0",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml": "941ddb1357e7eba9d93b4fa75b719d7974a9a8dd74926e47a4800ca38887a14b",
-    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml": "8ebc4446c42bedb6dd9fcecb62a2f9c44bce1d177886f3bdf280b6ad21db60b5",
+    "fixtures/evo/c-evo-01.yaml": "720bff1e2ae3edbf3ba56265b408f0be802ee2ef39dada2e897b491b7fecaf0a",
+    "fixtures/evo/c-evo-02.yaml": "fe117d8d31132da476ac8368512fbe7aadc0b0b054d21aeb9c991304fe8620e1",
+    "fixtures/evo/c-evo-03.yaml": "f8510758436577219438aae69e91d6a9756c33de0dfbedd404de2cf67229f2a5",
+    "fixtures/evo/c-evo-04.yaml": "7e7ccf0ca63ddcb0acb53c5cba7af5d59f52e4bf2707f10a09727085899af62e",
+    "fixtures/evo/c-evo-05.yaml": "347612b325b46e36bf18c43721988e57c07e596e324ae911536e5b0e6a0d9ae4",
+    "fixtures/evo/c-evo-06.yaml": "c7195e10a1b438f8cf61aca931aeb31baa086d3c4cd2f40b1376636a86138819",
+    "fixtures/evo/c-evo-07-checkpoint.yaml": "b41fa87114c12349e7ac6f420ca2b72e58e47e01f93d548a4535797c1e833bb5",
+    "fixtures/evo/c-evo-07-initialized.yaml": "b0ec1ea7a91d7db161c79af06b738432a44dbc12156c8930a6ab646c5b2e166c",
+    "fixtures/evo/c-evo-07-terminated.yaml": "801f6c3d341a185ef03e1cb711a2fe4026ad1c0c36ac9f26ff9752b55f06c8c2",
+    "fixtures/evo/c-evo-08.yaml": "a532b91d9bd35fb46432a2437fa5397491bef9ae7cc6492b5dfcdcb636f860be",
+    "fixtures/evo/c-evo-09.yaml": "57c1ebceba0600340eee675cf1ab2925c4fe7330b05f19c600f72b55fed22546",
+    "fixtures/evo/c-evo-10.yaml": "cc1d445e4b2773164d2468948e531529c7c23369f4c6be51e5be4fec70febfe0",
+    "fixtures/evo/c-evo-14.yaml": "4005bbc00e4822a1fa040d5f21ac12f537dd97a918c049eb788b07009e2cc1e3",
+    "fixtures/evo/c-evo-15.yaml": "4f97850da9597a5309e6d9d624b04f6c8930299ee25c8b6b2b2038cc35be8e83",
+    "fixtures/evo/c-evo-16.yaml": "2a3949c61b15be5e47f5c23465c8923bb99ed80b827e8023b85fd091b8b9e70b",
+    "fixtures/evo/c-evo-17.yaml": "5a9e57473811a43b4f477e307c57737810af82517b7f13e7d9b60c8632909202",
+    "fixtures/closure/c-evo-18-missing-exact-node.yaml": "47fe9d1ef70737834b8eaa9860fe025aa33c56e83b4bda25ce7b8be75f187c51",
+    "fixtures/closure/c-evo-19-missing-occurrence-evidence.yaml": "815176feedd578ad8f40749ae16eb2b1b1c1e35b1c8fdbe49ee2995062961284",
+    "fixtures/closure/c-evo-20-canonical-demand-order.yaml": "e10ce6e2588992faef63f3e898b61d3655fe5164f29d28dffb801baef51f0017",
+    "fixtures/closure/c-evo-21-retry-determinism-missing-first.yaml": "4c3f3a2f9272038fc4fb299a9934397f2c82040c24af239aa9aec153c9a495a6",
+    "fixtures/closure/c-evo-21-retry-determinism-missing-repeat.yaml": "70f787247b62b71c9d61e8ce62518c757d4f89e432792b5a970793e5ba1e2e46",
+    "fixtures/closure/c-evo-21-retry-determinism-resolved-first.yaml": "c2d4fc4f75bf655b689aee1ba400e7f50511118bbb10b19054c599461e7361b9",
+    "fixtures/closure/c-evo-21-retry-determinism-resolved-repeat.yaml": "31c8bdf750c903e67df1e87fe7bfb26aad9e8d1491f916d846480a727ee0e9a0",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-demand.yaml": "a01957e8bfd6ffe93198b2641d9fdcf69f26a4690b6404d585944b7e1e5e454c",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas-repeat.yaml": "0d37dc4547267f0f2e7de51738d7207052f209648cbe60ed4d67a636e42c956a",
+    "fixtures/closure/c-evo-22-low-gas-expanded-evidence-expanded-low-gas.yaml": "79c40afebe1cfca1281b0840a75c18d9e59fb9c3453612630a41dbbc7a73a273",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-demand.yaml": "4c92e80b0dfa6ff83f9b96a8d5c334ab25a969e620a711f873497f96e4f90bd6",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-automatic-resolved.yaml": "83851c5269e58eeed4c0896df7d01540c82cdb2bfb58463c0f5c4ed80ff9eda6",
+    "fixtures/closure/c-evo-23-automatic-explicit-retry-parity-explicit-resolved.yaml": "bac82eb7872230e85f0dad9f8b08398aab14208272418b3d9d88bf7f9ede38ec",
 }
 
 APPROVED_CONTRACTS_SPECIFICATION_SHA256 = (
@@ -225,7 +234,7 @@ if not APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY.startswith(
     )
 
 APPROVED_SCRIPTED_OPERATION_SHA256 = (
-    "b8304f600d22c0faa98222a96664f133fd6a34c73c9148989c143e7b435a2fc8"
+    "804c979ff5d97065aa3cbd75bd6a699a3ee42da139246d6ef93006473c64837d"
 )
 
 # The two larger normative documents are pinned by canonical structured
@@ -234,11 +243,11 @@ APPROVED_SCRIPTED_OPERATION_SHA256 = (
 APPROVED_STRUCTURED_TRANSITIONS = {
     "fixtures/closure-fixture-schema.yaml": (
         "eeb167d13cc2088d3d5760613e2d1eb395fe0d0a354b8f9c511952cafb35f693",
-        "dca5231dce4ec1cabb27f0670ccd64c4c4087bae12c9f6f5e20ca6d4ee750952",
+        "ab5fc2e2484d5926c2238f1e79573db618f361395766396e635d3c05ea4bfb2f",
     ),
     "identity-constructors.yaml": (
         "d4fd3263fcf40c3dbae2a11f5e05573b9b88063b2ef33c9065e5dc481fc73f89",
-        "4b46b82af73f496a4ce6a09987379b50d06889c41f4e76b301dd6719392031c2",
+        "2191db64b2258378e53324b8c02f13c176a94d0735bd0bfff7951d64adb6a9f1",
     ),
 }
 
@@ -1172,7 +1181,12 @@ def classify_changed_file(relative: str, before_path: Path, after_path: Path) ->
                 result["unexpected"] = True
         difference["category"] = category
         categories.add(category)
-    if bounded_cevo_transition_path(relative):
+    if (
+        bounded_cevo_transition_path(relative)
+        and not approved_identity_rebinding_transition(
+            relative, before_value, after_value
+        )
+    ):
         result["unexpected"] = True
     if result["unexpected"]:
         categories.add(UNEXPECTED)
