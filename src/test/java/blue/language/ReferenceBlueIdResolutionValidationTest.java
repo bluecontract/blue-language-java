@@ -14,6 +14,7 @@ import blue.language.provider.NodeProvider;
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ProcessorErrorCategory;
@@ -545,7 +546,7 @@ class ReferenceBlueIdResolutionValidationTest {
 
     private static Node malformedTypeDocument(boolean contracts) {
         Node document = new Node().type(malformedReference());
-        return contracts ? document.contracts(new Node()) : document;
+        return contracts ? document.contracts(Nodes.emptyObject()) : document;
     }
 
     private static Node malformedReference() {

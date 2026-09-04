@@ -12,6 +12,7 @@ import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
@@ -31,7 +32,8 @@ class MinimizedOverlayNestedTypedNodeTest {
         BasicNodeProvider writerProvider = provider();
         Blue writer = new Blue(writerProvider);
         String markerTypeBlueId = writerProvider.getBlueIdByName("Processing Marker");
-        ResolvedSnapshot initial = writer.loadSnapshot(new Node());
+        ResolvedSnapshot initial = writer.loadSnapshot(
+                new Node().contracts(Nodes.emptyObject()));
         Node marker = new Node()
                 .type(new Node().blueId(markerTypeBlueId))
                 .properties("documentId", new Node().value("document-1"));

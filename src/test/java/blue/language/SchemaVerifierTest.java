@@ -20,6 +20,7 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.*;
 import blue.language.model.Schema;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.BeforeEach;
@@ -422,7 +423,7 @@ public class SchemaVerifierTest {
     public void shouldAcceptMinItems() throws Exception {
         // given
         schema.minItems(2);
-        node.items(Arrays.asList(new Node(), new Node()));
+        node.items(Arrays.asList(Nodes.emptyObject(), Nodes.emptyObject()));
 
         // when
         Node resolved = merger.resolve(node);
@@ -435,7 +436,7 @@ public class SchemaVerifierTest {
     public void shouldRejectMinItems() throws Exception {
         // given
         schema.minItems(3);
-        node.items(Arrays.asList(new Node(), new Node()));
+        node.items(Arrays.asList(Nodes.emptyObject(), Nodes.emptyObject()));
 
         // when
         Throwable failure = captureFailure(() -> merger.resolve(node));
@@ -448,7 +449,7 @@ public class SchemaVerifierTest {
     public void shouldAcceptMaxItems() throws Exception {
         // given
         schema.maxItems(3);
-        node.items(Arrays.asList(new Node(), new Node()));
+        node.items(Arrays.asList(Nodes.emptyObject(), Nodes.emptyObject()));
 
         // when
         Node resolved = merger.resolve(node);
@@ -461,7 +462,7 @@ public class SchemaVerifierTest {
     public void shouldRejectMaxItems() throws Exception {
         // given
         schema.maxItems(1);
-        node.items(Arrays.asList(new Node(), new Node()));
+        node.items(Arrays.asList(Nodes.emptyObject(), Nodes.emptyObject()));
 
         // when
         Throwable failure = captureFailure(() -> merger.resolve(node));

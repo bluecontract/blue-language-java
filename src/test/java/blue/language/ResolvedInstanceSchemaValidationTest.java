@@ -14,6 +14,7 @@ import blue.language.provider.NodeProvider;
 import static blue.language.processor.DocumentProcessingResultTestSupport.snapshot;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.merge.Merger;
 import blue.language.merge.MergingProcessor;
@@ -42,6 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
@@ -120,21 +122,23 @@ class ResolvedInstanceSchemaValidationTest {
     }
 
     @Test
-    void shouldNotSatisfyNestedRequiredFieldWithEmptyObject() {
+    void shouldSatisfyNestedRequiredFieldWithExactEmptyObject() {
         // given
         Node type = new Node().name("Required Holder")
                 .properties("field", new Node().schema(new Schema().required(true)));
         BasicNodeProvider provider = new BasicNodeProvider(type);
         String typeId = provider.getBlueIdByName("Required Holder");
         Blue blue = new Blue(provider);
-        Node instance = new Node().type(reference(typeId)).properties("field", new Node());
+        Node instance = new Node().type(reference(typeId))
+                .properties("field", Nodes.emptyObject());
 
         // when
-        IllegalArgumentException failure = captureFailure(() -> blue.resolve(instance));
+        Node resolved = blue.resolve(instance);
 
         // then
-        assertTrue(failure instanceof IllegalArgumentException,
-                String.valueOf(failure));
+        assertNotNull(resolved.getProperties().get("field").getProperties());
+        assertTrue(resolved.getProperties().get("field")
+                .getProperties().isEmpty());
     }
 
     @Test

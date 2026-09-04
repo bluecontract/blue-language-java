@@ -16,6 +16,7 @@ import blue.language.provider.NodeProvider;
 import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentProcessingResult;
@@ -346,7 +347,8 @@ class ProcessingSnapshotProviderProvenanceTest {
                 Node.class);
         BasicNodeProvider provider = new BasicNodeProvider(cyclicSet);
         String memberBlueId = provider.getBlueIdByName("Cyclic Member Type");
-        Node document = new Node().type(reference(memberBlueId)).contracts(new Node());
+        Node document = new Node().type(reference(memberBlueId))
+                .contracts(Nodes.emptyObject());
 
         Node direct = new Blue(provider).resolve(document.clone());
         Blue cyclicBlue = new Blue(provider);
@@ -408,7 +410,8 @@ class ProcessingSnapshotProviderProvenanceTest {
 
         // when
         DocumentProcessingResult bootstrap = bootstrapBlue.initializeDocument(
-                new Node().type(reference(DICTIONARY_TYPE_BLUE_ID)).contracts(new Node()));
+                new Node().type(reference(DICTIONARY_TYPE_BLUE_ID))
+                        .contracts(Nodes.emptyObject()));
         int fallbackFetchCount = bootstrapFallbackFetches.get();
 
         // then
@@ -423,7 +426,8 @@ class ProcessingSnapshotProviderProvenanceTest {
         Blue runtimeBlue = new Blue(countingMiss(runtimeFallbackFetches));
 
         // when
-        DocumentProcessingResult runtime = runtimeBlue.initializeDocument(new Node());
+        DocumentProcessingResult runtime = runtimeBlue.initializeDocument(
+                Nodes.emptyObject());
         ResolvedSnapshot runtimeSnapshot = snapshot(runtimeBlue, runtime);
         int fallbackFetchCount = runtimeFallbackFetches.get();
         String initializedMarkerBlueId = BlueRuntimeTypeRegistry.getDefault().blueId(
@@ -666,7 +670,7 @@ class ProcessingSnapshotProviderProvenanceTest {
 
         private Node document() {
             return new Node().type(reference(requestedBlueId))
-                    .contracts(new Node());
+                    .contracts(Nodes.emptyObject());
         }
     }
 
