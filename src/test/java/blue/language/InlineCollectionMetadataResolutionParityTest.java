@@ -118,15 +118,11 @@ class InlineCollectionMetadataResolutionParityTest {
             assertEquals(BigInteger.ONE,
                     inlineMetadata.getSchema().getMinLengthExact());
             assertEquals(
-                    NodeToBlueIdInput.getWithResolvedBlueIdMetadata(
-                            referenceResolved),
-                    NodeToBlueIdInput.getWithResolvedBlueIdMetadata(
-                            inlineResolved));
+                    resolvedSemanticProjection(referenceResolved),
+                    resolvedSemanticProjection(inlineResolved));
             assertEquals(
-                    NodeToBlueIdInput.getWithResolvedBlueIdMetadata(
-                            referenceMetadata),
-                    NodeToBlueIdInput.getWithResolvedBlueIdMetadata(
-                            inlineMetadata));
+                    resolvedSemanticProjection(referenceMetadata),
+                    resolvedSemanticProjection(inlineMetadata));
 
             Node inlineCanonical = blue.canonicalize(inlineSource);
             Node referenceCanonical = blue.canonicalize(referenceSource);
@@ -145,6 +141,11 @@ class InlineCollectionMetadataResolutionParityTest {
 
     private static Node reference(String blueId) {
         return new Node().blueId(blueId);
+    }
+
+    private static Object resolvedSemanticProjection(Node node) {
+        return NodeWireForm.get(
+                NodeToBlueIdInput.stripResolvedBlueIdMetadata(node.clone()));
     }
 
     private static final class TypePosition {

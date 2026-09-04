@@ -14,7 +14,9 @@ import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -36,7 +38,7 @@ class VerifiedReferenceMaterializationTest {
         // when
         Node expanded = fixture.blue.expand(reference);
         String referenceBlueId = fixture.blue.calculateBlueId(reference);
-        String expandedBlueId = fixture.blue.calculateBlueId(expanded);
+        String expandedBlueId = resolvedBlueId(expanded);
 
         // then
         assertEquals(fixture.concreteDocumentId, referenceBlueId);
@@ -53,7 +55,7 @@ class VerifiedReferenceMaterializationTest {
 
         // when
         Node expanded = fixture.blue.expand(collapsed);
-        String expandedBlueId = fixture.blue.calculateBlueId(expanded);
+        String expandedBlueId = resolvedBlueId(expanded);
 
         // then
         assertEquals(collapsedBlueId, expandedBlueId);
@@ -97,8 +99,7 @@ class VerifiedReferenceMaterializationTest {
                 fixture.blue.nodeToJson(second));
         assertEquals(fixture.blue.nodeToJson(first),
                 fixture.blue.nodeToJson(fresh));
-        assertEquals(fixture.blue.calculateBlueId(first),
-                fixture.blue.calculateBlueId(fresh));
+        assertEquals(resolvedBlueId(first), resolvedBlueId(fresh));
     }
 
     @Test
@@ -150,6 +151,10 @@ class VerifiedReferenceMaterializationTest {
         return new Node().blueId(blueId);
     }
 
+    private static String resolvedBlueId(Node node) {
+        return FrozenNode.fromResolvedNode(node).blueId();
+    }
+
     private static final class Fixture {
         private final BasicNodeProvider provider = new BasicNodeProvider();
         private final String concreteDocumentId;
@@ -188,7 +193,7 @@ class VerifiedReferenceMaterializationTest {
 
             Node holderType = new Node()
                     .name("Materialization Holder")
-                    .properties("subject", new Node());
+                    .properties("subject", Nodes.emptyObject());
             provider.addSingleNodes(holderType);
             holderTypeId = provider.getBlueIdByName("Materialization Holder");
             blue = new Blue(provider);

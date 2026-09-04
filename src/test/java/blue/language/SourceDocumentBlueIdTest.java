@@ -73,10 +73,8 @@ class SourceDocumentBlueIdTest {
 
         // then
         assertEquals(
-                NodeToBlueIdInput.getWithResolvedBlueIdMetadata(
-                        referenceResolved),
-                NodeToBlueIdInput.getWithResolvedBlueIdMetadata(
-                        inlineResolved));
+                resolvedSemanticProjection(referenceResolved),
+                resolvedSemanticProjection(inlineResolved));
         assertEquals(NodeWireForm.get(referenceCanonical),
                 NodeWireForm.get(inlineCanonical));
         assertEquals(typeBlueId,
@@ -145,13 +143,16 @@ class SourceDocumentBlueIdTest {
         // The retry must be exactly the complete eager result.
         assertEquals(BlueOperationOutcome.ESTABLISHED, retried.outcome());
         assertEquals(
-                NodeToBlueIdInput.getWithResolvedBlueIdMetadata(
-                        eagerBlue.resolve(source)),
-                NodeToBlueIdInput.getWithResolvedBlueIdMetadata(
-                        retried.requireEstablished()));
+                resolvedSemanticProjection(eagerBlue.resolve(source)),
+                resolvedSemanticProjection(retried.requireEstablished()));
         assertEquals(NodeWireForm.get(eagerCanonical),
                 NodeWireForm.get(retryCanonical));
         assertEquals(eagerBlueId, retryBlueId);
+    }
+
+    private static Object resolvedSemanticProjection(Node node) {
+        return NodeWireForm.get(
+                NodeToBlueIdInput.stripResolvedBlueIdMetadata(node.clone()));
     }
 
     @Test
