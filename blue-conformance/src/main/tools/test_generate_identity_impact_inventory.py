@@ -287,7 +287,7 @@ class IdentityImpactInventoryTest(unittest.TestCase):
             invocation["oldExactIdentity"],
         )
         self.assertEqual(
-            "sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90",
+            "sha256:2eca441c0a5631a43d519544f586898fac8f1efab0e4cfce929b8d839cb4fe90",
             invocation["newExactIdentity"],
         )
         contracts_specification = artifacts[
@@ -298,7 +298,7 @@ class IdentityImpactInventoryTest(unittest.TestCase):
             contracts_specification["oldExactIdentity"],
         )
         self.assertEqual(
-            "sha256:62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9",
+            "sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd",
             contracts_specification["newExactIdentity"],
         )
         current_binding = artifacts[
