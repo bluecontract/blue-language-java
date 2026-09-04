@@ -208,8 +208,8 @@ final class MutationCommit {
     private static void removeMaterializedPath(Node root, String path) {
         List<String> segments = JsonPointer.split(path);
         if (segments.isEmpty()) {
-            root.replaceWith(new Node());
-            return;
+            throw new IllegalArgumentException(
+                    "Direct materialized writes cannot remove the root document");
         }
         List<String> parentSegments = new ArrayList<>(
                 segments.subList(0, segments.size() - 1));

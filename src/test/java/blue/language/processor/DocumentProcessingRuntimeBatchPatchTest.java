@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
@@ -31,9 +32,33 @@ class DocumentProcessingRuntimeBatchPatchTest {
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
+    void shouldRejectLowLevelMaterializedRootRemoval() {
+        // given
+        Node document = new Node().properties(
+                "status", new Node().value("retained"));
+        DocumentProcessingRuntime runtime =
+                new DocumentProcessingRuntime(document);
+
+        // when
+        Throwable failure = captureFailure(
+                () -> new MutationCommit(runtime)
+                        .publishSelected(
+                                "/",
+                                null,
+                                document.clone()));
+
+        // then
+        assertInstanceOf(IllegalArgumentException.class, failure);
+        assertEquals(
+                "Direct materialized writes cannot remove the root document",
+                failure.getMessage());
+        assertEquals("retained", document.getAsText("/status"));
+    }
+
+    @Test
     void shouldApplyMultipleObjectPatchesAndCommitOnce() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
         List<JsonPatch> patches = Arrays.asList(
@@ -255,7 +280,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldVerifyAtomicBatchPreflightTracksIntroducedReferenceBeforeDescendantPatch() {
         // given
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(document, null, manager);
@@ -276,7 +301,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
         assertInstanceOf(ProcessorFailureException.class, failure);
         assertEquals(ProcessorErrorCategory.CyclicSetMutationUnsupported,
                 ((ProcessorFailureException) failure).errorCategory());
-        assertNull(document.getProperties());
+        assertTrue(document.getProperties().isEmpty());
         assertEquals(0, manager.fromDocumentCalls);
     }
 
@@ -403,8 +428,8 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldDelegateApplyPatchToApplyPatchesSemantics() {
         // given
-        Node one = new Node();
-        Node two = new Node();
+        Node one = Nodes.emptyObject();
+        Node two = Nodes.emptyObject();
         DocumentProcessingRuntime oneRuntime =
                 new DocumentProcessingRuntime(one);
         DocumentProcessingRuntime twoRuntime =
@@ -558,7 +583,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldVerifyEscapedPointerKeysWorkInBatch() {
         // given
-        Node document = new Node().properties("tilde", new Node());
+        Node document = new Node().properties("tilde", Nodes.emptyObject());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         // when
@@ -577,7 +602,7 @@ class DocumentProcessingRuntimeBatchPatchTest {
     @Test
     void shouldVerifyBatchPatchAvoidsRepeatedSnapshotCommitCost() {
         // given
-        Node document = new Node().properties("values", new Node());
+        Node document = new Node().properties("values", Nodes.emptyObject());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
         List<JsonPatch> patches = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
