@@ -3354,12 +3354,12 @@ The labels `B`, `R`, and `F` identify fixture categories: BlueId algorithm, reso
 
 The Blue Language 1.0 conformance suite MUST publish machine-readable fixtures with exact expected BlueIds.
 
-The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. This proposal intentionally does not claim a final fixture count or package identity. The count and identities MUST be regenerated only after the inline-type repair and the empty-object semantic change both pass the complete implementation and differential suite.
+The canonical fixture package is part of the Blue Language 1.0 conformance release and is versioned with this specification. It contains 184 behavior fixtures covering 150 vectors. Its manifest and package identity are generated from the complete inventoried fixture set only after the inline-type and empty-object conformance gates pass.
 
 Its fixture-package identity is:
 
 ```text
-sha256:c59f2bc4e4ceafb8d7e20875003fa281f79f2f77ac7ae991fcebdc6dde0977cc
+sha256:83a0d7ec99d711577d6c08962b922aedd342d858a9bf12560ade790692d08cae
 ```
 
 The canonical core-registry package identity bound by this fixture package is:
