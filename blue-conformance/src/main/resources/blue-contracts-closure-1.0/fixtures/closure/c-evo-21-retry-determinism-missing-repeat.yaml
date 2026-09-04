@@ -86,7 +86,7 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
   closureIdentity: sha256:fa4b0649c4cd9d2b69c3dbd22e1037aacc5a0809b4c06abb44548e91efaf020c
-  invocationIdentity: sha256:85fd8af92c6288915a681d7475d78d8634ac4ee68161cbad3eae1c59497bcf87
+  invocationIdentity: sha256:cc58bcdab11be3e32aaba6c65c55ce1617afce8fcfb03c6febe792b3fad86242
   gasPolicy:
     policyIdentity: sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c1685
     sharedLimit: 100000
@@ -179,8 +179,8 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:a16e111c7d5e803e6551ff43a6beaa265149bf1cd0c73808ba7fb81650a079b3
-    cyclicProofVerifierIdentity: sha256:3a94850f63b8813e05fe38687e50ce95617a7748dbb8cc2f6d346572651d9372
+    cyclicFinalizerIdentity: sha256:dfaee4ddc131ec000bd1e46692ffb6a840bd645f3b9db79a3babd684cad468fb
+    cyclicProofVerifierIdentity: sha256:2eeab32b181001a872bb6f91c65405b7612cdc612bb381e32d57cf72fb570f53
 runtime:
   initializationHandlers:
     c-evo-21-a/installPeer:
