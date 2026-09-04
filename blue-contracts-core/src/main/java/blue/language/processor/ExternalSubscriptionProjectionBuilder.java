@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.PointerUtils;
@@ -674,7 +675,9 @@ final class ExternalSubscriptionProjectionBuilder {
                 }
             }
         }
-        return projected;
+        return Nodes.isBareFieldlessBuilder(projected)
+                ? Nodes.emptyObject()
+                : projected;
     }
 
     private Node copySubscriptionContracts(
