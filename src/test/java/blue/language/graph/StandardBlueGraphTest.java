@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class StandardBlueGraphTest {
@@ -131,6 +132,38 @@ final class StandardBlueGraphTest {
                 DirectBlueIdCalculator.calculateBlueId(exact),
                 collapsed.getBlueId());
         assertEquals("collapse me", exact.getValue());
+    }
+
+    @Test
+    void shouldCollapseExpandedTypeEvidenceThroughResolvedIdentity() {
+        // given
+        Node exactType = new Node()
+                .name("Expanded collapse type")
+                .properties("fixed", new Node().value("inherited"));
+        String typeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(exactType);
+        Node canonical = new Node()
+                .type(new Node().blueId(typeBlueId))
+                .properties("own", new Node().value("kept"));
+        String canonicalBlueId =
+                DirectBlueIdCalculator.calculateBlueId(canonical);
+        StandardBlueGraph graph = new StandardBlueGraph(
+                requested -> typeBlueId.equals(requested)
+                        ? Collections.singletonList(exactType)
+                        : null,
+                IDENTITY_RESOLVER);
+
+        // when
+        Node expanded = graph.expand(canonical);
+        Node collapsed = graph.collapse(expanded);
+
+        // then
+        assertFalse(expanded.getType().isReferenceOnly());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> DirectBlueIdCalculator.calculateBlueId(expanded));
+        assertTrue(collapsed.isReferenceOnly());
+        assertEquals(canonicalBlueId, collapsed.getBlueId());
     }
 
     @Test

@@ -15,6 +15,7 @@ import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.SequentialNodeProvider;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.NodeWireForm;
+import blue.language.model.NodeIdentities;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -192,7 +193,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
             collapsedReferenceOnly = collapsed.isReferenceOnly();
             collapsedBlueId = collapsed.getBlueId();
             expandedBlueId =
-                    DirectBlueIdCalculator.calculateBlueId(expanded);
+                    NodeIdentities.calculate(expanded);
             recollapsedBlueId =
                     roundTripBlue.collapse(expanded).getBlueId();
             expandedValue = NodeWireForm.get(expanded);

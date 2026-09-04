@@ -26,9 +26,10 @@ public interface BlueGraph {
             Node source, BlueOperationLimits limits);
 
     /**
-     * Hides exact content behind its direct BlueId.
+     * Hides exact content behind its BlueId.
      *
-     * @param exactInput valid direct identity input
+     * @param exactInput canonical exact content or an identity-preserving
+     *                   expanded materialization
      * @return a new pure reference node
      */
     Node collapse(Node exactInput);

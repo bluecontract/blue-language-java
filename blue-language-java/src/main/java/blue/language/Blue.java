@@ -219,12 +219,13 @@ public final class Blue implements AutoCloseable {
     }
 
     /**
-     * Hides exact canonical content behind its direct BlueId.
+     * Hides exact content behind its BlueId.
      *
-     * @param exactInput strict direct BlueId input; it is not mutated
+     * @param exactInput canonical exact content or an identity-preserving
+     *                   expanded materialization; it is not mutated
      * @return a pure reference to the input's direct BlueId
      * @throws IllegalArgumentException when {@code exactInput} is
-     *         {@code null} or is not valid direct identity input
+     *         {@code null} or cannot establish an exact identity
      * @throws IllegalStateException when this facade is closed
      */
     public Node collapse(Node exactInput) {
