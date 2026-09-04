@@ -679,6 +679,7 @@ class EffectiveFragmentationCatalogTest {
 
     @Test
     void shouldDistinguishAbsentAndPresentEmptyCollectionsInPublicPlan() {
+        // given
         Node embedded = new Node()
                 .type(new Node().blueId(RuntimeBlueIds.PROCESS_EMBEDDED))
                 .properties(
@@ -692,6 +693,8 @@ class EffectiveFragmentationCatalogTest {
 
         EmbeddedScopePlanView absentPlan;
         EmbeddedScopePlanView presentPlan;
+
+        // when
         try (Blue blue = blue(
                 new LinkedHashMap<String, Node>(),
                 new ArrayList<String>())) {
@@ -703,6 +706,7 @@ class EffectiveFragmentationCatalogTest {
                     .scopePlansByScope().get("/");
         }
 
+        // then
         assertEquals(
                 Collections.emptyList(),
                 absentPlan.collectionMemberKeysByDeclaration()
