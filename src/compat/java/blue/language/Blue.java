@@ -42,6 +42,7 @@ import blue.language.merge.SnapshotResolution;
 import blue.language.merge.processor.*;
 import blue.language.matching.MatchingRuntime;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
 import blue.language.processor.ContractMatchingService;
@@ -3594,7 +3595,8 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             return patchedSnapshot;
         }
 
-        ResolvedSnapshot inheritedSnapshot = snapshotResolver.apply(withoutOverride.root());
+        ResolvedSnapshot inheritedSnapshot = snapshotResolver.apply(
+                withoutOverride.root());
         FrozenNode patchedEffective = patchedSnapshot.resolvedAt(patched.path());
         FrozenNode inheritedEffective = inheritedSnapshot.resolvedAt(patched.path());
         if (patchedEffective != null
@@ -3623,7 +3625,10 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         Node resolved = merger.resolve(canonicalRoot.toNode(), limits);
         return ResolvedSnapshot.withDeferredResolution(
                 complete.canonicalRoot(),
-                resolvedReferenceCache.freezeResolved(resolved),
+                freezeDeferredResolvedProjection(
+                        complete.canonicalRoot(),
+                        resolved,
+                        resolvedReferenceCache),
                 complete.canonicalTypeIdentities());
     }
 
@@ -3642,11 +3647,29 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         }
 
         Node resolved = merger.resolve(canonicalRoot.toNode(), limits);
-        FrozenNode resolvedRoot = resolutionCache.freezeResolved(resolved);
+        FrozenNode resolvedRoot = freezeDeferredResolvedProjection(
+                complete.canonicalRoot(), resolved, resolutionCache);
         return ResolvedSnapshot.withDeferredResolution(
                 complete.canonicalRoot(),
                 resolvedRoot,
                 complete.canonicalTypeIdentities());
+    }
+
+    private FrozenNode freezeDeferredResolvedProjection(
+            FrozenNode canonicalRoot,
+            Node resolved,
+            ResolvedReferenceCache resolutionCache) {
+        Node projection = resolved;
+        if (Nodes.isBareFieldlessBuilder(resolved)
+                && canonicalRoot.getProperties() != null) {
+            /*
+             * A path limit can select no child of an authoritative object.
+             * The deferred lane still needs an object projection container,
+             * while the complete canonical lane retains the actual value.
+             */
+            projection = Nodes.emptyObject();
+        }
+        return resolutionCache.freezeResolved(projection);
     }
 
     private Set<String> processorContractPaths(Node root) {

@@ -754,6 +754,7 @@ final class ResolutionEngine implements NodeResolver {
                         node, limits, false);
         try {
             Node resultNode = node.getProperties() != null
+                    && node.getProperties().isEmpty()
                     ? Nodes.emptyObject()
                     : new Node();
             merge(resultNode, node, limits);
