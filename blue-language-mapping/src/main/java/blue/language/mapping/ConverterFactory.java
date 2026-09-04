@@ -135,7 +135,6 @@ public class ConverterFactory {
             return new NullConverter();
         }
 
-        MappingPayload.requireCompatible(node, targetType, "mapping root");
         Class<?> rawType = MappingPayload.rawType(targetType);
 
         if (rawType.isEnum()) {

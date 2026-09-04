@@ -6,7 +6,6 @@ import blue.language.model.BlueDescription;
 import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
-
 import java.lang.reflect.*;
 import java.util.*;
 
@@ -63,26 +62,35 @@ public class ComplexObjectConverter implements Converter<Object> {
 
     @Override
     public Object convert(Node node, Type targetType, boolean prioritizeTargetType) {
+        return MappingPayload.atSemanticBoundary(
+                node,
+                "complex object mapping",
+                () -> convertValidated(
+                        node, targetType, prioritizeTargetType));
+    }
+
+    private Object convertValidated(
+            Node node,
+            Type targetType,
+            boolean prioritizeTargetType) {
         if (node == null) {
             return null;
         }
 
-        MappingPayload.Kind payloadKind = MappingPayload.requireCompatible(
+        MappingPayload.Kind payloadKind = MappingPayload.requireKind(
                 node,
-                targetType,
                 "mapping root");
-
+        Class<?> requestedClass = MappingPayload.rawType(targetType);
         Class<?> resolvedClass = converterFactory.resolveClass(
                 node, typeClassResolver);
-        Class<?> classToInstantiate;
-
-        if (prioritizeTargetType) {
-            classToInstantiate = MappingPayload.rawType(targetType);
-        } else {
-            classToInstantiate = resolvedClass != null
-                    ? resolvedClass
-                    : MappingPayload.rawType(targetType);
-        }
+        Class<?> classToInstantiate = selectEffectiveClass(
+                requestedClass,
+                resolvedClass,
+                prioritizeTargetType);
+        MappingPayload.requireCompatible(
+                node,
+                classToInstantiate,
+                "mapping target " + classToInstantiate.getName());
 
         if (classToInstantiate == Object.class && resolvedClass == null) {
             switch (payloadKind) {
@@ -104,14 +112,10 @@ public class ComplexObjectConverter implements Converter<Object> {
             }
         }
 
-        if (classToInstantiate.isPrimitive() || ValueConverter.isSupportedType(classToInstantiate)) {
+        if (classToInstantiate.isEnum()
+                || classToInstantiate.isPrimitive()
+                || ValueConverter.isSupportedType(classToInstantiate)) {
             return ValueConverter.convertValue(node, classToInstantiate);
-        }
-
-        if (resolvedClass != null
-                && MappingPayload.rawType(targetType)
-                        .isAssignableFrom(resolvedClass)) {
-            classToInstantiate = resolvedClass;
         }
 
         try {
@@ -128,6 +132,47 @@ public class ComplexObjectConverter implements Converter<Object> {
                             + ": cannot access mapped field",
                     e);
         }
+    }
+
+    private Class<?> selectEffectiveClass(
+            Class<?> requestedClass,
+            Class<?> resolvedClass,
+            boolean prioritizeTargetType) {
+        if (resolvedClass == null) {
+            return requestedClass;
+        }
+        if (isAssignable(requestedClass, resolvedClass)) {
+            return resolvedClass;
+        }
+        if (!prioritizeTargetType) {
+            throw MappingPayload.failure(
+                    "mapping root",
+                    "resolved Blue type " + resolvedClass.getName()
+                            + " is not assignable to requested target "
+                            + requestedClass.getName());
+        }
+        return requestedClass;
+    }
+
+    private boolean isAssignable(
+            Class<?> requestedClass,
+            Class<?> resolvedClass) {
+        return boxed(requestedClass).isAssignableFrom(boxed(resolvedClass));
+    }
+
+    private Class<?> boxed(Class<?> type) {
+        if (!type.isPrimitive()) {
+            return type;
+        }
+        if (type == boolean.class) return Boolean.class;
+        if (type == byte.class) return Byte.class;
+        if (type == short.class) return Short.class;
+        if (type == int.class) return Integer.class;
+        if (type == long.class) return Long.class;
+        if (type == float.class) return Float.class;
+        if (type == double.class) return Double.class;
+        if (type == char.class) return Character.class;
+        return type;
     }
 
     private void convertFields(Node node, Class<?> clazz, Object instance) throws IllegalAccessException {

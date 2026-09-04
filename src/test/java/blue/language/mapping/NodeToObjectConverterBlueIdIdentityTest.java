@@ -105,8 +105,9 @@ class NodeToObjectConverterBlueIdIdentityTest {
                 snapshot.canonicalTypeIdentities());
 
         // then
-        RuntimeException failure = assertThrows(
-                RuntimeException.class, conversion);
+        IllegalStateException failure = assertThrows(
+                IllegalStateException.class, conversion);
+        assertTrue(failure.getMessage().contains("field 'subject'"));
         Throwable rootCause = rootCause(failure);
         assertInstanceOf(IllegalStateException.class, rootCause);
         assertTrue(rootCause.getMessage().contains(

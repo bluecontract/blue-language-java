@@ -36,6 +36,15 @@ public class ValueConverter {
      *                                  supported
      */
     public static Object convertValue(Node node, Class<?> targetClass) {
+        return MappingPayload.atSemanticBoundary(
+                node,
+                "scalar mapping",
+                () -> convertValidatedValue(node, targetClass));
+    }
+
+    private static Object convertValidatedValue(
+            Node node,
+            Class<?> targetClass) {
         if (node == null) {
             if (targetClass.isPrimitive()) {
                 return getDefaultPrimitiveValue(targetClass);
@@ -47,6 +56,11 @@ public class ValueConverter {
                 node,
                 targetClass,
                 "scalar mapping");
+        if (payloadKind == MappingPayload.Kind.NONE) {
+            return targetClass.isPrimitive()
+                    ? getDefaultPrimitiveValue(targetClass)
+                    : null;
+        }
         if (payloadKind != MappingPayload.Kind.SCALAR) {
             throw MappingPayload.failure(
                     "scalar mapping",

@@ -11,8 +11,9 @@ import java.util.*;
  * selecting converters for their declared generic item type.
  *
  * <p>When an interface or abstract collection cannot be instantiated, the
- * converter falls back to an {@link ArrayList}. Null elements become Java null
- * values or primitive defaults for primitive arrays.</p>
+ * converter falls back to an {@link ArrayList}. Canonical empty placeholders
+ * become Java null values or primitive defaults for primitive arrays; raw
+ * Java-null list members are rejected at the semantic boundary.</p>
  */
 public class CollectionConverter implements Converter<Object> {
     private final ConverterFactory converterFactory;
@@ -52,14 +53,24 @@ public class CollectionConverter implements Converter<Object> {
 
     @Override
     public Object convert(Node node, Type targetType) {
+        return MappingPayload.atSemanticBoundary(
+                node,
+                "collection mapping",
+                () -> convertValidated(node, targetType));
+    }
+
+    private Object convertValidated(Node node, Type targetType) {
         if (node == null) {
             return null;
         }
 
-        MappingPayload.requireCompatible(
+        MappingPayload.Kind payloadKind = MappingPayload.requireCompatible(
                 node,
                 targetType,
                 "collection mapping");
+        if (payloadKind == MappingPayload.Kind.NONE) {
+            return null;
+        }
 
         Class<?> rawType = getRawType(targetType);
         if (rawType.isArray()) {

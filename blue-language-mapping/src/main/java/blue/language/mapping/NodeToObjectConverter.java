@@ -87,7 +87,7 @@ public class NodeToObjectConverter {
      * @param typeIdentities resolver-issued canonical type identities
      * @param <T> requested Java value type
      * @return converted value
-     * @throws NullPointerException if {@code node}, {@code targetClass}, or
+     * @throws NullPointerException if {@code targetClass} or
      *         {@code typeIdentities} is null
      * @throws IllegalArgumentException if the node cannot be converted to the
      *         requested class
@@ -167,11 +167,17 @@ public class NodeToObjectConverter {
      */
     @SuppressWarnings("unchecked")
     public <T> T convertWithType(Node node, Type targetType, boolean prioritizeTargetType) {
-        Converter<?> converter = converterFactory.getConverter(
+        return MappingPayload.atSemanticBoundary(
                 node,
-                targetType,
-                prioritizeTargetType);
-        return (T) converter.convert(node, targetType, prioritizeTargetType);
+                "Java mapping input",
+                () -> {
+                    Converter<?> converter = converterFactory.getConverter(
+                            node,
+                            targetType,
+                            prioritizeTargetType);
+                    return (T) converter.convert(
+                            node, targetType, prioritizeTargetType);
+                });
     }
 
     /**
@@ -187,7 +193,7 @@ public class NodeToObjectConverter {
      * @param typeIdentities resolver-issued canonical type identities
      * @param <T> converted Java value type
      * @return converted value
-     * @throws NullPointerException if {@code node}, {@code targetType}, or
+     * @throws NullPointerException if {@code targetType} or
      *         {@code typeIdentities} is null
      * @throws IllegalArgumentException if the node cannot be converted to the
      *         requested type
@@ -200,19 +206,29 @@ public class NodeToObjectConverter {
             Type targetType,
             boolean prioritizeTargetType,
             CanonicalTypeIdentityLookup typeIdentities) {
-        ConverterFactory evidenceBoundFactory = new ConverterFactory(
-                typeClassResolver,
-                objectFactories,
-                Objects.requireNonNull(typeIdentities, "typeIdentities"),
-                CanonicalContentIdentityLookup.resolvedOnly(node));
-        Converter<?> converter = evidenceBoundFactory.getConverter(
+        CanonicalTypeIdentityLookup checkedTypeIdentities =
+                Objects.requireNonNull(typeIdentities, "typeIdentities");
+        return MappingPayload.atSemanticBoundary(
                 node,
-                targetType,
-                prioritizeTargetType);
-        return (T) converter.convert(
-                node,
-                targetType,
-                prioritizeTargetType);
+                "Java mapping input",
+                () -> {
+                    ConverterFactory evidenceBoundFactory =
+                            new ConverterFactory(
+                                    typeClassResolver,
+                                    objectFactories,
+                                    checkedTypeIdentities,
+                                    CanonicalContentIdentityLookup
+                                            .resolvedOnly(node));
+                    Converter<?> converter =
+                            evidenceBoundFactory.getConverter(
+                                    node,
+                                    targetType,
+                                    prioritizeTargetType);
+                    return (T) converter.convert(
+                            node,
+                            targetType,
+                            prioritizeTargetType);
+                });
     }
 
     /**
@@ -290,21 +306,26 @@ public class NodeToObjectConverter {
         if (resolvedNode == null) {
             return null;
         }
-        if (!checkedOmissions.isEmpty()
-                && resolvedNode.getProperties() != null) {
-            Map<String, Node> retained = new LinkedHashMap<>(
-                    resolvedNode.getProperties());
-            for (String property : checkedOmissions) {
-                retained.remove(property);
-            }
-            resolvedNode.properties(retained);
-        }
-        return convertSnapshotProjection(
-                checkedSnapshot,
-                pointer,
+        return MappingPayload.atSemanticBoundary(
                 resolvedNode,
-                targetType,
-                prioritizeTargetType);
+                "Java mapping input",
+                () -> {
+                    if (!checkedOmissions.isEmpty()
+                            && resolvedNode.getProperties() != null) {
+                        Map<String, Node> retained = new LinkedHashMap<>(
+                                resolvedNode.getProperties());
+                        for (String property : checkedOmissions) {
+                            retained.remove(property);
+                        }
+                        resolvedNode.properties(retained);
+                    }
+                    return convertSnapshotProjection(
+                            checkedSnapshot,
+                            pointer,
+                            resolvedNode,
+                            targetType,
+                            prioritizeTargetType);
+                });
     }
 
     /**

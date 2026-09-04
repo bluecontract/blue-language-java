@@ -55,10 +55,23 @@ public class MapConverter implements Converter<Map<?, ?>> {
 
     @Override
     public Map<?, ?> convert(Node node, Type targetType) {
+        return MappingPayload.atSemanticBoundary(
+                node,
+                "map mapping",
+                () -> convertValidated(node, targetType));
+    }
+
+    private Map<?, ?> convertValidated(Node node, Type targetType) {
         if (node == null) {
             return null;
         }
-        MappingPayload.requireCompatible(node, targetType, "map mapping");
+        MappingPayload.Kind payloadKind = MappingPayload.requireCompatible(
+                node,
+                targetType,
+                "map mapping");
+        if (payloadKind == MappingPayload.Kind.NONE) {
+            return null;
+        }
 
         Class<?> rawType = getRawType(targetType);
         Map<Object, Object> result;
