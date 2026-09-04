@@ -2,7 +2,7 @@ registry: blue-contracts-runtime
 registryKind: runtime-type
 specificationVersion: '1.0'
 languageVersion: '1.0'
-fixturePackageIdentity: sha256:5c6c6ca1ae10cff5e3afa4ee3a816b9e9f1a0bca802c71662f06951001473783
+fixturePackageIdentity: sha256:cc0662dba465fd9aafc536d024cd3402be1dd63958a3169469f547491f136c32
 entries:
 - key: Channel
   path: Channel.blue
