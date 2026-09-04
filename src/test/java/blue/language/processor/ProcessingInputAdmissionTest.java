@@ -38,6 +38,24 @@ class ProcessingInputAdmissionTest {
             "GX7CFU287wrZ7qw3LQG7gQi6UUoy1FFpM3tzupQJKi3N#0";
 
     @Test
+    void shouldKeepMissingInvalidRootFallbackAbsent() {
+        // given
+
+        // when
+        DocumentProcessingResult result =
+                ProcessingDocumentValidator.validateRaw(
+                        com.fasterxml.jackson.databind.node.NullNode
+                                .getInstance(),
+                        null);
+
+        // then
+        assertEquals(
+                ProcessorStatus.INVALID_PROCESSING_DOCUMENT,
+                result.status());
+        assertNull(result.document());
+    }
+
+    @Test
     void shouldVerifyBlueFacadeProcessesExactPureReferenceRootAndEvent() {
         // given
         Node root = new Node()
@@ -77,7 +95,10 @@ class ProcessingInputAdmissionTest {
             // then
             assertEquals(
                     ProcessorStatus.NO_MATCH,
-                    result.status());
+                    result.status(),
+                    result.diagnostic() == null
+                            ? "processing returned no diagnostic"
+                            : result.diagnostic().message());
             assertEquals(
                     rootBlueId,
                     DirectBlueIdCalculator.calculateBlueId(

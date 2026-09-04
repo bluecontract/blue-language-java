@@ -10,9 +10,12 @@ import java.util.Objects;
 /**
  * Immutable host value for one completed Contracts 1.0 PROCESS invocation.
  *
- * <p>The document and emitted events are defensive snapshots. A non-success
- * status carries a stable diagnostic category; gas is the exact admitted
- * total even when the invocation stopped before applying effects.</p>
+ * <p>The document and emitted events are defensive snapshots. A result may
+ * carry no document only when no parsed or admitted {@link Node} existed, for
+ * example when raw admission rejected host {@code null}; it never manufactures
+ * a Blue value to stand for that absence. A non-success status carries a stable diagnostic
+ * category; gas is the exact admitted total even when the invocation stopped
+ * before applying effects.</p>
  */
 public final class DocumentProcessingResult {
 
@@ -27,14 +30,19 @@ public final class DocumentProcessingResult {
                                      long totalGas,
                                      ProcessorStatus status,
                                      ProcessorDiagnostic diagnostic) {
-        this.document = Objects.requireNonNull(document, "document").clone();
+        ProcessorStatus requiredStatus = Objects.requireNonNull(
+                status, "status");
+        if (requiredStatus.commits() && document == null) {
+            throw new NullPointerException("document");
+        }
+        this.document = document != null ? document.clone() : null;
         Objects.requireNonNull(events, "events");
         if (totalGas < 0L) {
             throw new IllegalArgumentException("totalGas must be non-negative");
         }
         this.events = immutableNodes(events);
         this.totalGas = totalGas;
-        this.status = Objects.requireNonNull(status, "status");
+        this.status = requiredStatus;
         this.diagnostic = diagnostic;
         if (!status.commits() && !this.events.isEmpty()) {
             throw new IllegalArgumentException(
@@ -72,7 +80,8 @@ public final class DocumentProcessingResult {
     /**
      * Creates a noncommitting capability failure with the default category.
      *
-     * @param inputDocument unchanged invocation input
+     * @param inputDocument unchanged invocation input, or {@code null} when
+     *        no parsed or admitted {@link Node} existed
      * @param reason stable diagnostic explanation
      * @return an immutable noncommitting result with zero admitted gas
      */
@@ -85,7 +94,8 @@ public final class DocumentProcessingResult {
     /**
      * Creates a noncommitting capability failure with an explicit category.
      *
-     * @param inputDocument unchanged invocation input
+     * @param inputDocument unchanged invocation input, or {@code null} when
+     *        no parsed or admitted {@link Node} existed
      * @param reason stable diagnostic explanation
      * @param category error category, or {@code null} for the capability default
      * @return an immutable noncommitting result with zero admitted gas
@@ -104,7 +114,8 @@ public final class DocumentProcessingResult {
     /**
      * Creates a stable invalid-document result.
      *
-     * @param inputDocument unchanged invocation input
+     * @param inputDocument unchanged invocation input, or {@code null} when
+     *        no parsed or admitted {@link Node} existed
      * @param reason validation failure explanation
      * @return an immutable noncommitting result
      */
@@ -119,7 +130,8 @@ public final class DocumentProcessingResult {
     /**
      * Creates a stable invalid-event result.
      *
-     * @param inputDocument unchanged invocation input
+     * @param inputDocument unchanged invocation input, or {@code null} when
+     *        no parsed or admitted {@link Node} existed
      * @param reason validation failure explanation
      * @return an immutable noncommitting result
      */
@@ -134,7 +146,8 @@ public final class DocumentProcessingResult {
     /**
      * Creates a noncommitting runtime-fatal result.
      *
-     * @param inputDocument unchanged invocation input
+     * @param inputDocument unchanged invocation input, or {@code null} when
+     *        no parsed or admitted {@link Node} existed
      * @param reason stable failure explanation
      * @param category error category, or {@code null} for the runtime default
      * @return an immutable runtime-fatal result
@@ -178,10 +191,11 @@ public final class DocumentProcessingResult {
     /**
      * Returns the resulting document without exposing the stored snapshot.
      *
-     * @return a defensive document copy
+     * @return a defensive document copy, or {@code null} when admission had
+     *         no parsed or admitted {@link Node} to preserve
      */
     public Node document() {
-        return document.clone();
+        return document != null ? document.clone() : null;
     }
 
     /**
