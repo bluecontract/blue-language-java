@@ -1,0 +1,19 @@
+id: F_empty_object_collapse_reference_expand_parent_identity
+category: LimitedExpansion
+operation: compareGraphEquivalentInputs
+description: collapsing an exact empty-object child produces its pure reference, and expanding either representation preserves the exact parent identity
+variants:
+- name: inline-empty-object
+  source:
+    x: {}
+- name: collapsed-empty-object-reference
+  source:
+    x:
+      blueId: 5ajuwjHoLj33yG5t5UFsJtUb3vnRaJQEMPqSLz6VyoHK
+limits:
+  demandedPaths: [/x]
+expectedOutcome: Established
+expectedValue: {}
+expectedSameSemanticResult: true
+expectedSameRootNodeBlueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
+verifyCollapseReferenceExpand: true

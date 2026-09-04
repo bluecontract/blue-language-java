@@ -1,0 +1,21 @@
+id: R_empty_object_incomplete_resource_completion
+category: LimitedResolution
+operation: canonicalizeLimitedResult
+description: an authored exact-empty child is initially incomplete while its parent-type resource is expansion-limited, then resource completion proves the child derivable and converges on the same canonical parent identity
+source:
+  type:
+    blueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
+  x: {}
+provider:
+- requestedBlueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
+  node:
+    x: {}
+limits:
+  demandedPaths: [/x]
+  maxReferenceExpansions: 0
+expectedResolutionOutcome: Incomplete
+expectedCanonicalizationErrorCategory: CanonicalizationError
+expectedCanonicalOverlay:
+  type:
+    blueId: CDnA1mbZWySQbTBLnsSoVvAHbn1A8dZnybGxojg55JdE
+expectedNodeBlueId: HzANaraaX8uSvNnKTTfLUbJT8p2RXysJ9dyWpz2EVbTW

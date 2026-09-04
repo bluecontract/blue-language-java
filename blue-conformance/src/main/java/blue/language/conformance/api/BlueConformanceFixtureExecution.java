@@ -130,8 +130,8 @@ abstract class BlueConformanceFixtureExecution extends BlueConformanceResolution
             case FixtureOperation.COLLAPSE:
                 runCollapse(spec);
                 return;
-            case FixtureOperation.COMPARE_CONTENT_AND_DIRECT_RESOLVED_BLUE_ID:
-                runCompareContentAndDirectResolvedBlueId(spec);
+            case FixtureOperation.VERIFY_RESOLVED_FORM_NOT_DIRECT_IDENTITY_INPUT:
+                runVerifyResolvedFormNotDirectIdentityInput(spec);
                 return;
             case FixtureOperation.COMPARE_EXPANSION_STRATEGIES:
                 runCompareExpansionStrategies(spec);

@@ -109,9 +109,12 @@ MUST produce a different Canonical Identity Input and Source-derived BlueId.
 This guards against false convergence caused by malformed or cleaned-away type
 metadata.
 
-### `compareContentAndDirectResolvedBlueId`
+### `verifyResolvedFormNotDirectIdentityInput`
 
-Prove that Content BlueId is the Node BlueId of Canonical Identity Input and that directly hashing a noncanonical Resolved View need not yield it.
+Prove that Content BlueId is the Node BlueId of Canonical Identity Input and
+that the strict direct-identity boundary rejects a noncanonical Resolved Form.
+Resolved Form is evidence for reconstruction, not an alternative Canonical
+Identity Input.
 
 ### `minimizeAndResolve`
 
@@ -168,6 +171,7 @@ Return `Established`, `Absent`, `Incomplete`, or `Invalid` as the fixture reques
 ### `compareGraphEquivalentInputs`
 
 Run every representation against the same semantic demand and compare outcome, value, and exact root identity.
+When `verifyCollapseReferenceExpand: true`, the first variant must contain an exact empty object at the demanded path and the second its pure-reference form; the harness additionally derives that reference by collapsing the first value before expanding both parents.
 
 ### `compareLimitedAndCompleteResolution`
 

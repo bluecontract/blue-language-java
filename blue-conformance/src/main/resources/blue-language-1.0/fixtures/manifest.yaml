@@ -3,13 +3,13 @@ specificationVersion: '1.0'
 schemaVersion: blue-language-fixture/1.0
 registryPackageIdentity: sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321
 vectorCount: 150
-behaviorFixtureCount: 182
+behaviorFixtureCount: 184
 gasFixtureCount: 0
 files:
 - path: HARNESS.md
   role: support
-  sha256: 058633fa980ff2d33d0da33bd093e57e40c662c5bb2f7a9d9dd6c75367aeb406
-  bytes: 14563
+  sha256: be0440a8484385ec7d9d7c22f31ed285d1912d655ad9ba0ffe7571f6459b1eca
+  bytes: 14933
 - path: README.md
   role: support
   sha256: a110099c94b5def40e9995500dee3592e9bc31ab0100f40f5bc9ae4fd85a2f22
@@ -40,8 +40,8 @@ files:
   bytes: 492
 - path: blueid/B_empty_object_list_element_identity.yaml
   role: behavior-fixture
-  sha256: c0afdf7fa50cde3b54f3900f647cc1e3b940e87f2c7f0346397242dd848d8eed
-  bytes: 515
+  sha256: 3a75de49c60ea4bcbf8165a1d96297b66dadba0820247de1abeb8cba347ac0fc
+  bytes: 722
 - path: blueid/B_empty_placeholder.yaml
   role: behavior-fixture
   sha256: c39caecf2029b86ff9ef49692eef86db8b61cb75d09d1db87712b61d90136893
@@ -180,8 +180,12 @@ files:
   bytes: 673
 - path: fixture-schema.yaml
   role: support
-  sha256: 957dbb5cddad812ce7e2a22c3d300207dd3297f821334a184b89ba36b436b564
-  bytes: 4312
+  sha256: fdbd5c63fe74a3fd8042284dda3929d615d23673aa1338a50b7ed94991b6ca0f
+  bytes: 4322
+- path: limited/F_empty_object_collapse_reference_expand_parent_identity.yaml
+  role: behavior-fixture
+  sha256: 03e30ab7048a97879fa65cce490b05f048f710613e78b1ff07282525eeae966d
+  bytes: 675
 - path: limited/F_empty_object_reference_cache_parity.yaml
   role: behavior-fixture
   sha256: 8b3fb45992d104c2574aff18c62e9a14236fbccb5c2d89dd86d9d22f61a7bab4
@@ -202,6 +206,10 @@ files:
   role: behavior-fixture
   sha256: d0b12d37e0f768ef89c325f4b3b0b64f9a3a3cc6de3029c8ebaa4909c70d4219
   bytes: 867
+- path: limited/R_empty_object_incomplete_resource_completion.yaml
+  role: behavior-fixture
+  sha256: 7e6a5c8dda80529ae0f3eeb0410321f5f1890800baf7eaf65ec43a9cf0c7d4f0
+  bytes: 825
 - path: limited/R_empty_object_reference_unavailable_not_absent.yaml
   role: behavior-fixture
   sha256: 366fb25f4453dfab58f7486ae33add1857f9515d1f45621b34d292a1dfba812d
@@ -680,8 +688,8 @@ files:
   bytes: 370
 - path: resolver/R_resolved_form_not_direct_content_id.yaml
   role: behavior-fixture
-  sha256: 5a872fdd271f9290d5835dd7c1c46ed91901bfad3a4da857e053e27fb52c294c
-  bytes: 263
+  sha256: 7137c974b1bcaca770d6ea7a6ad12ac5a16321e1c78a93ca06c1a66f19d743a0
+  bytes: 222
 - path: resolver/R_schema_accumulation_conflict.yaml
   role: behavior-fixture
   sha256: 8cd273e7d6c629cefc686a7859833b53d6992faa9581c58f46c8b8223dacb972
@@ -764,10 +772,10 @@ files:
   bytes: 1574
 - path: vector-coverage.yaml
   role: support
-  sha256: 0b717446467120ae301d0fa3fb173cc97fff4927e25f4bf80a63f3c9201e1380
-  bytes: 13065
+  sha256: be3c616c490a2eec6a629ab28d3ad5b5315aef50237de99eeff4b7f6fe114fb4
+  bytes: 13176
 packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
-packageIdentity: sha256:c59f2bc4e4ceafb8d7e20875003fa281f79f2f77ac7ae991fcebdc6dde0977cc
+packageIdentity: sha256:83a0d7ec99d711577d6c08962b922aedd342d858a9bf12560ade790692d08cae

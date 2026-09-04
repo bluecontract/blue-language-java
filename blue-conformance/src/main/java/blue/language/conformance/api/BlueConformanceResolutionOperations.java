@@ -114,7 +114,7 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
         }
     }
 
-    static void runCompareContentAndDirectResolvedBlueId(JsonNode spec) {
+    static void runVerifyResolvedFormNotDirectIdentityInput(JsonNode spec) {
         LanguageFixtureRuntime blue = new LanguageFixtureRuntime(
                 providerContext(spec, null).provider);
         Node source = readNode(requirePresent(spec, FixtureField.SOURCE));
@@ -123,14 +123,17 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
         String contentBlueId = blue.calculateSourceDocumentBlueId(source);
         String canonicalIdentityInputBlueId =
                 DirectBlueIdCalculator.calculateBlueId(canonical);
-        String directResolvedBlueId = DirectBlueIdCalculator.calculateBlueId(resolved);
         assertEquals(spec.path(
                         FixtureField.EXPECTED_CONTENT_BLUE_ID_EQUALS_CANONICAL_IDENTITY_INPUT)
                         .asBoolean(false),
                 contentBlueId.equals(canonicalIdentityInputBlueId));
-        assertEquals(spec.path(FixtureField.EXPECTED_DIRECT_RESOLVED_BLUE_ID_MAY_DIFFER)
-                        .asBoolean(false),
-                !directResolvedBlueId.equals(contentBlueId));
+        try {
+            DirectBlueIdCalculator.calculateBlueId(resolved);
+            throw new AssertionError(
+                    "Resolved Form must not be accepted as direct Canonical Identity Input.");
+        } catch (IllegalArgumentException expected) {
+            // The strict direct boundary rejects expanded type metadata.
+        }
     }
 
     static void runMinimizeAndResolve(JsonNode spec) {

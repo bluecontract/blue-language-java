@@ -86,8 +86,8 @@ abstract class BlueConformanceFixturePrimitives {
         static final String CHANGING_REGISTRY_DESCRIPTION_CHANGES_BLUE_ID =
                 "changingRegistryDescriptionChangesBlueId";
         static final String COLLAPSE = "collapse";
-        static final String COMPARE_CONTENT_AND_DIRECT_RESOLVED_BLUE_ID =
-                "compareContentAndDirectResolvedBlueId";
+        static final String VERIFY_RESOLVED_FORM_NOT_DIRECT_IDENTITY_INPUT =
+                "verifyResolvedFormNotDirectIdentityInput";
         static final String COMPARE_EXPANSION_STRATEGIES =
                 "compareExpansionStrategies";
         static final String COMPARE_GRAPH_EQUIVALENT_INPUTS =
@@ -172,8 +172,6 @@ abstract class BlueConformanceFixturePrimitives {
                 "expectedDefensiveCopies";
         static final String EXPECTED_DESCENDANT_REQUESTS =
                 "expectedDescendantRequests";
-        static final String EXPECTED_DIRECT_RESOLVED_BLUE_ID_MAY_DIFFER =
-                "expectedDirectResolvedBlueIdMayDiffer";
         static final String
                 EXPECTED_DIRECT_RESULT_STILL_CONTAINS_ALL_ORDERED_ELEMENT_IDENTITIES =
                 "expectedDirectResultStillContainsAllOrderedElementIdentities";
@@ -297,6 +295,8 @@ abstract class BlueConformanceFixturePrimitives {
         static final String SOURCE = "source";
         static final String STORED_OPTIMIZATION = "storedOptimization";
         static final String VARIANTS = "variants";
+        static final String VERIFY_COLLAPSE_REFERENCE_EXPAND =
+                "verifyCollapseReferenceExpand";
 
         FixtureField() {
         }
@@ -308,7 +308,7 @@ abstract class BlueConformanceFixturePrimitives {
             FIXTURE_ROOT + "preprocessing/registry/";
     static final String PREPROCESSING_REGISTRY_MANIFEST_RESOURCE =
             PREPROCESSING_REGISTRY_ROOT + "manifest.yaml";
-    static final int EXPECTED_BEHAVIOR_FIXTURE_COUNT = 182;
+    static final int EXPECTED_BEHAVIOR_FIXTURE_COUNT = 184;
 
     static final Set<String> OPERATIONS = immutableSet(
             FixtureOperation.ASSERT_VIEW_PATH,
@@ -319,7 +319,7 @@ abstract class BlueConformanceFixturePrimitives {
             FixtureOperation.CANONICALIZE_LIMITED_RESULT,
             FixtureOperation.CHANGING_REGISTRY_DESCRIPTION_CHANGES_BLUE_ID,
             FixtureOperation.COLLAPSE,
-            FixtureOperation.COMPARE_CONTENT_AND_DIRECT_RESOLVED_BLUE_ID,
+            FixtureOperation.VERIFY_RESOLVED_FORM_NOT_DIRECT_IDENTITY_INPUT,
             FixtureOperation.COMPARE_EXPANSION_STRATEGIES,
             FixtureOperation.COMPARE_GRAPH_EQUIVALENT_INPUTS,
             FixtureOperation.COMPARE_LIMITED_AND_COMPLETE_RESOLUTION,
@@ -358,7 +358,7 @@ abstract class BlueConformanceFixturePrimitives {
             FixtureField.EXPECTED_CANONICAL_OVERLAY, FixtureField.EXPECTED_CANONICALIZATION_ERROR_CATEGORY,
             FixtureField.EXPECTED_COLLAPSED, FixtureField.EXPECTED_COLLAPSED_ROOT,
             FixtureField.EXPECTED_CONTENT_BLUE_ID_EQUALS_CANONICAL_IDENTITY_INPUT,
-            FixtureField.EXPECTED_DESCENDANT_REQUESTS, FixtureField.EXPECTED_DIRECT_RESOLVED_BLUE_ID_MAY_DIFFER,
+            FixtureField.EXPECTED_DESCENDANT_REQUESTS,
             FixtureField.EXPECTED_DIRECT_RESULT_STILL_CONTAINS_ALL_ORDERED_ELEMENT_IDENTITIES,
             FixtureField.EXPECTED_EFFECTIVE_TYPE, FixtureField.EXPECTED_EFFECTIVE_TYPES,
             FixtureField.EXPECTED_ELEMENT_BODY_REQUESTS, FixtureField.EXPECTED_EQUAL, FixtureField.EXPECTED_ERROR_CATEGORY,
@@ -393,7 +393,8 @@ abstract class BlueConformanceFixturePrimitives {
             FixtureField.PUBLISHABLE_FILES, FixtureField.REGISTRY_KEY, FixtureField.REGISTRY_KIND,
             FixtureField.REQUESTED_BLUE_ID, FixtureField.REQUIRED_HEADINGS, FixtureField.REQUIRES_VECTOR_PREFIXES,
             FixtureField.RESOLVED_ITEMS, FixtureField.RIGHT, FixtureField.SEMANTIC_DESCRIPTION_IDENTITY_BEARING,
-            FixtureField.SOURCE, FixtureField.STORED_OPTIMIZATION, FixtureField.VARIANTS
+            FixtureField.SOURCE, FixtureField.STORED_OPTIMIZATION, FixtureField.VARIANTS,
+            FixtureField.VERIFY_COLLAPSE_REFERENCE_EXPAND
     );
 
     static JsonNode readYamlResource(String resource) {

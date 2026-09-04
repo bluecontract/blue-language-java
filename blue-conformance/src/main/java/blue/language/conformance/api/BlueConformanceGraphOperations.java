@@ -305,7 +305,9 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
         try (LanguageFixtureRuntime blue =
                      new LanguageFixtureRuntime(provider.provider)) {
             Node resolved = blue.resolve(source.clone());
-            return NodeToBlueIdInput.getWithResolvedBlueIdMetadata(resolved);
+            return NodeWireForm.get(
+                    NodeToBlueIdInput.stripResolvedBlueIdMetadata(
+                            resolved.clone()));
         }
     }
 
@@ -457,6 +459,30 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
 
     static void runCompareGraphEquivalentInputs(JsonNode spec) {
         JsonNode variants = requireArray(spec, FixtureField.VARIANTS);
+        if (spec.path(FixtureField.VERIFY_COLLAPSE_REFERENCE_EXPAND)
+                .asBoolean(false)) {
+            if (variants.size() != 2) {
+                throw new IllegalArgumentException(
+                        "Collapse/reference/expand verification requires "
+                                + "exactly two variants.");
+            }
+            BlueOperationLimits limits = operationLimits(spec);
+            Node inlineParent = readNode(requirePresent(
+                    variants.get(0), FixtureField.SOURCE));
+            Node referenceParent = readNode(requirePresent(
+                    variants.get(1), FixtureField.SOURCE));
+            Node inlineValue = selectFirstDemand(inlineParent, limits);
+            Node referenceValue = selectFirstDemand(referenceParent, limits);
+            assertTrue(Nodes.isExactEmptyObject(inlineValue),
+                    "Collapse/reference/expand source must contain exact {}.");
+            assertTrue(referenceValue != null
+                            && referenceValue.isReferenceOnly(),
+                    "Collapsed variant must contain a pure reference.");
+            try (LanguageFixtureRuntime blue =
+                         new LanguageFixtureRuntime()) {
+                assertNodeEquals(referenceValue, blue.collapse(inlineValue));
+            }
+        }
         Map<String, NodeProviderResult> derived = new LinkedHashMap<>(globalProviderCatalog());
         for (JsonNode variant : variants) {
             Node source = readNode(requirePresent(variant, FixtureField.SOURCE));
@@ -477,8 +503,18 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
                             .expandLimited(source, limits);
             results.add(result);
             assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
-            selected.add(selectFirstDemand(result.requireEstablished(), limits));
-            rootIds.add(DirectBlueIdCalculator.calculateBlueId(source));
+            Node expanded = result.requireEstablished();
+            selected.add(selectFirstDemand(expanded, limits));
+            String sourceBlueId =
+                    DirectBlueIdCalculator.calculateBlueId(source);
+            String expandedBlueId =
+                    DirectBlueIdCalculator.calculateBlueId(expanded);
+            assertEquals(
+                    sourceBlueId,
+                    expandedBlueId,
+                    "Expansion changed the exact parent identity for variant "
+                            + requireText(variant, "name"));
+            rootIds.add(expandedBlueId);
         }
         assertAllNodeEqual(selected);
         assertAllEqual(rootIds);
@@ -506,8 +542,16 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
                     new LanguageFixtureRuntime(provider.provider)
                             .expandLimited(source, limits);
             assertOutcome(spec, FixtureField.EXPECTED_OUTCOME, result.outcome());
-            selected.add(selectFirstDemand(result.requireEstablished(), limits));
-            rootIds.add(DirectBlueIdCalculator.calculateBlueId(source));
+            Node expanded = result.requireEstablished();
+            selected.add(selectFirstDemand(expanded, limits));
+            String sourceBlueId = DirectBlueIdCalculator.calculateBlueId(source);
+            String expandedBlueId = DirectBlueIdCalculator.calculateBlueId(expanded);
+            assertEquals(
+                    sourceBlueId,
+                    expandedBlueId,
+                    "Expansion changed the exact parent identity for variant "
+                            + requireText(variant, "name"));
+            rootIds.add(expandedBlueId);
         }
         assertAllNodeEqual(selected);
         assertAllEqual(rootIds);

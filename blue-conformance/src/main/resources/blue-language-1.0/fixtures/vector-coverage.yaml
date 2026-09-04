@@ -518,6 +518,7 @@
   - R_inline_empty_type_reference_identity_parity
 - id: L-EMPTY-CANON-04
   fixtures:
+  - F_empty_object_collapse_reference_expand_parent_identity
   - R_empty_object_minimized_overlay_round_trip
 - id: L-EMPTY-CANON-05
   fixtures:
@@ -525,6 +526,7 @@
 - id: L-EMPTY-CANON-06
   fixtures:
   - R_empty_object_reference_unavailable_not_absent
+  - R_empty_object_incomplete_resource_completion
 - id: L-EMPTY-MERGE-01
   fixtures:
   - R_empty_object_over_inherited_scalar_conflicts
