@@ -27,6 +27,10 @@ sys.dont_write_bytecode = True
 
 import yaml
 
+from implementation_baseline import (
+    ImplementationBaselineError,
+    require_implementation_baseline_files,
+)
 from package_hygiene import release_inventory_files
 from release_regenerate_package import regenerate_generated_surfaces
 
@@ -47,26 +51,6 @@ CANONICAL_ORDINARY_FIXTURES = Path(
 CANONICAL_RUNTIME_REGISTRY = Path(
     "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0"
 )
-BASELINE_SOURCE_PATHS = (
-    "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
-    "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
-    "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
-    "blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
-    "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/PlatformCommitCompanion.java",
-)
-
-
 class RegenerationFailure(RuntimeError):
     """Raised when a candidate cannot be produced or verified safely."""
 
@@ -461,7 +445,6 @@ def validate_inputs(
     required_sources = (
         str(CONTRACTS_SPECIFICATION),
         str(LANGUAGE_SPECIFICATION),
-        *BASELINE_SOURCE_PATHS,
     )
     missing_sources = [
         relative
@@ -472,6 +455,10 @@ def validate_inputs(
         raise RegenerationFailure(
             f"repository root lacks release source inputs: {missing_sources}"
         )
+    try:
+        require_implementation_baseline_files(repository_root)
+    except ImplementationBaselineError as exc:
+        raise RegenerationFailure(str(exc)) from exc
     required_directories = (
         CANONICAL_ORDINARY_FIXTURES,
         CANONICAL_RUNTIME_REGISTRY,

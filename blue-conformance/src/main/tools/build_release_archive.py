@@ -13,10 +13,11 @@ from package_hygiene import release_inventory_files
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXED_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+NON_RELEASE_RECEIPTS = frozenset({"validation-output.json"})
 
 
 def package_files(root: Path = ROOT) -> list[Path]:
-    return release_inventory_files(root)
+    return release_inventory_files(root, NON_RELEASE_RECEIPTS)
 
 
 def build_archive(destination: Path, root: Path = ROOT) -> None:

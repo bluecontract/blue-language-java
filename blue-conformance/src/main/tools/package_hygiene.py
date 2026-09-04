@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import stat
 from typing import Collection
 
 
@@ -55,21 +57,61 @@ def release_inventory_files(
     root: Path,
     excluded_paths: Collection[str] = (),
 ) -> list[Path]:
-    """Return sorted authored files eligible for package inventories."""
+    """Return sorted authored files, rejecting unsafe filesystem entries."""
+    root = root.expanduser().absolute()
+    try:
+        root_mode = root.lstat().st_mode
+    except OSError as exc:
+        raise ValueError(f"release inventory root cannot be inspected: {root}") from exc
+    if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode):
+        raise ValueError(
+            f"release inventory root must be a non-symlink directory: {root}"
+        )
+
     excluded = set(excluded_paths)
     files: list[Path] = []
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        relative = path.relative_to(root)
-        relative_text = relative.as_posix()
-        if relative_text in excluded:
-            continue
-        if relative.suffix.casefold() == ".pyc":
-            continue
-        if is_build_or_cache_path(relative):
-            continue
-        if is_host_metadata_path(relative):
-            continue
-        files.append(path)
-    return sorted(files, key=lambda path: path.relative_to(root).as_posix())
+
+    def visit(directory: Path) -> None:
+        try:
+            entries = list(os.scandir(directory))
+        except OSError as exc:
+            raise ValueError(
+                f"release inventory directory cannot be inspected: {directory}"
+            ) from exc
+        entries.sort(key=lambda entry: os.fsencode(entry.name))
+        for entry in entries:
+            path = directory / entry.name
+            relative = path.relative_to(root)
+            relative_text = relative.as_posix()
+            try:
+                mode = entry.stat(follow_symlinks=False).st_mode
+            except OSError as exc:
+                raise ValueError(
+                    f"release inventory entry cannot be inspected: {relative_text}"
+                ) from exc
+            if stat.S_ISLNK(mode):
+                raise ValueError(
+                    f"release inventory contains a symlink: {relative_text}"
+                )
+            if stat.S_ISDIR(mode):
+                visit(path)
+                continue
+            if not stat.S_ISREG(mode):
+                raise ValueError(
+                    f"release inventory contains a non-regular entry: {relative_text}"
+                )
+            if relative_text in excluded:
+                continue
+            if relative.suffix.casefold() == ".pyc":
+                continue
+            if is_build_or_cache_path(relative):
+                continue
+            if is_host_metadata_path(relative):
+                continue
+            files.append(path)
+
+    visit(root)
+    return sorted(
+        files,
+        key=lambda path: os.fsencode(path.relative_to(root).as_posix()),
+    )

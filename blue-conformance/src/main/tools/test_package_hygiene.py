@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import tempfile
 import unittest
 import zipfile
@@ -44,6 +45,125 @@ BUILD_CACHE_PATHS = (
 
 
 class PackageHygieneTest(unittest.TestCase):
+
+    def test_release_inventory_rejects_symlinks_and_special_files(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="blue-release-unsafe-entry-"
+        ) as temporary:
+            root = Path(temporary)
+            package = root / "package"
+            package.mkdir()
+            outside = root / "outside.txt"
+            outside.write_text("outside\n", encoding="utf-8")
+
+            file_link = package / "file-link"
+            file_link.symlink_to(outside)
+            with self.assertRaisesRegex(ValueError, "contains a symlink"):
+                release_inventory_files(package)
+            file_link.unlink()
+
+            outside_directory = root / "outside-directory"
+            outside_directory.mkdir()
+            directory_link = package / "directory-link"
+            directory_link.symlink_to(outside_directory, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "contains a symlink"):
+                release_inventory_files(package)
+            directory_link.unlink()
+
+            if hasattr(os, "mkfifo"):
+                fifo = package / "pipe"
+                os.mkfifo(fifo)
+                with self.assertRaisesRegex(ValueError, "non-regular entry"):
+                    release_inventory_files(package)
+
+    def test_release_copy_never_dereferences_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="blue-release-copy-symlink-"
+        ) as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            outside = root / "outside.txt"
+            outside.write_text("outside\n", encoding="utf-8")
+            (source / "payload").symlink_to(outside)
+
+            with self.assertRaisesRegex(ValueError, "contains a symlink"):
+                regenerate_package.copy_release_tree_fail_closed(
+                    source, root / "destination"
+                )
+            self.assertFalse((root / "destination").exists())
+
+    def test_validation_receipt_is_not_part_of_release_archive(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="blue-release-receipt-exclusion-"
+        ) as temporary:
+            root = Path(temporary)
+            package = root / "package"
+            package.mkdir()
+            (package / "README.md").write_text(
+                "semantic package\n", encoding="utf-8"
+            )
+            receipt = package / "validation-output.json"
+            receipt.write_text(
+                '{"sourceArchive":{"provided":true,"suppliedName":"one.zip",'
+                '"sha256":"' + "1" * 64 + '"}}\n',
+                encoding="utf-8",
+            )
+
+            first = root / "first.zip"
+            build_release_archive.build_archive(first, package)
+            receipt.write_text(
+                '{"sourceArchive":{"provided":true,"suppliedName":"two.zip",'
+                '"sha256":"' + "2" * 64 + '"}}\n',
+                encoding="utf-8",
+            )
+            second = root / "second.zip"
+            build_release_archive.build_archive(second, package)
+
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            with zipfile.ZipFile(second) as archive:
+                self.assertEqual(
+                    [f"{package.name}/README.md"], archive.namelist()
+                )
+
+    def test_regeneration_comparison_ignores_only_archive_provenance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="blue-release-provenance-comparison-"
+        ) as temporary:
+            root = Path(temporary)
+            left = root / "left"
+            right = root / "right"
+            left.mkdir()
+            right.mkdir()
+            for package, name, digest in (
+                (left, "one.zip", "1" * 64),
+                (right, "two.zip", "2" * 64),
+            ):
+                (package / "payload.yaml").write_text(
+                    "value: stable\n", encoding="utf-8"
+                )
+                (package / "validation-output.json").write_text(
+                    '{"status":"PACKAGE_VALID","sourceArchive":'
+                    f'{{"provided":true,"suppliedName":"{name}",'
+                    f'"sha256":"{digest}"}}}}\n',
+                    encoding="utf-8",
+                )
+
+            self.assertEqual([], regenerate_package.compare_packages(left, right))
+
+            right_receipt = right / "validation-output.json"
+            right_receipt.write_text(
+                right_receipt.read_text(encoding="utf-8").replace(
+                    "PACKAGE_VALID", "DIFFERENT_STATUS"
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                ["content differs: validation-output.json"],
+                regenerate_package.compare_packages(left, right),
+            )
 
     def test_host_metadata_never_changes_release_inventories_or_archive(self) -> None:
         with tempfile.TemporaryDirectory(
@@ -89,6 +209,7 @@ class PackageHygieneTest(unittest.TestCase):
             archive_files_before = self._relative_paths(
                 build_release_archive.package_files(package), package
             )
+            self.assertNotIn("validation-output.json", archive_files_before)
             archive_before = temporary_root / "before.zip"
             build_release_archive.build_archive(archive_before, package)
 

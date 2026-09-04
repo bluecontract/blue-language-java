@@ -19,30 +19,14 @@ from typing import Any
 
 import yaml
 
+from implementation_baseline import (
+    ImplementationBaselineError,
+    require_implementation_baseline_files,
+)
 from package_hygiene import release_inventory_files
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE_SOURCE_PATHS = [
-    "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
-    "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
-    "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
-    "blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
-    "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
-    "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java",
-    "blue-contracts-core/src/main/java/blue/language/processor/PlatformCommitCompanion.java",
-]
-
-
 class RegenerationFailure(RuntimeError):
     pass
 
@@ -62,7 +46,10 @@ def package_inventory(root: Path) -> dict[str, Path]:
 def normalized_file_value(relative: str, path: Path) -> bytes | Any:
     if relative == "validation-output.json":
         value = json.loads(path.read_text())
-        value.get("sourceArchive", {}).pop("suppliedName", None)
+        source_archive = value.get("sourceArchive")
+        if isinstance(source_archive, dict):
+            source_archive.pop("suppliedName", None)
+            source_archive.pop("sha256", None)
         return value
     return path.read_bytes()
 
@@ -258,7 +245,11 @@ def regenerate_generated_surfaces(
     prune_unowned_oracles(oracle_directory, retained)
 
 
-def regenerate(candidate: Path, language_source_root: Path, source_zip: Path) -> None:
+def regenerate(
+    candidate: Path,
+    language_source_root: Path,
+    source_zip: Path,
+) -> None:
     environment = dict(os.environ)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     tools = candidate / "tools"
@@ -355,10 +346,25 @@ def publish(candidate: Path, destination: Path) -> None:
         raise RegenerationFailure(f"published package differs from validated staging tree: {differences[:20]}")
 
 
+def copy_release_tree_fail_closed(source: Path, destination: Path) -> None:
+    """Copy a release tree without ever dereferencing a symbolic link."""
+    release_inventory_files(source)
+    shutil.copytree(source, destination, symlinks=True)
+    release_inventory_files(destination)
+
+
 def main() -> None:
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--language-source-root", type=Path, required=True)
-    parser.add_argument("--source-zip", type=Path, required=True)
+    parser.add_argument(
+        "--source-zip",
+        type=Path,
+        required=True,
+        help=(
+            "Source archive recorded by filename and SHA-256 only in the "
+            "non-semantic validation receipt"
+        ),
+    )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="Regenerate in a temporary copy and require byte identity (default)")
     mode.add_argument("--write", action="store_true", help="Publish the validated temporary result into this package")
@@ -368,15 +374,21 @@ def main() -> None:
     source_zip = args.source_zip.expanduser().resolve()
     if not language_source_root.is_dir():
         raise RegenerationFailure(f"language source root is not a directory: {language_source_root}")
-    missing_baselines = [relative for relative in BASELINE_SOURCE_PATHS if not (language_source_root / relative).is_file()]
-    if missing_baselines:
-        raise RegenerationFailure(f"language source root lacks release baseline files: {missing_baselines}")
+    try:
+        require_implementation_baseline_files(language_source_root)
+    except ImplementationBaselineError as exc:
+        raise RegenerationFailure(str(exc)) from exc
     if not source_zip.is_file():
-        raise RegenerationFailure(f"original source ZIP is not a file: {source_zip}")
+        raise RegenerationFailure(
+            f"source archive for provenance is not a file: {source_zip}"
+        )
 
     with tempfile.TemporaryDirectory(prefix="blue-contracts-regenerate-") as temporary_root:
         candidate = Path(temporary_root) / ROOT.name
-        shutil.copytree(ROOT, candidate)
+        # Validate before copying, preserve any concurrently introduced link,
+        # then validate the copy.  A link is never dereferenced into release
+        # content and either scan fails closed.
+        copy_release_tree_fail_closed(ROOT, candidate)
         regenerate(candidate, language_source_root, source_zip)
         differences = compare_packages(ROOT, candidate)
         if args.write:

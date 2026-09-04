@@ -9,6 +9,7 @@ from pathlib import Path
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 from typing import Any, Iterable
@@ -18,6 +19,7 @@ sys.dont_write_bytecode = True
 import yaml
 
 from gas_reference import gas_trace_identity
+from implementation_baseline import IMPLEMENTATION_BASELINE_SOURCE_PATHS
 from jcs import dumps as jcs_dumps
 from package_hygiene import release_inventory_files
 
@@ -29,6 +31,7 @@ SEMANTIC = "actual-semantic-state-result-change"
 FORMATTING = "fixture-byte-only-formatting"
 UNEXPECTED = "unexpected"
 CATEGORIES = (SPEC, INVOCATION, TRACE, SEMANTIC, FORMATTING, UNEXPECTED)
+LOWERCASE_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 APPROVED_SUPPORT_DOCUMENTS = frozenset(
     {
@@ -121,8 +124,105 @@ APPROVED_CEVO_FIXTURE_IDENTITIES = {
 }
 
 APPROVED_CONTRACTS_SPECIFICATION_SHA256 = (
-    "8fa141d5babb21a0b5df064a1b715e3d57f868a9a087fc1fd20b686761375242"
+    "99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd"
 )
+APPROVED_REMOVED_SOURCE_ARCHIVE_BASELINE = {
+    "expectedSha256": (
+        "7be5116d8e7a64bccf471c11a93127d4924a36686e23bbbf634fc0713d6d33c9"
+    ),
+    "filenameIsNonNormative": True,
+}
+APPROVED_LANGUAGE_DEPENDENCY_TRANSITION = {
+    "specificationSha256": (
+        "019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37",
+        "db56468955be462861cfcdf3451f46361c5e13fc4e31ac89a39115e402ac4cde",
+    ),
+    "cyclicSetFinalizerBaselineIdentity": (
+        "sha256:d71ec19247a32f7f40107f512e4eb567b4cb41ae8e73c16d2ebe10b0e8517c76",
+        "sha256:d3ffac60d78fdb516a9f635181532e45dcb5bde05080ad161f63af8476eb1b48",
+    ),
+    "cyclicSetProofVerifierBaselineIdentity": (
+        "sha256:0768d22420c5bb01109861eb9e090b758aa66b25c2df7b4708dff36a969cefdd",
+        "sha256:550c51d427f53b07a5d31cbdfdc1c143829466602356615452b27327f2080202",
+    ),
+}
+
+# The old release carried this exact, order-sensitive sixteen-file snapshot.
+# The new release carries the entire closed six-module inventory.  Its 722
+# digests are approved through a single canonical aggregate rather than an
+# unreviewable Python literal.  Array order remains part of the aggregate.
+APPROVED_IMPLEMENTATION_BASELINE_BEFORE = (
+    ("blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java", "66a5d2e70757c9426a5ab922bcdafd951c7145ae7dcefab491dc533e95922283"),
+    ("blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java", "38c4f46e1731247c25469d7d68f0bfff160b68cfa7ab9094ba81811d9ffccf62"),
+    ("blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java", "5c29563118ed6cb704e2b0f17445eb7d17ce8f9ac02f00ac0143dc0d753dd5b3"),
+    ("blue-language-core/src/main/java/blue/language/provider/NodeContentHandler.java", "0ab691e9295f77da991faf1f392411b6223a4feffb9898ef80c999f73611ee65"),
+    ("blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java", "3ce68fa55e89299e4c2e57ccba6db264cc9c3416706b1d29a79b7ab47eb071f1"),
+    ("blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java", "eaad1e3a012454b4486b7283275fc6025af2007608ebcfbf4f1c4e9abf107474"),
+    ("blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java", "618ee825785f86697ca06e3fb1670609617da58e0548775cc2717aee2d317204"),
+    ("blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java", "c14931e3e346f36cf5979aede4ec2c3623318b9b88e13a69801934e65de0cc36"),
+    ("blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java", "db33225ee9243fa4bae09572ac40733dffa5e7d90c9b3d446694caf39e33f83c"),
+    ("blue-contracts-core/src/main/java/blue/language/processor/DocumentProcessor.java", "81a54840d50bc836321f3ca2ece052c8a0d6c3723f52d13bf6317c787833977c"),
+    ("blue-contracts-core/src/main/java/blue/language/processor/ProcessorInvocationOrchestrator.java", "bcc7ebe6be7eb9f86b6b079248cc2f1382e6ef3ad422827634c1483e643d0bcf"),
+    ("blue-contracts-core/src/main/java/blue/language/processor/ProcessorExecutionContext.java", "55dc9ac99a5860b5be843d61114c5aed4695c145ed32fbdada9ba3181dbea434"),
+    ("blue-contracts-core/src/main/java/blue/language/processor/EmbeddedScopePlanner.java", "2d17ebcd49932ef7cf36ffa4ac949f338fa5728d313a7f7f2fe17535859571c6"),
+    ("blue-contracts-core/src/main/java/blue/language/processor/ProcessGasMeter.java", "cfe0e418e87451d7d31f2522d4150514c197cee552f3cc3b0bab8a8f08c3abb2"),
+    ("blue-contracts-core/src/main/java/blue/language/processor/GasSchedule.java", "b049a54909bc111bf7921a3c4bb5424aea69f580ef389f6bc35bbad03960c302"),
+    ("blue-contracts-core/src/main/java/blue/language/processor/PlatformCommitCompanion.java", "0ef97244ea90a43bab60e1708010bcca95a76d50517dc81c31aef3c0079509b6"),
+)
+APPROVED_IMPLEMENTATION_BASELINE_BEFORE_ORDER = tuple(
+    path for path, _ in APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+)
+APPROVED_IMPLEMENTATION_BASELINE_BEFORE_BY_PATH = dict(
+    APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+)
+IMPLEMENTATION_BASELINE_AGGREGATE_DOMAIN = (
+    "blue-contracts-implementation-source-baseline/1.0"
+)
+
+
+def implementation_baseline_aggregate_identity(
+    order: tuple[str, ...],
+    by_path: dict[str, str],
+) -> str:
+    """Bind exact path order and digests into one reviewed approval identity."""
+    value = {
+        "domain": IMPLEMENTATION_BASELINE_AGGREGATE_DOMAIN,
+        "files": [
+            {"path": path, "sha256": by_path[path]} for path in order
+        ],
+    }
+    return "sha256:" + hashlib.sha256(jcs_dumps(value)).hexdigest()
+
+
+# Recompute deliberately when production source bytes or inventory membership
+# changes.  This pin approves one exact after-snapshot, not arbitrary hashes.
+APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY = (
+    "sha256:fe076c2ad557447dabe1fe231ff1ff458859d5196b2f552ea63887049edf9ce2"
+)
+
+if any(
+    LOWERCASE_SHA256_RE.fullmatch(digest) is None
+    for _, digest in APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+):
+    raise RuntimeError(
+        "approved pre-transition implementation baseline has a malformed digest"
+    )
+if len(APPROVED_IMPLEMENTATION_BASELINE_BEFORE_BY_PATH) != len(
+    APPROVED_IMPLEMENTATION_BASELINE_BEFORE
+):
+    raise RuntimeError(
+        "approved pre-transition implementation baseline has duplicate paths"
+    )
+if not APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY.startswith(
+    "sha256:"
+) or LOWERCASE_SHA256_RE.fullmatch(
+    APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY.removeprefix(
+        "sha256:"
+    )
+) is None:
+    raise RuntimeError(
+        "approved implementation-baseline aggregate identity is malformed"
+    )
 
 APPROVED_SCRIPTED_OPERATION_SHA256 = (
     "b8304f600d22c0faa98222a96664f133fd6a34c73c9148989c143e7b435a2fc8"
@@ -635,6 +735,31 @@ def approved_registry_manifest_transition(
     return actual == after.get("packageIdentity") == before.get("packageIdentity")
 
 
+def implementation_baseline_snapshot(
+    value: Any,
+) -> tuple[tuple[str, ...], dict[str, str]] | None:
+    """Parse one closed ordered path/digest baseline without positional meaning."""
+    if not isinstance(value, list):
+        return None
+    order: list[str] = []
+    by_path: dict[str, str] = {}
+    for entry in value:
+        if not isinstance(entry, dict) or set(entry) != {"path", "sha256"}:
+            return None
+        path = entry.get("path")
+        digest = entry.get("sha256")
+        if (
+            not isinstance(path, str)
+            or path in by_path
+            or not isinstance(digest, str)
+            or LOWERCASE_SHA256_RE.fullmatch(digest) is None
+        ):
+            return None
+        order.append(path)
+        by_path[path] = digest
+    return tuple(order), by_path
+
+
 def approved_release_manifest_transition(
     package_root: Path,
     before: dict[str, Any],
@@ -645,9 +770,44 @@ def approved_release_manifest_transition(
     try:
         fixture = after["fixturePackage"]
         constructors = after["identityConstructors"]
-        implementation = after["languageDependency"]["inputImplementationBaseline"]
-        embedded_scope = implementation[12]
-    except (KeyError, IndexError, TypeError):
+        before_implementation = before["languageDependency"][
+            "inputImplementationBaseline"
+        ]
+        after_implementation = after["languageDependency"][
+            "inputImplementationBaseline"
+        ]
+    except (KeyError, TypeError):
+        return False
+    before_snapshot = implementation_baseline_snapshot(before_implementation)
+    after_snapshot = implementation_baseline_snapshot(after_implementation)
+    expected_before = (
+        APPROVED_IMPLEMENTATION_BASELINE_BEFORE_ORDER,
+        APPROVED_IMPLEMENTATION_BASELINE_BEFORE_BY_PATH,
+    )
+    if before_snapshot != expected_before or after_snapshot is None:
+        return False
+    after_order, after_by_path = after_snapshot
+    if (
+        after_order != IMPLEMENTATION_BASELINE_SOURCE_PATHS
+        or implementation_baseline_aggregate_identity(
+            after_order, after_by_path
+        )
+        != APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY
+    ):
+        return False
+    before_language = before.get("languageDependency", {})
+    after_language = after.get("languageDependency", {})
+    if not all(
+        before_language.get(field) == transition[0]
+        and after_language.get(field) == transition[1]
+        for field, transition in APPROVED_LANGUAGE_DEPENDENCY_TRANSITION.items()
+    ):
+        return False
+    if (
+        before.get("sourceArchiveBaseline")
+        != APPROVED_REMOVED_SOURCE_ARCHIVE_BASELINE
+        or "sourceArchiveBaseline" in after
+    ):
         return False
     if fixture != {
         "path": "fixtures/manifest.yaml",
@@ -662,10 +822,6 @@ def approved_release_manifest_transition(
         return False
     if constructors.get("sha256") != sha256(package_root / "identity-constructors.yaml"):
         return False
-    if embedded_scope.get("sha256") != (
-        "2d17ebcd49932ef7cf36ffa4ac949f338fa5728d313a7f7f2fe17535859571c6"
-    ):
-        return False
     if after.get("specificationDocument", {}).get("sha256") != (
         APPROVED_CONTRACTS_SPECIFICATION_SHA256
     ):
@@ -677,12 +833,17 @@ def approved_release_manifest_transition(
     normalized["identityConstructors"]["sha256"] = before[
         "identityConstructors"
     ]["sha256"]
-    normalized["languageDependency"]["inputImplementationBaseline"][12][
-        "sha256"
-    ] = before["languageDependency"]["inputImplementationBaseline"][12]["sha256"]
+    normalized["languageDependency"]["inputImplementationBaseline"] = deepcopy(
+        before_implementation
+    )
+    for field in APPROVED_LANGUAGE_DEPENDENCY_TRANSITION:
+        normalized["languageDependency"][field] = before_language[field]
     normalized["specificationDocument"]["sha256"] = before[
         "specificationDocument"
     ]["sha256"]
+    normalized["sourceArchiveBaseline"] = deepcopy(
+        before["sourceArchiveBaseline"]
+    )
     normalized["releaseIdentity"] = before["releaseIdentity"]
     return normalized == before
 

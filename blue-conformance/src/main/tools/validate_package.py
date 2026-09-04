@@ -45,10 +45,20 @@ from blue_identity import (  # noqa: E402
     direct_blue_id,
 )
 from gas_reference import gas_trace_identity  # noqa: E402
+from implementation_baseline import (  # noqa: E402
+    CYCLIC_FINALIZER,
+    CYCLIC_PROOF_VERIFIER,
+    IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+    source_paths_for_role,
+)
 from runtime_surface_projection import (  # noqa: E402
     project_runtime_surface,
 )
 from package_hygiene import release_inventory_files  # noqa: E402
+from release_provenance import (  # noqa: E402
+    SourceArchiveProvenanceError,
+    source_archive_provenance,
+)
 PROCESS_EMBEDDED = "9ftzzP6ySLmbJ43bjwTbrm6Ff79FKqsVy5xdA1zWxoQ3"
 SAFE_INTEGER_MAX = 2**53 - 1
 SCRIPTED_EXTERNAL = "2hesjWGVbvcJSu6woCUTssU9S7A69ep93UzdgvwosDLt"
@@ -64,6 +74,7 @@ SUBSCRIPTION_CHANNEL_TYPES = {
     EMBEDDED_NODE_CHANNEL,
     LIFECYCLE_EVENT_CHANNEL,
 }
+LOWERCASE_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 FULL_LIFECYCLE_FIXTURE_NAMES = {
     "fl-adm-01-root-patch-event.yaml",
     "fl-adm-02-duplicate-equal-events.yaml",
@@ -176,6 +187,38 @@ _REGISTRY_BLUE_IDS: dict[str, str] | None = None
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise ValidationFailure(message)
+
+
+def is_lowercase_sha256(value: Any) -> bool:
+    """Return whether ``value`` is one canonical, unprefixed SHA-256 digest."""
+    return (
+        isinstance(value, str)
+        and LOWERCASE_SHA256_RE.fullmatch(value) is not None
+    )
+
+
+def validate_input_implementation_baseline(
+    value: Any,
+) -> dict[str, dict[str, str]]:
+    """Validate the release's exact closed source inventory and digests."""
+    require(
+        isinstance(value, list)
+        and all(
+            isinstance(entry, dict)
+            and set(entry) == {"path", "sha256"}
+            and isinstance(entry["path"], str)
+            and is_lowercase_sha256(entry["sha256"])
+            for entry in value
+        ),
+        "input implementation baseline must be a closed path/hash array",
+    )
+    baseline_paths = tuple(entry["path"] for entry in value)
+    require(
+        baseline_paths == IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+        "input implementation baseline must exactly match the authoritative "
+        "sorted ownership inventory",
+    )
+    return {entry["path"]: entry for entry in value}
 
 
 NFC_ORDER_TOKEN_FIELDS = {
@@ -9579,21 +9622,10 @@ def validate_manifests() -> dict[str, Any]:
     require(release["specificationDocument"]["sha256"] == sha256_file(SPEC), "spec hash mismatch in release manifest")
     language = release["languageDependency"]
     require(language["specificationSha256"] == sha256_file(LANG_SPEC), "Language spec hash mismatch")
-    baseline_by_path = {entry["path"]: entry for entry in language.get("inputImplementationBaseline", [])}
-    finalizer_paths = [
-        "blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalculator.java",
-        "blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java",
-        "blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java",
-    ]
-    verifier_paths = [
-        "blue-language-core/src/main/java/blue/language/provider/CyclicSetProof.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicSetProofResult.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicAwareNodeProvider.java",
-        "blue-language-core/src/main/java/blue/language/provider/VerifyingNodeProvider.java",
-        "blue-language-core/src/main/java/blue/language/provider/CyclicProofMemberComparator.java",
-    ]
-    require(all(path in baseline_by_path for path in finalizer_paths), "cyclic finalizer baseline source missing")
-    require(all(path in baseline_by_path for path in verifier_paths), "cyclic proof verifier baseline source missing")
+    baseline = language.get("inputImplementationBaseline")
+    baseline_by_path = validate_input_implementation_baseline(baseline)
+    finalizer_paths = source_paths_for_role(CYCLIC_FINALIZER)
+    verifier_paths = source_paths_for_role(CYCLIC_PROOF_VERIFIER)
     expected_finalizer = domain_identity(
         "blue-language-cyclic-set-finalizer-baseline/1.0",
         {"languageSpecificationSha256": sha256_file(LANG_SPEC), "files": [baseline_by_path[path] for path in finalizer_paths]},
@@ -9611,6 +9643,10 @@ def validate_manifests() -> dict[str, Any]:
     require(release["fixturePackage"]["vectorCount"] == fixtures["vectorCount"], "fixture vector-count binding mismatch")
     require(release["fixturePackage"]["fixtureCount"] == fixtures["totalExecutableFixtureCount"], "fixture count binding mismatch")
     require(release["oraclePackage"]["packageIdentity"] == oracles["packageIdentity"], "oracle binding mismatch")
+    require(
+        "sourceArchiveBaseline" not in release,
+        "source archive provenance must not participate in release identity",
+    )
     package = verify_manifest(PACKAGE_MANIFEST, "packageIdentity")
     verify_listed_files(ROOT, package["files"])
     require(package["contractsReleaseIdentity"] == release["releaseIdentity"], "package/release binding mismatch")
@@ -9629,17 +9665,37 @@ def checksum_manifest_inventory(root: Path = ROOT) -> set[str]:
 def validate_checksum_manifest() -> None:
     path = ROOT / "MANIFEST.sha256"
     require(path.is_file(), "MANIFEST.sha256 missing")
-    listed: set[str] = set()
-    for line in path.read_text().splitlines():
-        if not line:
-            continue
-        digest, rel = line.split("  ", 1)
+    try:
+        text = path.read_bytes().decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise ValidationFailure("checksum manifest is not strict UTF-8") from exc
+    require("\r" not in text, "checksum manifest must use LF line endings")
+    require(text.endswith("\n"), "checksum manifest must end with LF")
+    lines = text.splitlines()
+    require(all(lines), "checksum manifest contains a blank line")
+    expected = [
+        target.relative_to(ROOT).as_posix()
+        for target in release_inventory_files(
+            ROOT, {"MANIFEST.sha256", "validation-output.json"}
+        )
+    ]
+    listed: list[str] = []
+    for line in lines:
+        parts = line.split("  ", 1)
+        require(len(parts) == 2, "malformed checksum manifest line")
+        digest, rel = parts
+        require(is_lowercase_sha256(digest), f"malformed checksum digest: {rel}")
+        require(bool(rel) and "  " not in rel, "malformed checksum manifest path")
+        require(rel in expected, f"unexpected checksum manifest path: {rel}")
         target = ROOT / rel
         require(target.is_file(), f"checksum manifest target missing: {rel}")
         require(sha256_file(target) == digest, f"checksum mismatch: {rel}")
-        listed.add(rel)
-    expected = checksum_manifest_inventory()
-    require(listed == expected, f"checksum manifest inventory mismatch: missing={sorted(expected-listed)[:5]} extra={sorted(listed-expected)[:5]}")
+        listed.append(rel)
+    require(
+        listed == expected,
+        "checksum manifest inventory/order mismatch: "
+        f"expected={expected[:5]} actual={listed[:5]}",
+    )
 
 
 def run_command(command: list[str], cwd: Path | None = None) -> str:
@@ -9674,18 +9730,17 @@ def validate_java_templates() -> dict[str, Any]:
     return {"sourceFiles": len(sources), "contractsMain": contracts_output, "coordinationMain": coordination_output, "separateDocumentMain": separate_document_output}
 
 
-def validate_source_archive(source: Path | None, expected: str) -> dict[str, Any]:
-    if source is None:
-        return {"provided": False, "expectedSha256": expected}
-    require(source.is_file(), f"source archive not found: {source}")
-    actual = sha256_file(source)
-    require(actual == expected, f"source archive hash mismatch: expected {expected}, got {actual}")
-    return {"provided": True, "suppliedName": source.name, "sha256": actual}
-
-
 def main() -> None:
     parser = ArgumentParser()
-    parser.add_argument("--source", type=Path, default=None, help="Optional original spec source archive; verified by content hash, not filename")
+    parser.add_argument(
+        "--source",
+        type=Path,
+        default=None,
+        help=(
+            "Optional source archive recorded by filename and content hash in "
+            "the non-semantic validation receipt"
+        ),
+    )
     parser.add_argument("--write-output", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
@@ -9767,8 +9822,11 @@ def main() -> None:
     require(reference["status"] == "SEMANTIC_REFERENCE_VALID", "semantic reference scenarios failed")
     progress("Java templates")
     java = validate_java_templates()
-    progress("source archive")
-    source = validate_source_archive(args.source, manifests["release"]["sourceArchiveBaseline"]["expectedSha256"])
+    progress("source archive provenance")
+    try:
+        source = source_archive_provenance(args.source)
+    except SourceArchiveProvenanceError as exc:
+        raise ValidationFailure(str(exc)) from exc
 
     result = {
         "status": "PACKAGE_VALID",
