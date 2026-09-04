@@ -131,6 +131,7 @@ PROPERTY_DECISION_OWNERS = (
 STRUCTURAL_EMPTY_OWNERS = (
     "blue-language-mapping/src/main/java/blue/language/mapping/CollectionConverter.java",
     "blue-language-mapping/src/main/java/blue/language/mapping/ComplexObjectConverter.java",
+    "blue-language-mapping/src/main/java/blue/language/mapping/MappingPayload.java",
     "blue-language-model/src/main/java/blue/language/model/Nodes.java",
     "blue-language-core/src/main/java/blue/language/identity/CanonicalIdentityInputReconstructor.java",
     "blue-language-core/src/main/java/blue/language/identity/NodeToBlueIdInput.java",
@@ -158,6 +159,13 @@ EXACT_EMPTY_CONSTRUCTOR_OWNERS = (
     # Retained for the focused classifier regression; the implementation of
     # FrozenNode.empty() itself is asserted by ExactEmptyObjectSemanticsTest.
     "blue-language-core/src/main/java/blue/language/snapshot/FrozenNode.java",
+)
+
+
+# Exact production owners that compare against FrozenNode.empty() as the
+# canonical empty-object value without constructing or substituting payload.
+EXACT_EMPTY_COMPARISON_OWNERS = (
+    "blue-contracts-core/src/main/java/blue/language/processor/PatchImpactAnalyzer.java",
 )
 
 
@@ -420,6 +428,13 @@ def _decision(
         return Decision(classification, assumption, reason, tests)
     if audit == "empty-shape-and-builder":
         if "FrozenNode.empty()" in line:
+            if path in EXACT_EMPTY_COMPARISON_OWNERS:
+                return Decision(
+                    "A-exact-empty-object-comparison",
+                    "An exact empty-object comparison could be mistaken for an absence check.",
+                    symbol + " compares the present contracts payload with canonical `{}` only to detect empty-contract normalization impact; null contracts remain a separate absent state.",
+                    tests,
+                )
             if path not in EXACT_EMPTY_CONSTRUCTOR_OWNERS:
                 raise ValueError(
                     "Unclassified FrozenNode.empty() production owner: "
