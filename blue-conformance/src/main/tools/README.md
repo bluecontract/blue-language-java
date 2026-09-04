@@ -28,8 +28,12 @@ PYTHONDONTWRITEBYTECODE=1 python3 \
 ```
 
 With no output option, regeneration is a read-only byte-identity check.
-`--stage-output DIR` writes a candidate to a new or empty external directory.
-Only `--write` can replace the checked-in resource package. The ordinary
+`--stage-output DIR` writes only the candidate `conformance/contracts`
+resource package. `--stage-release-output DIR` instead retains the complete
+generated release shell, including its specifications, Language reference,
+vendored tools, top-level manifests, and the same candidate Contracts subtree.
+Both destinations must be new or empty and outside the repository/source
+trees. Only `--write` can replace the checked-in resource package. The ordinary
 `C-EVO-01..17` tranche is always rebuilt by the checked-in deterministic
 generator before manifest rebinding. An optional `--fixture-source-root DIR`
 requests the identity-free `FL-ADM` and `C-EVO-18..23` source pass; that mode
@@ -77,6 +81,36 @@ only: when supplied, they are recorded in the non-semantic
 identity. The receipt is excluded from the deterministic release ZIP.
 Regeneration comparison ignores its source-archive filename and digest while
 continuing to check every other receipt value.
+
+Archive a retained complete release without making its temporary directory
+name part of the ZIP bytes:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 \
+  blue-conformance/src/main/tools/regenerate_package.py \
+  --package-root \
+  blue-conformance/src/main/resources/blue-contracts-closure-1.0 \
+  --stage-release-output /outside/the/repository/staged-release
+
+PYTHONDONTWRITEBYTECODE=1 python3 \
+  /outside/the/repository/staged-release/tools/build_release_archive.py \
+  --root /outside/the/repository/staged-release \
+  --output /path/to/blue-contracts-and-processor-specification-1.0-final.zip
+```
+
+An explicit `--root` must have the complete generated release layout and the
+canonical package name. Archive output must be outside that release tree. The
+archive uses the canonical package directory name, fixed entry metadata, and
+excludes the local non-semantic `validation-output.json`, so equivalent staged
+releases produce byte-identical ZIPs regardless of their staging-directory
+names or source-archive provenance.
+
+This repository entry point proves regeneration and exact candidate retention;
+it does not independently issue the `PACKAGE_VALID` receipt because the two
+validator-only `java-templates` trees are not repository inputs. A complete
+upstream release that supplies those templates can run the vendored
+`validate_package.py` before archiving; the checksum gate prevents any later
+file change from being archived under that manifest.
 
 `classify_fixture_identity_delta.py` compares a pre-rebind and post-generation
 resource package, writes JSON and Markdown reports outside both packages, and

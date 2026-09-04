@@ -5,11 +5,14 @@ The repository stores the release ``conformance/contracts`` subtree rather
 than a complete specification release.  This entry point stages that subtree
 with the checked-in specifications and this vendored tool closure, runs the
 canonical release generator/refiner, and only then compares, stages, or
-publishes the resource package.
+publishes the resource package.  A separate full-release staging mode retains
+the exact generated shell containing specifications, reference, tools,
+manifests, and the Contracts package.
 
 With no output mode the command is read-only ``--check``.  ``--stage-output``
-writes a candidate package to a separate directory.  ``--write`` is the only
-mode allowed to modify ``--package-root``.
+writes a candidate resource package, and ``--stage-release-output`` writes the
+complete release shell, to a new or empty external directory.  ``--write`` is
+the only mode allowed to modify ``--package-root``.
 """
 from __future__ import annotations
 
@@ -20,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from typing import Callable, Iterable
 
 # Keep the checked-in tool directory cache-free even when callers do not set
 # PYTHONDONTWRITEBYTECODE in their shell.
@@ -27,11 +31,19 @@ sys.dont_write_bytecode = True
 
 import yaml
 
+from build_release_archive import (
+    require_complete_release_root,
+    verify_checksum_manifest,
+)
 from implementation_baseline import (
     ImplementationBaselineError,
     require_implementation_baseline_files,
 )
-from package_hygiene import release_inventory_files
+from package_hygiene import (
+    copy_regular_file,
+    copy_regular_tree,
+    release_inventory_files,
+)
 from release_regenerate_package import regenerate_generated_surfaces
 
 
@@ -100,8 +112,28 @@ def run(command: list[str], *, cwd: Path, environment: dict[str, str]) -> None:
 
 
 def copy_file(source: Path, target: Path) -> None:
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
+    try:
+        copy_regular_file(source, target)
+    except (OSError, ValueError) as exc:
+        raise RegenerationFailure(str(exc)) from exc
+
+
+def copy_tree(
+    source: Path,
+    target: Path,
+    *,
+    dirs_exist_ok: bool = False,
+    ignore: Callable[[str, list[str]], set[str]] | None = None,
+) -> None:
+    try:
+        copy_regular_tree(
+            source,
+            target,
+            dirs_exist_ok=dirs_exist_ok,
+            ignore=ignore,
+        )
+    except (OSError, ValueError) as exc:
+        raise RegenerationFailure(str(exc)) from exc
 
 
 def stage_release_shell(
@@ -118,23 +150,23 @@ def stage_release_shell(
         repository_root / LANGUAGE_SPECIFICATION,
         release_root / "reference/blue-language-specification-1.0.md",
     )
-    shutil.copytree(package_root, release_root / "conformance/contracts")
+    copy_tree(package_root, release_root / "conformance/contracts")
     # The closure release is the published superset of the ordinary fixture
     # package and the production runtime registry.  Refresh those mirrors from
     # their canonical repository locations before any generated surface reads
     # them, while retaining closure-only fixtures, gas microfixtures and the
     # conformance-only ScriptedOperation adapter.
-    shutil.copytree(
+    copy_tree(
         repository_root / CANONICAL_ORDINARY_FIXTURES,
         release_root / "conformance/contracts/fixtures",
         dirs_exist_ok=True,
     )
-    shutil.copytree(
+    copy_tree(
         repository_root / CANONICAL_RUNTIME_REGISTRY,
         release_root / "conformance/contracts/registry",
         dirs_exist_ok=True,
     )
-    shutil.copytree(
+    copy_tree(
         TOOLS_ROOT,
         release_root / "tools",
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
@@ -159,7 +191,7 @@ def run_full_lifecycle_generator(
             "expected identities or semantic output"
         )
     staged_sources = release_root / "fixture-sources/full-lifecycle"
-    shutil.copytree(fixture_source_root, staged_sources)
+    copy_tree(fixture_source_root, staged_sources)
     run(
         [
             sys.executable,
@@ -410,16 +442,124 @@ def publish(candidate: Path, destination: Path) -> None:
         )
 
 
-def copy_stage(candidate: Path, destination: Path) -> None:
+def require_stage_destination(
+    destination: Path,
+    forbidden_roots: Iterable[Path],
+) -> Path:
+    """Require a new/empty destination disjoint from every source tree."""
+    destination = destination.expanduser().absolute()
+    if destination.is_symlink():
+        raise RegenerationFailure(
+            f"stage output must not be a symlink: {destination}"
+        )
+    resolved_destination = destination.resolve(strict=False)
+    for source_root in forbidden_roots:
+        resolved_source = source_root.expanduser().resolve()
+        if (
+            resolved_destination == resolved_source
+            or resolved_source in resolved_destination.parents
+            or resolved_destination in resolved_source.parents
+        ):
+            raise RegenerationFailure(
+                "stage output must be outside every source tree: "
+                f"output={destination}, source={resolved_source}"
+            )
     if destination.exists():
         if not destination.is_dir() or any(destination.iterdir()):
             raise RegenerationFailure(
                 "stage output must be nonexistent or an empty directory: "
                 f"{destination}"
             )
-    else:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(candidate, destination, dirs_exist_ok=True)
+    return destination
+
+
+def copy_stage(
+    candidate: Path,
+    destination: Path,
+    *,
+    forbidden_roots: Iterable[Path] = (),
+    validator: Callable[[Path], None] | None = None,
+) -> Path:
+    """Atomically retain one candidate in a safe external directory."""
+    candidate = candidate.expanduser().resolve()
+    destination = require_stage_destination(
+        destination, (candidate, *tuple(forbidden_roots))
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(
+        prefix=f".{destination.name}.stage-",
+        dir=destination.parent,
+    ))
+    try:
+        copy_tree(candidate, temporary, dirs_exist_ok=True)
+        if validator is not None:
+            validator(temporary)
+        if destination.exists():
+            # The preflight requires this directory to be empty. Recheck at
+            # publication so concurrent content is never removed.
+            if (
+                destination.is_symlink()
+                or not destination.is_dir()
+                or any(destination.iterdir())
+            ):
+                raise RegenerationFailure(
+                    "stage output changed after validation: "
+                    f"{destination}"
+                )
+            destination.rmdir()
+        os.replace(temporary, destination)
+    finally:
+        if temporary.exists():
+            shutil.rmtree(temporary)
+    return destination
+
+
+def copy_complete_release_stage(
+    release_root: Path,
+    candidate_package: Path,
+    destination: Path,
+    *,
+    forbidden_roots: Iterable[Path] = (),
+) -> Path:
+    """Retain the exact complete shell containing the generated candidate."""
+    try:
+        release_root = require_complete_release_root(release_root)
+        verify_checksum_manifest(release_root)
+    except ValueError as exc:
+        raise RegenerationFailure(str(exc)) from exc
+    candidate_package = candidate_package.expanduser().resolve()
+    source_contracts = release_root / "conformance/contracts"
+    source_differences = compare_packages(source_contracts, candidate_package)
+    if source_differences:
+        raise RegenerationFailure(
+            "complete release shell does not contain the validated candidate: "
+            f"{source_differences[:20]}"
+        )
+
+    def validate_copy(staged: Path) -> None:
+        try:
+            require_complete_release_root(staged)
+            verify_checksum_manifest(staged)
+        except ValueError as exc:
+            raise RegenerationFailure(str(exc)) from exc
+        release_differences = compare_packages(release_root, staged)
+        candidate_differences = compare_packages(
+            candidate_package, staged / "conformance/contracts"
+        )
+        if release_differences or candidate_differences:
+            raise RegenerationFailure(
+                "staged complete release is not byte-equivalent to its "
+                "validated candidate: "
+                f"release={release_differences[:20]}, "
+                f"contracts={candidate_differences[:20]}"
+            )
+
+    return copy_stage(
+        release_root,
+        destination,
+        forbidden_roots=forbidden_roots,
+        validator=validate_copy,
+    )
 
 
 def validate_inputs(
@@ -530,6 +670,14 @@ def main() -> None:
         help="Write the generated candidate package to a separate directory",
     )
     mode.add_argument(
+        "--stage-release-output",
+        type=Path,
+        help=(
+            "Write the complete generated release shell to a separate "
+            "directory"
+        ),
+    )
+    mode.add_argument(
         "--write",
         action="store_true",
         help="Publish the generated candidate into --package-root",
@@ -554,9 +702,20 @@ def main() -> None:
         candidate = release_root / "conformance/contracts"
         differences = compare_packages(package_root, candidate)
         if args.stage_output is not None:
-            output = args.stage_output.expanduser().resolve()
-            copy_stage(candidate, output)
+            output = copy_stage(
+                candidate,
+                args.stage_output,
+                forbidden_roots=(repository_root, package_root),
+            )
             print(f"PACKAGE_REGENERATION_STAGED {output}")
+        elif args.stage_release_output is not None:
+            output = copy_complete_release_stage(
+                release_root,
+                candidate,
+                args.stage_release_output,
+                forbidden_roots=(repository_root, package_root),
+            )
+            print(f"RELEASE_REGENERATION_STAGED {output}")
         elif args.write:
             publish(candidate, package_root)
             print("PACKAGE_REGENERATED_AND_VALIDATED")

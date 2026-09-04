@@ -5,8 +5,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import shutil
 import stat
-from typing import Collection
+from typing import Callable, Collection
 
 
 _HOST_METADATA_NAMES = frozenset(
@@ -115,3 +116,44 @@ def release_inventory_files(
         files,
         key=lambda path: os.fsencode(path.relative_to(root).as_posix()),
     )
+
+
+def copy_regular_file(source: Path, destination: Path) -> None:
+    """Copy one real regular file without dereferencing a symlink."""
+    try:
+        mode = source.lstat().st_mode
+    except OSError as exc:
+        raise ValueError(f"release source file cannot be inspected: {source}") from exc
+    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+        raise ValueError(
+            f"release source must be a non-symlink regular file: {source}"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination, follow_symlinks=False)
+    copied_mode = destination.lstat().st_mode
+    if stat.S_ISLNK(copied_mode) or not stat.S_ISREG(copied_mode):
+        raise ValueError(
+            f"copied release file is not a regular file: {destination}"
+        )
+
+
+def copy_regular_tree(
+    source: Path,
+    destination: Path,
+    *,
+    dirs_exist_ok: bool = False,
+    ignore: Callable[[str, list[str]], set[str]] | None = None,
+) -> None:
+    """Copy a release tree without ever dereferencing an untrusted symlink."""
+    # The pre-scan gives clear diagnostics. ``symlinks=True`` closes the race:
+    # an entry replaced by a symlink after the scan is copied as a symlink and
+    # is then rejected by the destination scan, never dereferenced.
+    release_inventory_files(source)
+    shutil.copytree(
+        source,
+        destination,
+        symlinks=True,
+        dirs_exist_ok=dirs_exist_ok,
+        ignore=ignore,
+    )
+    release_inventory_files(destination)

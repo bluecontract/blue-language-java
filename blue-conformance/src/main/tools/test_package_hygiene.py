@@ -4,9 +4,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 
 import build_release_archive
@@ -44,7 +48,70 @@ BUILD_CACHE_PATHS = (
 )
 
 
+def write_complete_release(root: Path, receipt_name: str, receipt_hash: str) -> None:
+    authored = {
+        "package-manifest.yaml": (
+            "packageName: "
+            f"{build_release_archive.COMPLETE_RELEASE_ARCHIVE_ROOT_NAME}\n"
+        ),
+        "specifications/blue-contracts-and-processor-specification-1.0.md": (
+            "contracts specification\n"
+        ),
+        "reference/blue-language-specification-1.0.md": (
+            "language specification\n"
+        ),
+        "conformance/contracts/release-manifest.yaml": "releaseIdentity: test\n",
+        "tools/build_release_archive.py": "# archive tool\n",
+        "tools/validate_package.py": "# validator\n",
+        "tools/implementation-baseline-paths.txt": "module/src/main/java/A.java\n",
+    }
+    for relative, content in authored.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    (root / "validation-output.json").write_text(
+        '{"sourceArchive":{"provided":true,'
+        f'"suppliedName":"{receipt_name}","sha256":"{receipt_hash}"}}}}\n',
+        encoding="utf-8",
+    )
+    files = release_inventory_files(
+        root, {"MANIFEST.sha256", "validation-output.json"}
+    )
+    lines = [
+        f"{hashlib.sha256(path.read_bytes()).hexdigest()}  "
+        f"{path.relative_to(root).as_posix()}"
+        for path in files
+    ]
+    (root / "MANIFEST.sha256").write_text(
+        "\n".join(lines) + "\n", encoding="utf-8"
+    )
+
+
 class PackageHygieneTest(unittest.TestCase):
+
+    def test_archive_cli_without_root_keeps_legacy_generic_mode(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="blue-release-archive-default-"
+        ) as temporary:
+            output = Path(temporary) / "default.zip"
+            with (
+                mock.patch.object(
+                    sys,
+                    "argv",
+                    ["build_release_archive.py", "--output", str(output)],
+                ),
+                mock.patch.object(
+                    build_release_archive, "build_archive"
+                ) as generic,
+                mock.patch.object(
+                    build_release_archive, "build_complete_release_archive"
+                ) as complete,
+            ):
+                build_release_archive.main()
+            generic.assert_called_once_with(
+                output, build_release_archive.ROOT.absolute()
+            )
+            complete.assert_not_called()
 
     def test_release_inventory_rejects_symlinks_and_special_files(self) -> None:
         with tempfile.TemporaryDirectory(
@@ -125,6 +192,81 @@ class PackageHygieneTest(unittest.TestCase):
                 self.assertEqual(
                     [f"{package.name}/README.md"], archive.namelist()
                 )
+
+    def test_explicit_complete_roots_build_identical_canonical_archives(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="blue-complete-release-archive-"
+        ) as temporary:
+            temporary_root = Path(temporary)
+            first_root = temporary_root / "arbitrary-stage-one"
+            second_root = temporary_root / "differently-named-stage-two"
+            write_complete_release(first_root, "one.zip", "1" * 64)
+            write_complete_release(second_root, "two.zip", "2" * 64)
+            first = temporary_root / "first.zip"
+            second = temporary_root / "second.zip"
+            tool = Path(build_release_archive.__file__).resolve()
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(tool),
+                    "--root",
+                    str(first_root),
+                    "--output",
+                    str(first),
+                ],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(tool),
+                    "--root",
+                    str(second_root),
+                    "--output",
+                    str(second),
+                ],
+                check=True,
+            )
+
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            prefix = (
+                build_release_archive.COMPLETE_RELEASE_ARCHIVE_ROOT_NAME + "/"
+            )
+            with zipfile.ZipFile(first) as archive:
+                self.assertTrue(archive.namelist())
+                self.assertTrue(
+                    all(name.startswith(prefix) for name in archive.namelist())
+                )
+                self.assertNotIn(
+                    prefix + "validation-output.json", archive.namelist()
+                )
+
+            with self.assertRaisesRegex(ValueError, "outside the package tree"):
+                build_release_archive.build_complete_release_archive(
+                    first_root / "inside.zip", first_root
+                )
+
+            target = temporary_root / "must-not-be-overwritten.zip"
+            target.write_bytes(b"preserve me")
+            output_link = temporary_root / "output-link.zip"
+            output_link.symlink_to(target)
+            with self.assertRaisesRegex(ValueError, "must not be a symlink"):
+                build_release_archive.build_complete_release_archive(
+                    output_link, first_root
+                )
+            self.assertEqual(b"preserve me", target.read_bytes())
+
+            (first_root / "tools/validate_package.py").write_text(
+                "# tampered validator\n", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                build_release_archive.build_complete_release_archive(
+                    temporary_root / "tampered.zip", first_root
+                )
+            self.assertFalse((temporary_root / "tampered.zip").exists())
 
     def test_regeneration_comparison_ignores_only_archive_provenance(
         self,

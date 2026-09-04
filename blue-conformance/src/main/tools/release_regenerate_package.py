@@ -23,7 +23,7 @@ from implementation_baseline import (
     ImplementationBaselineError,
     require_implementation_baseline_files,
 )
-from package_hygiene import release_inventory_files
+from package_hygiene import copy_regular_tree, release_inventory_files
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -348,9 +348,7 @@ def publish(candidate: Path, destination: Path) -> None:
 
 def copy_release_tree_fail_closed(source: Path, destination: Path) -> None:
     """Copy a release tree without ever dereferencing a symbolic link."""
-    release_inventory_files(source)
-    shutil.copytree(source, destination, symlinks=True)
-    release_inventory_files(destination)
+    copy_regular_tree(source, destination)
 
 
 def main() -> None:
