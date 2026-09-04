@@ -2569,6 +2569,67 @@ final class FullLifecycleAdmissionTest {
     }
 
     @Test
+    void activatedDormantProspectiveTargetInitializesExactlyOnceBeforeCommit() {
+        ProbeProcessor probe = new ProbeProcessor();
+        try (DocumentProcessor owner = owner(probe)) {
+            ClosureEnvironment environment = environment(owner);
+            Node source = new Node()
+                    .name("Dormant activation source")
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("activateDormant",
+                                    handler(
+                                            "lifecycle",
+                                            initiatedPattern())));
+            Node target = new Node()
+                    .name("Dormant activation target")
+                    .contracts(new Node()
+                            .properties("lifecycle", lifecycleChannel())
+                            .properties("recordDormantInit",
+                                    handler(
+                                            "lifecycle",
+                                            initiatedPattern())));
+            String targetBlueId = blueId(target);
+            ManagedOccurrenceBinding prospective =
+                    ManagedOccurrenceBinding.derived(
+                            environment.managedBindingPolicyIdentity(),
+                            A,
+                            ScopeAddress.embedded("/reserved", 1L),
+                            B,
+                            targetBlueId,
+                            false,
+                            null);
+            AffectedClosureSnapshot snapshot = finalizedSnapshot(
+                    bodies(A, source, B, target),
+                    Collections.singletonList(prospective),
+                    Collections.singletonList(A));
+            probe.dormantActivationTargetBlueId = snapshot
+                    .managedDocument(B).blueId();
+            ClosureInvocationInput input = admission(
+                    snapshot, environment, GENEROUS_GAS);
+            Capture capture = new Capture();
+
+            ClosureProcessResult result = full(owner, input, capture)
+                    .processResult();
+
+            assertSuccess(result);
+            assertTrue(document(result, A).initialized());
+            assertTrue(document(result, B).initialized());
+            assertEquals(1, probe.dormantTargetInitializationCount);
+            assertEquals(1L, capture.evidence.workTrace().stream()
+                    .filter(work -> work.kind() == WorkKind.INITIALIZATION)
+                    .filter(work -> B.equals(work.targetDocumentId()))
+                    .count());
+            assertTrue(result.occurrenceBindings().stream()
+                    .anyMatch(binding -> A.equals(
+                                    binding.sourceDocumentId())
+                            && "/reserved".equals(binding.sourcePath())
+                            && binding.active()
+                            && binding.pendingHistoricalEpoch() == null));
+        }
+    }
+
+    @Test
     void requirement19NestedUpdateEventWaitsForParentNextPatch() {
         ProbeProcessor probe = new ProbeProcessor();
         try (DocumentProcessor owner = owner(probe)) {
@@ -4063,7 +4124,9 @@ final class FullLifecycleAdmissionTest {
         private final List<String> observedEventKinds =
                 new ArrayList<String>();
         private String reactivationTargetBlueId;
+        private String dormantActivationTargetBlueId;
         private int reactivationInitializationCount;
+        private int dormantTargetInitializationCount;
         private int executionCount;
 
         @Override
@@ -4219,6 +4282,20 @@ final class FullLifecycleAdmissionTest {
                             "/self",
                             new Node().blueId(
                                     reactivationTargetBlueId)));
+                }
+            } else if ("activateDormant".equals(key)) {
+                if (initiated(context)) {
+                    context.applyPatch(JsonPatch.add(
+                            "/reserved",
+                            new Node().blueId(
+                                    dormantActivationTargetBlueId)));
+                    context.applyPatch(JsonPatch.add(
+                            "/contracts/embedded",
+                            processEmbedded("/reserved")));
+                }
+            } else if ("recordDormantInit".equals(key)) {
+                if (initiated(context)) {
+                    dormantTargetInitializationCount++;
                 }
             } else if ("parentPatchThenFinish".equals(key)) {
                 if (initiated(context)) {

@@ -244,6 +244,58 @@ final class ClosureAdmissionExecutionTest {
     }
 
     @Test
+    void fullLifecycleAdmissionLeavesDormantProspectiveOnlyTargetUninitialized() {
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureInvocationInput input = dormantProspectiveAdmission(owner);
+            Capture capture = new Capture();
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.admitClosureWithLifecycleQueue(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.SUCCESS,
+                    attempt.processResult().status(), diagnostic(attempt));
+            assertEquals(Collections.singletonList(A),
+                    targets(capture.evidence.documentStepTrace()));
+            assertTrue(document(attempt.processResult(), A).initialized());
+            assertFalse(document(attempt.processResult(), B).initialized());
+            assertNull(document(attempt.processResult(), B).document()
+                    .getContracts());
+            ManagedOccurrenceBinding reserved = binding(
+                    attempt.processResult().occurrenceBindings(),
+                    A,
+                    "/reserved");
+            assertFalse(reserved.active());
+            assertNull(reserved.pendingHistoricalEpoch());
+        }
+    }
+
+    @Test
+    void legacyAdmissionAlsoLeavesDormantProspectiveOnlyTargetUninitialized() {
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureInvocationInput input = dormantProspectiveAdmission(owner);
+            Capture capture = new Capture();
+            ClosureAttemptResult attempt;
+            try (BlueClosureContracts contracts =
+                         new BlueClosureContracts(owner, capture)) {
+                attempt = contracts.admitClosure(input);
+            }
+
+            assertTrue(attempt.isComplete());
+            assertEquals(ProcessorStatus.SUCCESS,
+                    attempt.processResult().status(), diagnostic(attempt));
+            assertEquals(Collections.singletonList(A),
+                    targets(capture.evidence.documentStepTrace()));
+            assertTrue(document(attempt.processResult(), A).initialized());
+            assertFalse(document(attempt.processResult(), B).initialized());
+            assertNull(document(attempt.processResult(), B).document()
+                    .getContracts());
+        }
+    }
+
+    @Test
     void rejectsRecomputedPolicyThatInflatesOneFrozenLimitBeforeAdmission() {
         try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
             Capture capture = new Capture();
@@ -465,6 +517,32 @@ final class ClosureAdmissionExecutionTest {
                 IDENTITIES.invocationIdentity(provisional),
                 snapshot, cause, null, null,
                 deliveries, policy, environment);
+    }
+
+    private static ClosureInvocationInput dormantProspectiveAdmission(
+            DocumentProcessor owner) {
+        ClosureInvocationInput base = admission(owner, 100000L, 128L);
+        AffectedClosureSnapshot snapshot = dormantProspectiveSnapshot(
+                base.environment().managedBindingPolicyIdentity());
+        ClosureInvocationInput provisional =
+                ClosureInvocationInput.admitClosure(
+                        hash('6'),
+                        snapshot,
+                        (AdmissionCause) base.cause(),
+                        null,
+                        null,
+                        base.directDeliverySnapshotIdentity(),
+                        base.executionPolicy(),
+                        base.environment());
+        return ClosureInvocationInput.admitClosure(
+                IDENTITIES.invocationIdentity(provisional),
+                snapshot,
+                (AdmissionCause) base.cause(),
+                null,
+                null,
+                base.directDeliverySnapshotIdentity(),
+                base.executionPolicy(),
+                base.environment());
     }
 
     private static AffectedClosureSnapshot cyclicSnapshot(
@@ -690,6 +768,84 @@ final class ClosureAdmissionExecutionTest {
                 IDENTITIES.affectedClosureIdentity(provisionalSnapshot),
                 1L, documents, exactBindings, bindingSet,
                 components, Collections.singletonList(A));
+    }
+
+    private static AffectedClosureSnapshot dormantProspectiveSnapshot(
+            String bindingPolicyIdentity) {
+        Node bodyA = new Node().name("Dormant prospective source");
+        Node bodyB = new Node().name("Dormant prospective target");
+        String blueB = DirectBlueIdCalculator.calculateBlueId(bodyB);
+        List<ManagedOccurrenceBinding> bindings =
+                Collections.singletonList(
+                        ManagedOccurrenceBinding.derived(
+                                bindingPolicyIdentity,
+                                A,
+                                ScopeAddress.embedded("/reserved", 1L),
+                                B,
+                                blueB,
+                                false,
+                                null));
+        LinkedHashMap<DocumentId, Long> generations =
+                new LinkedHashMap<DocumentId, Long>();
+        generations.put(A, Long.valueOf(1L));
+        generations.put(B, Long.valueOf(1L));
+        LinkedHashMap<DocumentId, Node> bodies =
+                new LinkedHashMap<DocumentId, Node>();
+        bodies.put(A, bodyA);
+        bodies.put(B, bodyB);
+        ComponentFinalizationResult exact =
+                new ComponentFinalizationKernel().finalizeComponents(
+                        new ComponentFinalizationInput(
+                                ManagedDocumentGraph.fromBindings(
+                                        Arrays.asList(A, B), bindings),
+                                generations,
+                                bodies,
+                                bindings));
+        List<ManagedOccurrenceBinding> exactBindings =
+                exact.finalizedGraph().bindings();
+        ArrayList<ManagedDocumentSnapshot> documents =
+                new ArrayList<ManagedDocumentSnapshot>();
+        documents.add(new ManagedDocumentSnapshot(
+                A,
+                exact.document(A).blueId(),
+                exact.document(A).document(),
+                false,
+                false,
+                true,
+                0L,
+                1L));
+        documents.add(new ManagedDocumentSnapshot(
+                B,
+                exact.document(B).blueId(),
+                exact.document(B).document(),
+                false,
+                false,
+                false,
+                0L,
+                1L));
+        ArrayList<ComponentSnapshot> components =
+                new ArrayList<ComponentSnapshot>();
+        for (FinalizedComponentEvidence component : exact.components()) {
+            components.add(component.component());
+        }
+        String bindingSet = IDENTITIES.occurrenceBindingSetIdentity(
+                exactBindings);
+        AffectedClosureSnapshot provisional = new AffectedClosureSnapshot(
+                hash('0'),
+                1L,
+                documents,
+                exactBindings,
+                bindingSet,
+                components,
+                Collections.singletonList(A));
+        return new AffectedClosureSnapshot(
+                IDENTITIES.affectedClosureIdentity(provisional),
+                1L,
+                documents,
+                exactBindings,
+                bindingSet,
+                components,
+                Collections.singletonList(A));
     }
 
     private static void materializeThis(

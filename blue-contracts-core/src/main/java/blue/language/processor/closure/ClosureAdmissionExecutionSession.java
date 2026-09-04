@@ -4,6 +4,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.model.Nodes;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
 import blue.language.processor.ExactEventIdentityEvidence;
@@ -61,6 +62,8 @@ final class ClosureAdmissionExecutionSession
             new LinkedHashMap<DocumentId, Set<String>>();
     private final Map<DocumentId, FrozenInitialization> frozen =
             new LinkedHashMap<DocumentId, FrozenInitialization>();
+    private final Set<DocumentId> dormantProspectiveTargets =
+            new LinkedHashSet<DocumentId>();
     private final Set<DocumentId> initialized =
             new LinkedHashSet<DocumentId>();
     private final Set<String> existingBlueIds;
@@ -112,6 +115,12 @@ final class ClosureAdmissionExecutionSession
                     document.documentId(), document.blueId());
             if (document.initialized()) {
                 initialized.add(document.documentId());
+            } else if (ManagedDocumentInitializationEligibility
+                    .isDormantProspectiveOnlyTarget(
+                            document,
+                            currentBindings,
+                            input.directDeliveries())) {
+                dormantProspectiveTargets.add(document.documentId());
             } else {
                 frozen.put(document.documentId(), new FrozenInitialization(
                         document.blueId(), document.document()));
@@ -162,6 +171,7 @@ final class ClosureAdmissionExecutionSession
         if (!frozen.isEmpty()) {
             installMarkerBatch(plan);
         }
+        requireNoActivatedDormantTarget();
         captureSurfaces(resultingChannelSurfaces);
         return state();
     }
@@ -445,7 +455,7 @@ final class ClosureAdmissionExecutionSession
             Node body = latestBodies.get(documentId).clone();
             Node contracts = body.getContracts();
             if (contracts == null) {
-                contracts = new Node();
+                contracts = Nodes.emptyObject();
                 body.contracts(contracts);
             }
             if (contracts.getProperties() != null
@@ -596,10 +606,39 @@ final class ClosureAdmissionExecutionSession
         }
         currentFinalization = finalized;
         currentSnapshot = snapshot(finalized);
+        requireNoActivatedDormantTarget();
         processEmbeddedRetirementFences.addAll(
                 surfaceReclassification.retiredOccurrencePaths);
         if (activeWork != null) {
             finalizationsInActiveStep++;
+        }
+    }
+
+    /**
+     * The compatibility admission lane freezes its work plan before the first
+     * document step.  It therefore cannot safely add lifecycle work when a
+     * dormant prospective target becomes processable during that plan.  Fail
+     * the tentative attempt instead of publishing an active, uninitialized
+     * target; callers that need dynamic activation use the lifecycle-queue
+     * entry point.
+     */
+    private void requireNoActivatedDormantTarget() {
+        for (DocumentId documentId : dormantProspectiveTargets) {
+            ManagedDocumentSnapshot current = currentSnapshot.managedDocument(
+                    documentId);
+            if (current == null || current.initialized()
+                    || ManagedDocumentInitializationEligibility
+                            .isDormantProspectiveOnlyTarget(
+                                    current,
+                                    currentBindings,
+                                    input.directDeliveries())) {
+                continue;
+            }
+            throw new ClosureCapabilityGapException(
+                    "LEGACY_DYNAMIC_INITIALIZATION_REQUIRED",
+                    "Legacy admission activated a dormant prospective "
+                            + "target and cannot schedule its initialization "
+                            + "within the frozen work plan");
         }
     }
 

@@ -4,6 +4,7 @@ import blue.language.identity.CyclicSetFinalization;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.DocumentUpdateOccurrence;
@@ -294,7 +295,12 @@ final class ClosureExecutionSession
             for (DocumentId documentId : component) {
                 ManagedDocumentSnapshot document = currentSnapshot
                         .managedDocument(documentId);
-                if (!document.initialized()) {
+                if (!document.initialized()
+                        && !ManagedDocumentInitializationEligibility
+                                .isDormantProspectiveOnlyTarget(
+                                        document,
+                                        currentBindings,
+                                        input.directDeliveries())) {
                     pendingInitializationCauses.put(
                             documentId, causeIdentity);
                 }
@@ -526,8 +532,11 @@ final class ClosureExecutionSession
             }
             if (executionMode == ExecutionMode.PROCESSING
                     && !document.initialized()
-                    && !isInactiveProspectiveTarget(
-                            document.documentId())) {
+                    && !ManagedDocumentInitializationEligibility
+                            .isDormantProspectiveOnlyTarget(
+                                    document,
+                                    input.snapshot().occurrences(),
+                                    input.directDeliveries())) {
                 throw new ClosureCapabilityGapException(
                         "INITIALIZATION_BATCH_REQUIRED",
                         "A PROCESS_CLOSURE input may retain an uninitialized "
@@ -543,30 +552,6 @@ final class ClosureExecutionSession
                 && input.cause() instanceof ManagedRevisionCause
                 && ((ManagedRevisionCause) input.cause())
                         .childDocumentId().equals(documentId);
-    }
-
-    private boolean isInactiveProspectiveTarget(DocumentId documentId) {
-        boolean prospective = false;
-        for (ManagedOccurrenceBinding binding
-                : input.snapshot().occurrences()) {
-            if (!binding.targetDocumentId().equals(documentId)) {
-                continue;
-            }
-            if (binding.active()
-                    || binding.pendingHistoricalEpoch() != null) {
-                return false;
-            }
-            prospective = true;
-        }
-        if (!prospective) {
-            return false;
-        }
-        for (DirectLogicalDelivery delivery : input.directDeliveries()) {
-            if (delivery.targetDocumentId().equals(documentId)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private ComponentFinalizationResult verifyCurrentFinalization() {
@@ -616,7 +601,13 @@ final class ClosureExecutionSession
                     && !initializedDocuments.contains(
                             document.documentId())
                     && !terminatedDocuments.contains(
-                            document.documentId())) {
+                            document.documentId())
+                    && !ManagedDocumentInitializationEligibility
+                            .isDormantProspectiveOnlyTarget(
+                                    currentSnapshot.managedDocument(
+                                            document.documentId()),
+                                    currentBindings,
+                                    input.directDeliveries())) {
                 throw new InvalidExecutionEvidenceException(
                         "Expected managed occurrence activation did not "
                                 + "initialize prospective document "
@@ -1284,9 +1275,15 @@ final class ClosureExecutionSession
             return false;
         }
         if (executionMode == ExecutionMode.ADMISSION) {
-            ManagedDocumentSnapshot admitted = input.snapshot()
+            ManagedDocumentSnapshot admitted = currentSnapshot
                     .managedDocument(documentId);
-            return admitted != null && !admitted.initialized();
+            return admitted != null
+                    && !admitted.initialized()
+                    && !ManagedDocumentInitializationEligibility
+                            .isDormantProspectiveOnlyTarget(
+                                    admitted,
+                                    currentBindings,
+                                    input.directDeliveries());
         }
         for (ManagedOccurrenceBinding binding : currentBindings) {
             if (binding.active()
@@ -1429,7 +1426,7 @@ final class ClosureExecutionSession
             Node body = latestBodies.get(documentId).clone();
             Node contracts = body.getContracts();
             if (contracts == null) {
-                contracts = new Node();
+                contracts = Nodes.emptyObject();
                 body.contracts(contracts);
             }
             if (contracts.getProperties() != null
@@ -1797,7 +1794,7 @@ final class ClosureExecutionSession
         Node body = latestBodies.get(termination.documentId).clone();
         Node contracts = body.getContracts();
         if (contracts == null) {
-            contracts = new Node();
+            contracts = Nodes.emptyObject();
             body.contracts(contracts);
         }
         if (contracts.getProperties() != null
