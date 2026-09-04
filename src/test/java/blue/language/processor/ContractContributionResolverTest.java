@@ -141,6 +141,40 @@ class ContractContributionResolverTest {
     }
 
     @Test
+    void shouldKeepHostNullExecutableBodyAbsent() {
+        // given
+        Node exactContribution = new Node().properties(
+                "mode", new Node().value("header-only"));
+        String contributionBlueId =
+                DirectBlueIdCalculator.calculateBlueId(
+                        exactContribution);
+        Node selectedScope = new Node().contracts(
+                new Node().properties(
+                        "handler", exactContribution));
+
+        // when
+        ContractContributionResolver.BindingResolution resolution =
+                new ContractContributionResolver(null)
+                        .resolveBinding(
+                                selectedScope,
+                                null,
+                                "handler",
+                                true,
+                                Collections.singletonList(
+                                        "program"));
+
+        // then
+        assertEquals(
+                Collections.singletonList(
+                        contributionBlueId),
+                resolution.sourceContributions());
+        assertFalse(resolution.exactExecutableBodies()
+                .containsKey("program"));
+        assertFalse(resolution.executableBodySources()
+                .containsKey("program"));
+    }
+
+    @Test
     void shouldVerifyUnavailableSourceContributionRetainsItsExactDemand() {
         // given
         Node type =

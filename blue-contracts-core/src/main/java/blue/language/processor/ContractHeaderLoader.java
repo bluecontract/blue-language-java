@@ -289,7 +289,8 @@ final class ContractHeaderLoader {
                         effectiveScopeNode,
                         key,
                         true,
-                        exactSourceFields);
+                        exactSourceFields,
+                        executableBodyFields);
         List<String> sourceContributions = binding.sourceContributions();
         if (recognitionMeter != null) {
             recognitionMeter.recognizeHeader(

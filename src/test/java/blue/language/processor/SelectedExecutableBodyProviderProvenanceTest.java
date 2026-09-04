@@ -6,6 +6,7 @@ import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.BlueId;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.processor.conformance.MockHandler;
 import blue.language.processor.conformance.MockTypeBlueIds;
@@ -138,7 +139,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                         COMPLETE_EMPTY_EVIDENCE)
                 .build();
         ResolvedSnapshot invocationSnapshot =
-                activeManager.fromDocument(new Node());
+                activeManager.fromDocument(Nodes.emptyObject());
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(
                         owner, invocationSnapshot);
@@ -150,7 +151,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
 
         // when
         boolean handled = runner.runHandlers(
-                "/", bundle, "events", new Node());
+                "/", bundle, "events", Nodes.emptyObject());
 
         // then
         assertTrue(handled);
@@ -197,12 +198,12 @@ class SelectedExecutableBodyProviderProvenanceTest {
             ProcessorInvocationState execution =
                     new ProcessorInvocationState(
                             owner,
-                            manager.fromDocument(new Node()));
+                            manager.fromDocument(Nodes.emptyObject()));
             ChannelRunner runner = runner(owner, execution);
 
             // when
             boolean handled = runner.runHandlers(
-                    "/", bundle, "events", new Node());
+                    "/", bundle, "events", Nodes.emptyObject());
 
             // then
             assertTrue(handled);
@@ -272,7 +273,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 new ActiveProviderManager(bodyBlueId, body);
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
-                        new Node(), null, manager);
+                        Nodes.emptyObject(), null, manager);
         FrozenNode reference =
                 FrozenNode.fromResolvedNode(
                         new Node().blueId(bodyBlueId));
@@ -293,7 +294,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
     void shouldFailRuntimeMaterializationClosedWithoutSnapshotManager() {
         // given
         DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(new Node());
+                new DocumentProcessingRuntime(Nodes.emptyObject());
         FrozenNode reference =
                 FrozenNode.fromResolvedNode(
                         new Node().blueId(
@@ -322,7 +323,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                         new Node().value("expanded-or-wrong"));
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
-                        new Node(), null, manager);
+                        Nodes.emptyObject(), null, manager);
         FrozenNode reference = FrozenNode.fromNode(
                 new Node().blueId(bodyBlueId));
 
@@ -376,7 +377,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 new ProcessorInvocationState(
                         owner,
                         manager.fromDocument(
-                                new Node()));
+                                Nodes.emptyObject()));
         ChannelRunner runner =
                 runner(
                         owner,
@@ -389,7 +390,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                                 "/",
                                 bundle,
                                 "events",
-                                new Node()));
+                                Nodes.emptyObject()));
 
         // then
         assertInstanceOf(
@@ -431,7 +432,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 new ProcessorInvocationState(
                         owner,
                         manager.fromDocument(
-                                new Node()));
+                                Nodes.emptyObject()));
         ChannelRunner runner =
                 runner(
                         owner,
@@ -444,7 +445,7 @@ class SelectedExecutableBodyProviderProvenanceTest {
                                 "/",
                                 bundle,
                                 "events",
-                                new Node()));
+                                Nodes.emptyObject()));
 
         // then
         assertInstanceOf(
@@ -605,14 +606,15 @@ class SelectedExecutableBodyProviderProvenanceTest {
                 ProcessorInvocationState execution =
                         new ProcessorInvocationState(
                                 owner,
-                                authoritative.fromDocument(new Node()));
+                                authoritative.fromDocument(
+                                        Nodes.emptyObject()));
                 ChannelRunner runner = runner(owner, execution);
                 Throwable failure = captureFailure(
                         () -> runner.runHandlers(
                                 "/",
                                 bundle,
                                 "events",
-                                new Node()));
+                                Nodes.emptyObject()));
                 return new TypedBodyOutcome(
                         failure,
                         handlerProcessor.executions,

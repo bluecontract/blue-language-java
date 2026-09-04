@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
@@ -30,10 +31,10 @@ final class SelectedExecutableBodyDemandGasTest {
                     new Node().blueId(exactBodyBlueId));
             DocumentProcessingRuntime inlineRuntime =
                     new DocumentProcessingRuntime(
-                            new Node(), null, manager);
+                            Nodes.emptyObject(), null, manager);
             DocumentProcessingRuntime referenceRuntime =
                     new DocumentProcessingRuntime(
-                            new Node(), null, manager);
+                            Nodes.emptyObject(), null, manager);
 
             // when
             inlineRuntime.recordSelectedExecutableBodyDemand(
@@ -72,7 +73,7 @@ final class SelectedExecutableBodyDemandGasTest {
         try (Blue blue = ProcessorTestSupport.blue()) {
             DocumentProcessingRuntime runtime =
                     new DocumentProcessingRuntime(
-                            new Node(),
+                            Nodes.emptyObject(),
                             null,
                             blue.getDocumentProcessor().snapshotManager());
 
@@ -97,7 +98,7 @@ final class SelectedExecutableBodyDemandGasTest {
     void shouldProduceNoDemandOrGasForAbsentExecutableField() {
         // given
         DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(new Node());
+                new DocumentProcessingRuntime(Nodes.emptyObject());
 
         // when
         runtime.recordSelectedExecutableBodyDemand(
