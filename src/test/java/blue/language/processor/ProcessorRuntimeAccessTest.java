@@ -6,6 +6,7 @@ import blue.language.api.BlueOperationResult;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -806,12 +807,12 @@ final class ProcessorRuntimeAccessTest {
                 .build();
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(
-                        successor, new Node());
+                        successor, Nodes.emptyObject());
         execution.preflightScope("/");
         ProcessorExecutionContext context = execution.createContext(
                 "/",
                 execution.bundleForScope("/"),
-                new Node(),
+                Nodes.emptyObject(),
                 false);
 
         // when

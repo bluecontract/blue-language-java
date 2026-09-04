@@ -4,6 +4,7 @@ import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.model.JsonPatch;
 import blue.language.preprocess.provider.BasicNodeProvider;
@@ -1278,7 +1279,7 @@ final class SemanticOutputBoundaryTest {
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(
                         blue.getDocumentProcessor(),
-                        new Node());
+                        Nodes.emptyObject());
         execution.preflightScope("/");
         Node output =
                 new Node().properties(
@@ -1295,7 +1296,7 @@ final class SemanticOutputBoundaryTest {
                          execution.createContext(
                                  "/",
                                  execution.bundleForScope("/"),
-                                 new Node(),
+                                 Nodes.emptyObject(),
                                  false)) {
                 first = phase.semanticOutputBoundary()
                         .admit(output);
@@ -1434,13 +1435,13 @@ final class SemanticOutputBoundaryTest {
                     blue.getDocumentProcessor();
             this.execution =
                     new ProcessorInvocationState(
-                            owner, new Node());
+                            owner, Nodes.emptyObject());
             execution.preflightScope("/");
             this.context =
                     execution.createContext(
                             "/",
                             execution.bundleForScope("/"),
-                            new Node(),
+                            Nodes.emptyObject(),
                             false);
         }
 

@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.model.TestEventChannel;
@@ -450,12 +451,12 @@ final class SubscriptionSurfaceProjectionTest {
 
         // when
         SubscriptionDelta delta = projection.projectInitial(
-                new Node(),
+                Nodes.emptyObject(),
                 0L,
                 order(0));
         Throwable closedFailure = FailureCapture.captureFailure(
                 () -> projection.projectInitial(
-                        new Node(),
+                        Nodes.emptyObject(),
                         0L,
                         order(0)));
         processor.close();
@@ -564,7 +565,7 @@ final class SubscriptionSurfaceProjectionTest {
 
         // when
         projection.projectUpdate(
-                new Node(),
+                Nodes.emptyObject(),
                 Collections.singletonList(retainedChild),
                 callerChanges,
                 8L,

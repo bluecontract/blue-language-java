@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -56,7 +57,7 @@ final class PatchPlanningEngineCollectionTest {
     @Test
     void shouldNotReopenAddedCollectionMemberForWholeChildStateRemoval() {
         // given
-        Node entryRoot = rootWithCollectionMember(new Node());
+        Node entryRoot = rootWithCollectionMember(Nodes.emptyObject());
         EmbeddedScopePlan entryPlan = embeddedScopePlan(entryRoot);
         SequentialPatchPlanningSession rootSession =
                 new SequentialPatchPlanningSession(

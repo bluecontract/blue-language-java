@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ final class ProcessorExecutionContextTest {
                 DirectBlueIdCalculator.calculateBlueId(
                         new Node().name("event-cycle")) + "#0";
         ProcessorInvocationState execution = new ProcessorInvocationState(
-                new DocumentProcessor(), new Node());
+                new DocumentProcessor(), Nodes.emptyObject());
         execution.preflightScope("/");
 
         // when
@@ -101,9 +102,11 @@ final class ProcessorExecutionContextTest {
     void shouldEnqueueOneInvocationOccurrenceAndRecordRootOutputWhenEmittingEvent() {
         // given
         DocumentProcessor owner = new DocumentProcessor();
-        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                owner, Nodes.emptyObject());
         execution.preflightScope("/");
-        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
+        ProcessorExecutionContext context = execution.createContext(
+                "/", execution.bundleForScope("/"), Nodes.emptyObject(), false);
 
         // when
         context.emitEvent(new Node().value("payload"));
@@ -281,10 +284,12 @@ final class ProcessorExecutionContextTest {
     void shouldVerifyInvalidEmitEventAbortsBeforeQueueOrPortableGas() {
         // given
         DocumentProcessor owner = new DocumentProcessor();
-        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                owner, Nodes.emptyObject());
         execution.preflightScope("/");
         long admittedBeforeEffects = execution.runtime().totalGas();
-        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false);
+        ProcessorExecutionContext context = execution.createContext(
+                "/", execution.bundleForScope("/"), Nodes.emptyObject(), false);
         Node invalidEvent = new Node()
                 .value("payload")
                 .properties("alsoPayload", new Node().value("invalid"));
@@ -405,13 +410,13 @@ final class ProcessorExecutionContextTest {
         // given
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(
-                        new DocumentProcessor(), new Node());
+                        new DocumentProcessor(), Nodes.emptyObject());
         execution.preflightScope("/");
         ProcessorExecutionContext context =
                 execution.createContext(
                         "/",
                         execution.bundleForScope("/"),
-                        new Node(),
+                        Nodes.emptyObject(),
                         false);
         GasMeter.ChildGasLedger first =
                 context.newRuntimeGasLedger(
@@ -455,13 +460,13 @@ final class ProcessorExecutionContextTest {
                 .properties("propertyKey", new Node().value("/x"));
         FrozenNode frozen = FrozenNode.fromResolvedNode(contract);
         ProcessorInvocationState execution = new ProcessorInvocationState(
-                new DocumentProcessor(), new Node());
+                new DocumentProcessor(), Nodes.emptyObject());
         execution.preflightScope("/");
         // when
         ProcessorExecutionContext context = execution.createContext(
                 "/",
                 execution.bundleForScope("/"),
-                new Node(),
+                Nodes.emptyObject(),
                 "probe",
                 frozen,
                 false);

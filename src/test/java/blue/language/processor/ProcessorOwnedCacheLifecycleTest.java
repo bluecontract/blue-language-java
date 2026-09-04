@@ -4,6 +4,7 @@ import blue.language.api.BlueCachePolicy;
 import blue.language.provider.NodeProvider;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.snapshot.FrozenNode;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.identity.CanonicalTypeIdentityLookup;
@@ -169,7 +170,7 @@ class ProcessorOwnedCacheLifecycleTest {
 
         // when
         DocumentProcessingResult result = processor.processDocument(
-                new Node(), new Node().value("event"));
+                Nodes.emptyObject(), new Node().value("event"));
 
         // then
         assertTrue(result != null);

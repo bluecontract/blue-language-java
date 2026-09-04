@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
@@ -269,13 +270,13 @@ final class SelectedExecutableBodyCapabilityTest {
             ProcessorInvocationState execution =
                     new ProcessorInvocationState(
                             blue.getDocumentProcessor(),
-                            new Node());
+                            Nodes.emptyObject());
             execution.preflightScope("/");
             ProcessorExecutionContext context =
                     execution.createContext(
                             "/",
                             execution.bundleForScope("/"),
-                            new Node(),
+                            Nodes.emptyObject(),
                             "handler",
                             FrozenNode.fromResolvedNode(
                                     new Node().properties(
@@ -369,13 +370,13 @@ final class SelectedExecutableBodyCapabilityTest {
             ProcessorInvocationState execution =
                     new ProcessorInvocationState(
                             blue.getDocumentProcessor(),
-                            new Node());
+                            Nodes.emptyObject());
             execution.preflightScope("/");
             ProcessorExecutionContext context =
                     execution.createContext(
                             "/",
                             execution.bundleForScope("/"),
-                            new Node(),
+                            Nodes.emptyObject(),
                             "handler",
                             FrozenNode.fromResolvedNode(
                                     new Node().properties(
