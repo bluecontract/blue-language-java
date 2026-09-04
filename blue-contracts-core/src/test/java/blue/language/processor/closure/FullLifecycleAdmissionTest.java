@@ -7,7 +7,11 @@ import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.model.NodeWireForm;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.provider.NodeProvider;
+import blue.language.registry.BlueCoreTypeRegistry;
+import blue.language.runtime.BlueLanguage;
+import blue.language.processor.BlueContracts;
 import blue.language.processor.ContractProcessorRegistry;
 import blue.language.processor.ContractProcessorRegistryBuilder;
 import blue.language.processor.ChannelProcessor;
@@ -63,7 +67,10 @@ final class FullLifecycleAdmissionTest {
     private static final String HANDLER_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(HANDLER_TYPE);
     private static final Node EXACT_DOCUMENT_TYPE =
-            new Node().name("Full lifecycle exact-node type");
+            new Node()
+                    .name("Full lifecycle exact-node type")
+                    .type(new Node().blueId(
+                            BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID));
     private static final String EXACT_DOCUMENT_TYPE_BLUE_ID =
             DirectBlueIdCalculator.calculateBlueId(EXACT_DOCUMENT_TYPE);
     private static final Node RETAINED_SOURCE_CHANNEL_TYPE =
@@ -2266,7 +2273,26 @@ final class FullLifecycleAdmissionTest {
     void requirement13ColdAndWarmExactNodeRunsHaveExactParity() {
         ProbeProcessor probe = new ProbeProcessor();
         CountingNodeProvider provider = new CountingNodeProvider();
-        try (DocumentProcessor owner = owner(probe, provider)) {
+        ContractProcessorRegistry registry =
+                ContractProcessorRegistryBuilder.create()
+                        .register(
+                                HANDLER_BLUE_ID,
+                                HANDLER_TYPE,
+                                probe)
+                        .build();
+        try (BlueLanguage language = BlueLanguage.builder()
+                     .nodeProvider(new TestNodeProvider(provider))
+                     .build();
+             BlueContracts backingContracts = BlueContracts.builder(
+                             language.processing())
+                     .runtimeRegistry(registry)
+                     .build();
+             DocumentProcessor owner = DocumentProcessor.builder()
+                     .runtimeRegistry(registry)
+                     .runtimeRegistryIdentity(
+                             registry.generationIdentity())
+                     .runtimeAccess(backingContracts.runtimeAccess())
+                     .build()) {
             ClosureEnvironment environment = environment(owner);
             CyclicFixture fixture = twoMemberCycle(
                     environment,
@@ -2282,8 +2308,15 @@ final class FullLifecycleAdmissionTest {
 
             try (BlueClosureContracts contracts =
                          new BlueClosureContracts(owner, captures)) {
-                cold = contracts.admitClosureWithLifecycleQueue(input)
-                        .processResult();
+                ClosureAttemptResult coldAttempt =
+                        contracts.admitClosureWithLifecycleQueue(input);
+                assertTrue(coldAttempt.isComplete(),
+                        "Cold exact-node run suspended: "
+                                + coldAttempt.requiredExactBlueIds()
+                                + "; exactType=" + EXACT_DOCUMENT_TYPE_BLUE_ID
+                                + "; dictionary="
+                                + BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID);
+                cold = coldAttempt.processResult();
                 int coldFetches = provider.exactFetches;
                 assertTrue(coldFetches > 0,
                         "The first admission must establish the exact type");
@@ -2292,20 +2325,24 @@ final class FullLifecycleAdmissionTest {
                 assertTrue(warmedCacheEntries > 0,
                         "The first admission must warm processor-owned caches");
                 provider.exactFetches = 0;
-                warm = contracts.admitClosureWithLifecycleQueue(input)
-                        .processResult();
-                assertEquals(2, provider.exactFetches,
-                        "The warm run revalidates one exact type per member");
+                ClosureAttemptResult warmAttempt =
+                        contracts.admitClosureWithLifecycleQueue(input);
+                assertTrue(warmAttempt.isComplete(),
+                        "Warm exact-node run suspended: "
+                                + warmAttempt.requiredExactBlueIds());
+                warm = warmAttempt.processResult();
                 assertTrue(provider.exactFetches < coldFetches,
-                        "The warm run must perform fewer exact provider lookups");
+                        "The warm run must perform fewer exact provider "
+                                + "lookups: cold=" + coldFetches
+                                + ", warm=" + provider.exactFetches);
                 assertEquals(warmedCacheEntries, owner.administration()
                                 .cacheEntryCount(),
                         "The warm admission must reuse the populated caches");
             }
 
-            assertEquals(2, captures.values.size());
             assertSuccess(cold);
             assertSuccess(warm);
+            assertEquals(2, captures.values.size());
             assertExactParity(cold, warm);
             assertEquals(workIdentities(captures.values.get(0)),
                     workIdentities(captures.values.get(1)));
@@ -4365,7 +4402,10 @@ final class FullLifecycleAdmissionTest {
                     context.applyPatch(JsonPatch.add(
                             "/child",
                             new Node().name(
-                                    "Unknown child created during initialization")));
+                                    "Unknown child created during initialization")
+                                    .properties(
+                                            "payload",
+                                            new Node().value(Boolean.TRUE))));
                 }
             }
         }
@@ -4433,6 +4473,8 @@ final class FullLifecycleAdmissionTest {
 
     private static final class TestNodeProvider implements NodeProvider {
         private final NodeProvider delegate;
+        private final NodeProvider core =
+                BlueCoreTypeRegistry.INSTANCE.verifiedProvider();
         private final NodeProvider runtime =
                 BlueRuntimeTypeRegistry.getDefault().asProvider();
 
@@ -4450,6 +4492,10 @@ final class FullLifecycleAdmissionTest {
                 if (resolved != null && !resolved.isEmpty()) {
                     return resolved;
                 }
+            }
+            List<Node> coreResolved = core.fetchByBlueId(blueId);
+            if (coreResolved != null && !coreResolved.isEmpty()) {
+                return coreResolved;
             }
             return runtime.fetchByBlueId(blueId);
         }

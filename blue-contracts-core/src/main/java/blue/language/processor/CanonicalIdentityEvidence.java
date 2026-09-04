@@ -212,7 +212,7 @@ final class CanonicalIdentityEvidence {
 
         Node sourceProjection = NodeToBlueIdInput
                 .stripResolvedBlueIdMetadata(checked.clone());
-        canonicalizeExactFields(
+        Set<String> presentExactPaths = canonicalizeExactFields(
                 sourceProjection,
                 manager,
                 purpose,
@@ -222,15 +222,16 @@ final class CanonicalIdentityEvidence {
                 sourceProjection,
                 manager,
                 purpose,
-                checkedExactPaths).blueId();
+                presentExactPaths).blueId();
     }
 
-    private static void canonicalizeExactFields(
+    private static Set<String> canonicalizeExactFields(
             Node sourceProjection,
             ProcessingSnapshotManager snapshotManager,
             String purpose,
             Set<String> exactFieldPaths,
             Set<String> executableBodyPaths) {
+        Set<String> presentExactPaths = new LinkedHashSet<>();
         List<String> orderedPaths = new ArrayList<>(exactFieldPaths);
         Collections.sort(orderedPaths, (left, right) -> {
             int byDepth = Integer.compare(
@@ -244,6 +245,7 @@ final class CanonicalIdentityEvidence {
             if (exactValue == null) {
                 continue;
             }
+            presentExactPaths.add(path);
             Set<String> preservedWithinValue = relativeDescendants(
                     path, exactFieldPaths);
             if (executableBodyPaths.contains(path)) {
@@ -263,6 +265,7 @@ final class CanonicalIdentityEvidence {
                             purpose + " exact header field " + path);
             NodePathEditor.put(sourceProjection, path, canonicalValue);
         }
+        return presentExactPaths;
     }
 
     /**

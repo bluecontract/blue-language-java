@@ -6,8 +6,10 @@ import blue.language.merge.ResolvedSnapshot;
 import blue.language.model.Node;
 import blue.language.model.Nodes;
 import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.provider.SequentialNodeProvider;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.BlueRuntimeTypeRegistry;
 import blue.language.runtime.BlueLanguage;
 import blue.language.runtime.LanguageProcessing;
 import blue.language.snapshot.FrozenNode;
@@ -219,6 +221,7 @@ final class ManagedRootSettlementServiceTest {
                     classification.candidate().payloadBlueId());
         } finally {
             processor.close();
+            domainStore.close();
         }
     }
 
@@ -419,6 +422,7 @@ final class ManagedRootSettlementServiceTest {
                     "source"));
         } finally {
             processor.close();
+            domainStore.close();
         }
     }
 
@@ -690,6 +694,7 @@ final class ManagedRootSettlementServiceTest {
             }
         } finally {
             processor.close();
+            domainStore.close();
         }
     }
 
@@ -837,6 +842,7 @@ final class ManagedRootSettlementServiceTest {
             }
         } finally {
             processor.close();
+            domainStore.close();
         }
     }
 
@@ -1185,6 +1191,20 @@ final class ManagedRootSettlementServiceTest {
 
         private final Map<String, FrozenNode> exactValues =
                 new LinkedHashMap<String, FrozenNode>();
+        private final BlueLanguage language;
+        private final LanguageProcessing.Scope scope;
+        private final ProcessingSnapshotManager delegate;
+
+        private ExactDomainSnapshotManager() {
+            language = BlueLanguage.builder()
+                    .nodeProvider(new SequentialNodeProvider(
+                            new BasicNodeProvider(SOURCE_TYPE),
+                            BlueRuntimeTypeRegistry.getDefault()
+                                    .asProcessorSnapshotProvider()))
+                    .build();
+            scope = language.processing().openScope();
+            delegate = new LanguageProcessingSnapshotManager(scope);
+        }
 
         private void provide(ManagedCheckpointDomain domain) {
             exactValues.put(
@@ -1195,23 +1215,60 @@ final class ManagedRootSettlementServiceTest {
         @Override
         public FrozenNode materializeVerifiedExactReference(
                 FrozenNode reference) {
-            return exactValues.get(reference.getReferenceBlueId());
+            FrozenNode exact = exactValues.get(reference.getReferenceBlueId());
+            return exact != null
+                    ? exact
+                    : delegate.materializeVerifiedExactReference(reference);
         }
 
         @Override
         public ResolvedSnapshot fromDocument(Node document) {
-            return ResolvedSnapshot.withDeferredResolution(
-                    FrozenNode.fromNode(document),
-                    FrozenNode.fromResolvedNode(document),
-                    CanonicalTypeIdentityLookup.incomplete());
+            return delegate.fromDocument(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransient(Node document) {
+            return delegate.fromDocumentTransient(document);
+        }
+
+        @Override
+        public blue.language.identity.CanonicalTypeIdentityEvidence
+        resolveTypeDeclarationIdentity(Node declaration) {
+            return delegate.resolveTypeDeclarationIdentity(declaration);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentPreservingPaths(
+                Node document,
+                java.util.Collection<String> preservedPaths) {
+            return delegate.fromDocumentPreservingPaths(
+                    document, preservedPaths);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+                Node document,
+                java.util.Collection<String> preservedPaths) {
+            return delegate.fromDocumentTransientPreservingPaths(
+                    document, preservedPaths);
+        }
+
+        @Override
+        public blue.language.merge.TypeEvidenceResolution
+        materializeVerifiedTypeReference(FrozenNode reference) {
+            return delegate.materializeVerifiedTypeReference(reference);
         }
 
         @Override
         public ResolvedSnapshot applyPatch(
                 ResolvedSnapshot snapshot,
                 JsonPatch patch) {
-            throw new AssertionError(
-                    "Snapshot patching is outside this focused test");
+            return delegate.applyPatch(snapshot, patch);
+        }
+
+        private void close() {
+            scope.close();
+            language.close();
         }
     }
 }
