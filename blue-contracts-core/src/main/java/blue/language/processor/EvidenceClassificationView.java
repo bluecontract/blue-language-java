@@ -82,7 +82,8 @@ final class EvidenceClassificationView {
                         null,
                         true,
                         owner.observer(),
-                        scope.canonicalTypeIdentities());
+                        scope.canonicalTypeIdentities(),
+                        owner.contributionIdentityMemo());
         EmbeddedScopeEntryPlans.attach(
                 runtime,
                 scopePath,

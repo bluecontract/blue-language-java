@@ -110,7 +110,8 @@ final class ScopeFrameFactory {
                     metrics,
                     execution.contractRecognitionMeter(),
                     "participating-contract-header",
-                    recognition.canonicalTypeIdentities());
+                    recognition.canonicalTypeIdentities(),
+                    owner.contributionIdentityMemo());
             loaded = EmbeddedScopeEntryPlans.attachManagedRoot(
                     runtime,
                     normalizedScope,
@@ -156,7 +157,8 @@ final class ScopeFrameFactory {
                     metrics,
                     execution.contractRecognitionMeter(),
                     "participating-contract-header",
-                    recognition.canonicalTypeIdentities());
+                    recognition.canonicalTypeIdentities(),
+                    owner.contributionIdentityMemo());
             if (attachEmbeddedEntryPlans) {
                 loaded = EmbeddedScopeEntryPlans.attach(
                         runtime,

@@ -1,8 +1,12 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.identity.CanonicalTypeIdentityEvidence;
+import blue.language.identity.CanonicalTypeIdentityLookup;
+import blue.language.merge.ResolvedSnapshot;
 import blue.language.provider.NodeProvider;
 import blue.language.provider.NodeProviderResult;
+import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
@@ -10,7 +14,10 @@ import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,6 +25,31 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ContractContributionResolverTest {
+
+    private static final CanonicalTypeIdentityLookup
+            COMPLETE_REFERENCE_ONLY_EVIDENCE =
+            new CanonicalTypeIdentityLookup() {
+                @Override
+                public boolean hasCompleteCoverage() {
+                    return true;
+                }
+
+                @Override
+                public Optional<CanonicalTypeIdentityEvidence>
+                findCanonicalTypeIdentityEvidence(Node completedType) {
+                    if (completedType == null) {
+                        throw new NullPointerException("completedType");
+                    }
+                    return completedType.isReferenceOnly()
+                            ? Optional.of(
+                                    CanonicalTypeIdentityEvidence
+                                            .referenceSource(
+                                                    completedType
+                                                            .getBlueId()))
+                            : Optional
+                                    .<CanonicalTypeIdentityEvidence>empty();
+                }
+            };
 
     @Test
     void shouldVerifyContextuallyInheritedTypeIsReverifiedFromItsExactBlueId() {
@@ -396,6 +428,186 @@ class ContractContributionResolverTest {
         assertFalse(source.pureReference());
     }
 
+    @Test
+    void shouldMemoizeCanonicalContributionOnlyWithinSuppliedInvocationMemo() {
+        // given
+        CountingCanonicalSnapshotManager manager =
+                new CountingCanonicalSnapshotManager();
+        ContractContributionResolver resolver =
+                new ContractContributionResolver(
+                        null,
+                        GasSchedule.contracts10(),
+                        manager);
+        Node contribution = new Node()
+                .type(new Node().blueId(
+                        RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL))
+                .properties("program", new Node().value("exact"));
+        Node selectedScope = new Node().contracts(
+                new Node().properties("handler", contribution));
+        CanonicalContributionIdentityMemo firstInvocation =
+                new CanonicalContributionIdentityMemo();
+
+        // when
+        ContractContributionResolver.BindingResolution first =
+                resolver.resolveBinding(
+                        selectedScope,
+                        null,
+                        "handler",
+                        true,
+                        Collections.singletonList("program"),
+                        Collections.singletonList("program"),
+                        firstInvocation);
+        ContractContributionResolver.BindingResolution reused =
+                resolver.resolveBinding(
+                        selectedScope.clone(),
+                        null,
+                        "handler",
+                        true,
+                        Collections.singletonList("program"),
+                        Collections.singletonList("program"),
+                        firstInvocation);
+        int afterSameInvocation = manager.canonicalResolutions;
+        ContractContributionResolver.BindingResolution nextInvocation =
+                resolver.resolveBinding(
+                        selectedScope.clone(),
+                        null,
+                        "handler",
+                        true,
+                        Collections.singletonList("program"),
+                        Collections.singletonList("program"),
+                        new CanonicalContributionIdentityMemo());
+
+        // then
+        assertEquals(
+                first.sourceContributions(),
+                reused.sourceContributions());
+        assertEquals(
+                first.sourceContributions(),
+                nextInvocation.sourceContributions());
+        assertEquals(2, afterSameInvocation);
+        assertEquals(4, manager.canonicalResolutions);
+    }
+
+    @Test
+    void shouldNotMemoizeVerifiedReferenceMaterialization() {
+        // given
+        Node contribution = new Node().properties(
+                "program", new Node().value("provider-owned"));
+        String contributionBlueId =
+                DirectBlueIdCalculator.calculateBlueId(contribution);
+        AtomicInteger providerFetches = new AtomicInteger();
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                return fetchResultByBlueId(blueId).nodes();
+            }
+
+            @Override
+            public NodeProviderResult fetchResultByBlueId(String blueId) {
+                providerFetches.incrementAndGet();
+                return NodeProviderResult.found(
+                        Collections.singletonList(
+                                contribution.clone()));
+            }
+        };
+        ContractContributionResolver resolver =
+                new ContractContributionResolver(provider);
+        Node selectedScope = new Node().contracts(
+                new Node().properties(
+                        "handler",
+                        new Node().blueId(contributionBlueId)));
+        CanonicalContributionIdentityMemo invocationMemo =
+                new CanonicalContributionIdentityMemo();
+
+        // when
+        resolver.resolveBinding(
+                selectedScope,
+                null,
+                "handler",
+                true,
+                Collections.singletonList("program"),
+                Collections.singletonList("program"),
+                invocationMemo);
+        resolver.resolveBinding(
+                selectedScope.clone(),
+                null,
+                "handler",
+                true,
+                Collections.singletonList("program"),
+                Collections.singletonList("program"),
+                invocationMemo);
+
+        // then
+        assertEquals(2, providerFetches.get());
+        assertEquals(0, invocationMemo.size());
+    }
+
+    @Test
+    void shouldReuseInlineContributionIdentityAfterProviderTypeVerification() {
+        // given
+        CountingCanonicalSnapshotManager manager =
+                new CountingCanonicalSnapshotManager();
+        Node contribution = new Node()
+                .type(new Node().blueId(
+                        RuntimeBlueIds.LIFECYCLE_EVENT_CHANNEL))
+                .properties("program", new Node().value("provider-inline"));
+        Node providedType = new Node().contracts(
+                new Node().properties("handler", contribution));
+        String providedTypeBlueId =
+                DirectBlueIdCalculator.calculateBlueId(providedType);
+        AtomicInteger providerFetches = new AtomicInteger();
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                return fetchResultByBlueId(blueId).nodes();
+            }
+
+            @Override
+            public NodeProviderResult fetchResultByBlueId(String blueId) {
+                providerFetches.incrementAndGet();
+                return NodeProviderResult.found(
+                        Collections.singletonList(providedType.clone()));
+            }
+        };
+        ContractContributionResolver resolver =
+                new ContractContributionResolver(
+                        provider,
+                        GasSchedule.contracts10(),
+                        manager);
+        Node selectedScope = new Node().type(
+                new Node().blueId(providedTypeBlueId));
+        CanonicalContributionIdentityMemo invocationMemo =
+                new CanonicalContributionIdentityMemo();
+
+        // when
+        ContractContributionResolver.BindingResolution first =
+                resolver.resolveBinding(
+                        selectedScope,
+                        null,
+                        "handler",
+                        true,
+                        Collections.singletonList("program"),
+                        Collections.singletonList("program"),
+                        invocationMemo);
+        ContractContributionResolver.BindingResolution reused =
+                resolver.resolveBinding(
+                        selectedScope.clone(),
+                        null,
+                        "handler",
+                        true,
+                        Collections.singletonList("program"),
+                        Collections.singletonList("program"),
+                        invocationMemo);
+
+        // then
+        assertEquals(
+                first.sourceContributions(),
+                reused.sourceContributions());
+        assertEquals(2, providerFetches.get());
+        assertEquals(2, manager.canonicalResolutions);
+        assertEquals(1, invocationMemo.size());
+    }
+
     private static FrozenNode nestedHeaderReference(String value) {
         Node nestedHeader = new Node().value(value);
         return FrozenNode.fromResolvedNode(
@@ -422,5 +634,46 @@ class ContractContributionResolverTest {
                 return result;
             }
         };
+    }
+
+    private static final class CountingCanonicalSnapshotManager
+            implements ProcessingSnapshotManager {
+        private int canonicalResolutions;
+
+        @Override
+        public ResolvedSnapshot fromDocument(Node document) {
+            return snapshot(document);
+        }
+
+        @Override
+        public ResolvedSnapshot
+        fromDocumentTransientForCanonicalIdentity(Node document) {
+            canonicalResolutions++;
+            return snapshot(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+                Node document,
+                Collection<String> preservedPaths) {
+            canonicalResolutions++;
+            return snapshot(document);
+        }
+
+        @Override
+        public ResolvedSnapshot applyPatch(
+                ResolvedSnapshot snapshot,
+                JsonPatch patch) {
+            throw new UnsupportedOperationException(
+                    "Patch application is outside this identity test");
+        }
+
+        private ResolvedSnapshot snapshot(Node document) {
+            FrozenNode canonical = FrozenNode.fromNode(document);
+            return ResolvedSnapshot.withCanonicalTypeIdentities(
+                    canonical,
+                    FrozenNode.fromResolvedNode(document),
+                    COMPLETE_REFERENCE_ONLY_EVIDENCE);
+        }
     }
 }

@@ -72,12 +72,31 @@ final class ContractContributionCollector {
             boolean effectiveContractExists,
             Collection<String> exactSourceFields,
             Collection<String> executableBodyFields) {
+        return collect(
+                selectedScope,
+                effectiveScope,
+                contractKey,
+                effectiveContractExists,
+                exactSourceFields,
+                executableBodyFields,
+                null);
+    }
+
+    ContractContributionResolver.BindingResolution collect(
+            Node selectedScope,
+            FrozenNode effectiveScope,
+            String contractKey,
+            boolean effectiveContractExists,
+            Collection<String> exactSourceFields,
+            Collection<String> executableBodyFields,
+            CanonicalContributionIdentityMemo identityMemo) {
         return resolver.resolveBinding(
                 selectedScope,
                 effectiveScope,
                 contractKey,
                 effectiveContractExists,
                 exactSourceFields,
-                executableBodyFields);
+                executableBodyFields,
+                identityMemo);
     }
 }

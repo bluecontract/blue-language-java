@@ -60,7 +60,8 @@ final class ManagedRootSurfaceResolver {
                 owner.observer(),
                 null,
                 null,
-                recognition.canonicalTypeIdentities());
+                recognition.canonicalTypeIdentities(),
+                owner.contributionIdentityMemo());
         if (gasContext.meter().totalGas() != gasBefore) {
             throw new IllegalStateException(
                     "Route classification must not charge shared gas");

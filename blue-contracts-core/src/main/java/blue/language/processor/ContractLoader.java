@@ -136,7 +136,8 @@ final class ContractLoader {
                 null,
                 snapshot.canonicalTypeIdentities(),
                 ContractHeaderMappingEvidence.fromSnapshot(
-                        snapshot, scopePath));
+                        snapshot, scopePath),
+                null);
     }
 
     ContractBundle load(
@@ -196,6 +197,26 @@ final class ContractLoader {
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason,
             CanonicalTypeIdentityLookup typeIdentities) {
+        return load(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                observer,
+                recognitionMeter,
+                recognitionReason,
+                typeIdentities,
+                null);
+    }
+
+    ContractBundle load(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            ProcessingObserver observer,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            CanonicalContributionIdentityMemo identityMemo) {
         Node selectedScope = selectedScopeNode != null
                 ? effectiveContracts.selectedContractContainer(selectedScopeNode)
                 : null;
@@ -206,7 +227,8 @@ final class ContractLoader {
                 observer,
                 recognitionMeter,
                 recognitionReason,
-                typeIdentities);
+                typeIdentities,
+                identityMemo);
     }
 
     ContractBundle loadExternalClassification(
@@ -259,9 +281,31 @@ final class ContractLoader {
                 channelKey,
                 includeProcessEmbedded,
                 observer,
+                typeIdentities,
+                null);
+    }
+
+    ContractBundle loadExternalClassification(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ProcessingObserver observer,
+            CanonicalTypeIdentityLookup typeIdentities,
+            CanonicalContributionIdentityMemo identityMemo) {
+        return loadExternalClassification(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                channelKey,
+                includeProcessEmbedded,
+                ExternalChannelDependencySnapshot.none(),
+                observer,
                 null,
                 null,
-                typeIdentities);
+                typeIdentities,
+                identityMemo);
     }
 
     ContractBundle loadExternalClassification(
@@ -298,6 +342,32 @@ final class ContractLoader {
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason,
             CanonicalTypeIdentityLookup typeIdentities) {
+        return loadExternalClassification(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                channelKey,
+                includeProcessEmbedded,
+                declaredDependencies,
+                observer,
+                recognitionMeter,
+                recognitionReason,
+                typeIdentities,
+                null);
+    }
+
+    ContractBundle loadExternalClassification(
+            FrozenNode selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            String channelKey,
+            boolean includeProcessEmbedded,
+            ExternalChannelDependencySnapshot declaredDependencies,
+            ProcessingObserver observer,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            CanonicalContributionIdentityMemo identityMemo) {
         Set<String> retainedKeys = externalClassificationContractKeys(
                 selectedScopeNode,
                 effectiveScopeNode,
@@ -319,7 +389,8 @@ final class ContractLoader {
                 observer,
                 recognitionMeter,
                 recognitionReason,
-                typeIdentities);
+                typeIdentities,
+                identityMemo);
     }
 
     Set<String> externalClassificationContractKeys(
@@ -399,7 +470,28 @@ final class ContractLoader {
                 recognitionMeter,
                 recognitionReason,
                 typeIdentities,
-                ContractHeaderMappingEvidence.none(scopePath));
+                null);
+    }
+
+    ContractBundle load(
+            Node selectedScopeNode,
+            FrozenNode effectiveScopeNode,
+            String scopePath,
+            ProcessingObserver observer,
+            ContractRecognitionMeter recognitionMeter,
+            String recognitionReason,
+            CanonicalTypeIdentityLookup typeIdentities,
+            CanonicalContributionIdentityMemo identityMemo) {
+        return load(
+                selectedScopeNode,
+                effectiveScopeNode,
+                scopePath,
+                observer,
+                recognitionMeter,
+                recognitionReason,
+                typeIdentities,
+                ContractHeaderMappingEvidence.none(scopePath),
+                identityMemo);
     }
 
     private ContractBundle load(
@@ -410,7 +502,8 @@ final class ContractLoader {
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason,
             CanonicalTypeIdentityLookup typeIdentities,
-            ContractHeaderMappingEvidence mappingEvidence) {
+            ContractHeaderMappingEvidence mappingEvidence,
+            CanonicalContributionIdentityMemo identityMemo) {
         ContractHeaderMappingEvidence contentEvidence = Objects.requireNonNull(
                 mappingEvidence, "mappingEvidence");
         return refresh.load(
@@ -430,7 +523,8 @@ final class ContractLoader {
                                 meter,
                                 reason,
                                 identities,
-                                contentEvidence));
+                                contentEvidence,
+                                identityMemo));
     }
 
     void clearCaches() {

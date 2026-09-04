@@ -77,7 +77,8 @@ final class ExternalCandidateProjector {
                 includeProcessEmbedded
                         ? "structural-route-header"
                         : "external-channel-header",
-                recognition.canonicalTypeIdentities());
+                recognition.canonicalTypeIdentities(),
+                owner.contributionIdentityMemo());
     }
 
     ContractBundle.ChannelBinding requireExternalSource(

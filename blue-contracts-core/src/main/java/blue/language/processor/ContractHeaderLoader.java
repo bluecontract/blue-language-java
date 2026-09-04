@@ -169,7 +169,8 @@ final class ContractHeaderLoader {
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason,
             CanonicalTypeIdentityLookup typeIdentities,
-            ContractHeaderMappingEvidence mappingEvidence) {
+            ContractHeaderMappingEvidence mappingEvidence,
+            CanonicalContributionIdentityMemo identityMemo) {
         ContractBundle.Builder bundle = ContractBundle.builder(
                 Objects.requireNonNull(typeIdentities, "typeIdentities"));
         Node exactSelectedScope =
@@ -226,7 +227,8 @@ final class ContractHeaderLoader {
                     recognitionMeter,
                     recognitionReason,
                     typeIdentities,
-                    mappingEvidence);
+                    mappingEvidence,
+                    identityMemo);
         }
         ContractBundle result = bundle.build();
         validateEmbeddedCollectionChannels(
@@ -246,7 +248,8 @@ final class ContractHeaderLoader {
             ContractRecognitionMeter recognitionMeter,
             String recognitionReason,
             CanonicalTypeIdentityLookup typeIdentities,
-            ContractHeaderMappingEvidence mappingEvidence) {
+            ContractHeaderMappingEvidence mappingEvidence,
+            CanonicalContributionIdentityMemo identityMemo) {
         String typeBlueId = typeBlueIds.get(key);
         if (typeBlueId == null) {
             throw new MustUnderstandFailureException(
@@ -290,7 +293,8 @@ final class ContractHeaderLoader {
                         key,
                         true,
                         exactSourceFields,
-                        executableBodyFields);
+                        executableBodyFields,
+                        identityMemo);
         List<String> sourceContributions = binding.sourceContributions();
         if (recognitionMeter != null) {
             recognitionMeter.recognizeHeader(

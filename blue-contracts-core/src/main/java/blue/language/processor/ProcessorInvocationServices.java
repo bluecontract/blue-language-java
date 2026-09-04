@@ -12,7 +12,7 @@ import blue.language.runtime.LanguageRuntimeAccess;
 import java.util.Objects;
 
 /**
- * Immutable collaborator set used by exactly one processor invocation.
+ * Invocation-owned collaborator set used by exactly one processor invocation.
  *
  * <p>The ordinary path captures the configured processor generation. The
  * platform path replaces every provider-sensitive collaborator with an
@@ -37,6 +37,9 @@ final class ProcessorInvocationServices implements AutoCloseable {
     private final String runtimeRegistryIdentity;
     private final ExternalDeliveryEvidenceVerifier deliveryEvidenceVerifier;
     private final SubscriptionSurfaceValidator subscriptionSurfaceValidator;
+    private final CanonicalContributionIdentityMemo
+            contributionIdentityMemo =
+            new CanonicalContributionIdentityMemo();
     private final boolean ownsProviderDerivedCaches;
     private final boolean strictPlatformInvocation;
 
@@ -191,6 +194,11 @@ final class ProcessorInvocationServices implements AutoCloseable {
         return contractLoader;
     }
 
+    /** Reuses successful canonical contribution identities in this call only. */
+    CanonicalContributionIdentityMemo contributionIdentityMemo() {
+        return contributionIdentityMemo;
+    }
+
     ConformanceEngine conformanceEngine() {
         return conformanceEngine;
     }
@@ -312,9 +320,10 @@ final class ProcessorInvocationServices implements AutoCloseable {
         };
     }
 
-    /** Releases only invocation-owned provider-derived Contracts caches. */
+    /** Releases all invocation-owned memoized and provider-derived state. */
     @Override
     public void close() {
+        contributionIdentityMemo.clear();
         if (!ownsProviderDerivedCaches) {
             return;
         }

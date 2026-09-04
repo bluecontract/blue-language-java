@@ -767,10 +767,9 @@ final class ManagedRootSettlementService {
                 scope.selected(),
                 recognition.resolved(),
                 JsonPointer.ROOT,
-                owner.observer(),
-                null,
-                null,
-                recognition.canonicalTypeIdentities());
+                owner.observer(), null, null,
+                recognition.canonicalTypeIdentities(),
+                owner.contributionIdentityMemo());
         if (sharedGasContext.meter().totalGas() != gasBefore) {
             throw new IllegalStateException(
                     "Managed Root contract projection must not charge gas");
