@@ -1,6 +1,7 @@
 package blue.language.matching;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.snapshot.FrozenNode;
 
@@ -103,7 +104,9 @@ final class LabelNeutralTypeIdentity {
                 node.getProperties(), verifiedMaterializer, expandingReferences));
         normalized.schema(normalizeSchema(
                 node.getSchema(), verifiedMaterializer, expandingReferences));
-        return normalized;
+        return Nodes.isBareFieldlessBuilder(normalized)
+                ? Nodes.emptyObject()
+                : normalized;
     }
 
     private static List<Node> normalizeItems(

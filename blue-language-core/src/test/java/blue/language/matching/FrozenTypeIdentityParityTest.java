@@ -5,6 +5,7 @@ import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.merge.TypeEvidenceResolution;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +24,28 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class FrozenTypeIdentityParityTest {
+
+    @Test
+    void labelOnlyTypeNormalizationUsesExplicitSemanticEmptyObjects() {
+        FrozenNode labelOnly = FrozenNode.fromResolvedNode(
+                new Node()
+                        .name("Label-only type")
+                        .description("Compatibility-neutral description"));
+        FrozenNode explicitEmpty = FrozenNode.fromResolvedNode(
+                Nodes.emptyObject());
+        FrozenNode nestedLabelOnly = FrozenNode.fromResolvedNode(
+                new Node().type(
+                        new Node().name("Label-only parent")));
+        FrozenNode nestedExplicitEmpty = FrozenNode.fromResolvedNode(
+                new Node().type(Nodes.emptyObject()));
+
+        assertEquals(
+                fingerprint(explicitEmpty),
+                fingerprint(labelOnly));
+        assertEquals(
+                fingerprint(nestedExplicitEmpty),
+                fingerprint(nestedLabelOnly));
+    }
 
     @Test
     void exactInlineAndReferenceFormsConvergeWithResolverEvidenceColdAndWarm() {
@@ -373,5 +396,15 @@ final class FrozenTypeIdentityParityTest {
 
     private static FrozenNode frozenReference(String blueId) {
         return FrozenNode.fromNode(new Node().blueId(blueId));
+    }
+
+    private static String fingerprint(FrozenNode type) {
+        return LabelNeutralTypeIdentity.calculateCompatibilityFingerprint(
+                type,
+                requested -> {
+                    throw new AssertionError(
+                            "label-only normalization must not materialize "
+                                    + "references");
+                });
     }
 }
