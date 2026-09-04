@@ -551,7 +551,8 @@ abstract class ContractsFixtureFeederEnvironment extends ContractsFixtureHarness
                                          Set<String> ancestry,
                                          Map<String, Node> providerNodes) {
         result.add(new ScopeValue(path, scope));
-        String identity = DirectBlueIdCalculator.calculateBlueId(readNode(scope));
+        String identity = sourceIdentity(
+                readNode(scope), providerNodes, true).blueId();
         if (!ancestry.add(identity)) {
             throw new IllegalArgumentException(
                     "Embedded scope ancestry cycle at " + path);
