@@ -1,13 +1,14 @@
 package blue.language.model;
 
 import blue.language.model.value.BlueNumbers;
+import blue.language.model.wire.JsonPointer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static blue.language.model.wire.BlueLanguageConstants.*;
 import static blue.language.model.NodeWireForm.Strategy.OFFICIAL;
@@ -56,10 +57,20 @@ public final class NodeWireForm {
      *                                  payload kinds or has invalid list control
      */
     public static Object get(Node node, Strategy strategy) {
+        return get(node, strategy, JsonPointer.ROOT);
+    }
+
+    private static Object get(
+            Node node,
+            Strategy strategy,
+            String path) {
         validatePayloadKind(node);
 
         if (Nodes.isSourceNullLiteral(node)) {
             return null;
+        }
+        if (Nodes.isBareFieldlessBuilder(node)) {
+            throw bareFieldlessBuilder(path);
         }
 
         if (isEmptyPlaceholder(node)) {
@@ -84,10 +95,18 @@ public final class NodeWireForm {
         if (value != null && strategy == SIMPLE) {
             return value;
         }
-        List<Object> items = node.getItems() == null ? null
-                : node.getItems().stream()
-                        .map(item -> get(item, strategy))
-                        .collect(Collectors.toList());
+        List<Object> items = null;
+        if (node.getItems() != null) {
+            items = new ArrayList<>(node.getItems().size());
+            for (int index = 0; index < node.getItems().size(); index++) {
+                items.add(get(
+                        node.getItems().get(index),
+                        strategy,
+                        appendPath(
+                                appendPath(path, OBJECT_ITEMS),
+                                String.valueOf(index))));
+            }
+        }
         if (items != null && strategy == SIMPLE) {
             return items;
         }
@@ -111,16 +130,28 @@ public final class NodeWireForm {
             }
         } else if (node.getType() != null) {
             valueTypeBlueId = node.getType().getBlueId();
-            result.put(OBJECT_TYPE, get(node.getType()));
+            result.put(OBJECT_TYPE, get(
+                    node.getType(),
+                    OFFICIAL,
+                    appendPath(path, OBJECT_TYPE)));
         }
         if (node.getItemType() != null) {
-            result.put(OBJECT_ITEM_TYPE, get(node.getItemType()));
+            result.put(OBJECT_ITEM_TYPE, get(
+                    node.getItemType(),
+                    OFFICIAL,
+                    appendPath(path, OBJECT_ITEM_TYPE)));
         }
         if (node.getKeyType() != null) {
-            result.put(OBJECT_KEY_TYPE, get(node.getKeyType()));
+            result.put(OBJECT_KEY_TYPE, get(
+                    node.getKeyType(),
+                    OFFICIAL,
+                    appendPath(path, OBJECT_KEY_TYPE)));
         }
         if (node.getValueType() != null) {
-            result.put(OBJECT_VALUE_TYPE, get(node.getValueType()));
+            result.put(OBJECT_VALUE_TYPE, get(
+                    node.getValueType(),
+                    OFFICIAL,
+                    appendPath(path, OBJECT_VALUE_TYPE)));
         }
         if (node.getMergePolicy() != null) {
             result.put(OBJECT_MERGE_POLICY, node.getMergePolicy());
@@ -138,14 +169,19 @@ public final class NodeWireForm {
         if (node.getSchema() != null) {
             result.put(OBJECT_SCHEMA,
                     SchemaWireForm.get(node.getSchema(),
-                            child -> get(child, strategy)));
+                            child -> get(
+                                    child,
+                                    strategy,
+                                    appendPath(path, OBJECT_SCHEMA))));
         }
         if (node.getContracts() != null) {
             result.put(OBJECT_CONTRACTS,
-                    get(node.getContracts(), strategy));
+                    get(node.getContracts(), strategy,
+                            appendPath(path, OBJECT_CONTRACTS)));
         }
         if (node.getBlue() != null) {
-            result.put(OBJECT_BLUE, get(node.getBlue(), strategy));
+            result.put(OBJECT_BLUE, get(node.getBlue(), strategy,
+                    appendPath(path, OBJECT_BLUE)));
         }
         if (node.getProperties() != null) {
             node.getProperties().forEach((key, propertyValue) -> {
@@ -156,13 +192,31 @@ public final class NodeWireForm {
                     result.put(key, get(
                             propertyValue,
                             propertyValue.isInlineValue()
-                                    ? SIMPLE : OFFICIAL));
+                                    ? SIMPLE : OFFICIAL,
+                            appendPath(path, key)));
                 } else {
-                    result.put(key, get(propertyValue, strategy));
+                    result.put(key, get(
+                            propertyValue,
+                            strategy,
+                            appendPath(path, key)));
                 }
             });
         }
         return result;
+    }
+
+    private static IllegalArgumentException bareFieldlessBuilder(
+            String path) {
+        return new IllegalArgumentException(
+                "Fieldless Node is an incomplete builder, not semantic Blue "
+                        + "content. Use Nodes.emptyObject() for {} or omit the "
+                        + "field for absence. Path: " + path);
+    }
+
+    private static String appendPath(String path, String segment) {
+        return JsonPointer.ROOT.equals(path)
+                ? JsonPointer.ROOT + JsonPointer.escape(segment)
+                : path + JsonPointer.ROOT + JsonPointer.escape(segment);
     }
 
     private static boolean isEmptyPlaceholder(Node node) {

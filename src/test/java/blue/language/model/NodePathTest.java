@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -233,6 +234,93 @@ class NodePathTest {
         assertNotNull(contracts);
         assertEquals(Boolean.TRUE, enabled);
         assertFalse(contractsStoredAsOrdinaryProperty);
+    }
+
+    @Test
+    void shouldMaterializeSparseListPaddingAsExactPlaceholders() {
+        // given
+        Node list = new Node().items(new ArrayList<Node>());
+
+        // when
+        NodePathEditor.put(
+                list,
+                "/2/selected",
+                new Node().value("selected"));
+
+        // then
+        assertEquals(3, list.getItems().size());
+        assertTrue(Nodes.isEmptyPlaceholder(
+                list.getItems().get(0)));
+        assertTrue(Nodes.isEmptyPlaceholder(
+                list.getItems().get(1)));
+        assertFalse(Nodes.isBareFieldlessBuilder(
+                list.getItems().get(0)));
+        assertFalse(Nodes.isBareFieldlessBuilder(
+                list.getItems().get(1)));
+        assertEquals(
+                "selected",
+                list.getItems().get(2)
+                        .getProperties().get("selected")
+                        .getValue());
+    }
+
+    @Test
+    void shouldPromoteSparsePlaceholderBeforeSecondWriteDescendsIntoObject() {
+        // given
+        Node list = new Node().items(new ArrayList<Node>());
+        NodePathEditor.put(
+                list,
+                "/2/selected",
+                new Node().value("selected"));
+
+        // when
+        NodePathEditor.put(
+                list,
+                "/0/revisited",
+                new Node().value("revisited"));
+
+        // then
+        Node promoted = list.getItems().get(0);
+        assertFalse(Nodes.isEmptyPlaceholder(promoted));
+        assertFalse(promoted.getProperties().containsKey("$empty"));
+        assertEquals(
+                "revisited",
+                promoted.getProperties().get("revisited").getValue());
+        assertTrue(Nodes.isEmptyPlaceholder(list.getItems().get(1)));
+        assertEquals(
+                "selected",
+                list.getItems().get(2)
+                        .getProperties().get("selected")
+                        .getValue());
+        assertDoesNotThrow(() -> NodeWireForm.get(list));
+    }
+
+    @Test
+    void shouldPromoteSparsePlaceholderToListForIndexedSecondWrite() {
+        // given
+        Node list = new Node().items(new ArrayList<Node>());
+        NodePathEditor.put(
+                list,
+                "/2/selected",
+                new Node().value("selected"));
+
+        // when
+        NodePathEditor.put(
+                list,
+                "/0/0/revisited",
+                new Node().value("revisited"));
+
+        // then
+        Node promoted = list.getItems().get(0);
+        assertFalse(Nodes.isEmptyPlaceholder(promoted));
+        assertNotNull(promoted.getItems());
+        assertEquals(1, promoted.getItems().size());
+        assertEquals(
+                "revisited",
+                promoted.getItems().get(0)
+                        .getProperties().get("revisited")
+                        .getValue());
+        assertDoesNotThrow(() -> NodeWireForm.get(list));
     }
 
     @Test

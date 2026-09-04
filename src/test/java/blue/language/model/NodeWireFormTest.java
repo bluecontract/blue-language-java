@@ -414,4 +414,55 @@ public class NodeWireFormTest {
                 itemsAndPropertiesFailure.getClass());
     }
 
+    @Test
+    public void shouldDistinguishBareBuilderFromSourceNullAndExactEmptyObject() {
+        // given
+        Node bareBuilder = new Node();
+        Node sourceNull = new Node().inlineValue(true);
+        Node exactEmptyObject = Nodes.emptyObject();
+        Node metadataOnly = new Node().name("Metadata only");
+
+        // when
+
+        // then
+        assertTrue(Nodes.isBareFieldlessBuilder(bareBuilder));
+        assertFalse(Nodes.isBareFieldlessBuilder(sourceNull));
+        assertFalse(Nodes.isBareFieldlessBuilder(exactEmptyObject));
+        assertFalse(Nodes.isBareFieldlessBuilder(metadataOnly));
+        assertNull(NodeWireForm.get(sourceNull));
+        assertEquals(Collections.emptyMap(),
+                NodeWireForm.get(exactEmptyObject));
+        assertEquals(Collections.singletonMap("name", "Metadata only"),
+                NodeWireForm.get(metadataOnly));
+    }
+
+    @Test
+    public void shouldRejectBareBuildersAtEveryWirePositionWithExactPath() {
+        // given
+        // when
+        // then
+        assertBareBuilderRejected("/", () ->
+                NodeWireForm.get(new Node()));
+        assertBareBuilderRejected("/child", () ->
+                NodeWireForm.get(new Node().properties(
+                        "child", new Node())));
+        assertBareBuilderRejected("/items/0", () ->
+                NodeWireForm.get(new Node().items(new Node())));
+        assertBareBuilderRejected("/type", () ->
+                NodeWireForm.get(new Node().type(new Node())));
+    }
+
+    private static void assertBareBuilderRejected(
+            String path,
+            Runnable action) {
+        IllegalArgumentException failure = assertThrows(
+                IllegalArgumentException.class,
+                action::run);
+        assertEquals(
+                "Fieldless Node is an incomplete builder, not semantic Blue "
+                        + "content. Use Nodes.emptyObject() for {} or omit the "
+                        + "field for absence. Path: " + path,
+                failure.getMessage());
+    }
+
 }

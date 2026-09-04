@@ -85,6 +85,24 @@ public class Nodes {
     }
 
     /**
+     * Tests whether a node is only an unfinished mutable-builder shell.
+     *
+     * <p>A fieldless builder has neither Source-null provenance nor the
+     * non-null empty properties map that represents the exact object value
+     * {@code {}}. It may be useful while assembling a graph, but it is not
+     * semantic Blue content and must not cross serialization or identity
+     * boundaries.</p>
+     *
+     * @param node node to inspect
+     * @return {@code true} only for a bare fieldless mutable builder
+     */
+    public static boolean isBareFieldlessBuilder(Node node) {
+        return node != null
+                && !node.isInlineValue()
+                && isEmptyNode(node);
+    }
+
+    /**
      * Tests whether a node is the exact object payload {@code {}}.
      *
      * <p>An empty, non-null properties map records the presence of the object
@@ -125,6 +143,38 @@ public class Nodes {
             }
         }
         return false;
+    }
+
+    /**
+     * Tests whether a node has a schema-enum scalar identity shape.
+     *
+     * <p>Schema enum members may be scalar values, explicitly typed scalar
+     * values, or pure value references. Object/list payloads and metadata
+     * unrelated to scalar identity are not enum values.</p>
+     *
+     * @param node node to inspect
+     * @return {@code true} when the node is valid schema-enum scalar content
+     */
+    public static boolean isSchemaEnumValue(Node node) {
+        if (node == null) {
+            return false;
+        }
+        if (node.isReferenceOnly()) {
+            return true;
+        }
+        Object value = node.getRawValue();
+        return isSchemaScalarValue(value)
+                && hasFieldsAndMayHaveFields(
+                        node,
+                        EnumSet.of(NodeField.VALUE),
+                        EnumSet.of(NodeField.TYPE));
+    }
+
+    private static boolean isSchemaScalarValue(Object value) {
+        return value instanceof String
+                || value instanceof Boolean
+                || value instanceof BigInteger
+                || value instanceof BigDecimal;
     }
 
     /**
