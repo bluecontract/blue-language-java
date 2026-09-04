@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 789,
-    "productionResourceCount": 813,
-    "productionSourcePathIdentity": "sha256:92de23d5711c149ad8f6af9c6a172be87461c995b7c8c66c840b54d9823ad946",
-    "productionResourcePathIdentity": "sha256:e7f14fbe67873a4dd5da88fb4a0b54197b98d68458c367d012cf67f22eb4c2b5"
+    "productionSourceCount": 792,
+    "productionResourceCount": 815,
+    "productionSourcePathIdentity": "sha256:b1a6b0c3d69ec9e16feff5443b93c75a7e476c80895c13bc57e34ea460f52415",
+    "productionResourcePathIdentity": "sha256:06a81db9c0ac4aa99f1aad6ed183445c926d6f0d522503e718af68a075cebfb0"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -1124,6 +1124,13 @@
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedCollectionEventChannelSupport.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedCollectionState.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/EmbeddedCollectionState.java",
       "targetPackage": "blue.language.processor"
     },
     {
@@ -3231,6 +3238,13 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentGraph.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentInitializationEligibility.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentInitializationEligibility.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {
@@ -5352,6 +5366,13 @@
       "currentPackage": "blue.language.mapping",
       "targetModule": ":blue-language-mapping",
       "targetPath": "blue-language-mapping/src/main/java/blue/language/mapping/MappingObjectMapper.java",
+      "targetPackage": "blue.language.mapping"
+    },
+    {
+      "currentPath": "blue-language-mapping/src/main/java/blue/language/mapping/MappingPayload.java",
+      "currentPackage": "blue.language.mapping",
+      "targetModule": ":blue-language-mapping",
+      "targetPath": "blue-language-mapping/src/main/java/blue/language/mapping/MappingPayload.java",
       "targetPackage": "blue.language.mapping"
     },
     {
@@ -8711,6 +8732,11 @@
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/fixture-schema.yaml"
     },
     {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_empty_object_collapse_reference_expand_parent_identity.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_empty_object_collapse_reference_expand_parent_identity.yaml"
+    },
+    {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_empty_object_reference_cache_parity.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_empty_object_reference_cache_parity.yaml"
@@ -8734,6 +8760,11 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_unrelated_missing_reference_does_not_block.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/F_unrelated_missing_reference_does_not_block.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/R_empty_object_incomplete_resource_completion.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/R_empty_object_incomplete_resource_completion.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/limited/R_empty_object_reference_unavailable_not_absent.yaml",
