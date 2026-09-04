@@ -250,6 +250,59 @@ final class CanonicalIdentityAuthoritativeResolutionTest {
         }
     }
 
+    @Test
+    void shouldKeepTypeContributedExactReferenceColdDuringSourceIdentityResolution() {
+        Node coldBody = new Node().properties(
+                "payload", new Node().value("must remain cold"));
+        String coldBodyBlueId = DirectBlueIdCalculator.calculateBlueId(
+                coldBody);
+        Node scopeType = new Node()
+                .name("Type-contributed exact field")
+                .properties(
+                        "inheritedResult",
+                        new Node().blueId(coldBodyBlueId));
+        String scopeTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
+                scopeType);
+        Node source = new Node().type(
+                new Node().blueId(scopeTypeBlueId));
+        AtomicInteger typeReads = new AtomicInteger();
+        AtomicInteger coldBodyReads = new AtomicInteger();
+
+        try (BlueLanguage language = BlueLanguage.builder()
+                .nodeProvider(blueId -> {
+                    if (scopeTypeBlueId.equals(blueId)) {
+                        typeReads.incrementAndGet();
+                        return Collections.singletonList(scopeType.clone());
+                    }
+                    if (coldBodyBlueId.equals(blueId)) {
+                        coldBodyReads.incrementAndGet();
+                        return Collections.singletonList(coldBody.clone());
+                    }
+                    return Collections.emptyList();
+                })
+                .build();
+             LanguageProcessing.Scope scope =
+                     language.processing().openScope()) {
+            String inheritedResultPath = "/inheritedResult";
+
+            String actual = CanonicalIdentityEvidence
+                    .sourceBlueIdWithCanonicalExactFields(
+                            source,
+                            new LanguageProcessingSnapshotManager(scope),
+                            "type-contributed exact field",
+                            Collections.singleton(inheritedResultPath),
+                            Collections.singleton(inheritedResultPath));
+
+            assertEquals(
+                    DirectBlueIdCalculator.calculateBlueId(source),
+                    actual);
+            assertTrue(typeReads.get() > 0,
+                    "the source type must still be verified");
+            assertEquals(0, coldBodyReads.get(),
+                    "an absent type-contributed exact field must remain cold");
+        }
+    }
+
     private static Node rootWithExecutablePatchValue(Node operationType) {
         Node operation = new Node()
                 .type(operationType.clone())

@@ -218,11 +218,14 @@ final class CanonicalIdentityEvidence {
                 purpose,
                 checkedExactPaths,
                 checkedExecutablePaths);
+        Set<String> preservedExactPaths = new LinkedHashSet<>(
+                checkedExactPaths);
+        preservedExactPaths.addAll(presentExactPaths);
         return resolveSourceSnapshot(
                 sourceProjection,
                 manager,
                 purpose,
-                presentExactPaths).blueId();
+                preservedExactPaths).blueId();
     }
 
     private static Set<String> canonicalizeExactFields(
