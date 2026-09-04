@@ -5,6 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
@@ -508,7 +509,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
         // when
         DocumentProcessingResult directEmpty =
                 processor.processDocument(
-                        new Node(), event("topic"));
+                        Nodes.emptyObject(), event("topic"));
 
         // then
         assertEquals(
@@ -712,7 +713,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     @Test
     void shouldVerifyTypedFeederAcquisitionSuspendsAttemptButNeverBecomesProcessStatus() {
         // given
-        Node root = new Node();
+        Node root = Nodes.emptyObject();
         Node event = event("topic");
         String missing = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Feeder snapshot evidence"));
@@ -1036,7 +1037,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
     @Test
     void shouldVerifyCheckpointDomainDoesNotConfuseEffectiveNodeWithSourceContribution() {
         // given
-        Node root = new Node();
+        Node root = Nodes.emptyObject();
         Node event = event("topic");
         ExternalDeliverySnapshot delivery =
                 ExternalDeliverySnapshot.builder("/", "incoming")
@@ -2017,7 +2018,7 @@ final class ExternalDeliveryPlanTrustBoundaryTest {
                         new Node().contracts(
                                 new Node().properties(
                                         "checkpoint",
-                                        new Node()))));
+                                        Nodes.emptyObject()))));
             }
         }
     }

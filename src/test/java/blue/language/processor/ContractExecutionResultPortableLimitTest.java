@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.model.TestEvent;
@@ -270,13 +271,13 @@ final class ContractExecutionResultPortableLimitTest {
         ProcessorInvocationState execution =
                 new ProcessorInvocationState(
                         new DocumentProcessor(),
-                        new Node());
+                        Nodes.emptyObject());
         execution.preflightScope("/");
         ProcessorExecutionContext context =
                 execution.createContext(
                         "/",
                         execution.bundleForScope("/"),
-                        new Node(),
+                        Nodes.emptyObject(),
                         false);
         return new Fixture(context);
     }

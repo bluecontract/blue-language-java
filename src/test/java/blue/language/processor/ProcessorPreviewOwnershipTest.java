@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.SetProperty;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
@@ -103,7 +104,8 @@ class ProcessorPreviewOwnershipTest {
                 .runtimeRegistry(registry)
                 .snapshotStore(manager)
                 .build();
-        ProcessorInvocationState execution = new ProcessorInvocationState(owner, new Node());
+        ProcessorInvocationState execution = new ProcessorInvocationState(
+                owner, Nodes.emptyObject());
         SetProperty contract = new SetProperty();
         contract.setChannelKey("events");
         ContractBundle bundle = ContractBundle.builder()
@@ -117,7 +119,7 @@ class ProcessorPreviewOwnershipTest {
         // when
         Throwable runFailure = captureFailure(
                 () -> runner.runHandlers(
-                        "/", bundle, "events", new Node()));
+                        "/", bundle, "events", Nodes.emptyObject()));
 
         // then
         assertInstanceOf(RunTerminationException.class,
@@ -134,13 +136,13 @@ class ProcessorPreviewOwnershipTest {
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         manager.failNextRetain = true;
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), null, manager);
+                Nodes.emptyObject(), null, manager);
 
         // when
         Throwable retainFailure = captureFailure(() -> {
             try (WorkingDocument working = runtime.workingDocument("/")) {
                 working.previewAndApplyPatches(Collections.singletonList(
-                        JsonPatch.add("/value", new Node().value(1))));
+                        JsonPatch.add("/state", new Node().value(1))));
             }
         });
         int openCalls = manager.openCalls;
@@ -160,7 +162,7 @@ class ProcessorPreviewOwnershipTest {
         // given
         TrackingSnapshotManager manager = new TrackingSnapshotManager();
         manager.failNextCacheSnapshot = true;
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 document, null, manager);
         List<JsonPatch> patches = java.util.Arrays.asList(
@@ -237,9 +239,9 @@ class ProcessorPreviewOwnershipTest {
                 .snapshotStore(manager)
                 .build();
         ProcessorInvocationState execution = new ProcessorInvocationState(
-                processor, new Node());
+                processor, Nodes.emptyObject());
         ProcessorExecutionContext context = execution.createContext(
-                "/", ContractBundle.empty(), new Node(), false);
+                "/", ContractBundle.empty(), Nodes.emptyObject(), false);
         return new Fixture(execution, context);
     }
 

@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.TestEventChannel;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -239,7 +240,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         Node channel = scriptedChannel("topic");
         Node before = new Node().contracts(
                 new Node().properties("incoming", channel));
-        Node after = new Node().contracts(new Node());
+        Node after = new Node().contracts(Nodes.emptyObject());
         ExternalOrderKey originalStart =
                 ExternalOrderKey.of(
                         Arrays.asList(1, "timeline", 0));
@@ -408,7 +409,7 @@ final class EffectiveSubscriptionSurfaceValidatorTest {
         // given
         Node child = new Node()
                 .blueId("same-exact-scope")
-                .contracts(new Node());
+                .contracts(Nodes.emptyObject());
         Node root = new Node()
                 .blueId("same-exact-scope")
                 .properties("child", child)

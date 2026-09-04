@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.codec.jackson.UncheckedObjectMapper;
 import blue.language.identity.DirectBlueIdCalculator;
@@ -310,7 +311,7 @@ final class Contracts10KernelInvariantTest {
     @Test
     void shouldVerifyProcessAttemptCompletesInvalidEvidenceBeforeReportingResources() {
         // given
-        Node root = new Node();
+        Node root = Nodes.emptyObject();
         Node event = new Node().value("event");
         VerifiedExecutionEvidence evidence =
                 VerifiedExecutionEvidence.builder(

@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessorTestTypeBlueIds;
@@ -192,7 +193,7 @@ final class EffectiveContractRefreshAndReferenceResultTest {
                         typelessOverlay);
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
-                        new Node(),
+                        Nodes.emptyObject(),
                         null,
                         manager);
 

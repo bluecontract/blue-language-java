@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -26,7 +27,8 @@ final class CheckpointManagerTest {
     @Test
     void shouldCreateCheckpointMarkerWhenAbsent() {
         // given
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                Nodes.emptyObject());
         CheckpointManager manager = new CheckpointManager(runtime, node -> null);
         ContractBundle bundle = ContractBundle.builder().build();
 
@@ -44,7 +46,8 @@ final class CheckpointManagerTest {
     @Test
     void shouldUpdateCheckpointAndChargeGasWhenPersisting() {
         // given
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                Nodes.emptyObject());
         CheckpointManager manager = new CheckpointManager(runtime, node -> node != null ? "sig" : null);
         ContractBundle bundle = ContractBundle.builder().build();
         manager.ensureCheckpointMarker("/", bundle);

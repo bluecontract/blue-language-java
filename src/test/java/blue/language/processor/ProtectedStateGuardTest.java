@@ -4,6 +4,7 @@ import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.CanonicalTypeIdentityEvidence;
 import blue.language.identity.DirectBlueIdCalculator;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -52,7 +53,7 @@ final class ProtectedStateGuardTest {
         Map<String, ProcessorFailureException> failures =
                 new LinkedHashMap<>();
         for (String key : markerKeys) {
-            Node beforeNode = new Node().contracts(new Node());
+            Node beforeNode = new Node().contracts(Nodes.emptyObject());
             Node afterNode = new Node().contracts(
                     new Node().properties(
                             key,
@@ -136,7 +137,7 @@ final class ProtectedStateGuardTest {
                                 "document",
                                 new Node().blueId(
                                         "11111111111111111111111111111111"))));
-        Node afterNode = new Node().contracts(new Node());
+        Node afterNode = new Node().contracts(Nodes.emptyObject());
 
         // when
         ProcessorFailureException failure =
@@ -160,7 +161,7 @@ final class ProtectedStateGuardTest {
         FrozenNode canonical = frozen(
                 new Node().type(new Node().blueId(
                         "11111111111111111111111111111111")));
-        FrozenNode resolvedBefore = frozen(new Node());
+        FrozenNode resolvedBefore = frozen(Nodes.emptyObject());
         // when
         FrozenNode resolvedAfter = frozen(
                 new Node().contracts(
@@ -283,7 +284,7 @@ final class ProtectedStateGuardTest {
                         "workflow",
                         new Node().properties(
                                 "revision", new Node().value(2))));
-        Node removedNode = new Node().contracts(new Node());
+        Node removedNode = new Node().contracts(Nodes.emptyObject());
 
         // when
         Throwable replacementFailure = FailureCapture.captureFailure(
@@ -538,7 +539,7 @@ final class ProtectedStateGuardTest {
     @Test
     void shouldVerifyEffectiveGeneralizationAtDeclaredScopeCannotChange() {
         // given
-        Node canonical = rootWithEmbeddedChild(new Node());
+        Node canonical = rootWithEmbeddedChild(Nodes.emptyObject());
         Node resolvedBefore = rootWithEmbeddedChild(
                 childWithGeneralization("reject"));
         Node resolvedAfter = rootWithEmbeddedChild(
@@ -581,9 +582,9 @@ final class ProtectedStateGuardTest {
         // when
         // then
         assertDoesNotThrow(() -> ProtectedStateGuard.verifyUnchanged(
-                frozen(new Node()),
+                frozen(Nodes.emptyObject()),
                 frozen(before),
-                frozen(new Node()),
+                frozen(Nodes.emptyObject()),
                 frozen(after),
                 Collections.<String>emptySet(),
                 null,
@@ -605,9 +606,9 @@ final class ProtectedStateGuardTest {
         // then
         assertThrows(IllegalStateException.class,
                 () -> ProtectedStateGuard.verifyUnchanged(
-                        frozen(new Node()),
+                        frozen(Nodes.emptyObject()),
                         frozen(resolved),
-                        frozen(new Node()),
+                        frozen(Nodes.emptyObject()),
                         frozen(resolved),
                         Collections.<String>emptySet(),
                         null,
@@ -698,7 +699,7 @@ final class ProtectedStateGuardTest {
     @Test
     void shouldRejectProtectedStateInsideNewCollectionMember() {
         // given
-        Node beforeNode = rootWithCollection(new Node());
+        Node beforeNode = rootWithCollection(Nodes.emptyObject());
         Node afterNode = rootWithCollection(
                 new Node().properties(
                         "lesson-a",
@@ -727,7 +728,7 @@ final class ProtectedStateGuardTest {
         // given
         Node beforeNode = rootWithCollection(
                 new Node().properties(
-                        "lesson-a", new Node()));
+                        "lesson-a", Nodes.emptyObject()));
         Node afterNode = rootWithCollection(
                 new Node().items(new Node().value("not-an-object")));
 

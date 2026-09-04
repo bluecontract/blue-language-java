@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.conformance.ConformanceEngineTest;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.TestEvent;
@@ -451,7 +452,7 @@ class DocumentProcessorSnapshotTransactionTest {
     void shouldKeepCanonicalSnapshotInSameRuntimeTransactionForDirectWrite() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
 
         // when

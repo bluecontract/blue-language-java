@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.merge.ResolvedSnapshot;
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.processor.util.ProcessorContractConstants;
@@ -67,7 +68,8 @@ final class ProcessingSnapshotBootstrapTest {
                 declarationDefinition());
         FrozenNode effectiveScope = effectiveScope(
                 embedded,
-                Collections.singletonMap("payment", new Node()));
+                Collections.singletonMap(
+                        "payment", Nodes.emptyObject()));
 
         // when
         EmbeddedScopePlan plan = ProcessingSnapshotBootstrap
@@ -96,7 +98,7 @@ final class ProcessingSnapshotBootstrapTest {
                 declarationDefinition(),
                 declarations("/lessons"));
         Node lessons = new Node().properties(
-                "lesson-a", new Node());
+                "lesson-a", Nodes.emptyObject());
         FrozenNode effectiveScope = effectiveScope(
                 embedded,
                 Collections.singletonMap("lessons", lessons));
@@ -178,7 +180,8 @@ final class ProcessingSnapshotBootstrapTest {
         // given
         Node embedded = processEmbedded(
                 declarationDefinition(),
-                new Node().properties("unexpected", new Node()));
+                new Node().properties(
+                        "unexpected", Nodes.emptyObject()));
         FrozenNode effectiveScope = effectiveScope(
                 embedded,
                 Collections.emptyMap());

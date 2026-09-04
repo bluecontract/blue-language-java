@@ -37,7 +37,7 @@ class PreparedPatchSequenceTest {
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(),
+                Nodes.emptyObject(),
                 null,
                 unchangedConformanceOverride(),
                 manager,
@@ -146,7 +146,8 @@ class PreparedPatchSequenceTest {
     void shouldVerifyPreparedSequenceMembershipIsIndependentOfCallerListMutation() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node(), null, manager);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                Nodes.emptyObject(), null, manager);
         List<JsonPatch> callerPatches = new ArrayList<>(Arrays.asList(
                 JsonPatch.add("/first", new Node().value(1)),
                 JsonPatch.add("/second", new Node().value(2))));
@@ -172,7 +173,8 @@ class PreparedPatchSequenceTest {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(new Node(), null, manager);
+                new DocumentProcessingRuntime(
+                        Nodes.emptyObject(), null, manager);
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/first", new Node().value(1)),
                 JsonPatch.add("/second", new Node().value(2)));
@@ -195,7 +197,8 @@ class PreparedPatchSequenceTest {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
-        ProcessorInvocationState execution = execution(new Node(), manager, metrics);
+        ProcessorInvocationState execution = execution(
+                Nodes.emptyObject(), manager, metrics);
         DocumentProcessingRuntime runtime = execution.runtime();
         List<JsonPatch> patches = new ArrayList<>();
         for (int index = 0; index < 9; index++) {
@@ -226,7 +229,8 @@ class PreparedPatchSequenceTest {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
-        ProcessorInvocationState execution = execution(new Node(), manager, metrics);
+        ProcessorInvocationState execution = execution(
+                Nodes.emptyObject(), manager, metrics);
         DocumentProcessingRuntime runtime = execution.runtime();
         List<JsonPatch> patches = patchesAdding("p", 5);
         WorkingDocument.Preview preview = runtime.workingDocument("/")
@@ -317,7 +321,8 @@ class PreparedPatchSequenceTest {
         FrozenNode materializedValue = FrozenNode.fromNode(materialized);
         FrozenNode referenceValue = FrozenNode.fromNode(
                 new Node().blueId(materializedValue.blueId()));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                Nodes.emptyObject());
         List<FrozenJsonPatch> previewPatches = Arrays.asList(
                 FrozenJsonPatch.add("/slot", materializedValue));
         WorkingDocument.Preview preview = runtime.workingDocument("/")
@@ -343,7 +348,8 @@ class PreparedPatchSequenceTest {
         // given
         Node materialized = new Node().properties("payload", new Node().value("value"));
         String blueId = FrozenNode.fromNode(materialized).blueId();
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                Nodes.emptyObject());
         List<JsonPatch> previewPatches = Arrays.asList(
                 JsonPatch.add("/slot", materialized));
         WorkingDocument.Preview preview = runtime.workingDocument("/")
@@ -449,7 +455,7 @@ class PreparedPatchSequenceTest {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
         RecordingMetrics metrics = new RecordingMetrics();
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager, metrics);
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/prefix", new Node().value("committed")),
@@ -514,7 +520,8 @@ class PreparedPatchSequenceTest {
     void shouldVerifyClosingPartiallyConsumedPreviewReleasesUnconsumedSuffix() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node(), null, manager);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                Nodes.emptyObject(), null, manager);
         List<JsonPatch> patches = patchesAdding("release", 3);
         WorkingDocument.Preview preview = runtime.workingDocument("/")
                 .previewAndApplyPatches(patches);
@@ -547,9 +554,9 @@ class PreparedPatchSequenceTest {
         // given
         ReleasingSnapshotManager manager = new ReleasingSnapshotManager();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), null, manager);
+                Nodes.emptyObject(), null, manager);
         List<JsonPatch> patches = Collections.singletonList(
-                JsonPatch.add("/value", new Node().value(1)));
+                JsonPatch.add("/state", new Node().value(1)));
 
         WorkingDocument firstWorking = runtime.workingDocument("/");
         WorkingDocument.Preview discarded = firstWorking.previewAndApplyPatches(patches);
@@ -569,9 +576,9 @@ class PreparedPatchSequenceTest {
                 new ReleasingSnapshotManager();
         DocumentProcessingRuntime runtime =
                 new DocumentProcessingRuntime(
-                        new Node(), null, manager);
+                        Nodes.emptyObject(), null, manager);
         List<JsonPatch> patches = Collections.singletonList(
-                JsonPatch.add("/value", new Node().value(1)));
+                JsonPatch.add("/state", new Node().value(1)));
         WorkingDocument working = runtime.workingDocument("/");
         WorkingDocument.Preview transferred =
                 working.previewAndApplyPatches(patches);
@@ -589,7 +596,7 @@ class PreparedPatchSequenceTest {
         IllegalStateException closedWorkingFailure =
                 FailureCapture.captureFailure(
                         () -> working.applyPatch(
-                                JsonPatch.remove("/value")));
+                                JsonPatch.remove("/state")));
 
         // then
         assertEquals(beforeTransfer, releasesWhileTransferred,
@@ -604,7 +611,7 @@ class PreparedPatchSequenceTest {
     void shouldVerifySequenceCopiesEveryAuthoredPatchValueBeforeTheFirstStep() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
         Node firstValue = new Node().properties("payload", new Node().value("first-before"));
         Node secondValue = new Node().properties("payload", new Node().value("second-before"));
@@ -638,7 +645,7 @@ class PreparedPatchSequenceTest {
     void shouldVerifyInvalidLaterValueIsFrozenOnlyAfterTheCommittedPrefix() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
         Node invalidReferenceOverlay = new Node()
                 .blueId("not-a-valid-reference")
@@ -672,7 +679,7 @@ class PreparedPatchSequenceTest {
     void shouldVerifyEarlierBoundaryFailureWinsOverMalformedSuffixValue() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        Node document = new Node().properties("scope", new Node());
+        Node document = new Node().properties("scope", Nodes.emptyObject());
         ProcessorInvocationState execution = execution(document, manager, new RecordingMetrics());
         Node invalidReferenceOverlay = new Node()
                 .blueId("not-a-valid-reference")
@@ -715,7 +722,8 @@ class PreparedPatchSequenceTest {
     void shouldVerifyGasForExactEmptyAuthoredValuesUsesNamedCounters() {
         // given
         CountingSnapshotManager manager = new CountingSnapshotManager();
-        ProcessorInvocationState execution = execution(new Node(), manager, new RecordingMetrics());
+        ProcessorInvocationState execution = execution(
+                Nodes.emptyObject(), manager, new RecordingMetrics());
         Map<String, Node> authoredProperties = new LinkedHashMap<>();
         for (int index = 0; index < 40; index++) {
             authoredProperties.put(
@@ -772,7 +780,7 @@ class PreparedPatchSequenceTest {
     void shouldVerifyFailedFinalPromotionKeepsTheCommittedPrefixAndCanBeRetried() {
         // given
         FailOnceSnapshotManager manager = new FailOnceSnapshotManager();
-        Node document = new Node();
+        Node document = Nodes.emptyObject();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, null, manager);
         List<JsonPatch> patches = Arrays.asList(
                 JsonPatch.add("/prefix", new Node().value("committed")),

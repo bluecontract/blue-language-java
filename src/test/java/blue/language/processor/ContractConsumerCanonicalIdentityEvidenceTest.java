@@ -298,7 +298,7 @@ final class ContractConsumerCanonicalIdentityEvidenceTest {
         Node completedType = new Node().name("Completed generated type");
         String canonicalTypeBlueId = DirectBlueIdCalculator.calculateBlueId(
                 new Node().name("Canonical generated type"));
-        FrozenNode canonicalRoot = FrozenNode.fromNode(new Node());
+        FrozenNode canonicalRoot = FrozenNode.empty();
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(
                 new Node().type(completedType.clone()));
         BatchPatchRecord record = record(canonicalRoot, resolvedRoot);
@@ -332,7 +332,7 @@ final class ContractConsumerCanonicalIdentityEvidenceTest {
     void shouldRejectResolvedMetadataWithoutCanonicalTypeEvidence() {
         // given
         Node completedType = new Node().name("Unproved generated type");
-        FrozenNode canonicalRoot = FrozenNode.fromNode(new Node());
+        FrozenNode canonicalRoot = FrozenNode.empty();
         FrozenNode resolvedRoot = FrozenNode.fromResolvedNode(
                 new Node().type(completedType));
         BatchPatchRecord record = record(canonicalRoot, resolvedRoot);

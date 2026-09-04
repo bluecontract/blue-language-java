@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -87,7 +88,7 @@ final class ScopeMutationServicesTest {
     @Test
     void shouldRejectDirectReservedContractMutation() {
         // given
-        ProcessorInvocationState execution = execution(new Node());
+        ProcessorInvocationState execution = execution(Nodes.emptyObject());
         DirectProtectedStateMutationGuard guard =
                 new DirectProtectedStateMutationGuard(execution.runtime());
         PatchInput patch = PatchInput.mutable(JsonPatch.add(
@@ -115,7 +116,7 @@ final class ScopeMutationServicesTest {
     @Test
     void shouldAllowApplicationToChangeEmbeddedPathList() {
         // given
-        ProcessorInvocationState execution = execution(new Node());
+        ProcessorInvocationState execution = execution(Nodes.emptyObject());
         DirectProtectedStateMutationGuard guard =
                 new DirectProtectedStateMutationGuard(execution.runtime());
         PatchInput patch = PatchInput.mutable(JsonPatch.add(
@@ -133,7 +134,7 @@ final class ScopeMutationServicesTest {
     @Test
     void shouldAllowApplicationToChangeEmbeddedCollectionPathList() {
         // given
-        ProcessorInvocationState execution = execution(new Node());
+        ProcessorInvocationState execution = execution(Nodes.emptyObject());
         DirectProtectedStateMutationGuard guard =
                 new DirectProtectedStateMutationGuard(execution.runtime());
         PatchInput patch = PatchInput.mutable(JsonPatch.add(
@@ -184,7 +185,7 @@ final class ScopeMutationServicesTest {
         // given
         DirectProtectedStateMutationGuard guard =
                 new DirectProtectedStateMutationGuard(
-                        execution(new Node()).runtime());
+                        execution(Nodes.emptyObject()).runtime());
         PatchInput patch = PatchInput.mutable(JsonPatch.add(
                 "/contracts/generalization",
                 protectedValue("forged")));
@@ -242,7 +243,7 @@ final class ScopeMutationServicesTest {
         for (String key : protectedKeys) {
             Node document = new Node().contracts(new Node().properties(
                     key, protectedValue("before"),
-                    "workflow", new Node()));
+                    "workflow", Nodes.emptyObject()));
             DirectProtectedStateMutationGuard mutableGuard =
                     new DirectProtectedStateMutationGuard(
                             execution(document.clone()).runtime());
@@ -251,7 +252,7 @@ final class ScopeMutationServicesTest {
                             execution(document.clone()).runtime());
             Node replacement = new Node().properties(
                     key, protectedValue("after"),
-                    "workflow", new Node());
+                    "workflow", Nodes.emptyObject());
 
             Throwable mutableFailure = FailureCapture.captureFailure(
                     () -> mutableGuard.validate(
@@ -299,7 +300,7 @@ final class ScopeMutationServicesTest {
                                     .runtime());
             DirectProtectedStateMutationGuard empty =
                     new DirectProtectedStateMutationGuard(
-                            execution(new Node()).runtime());
+                            execution(Nodes.emptyObject()).runtime());
 
             Throwable dropFailure = FailureCapture.captureFailure(
                     () -> populated.validate(
@@ -307,7 +308,7 @@ final class ScopeMutationServicesTest {
                             PatchInput.mutable(JsonPatch.replace(
                                     "/contracts",
                                     new Node().properties(
-                                            "workflow", new Node()))),
+                                            "workflow", Nodes.emptyObject()))),
                             false));
             Throwable introductionFailure = FailureCapture.captureFailure(
                     () -> empty.validate(
@@ -332,7 +333,7 @@ final class ScopeMutationServicesTest {
     @Test
     void shouldRejectInlineTypeThatContributesProtectedState() {
         // given
-        ProcessorInvocationState execution = execution(new Node());
+        ProcessorInvocationState execution = execution(Nodes.emptyObject());
         DirectProtectedStateMutationGuard guard =
                 new DirectProtectedStateMutationGuard(execution.runtime());
         Node applicationType = new Node().contracts(
@@ -366,7 +367,7 @@ final class ScopeMutationServicesTest {
         // given
         DirectProtectedStateMutationGuard guard =
                 new DirectProtectedStateMutationGuard(
-                        execution(new Node()).runtime());
+                        execution(Nodes.emptyObject()).runtime());
         Node applicationType = new Node().contracts(
                 new Node().properties(
                         "embedded", processEmbedded("/child")));

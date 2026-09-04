@@ -5,6 +5,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 import blue.language.Blue;
 import blue.language.conformance.ConformanceEngine;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -348,7 +349,7 @@ class SelectedScopeContentBlueIdFailFirstTest {
     }
 
     private static String emptyNodeBlueId() {
-        return DirectBlueIdCalculator.calculateBlueId(new Node());
+        return DirectBlueIdCalculator.calculateBlueId(Nodes.emptyObject());
     }
 
     private static Node reference(String blueId) {

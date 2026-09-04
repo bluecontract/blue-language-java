@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.provider.ExactNodeGraphFragments;
 import blue.language.provider.NodeProvider;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.HandlerContract;
@@ -270,7 +271,7 @@ final class ExternalChannelDependencyContextTest {
             // when
             SubscriptionDelta delta = validate(
                     blue,
-                    new Node(),
+                    Nodes.emptyObject(),
                     document,
                     "/");
             SubscriptionDelta.Entry aggregate =
@@ -345,7 +346,7 @@ final class ExternalChannelDependencyContextTest {
             // when
             SubscriptionDelta delta = validate(
                     blue,
-                    new Node(),
+                    Nodes.emptyObject(),
                     document,
                     "/");
             ExternalChannelDependencySnapshot.TypeFamily family =
@@ -615,7 +616,7 @@ final class ExternalChannelDependencyContextTest {
             failure = captureFailure(
                             () -> validate(
                                     blue,
-                                    new Node(),
+                                    Nodes.emptyObject(),
                                     missing,
                                     "/contracts/outer"));
         }
@@ -640,7 +641,7 @@ final class ExternalChannelDependencyContextTest {
             failure = captureFailure(
                             () -> validate(
                                     blue,
-                                    new Node(),
+                                    Nodes.emptyObject(),
                                     cycle,
                                     "/contracts/left"));
         }
@@ -674,7 +675,7 @@ final class ExternalChannelDependencyContextTest {
             failure = captureFailure(
                             () -> validate(
                                     blue,
-                                    new Node(),
+                                    Nodes.emptyObject(),
                                     invalid,
                                     "/contracts/outer"));
         }
@@ -768,7 +769,7 @@ final class ExternalChannelDependencyContextTest {
                         aggregate("outer", null, mode));
                 SubscriptionDelta initial = validate(
                         blue,
-                        new Node(),
+                        Nodes.emptyObject(),
                         emptyEnumeration,
                         "/contracts/outer");
                 SubscriptionDelta.Entry stale =
@@ -860,7 +861,7 @@ final class ExternalChannelDependencyContextTest {
                             "timeline-a"));
             SubscriptionDelta initial = validate(
                     blue,
-                    new Node(),
+                    Nodes.emptyObject(),
                     direct,
                     "/contracts/outer");
             SubscriptionDelta.Entry active =
@@ -918,7 +919,7 @@ final class ExternalChannelDependencyContextTest {
         try (Blue language = runtime(fragments.provider(), false)) {
             SubscriptionDelta initial = validate(
                     language,
-                    new Node(),
+                    Nodes.emptyObject(),
                     document,
                     "/contracts/outer");
             ExternalOrderKey activationOrder =

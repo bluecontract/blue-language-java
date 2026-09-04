@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +37,7 @@ final class DocumentProcessingRuntimeCompositionTest {
     void shouldRetainSemanticDemandFirstObservationOrder() {
         // given
         DocumentProcessingRuntime runtime =
-                new DocumentProcessingRuntime(new Node());
+                new DocumentProcessingRuntime(Nodes.emptyObject());
 
         // when
         runtime.recordSemanticDemand("body-blue-id");

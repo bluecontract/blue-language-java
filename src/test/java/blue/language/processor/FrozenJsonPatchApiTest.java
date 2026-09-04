@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.model.wire.BlueLanguageConstants;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.NodeCanonicalizer;
@@ -150,8 +151,8 @@ class FrozenJsonPatchApiTest {
             FrozenJsonPatch frozen = FrozenJsonPatch.add(path, value);
             FrozenJsonPatch converted = FrozenJsonPatch.from(mutable);
 
-            Node mutableDocument = new Node();
-            Node frozenDocument = new Node();
+            Node mutableDocument = Nodes.emptyObject();
+            Node frozenDocument = Nodes.emptyObject();
             new DocumentProcessingRuntime(mutableDocument).applyPatch("/", mutable);
             new DocumentProcessingRuntime(frozenDocument).applyFrozenPatch("/", frozen);
             observations.add(
@@ -379,9 +380,10 @@ class FrozenJsonPatchApiTest {
                 "items", new Node().items(new Node().value("first"), new Node().value("second")));
         FrozenNode frozen = FrozenNode.fromNode(authored);
         FrozenNode resolvedMode = FrozenNode.authoredValueInModeOf(
-                frozen, FrozenNode.fromResolvedNode(new Node()));
+                frozen, FrozenNode.fromResolvedNode(Nodes.emptyObject()));
         FrozenNode uncheckedMode = FrozenNode.authoredValueInModeOf(
-                frozen, FrozenNode.fromUncheckedCanonicalNode(new Node()));
+                frozen, FrozenNode.fromUncheckedCanonicalNode(
+                        Nodes.emptyObject()));
 
         FrozenNode legacyResolved = FrozenNode.fromResolvedNode(authored);
         // when
@@ -446,11 +448,11 @@ class FrozenJsonPatchApiTest {
         // given
         RecordingMetrics metrics = new RecordingMetrics();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
-                new Node(), null, null, metrics);
+                Nodes.emptyObject(), null, null, metrics);
 
         // when
         runtime.applyFrozenPatch("/", FrozenJsonPatch.add(
-                "/value", FrozenNode.fromNode(new Node().value("already frozen"))));
+                "/state", FrozenNode.fromNode(new Node().value("already frozen"))));
 
         // then
         assertEquals(1, metrics.frozenAccepted);
@@ -488,7 +490,7 @@ class FrozenJsonPatchApiTest {
         // given
         Node authored = new Node().properties(
                 "pad", new Node().value("12345"),
-                "empty", new Node());
+                "empty", Nodes.emptyObject());
         FrozenJsonPatch converted = FrozenJsonPatch.from(
                 JsonPatch.add("/payload", authored));
         GasMeter mutable = new GasMeter();

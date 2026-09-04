@@ -211,7 +211,7 @@ class ImmutablePatchPlannerTest {
     @Test
     void shouldVerifyIntroducingPureCyclicSetMemberReferenceBlocksOnlyLaterDescendantMutation() {
         // given
-        FrozenNode initial = FrozenNode.fromNode(new Node());
+        FrozenNode initial = FrozenNode.empty();
         ImmutablePatchPlanner.PatchPlan introduced =
                 new ImmutablePatchPlanner(initial).plan(
                         "/",

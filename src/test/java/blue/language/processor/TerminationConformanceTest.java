@@ -4,6 +4,7 @@ import static blue.language.processor.DocumentProcessingResultTestSupport.*;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.contracts.TerminateScopeContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.JsonPatch;
@@ -470,7 +471,7 @@ final class TerminationConformanceTest {
         Blue blue = ProcessorTestSupport.blue();
         Node document = new Node()
                 .name("Parent")
-                .contracts(new Node())
+                .contracts(Nodes.emptyObject())
                 .properties("child", new Node().name("Child"));
         ProcessorInvocationState execution = new ProcessorInvocationState(blue.getDocumentProcessor(), document);
 

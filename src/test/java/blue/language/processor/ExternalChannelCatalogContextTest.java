@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.processor.model.ChannelContract;
@@ -690,7 +691,7 @@ final class ExternalChannelCatalogContextTest {
                             .validate(
                                     SubscriptionSurfaceValidationContext
                                             .builder(
-                                                    new Node(),
+                                                    Nodes.emptyObject(),
                                                     document,
                                                     Collections.singleton(
                                                             "/contracts"),
@@ -699,7 +700,7 @@ final class ExternalChannelCatalogContextTest {
                                                     languageProcessor
                                                             .snapshotManager()
                                                             .fromDocumentTransient(
-                                                                    new Node()),
+                                                                    Nodes.emptyObject()),
                                                     languageProcessor
                                                             .snapshotManager()
                                                             .fromDocumentTransientPreservingPaths(

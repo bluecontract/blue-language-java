@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.FrozenNode;
 import org.junit.jupiter.api.Test;
@@ -91,7 +92,7 @@ class PatchSequenceRetentionStressTest {
     private Node initialDocument() {
         return new Node()
                 .properties("repeated", replacement(-1))
-                .properties("siblings", new Node())
+                .properties("siblings", Nodes.emptyObject())
                 .properties("stable", new Node().value("retained"));
     }
 
