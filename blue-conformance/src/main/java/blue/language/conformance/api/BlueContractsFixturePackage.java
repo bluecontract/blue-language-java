@@ -39,7 +39,7 @@ final class BlueContractsFixturePackage {
             16 * 1024 * 1024;
 
     static final String CONTRACTS_RELEASE_IDENTITY =
-            "sha256:ed634d06aa95153fd34ae991c901131714a2a303980c49dc12ba9ce498364c5c";
+            "sha256:7efb371a5c4dbd1c03268ebc797836bb3dbdc1635a38d9669134a954bc22f1e2";
     private static final String CONTRACTS_RELEASE_MANIFEST_RESOURCE =
             "blue-contracts-closure-1.0/release-manifest.yaml";
 

@@ -22399,7 +22399,7 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
       "line": 39,
@@ -22414,10 +22414,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 88,
+      "line": 89,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-language-core/src/main/java/blue/language/provider/ProviderEvidenceVerifier.java",
@@ -22429,10 +22429,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 586,
+      "line": 590,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-language-core/src/main/java/blue/language/provider/ProviderEvidenceVerifier.java",
@@ -22444,10 +22444,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 587,
+      "line": 591,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-language-core/src/main/java/blue/language/provider/ProviderEvidenceVerifier.java",
@@ -22459,10 +22459,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 632,
+      "line": 636,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-language-core/src/main/java/blue/language/provider/ProviderEvidenceVerifier.java",
@@ -22474,10 +22474,10 @@
     },
     {
       "audit": "schema-presence",
-      "changed": false,
+      "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 636,
+      "line": 640,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-language-core/src/main/java/blue/language/provider/ProviderEvidenceVerifier.java",
@@ -22777,14 +22777,14 @@
       "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 10,
+      "line": 15,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-language-core/src/main/java/blue/language/provider/SourceProviderEnvironment.java",
       "reason": "Broad required/presence vocabulary matched traversal, metadata, diagnostics, or a non-object constraint rather than an empty-object presence decision.",
       "relevance": "context-only",
       "reviewDisposition": "resolved-context-only",
-      "source": "/** Release identity required for Blue Language 1.0 source ingestion. */",
+      "source": "* Source-preprocessing baseline required for Language 1.0 ingestion.",
       "symbol": "SourceProviderEnvironment"
     },
     {
@@ -22792,7 +22792,7 @@
       "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 209,
+      "line": 225,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-language-core/src/main/java/blue/language/provider/SourceProviderEnvironment.java",
@@ -30779,10 +30779,10 @@
       "E-invalid-fieldless-list-position": 5,
       "context-only-not-empty-sentinel-decision": 1797
     },
-    "changedFileHitCount": 1109,
+    "changedFileHitCount": 1115,
     "contextOnlyHitCount": 1797,
     "decisionRelevantHitCount": 252,
     "productionHitCount": 2049,
-    "unchangedFileHitCount": 940
+    "unchangedFileHitCount": 934
   }
 }

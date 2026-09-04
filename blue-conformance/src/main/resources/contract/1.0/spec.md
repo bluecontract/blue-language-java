@@ -475,7 +475,7 @@ Registry source, calculated BlueIds, prose, fixtures, and gas manifest MUST agre
 
 This revision adds the exact processor runtime type `Embedded Collection Event Channel`. Its canonical node, BlueId, dispatch fields, structural path matcher, runtime role, gas behavior, and conformance fixtures MUST be published in the regenerated registry. The existing `Embedded Node Channel` keeps exact-path semantics and is not silently reinterpreted.
 
-This proposal intentionally publishes no final core-runtime-registry package identity. The registry MUST be regenerated after the Language identity cascade, the revised `Process Embedded` node, and the new `Embedded Collection Event Channel` node are final. A byte-identical gas manifest may retain its own file identity, but every release binding and package manifest must be recalculated and verified rather than copied from an earlier RC.
+This release publishes the final core-runtime registry through its checked-in manifest. The manifest's calculated package identity is bound by the conformance and release manifests. Any later change to the Language identity closure, `Process Embedded`, or `Embedded Collection Event Channel` requires those bindings and package identities to be regenerated; identities MUST NOT be copied from an earlier release candidate.
 
 The closure executor and cyclic-set finalizer are processor/platform capabilities, not new application runtime types. The release manifest MUST bind the exact Blue Language cyclic-set implementation and proof verifier used by closure processing.
 
@@ -5963,12 +5963,12 @@ absent from this family and is not a Contracts 1.0 conformance requirement.
 generalization to reveal an inherited declaration previously suppressed by the
 subtype.
 
-This proposal intentionally claims no final Language or Contracts fixture
-count or package identity. Existing business-result semantics outside the
-explicitly changed areas remain regression baselines, but specification,
-invocation, work, event, trace, registry, and package identities may be updated
-only after an identity-delta audit classifies every change and reports zero
-unexplained differences.
+This release claims the exact Language and Contracts fixture counts and package
+identities declared by its checked-in manifests. Existing business-result
+semantics outside the explicitly changed areas remain regression baselines.
+Every specification, invocation, work, event, trace, registry, and package
+identity change is accepted only when the identity-delta audit classifies it
+and reports zero unexplained differences.
 
 ### 15.3 Gas and execution fixtures
 

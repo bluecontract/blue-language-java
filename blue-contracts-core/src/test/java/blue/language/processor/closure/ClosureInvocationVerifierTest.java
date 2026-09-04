@@ -40,16 +40,16 @@ final class ClosureInvocationVerifierTest {
     private static final String BLUE_B =
             "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6";
     private static final String C_CLO_34_INVOCATION_IDENTITY =
-            "sha256:409673ded57ba8384b1324f90f203e59f5cb0d7192b4847c0692dc5269391d90";
+            "sha256:2eca441c0a5631a43d519544f586898fac8f1efab0e4cfce929b8d839cb4fe90";
     private static final String C_CLO_34_CANONICAL_INVOCATION_ENVELOPE =
             "{\"domain\":\"blue-contracts-invocation/1.0\",\"value\":{\"admissionCandidateIdenti"
-                    + "ty\":null,\"blueLanguageSpecificationIdentity\":\"sha256:019a436c6266400710bca7f4"
-                    + "9905c2c53d62434762850236ca0f86d99dff1b37\",\"causeIdentity\":\"sha256:08502d369"
+                    + "ty\":null,\"blueLanguageSpecificationIdentity\":\"sha256:0dc2942bfbabbe994debb1038"
+                    + "fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06\",\"causeIdentity\":\"sha256:08502d369"
                     + "b6bfee172fd72c48637ce4a241fa88348024904e6113f333d3cd57b\",\"contractsSpecifica"
-                    + "tionIdentity\":\"sha256:62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf"
-                    + "9\",\"cyclicFinalizerIdentity\":\"sha256:d71ec19247a32f7f40107f512e4eb567b4cb41ae8e73c16d2ebe10b0e8517c76"
-                    + "\",\"cyclicProofVerifierIdentity\":\"sha256:0768d22420c5bb01109861eb9e090b758aa66b25c2df7b4708dff36a969cef"
-                    + "dd\",\"directDeliv"
+                    + "tionIdentity\":\"sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bd"
+                    + "d\",\"cyclicFinalizerIdentity\":\"sha256:a16e111c7d5e803e6551ff43a6beaa265149bf1cd0c73808ba7fb81650a079b3"
+                    + "\",\"cyclicProofVerifierIdentity\":\"sha256:3a94850f63b8813e05fe38687e50ce95617a7748dbb8cc2f6d346572651d9"
+                    + "372\",\"directDeliv"
                     + "erySnapshotIdentity\":\"sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60b"
                     + "f562f6d79c8eee439\",\"documents\":[{\"blueId\":\"8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6"
                     + "C2PRSZgZ\",\"componentGeneration\":1,\"documentId\":\"a\",\"epoch\":0,\"initialized"
@@ -597,8 +597,8 @@ final class ClosureInvocationVerifierTest {
 
     private static ClosureEnvironment releasedEnvironment() {
         return new ClosureEnvironment(
-                "sha256:019a436c6266400710bca7f49905c2c53d62434762850236ca0f86d99dff1b37",
-                "sha256:62be2e671a88d231c151944a35030c0c56696cc6e4b073f86681f0c795c54bf9",
+                "sha256:0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06",
+                "sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd",
                 "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4",
                 "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
                 labeled(

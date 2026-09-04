@@ -977,7 +977,7 @@ Systems that require authoring provenance SHOULD retain an out-of-band preproces
 
 ```text
 source artifact identity
-Blue Language release identity
+Blue Language source-preprocessing baseline identity
 directive BlueId or alias binding identity
 ordered transformation node identities
 effective imports identity
@@ -2220,7 +2220,24 @@ Provider location, cache state, transfer size, paging, and physical storage layo
 
 The default portable provider model returns BlueId Input or cyclic-set-aware member content appropriate to the requested identity.
 
-A Source Document provider MAY be supported as an implementation extension or registry mode. Such a provider verifies returned content by running Source Document BlueId calculation, not direct BlueId calculation. The provider mode MUST bind the exact Blue Language release, preprocessing environment, canonical registry bindings, and the exact Source Document snapshot or other identity-bearing evidence being resolved. Ambient provider state is never part of Source Document BlueId calculation. A Source Document provider is not the default portable provider model.
+A Source Document provider MAY be supported as an implementation extension or registry mode. Such a provider verifies returned content by running Source Document BlueId calculation, not direct BlueId calculation. The provider mode MUST bind the exact Blue Language source-preprocessing baseline, preprocessing environment, canonical registry bindings, and the exact Source Document snapshot or other identity-bearing evidence being resolved. Ambient provider state is never part of Source Document BlueId calculation. A Source Document provider is not the default portable provider model.
+
+The Blue Language 1.0 source-preprocessing baseline identity is
+`blue-language-source-preprocessing-environment-1.0@sha256:<digest>`, where
+`<digest>` is SHA-256 over RFC 8785 canonical JSON encoded as UTF-8. Its
+canonical payload contains exactly the domain
+`blue-language-source-preprocessing-environment/1.0` and a value binding the
+Language version, canonical Language specification digest, canonical core
+registry package identity, source-content canonicalization strategy identity,
+and explicit provider-evidence verifier domain identity. Runtime directive
+aliases and environment imports remain part of the higher-level preprocessing
+environment identity.
+
+The baseline identity MUST NOT contain the aggregate Language/Contracts
+distribution identity, a Java source-tree digest, a closure release identity,
+generated artifact bytes, its own identity, a build timestamp, or a source
+commit. An aggregate release MAY bind the baseline identity as a component,
+but the baseline identity MUST NOT bind that aggregate release.
 
 ### 12.4 Plain BlueId provider verification (normative)
 

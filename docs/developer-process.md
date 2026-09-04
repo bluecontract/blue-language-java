@@ -429,7 +429,7 @@ commit the exact result. Do not edit a generated reference by hand.
 ./gradlew semanticBaselineVerify
 ```
 
-The Language fixture package contains 182 exact fixtures and the Contracts
+The Language fixture package contains 184 exact fixtures and the Contracts
 package contains 295. Generated fixture coverage is the source for category
 subtotals; avoid copying subtotals into authored docs.
 
