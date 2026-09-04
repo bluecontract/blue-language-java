@@ -30,7 +30,9 @@ import java.util.Set;
  *
  * <p>This helper opens only the exact references required to establish the
  * top-level semantic inputs and the ancestor closure of feeder-selected scope
- * paths. It never invokes ordinary snapshot resolution.</p>
+ * paths. Direct canonical inputs are checked without resolution. Source that
+ * contains an inline type declaration uses the manager's authoritative
+ * canonical-identity operation; it is never hashed as direct input.</p>
  */
 final class ProcessingInputAdmission {
 
@@ -175,7 +177,7 @@ final class ProcessingInputAdmission {
         boolean copied = false;
         boolean materialized = admittedRoot.wasMaterialized();
         String expectedRootBlueId =
-                DirectBlueIdCalculator.calculateBlueId(working);
+                canonicalIdentity(working, PROCESSING_ROOT_LABEL);
 
         for (String scopePath : orderedPaths) {
             List<String> segments = JsonPointer.split(scopePath);
@@ -307,7 +309,7 @@ final class ProcessingInputAdmission {
             String label) {
         final String actualBlueId;
         try {
-            actualBlueId = DirectBlueIdCalculator.calculateBlueId(exact);
+            actualBlueId = canonicalIdentity(exact, label);
         } catch (RuntimeException exception) {
             throw invalid(
                     label + " provider content is not exact canonical content for "
@@ -322,6 +324,16 @@ final class ProcessingInputAdmission {
                             + expectedBlueId,
                     null);
         }
+    }
+
+    private String canonicalIdentity(Node exact, String purpose) {
+        if (!CanonicalIdentityEvidence.requiresEffectiveTypeIdentity(exact)) {
+            return DirectBlueIdCalculator.calculateBlueId(exact);
+        }
+        return CanonicalIdentityEvidence.sourceBlueId(
+                exact,
+                snapshotManager,
+                purpose + " canonical identity");
     }
 
     private boolean isUnavailable(RuntimeException exception) {
