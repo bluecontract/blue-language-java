@@ -16,6 +16,7 @@ import blue.language.identity.DirectBlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -683,6 +684,24 @@ class SelectedScopeContentBlueIdFailFirstTest {
         @Override
         public ResolvedSnapshot fromDocumentTransient(Node document) {
             return delegate.fromDocumentTransient(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentPreservingPaths(
+                Node document,
+                Collection<String> preservedPaths) {
+            return delegate.fromDocumentPreservingPaths(
+                    document,
+                    preservedPaths);
+        }
+
+        @Override
+        public ResolvedSnapshot fromDocumentTransientPreservingPaths(
+                Node document,
+                Collection<String> preservedPaths) {
+            return delegate.fromDocumentTransientPreservingPaths(
+                    document,
+                    preservedPaths);
         }
 
         @Override
