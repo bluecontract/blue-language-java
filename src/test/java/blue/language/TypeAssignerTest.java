@@ -17,15 +17,13 @@ import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.resolve.ResolutionLimits;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static blue.language.identity.DirectBlueIdCalculator.calculateBlueId;
 import static blue.language.codec.jackson.UncheckedObjectMapper.YAML_MAPPER;
@@ -84,7 +82,7 @@ public class TypeAssignerTest {
                 .name("Y")
                 .type(new Node().blueId(calculateBlueId(x)))
                 .properties(
-                        "a", new Node()
+                        "a", Nodes.emptyObject()
                 );
 
         List<Node> nodes = Arrays.asList(a, b, c, x, y);
@@ -137,10 +135,8 @@ public class TypeAssignerTest {
                 "    type:\n" +
                 "      name: A";
 
-        Map<String, Node> nodes = Stream.of(a, b, c, x, y)
-                .map(doc -> YAML_MAPPER.readValue(doc, Node.class))
-                .collect(Collectors.toMap(Node::getName, node -> node));
-        BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes.values());
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocsUnchecked(a, b, c, x, y);
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
                         new TypeAssigner()
@@ -149,7 +145,7 @@ public class TypeAssignerTest {
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
         // when
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(nodeProvider.getBlueIdByName("Y")).get(0));
 
         // then
         assertEquals("B", node.getProperties().get("a").getType().getName());

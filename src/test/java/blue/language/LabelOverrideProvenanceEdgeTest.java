@@ -431,8 +431,8 @@ class LabelOverrideProvenanceEdgeTest {
     @Test
     void shouldFixedItemTypePreventsPlainAndPositionedRelabeling() {
         // given
-        BasicNodeProvider provider = new BasicNodeProvider();
-        provider.addSingleDocs(String.join("\n",
+        Blue blue = new Blue();
+        Node holderType = blue.yamlToNode(String.join("\n",
                 "name: Fixed ItemType Holder",
                 "entries:",
                 "  type: List",
@@ -440,21 +440,17 @@ class LabelOverrideProvenanceEdgeTest {
                 "    fixed: value",
                 "  items:",
                 "    - name: Generic Item"));
-        String holderId = provider.getBlueIdByName("Fixed ItemType Holder");
-        Blue blue = new Blue(provider);
         Node plain = blue.yamlToNode(String.join("\n",
-                "type:",
-                "  blueId: " + holderId,
                 "entries:",
                 "  items:",
-                "    - name: Illegal Plain Item"));
+                "    - name: Illegal Plain Item"))
+                .type(holderType.clone());
         Node positioned = blue.yamlToNode(String.join("\n",
-                "type:",
-                "  blueId: " + holderId,
                 "entries:",
                 "  items:",
                 "    - $pos: 0",
-                "      name: Illegal Positioned Item"));
+                "      name: Illegal Positioned Item"))
+                .type(holderType.clone());
         // when
 
         // then
