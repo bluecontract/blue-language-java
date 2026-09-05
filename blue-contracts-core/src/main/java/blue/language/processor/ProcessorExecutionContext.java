@@ -697,7 +697,10 @@ public final class ProcessorExecutionContext implements AutoCloseable {
                     new SelectedExecutableBody(
                             field,
                             bodyBlueId,
-                            body,
+                            sourceProperties != null
+                                    && sourceProperties.get(field) != null
+                                    && sourceProperties.get(field).isReferenceOnly()
+                                    ? sourceProperties.get(field) : body,
                             sourceProperties != null
                                     && sourceProperties.get(field) != null
                                     && sourceProperties.get(field)
