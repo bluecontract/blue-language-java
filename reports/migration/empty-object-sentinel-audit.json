@@ -2437,7 +2437,7 @@
       "changed": true,
       "coveringTest": "not-applicable: no empty-sentinel decision",
       "decisionBasis": "explicitly-excluded-broad-search-context",
-      "line": 648,
+      "line": 649,
       "newClassification": "context-only-not-empty-sentinel-decision",
       "oldAssumption": "Prompt-mandated broad-search candidate; no semantic assumption is attributed to a context-only line.",
       "path": "blue-conformance/src/main/java/blue/language/conformance/contracts/ContractsFixtureFeederEnvironment.java",
