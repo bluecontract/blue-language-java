@@ -4,7 +4,7 @@ specificationVersions:
   contracts: '1.0'
 status: final-implementation-baseline-amendment
 components:
-  languageSpecificationSha256: 0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06
+  languageSpecificationSha256: c9466da878d02bc97a77b227f7341b96a739803dcb56245d0a15d10aa5ff6c17
   languageRegistryPackageIdentity: sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321
   languageFixturePackageIdentity: sha256:83a0d7ec99d711577d6c08962b922aedd342d858a9bf12560ade790692d08cae
   languageVectorCount: 150
@@ -1648,6 +1648,6 @@ files:
   sha256: 99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd
   bytes: 346953
 - path: specifications/blue-language-specification-1.0.md
-  sha256: 0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06
-  bytes: 208409
-packageIdentity: sha256:ead931938c51e650533ac32dc2b0d83729790adf1a89d15765b75fb7da8dfc0d
+  sha256: c9466da878d02bc97a77b227f7341b96a739803dcb56245d0a15d10aa5ff6c17
+  bytes: 215081
+packageIdentity: sha256:ec94446d45d799c19d4385a5009ea6c569b8df5b4826a85a69ea5e6f235b388a

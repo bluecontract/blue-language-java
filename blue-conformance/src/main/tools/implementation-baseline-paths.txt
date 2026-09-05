@@ -480,9 +480,11 @@ blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalcu
 blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java
 blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java
 blue-language-core/src/main/java/blue/language/identity/DirectBlueIdCalculator.java
+blue-language-core/src/main/java/blue/language/identity/EnumConstraintMembership.java
 blue-language-core/src/main/java/blue/language/identity/ListBlueIdFold.java
 blue-language-core/src/main/java/blue/language/identity/NodeToBlueIdInput.java
 blue-language-core/src/main/java/blue/language/identity/ObjectBlueIdHasher.java
+blue-language-core/src/main/java/blue/language/identity/ScalarConstraintPayload.java
 blue-language-core/src/main/java/blue/language/identity/ScalarIdentityEncoder.java
 blue-language-core/src/main/java/blue/language/identity/ScalarNodeIdentity.java
 blue-language-core/src/main/java/blue/language/identity/SchemaEnumCanonicalizer.java
