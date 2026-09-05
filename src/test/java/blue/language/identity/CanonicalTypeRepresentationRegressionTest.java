@@ -299,12 +299,12 @@ class CanonicalTypeRepresentationRegressionTest {
                     Node node,
                     ResolutionLimits limits) {
                 detachedProofs[0]++;
-                observed[0] = node.getType() != null
+                observed[0] = node.getItemType() != null
                         && FrozenNode.fromResolvedNode(fixture.authoredT)
                         .sameResolvedStructure(
-                                FrozenNode.fromResolvedNode(node.getType()));
+                                FrozenNode.fromResolvedNode(node.getItemType()));
                 Node resolved = node.clone()
-                        .type(fixture.completedT.clone());
+                        .itemType(fixture.completedT.clone());
                 observed[1] = true;
                 return new TypeEvidenceResolution(
                         FrozenNode.fromResolvedNode(resolved),
