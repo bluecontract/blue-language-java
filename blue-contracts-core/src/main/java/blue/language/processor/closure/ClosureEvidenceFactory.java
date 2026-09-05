@@ -28,6 +28,26 @@ public final class ClosureEvidenceFactory {
     private static final ClosureIdentityService IDENTITIES =
             ClosureIdentityService.INSTANCE;
 
+    /**
+     * Prepares a closed-evidence replay for freshly reserved document births.
+     *
+     * <p>Existing heads, epochs, direct deliveries, logical cause, environment
+     * and gas policy are preserved. Added targets are inactive prospective
+     * members; the ordinary engine verifies their activation and initializes
+     * them. No retained source epoch is executed merely by this preparation.
+     * The complete semantic prefix is replayed and charged under the same cap;
+     * this factory never resumes from a partially executed, gas-free suffix.</p>
+     *
+     * @param input exact input of the noncommitting resource attempt
+     * @param births exact demands paired with fresh durable lineage reservations
+     * @return expanded independently verifiable invocation; publishes nothing
+     * @throws IllegalArgumentException for conflicting or unrelated evidence
+     */
+    public static ClosureInvocationInput withProspectiveBirths(
+            ClosureInvocationInput input, List<ManagedDocumentBirth> births) {
+        return ProspectiveBirthRetry.prepare(input, births);
+    }
+
     private ClosureEvidenceFactory() {
     }
 
