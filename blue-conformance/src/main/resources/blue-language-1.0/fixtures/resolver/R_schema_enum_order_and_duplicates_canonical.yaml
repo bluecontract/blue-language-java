@@ -1,6 +1,6 @@
 id: R_schema_enum_order_and_duplicates_canonical
 category: Schema
-operation: resolve
+operation: resolveDefinition
 description: enum order and duplicate entries normalize to a duplicate-free canonical
   effective schema
 source:

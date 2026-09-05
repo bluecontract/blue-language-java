@@ -60,13 +60,13 @@ public final class BlueContractsConformanceReport {
             "blue-language-contracts-embedded-modules-collection-paths";
     /** Canonical identity declared by the exact supplied package manifest. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:ead931938c51e650533ac32dc2b0d83729790adf1a89d15765b75fb7da8dfc0d";
+            "sha256:139fc801bf22f59eca9d5f05a00915275eec435e5cda7ee6f244ec709e6fb107";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";
     /** Exact Language fixture package identity. */
     public static final String LANGUAGE_FIXTURE_PACKAGE_IDENTITY =
-            "sha256:83a0d7ec99d711577d6c08962b922aedd342d858a9bf12560ade790692d08cae";
+            "sha256:ad5c4a611cae6b8caea5fca98305146c03b2a6ff3815905dc6e371aae611098c";
     /** Exact Contracts registry package identity. */
     public static final String CONTRACTS_REGISTRY_PACKAGE_IDENTITY =
             RuntimeBlueIds.REGISTRY_PACKAGE_IDENTITY;
@@ -85,7 +85,7 @@ public final class BlueContractsConformanceReport {
             "99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd";
     /** Published SHA-256 digest of the Language specification. */
     public static final String LANGUAGE_SPECIFICATION_SHA256 =
-            "0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06";
+            "1fc0c1dc371ce0ad6c5bc36f60c624a114828a8e7f30136a4d955cd05737acbf";
 
 
     private final String specVersion;

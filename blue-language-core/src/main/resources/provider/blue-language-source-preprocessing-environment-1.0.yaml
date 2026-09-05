@@ -1,7 +1,7 @@
 domain: blue-language-source-preprocessing-environment/1.0
 value:
   languageVersion: '1.0'
-  languageSpecificationSha256: 0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06
+  languageSpecificationSha256: 1fc0c1dc371ce0ad6c5bc36f60c624a114828a8e7f30136a4d955cd05737acbf
   canonicalRegistryIdentity: sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321
   sourceContentStrategyIdentity: blue-language-1.0:source-content-canonicalization
   providerEvidenceVerifierDomainIdentity: blue-language-1.0:explicit-provider-evidence-verifier

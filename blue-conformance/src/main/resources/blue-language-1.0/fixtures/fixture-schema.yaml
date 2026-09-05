@@ -134,6 +134,7 @@ properties:
     - preprocess
     - registryNodeHashesToPublishedBlueId
     - resolve
+    - resolveDefinition
     - resolveLimited
     - resolveVariants
     - retrieveDirectList

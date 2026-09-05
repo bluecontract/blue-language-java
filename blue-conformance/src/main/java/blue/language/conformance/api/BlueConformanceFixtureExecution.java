@@ -178,6 +178,9 @@ abstract class BlueConformanceFixtureExecution extends BlueConformanceResolution
             case FixtureOperation.REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID:
                 runRegistryNodeHashesToPublishedBlueId(spec);
                 return;
+            case FixtureOperation.RESOLVE_DEFINITION:
+                runResolveDefinition(spec);
+                return;
             case FixtureOperation.RESOLVE:
                 runResolve(spec);
                 return;

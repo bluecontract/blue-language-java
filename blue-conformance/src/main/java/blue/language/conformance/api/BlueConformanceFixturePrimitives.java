@@ -109,6 +109,7 @@ abstract class BlueConformanceFixturePrimitives {
         static final String REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID =
                 "registryNodeHashesToPublishedBlueId";
         static final String RESOLVE = "resolve";
+        static final String RESOLVE_DEFINITION = "resolveDefinition";
         static final String RESOLVE_LIMITED = "resolveLimited";
         static final String RESOLVE_VARIANTS = "resolveVariants";
         static final String RETRIEVE_DIRECT_LIST = "retrieveDirectList";
@@ -336,6 +337,7 @@ abstract class BlueConformanceFixturePrimitives {
             FixtureOperation.PREPROCESS,
             FixtureOperation.REGISTRY_NODE_HASHES_TO_PUBLISHED_BLUE_ID,
             FixtureOperation.RESOLVE,
+            FixtureOperation.RESOLVE_DEFINITION,
             FixtureOperation.RESOLVE_LIMITED,
             FixtureOperation.RESOLVE_VARIANTS,
             FixtureOperation.RETRIEVE_DIRECT_LIST,

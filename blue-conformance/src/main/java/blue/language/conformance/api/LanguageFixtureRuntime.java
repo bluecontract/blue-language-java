@@ -65,6 +65,11 @@ final class LanguageFixtureRuntime implements AutoCloseable {
         return runtime.resolution().resolve(source);
     }
 
+    /** Prepares a definition without certifying an instance payload. */
+    public Node resolveDefinition(Node source) {
+        return runtime.resolution().resolveDefinition(source);
+    }
+
     /** Produces the canonical direct identity input for authored Source. */
     public Node canonicalize(Node source) {
         return runtime.identity().canonicalIdentityInput(source);

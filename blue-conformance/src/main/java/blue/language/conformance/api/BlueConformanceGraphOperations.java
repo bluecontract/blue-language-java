@@ -146,6 +146,15 @@ abstract class BlueConformanceGraphOperations extends BlueConformanceFixtureTran
         }
     }
 
+    static void runResolveDefinition(JsonNode spec) {
+        ProviderContext provider = providerContext(spec, null);
+        try (LanguageFixtureRuntime blue = new LanguageFixtureRuntime(provider.provider)) {
+            Node source = sourceWithParent(spec);
+            Node actual = blue.resolveDefinition(source);
+            assertResolutionExpectations(spec, actual, blue, source);
+        }
+    }
+
     static void runResolve(JsonNode spec) {
         SymbolicTypeCycle symbolicCycle = symbolicTypeCycle(spec);
         if (symbolicCycle != null) {
