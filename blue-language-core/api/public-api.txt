@@ -65,7 +65,7 @@ field blue.language.provider.ProviderMode#BOUND_SOURCE_CONTENT descriptor=Lblue/
 field blue.language.provider.ProviderMode#DIRECT_NODE descriptor=Lblue/language/provider/ProviderMode; access=public,static,final signature=- constant=-
 field blue.language.provider.ProviderMode#SOURCE_DOCUMENT descriptor=Lblue/language/provider/ProviderMode; access=public,static,final,enum signature=- constant=-
 field blue.language.provider.SourceProviderEnvironment#EXPLICIT_VERIFIER_DOMAIN_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0:explicit-provider-evidence-verifier"
-field blue.language.provider.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-source-preprocessing-environment-1.0@sha256:0a71eaebd0e191da4dd7806cf12b7411b494057e850c85c4f608942aa0546b0c"
+field blue.language.provider.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-source-preprocessing-environment-1.0@sha256:74be75a1b0ca9932b88e00b5010beadf45010d8bf643b52fb83447d4c0a9640e"
 field blue.language.provider.SourceProviderEnvironment#LANGUAGE_CONTENT_STRATEGY_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0:source-content-canonicalization"
 field blue.language.registry.BlueCoreTypeRegistry#INSTANCE descriptor=Lblue/language/registry/BlueCoreTypeRegistry; access=public,static,final signature=- constant=-
 field blue.language.registry.BlueCoreTypeRegistry#RESOURCE_ROOT descriptor=Ljava/lang/String; access=public,static,final signature=- constant="registry/blue-language-1.0"
