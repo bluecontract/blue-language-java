@@ -96,14 +96,14 @@ final class FullLifecycleAdmissionTest {
     private static final long GENEROUS_GAS = 100_000L;
     private static final long LOOP_GAS = 20_000L;
     private static final String DUPLICATE_EVENT_IDENTITY_ORACLE =
-            "sha256:9a09924bb68966c33a1fd2ca6fa2d71eb163d08eb82c60367f8cec8b30edd00e"
+            "sha256:4e9cc1c2dad1b3ff442efafb3c867104032c681c8d89a64c42cb1fae0fbdf1cb"
                     + "|31JtLEZds6saFSDKKWh4XZrWf63BQywpRUB4wDt766Jo"
-                    + "|sha256:93c7be872d7c8f261a63b7f972147c997e3eeaf44dd208c0737e2d4ac91d1055"
-                    + "|sha256:7ce98318d2daf3a04752d75fe17d880d31d841415d2021a92c093eeef4d7257c";
+                    + "|sha256:c465b987961e2f0ae79cfe699f48f5bf2ed898cfceb47e977ac448dd5a28f22a"
+                    + "|sha256:2ffc73ae79ee5ac50860995647139a2e106cc474668ae1dab9ef27c6ae272464";
     private static final String GAS_FAILURE_ORACLE =
-            "sha256:e0281a012d85796b57810ca21d84f441d350be3382dea5be496f39f71377ef45"
+            "sha256:490cb3215bb7316ec47979ba173a539e61185b63dee9f896111147f02b2b593b"
                     + "|20000|2123"
-                    + "|sha256:73d4b84884c99293ec8628bf628bae0ef37de348f44bbbf7a60a4b490008129d"
+                    + "|sha256:b7c504bfac0774539471a251eb7b6e878648f4b32024621df9f647c8dcb7f8d3"
                     + "|GasLimitExceeded"
                     + "|Gas limit exceeded before processor.embeddedEventDelivered"
                     + "|{namespace=processor, counter=embeddedEventDelivered, quantity=1, weight=10, admittedGas=20000, gasLimit=20000, effectiveBudget=20000}"
@@ -115,9 +115,9 @@ final class FullLifecycleAdmissionTest {
                     + "|g5:5:PROCESSOR:processEmbeddedEdgeExamined:1:2:2:b:null:null:admission.edge.sha256:42c26caa522b69df9e1485ab05a3f7e0085b75e15d48c6a0d70d048ecd6e514a"
                     + "|g6:6:PROCESSOR:managedOccurrenceBindingVerified:1:5:5:a:null:null:admission.binding.sha256:6f7a2db7eec312dcb0effa98d6bef40f8735c431eef85a90083a957079e661d5"
                     + "|g7:7:PROCESSOR:processEmbeddedEdgeExamined:1:2:2:a:null:null:admission.edge.sha256:6f7a2db7eec312dcb0effa98d6bef40f8735c431eef85a90083a957079e661d5"
-                    + "|rejected:[sha256:f94c892bed31272d2227d63866ea8a38a4c826e740fc143ed87e96fe2e9d71c7, PROCESSOR, embeddedEventDelivered, 1, 10, 10, SHARED, null, 0, WORK, sha256:5cb549fbc9251d5eaa0a1f365c5ed04cc213f412a01199952bc052a41778c906, null, null, null]"
-                    + "|works:136:0|INITIALIZATION|a|sha256:b4c4cd22e5528d5f22088a36e9a531018b0a17872a28f85781b39b6d282275e5"
-                    + ":135|EMBEDDED_EVENT|b|sha256:5cb549fbc9251d5eaa0a1f365c5ed04cc213f412a01199952bc052a41778c906";
+                    + "|rejected:[sha256:0a405e3df4cda10a75658d7249b08467cd4d329fc6d5393e6dfbdad666b6bb55, PROCESSOR, embeddedEventDelivered, 1, 10, 10, SHARED, null, 0, WORK, sha256:1cc6e957d2b9657fe61696e53c817fb928391072f25f7627023df3453549ff1a, null, null, null]"
+                    + "|works:136:0|INITIALIZATION|a|sha256:c7660e2af3f67df690726f1b3fd4a404417d9b8d4fe2415d317f966f22ee6207"
+                    + ":135|EMBEDDED_EVENT|b|sha256:1cc6e957d2b9657fe61696e53c817fb928391072f25f7627023df3453549ff1a";
 
     @Test
     void requirement01RootInitializationPatchCommitsExactMarkerState() {
