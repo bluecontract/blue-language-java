@@ -5,20 +5,20 @@
     "sourceInputIdentity" : "sha256:145eb55502ac8f616f5ccfcb2ed86b55007d35f8a8e570e407e7bffbd8c61561"
   },
   "specifications" : {
-    "languageSha256" : "0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06",
+    "languageSha256" : "77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
     "contractsSha256" : "99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd"
   },
   "release" : {
-    "packageIdentity" : "sha256:ead931938c51e650533ac32dc2b0d83729790adf1a89d15765b75fb7da8dfc0d",
-    "contractsReleaseIdentity" : "sha256:80ea2db0481f55412304cd05cbc4185405dec0222b15175ff7b111808282f92c"
+    "packageIdentity" : "sha256:0b94e3ad61b650abb4b249eeb51d910ef93ec25133d3717cf90714c07032148a",
+    "contractsReleaseIdentity" : "sha256:b112c1995934700899762b741610c3d306ecd10205fa643bdaa30b28fecf6643"
   },
   "packages" : {
     "languageRegistry" : "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321",
-    "languageFixtures" : "sha256:83a0d7ec99d711577d6c08962b922aedd342d858a9bf12560ade790692d08cae",
+    "languageFixtures" : "sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e",
     "contractsRegistry" : "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4",
     "contractsGas" : "sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a",
-    "contractsFixtures" : "sha256:4c04a92450e782ec5ee834545c19bacc7c3372484cecc21c73942648cf26e182",
-    "contractsRelease" : "sha256:80ea2db0481f55412304cd05cbc4185405dec0222b15175ff7b111808282f92c"
+    "contractsFixtures" : "sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436",
+    "contractsRelease" : "sha256:b112c1995934700899762b741610c3d306ecd10205fa643bdaa30b28fecf6643"
   },
   "tests" : {
     "all" : {
@@ -31,7 +31,7 @@
   },
   "gas" : {
     "fixtureCount" : 71,
-    "oraclePackageIdentity" : "sha256:4c04a92450e782ec5ee834545c19bacc7c3372484cecc21c73942648cf26e182",
+    "oraclePackageIdentity" : "sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436",
     "fixtures" : [ {
       "resultKey" : "contracts:gas-composite-gas-exhaustion-prefix",
       "id" : "gas-composite-gas-exhaustion-prefix",

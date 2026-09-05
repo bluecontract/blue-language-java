@@ -504,13 +504,10 @@ public final class SemanticBaselineVerifierCli {
                 "private BlueLanguageRuntime(NodeProvider nodeProvider,",
                 "Language runtime identity wiring",
                 "new StandardBlueIdentity(this::canonicalize)");
-        requireOrderedIdentityMethod(
+        verifyRuntimeCanonicalization(
                 runtime,
-                "public Node canonicalize(Node source)",
-                "Language runtime canonicalization",
-                "rawPreprocess(",
-                ".resolveSnapshot(",
-                ".canonicalRoot().toNode()");
+                readSource("src/main/java/blue/language/identity/"
+                        + "CanonicalIdentityInputBuilder.java"));
 
         String runtimeServices = readSource(
                 "src/main/java/blue/language/runtime/LanguageRuntimeServices.java");
@@ -559,6 +556,38 @@ public final class SemanticBaselineVerifierCli {
                 "public String directBlueId(Node node)",
                 "direct BlueId calculator",
                 "calculateNormalized(normalizer.normalize(node))");
+    }
+
+    /** Verifies the definition-aware canonical identity pipeline and its proof fence. */
+    static void verifyRuntimeCanonicalization(
+            String runtime,
+            String canonicalBuilder) {
+        requireIdentityMethod(
+                runtime,
+                "public Node canonicalize(Node source)",
+                "Language canonical-root projection",
+                "canonicalizeWithEvidence(source).canonicalRoot()");
+        requireOrderedIdentityMethod(
+                runtime,
+                "public ResolvedSnapshot canonicalizeWithEvidence(Node source)",
+                "Language evidence-bearing canonicalization",
+                "rawPreprocess(",
+                "preprocessed.isReferenceOnly()",
+                "new ResolvedSnapshot(reference, reference, reference.blueId())",
+                ".resolveTypeDeclarationEvidence(preprocessed, NO_LIMITS)",
+                "new blue.language.identity.CanonicalIdentityInputBuilder().build(",
+                "definition.resolvedRoot().toNode(), preprocessed,",
+                "definition.canonicalTypeIdentities()",
+                "ResolvedSnapshot.withCanonicalTypeIdentities(",
+                "FrozenNode.fromNode(canonical), definition.resolvedRoot(),",
+                "definition.canonicalTypeIdentities()");
+        requireOrderedIdentityMethod(
+                canonicalBuilder,
+                "public Node build(",
+                "Complete canonical type-evidence reconstruction",
+                ".requireCompleteCoverage()",
+                "new CanonicalIdentityInputReconstructor(typeIdentities)",
+                ".reconstruct(resolvedNode, preprocessedSource)");
     }
 
     private static String readSource(String path) throws IOException {
