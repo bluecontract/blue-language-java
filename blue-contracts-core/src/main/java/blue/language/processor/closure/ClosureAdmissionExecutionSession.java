@@ -35,8 +35,6 @@ final class ClosureAdmissionExecutionSession
 
     private static final ClosureIdentityService IDENTITIES =
             ClosureIdentityService.INSTANCE;
-    private static final String PROVISIONAL_IDENTITY =
-            "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 
     private final ClosureInvocationInput input;
     private final ClosureExecutionRecorder recorder;
@@ -605,7 +603,9 @@ final class ClosureAdmissionExecutionSession
             latestBodies.put(document.documentId(), document.document());
         }
         currentFinalization = finalized;
-        currentSnapshot = snapshot(finalized);
+        currentSnapshot = ClosureResultAssemblySupport.admissionSnapshot(
+                input.snapshot(), finalized, initialized, currentBindings,
+                graphGeneration);
         requireNoActivatedDormantTarget();
         processEmbeddedRetirementFences.addAll(
                 surfaceReclassification.retiredOccurrencePaths);
@@ -970,50 +970,6 @@ final class ClosureAdmissionExecutionSession
             }
         }
         return Collections.unmodifiableSet(result);
-    }
-
-    private AffectedClosureSnapshot snapshot(
-            ComponentFinalizationResult finalized) {
-        ArrayList<ManagedDocumentSnapshot> documents =
-                new ArrayList<ManagedDocumentSnapshot>();
-        for (ManagedDocumentSnapshot original
-                : input.snapshot().managedDocuments()) {
-            FinalizedDocumentEvidence exact = finalized.document(
-                    original.documentId());
-            documents.add(new ManagedDocumentSnapshot(
-                    original.documentId(),
-                    exact.blueId(),
-                    exact.document(),
-                    initialized.contains(original.documentId()),
-                    original.terminated(),
-                    original.publicRoot(),
-                    original.epoch(),
-                    exact.componentGeneration()));
-        }
-        ArrayList<ComponentSnapshot> components =
-                new ArrayList<ComponentSnapshot>();
-        for (FinalizedComponentEvidence component
-                : finalized.components()) {
-            components.add(component.component());
-        }
-        String bindingIdentity = IDENTITIES.occurrenceBindingSetIdentity(
-                currentBindings);
-        AffectedClosureSnapshot provisional = new AffectedClosureSnapshot(
-                PROVISIONAL_IDENTITY,
-                graphGeneration,
-                documents,
-                currentBindings,
-                bindingIdentity,
-                components,
-                input.snapshot().publicRootDocumentIds());
-        return new AffectedClosureSnapshot(
-                IDENTITIES.affectedClosureIdentity(provisional),
-                graphGeneration,
-                documents,
-                currentBindings,
-                bindingIdentity,
-                components,
-                input.snapshot().publicRootDocumentIds());
     }
 
     ClosureExecutionState state() {
