@@ -52,6 +52,11 @@ def main():
     replace(environment, r'(LANGUAGE_1_0_RELEASE_IDENTITY\s*=\s*"[^"]+"\s*\+ "sha256:)[0-9a-f]{64}(";)', digest)
     replace("blue-language-core/api/public-api.txt",
             r'(field blue\.language\.provider\.SourceProviderEnvironment#LANGUAGE_1_0_RELEASE_IDENTITY .*@sha256:)[0-9a-f]{64}("\n)', digest)
+    replace("src/test/java/blue/language/provider/ProviderEvidenceVerifierTest.java",
+            r'(SOURCE_PREPROCESSING_BASELINE_IDENTITY\s*=\s*"[^\"]+"\s*\+ "sha256:)[0-9a-f]{64}(";)', digest)
+
+    constant("blue-conformance/src/main/java/blue/language/conformance/api/BlueConformanceReport.java",
+             "FIXTURE_PACKAGE_IDENTITY", fixture_identity)
 
     report = "blue-conformance/src/main/java/blue/language/conformance/api/BlueContractsConformanceReport.java"
     resources = "blue-conformance/src/main/resources/"

@@ -46,7 +46,6 @@ class ResolvedProcessingSelectionCorrectnessTest {
                         "Wide Processing Selection Type")))
                 .contracts(Nodes.emptyObject());
         DocumentProcessingResult initialized = blue.initializeDocument(compact);
-        assertEquals(ProcessorStatus.SUCCESS, initialized.status());
         Node selected = initialized.document();
         String sourceIdentity = blue.calculateSourceDocumentBlueId(selected);
         ResolvedSnapshot snapshot = blue.loadSnapshot(selected);
@@ -61,6 +60,7 @@ class ResolvedProcessingSelectionCorrectnessTest {
         };
 
         // then
+        assertEquals(ProcessorStatus.SUCCESS, initialized.status());
         assertEquals(sourceIdentity, snapshot.blueId());
         for (DocumentProcessingResult result : results) {
             assertEquals(ProcessorStatus.NO_MATCH, result.status());

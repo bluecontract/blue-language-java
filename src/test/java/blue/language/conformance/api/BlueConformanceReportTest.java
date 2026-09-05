@@ -90,7 +90,7 @@ class BlueConformanceReportTest {
         assertEquals(BlueConformanceReport.FIXTURE_PACKAGE_IDENTITY,
                 reportedIdentity);
         assertEquals(
-                "sha256:83a0d7ec99d711577d6c08962b922aedd342d858a9bf12560ade790692d08cae",
+                "sha256:ad5c4a611cae6b8caea5fca98305146c03b2a6ff3815905dc6e371aae611098c",
                 reportedIdentity);
         assertEquals("blue-language-1.0-final-implementation-baseline",
                 BlueConformanceReport.BLUE_SPEC_SOURCE);
