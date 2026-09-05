@@ -127,12 +127,12 @@ final class ClosureInvocationVerifier {
                 }
             }
             if (active == null || !(active.active()
-                    || isVerifiedManagedReceiptEventSource(base, active))
-                    || active.targetDocumentId().equals(
-                            resolution.targetDocumentId())) {
+                    || (isVerifiedManagedReceiptEventSource(base, active)
+                            && !active.targetDocumentId().equals(
+                                    resolution.targetDocumentId())))) {
                 throw new IllegalArgumentException(
                         "A managed-occurrence process retry requires an "
-                                + "active different-lineage source row");
+                                + "active source row or verified different-lineage receipt event");
             }
         }
         return new Verification(

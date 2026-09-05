@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -270,6 +271,40 @@ final class DifferentLineageRetargetReceiptTest {
         }
     }
 
+    @Test
+    void sameLineageHistoricalReplacementRequiresItsExactResolution() {
+        // given
+        try (DocumentProcessor owner = DocumentProcessor.builder().build()) {
+            ClosureEnvironment environment = environment(owner);
+            Scenario scenario = historicalScenario(environment.managedBindingPolicyIdentity(), B);
+            ClosureInvocationInput input = invocation(scenario.input.snapshot, environment);
+            ManagedOccurrenceEvidenceDemand demand = historicalDemand(input, scenario.after.expectedTargetBlueId());
+            ManagedOccurrenceEvidenceResolution resolution = ManagedOccurrenceEvidenceResolution.derived(demand, B, -1L);
+            ClosureProcessRetryInput retry = ClosureProcessRetryInput.derived(input, Collections.singletonList(resolution));
+
+            // when
+            ClosureInvocationVerifier.Verification verified = ClosureInvocationVerifier.verifyRetry(retry, owner.administration()::runtimeAccess);
+            ClosureProcessResult result = ClosureSuccessResultAssembler.assemble(input, executionState(scenario.output), Collections.singletonList(resolution));
+
+            // then
+            assertEquals(retry.retryInvocationIdentity(), verified.invocationIdentity());
+            assertEquals(1, result.graphChanges().size());
+            assertEquals(GraphChange.Kind.REMOVE, result.graphChanges().get(0).changeKind());
+            ManagedOccurrenceBinding retained = result.occurrenceBindings().get(0);
+            assertEquals(B, retained.targetDocumentId());
+            assertEquals(5L, retained.activationGeneration());
+            assertEquals(Long.valueOf(-1L), retained.pendingHistoricalEpoch());
+            assertFalse(retained.active());
+            assertNotEquals(scenario.before.occurrenceIdentity(), retained.occurrenceIdentity());
+            assertTrue(result.publicEvents().isEmpty());
+            assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(input, executionState(scenario.output)));
+            assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(input, executionState(scenario.output), Collections.singletonList(ManagedOccurrenceEvidenceResolution.derived(demand, C, -1L))));
+            assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(input, executionState(scenario.output), Collections.singletonList(ManagedOccurrenceEvidenceResolution.derived(demand, B, 0L))));
+            ManagedOccurrenceEvidenceDemand wrongExact = historicalDemand(input, scenario.before.expectedTargetBlueId());
+            assertThrows(IllegalArgumentException.class, () -> ClosureSuccessResultAssembler.assemble(input, executionState(scenario.output), Collections.singletonList(ManagedOccurrenceEvidenceResolution.derived(wrongExact, B, -1L))));
+        }
+    }
+
     private static Scenario scenario(String afterBindingPolicyIdentity) {
         Node oldTarget = new Node().name("Old target");
         Node newTarget = new Node().name("New target");
@@ -332,6 +367,11 @@ final class DifferentLineageRetargetReceiptTest {
 
     private static Scenario historicalScenario(
             String afterBindingPolicyIdentity) {
+        return historicalScenario(afterBindingPolicyIdentity, C);
+    }
+
+    private static Scenario historicalScenario(
+            String afterBindingPolicyIdentity, DocumentId selectedTarget) {
         Node oldTarget = new Node().name("Old target");
         Node historicalTarget = new Node().name("Authored target");
         Node currentTarget = new Node().name("Current target");
@@ -349,7 +389,7 @@ final class DifferentLineageRetargetReceiptTest {
                 afterBindingPolicyIdentity,
                 A,
                 ScopeAddress.embedded(PATH, 5L),
-                C,
+                selectedTarget,
                 historicalBlueId,
                 false,
                 Long.valueOf(-1L));

@@ -3194,15 +3194,13 @@ final class ClosureExecutionSession
             }
             ManagedOccurrenceBinding before = replacement.get(match);
             if (!before.active()
-                    || before.targetDocumentId().equals(
-                            resolution.targetDocumentId())
                     || currentSnapshot.managedDocument(
                             resolution.targetDocumentId()) == null
                     || before.activationGeneration()
                             == ClosureValueSupport.MAX_SAFE_INTEGER) {
                 throw new IllegalArgumentException(
                         "Managed occurrence resolution is not an active "
-                                + "different-lineage historical retarget");
+                                + "historical reference replacement");
             }
             ManagedOccurrenceBinding after =
                     ManagedOccurrenceBinding.derived(

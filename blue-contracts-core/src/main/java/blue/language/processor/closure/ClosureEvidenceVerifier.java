@@ -667,9 +667,7 @@ final class ClosureEvidenceVerifier {
                         successor.sourceDocumentId())
                 || !removed.sourcePath().equals(successor.sourcePath())
                 || !removed.bindingPolicyIdentity().equals(
-                        successor.bindingPolicyIdentity())
-                || removed.targetDocumentId().equals(
-                        successor.targetDocumentId())) {
+                        successor.bindingPolicyIdentity())) {
             return false;
         }
         for (ManagedOccurrenceEvidenceResolution resolution
