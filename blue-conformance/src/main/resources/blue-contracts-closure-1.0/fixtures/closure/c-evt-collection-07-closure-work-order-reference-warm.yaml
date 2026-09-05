@@ -4,8 +4,7 @@ vectors:
 - C-EVT-COLLECTION-07
 category: admission
 operation: admit-closure
-description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection
-  paths, and queue/gas evidence across representation and physical provider modes.
+description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection paths, and queue/gas evidence across representation and physical provider modes.
 releaseManifest: ../../release-manifest.yaml
 input:
   graphGeneration: 1

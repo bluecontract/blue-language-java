@@ -638,8 +638,12 @@ final class PatchPlanningEngine {
                     canonicalRoot, resolvedRoot, changedPathRecords);
         } else {
             try {
+                // Patching through a reference may have materialized types
+                // absent from the entry snapshot's graph. Include the exact
+                // resolver evidence captured for that patch base before
+                // minimizing any typed ancestor for conformance.
                 CanonicalTypeIdentityLookup canonicalTypeIdentities =
-                        canonicalIdentityEvidence.forConformance();
+                        canonicalIdentityEvidence.forResolvedGraph(resolvedRoot);
                 plan = conformanceEngine
                         .planGeneralizationPreservingPaths(
                                 canonicalRoot,

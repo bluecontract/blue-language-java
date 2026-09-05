@@ -63,6 +63,9 @@ CANONICAL_ORDINARY_FIXTURES = Path(
 CANONICAL_RUNTIME_REGISTRY = Path(
     "blue-contracts-core/src/main/resources/registry/blue-contracts-1.0"
 )
+CANONICAL_JAVA_TEMPLATES = Path(
+    "blue-conformance/src/main/templates/java-templates"
+)
 class RegenerationFailure(RuntimeError):
     """Raised when a candidate cannot be produced or verified safely."""
 
@@ -166,6 +169,8 @@ def stage_release_shell(
         release_root / "conformance/contracts/registry",
         dirs_exist_ok=True,
     )
+    copy_tree(repository_root / CANONICAL_JAVA_TEMPLATES,
+              release_root / "java-templates")
     copy_tree(
         TOOLS_ROOT,
         release_root / "tools",
@@ -603,6 +608,7 @@ def validate_inputs(
     required_directories = (
         CANONICAL_ORDINARY_FIXTURES,
         CANONICAL_RUNTIME_REGISTRY,
+        CANONICAL_JAVA_TEMPLATES,
     )
     missing_directories = [
         str(relative)

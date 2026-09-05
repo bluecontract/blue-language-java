@@ -81,6 +81,11 @@ class RegenerateResourcePackageTest(unittest.TestCase):
                     )
                     self.assertEqual(source.read_bytes(), target.read_bytes())
 
+            templates = REPOSITORY_ROOT / regenerator.CANONICAL_JAVA_TEMPLATES
+            self.assertEqual(58, len(list(templates.rglob("*.java"))))
+            self.assertEqual([], regenerator.compare_packages(
+                templates, release_root / "java-templates"))
+
             self.assertTrue(
                 (staged_contracts / "fixtures/closure/README.md").is_file()
             )

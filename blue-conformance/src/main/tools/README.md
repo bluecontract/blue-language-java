@@ -31,7 +31,10 @@ With no output option, regeneration is a read-only byte-identity check.
 `--stage-output DIR` writes only the candidate `conformance/contracts`
 resource package. `--stage-release-output DIR` instead retains the complete
 generated release shell, including its specifications, Language reference,
-vendored tools, top-level manifests, and the same candidate Contracts subtree.
+vendored tools, Java shape-smoke templates, top-level manifests, and the same
+candidate Contracts subtree. The Java templates are retained under
+`blue-conformance/src/main/templates/java-templates` and copied byte-for-byte;
+full package validation compiles and runs them.
 Both destinations must be new or empty and outside the repository/source
 trees. Only `--write` can replace the checked-in resource package. The ordinary
 `C-EVO-01..17` tranche is always rebuilt by the checked-in deterministic

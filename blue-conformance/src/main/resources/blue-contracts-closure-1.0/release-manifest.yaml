@@ -421,7 +421,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningContextFactory.java
     sha256: 69a4250f4c528903e7e6857e418cf028d05d2c1c73d9731443285c5331aef741
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningEngine.java
-    sha256: 53c787b5d621db0ee0fd3486539fbf88956b958a6cedebdbd3cd15c5e212da9e
+    sha256: ceca918eeefe30c1d709e67858006b3caf1cb059f3dcc9a9c99976c2d13bd8cb
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningPathInspection.java
     sha256: f93d36ec5bdbb068bb75f20d5fb15a6abc9a55e6ca91950f00d9c8eef9d141e9
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPreflight.java
@@ -1483,7 +1483,7 @@ identityConstructors:
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:a84bbb688d247e65411204b5b52046fe481f255a22b3f9ee0c82dd6afe36f4a0
+  packageIdentity: sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436
   vectorCount: 182
   fixtureCount: 295
 oraclePackage:
@@ -1512,4 +1512,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:9bec8c4c6cd97b5323e0a51fc085e99a727c700bb4b5eeef804bb9ea0874d9ff
+releaseIdentity: sha256:b112c1995934700899762b741610c3d306ecd10205fa643bdaa30b28fecf6643

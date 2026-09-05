@@ -11,7 +11,7 @@ components:
   languageBehaviorFixtureCount: 184
   contractsSpecificationSha256: 99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd
   contractsRegistryPackageIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
-  contractsFixturePackageIdentity: sha256:a84bbb688d247e65411204b5b52046fe481f255a22b3f9ee0c82dd6afe36f4a0
+  contractsFixturePackageIdentity: sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436
   contractsGasPackageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
   contractsVectorCount: 182
   contractsBehaviorFixtureCount: 126
@@ -310,17 +310,17 @@ files:
   sha256: 0cbcaed05bc1ec85a4964dbf3d6649f6ffdfb51dd0d8a479ae0887020e650da3
   bytes: 71698
 - path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml
-  sha256: a82a3f5e76c2fd25017f0494f65e631f84b01f6b0bdfaea831c4ab5dc5def97c
-  bytes: 344391
-- path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml
-  sha256: b9590af56481e42ca3a7a1a88884f58507e36c16839c4c65de1564a88175627f
+  sha256: 4971e37e14b363627a0ce8830f0a4fdc0a65bf3c6a1ccfb9a0d7143af0a667f9
   bytes: 344389
+- path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml
+  sha256: e1722b334d4ec8932f022e74b812139096c6bd74575468136c02e8683fef0571
+  bytes: 344387
 - path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml
-  sha256: 922c68b031d6ab7d383381102f06028d0e151867bc3a4e97bfe5846713b49f47
-  bytes: 343850
+  sha256: 14f97ff23235588229191824b9fbc5fb28120cd632dd502abcc65f5cdcd07c67
+  bytes: 343848
 - path: conformance/contracts/fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml
-  sha256: 3f75322209bfef282036778c9dd0a7e5a76da24a1683cd4771f404fb2218d7e9
-  bytes: 343852
+  sha256: 5e8e463a3557c811e4fbf077c8046d5f8d969eed48eb08c1b4c138d6488cc79f
+  bytes: 343850
 - path: conformance/contracts/fixtures/closure/fl-adm-01-root-patch-event.yaml
   sha256: 959607497b170f61f357b84fb89a78f06dbac0f1c646da9dee32fa9acf3302a4
   bytes: 50656
@@ -874,7 +874,7 @@ files:
   sha256: 83a15d3750f60f0b6d33acf055a40787d5acdb9f210ad1d6862dd776e4129b75
   bytes: 1457
 - path: conformance/contracts/fixtures/manifest.yaml
-  sha256: 63393fbd8e5a963b18a98b787d50601ee2889d190e18c6b35286905d4748bc5c
+  sha256: 097e02bac976c51ec1cd0f562058dad0ca9faf92a88c3d3ae6ce0ca1a94e89c4
   bytes: 56157
 - path: conformance/contracts/fixtures/projection-catalog.yaml
   sha256: ff584d108bebb1f0d362eaa6f8ab41890c2b88e6d701150a1382013c6a7b3751
@@ -1650,4 +1650,4 @@ files:
 - path: specifications/blue-language-specification-1.0.md
   sha256: 77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
   bytes: 217483
-packageIdentity: sha256:123c80bb111706a1e3e9b9dea31859e13b2de8a356016f6efdd1a1fb4cddace9
+packageIdentity: sha256:0b94e3ad61b650abb4b249eeb51d910ef93ec25133d3717cf90714c07032148a

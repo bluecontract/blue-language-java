@@ -23,6 +23,58 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProcessingSnapshotProviderPatchTest {
 
     @Test
+    void shouldRetainPatchTimeTypeEvidenceForReferencedBusinessValue() {
+        // given
+        BasicNodeProvider provider = referencedTypedValueProvider();
+        Blue blue = new Blue(provider);
+        DocumentProcessor processor = blue.getDocumentProcessor();
+        Node source = referencedTypedValueRoot(provider);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                source, processor.conformanceEngine(), null,
+                processor.snapshotManager(), null, new GasMeter(),
+                Collections.emptyMap(), true);
+        // when
+        runtime.applyPatch("/", JsonPatch.replace("/money/val", new Node().value(30)));
+        // then
+        assertEquals(30, runtime.document().getAsInteger("/money/val"));
+        assertNotNull(runtime.snapshot().canonicalTypeIdentities());
+    }
+
+    @Test
+    void shouldRejectWrongKindWithinReferencedBusinessValueAtomically() {
+        // given
+        BasicNodeProvider provider = referencedTypedValueProvider();
+        Blue blue = new Blue(provider);
+        DocumentProcessor processor = blue.getDocumentProcessor();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                referencedTypedValueRoot(provider), processor.conformanceEngine(), null,
+                processor.snapshotManager(), null, new GasMeter(),
+                Collections.emptyMap(), true);
+        String before = blue.nodeToJson(runtime.document());
+        // when
+        org.junit.jupiter.api.Assertions.assertThrows(ProcessorFailureException.class,
+                () -> runtime.applyPatch("/", JsonPatch.replace("/money/val", new Node().value("wrong"))));
+        // then
+        assertEquals(before, blue.nodeToJson(runtime.document()));
+    }
+
+    private static BasicNodeProvider referencedTypedValueProvider() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleNodes(new Node().name("Referenced Amount Type")
+                .properties("val", new Node().type(new Node().blueId(
+                        blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))));
+        provider.addSingleNodes(new Node().name("Referenced Amount")
+                .type(new Node().blueId(provider.getBlueIdByName("Referenced Amount Type")))
+                .properties("val", new Node().value(25)));
+        return provider;
+    }
+
+    private static Node referencedTypedValueRoot(BasicNodeProvider provider) {
+        return new Node().properties("money", new Node().blueId(
+                provider.getBlueIdByName("Referenced Amount")));
+    }
+
+    @Test
     void shouldVerifyRemovedTypedIntermediateStateDoesNotPolluteBlueCaches() {
         // given
         BasicNodeProvider provider = new BasicNodeProvider();
