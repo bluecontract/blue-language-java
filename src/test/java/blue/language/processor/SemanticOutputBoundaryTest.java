@@ -87,6 +87,55 @@ final class SemanticOutputBoundaryTest {
     }
 
     @Test
+    void shouldRetainConstructedContentAfterCarryingAnOpaqueInputEdge() {
+        // given
+        Blue blue = new Blue();
+        Node output = new Node().properties(
+                "kind", text("PendingNested/Changed"));
+        FrozenNode exact = FrozenNode.fromNode(
+                blue.canonicalize(output.clone()));
+        FrozenNode input = FrozenNode.fromNode(new Node().properties(
+                "event", new Node().blueId(exact.blueId())));
+        long freshConstructionGas;
+        try (Invocation fresh = new Invocation(new Blue())) {
+            long before = fresh.totalGas();
+            fresh.boundary().admit(output.clone());
+            freshConstructionGas = fresh.totalGas() - before;
+        }
+        try (Invocation invocation = new Invocation(blue)) {
+            SemanticOutputBoundary boundary = invocation.boundary();
+            boundary.carryExactInput(input, input.blueId());
+            ExactBlueValue opaque = boundary.admit(
+                    new Node().blueId(exact.blueId()));
+            long before = invocation.totalGas();
+
+            // when
+            ExactBlueValue constructed = boundary.admit(output.clone());
+            long afterConstruction = invocation.totalGas();
+            ExactBlueValue repeated = boundary.admit(output.clone());
+            ExactBlueValue referenced = boundary.admit(
+                    new Node().blueId(exact.blueId()));
+
+            // then
+            assertTrue(opaque.frozenValue().isReferenceOnly(),
+                    "an already-issued input handle remains an immutable edge");
+            assertEquals(exact.blueId(), opaque.blueId());
+            assertEquals(exact.blueId(), constructed.blueId());
+            assertFalse(constructed.frozenValue().isReferenceOnly(),
+                    "complete verified output must keep its semantic content");
+            assertEquals(exact.resolvedStructuralKey(),
+                    constructed.frozenValue().resolvedStructuralKey());
+            assertEquals(freshConstructionGas, afterConstruction - before,
+                    "the input edge does not prepay content construction");
+            assertTrue(freshConstructionGas > 0L);
+            assertSame(constructed, repeated);
+            assertSame(constructed, referenced);
+            assertEquals(afterConstruction, invocation.totalGas(),
+                    "reusing complete evidence must not repeat construction");
+        }
+    }
+
+    @Test
     void shouldChargeLargeTextUsingMultipleLogicalTextBlocks() {
         // given
         long smallTextGas;

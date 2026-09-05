@@ -379,11 +379,20 @@ public final class SemanticOutputBoundary {
                             + blueId);
         }
         existing = admittedByIdentity.get(blueId);
-        if (existing != null) {
+        if (existing != null
+                && (canonical.isReferenceOnly()
+                        || !existing.frozenValue().isReferenceOnly())) {
             admittedByCanonicalStructure.put(
                     structuralKey, existing);
             return existing;
         }
+        /*
+         * An input edge proves identity without proving target content. Once
+         * this admission has normalized, charged, and verified the complete
+         * output, retain that stronger evidence instead of returning the old
+         * opaque edge. Previously issued handles remain immutable; subsequent
+         * admissions can reuse the complete value under the same identity.
+         */
         ExactBlueValue admitted =
                 new ExactBlueValue(
                         canonical,
