@@ -667,9 +667,7 @@ final class PatchPlanningEngine {
                 plan.root(),
                 plan.changedPaths(),
                 originScope,
-                frozenGeneralizationPolicy,
-                PatchPlanningPathInspection.changesApplicationContracts(
-                        records));
+                frozenGeneralizationPolicy);
         FrozenNode finalCanonical = plan.canonicalRoot() != null
                 ? plan.canonicalRoot()
                 : canonicalRoot;

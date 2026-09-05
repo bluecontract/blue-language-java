@@ -917,6 +917,31 @@ class DocumentProcessorGeneralizationTest {
     }
 
     @Test
+    void shouldRejectOrdinaryValueGeneralizationWhenPolicyIsAbsent() {
+        // given
+        BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();
+        Blue blue = ProcessorTestSupport.blue(nodeProvider);
+        Node document = canonicalRoot(blue, YAML_MAPPER.readValue(
+                "price:\n" +
+                "  type:\n" +
+                "    blueId: " + nodeProvider.getBlueIdByName("Price in EUR") + "\n" +
+                "  amount: 150\n" +
+                "  currency: EUR", Node.class));
+        document.contracts(null);
+        Node before = document.clone();
+
+        // when
+        ProcessorFailureException failure = captureFailure(() -> runtime(blue, document)
+                .applyPatch("/", JsonPatch.replace("/price/currency", new Node().value("USD"))));
+
+        // then
+        assertNotNull(failure);
+        assertEquals(ProcessorErrorCategory.TypeGeneralizationFailure, failure.errorCategory());
+        assertEquivalentDocuments(before, document,
+                "ordinary data changes need policy permission and roll back atomically");
+    }
+
+    @Test
     void shouldVerifyProductionGeneralizationPolicyRejectModeFailsWithoutScriptedRuntime() throws Exception {
         // given
         BasicNodeProvider nodeProvider = ConformanceEngineTest.priceProvider();

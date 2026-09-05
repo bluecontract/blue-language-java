@@ -572,7 +572,14 @@ final class ExecutableBodyPathCatalog {
                 && exactMaterializer == null) {
             return;
         }
-        Node exactType = declaredType.isReferenceOnly()
+        String coreTypeName = declaredType.isReferenceOnly()
+                ? BlueLanguageConstants.CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(declaredType.getBlueId())
+                : null;
+        // Core definitions are verified built-in evidence; custom provider
+        // surfaces are not required to serve their bytes.
+        Node exactType = coreTypeName != null
+                ? blue.language.registry.BlueCoreTypeRegistry.INSTANCE.node(coreTypeName)
+                : declaredType.isReferenceOnly()
                 ? materializeVerifiedExact(
                         exactMaterializer,
                         FrozenNode.fromNode(declaredType),

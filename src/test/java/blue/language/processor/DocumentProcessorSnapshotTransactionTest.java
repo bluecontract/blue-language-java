@@ -330,6 +330,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
+        permitGeneralization(document);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine(), manager);
 
         // when
@@ -358,6 +359,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "price:\n" +
                 "  amount: 150\n" +
                 "  currency: EUR", Node.class));
+        permitGeneralization(document);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine(), manager);
         ResolvedSnapshot before = runtime.snapshot();
         FrozenNode beforeResolvedRoot = before.frozenResolvedRoot();
@@ -435,6 +437,7 @@ class DocumentProcessorSnapshotTransactionTest {
                 "name: Counter Instance\n" +
                 "type:\n" +
                 "  blueId: " + nodeProvider.getBlueIdByName("Zero Counter") + "\n", Node.class));
+        permitGeneralization(document);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document, blue.conformanceEngine(), manager);
 
         // when
@@ -1175,4 +1178,10 @@ class DocumentProcessorSnapshotTransactionTest {
             return snapshot;
         }
     }
+    private static void permitGeneralization(Node document) {
+        document.contracts(new Node().properties("generalization",
+                new Node().type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                        .properties("defaultMode", new Node().value("nearest-valid-ancestor"))));
+    }
+
 }

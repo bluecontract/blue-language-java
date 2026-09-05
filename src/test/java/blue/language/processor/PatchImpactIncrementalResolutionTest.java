@@ -14,6 +14,7 @@ import blue.language.model.Node;
 import blue.language.model.Nodes;
 import blue.language.model.Schema;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.FrozenNode;
 import blue.language.merge.ResolvedSnapshot;
@@ -280,7 +281,11 @@ class PatchImpactIncrementalResolutionTest {
     void shouldVerifyTypeContributionOnChangedPathUsesOneExplicitFullFallbackAndMatchesOracle() {
         // given
         Fixture fixture = Fixture.withFixedStatusSubtype();
-        ResolvedSnapshot base = fixture.snapshot();
+        Node document = fixture.snapshot().canonicalRoot();
+        document.contracts(new Node().properties("generalization",
+                new Node().type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                        .properties("defaultMode", new Node().value("nearest-valid-ancestor"))));
+        ResolvedSnapshot base = fixture.blue.resolveToSnapshot(document);
         RecordingProcessingObserver metrics = new RecordingProcessingObserver();
         FullOracleSnapshotManager incrementalManager = new FullOracleSnapshotManager(fixture.blue, true);
         DocumentProcessingRuntime incremental = new DocumentProcessingRuntime(
@@ -643,7 +648,7 @@ class PatchImpactIncrementalResolutionTest {
                     .type(reference(parentId))
                     .properties("status", new Node().value("draft")));
             String draftId = provider.getBlueIdByName("Draft Document");
-            return new Fixture(provider, new Blue(provider), draftId, parentId);
+            return new Fixture(provider, ProcessorTestSupport.blue(provider), draftId, parentId);
         }
 
         private static Fixture withBasicStatusTypeContribution() {

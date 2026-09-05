@@ -229,8 +229,8 @@ class DocumentProcessorGasTest {
         assertTrue(coldAccountFetches > 0);
         assertTrue(coldMoneyFetches > 0);
         assertInitializedAccount(coldReused, types);
-        assertTrue(reusedFetches > 0,
-                "provider evidence is reverified independently of resolver cache warmth");
+        assertEquals(0, reusedFetches,
+                "initialization retains already verified immutable type content");
         assertEquals(cold.totalGas(), coldReused.totalGas());
         assertInitializedAccount(warm, types);
         assertEquals(cold.totalGas(), warm.totalGas());
@@ -317,8 +317,8 @@ class DocumentProcessorGasTest {
         assertTrue(coldAccountFetches > 0);
         assertTrue(coldMoneyFetches > 0);
         assertInitializedEmbeddedAccounts(coldReused, types);
-        assertTrue(reusedFetches > 0,
-                "provider evidence is reverified independently of resolver cache warmth");
+        assertEquals(0, reusedFetches,
+                "initialization retains already verified immutable type content");
         assertEquals(cold.totalGas(), coldReused.totalGas());
         assertInitializedEmbeddedAccounts(warm, types);
         assertEquals(cold.totalGas(), warm.totalGas());

@@ -736,12 +736,12 @@ files:
   bytes: 1460
 - path: snd/c-snd-02.yaml
   role: behavior-fixture
-  sha256: b0e3b2fe445bcf20c0c39f16f1d7741b85226a824b76e577725cdb928669ab67
-  bytes: 1486
+  sha256: ef3b9e87c082483f48611a9373986f026b630e7c0b66bc431327c34f0c065272
+  bytes: 1629
 - path: snd/c-snd-03.yaml
   role: behavior-fixture
-  sha256: 9bcb799216e58f077dba4d129b86e2c5b1a250f9e561c94cb7621fb884be677e
-  bytes: 1455
+  sha256: e7876feed183766c83298f1bd3a463ef6f07416823f9e75c673e8f633c236909
+  bytes: 1598
 - path: snd/c-snd-04.yaml
   role: behavior-fixture
   sha256: 862de37dd3f5240ce1daece3c824b12ae3bee92c30d927838df921a7e3aefbd7
@@ -775,7 +775,7 @@ packageIdentityAlgorithm:
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
   lineEndings: LF
-packageIdentity: sha256:70fd63f4a0f5872ea98e545a53dc215d6f49a304380619a10319240d9da0780e
+packageIdentity: sha256:d2141ee6c13b76e3c9afa70273cdec53ff01ee448a27a06ea441f40b4efb4bde
 gasSchedule: blue-contracts/gas/1.0
 gasManifestPackageIdentity: sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a
 gasManifestSha256: 54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8

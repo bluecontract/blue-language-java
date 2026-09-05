@@ -469,9 +469,8 @@ public class BlueLanguageConformanceFixtureTest {
     }
 
     private boolean isFixtureResource(String path) {
-        String name = path.substring(path.lastIndexOf('/') + 1);
-        return !"manifest.yaml".equals(name)
-                && !"manifest.yml".equals(name);
+        return !"manifest.yaml".equals(path)
+                && !"manifest.yml".equals(path);
     }
 
     private String failureMessage(BlueConformanceFailure failure) {

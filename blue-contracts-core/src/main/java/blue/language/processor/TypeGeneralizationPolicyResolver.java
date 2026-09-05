@@ -56,8 +56,7 @@ final class TypeGeneralizationPolicyResolver {
                 finalResolvedRoot,
                 generatedPaths,
                 JsonPointer.ROOT,
-                freeze(finalResolvedRoot, JsonPointer.ROOT),
-                true);
+                freeze(finalResolvedRoot, JsonPointer.ROOT));
     }
 
     static void enforce(ConformanceEngine conformanceEngine,
@@ -68,8 +67,7 @@ final class TypeGeneralizationPolicyResolver {
                 finalResolvedRoot,
                 generatedPaths,
                 originScope,
-                freeze(finalResolvedRoot, originScope),
-                true);
+                freeze(finalResolvedRoot, originScope));
     }
 
     static FrozenPolicy freeze(
@@ -91,8 +89,7 @@ final class TypeGeneralizationPolicyResolver {
                         FrozenNode finalResolvedRoot,
                         List<String> generatedPaths,
                         String originScope,
-                        FrozenPolicy frozenPolicy,
-                        boolean requireExplicitPolicy) {
+                        FrozenPolicy frozenPolicy) {
         if (finalResolvedRoot == null
                 || generatedPaths == null || generatedPaths.isEmpty()) {
             return;
@@ -106,16 +103,6 @@ final class TypeGeneralizationPolicyResolver {
                 continue;
             }
             Policy policy = policySnapshot.policyFor(write.nodePath);
-            if (!policy.present && !requireExplicitPolicy) {
-                /*
-                 * Contracts 1.0 introduced fail-closed policy admission for
-                 * application-contract evolution.  Ordinary value patches
-                 * that already used Language conformance widening remain a
-                 * compatibility lane when no policy exists.  An explicitly
-                 * configured policy still governs both lanes.
-                 */
-                continue;
-            }
             Rule rule = policy.ruleFor(write.nodePath);
             String mode = rule != null && rule.mode != null ? rule.mode : policy.defaultMode;
             if (ProcessorContractConstants

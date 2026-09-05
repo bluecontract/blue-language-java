@@ -532,6 +532,11 @@ final class FullLifecycleFixtureExporterTest {
         assertEquals(physicalVariant ? 5 : 3, provider.size(), name);
         JsonNode nodes = provider.path("nodes");
         assertTrue(nodes.isObject(), name);
+        List<String> nodeIds = new ArrayList<String>();
+        nodes.fieldNames().forEachRemaining(nodeIds::add);
+        assertEquals(new ArrayList<String>(new TreeSet<String>(nodeIds)), nodeIds,
+                name + " provider nodes must use canonical key order");
+
         boolean referenceForms = name.contains("reference-");
         if (physicalVariant) {
             assertEquals(referenceForms ? 5 : 2, nodes.size(), name);

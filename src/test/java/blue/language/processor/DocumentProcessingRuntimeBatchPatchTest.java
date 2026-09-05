@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.registry.RuntimeBlueIds;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.snapshot.CanonicalOverlayPatchEngine;
 import blue.language.snapshot.CanonicalPatchResult;
@@ -559,6 +560,9 @@ class DocumentProcessingRuntimeBatchPatchTest {
                 "name: Instance\n" +
                 "type:\n" +
                 "  blueId: " + provider.getBlueIdByName("Has Inherited Status") + "\n", Node.class);
+        canonical.contracts(new Node().properties("generalization",
+                new Node().type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                        .properties("defaultMode", new Node().value("nearest-valid-ancestor"))));
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(canonical);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
                 snapshot,

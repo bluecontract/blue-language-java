@@ -409,7 +409,7 @@ class BlueConformanceReportTest {
         try (Stream<Path> paths = Files.walk(fixtureSourceRoot)) {
             fixtureFiles = paths
                     .filter(Files::isRegularFile)
-                    .filter(path -> !"manifest.yaml".equals(path.getFileName().toString()))
+                    .filter(path -> !path.equals(fixtureSourceRoot.resolve("manifest.yaml")))
                     .map(fixtureSourceRoot::relativize)
                     .map(path -> path.toString().replace('\\', '/'))
                     .collect(Collectors.toCollection(LinkedHashSet::new));

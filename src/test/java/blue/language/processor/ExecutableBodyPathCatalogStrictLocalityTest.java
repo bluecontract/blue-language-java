@@ -21,6 +21,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class ExecutableBodyPathCatalogStrictLocalityTest {
 
     @Test
+    void shouldRecognizeCoreTypeLeavesWithoutExternalProviderContent() {
+        // given
+        Node document = new Node().properties("label", new Node()
+                .type(reference(blue.language.model.wire.BlueLanguageConstants.TEXT_TYPE_BLUE_ID))
+                .value("leaf"));
+        ProcessingSnapshotManager manager = new ProcessingSnapshotManager() {
+            public blue.language.merge.ResolvedSnapshot fromDocument(Node value) {
+                throw new AssertionError("catalog recognition must not resolve a whole document");
+            }
+            public blue.language.merge.ResolvedSnapshot applyPatch(
+                    blue.language.merge.ResolvedSnapshot value,
+                    blue.language.processor.model.JsonPatch patch) {
+                throw new AssertionError("catalog recognition is read-only");
+            }
+            public FrozenNode materializeVerifiedExactReference(FrozenNode reference) {
+                throw new AssertionError("core type content is owned by the verified built-in registry");
+            }
+        };
+        // when
+        java.util.Set<String> paths = ExecutableBodyPathCatalog.forHostedOutput(
+                document, Collections.singletonMap("unused-runtime-type", Collections.singletonList("request")), manager);
+        // then
+        assertTrue(paths.isEmpty());
+    }
+
+    @Test
     void shouldNotReadTypeOfUnrelatedAuthoredSibling() {
         // given
         Node siblingType = new Node()

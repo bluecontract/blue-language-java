@@ -852,6 +852,7 @@ class EffectiveFragmentationCatalogTest {
 
     @Test
     void shouldPreserveRegisteredRequiredRequestDeclarationAcrossSnapshots() {
+        // given
         Fixture fixture = new Fixture();
         Node document = fixture.document();
         Node request = new Node().properties("amount", new Node()
@@ -859,11 +860,13 @@ class EffectiveFragmentationCatalogTest {
                 .schema(new blue.language.model.Schema().required(true)));
         document.getContracts().getProperties().get("run")
                 .properties("request", request);
+        // when
         try (Blue blue = fixture.blue()) {
             DocumentProcessor processor = blue.getDocumentProcessor();
             Node canonical = processor.administration().canonicalizeProcessingSource(document);
             EffectiveContractSnapshot handler = contract(processor.administration()
                     .effectiveFragmentationCatalog(canonical), "/", "run");
+            // then
             assertTrue(handler.headerFields().get("request").property("amount")
                     .getSchema().getRequiredValue());
             assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical),

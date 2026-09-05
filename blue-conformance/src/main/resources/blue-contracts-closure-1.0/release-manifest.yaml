@@ -205,7 +205,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodyLoader.java
     sha256: 4869d5b7e01a46589133967d490d002b617b8b88ee9f556a69bd33b403e6811a
   - path: blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodyPathCatalog.java
-    sha256: 3fff36655296a98e81e2b2696e983fa2b16a6df1c40b3c3e611ee9b5f9e6a254
+    sha256: f3db5b7efbd8fc238cf3b42977a441bf933cde13c474175c4ac2c144f4e415f7
   - path: blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodySourceDescriptor.java
     sha256: c02b9106d718e2841ba75c0216b1eb1ad141a0e60ca5554afd8383318c8f241a
   - path: blue-contracts-core/src/main/java/blue/language/processor/ExecutableBodyTypeIdentity.java
@@ -421,7 +421,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningContextFactory.java
     sha256: 69a4250f4c528903e7e6857e418cf028d05d2c1c73d9731443285c5331aef741
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningEngine.java
-    sha256: 8e81077f714030702471b6406b6bf210361a920b5388f068e05189cd111a304a
+    sha256: 53c787b5d621db0ee0fd3486539fbf88956b958a6cedebdbd3cd15c5e212da9e
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningPathInspection.java
     sha256: f93d36ec5bdbb068bb75f20d5fb15a6abc9a55e6ca91950f00d9c8eef9d141e9
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPreflight.java
@@ -637,7 +637,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/TerminationService.java
     sha256: 004f6ac5e70699b2bc581bf5fb234df1c381c9d373ad19b5e92865f552679054
   - path: blue-contracts-core/src/main/java/blue/language/processor/TypeGeneralizationPolicyResolver.java
-    sha256: 462fb578998cbd292485e08bd1f556fb182b8a0ecf12b6c5d5c7bedb82a75be1
+    sha256: 68a7dcecf4125db4cfbd7ad3b8819882ee7f6f8e0b1551a500da85513dd1a502
   - path: blue-contracts-core/src/main/java/blue/language/processor/UpdateMaterializationMetrics.java
     sha256: 210af610a41c81094ac3a96b10757cceb5591424e9b47659b22a57b94debd0cb
   - path: blue-contracts-core/src/main/java/blue/language/processor/VerifiedExecutionEvidence.java
@@ -1483,7 +1483,7 @@ identityConstructors:
   status: normative
 fixturePackage:
   path: fixtures/manifest.yaml
-  packageIdentity: sha256:5f3cd31a03febb9cf7f07b2eff503521fd6ec40558b2e09c92eb2dd16c40f7bf
+  packageIdentity: sha256:a84bbb688d247e65411204b5b52046fe481f255a22b3f9ee0c82dd6afe36f4a0
   vectorCount: 182
   fixtureCount: 295
 oraclePackage:
@@ -1512,4 +1512,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:2101a5e149a2d0fd933457f24bd13f503243cb89c4b943b7b6c984ec2d6baead
+releaseIdentity: sha256:9bec8c4c6cd97b5323e0a51fc085e99a727c700bb4b5eeef804bb9ea0874d9ff

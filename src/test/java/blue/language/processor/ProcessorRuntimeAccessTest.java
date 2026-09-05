@@ -998,6 +998,16 @@ final class ProcessorRuntimeAccessTest {
         }
 
         @Override
+        public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
+                Node document) {
+            record(document);
+            try (blue.language.runtime.BlueLanguage language =
+                    blue.language.runtime.BlueLanguage.builder().build()) {
+                return language.snapshots().resolve(document);
+            }
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentTransientPreservingPaths(
                 Node document,
                 Collection<String> preservedPaths) {
@@ -1040,9 +1050,11 @@ final class ProcessorRuntimeAccessTest {
                 transientResolutionRelease = null;
             }
             lastDocument = document;
-            document.properties(
-                    "managerMutation",
-                    new Node().value("recorded"));
+            if (document.getValue() == null && document.getItems() == null) {
+                document.properties("managerMutation", new Node().value("recorded"));
+            } else {
+                document.description("manager mutation recorded");
+            }
             return new ResolvedSnapshot(
                     FrozenNode.fromNode(document),
                     FrozenNode.fromResolvedNode(document));

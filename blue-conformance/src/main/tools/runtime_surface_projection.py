@@ -31,11 +31,12 @@ DEFAULT_REGISTRY = (
     else REPOSITORY_REGISTRY
 )
 
-# These fields are direct ``Node`` headers in the released runtime classes.
-# Their authored values are retained as separate dependency/body evidence; the
-# effective runtime surface keeps the inherited registry placeholder closed.
+# These fields are exact ``Node`` headers in the released runtime classes.
+# Their authored values remain opaque and absent fields remain absent, matching
+# NormalizedRuntimeContribution without resolving declarations as instances.
 DEFERRED_NODE_FIELDS_BY_REGISTRY_KEY = {
     "EmbeddedNodeChannel": frozenset(("event",)),
+    "EmbeddedCollectionEventChannel": frozenset(("event",)),
     "ScriptedExternalChannel": frozenset(("payload",)),
     "TriggeredEventChannel": frozenset(("event",)),
 }
@@ -98,9 +99,9 @@ class RegistryTypeProjector:
             registry_key, frozenset()
         )
 
-        effective: dict[str, Any] = {"type": deepcopy(resolved_type)}
+        effective: dict[str, Any] = {"type": {"blueId": type_blue_id}}
         for field, value in resolved_type.items():
-            if field not in {"type", "name", "description"}:
+            if field not in {"type", "name", "description"} and field not in deferred:
                 effective[field] = deepcopy(value)
         for field, authored in contract.items():
             if field == "type" or authored is None:
@@ -184,11 +185,7 @@ class RegistryTypeProjector:
         deferred_node: bool,
     ) -> Any:
         if deferred_node:
-            if base is None:
-                raise ValueError(
-                    "deferred runtime Node field lacks a registry placeholder"
-                )
-            return deepcopy(base)
+            return deepcopy(authored)
         if isinstance(authored, (str, int, float, bool)):
             if isinstance(base, dict):
                 result = deepcopy(base)

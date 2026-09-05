@@ -880,6 +880,7 @@ class ExecutableBodyFieldMetadataTest {
         private final BodyForm bodyForm;
         private final boolean patchBeforeProgramMatch;
         private final boolean typedPartialEventMatcher;
+        private boolean permitTypeGeneralization;
 
         private Fixture(boolean matches) {
             this(matches,
@@ -992,6 +993,11 @@ class ExecutableBodyFieldMetadataTest {
                                         "propertyValue",
                                         new Node().value(1)));
             }
+            if (permitTypeGeneralization) {
+                result.properties("generalization",
+                        new Node().type(new Node().blueId(RuntimeBlueIds.TYPE_GENERALIZATION_POLICY))
+                                .properties("defaultMode", new Node().value("nearest-valid-ancestor")));
+            }
             return result.properties("run", handler);
         }
 
@@ -1087,6 +1093,7 @@ class ExecutableBodyFieldMetadataTest {
         }
 
         private ProcessingMetricsSnapshot applyUnrelatedTypedPatchDirectly() {
+            permitTypeGeneralization = true;
             Map<String, Node> content =
                     new LinkedHashMap<>();
             Node generalScopeType =
