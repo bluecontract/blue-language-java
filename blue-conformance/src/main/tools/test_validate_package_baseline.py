@@ -67,6 +67,17 @@ class ValidatePackageBaselineTest(unittest.TestCase):
                 entry["workOccurrenceId"] = forged["workTrace"][0]["workIdentity"]
         with self.assertRaises(validate_package.ValidationFailure): check(forged)
 
+    def test_active_outgoing_edge_preserves_the_admission_initialization_cause(self) -> None:
+        path = validate_package.CLOSURE / "c-clo-08-cycle-during-initialization.yaml"
+        fixture = validate_package.load_yaml(path)
+        def check(expected):
+            return validate_package.validate_work_trace(path, fixture["input"], expected, [],
+                                                       expected["invocationIdentity"])
+        self.assertEqual(4, len(check(fixture["expected"])))
+        forged = deepcopy(fixture["expected"])
+        forged["workTrace"][2]["sourceOccurrenceIdentity"] = forged["workTrace"][1]["workIdentity"]
+        with self.assertRaises(validate_package.ValidationFailure): check(forged)
+
     def test_absent_collection_requires_complete_evidence_and_inactive_direct_rows(self) -> None:
         document = {"contracts": {"embedded": {
             "type": {"blueId": validate_package.PROCESS_EMBEDDED},

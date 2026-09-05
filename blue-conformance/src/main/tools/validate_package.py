@@ -7339,7 +7339,11 @@ def validate_work_trace(
             target = work_item["targetDocumentId"]
             incoming = [row for row in fixture_input["occurrences"]
                         if row["targetDocumentId"] == target]
-            dormant = (bool(incoming) and all(row["active"] is False for row in incoming)
+            incident = [row for row in fixture_input["occurrences"]
+                        if target in (row["sourceDocumentId"], row["targetDocumentId"])]
+            dormant = (bool(incoming)
+                       and all(row["active"] is False and row["pendingHistoricalEpoch"] is None
+                               for row in incident)
                        and not fixture_input["documents"][target]["publicRoot"]
                        and not any(delivery["targetDocumentId"] == target
                                    for delivery, _ in ordered_direct))
