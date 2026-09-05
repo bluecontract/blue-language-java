@@ -879,6 +879,18 @@ class EffectiveFragmentationCatalogTest {
                     .value("wrong kind");
             assertThrows(IllegalArgumentException.class, () -> processor.administration()
                     .canonicalizeProcessingSource(invalidFixed));
+            // Newly inserted child Source is not yet an opened processing scope.
+            Node nested = new Node().properties("children", new Node()
+                    .properties("first", canonical.clone()));
+            for (boolean strict : new boolean[] {false, true}) {
+                DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(
+                        new Node().properties("children", new Node().properties(Collections.emptyMap())),
+                        null, null, processor.scopeIdentitySnapshotManager(), null,
+                        new GasMeter(), processor.registry().exactSourceFieldsByType(), strict);
+                assertTrue(runtime.snapshotFromDocument(nested).resolvedRoot()
+                        .getNode("/children/first/contracts/run/request/amount")
+                        .getSchema().getRequiredValue());
+            }
             Node ordinaryRequest = new Node().properties("request", request.clone());
             assertThrows(IllegalArgumentException.class, () -> processor.administration()
                     .resolveProcessingSource(ordinaryRequest));

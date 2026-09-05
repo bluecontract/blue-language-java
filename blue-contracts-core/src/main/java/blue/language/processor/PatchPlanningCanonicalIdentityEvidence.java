@@ -87,9 +87,12 @@ final class PatchPlanningCanonicalIdentityEvidence {
     }
 
     private CanonicalTypeIdentityLookup resolveCompleteEvidence() {
-        ResolvedSnapshot snapshot = snapshotManager
-                .fromDocumentTransientForCanonicalIdentity(
-                        canonicalRoot.toNode());
+        blue.language.model.Node source = canonicalRoot.toNode();
+        Set<String> preserved = ExecutableBodyPathCatalog.forHostedOutput(
+                source, executableBodyFieldsByType, snapshotManager);
+        ResolvedSnapshot snapshot = preserved.isEmpty()
+                ? snapshotManager.fromDocumentTransientForCanonicalIdentity(source)
+                : snapshotManager.fromDocumentTransientPreservingPaths(source, preserved);
         return snapshot.canonicalTypeIdentities();
     }
 }

@@ -415,7 +415,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchInput.java
     sha256: b9779463aba7d728050c82029e07c77af7fca5899fdd6f7c3d5042b9311febee
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningCanonicalIdentityEvidence.java
-    sha256: d1f612214adb8c028ae340ad11f75f559648498d30a3d309ba3df0e4b50b9024
+    sha256: 1ac66a35205cc0900b7a053c60de51954468eb3e503889599b63a541d3976e61
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningContext.java
     sha256: 04b9b69e4b50b71919de3ed28eb1dd85022638eb23949f6163ffcc051f055ec4
   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningContextFactory.java
@@ -513,7 +513,7 @@ languageDependency:
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessingSnapshotManager.java
     sha256: 60c8b2aa5c705e974ab91b1e9d92304de88a5babf49513f54c7262764604edc8
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessingSnapshotTransaction.java
-    sha256: 01c7a82465b87902009a463804356d5ee8b6b658e2d66b4444e63ab722360e99
+    sha256: 22cbd6ec6159fc3f33186649168a2a0a120f80dfc90fd2a771c5b0ee68e0ec38
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessingTraceConstants.java
     sha256: 4f7bd8eb186c512cad3fdf820f57aafa942ec1393e96cc4fd325382cdde2f34c
   - path: blue-contracts-core/src/main/java/blue/language/processor/ProcessingTraceRecord.java
@@ -1512,4 +1512,4 @@ releaseIdentityAlgorithm:
   digest: sha256
   encoding: RFC 8785 canonical JSON encoded as UTF-8
   normalization: releaseIdentity is null before hashing
-releaseIdentity: sha256:6b10ad73c2716ed63d3c14fd3fbe0da79b30fd68a9a4e77b9841cb979eb4017d
+releaseIdentity: sha256:2101a5e149a2d0fd933457f24bd13f503243cb89c4b943b7b6c984ec2d6baead

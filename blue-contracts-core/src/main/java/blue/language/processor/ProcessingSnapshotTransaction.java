@@ -243,6 +243,10 @@ final class ProcessingSnapshotTransaction {
             Set<String> preservedPaths = new LinkedHashSet<>();
             Set<String> openedScopePaths = new LinkedHashSet<>(
                     runtime.scopes().keySet());
+            // Field ownership follows authored contract types even before a
+            // newly inserted child is admitted as a processing scope.
+            preservedPaths.addAll(ExecutableBodyPathCatalog.forHostedOutput(
+                    document, runtime.executableBodyFieldsByType, manager));
             if (runtime.selectedDocumentBacked
                     && !runtime.strictPlatformInvocation) {
                 preservedPaths.addAll(
