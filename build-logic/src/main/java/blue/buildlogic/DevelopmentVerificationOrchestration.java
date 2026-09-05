@@ -15,6 +15,7 @@ final class DevelopmentVerificationOrchestration {
     private DevelopmentVerificationOrchestration() {}
 
     static void register(Project project) {
+        CorpusDevelopmentOrchestration.register(project);
         TaskProvider<Task> mirrors = project.getTasks().register("verifySpecificationMirrors", task -> {
             task.setGroup("verification");
             task.setDescription("Checks the two specification mirrors without regenerating them.");

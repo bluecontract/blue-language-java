@@ -61,9 +61,14 @@ final class FragmentedProcessingLocalityIntegrationTest {
     @Test
     void shouldVerifyExactRootAndEventFragmentsHaveIdenticalSemanticsAcrossMatrix() {
         // given
+        List<Variant> selected = selectedVariants(System.getProperty("blue.fragmented.cases"));
+        List<Variant> variants = new ArrayList<>(selected);
+        if (!variants.get(0).label.startsWith("A ")) {
+            variants.add(0, Variant.requiredMatrix().get(0));
+            System.out.println("EXECUTION PREREQUISITE A: inline semantic baseline for comparison");
+        }
+        for (Variant variant : selected) System.out.println("SELECTED FRAGMENTED " + variant);
         Scenario scenario = Scenario.create();
-        List<Variant> variants =
-                Variant.requiredMatrix();
 
         // when
         List<Run> runs = new ArrayList<>(variants.size());
@@ -71,6 +76,7 @@ final class FragmentedProcessingLocalityIntegrationTest {
                 new ArrayList<>(variants.size());
         for (Variant variant : variants) {
             runs.add(execute(scenario, variant));
+            System.out.println("EXECUTED FRAGMENTED " + variant + " (primary + replay)");
         }
         for (Run run : runs) {
             projections.add(
@@ -91,10 +97,23 @@ final class FragmentedProcessingLocalityIntegrationTest {
         }
         assertNotNull(baseline);
         assertEquals(ProcessorStatus.SUCCESS, baseline.status);
-        assertEquals(8, variants.size());
+        assertEquals(8, Variant.requiredMatrix().size());
         SemanticLocalityEvidenceWriter.write(
                 "fragmented-matrix.json",
                 localityEvidence(runs));
+    }
+
+    private static List<Variant> selectedVariants(String selector) {
+        return blue.language.testing.CaseSelection.select(Variant.requiredMatrix(), selector,
+                variant -> variant.label.substring(0, 1));
+    }
+
+    public static void main(String[] args) {
+        if (args.length > 1) throw new IllegalArgumentException("Expected at most one selector");
+        System.out.println("LIST ONLY; A baseline is an execution prerequisite; each case performs primary + replay");
+        for (Variant variant : selectedVariants(args.length == 0 ? null : args[0])) {
+            System.out.println("SELECTED FRAGMENTED " + variant);
+        }
     }
 
     private static Map<String, Object> localityEvidence(List<Run> runs) {

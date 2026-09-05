@@ -32,6 +32,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlueContractsConformanceFixtureTest {
 
+    @org.junit.jupiter.api.TestFactory
+    java.util.stream.Stream<org.junit.jupiter.api.DynamicTest> selectedContractsFixtures() {
+        String selector = System.getProperty(ContractsFixtureSelection.PROPERTY);
+        // The original complete suite below remains the default/release path.
+        return selector == null ? java.util.stream.Stream.empty()
+                : ContractsFixtureSelection.dynamicTests(selector);
+    }
+
     private static final ObjectMapper YAML = new ObjectMapper(
             YAMLFactory.builder()
                     .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)

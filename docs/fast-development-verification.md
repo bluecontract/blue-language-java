@@ -285,6 +285,40 @@ existing development consumer/example tests are not a substitute for those
 release checks.
 # Campaign B2: source and candidate boundaries
 
+Additional case selection (all development XML/HTML/counter reports are isolated):
+
+```bash
+./gradlew listContractsConformanceCases
+./gradlew focusedContractsConformanceTest -PblueContractsCases=c-init-01,c-gas-01
+./gradlew focusedContractsConformanceTest '-PblueContractsCases=c-evo-*'
+./gradlew :blue-conformance:listClosureConformanceCases
+./gradlew :blue-conformance:focusedClosureConformanceTest -PblueClosureCases=fl-adm-01-root-patch-event
+./gradlew listFragmentedProcessingCases
+./gradlew focusedFragmentedProcessingTest -PblueFragmentedCases=D
+```
+
+Selectors are exact manifest IDs or terminal prefix wildcards; every comma-separated
+token must match. Missing/empty selectors fail selected execution tasks. Listing with
+no selector lists the full inventory without running it. Contracts validates the full
+295-entry metadata and gas-counter coverage before scheduling only selected entries.
+Each selected entry includes its authored execution variants. Gas coverage is a metadata
+prerequisite, not evidence that unselected microfixtures executed. The original full
+Contracts suite and its assertions remain unchanged on the default/release path.
+
+Closure selection runs the existing independent public-facade executor and all its
+result assertions. Its complete default inventory remains 98 cases, including the
+18 limit micros (independent limit checks, not closure invocations). Lifecycle cases
+use their original `fl-adm-*` identities and declared lifecycle queues. Development
+closure JSON is under the task's own `evidence/closure.json`, removed before an attempt.
+An optional `-PblueClosurePackageRoot=/absolute/package` is fingerprinted as an input;
+development tasks do not inherit an ambient external package environment variable.
+
+Fragmented cases are A–H from the existing matrix. A is the explicit inline baseline
+prerequisite for each selected comparison. Each variant executes primary and replay;
+one JUnit method therefore does **not** mean one invocation. Selection occurs before
+scenario creation and expensive execution. The full default still compares all eight
+variants. Provider requests/bytes are retained in task-local locality evidence.
+
 `developmentPreflight` and `fastVerify` now check authoritative source inventories,
 digests, nested package identities, YAML manifest syntax, Markdown title/fence/conflict
 structure and primary/mirror agreement. Markdown examples contain pseudocode and are

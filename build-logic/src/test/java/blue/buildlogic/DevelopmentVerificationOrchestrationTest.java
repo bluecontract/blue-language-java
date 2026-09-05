@@ -62,7 +62,7 @@ final class DevelopmentVerificationOrchestrationTest {
             assertEquals(1, task.getMaxParallelForks());
             assertEquals("512m", task.getMaxHeapSize());
         }
-        assertEquals(4, outputs.size());
+        assertEquals(6, outputs.size());
     }
 
     @Test

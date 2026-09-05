@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.tasks.Input;
@@ -40,12 +41,16 @@ public abstract class DevelopmentTest extends Test {
     @OutputFile
     public abstract RegularFileProperty getInventoryFile();
 
+    @org.gradle.api.tasks.OutputDirectory
+    public abstract DirectoryProperty getEvidenceDirectory();
+
     public DevelopmentTest() {
         getSelectionRequired().convention(false);
         getCommandLineSelection().convention(java.util.Collections.emptyList());
         var directory = getProject().getLayout().getBuildDirectory()
                 .dir("development-verification/" + getName());
         getInventoryFile().convention(directory.map(value -> value.file("inventory.txt")));
+        getEvidenceDirectory().convention(directory.map(value -> value.dir("evidence")));
         getReports().getJunitXml().getOutputLocation().set(directory.map(value -> value.dir("xml")));
         getReports().getHtml().getOutputLocation().set(directory.map(value -> value.dir("html")));
         getBinaryResultsDirectory().set(directory.map(value -> value.dir("binary")));
@@ -99,6 +104,8 @@ public abstract class DevelopmentTest extends Test {
     @TaskAction
     public void executeTests() {
         inventory.clear();
+        getFileSystemOperations().delete(spec -> spec.delete(getEvidenceDirectory()));
+        getEvidenceDirectory().get().getAsFile().mkdirs();
         // Validation belongs inside the action: constructor doFirst callbacks can be
         // ordered behind Gradle's annotated test action during task decoration.
         writeInventory("DEVELOPMENT ONLY; RUNNING\n");
@@ -109,6 +116,9 @@ public abstract class DevelopmentTest extends Test {
         inventory.add("selected=" + getFilter().getIncludePatterns());
         inventory.add("commandLineSelected=" + selectors);
         inventory.add("fixtureCases=" + getSystemProperties().getOrDefault("blue.fixture.cases", "<none>"));
+        getSystemProperties().forEach((key, value) -> {
+            if (key.endsWith(".cases")) inventory.add(key + "=" + value);
+        });
         inventory.add("testJvm=" + getJavaLauncher().get().getExecutablePath().getAsFile());
         inventory.forEach(line -> getLogger().lifecycle(line));
         super.executeTests();
@@ -126,7 +136,7 @@ public abstract class DevelopmentTest extends Test {
         // A rejected attempt must not leave a previous successful HTML/XML report.
         getFileSystemOperations().delete(spec -> spec.delete(
                 getReports().getJunitXml().getOutputLocation(),
-                getReports().getHtml().getOutputLocation(), getBinaryResultsDirectory()));
+                getReports().getHtml().getOutputLocation(), getBinaryResultsDirectory(), getEvidenceDirectory()));
         writeInventory("DEVELOPMENT ONLY; REJECTED: " + reason + "\n");
         throw new GradleException(reason);
     }
