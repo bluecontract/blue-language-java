@@ -89,9 +89,7 @@ LANGUAGE_FIXTURE_SOURCE = ManifestSource(
     "files",
     ("packageIdentity",),
     True,
-    # This fixture-local registry manifest is intentionally not a fixture vector or
-    # support entry. It is nevertheless part of the aggregate package inventory.
-    ("preprocessing/registry/manifest.yaml",),
+    # The fixture-local registry manifest is listed in the authenticated support inventory.
 )
 CONTRACTS_REGISTRY_SOURCE = ManifestSource(
     "Contracts registry",

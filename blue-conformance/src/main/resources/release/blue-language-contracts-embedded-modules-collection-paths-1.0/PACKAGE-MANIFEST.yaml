@@ -4,9 +4,9 @@ specificationVersions:
   contracts: '1.0'
 status: final-implementation-baseline-amendment
 components:
-  languageSpecificationSha256: 1fc0c1dc371ce0ad6c5bc36f60c624a114828a8e7f30136a4d955cd05737acbf
+  languageSpecificationSha256: 77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
   languageRegistryPackageIdentity: sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321
-  languageFixturePackageIdentity: sha256:ad5c4a611cae6b8caea5fca98305146c03b2a6ff3815905dc6e371aae611098c
+  languageFixturePackageIdentity: sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e
   languageVectorCount: 150
   languageBehaviorFixtureCount: 184
   contractsSpecificationSha256: 99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd
@@ -1216,8 +1216,8 @@ files:
   sha256: c1364c7d04016f5ad312acafd42fab0b3c48d20c37694c6442ff4242d1a6f991
   bytes: 895
 - path: conformance/language/fixtures/manifest.yaml
-  sha256: d68261a6658705c131535acce465587345671c1a23c3e2f2388e1d7e0e593774
-  bytes: 33216
+  sha256: dff811c4860dc3625eeb16c86228af06a4a34ef2749305e64e5486e990ddd23d
+  bytes: 33365
 - path: conformance/language/fixtures/preprocessing/R_blue_absent_applies_baseline.yaml
   sha256: b3f74939b1e51c2637cfb13ce9ec78034ac92cd72aac47971dc730c57e4a1f89
   bytes: 304
@@ -1636,7 +1636,7 @@ files:
   sha256: db8a4ff45cccfbb92e011ac3c79a70e6a17e57f2a807e10747e9f444c8d15fe5
   bytes: 530
 - path: conformance/language/registry/manifest.yaml
-  sha256: e26a961e7a0b571ee1f175e40c491b02298381f69e55e4cc6b58115e30144aa0
+  sha256: 1b1ad89b1ae277934fece1e93e7fe8c58a9094e116c874ebc00b82233fa60865
   bytes: 1698
 - path: docs/embedded-process-modules-and-collections-summary.md
   sha256: 3830784ecb69483a77850f9ab1776c402dc118fba04821eaa3037da63a29eb99
@@ -1648,6 +1648,6 @@ files:
   sha256: 99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd
   bytes: 346953
 - path: specifications/blue-language-specification-1.0.md
-  sha256: 1fc0c1dc371ce0ad6c5bc36f60c624a114828a8e7f30136a4d955cd05737acbf
-  bytes: 217477
-packageIdentity: sha256:195a71f727fe946b3bd7222284f09da5c444d36ca1b69de9062eb9fad8c95384
+  sha256: 77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
+  bytes: 217483
+packageIdentity: sha256:edbf84937163fb8eab4f0a234967a8741156d6b7b1670b347533c3ceee6a5e61

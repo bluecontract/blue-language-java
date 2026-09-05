@@ -192,6 +192,7 @@ blue-contracts-core/src/main/java/blue/language/processor/NoOpProcessingObserver
 blue-contracts-core/src/main/java/blue/language/processor/NoncommittingExecutionException.java
 blue-contracts-core/src/main/java/blue/language/processor/NormalizedRuntimeContribution.java
 blue-contracts-core/src/main/java/blue/language/processor/ObservationKind.java
+blue-contracts-core/src/main/java/blue/language/processor/OpaqueCyclicMemberPathCatalog.java
 blue-contracts-core/src/main/java/blue/language/processor/ParticipatingClosurePreflight.java
 blue-contracts-core/src/main/java/blue/language/processor/PatchBoundaryValidator.java
 blue-contracts-core/src/main/java/blue/language/processor/PatchImpact.java

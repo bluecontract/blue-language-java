@@ -20,7 +20,7 @@ public final class SourceProviderEnvironment {
      */
     public static final String LANGUAGE_1_0_RELEASE_IDENTITY =
             "blue-language-source-preprocessing-environment-1.0@"
-                    + "sha256:0a71eaebd0e191da4dd7806cf12b7411b494057e850c85c4f608942aa0546b0c";
+                    + "sha256:74be75a1b0ca9932b88e00b5010beadf45010d8bf643b52fb83447d4c0a9640e";
     /** Domain used by the released explicit verifier overload. */
     public static final String EXPLICIT_VERIFIER_DOMAIN_IDENTITY =
             "blue-language-1.0:explicit-provider-evidence-verifier";
