@@ -4,11 +4,11 @@ This report records every prompt-mandated production Java search hit, then expli
 
 ## Result
 
-- Production matches: 2067
-- Decision-relevant matches: 251
-- Context-only broad-search matches: 1816
-- Matches in files changed since the RC baseline: 1157
-- Matches in unchanged files: 910
+- Production matches: 2069
+- Decision-relevant matches: 252
+- Context-only broad-search matches: 1817
+- Matches in files changed since the RC baseline: 1161
+- Matches in unchanged files: 908
 
 Every entry has a resolved disposition. Context-only matches are retained to prove the broad searches ran, but are not presented as semantic evidence and do not claim a covering behavior test. Every decision-relevant entry is selected by an explicit path/symbol rule and distinguishes Source null, exact `{}`, an explicit list placeholder, a temporary fieldless builder/control, host absence, invalid reserved-position output, or nullable identity-header metadata.
 
@@ -22,8 +22,8 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `empty-to-null-return` | 0 |
 | `list-placeholder` | 25 |
 | `property-shape` | 50 |
-| `raw-blue-id-access` | 95 |
-| `schema-presence` | 1465 |
+| `raw-blue-id-access` | 96 |
+| `schema-presence` | 1466 |
 
 ## Classification totals
 
@@ -50,12 +50,12 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `B-structural-fieldlessness-helper` | 3 |
 | `B-temporary-fieldless-builder-or-control-container` | 20 |
 | `B-temporary-reconstruction-builder` | 6 |
-| `B-unverified-identity-claim-boundary` | 35 |
+| `B-unverified-identity-claim-boundary` | 36 |
 | `C-source-null-before-preprocessing` | 1 |
 | `D-host-absence-from-fieldless-source-control` | 1 |
 | `E-explicit-list-hole-control` | 16 |
 | `E-invalid-fieldless-list-position` | 5 |
-| `context-only-not-empty-sentinel-decision` | 1816 |
+| `context-only-not-empty-sentinel-decision` | 1817 |
 
 ## Load-bearing decisions
 

@@ -357,6 +357,16 @@ def _decision(
     if audit == "raw-blue-id-access":
         if _is_comment_or_declaration(line):
             return None
+        if (path.endswith("/closure/ManagedDocumentBirth.java")
+                and symbol == "ManagedDocumentBirth#ManagedDocumentBirth"):
+            return Decision(
+                "B-unverified-identity-claim-boundary",
+                "A birth might be accepted with an unverified prior identity claim.",
+                "The constructor rejects every root BlueId header before checking "
+                "the exact authored content against the birth demand. Object "
+                "payload presence remains independent of the identity header.",
+                "ProspectiveBirthRetryTest, BexScalarDocumentFactoryTest",
+            )
         if path not in RAW_BLUE_ID_NULLABILITY_OWNERS:
             raise ValueError(
                 "Unclassified raw BlueId nullability owner: "
