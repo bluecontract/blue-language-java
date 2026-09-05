@@ -141,9 +141,9 @@ input:
   directDeliverySnapshotIdentity: sha256:9d89e4507c246cc1e76c107567015b7974867da180a81b1f624749c62b7298c2
   occurrenceBindingSetIdentity: sha256:2b20a71a8c20e4e62fdd02833c826a952e01e11046b48b2c739ced85a39a6387
   closureIdentity: sha256:ad5a20437afff0a6c55ac79d729dad7540785bc1f5be03af82334a912dbd0e0b
-  invocationIdentity: sha256:ee93551d821c26614cbbd1e3813b1bf9357c2bf84f6313025025f0484b54bd2e
+  invocationIdentity: sha256:e3d63706cdc6739bb5f2c1dc76082af1518f07fbae963f146b3f539b506a5554
   environment:
-    blueLanguageSpecificationIdentity: sha256:0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06
+    blueLanguageSpecificationIdentity: sha256:1fc0c1dc371ce0ad6c5bc36f60c624a114828a8e7f30136a4d955cd05737acbf
     contractsSpecificationIdentity: sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd
     runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
@@ -229,8 +229,8 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:dfaee4ddc131ec000bd1e46692ffb6a840bd645f3b9db79a3babd684cad468fb
-    cyclicProofVerifierIdentity: sha256:2eeab32b181001a872bb6f91c65405b7612cdc612bb381e32d57cf72fb570f53
+    cyclicFinalizerIdentity: sha256:a23d3ebfef505da4dbd33c4dfa9ac6601699b378da4e5ed1799c3500d52e419f
+    cyclicProofVerifierIdentity: sha256:8775a7b730280b4a4a5a07165b8d04a7e2f1e5db9f0ebb8a1a6efa71bb4611bf
 expected:
   attemptOutcome: NeedsResources
   requiredBlueIds:

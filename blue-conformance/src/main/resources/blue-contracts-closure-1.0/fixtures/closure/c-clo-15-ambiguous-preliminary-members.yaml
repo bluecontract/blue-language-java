@@ -67,9 +67,9 @@ input:
   directDeliverySnapshotIdentity: sha256:7068cf0f18f4117e3335edfbf365338ad4d6370e19220742882b451df722db2f
   occurrenceBindingSetIdentity: sha256:56d5948a0896a1ffe919cd581871b666392e82f1c219997e362be67bf1c599ab
   closureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
-  invocationIdentity: sha256:61d62d0ab247f6978b7ee6493bbe2c78a8c77556530ffa4de3b03ff40909f7c5
+  invocationIdentity: sha256:acdd617d5d4ac34161b3bafe3fd2ea809bb651a665165955b42dcfb7dfbb8802
   environment:
-    blueLanguageSpecificationIdentity: sha256:0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06
+    blueLanguageSpecificationIdentity: sha256:1fc0c1dc371ce0ad6c5bc36f60c624a114828a8e7f30136a4d955cd05737acbf
     contractsSpecificationIdentity: sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd
     runtimeRegistryIdentity: sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4
     gasManifestIdentity: sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8
@@ -155,12 +155,12 @@ input:
         value: 256
       - name: typeChainEdges
         value: 256
-    cyclicFinalizerIdentity: sha256:dfaee4ddc131ec000bd1e46692ffb6a840bd645f3b9db79a3babd684cad468fb
-    cyclicProofVerifierIdentity: sha256:2eeab32b181001a872bb6f91c65405b7612cdc612bb381e32d57cf72fb570f53
+    cyclicFinalizerIdentity: sha256:a23d3ebfef505da4dbd33c4dfa9ac6601699b378da4e5ed1799c3500d52e419f
+    cyclicProofVerifierIdentity: sha256:8775a7b730280b4a4a5a07165b8d04a7e2f1e5db9f0ebb8a1a6efa71bb4611bf
 expected:
   attemptOutcome: Complete
   status: invalid-processing-document
-  invocationIdentity: sha256:61d62d0ab247f6978b7ee6493bbe2c78a8c77556530ffa4de3b03ff40909f7c5
+  invocationIdentity: sha256:acdd617d5d4ac34161b3bafe3fd2ea809bb651a665165955b42dcfb7dfbb8802
   inputClosureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
   outputClosureIdentity: sha256:3391220309745f51afb1af6e0adafce9c11bdedcb2c9b42bab53e0eda039aaa7
   atomic: true
