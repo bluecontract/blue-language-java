@@ -4,11 +4,11 @@ This report records every prompt-mandated production Java search hit, then expli
 
 ## Result
 
-- Production matches: 2069
-- Decision-relevant matches: 252
-- Context-only broad-search matches: 1817
-- Matches in files changed since the RC baseline: 1161
-- Matches in unchanged files: 908
+- Production matches: 2073
+- Decision-relevant matches: 253
+- Context-only broad-search matches: 1820
+- Matches in files changed since the RC baseline: 1170
+- Matches in unchanged files: 903
 
 Every entry has a resolved disposition. Context-only matches are retained to prove the broad searches ran, but are not presented as semantic evidence and do not claim a covering behavior test. Every decision-relevant entry is selected by an explicit path/symbol rule and distinguishes Source null, exact `{}`, an explicit list placeholder, a temporary fieldless builder/control, host absence, invalid reserved-position output, or nullable identity-header metadata.
 
@@ -21,9 +21,9 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `empty-shape-and-builder` | 432 |
 | `empty-to-null-return` | 0 |
 | `list-placeholder` | 25 |
-| `property-shape` | 50 |
+| `property-shape` | 51 |
 | `raw-blue-id-access` | 96 |
-| `schema-presence` | 1466 |
+| `schema-presence` | 1469 |
 
 ## Classification totals
 
@@ -40,7 +40,7 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `A-resolution-payload-kind` | 4 |
 | `A-semantic-presence-provenance` | 32 |
 | `A-wire-empty-object-presence` | 1 |
-| `A/C-source-null-removal-with-empty-object-preservation` | 2 |
+| `A/C-source-null-removal-with-empty-object-preservation` | 3 |
 | `B-conformance-identity-shape-control` | 9 |
 | `B-contracts-identity-evidence-boundary` | 12 |
 | `B-empty-reserved-container-shape` | 9 |
@@ -55,7 +55,7 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `D-host-absence-from-fieldless-source-control` | 1 |
 | `E-explicit-list-hole-control` | 16 |
 | `E-invalid-fieldless-list-position` | 5 |
-| `context-only-not-empty-sentinel-decision` | 1817 |
+| `context-only-not-empty-sentinel-decision` | 1820 |
 
 ## Load-bearing decisions
 

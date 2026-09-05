@@ -40,37 +40,32 @@ final class ClosureInvocationVerifierTest {
     private static final String BLUE_B =
             "BTEtRFRthnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6";
     private static final String C_CLO_34_INVOCATION_IDENTITY =
-            "sha256:bf6ac22af9a1b4a4492c4e699feeace4638dcd8252781d91af70c73b371a8ef8";
+            "sha256:e6aaa6471166daaa602aa8f505d5a467e1de6a0ee8ce4204b2b6211c2dcea8db";
     private static final String C_CLO_34_CANONICAL_INVOCATION_ENVELOPE =
-            "{\"domain\":\"blue-contracts-invocation/1.0\",\"value\":{\"admissionCandidateIdenti"
-                    + "ty\":null,\"blueLanguageSpecificationIdentity\":\"sha256:0dc2942bfbabbe994debb1038"
-                    + "fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06\",\"causeIdentity\":\"sha256:08502d369"
-                    + "b6bfee172fd72c48637ce4a241fa88348024904e6113f333d3cd57b\",\"contractsSpecifica"
-                    + "tionIdentity\":\"sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bd"
-                    + "d\",\"cyclicFinalizerIdentity\":\"sha256:dfaee4ddc131ec000bd1e46692ffb6a840bd645f3b9db79a3babd684cad468fb"
-                    + "\",\"cyclicProofVerifierIdentity\":\"sha256:2eeab32b181001a872bb6f91c65405b7612cdc612bb381e32d57cf72fb570f"
-                    + "53\",\"directDeliv"
-                    + "erySnapshotIdentity\":\"sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60b"
-                    + "f562f6d79c8eee439\",\"documents\":[{\"blueId\":\"8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6"
-                    + "C2PRSZgZ\",\"componentGeneration\":1,\"documentId\":\"a\",\"epoch\":0,\"initialized"
-                    + "\":true,\"publicRoot\":true,\"terminated\":false},{\"blueId\":\"BTEtRFRthnZRSw1chg6iwhxXeu32rcwe"
-                    + "6te8aJB4cbE6\",\"componentGeneration\":1,\"documentId\":\"b\",\"epoch\":0"
-                    + ",\"initialized\":true,\"publicRoot\":false,\"terminated\":false}],\"exactNodeProvid"
-                    + "erDomainIdentity\":\"sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd"
-                    + "3247b3d3c0d3ec\",\"externalOrderPolicyIdentity\":\"sha256:2d8d984a7c93db9aa076db"
-                    + "fdeb6617161b91c224db6a1366d3636462b762a0f9\",\"gasManifestIdentity\":\"sha256:54"
-                    + "310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8\",\"gasPolicyId"
-                    + "entity\":\"sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942490c"
-                    + "1685\",\"inputClosureIdentity\":\"sha256:c65ef11c664373426353af741b2ccd5f2297bcc"
-                    + "522d91a98e6abcfe0e5883db2\",\"inputGraphGeneration\":1,\"managedBindingPolicyIde"
-                    + "ntity\":\"sha256:c1e8d880499cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03"
-                    + "d35\",\"managedDocumentIdentityPolicyIdentity\":\"sha256:44ed2def49e63a24f3b818c"
-                    + "f3d2854a3ceb8b40f679bf5b77a0be52b538258ac\",\"occurrenceBindingSetIdentity\":\"s"
-                    + "ha256:c8f3bd1bbefdc74425c9648e1db070982cd02021f7c8f5239142e0c3d8824f72\",\"ope"
-                    + "ration\":\"process-closure\",\"portableLimitPolicyIdentity\":\"sha256:fcd17a9a3270"
-                    + "82d9a563c59be1089a7f4ee09275d74915b2c84563be42c575a5\",\"runtimeRegistryIdenti"
-                    + "ty\":\"sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4"
-                    + "\"}}";
+            "{\"domain\":\"blue-contracts-invocation/1.0\",\"value\":{\"admissionCandidateIdentity\":null,\"blue"
+                    + "LanguageSpecificationIdentity\":\"sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f551108"
+                    + "5bbb3c31c4144\",\"causeIdentity\":\"sha256:08502d369b6bfee172fd72c48637ce4a241fa88348024904e61"
+                    + "13f333d3cd57b\",\"contractsSpecificationIdentity\":\"sha256:99445f8ad407c146804ae3bcad1e060a2c"
+                    + "7bac3d32492808ea6fd7caf2fe7bdd\",\"cyclicFinalizerIdentity\":\"sha256:5d62d029bc2e9072ec8e65b0"
+                    + "a4ea2db04a42facc6a6bcd069d694bf69d08922d\",\"cyclicProofVerifierIdentity\":\"sha256:30785ca04a"
+                    + "f90a4c2d303a658ed7354ee82d718d05d394623889943f285e429d\",\"directDeliverySnapshotIdentity\":\""
+                    + "sha256:c8047b98a89fd94bc32a8f546c7d623d59254615962e60bf562f6d79c8eee439\",\"documents\":[{\"bl"
+                    + "ueId\":\"8BEDGRScD4UFo3By5zVDqhhHHurAPbpraVY6C2PRSZgZ\",\"componentGeneration\":1,\"documentId\":"
+                    + "\"a\",\"epoch\":0,\"initialized\":true,\"publicRoot\":true,\"terminated\":false},{\"blueId\":\"BTEtRFRt"
+                    + "hnZRSw1chg6iwhxXeu32rcwe6te8aJB4cbE6\",\"componentGeneration\":1,\"documentId\":\"b\",\"epoch\":0,\""
+                    + "initialized\":true,\"publicRoot\":false,\"terminated\":false}],\"exactNodeProviderDomainIdentity"
+                    + "\":\"sha256:3cf3044ce503a6a8d6924c4739188b2780c74eaa2f74b3f0fd3247b3d3c0d3ec\",\"externalOrder"
+                    + "PolicyIdentity\":\"sha256:2d8d984a7c93db9aa076dbfdeb6617161b91c224db6a1366d3636462b762a0f9\","
+                    + "\"gasManifestIdentity\":\"sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60"
+                    + "bad8\",\"gasPolicyIdentity\":\"sha256:06be3c4e41fbbc52cf8289ff95cc52264b2f5093d75c590501173942"
+                    + "490c1685\",\"inputClosureIdentity\":\"sha256:c65ef11c664373426353af741b2ccd5f2297bcc522d91a98e"
+                    + "6abcfe0e5883db2\",\"inputGraphGeneration\":1,\"managedBindingPolicyIdentity\":\"sha256:c1e8d8804"
+                    + "99cbafc595e1fb213ee73acc6ddb8d1d9850c7ddff2224c88a03d35\",\"managedDocumentIdentityPolicyIde"
+                    + "ntity\":\"sha256:44ed2def49e63a24f3b818cf3d2854a3ceb8b40f679bf5b77a0be52b538258ac\",\"occurren"
+                    + "ceBindingSetIdentity\":\"sha256:c8f3bd1bbefdc74425c9648e1db070982cd02021f7c8f5239142e0c3d882"
+                    + "4f72\",\"operation\":\"process-closure\",\"portableLimitPolicyIdentity\":\"sha256:fcd17a9a327082d9"
+                    + "a563c59be1089a7f4ee09275d74915b2c84563be42c575a5\",\"runtimeRegistryIdentity\":\"sha256:1442c9"
+                    + "0ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4\"}}";
 
     @Test
     void shouldMatchReleasedCclo14Cclo15AndCclo29CandidateIdentities() {
@@ -597,7 +592,7 @@ final class ClosureInvocationVerifierTest {
 
     private static ClosureEnvironment releasedEnvironment() {
         return new ClosureEnvironment(
-                "sha256:0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06",
+                "sha256:77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
                 "sha256:99445f8ad407c146804ae3bcad1e060a2c7bac3d32492808ea6fd7caf2fe7bdd",
                 "sha256:1442c90ed0b2601b7293cd3c21938a86907d217336b69e4674adabbf3253e9a4",
                 "sha256:54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8",
