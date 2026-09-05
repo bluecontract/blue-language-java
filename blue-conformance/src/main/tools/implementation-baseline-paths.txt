@@ -480,11 +480,9 @@ blue-language-core/src/main/java/blue/language/identity/CircularSetIdentityCalcu
 blue-language-core/src/main/java/blue/language/identity/CyclicMemberFinalization.java
 blue-language-core/src/main/java/blue/language/identity/CyclicSetFinalization.java
 blue-language-core/src/main/java/blue/language/identity/DirectBlueIdCalculator.java
-blue-language-core/src/main/java/blue/language/identity/EnumConstraintMembership.java
 blue-language-core/src/main/java/blue/language/identity/ListBlueIdFold.java
 blue-language-core/src/main/java/blue/language/identity/NodeToBlueIdInput.java
 blue-language-core/src/main/java/blue/language/identity/ObjectBlueIdHasher.java
-blue-language-core/src/main/java/blue/language/identity/ScalarConstraintPayload.java
 blue-language-core/src/main/java/blue/language/identity/ScalarIdentityEncoder.java
 blue-language-core/src/main/java/blue/language/identity/ScalarNodeIdentity.java
 blue-language-core/src/main/java/blue/language/identity/SchemaEnumCanonicalizer.java
@@ -546,10 +544,12 @@ blue-language-core/src/main/java/blue/language/merge/package-info.java
 blue-language-core/src/main/java/blue/language/merge/processor/BasicTypesVerifier.java
 blue-language-core/src/main/java/blue/language/merge/processor/DictionaryProcessor.java
 blue-language-core/src/main/java/blue/language/merge/processor/EffectiveTypeChecks.java
+blue-language-core/src/main/java/blue/language/merge/processor/EnumConstraintMembership.java
 blue-language-core/src/main/java/blue/language/merge/processor/ExclusiveItemsOrValueChecker.java
 blue-language-core/src/main/java/blue/language/merge/processor/LeastCommonMultiple.java
 blue-language-core/src/main/java/blue/language/merge/processor/ListItemsTypeChecker.java
 blue-language-core/src/main/java/blue/language/merge/processor/ListProcessor.java
+blue-language-core/src/main/java/blue/language/merge/processor/ScalarConstraintPayload.java
 blue-language-core/src/main/java/blue/language/merge/processor/SchemaPropagator.java
 blue-language-core/src/main/java/blue/language/merge/processor/SchemaVerifier.java
 blue-language-core/src/main/java/blue/language/merge/processor/SequentialMergingProcessor.java

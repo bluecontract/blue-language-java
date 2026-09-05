@@ -4,11 +4,11 @@ This report records every prompt-mandated production Java search hit, then expli
 
 ## Result
 
-- Production matches: 2049
-- Decision-relevant matches: 252
-- Context-only broad-search matches: 1797
-- Matches in files changed since the RC baseline: 1116
-- Matches in unchanged files: 933
+- Production matches: 2062
+- Decision-relevant matches: 251
+- Context-only broad-search matches: 1811
+- Matches in files changed since the RC baseline: 1151
+- Matches in unchanged files: 911
 
 Every entry has a resolved disposition. Context-only matches are retained to prove the broad searches ran, but are not presented as semantic evidence and do not claim a covering behavior test. Every decision-relevant entry is selected by an explicit path/symbol rule and distinguishes Source null, exact `{}`, an explicit list placeholder, a temporary fieldless builder/control, host absence, invalid reserved-position output, or nullable identity-header metadata.
 
@@ -18,12 +18,12 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 
 | Audit | Hits |
 | --- | ---: |
-| `empty-shape-and-builder` | 420 |
+| `empty-shape-and-builder` | 430 |
 | `empty-to-null-return` | 0 |
 | `list-placeholder` | 25 |
 | `property-shape` | 50 |
-| `raw-blue-id-access` | 96 |
-| `schema-presence` | 1458 |
+| `raw-blue-id-access` | 95 |
+| `schema-presence` | 1462 |
 
 ## Classification totals
 
@@ -45,7 +45,7 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `B-contracts-identity-evidence-boundary` | 12 |
 | `B-empty-reserved-container-shape` | 9 |
 | `B-fieldless-metadata-or-control-container` | 10 |
-| `B-identity-metadata-versus-value-payload` | 30 |
+| `B-identity-metadata-versus-value-payload` | 29 |
 | `B-nullable-identity-wire-header` | 10 |
 | `B-structural-fieldlessness-helper` | 3 |
 | `B-temporary-fieldless-builder-or-control-container` | 20 |
@@ -55,7 +55,7 @@ The classification prefix follows the required audit taxonomy: **A** exact empty
 | `D-host-absence-from-fieldless-source-control` | 1 |
 | `E-explicit-list-hole-control` | 16 |
 | `E-invalid-fieldless-list-position` | 5 |
-| `context-only-not-empty-sentinel-decision` | 1797 |
+| `context-only-not-empty-sentinel-decision` | 1811 |
 
 ## Load-bearing decisions
 
