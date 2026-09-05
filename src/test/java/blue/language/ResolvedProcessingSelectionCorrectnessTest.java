@@ -12,7 +12,11 @@ import blue.language.runtime.LanguageRuntimeAccess;
 import blue.language.provider.NodeProvider;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.merge.ResolvedSnapshot;
+import blue.language.preprocess.provider.BasicNodeProvider;
+import blue.language.processor.DocumentProcessingResult;
+import blue.language.processor.ProcessorStatus;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,6 +30,46 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * authored "selected graph" whose materialization changes semantics.
  */
 class ResolvedProcessingSelectionCorrectnessTest {
+
+    @Test
+    void shouldPreserveNoMatchWithExplicitEmptyContractsAcrossSelectionForms() {
+        // given
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Node wideType = new Node().name("Wide Processing Selection Type");
+        for (int index = 0; index < 128; index++) {
+            wideType.properties("field" + index, new Node().value(index));
+        }
+        provider.addSingleNodes(wideType);
+        Blue blue = new Blue(provider);
+        Node compact = new Node()
+                .type(new Node().blueId(provider.getBlueIdByName(
+                        "Wide Processing Selection Type")))
+                .contracts(Nodes.emptyObject());
+        DocumentProcessingResult initialized = blue.initializeDocument(compact);
+        assertEquals(ProcessorStatus.SUCCESS, initialized.status());
+        Node selected = initialized.document();
+        String sourceIdentity = blue.calculateSourceDocumentBlueId(selected);
+        ResolvedSnapshot snapshot = blue.loadSnapshot(selected);
+        Node event = new Node().properties("kind", new Node().value("noop"));
+
+        // when
+        DocumentProcessingResult[] results = {
+                blue.processDocument(selected, event),
+                blue.processDocument(selected.clone(), event),
+                blue.processDocument(snapshot, event),
+                blue.processDocument(selected, event)
+        };
+
+        // then
+        assertEquals(sourceIdentity, snapshot.blueId());
+        for (DocumentProcessingResult result : results) {
+            assertEquals(ProcessorStatus.NO_MATCH, result.status());
+            assertFalse(result.commits());
+            assertTrue(result.events().isEmpty());
+            assertEquals(sourceIdentity,
+                    blue.calculateSourceDocumentBlueId(result.document()));
+        }
+    }
 
     @Test
     void shouldKeepCanonicalIdentityAndResolvedMeaningDistinctInSnapshot() {

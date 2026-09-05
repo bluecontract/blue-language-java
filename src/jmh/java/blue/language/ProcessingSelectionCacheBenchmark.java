@@ -1,6 +1,7 @@
 package blue.language;
 
 import blue.language.model.Node;
+import blue.language.model.Nodes;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import blue.language.merge.ResolvedSnapshot;
@@ -30,7 +31,7 @@ public class ProcessingSelectionCacheBenchmark {
         blue = new Blue(provider);
         Node compact = new Node()
                 .type(new Node().blueId(provider.getBlueIdByName("Wide Processing Selection Type")))
-                .contracts(new Node());
+                .contracts(Nodes.emptyObject());
         DocumentProcessingResult initialized = blue.initializeDocument(compact);
         selected = initialized.document();
         snapshot = blue.loadSnapshot(selected);
