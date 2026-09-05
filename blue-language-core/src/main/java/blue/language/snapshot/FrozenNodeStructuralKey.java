@@ -1,5 +1,8 @@
 package blue.language.snapshot;
 
+import blue.language.model.Node;
+import blue.language.model.Schema;
+
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,9 +38,7 @@ public final class FrozenNodeStructuralKey {
         exact.add(propertyKeysOf(node.properties));
         exact.add(keyOf(node.contracts));
         exact.add(node.referenceBlueId);
-        exact.add(node.schema != null
-                ? valueKeyOf(FrozenNodeIdentity.schemaObject(node.schema))
-                : null);
+        exact.add(schemaKeyOf(node.schema));
         exact.add(node.mergePolicy);
         exact.add(node.previousBlueId);
         exact.add(node.position);
@@ -48,6 +49,32 @@ public final class FrozenNodeStructuralKey {
         exact.add(node.previousAnchorContext);
         this.fields = Collections.unmodifiableList(exact);
         this.hashCode = fields.hashCode();
+    }
+
+    private static Object schemaKeyOf(Schema schema) {
+        if (schema == null) {
+            return null;
+        }
+        // Wire sugar omits keyword type/provenance fields. Structural sharing
+        // must preserve those fields because resolver evidence keys retain them.
+        List<Object> keys = new ArrayList<>();
+        keys.add(schema.getBlueId());
+        for (Node keyword : java.util.Arrays.asList(schema.getRequired(),
+                schema.getMinLength(), schema.getMaxLength(), schema.getMinimum(),
+                schema.getMaximum(), schema.getExclusiveMinimum(), schema.getExclusiveMaximum(),
+                schema.getMultipleOf(), schema.getMinItems(), schema.getMaxItems(),
+                schema.getUniqueItems(), schema.getMinFields(), schema.getMaxFields())) {
+            keys.add(keyword != null ? keyOf(FrozenNode.fromResolvedNode(keyword)) : null);
+        }
+        List<Object> entries = null;
+        if (schema.getEnum() != null) {
+            entries = new ArrayList<>();
+            for (Node entry : schema.getEnum()) {
+                entries.add(keyOf(FrozenNode.fromResolvedNode(entry)));
+            }
+        }
+        keys.add(entries != null ? Collections.unmodifiableList(entries) : null);
+        return Collections.unmodifiableList(keys);
     }
 
     List<Object> fields() {

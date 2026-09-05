@@ -126,6 +126,10 @@ final class LanguageRuntimeLimitedResolution {
             RuntimeException failure,
             ReferenceBudget budget) {
         for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ReferenceExpansionLimitException) {
+                return BlueOperationResult.incomplete(null, budget.outstandingBlueIds,
+                        null, cause.getMessage());
+            }
             if (cause instanceof ProviderUnavailableException) {
                 ProviderUnavailableException unavailable =
                         (ProviderUnavailableException) cause;
@@ -137,6 +141,9 @@ final class LanguageRuntimeLimitedResolution {
                         NodeProviderOutcome.UNAVAILABLE,
                         failure.getMessage());
             }
+        }
+        if (budget.providerOutcome == NodeProviderOutcome.INVALID_EVIDENCE) {
+            return BlueOperationResult.invalid(failure.getMessage(), NodeProviderOutcome.INVALID_EVIDENCE);
         }
         BlueLanguageErrorCategory category =
                 BlueLanguageErrorClassifier.classify(failure);

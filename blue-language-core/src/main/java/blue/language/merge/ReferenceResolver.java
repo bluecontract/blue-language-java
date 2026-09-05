@@ -145,7 +145,10 @@ final class ReferenceResolver {
                 .getVerifiedResolution(blueId).orElse(null);
         if (verification == null
                 || !verification.canonicalTypeIdentityEvidence()
-                .hasCompleteCoverage()) {
+                .hasCompleteCoverage()
+                // Identity evidence is not a validation certificate. Schema
+                // obligations in metadata must be registered by this call.
+                || verification.resolvedRoot().containsSchema()) {
             return null;
         }
         engine.activeResolutionState().canonicalTypeIdentityIndex
