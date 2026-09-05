@@ -567,6 +567,7 @@ def validate_inputs(
     repository_root: Path,
     fixture_source_root: Path | None,
 ) -> None:
+    validate_lifecycle_inputs(package_root, repository_root, fixture_source_root)
     required_package = (
         "fixtures/manifest.yaml",
         "registry/manifest.yaml",
@@ -635,8 +636,35 @@ def validate_inputs(
         )
 
 
+def validate_lifecycle_inputs(package_root: Path, repository_root: Path,
+                              fixture_source_root: Path | None) -> None:
+    """Reject incomplete exporter configuration before staging or launching Java."""
+    closure = package_root / "fixtures/closure"
+    lifecycle_present = any(closure.glob("fl-adm-*.yaml"))
+    if lifecycle_present and fixture_source_root is None:
+        raise RegenerationFailure(
+            "Package contains full-lifecycle fixtures; --fixture-source-root is required. "
+            "Use --validate-inputs-only to check configuration without regeneration.")
+    if fixture_source_root is None:
+        return
+    canonical = repository_root / "blue-conformance/src/main/fixture-sources/full-lifecycle"
+    required = {path.name for path in canonical.glob("*.yaml")}
+    if not required or "source-schema.yaml" not in required:
+        raise RegenerationFailure(f"Canonical lifecycle source inventory is missing: {canonical}")
+    missing = sorted(name for name in required if not (fixture_source_root / name).is_file())
+    if missing:
+        raise RegenerationFailure(f"Incomplete --fixture-source-root; missing lifecycle inputs: {missing}")
+    for name in sorted(required):
+        value = yaml.safe_load((fixture_source_root / name).read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise RegenerationFailure(f"Lifecycle source must be a YAML mapping: {name}")
+    # Full source shape and semantics remain the Java exporter's responsibility.
+
+
 def main() -> None:
     parser = ArgumentParser(description=__doc__)
+    parser.add_argument("--validate-inputs-only", action="store_true",
+                        help="Check complete generator inputs only; no staging, Java or regeneration")
     parser.add_argument(
         "--package-root",
         type=Path,
@@ -683,6 +711,8 @@ def main() -> None:
         help="Publish the generated candidate into --package-root",
     )
     args = parser.parse_args()
+    if args.validate_inputs_only and (args.write or args.stage_output or args.stage_release_output):
+        parser.error("--validate-inputs-only cannot be combined with an output mode")
 
     package_root = args.package_root.expanduser().resolve()
     repository_root = args.repository_root.expanduser().resolve()
@@ -692,6 +722,9 @@ def main() -> None:
         else args.fixture_source_root.expanduser().resolve()
     )
     validate_inputs(package_root, repository_root, fixture_source_root)
+    if args.validate_inputs_only:
+        print("PACKAGE_GENERATOR_INPUTS_OK; no generation or semantic certification")
+        return
 
     with tempfile.TemporaryDirectory(
         prefix="blue-contracts-resource-regenerate-"

@@ -64,6 +64,19 @@ final class FinalQualityOrchestration {
         });
 
         TaskProvider<JMHTask> jmh = project.getTasks().named("jmh", JMHTask.class);
+        TaskProvider<Task> early = ReleasePreflightOrchestration.register(project, productionSources, releaseVerify);
+        project.getTasks().register("requiredBenchmarkSmoke", task -> {
+            task.setGroup("verification");
+            task.setDescription("Executes the exact three required benchmark smokes and verifies measured results.");
+            task.dependsOn(early, jmh);
+            task.doLast(ignored -> {
+                List<String> blockers = new ArrayList<>();
+                Map<String, Object> result = blue.buildlogic.support.FinalQualityEvidence.benchmarks(
+                        jmh.get().getResultsFile().get().getAsFile().toPath(), REQUIRED_SMOKE_BENCHMARKS, true, blockers);
+                if (!blockers.isEmpty()) throw new org.gradle.api.GradleException("Required JMH result failure: " + result);
+                task.getLogger().lifecycle("REQUIRED_JMH_SMOKE_OK {}", result);
+            });
+        });
         if (isFinalQualityInvocation(project)) {
             jmh.configure(task -> {
                 task.getIncludes().set(requiredSmokeIncludes());
@@ -75,6 +88,14 @@ final class FinalQualityOrchestration {
                 task.getResultFormat().set("JSON");
                 task.getResultsFile().set(project.getLayout().getBuildDirectory()
                         .file("reports/benchmarks/required-smoke.json"));
+                task.getOutputs().upToDateWhen(ignored -> false);
+                task.doFirst(ignored -> {
+                    try {
+                        java.nio.file.Files.deleteIfExists(task.getResultsFile().get().getAsFile().toPath());
+                    } catch (java.io.IOException exception) {
+                        throw new org.gradle.api.GradleException("Cannot remove prior JMH smoke result", exception);
+                    }
+                });
             });
         }
 
@@ -159,6 +180,7 @@ final class FinalQualityOrchestration {
         for (String requested : project.getGradle().getStartParameter().getTaskNames()) {
             String name = requested.substring(requested.lastIndexOf(':') + 1);
             if (name.equals(BuildLogicConstants.TASK_FINAL_QUALITY_VERIFY)
+                    || name.equals("requiredBenchmarkSmoke")
                     || name.equals(BuildLogicConstants.TASK_GENERATE_FINAL_QUALITY_REPORT)) {
                 return true;
             }

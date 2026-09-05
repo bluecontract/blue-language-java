@@ -803,7 +803,25 @@ def _json_bytes(value: dict[str, Any]) -> bytes:
 def _write_or_check(path: Path, expected: bytes, check: bool) -> None:
     if check:
         if not path.is_file() or path.read_bytes() != expected:
-            raise SystemExit("Generated output is stale: " + str(path))
+            details = ""
+            if path.is_file() and path.suffix == ".json":
+                try:
+                    old = json.loads(path.read_bytes()).get("entries", [])
+                    new = json.loads(expected).get("entries", [])
+                    old_locations = {(item["path"], item.get("symbol"), item.get("audit"), item.get("source")): item for item in old}
+                    changes = []
+                    for item in new:
+                        key = (item["path"], item.get("symbol"), item.get("audit"), item.get("source"))
+                        previous = old_locations.get(key)
+                        if previous != item:
+                            changes.append(f"{item['path']}:{item['line']} (previous line {previous.get('line') if previous else 'unrecorded'}): {item.get('source')}")
+                        if len(changes) == 5:
+                            break
+                    if changes:
+                        details = "\nFirst changed source locations (review before regeneration):\n" + "\n".join(changes)
+                except (ValueError, KeyError, TypeError):
+                    details = "\nPrior audit is malformed; manual review required."
+            raise SystemExit("Generated output is stale: " + str(path) + details)
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(expected)
