@@ -277,7 +277,7 @@ class BlueContractsConformanceReportTest {
         assertTrue(BlueContractsConformanceReport
                 .fixturePackageIdentityMatchesFixtureFiles());
         assertEquals(
-                "0dc2942bfbabbe994debb1038fe4d1c7a4ddefa9b25bc26cb0f68a7380cfbd06",
+                "77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144",
                 nested(report.toMachineReadableMap(),
                         "language", "specificationSha256"));
         assertEquals(

@@ -82,6 +82,24 @@ absolute path and must not invoke the Contracts `clean`, publication or staging
 tasks. `publishedArtifactSmoke` applies the same repository property and proves
 that all `blue.language` coordinates resolve from the handoff repository only.
 
+
+A local RC uses the same non-overwriting export task with an explicit
+`3.1.0-rc.N` version. It requires the exact clean source commit and Java 17,
+and exports all seven published modules with runtime, sources, Javadoc and
+POM files. Its manifest uses `blue-local-rc-maven-repository/1.0` and
+`stagePurpose: LOCAL_RC`; development exports retain their existing schema
+and six-module runtime/POM inventory. The local RC export does not claim
+release readiness: conformance, compatibility and downstream product evidence
+must still be bound to those exact bytes. No remote publishing task is invoked.
+
+For example, after selecting a fresh RC coordinate:
+
+```bash
+./gradlew assembleImmutableStagedRepository \
+  -PreleaseVersion=3.1.0-rc.24 \
+  -PstagedDependencyRepository=/absolute/path/to/blue-local-rc-maven-repository
+```
+
 ## Evidence is fail-closed
 
 Reports are generated from declared task outputs, never broad stale build

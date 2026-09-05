@@ -355,14 +355,8 @@ final class FullLifecycleFixtureCompiler {
                     authoredSharedLimit.longValue());
         }
         ObjectNode provider = providerHarness.deepCopy();
-        ObjectNode sortedNodes = JSON.objectNode();
-        List<String> nodeIds = new ArrayList<String>();
-        provider.path("nodes").fieldNames().forEachRemaining(nodeIds::add);
-        Collections.sort(nodeIds);
-        for (String nodeId : nodeIds) {
-            sortedNodes.set(nodeId, provider.path("nodes").get(nodeId));
-        }
-        provider.set("nodes", sortedNodes);
+        provider.set("nodes", FullLifecycleFixtureJson.sortedFields(
+                provider.path("nodes")));
         envelope.set("provider", provider);
         provider.set("expectedRequiredBlueIds",
                 FullLifecycleFixtureSupport.textArray(

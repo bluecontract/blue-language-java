@@ -1,5 +1,7 @@
 package blue.buildlogic;
 
+import blue.buildlogic.support.CommitBoundDevelopmentCandidate;
+import blue.buildlogic.support.RepositorySourceFiles;
 import blue.buildlogic.tasks.AssembleImmutableStagedRepositoryTask;
 import blue.buildlogic.tasks.CompareArchiveReplicasTask;
 import blue.buildlogic.tasks.GenerateAggregateReleaseReceiptTask;
@@ -12,7 +14,6 @@ import blue.buildlogic.tasks.VerifyBuildScriptShapeTask;
 import blue.buildlogic.tasks.VerifyJavaModuleStructureTask;
 import blue.buildlogic.tasks.VerifyPublishedRepositoryTask;
 import blue.buildlogic.tasks.VerifySourceReleaseArchiveTask;
-import blue.buildlogic.support.RepositorySourceFiles;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -235,7 +236,9 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.getOutputRepository().set(immutableRepository);
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
-                            task.getExpectedArtifacts().set(DEVELOPMENT_HANDOFF_MODULES);
+                            task.getExpectedArtifacts().set(project.provider(() ->
+                                    CommitBoundDevelopmentCandidate.isLocalRc(project.getVersion().toString())
+                                            ? PUBLISHED_MODULES : DEVELOPMENT_HANDOFF_MODULES));
                             task.getSourceCommit().set(sourceCommit);
                             task.getSourceTree().set(sourceTree);
                             task.getRepositoryHead().set(repositoryHead);
@@ -263,7 +266,9 @@ public final class RootOrchestrationPlugin implements Plugin<Project> {
                             task.getRepositoryDirectory().set(immutableRepository);
                             task.getVersionValue().set(project.provider(
                                     () -> project.getVersion().toString()));
-                            task.getExpectedArtifacts().set(DEVELOPMENT_HANDOFF_MODULES);
+                            task.getExpectedArtifacts().set(project.provider(() ->
+                                    CommitBoundDevelopmentCandidate.isLocalRc(project.getVersion().toString())
+                                            ? PUBLISHED_MODULES : DEVELOPMENT_HANDOFF_MODULES));
                             task.getAllowedModuleEdges().set(ALLOWED_MODULE_EDGES);
                             task.getSourceCommit().set(sourceCommit);
                             task.getSourceTree().set(sourceTree);

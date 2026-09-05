@@ -33,6 +33,7 @@ public final class StagedRepositoryManifest {
     public static final String MANIFEST_FILE = "artifact-manifest.json";
     public static final String MANIFEST_CHECKSUM_FILE = MANIFEST_FILE + ".sha256";
     public static final String SCHEMA = "blue-development-maven-repository/1.0";
+    public static final String LOCAL_RC_SCHEMA = "blue-local-rc-maven-repository/1.0";
     public static final int REQUIRED_BUILD_JAVA = 17;
 
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
@@ -45,6 +46,12 @@ public final class StagedRepositoryManifest {
     private static final List<ArtifactKind> KINDS = Collections.unmodifiableList(Arrays.asList(
             new ArtifactKind("pom", ".pom"),
             new ArtifactKind("runtime", ".jar")));
+
+    private static final List<ArtifactKind> LOCAL_RC_KINDS = Collections.unmodifiableList(Arrays.asList(
+            new ArtifactKind("pom", ".pom"),
+            new ArtifactKind("runtime", ".jar"),
+            new ArtifactKind("sources", "-sources.jar"),
+            new ArtifactKind("javadoc", "-javadoc.jar")));
 
     private StagedRepositoryManifest() {}
 
@@ -263,7 +270,11 @@ public final class StagedRepositoryManifest {
         String expectedVersion = bindings.isSourceDirty()
                 ? "3.1.0-dev.tree." + bindings.getSourceTree()
                 : "3.1.0-dev." + bindings.getSourceCommit();
-        if (!checkedVersion.equals(expectedVersion)) {
+        boolean localRc = CommitBoundDevelopmentCandidate.isLocalRc(checkedVersion);
+        if (localRc && bindings.isSourceDirty()) {
+            throw new GradleException("Local RC repository requires clean source provenance");
+        }
+        if (!localRc && !checkedVersion.equals(expectedVersion)) {
             throw new GradleException(
                     "Development repository version is not bound to exact source provenance: "
                             + checkedVersion + " != " + expectedVersion);
@@ -300,11 +311,11 @@ public final class StagedRepositoryManifest {
                 bindings.getContractsSpecificationIdentity());
         manifest.put("groupId", checkedGroup);
         manifest.put("releaseReadinessClaimed", false);
-        manifest.put("schema", SCHEMA);
+        manifest.put("schema", localRc ? LOCAL_RC_SCHEMA : SCHEMA);
         manifest.put("sourceCommit", bindings.getSourceCommit());
         manifest.put("sourceDirty", bindings.isSourceDirty());
         manifest.put("sourceTree", bindings.getSourceTree());
-        manifest.put("stagePurpose", "DEVELOPMENT");
+        manifest.put("stagePurpose", localRc ? "LOCAL_RC" : "DEVELOPMENT");
         manifest.put("version", checkedVersion);
         return manifest;
     }
@@ -329,7 +340,8 @@ public final class StagedRepositoryManifest {
         for (String artifact : sorted) {
             String base = groupPath + "/" + artifact + "/" + checkedVersion
                     + "/" + artifact + "-" + checkedVersion;
-            for (ArtifactKind kind : KINDS) {
+            for (ArtifactKind kind : CommitBoundDevelopmentCandidate.isLocalRc(checkedVersion)
+                    ? LOCAL_RC_KINDS : KINDS) {
                 files.add(new ArtifactFile(artifact, kind.name, base + kind.suffix));
             }
         }

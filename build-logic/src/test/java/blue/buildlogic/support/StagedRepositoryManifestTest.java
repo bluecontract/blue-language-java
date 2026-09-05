@@ -92,6 +92,31 @@ final class StagedRepositoryManifestTest {
     }
 
     @Test
+    void shouldExportLocalRcWithCompletePublicationsAndRejectReplacement() throws Exception {
+        String version = "3.1.0-rc.24";
+        Fixture fixture = fixture(Collections.singletonList(ARTIFACT), version);
+        StagedRepositoryManifest.assemble(fixture.source, fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings);
+        assertTrue(StagedRepositoryManifest.verify(fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings).getViolations().isEmpty());
+        String manifest = Files.readString(fixture.target.resolve(StagedRepositoryManifest.MANIFEST_FILE));
+        assertTrue(manifest.contains("\"schema\":\"blue-local-rc-maven-repository/1.0\""));
+        assertTrue(manifest.contains("\"stagePurpose\":\"LOCAL_RC\""));
+        assertTrue(manifest.contains("\"releaseReadinessClaimed\":false"));
+        assertTrue(manifest.contains("\"kind\":\"sources\""));
+        assertTrue(manifest.contains("\"kind\":\"javadoc\""));
+        assertTrue(manifest.contains(COMMIT));
+        Path sourceJar = fixture.source.resolve("blue/language/" + ARTIFACT + "/" + version
+                + "/" + ARTIFACT + "-" + version + ".jar");
+        Files.writeString(sourceJar, "new bytes under the same RC coordinate");
+        assertThrows(GradleException.class, () -> StagedRepositoryManifest.assemble(
+                fixture.source, fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings));
+        assertTrue(StagedRepositoryManifest.verify(fixture.target, GROUP, version,
+                Collections.singletonList(ARTIFACT), fixture.bindings).getViolations().isEmpty());
+    }
+
+    @Test
     void shouldRejectTamperedPayloadAndChecksum() throws Exception {
         // given
         Fixture fixture = fixture();
@@ -364,12 +389,16 @@ final class StagedRepositoryManifestTest {
     }
 
     private Fixture fixture(List<String> artifacts) throws Exception {
+        return fixture(artifacts, VERSION);
+    }
+
+    private Fixture fixture(List<String> artifacts, String version) throws Exception {
         Path source = Files.createDirectories(temporaryDirectory.resolve("mutable"));
         Path target = temporaryDirectory.resolve("immutable");
         for (String artifact : artifacts) {
             Path coordinate = Files.createDirectories(source.resolve(
-                    "blue/language/" + artifact + "/" + VERSION));
-            String base = artifact + "-" + VERSION;
+                    "blue/language/" + artifact + "/" + version));
+            String base = artifact + "-" + version;
             Files.writeString(coordinate.resolve(base + ".pom"), "pom\n");
             Files.writeString(coordinate.resolve(base + ".jar"), "runtime\n");
             Files.writeString(coordinate.resolve(base + "-sources.jar"), "sources\n");

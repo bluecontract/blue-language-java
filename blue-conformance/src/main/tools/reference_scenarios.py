@@ -1035,17 +1035,6 @@ def _reference_charge_direct_node(
     if facts.pure_reference:
         return
     direct_member_count = facts.direct_member_count
-    canonical_facts = facts
-    if isinstance(value, dict):
-        identity_value = {
-            key: child
-            for key, child in value.items()
-            if not (isinstance(child, dict) and not child)
-        }
-        if len(identity_value) != len(value):
-            canonical_facts = direct_identity_facts(
-                identity_value, allow_cyclic_placeholders=True
-            )
     charge(
         "semantic", "nodeIdentityEstablished", 1,
         "identity-rebuild", context,
@@ -1064,7 +1053,7 @@ def _reference_charge_direct_node(
             )
         charge(
             "semantic", "directIdentityHashBlock",
-            math.ceil((canonical_facts.canonical_input_utf8_bytes + 9) / 64),
+            math.ceil((facts.canonical_input_utf8_bytes + 9) / 64),
             "identity-rebuild", context,
         )
     if recurse:
@@ -1137,6 +1126,33 @@ def derive_direct_patch_result_identity_trace(
             context={"logicalPath": patch["path"]},
         )
     return result, trace.entries, trace.total
+
+
+def reference_finalization_stage(
+    fixture: dict[str, Any], finalization: dict[str, Any],
+    oracle: Any, document_ids: list[str],
+) -> str:
+    """Authenticate the independent oracle, then name its execution boundary."""
+    assert finalization["masterBlueId"] == oracle.master_blue_id
+    assert finalization["memberBlueIds"] == dict(zip(
+        document_ids, oracle.member_ids_in_source_order(), strict=True))
+    assert finalization["canonicalBytes"] == cyclic_canonical_limit_bytes(oracle)
+    boundary = finalization["boundary"]
+    if boundary["kind"] == "WORK":
+        prefix = f"work.{boundary['afterWorkOrdinal']}.finalization"
+    elif boundary["kind"] == "CHECKPOINT_SETTLEMENT":
+        prefix = "checkpoint-settlement.0"
+    else:
+        assert boundary["kind"] == "INITIALIZATION_BATCH"
+        prefix = "initialization-batch"
+    peers = [row for row in fixture["expected"]["tentativeFinalizations"]
+             if row["boundary"] == boundary]
+    assert finalization in peers
+    members = [tuple(sorted(row["memberBlueIds"])) for row in peers]
+    assert len(set(members)) == len(members)
+    if len(peers) > 1:
+        prefix += f".component.{peers.index(finalization)}"
+    return prefix
 
 
 def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], int, str]:
@@ -1352,7 +1368,8 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
             }
         finalize_cyclic_component(
             oracle, trace, established, existing,
-            stage=f"{boundary_prefix}.{stage_name}",
+            stage=reference_finalization_stage(
+                fixture, finalization, oracle, document_ids),
             component_generation=generation,
             document_ids=document_ids,
             work_occurrence_id=(
@@ -1652,6 +1669,17 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
                     "internalEventDequeued", 1,
                     f"event.{event_key[1]}.dequeue",
                 )
+                # Embedded candidates are tested before any accepted delivery
+                # is enqueued. Triggered channels use their local dispatch path.
+                for delivery in event_groups[event_key]:
+                    if delivery["kind"] == "EMBEDDED_EVENT":
+                        target = delivery["targetDocumentId"]
+                        processor("channelCandidateTested", 1, "acceptance", {
+                            "documentId": target, "scopePath": "/",
+                            "activationGeneration": 0,
+                            "componentGeneration": active_generations[target],
+                            "contractKey": delivery["channelKey"],
+                        })
                 for delivery_index, delivery in enumerate(event_groups[event_key]):
                     context = work_context(delivery, include_work_path=True)
                     processor(
@@ -1778,8 +1806,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
                     "patchRemove" if patch["op"] == "remove"
                     else "patchAddOrReplace",
                     1,
-                    "application-remove" if patch["op"] == "remove"
-                    else "application-patch",
+                    "application-patch",
                     work_context(work_item),
                 )
                 identity_context = work_context(
@@ -1897,7 +1924,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
         source_key = work_item["channelKey"]
         processor(
             "checkpointWritten", 1,
-            f"checkpoint-settlement.{settlement_index}.write.{raw_order}",
+            f"checkpoint-settlement.0.write.{raw_order}",
             {
                 "documentId": document_id,
                 "scopePath": "/",
@@ -1980,6 +2007,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
             },
         ),
     )
+    cleanup_ordinal = len(external_work)
     for document_id in ordered_document_ids:
         before_entries = (
             fixture_input["documents"][document_id]["document"]
@@ -1998,7 +2026,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
             assert raw_key not in after_entries
             processor(
                 "checkpointWritten", 1,
-                f"checkpoint-settlement.cleanup.{document_id}.{raw_key}",
+                f"checkpoint-settlement.0.cleanup.{cleanup_ordinal}",
                 {
                     "documentId": document_id,
                     "scopePath": "/",
@@ -2009,6 +2037,7 @@ def derive_finite_trace(fixture: dict[str, Any]) -> tuple[list[dict[str, Any]], 
                     "contractKey": raw_key,
                 },
             )
+            cleanup_ordinal += 1
             entry_path = (
                 "/contracts/checkpoint/entries/"
                 + raw_key.replace("~", "~0").replace("/", "~1")
@@ -3131,7 +3160,9 @@ def derive_managed_revision_trace(
             trace,
             established,
             existing,
-            stage=f"work.{work['ordinal']}.{finalization_stage}",
+            stage=reference_finalization_stage(
+                fixture, finalization, oracle,
+                [state["documentId"] for state in member_states]),
             component_generation=component["componentGeneration"],
             document_ids=[state["documentId"] for state in member_states],
             work_occurrence_id=work["workIdentity"],
@@ -3823,7 +3854,8 @@ def check_stabilized_closure_vectors() -> dict[str, Any]:
         {"ma", "mb"},
         {"mc", "md"},
     ]
-    assert mixed_expected["totalGas"] == 1151
+    assert mixed_expected["totalGas"] == 1162
+    assert derive_finite_trace(mixed)[0] == gas_trace(mixed, mixed["id"])
 
     rejection = load_yaml(
         FIX / "c-clo-32-finalization-owned-gas-rejection.yaml"
@@ -3847,7 +3879,8 @@ def check_stabilized_closure_vectors() -> dict[str, Any]:
     )
     retirement_trace = gas_trace(retirement, retirement["id"])
     retirement_expected = retirement["expected"]
-    assert retirement_expected["totalGas"] == 1445
+    assert retirement_expected["totalGas"] == 1458
+    assert derive_finite_trace(retirement)[0] == retirement_trace
     cleanup_path = "/contracts/checkpoint/entries/orphan"
     cleanup_rows = [
         entry
