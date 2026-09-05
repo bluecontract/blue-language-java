@@ -104,7 +104,7 @@ public final class ProcessorExecutionContext implements AutoCloseable {
         this.effectTypeIdentities = bundle.canonicalTypeIdentities();
         this.runtimeWorkSession =
                 execution.runtime().newRuntimeWorkSession(
-                        execution.blue());
+                        execution.blue(), execution.contractRegistry());
         if (exactEvent != null) {
             runtimeWorkSession.carryExactInput(
                     exactEvent,

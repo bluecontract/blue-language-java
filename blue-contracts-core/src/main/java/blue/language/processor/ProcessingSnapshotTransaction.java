@@ -246,7 +246,7 @@ final class ProcessingSnapshotTransaction {
             if (runtime.selectedDocumentBacked
                     && !runtime.strictPlatformInvocation) {
                 preservedPaths.addAll(
-                        ExecutableBodyPathCatalog.fromNodeDirectContracts(
+                        ExecutableBodyPathCatalog.fromNodeIncludingTypeContractFields(
                                 document,
                                 openedScopePaths,
                                 runtime.executableBodyFieldsByType,

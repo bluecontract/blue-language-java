@@ -16,6 +16,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 
 /**
@@ -34,6 +35,7 @@ public final class SemanticOutputBoundary {
     private final ProcessingSnapshotManager snapshotManager;
     private final SemanticGasMeter semantic;
     private final AdmissionMemo admissionMemo;
+    private final ContractProcessorRegistry contractRegistry;
     private final Map<String, ExactBlueValue> admittedByIdentity;
     private final Map<FrozenNode.ResolvedStructuralKey, ExactBlueValue>
             admittedByCanonicalStructure;
@@ -55,6 +57,16 @@ public final class SemanticOutputBoundary {
                            ProcessingSnapshotManager snapshotManager,
                            SemanticGasMeter semantic,
                            AdmissionMemo admissionMemo) {
+        this(workSession, languageRuntime, snapshotManager, semantic, admissionMemo, null);
+    }
+
+    SemanticOutputBoundary(RuntimeWorkSession workSession,
+                           LanguageRuntimeAccess languageRuntime,
+                           ProcessingSnapshotManager snapshotManager,
+                           SemanticGasMeter semantic,
+                           AdmissionMemo admissionMemo,
+                           ContractProcessorRegistry registry) {
+        this.contractRegistry = registry;
         this.workSession =
                 Objects.requireNonNull(workSession, "workSession");
         this.languageRuntime = Objects.requireNonNull(
@@ -120,8 +132,7 @@ public final class SemanticOutputBoundary {
             try {
                 normalized =
                         FrozenNode.fromResolvedNode(
-                                languageRuntime.canonicalize(
-                                        exactInput.toNode()));
+                                canonicalizeOutput(exactInput.toNode()));
             } catch (ExecutionEvidenceUnavailableException ex) {
                 throw ex;
             } catch (RuntimeException invalid) {
@@ -141,6 +152,20 @@ public final class SemanticOutputBoundary {
                     exhaustion);
             throw exhaustion;
         }
+    }
+
+    private Node canonicalizeOutput(Node output) {
+        if (snapshotManager != null && contractRegistry != null) {
+            Set<String> exactFields = ExecutableBodyPathCatalog.forHostedOutput(
+                    output, contractRegistry.exactSourceFieldsByType(), snapshotManager);
+            if (!exactFields.isEmpty()) {
+                Set<String> executableFields = ExecutableBodyPathCatalog.forHostedOutput(
+                        output, contractRegistry.executableBodyFieldsByType(), snapshotManager);
+                return CanonicalIdentityEvidence.canonicalSourceWithExactFields(output,
+                        snapshotManager, "Hosted runtime output", exactFields, executableFields);
+            }
+        }
+        return languageRuntime.canonicalize(output);
     }
 
     /**
@@ -598,7 +623,7 @@ public final class SemanticOutputBoundary {
                 languageRuntime,
                 snapshotManager,
                 sessionSemanticMeter(session),
-                new AdmissionMemo(admissionMemo));
+                new AdmissionMemo(admissionMemo), contractRegistry);
     }
 
     synchronized void carryExactInput(

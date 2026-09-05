@@ -45,7 +45,7 @@ final class ManagedRootSurfaceResolver {
                 owner.snapshotManager(),
                 owner.observer(),
                 gasContext,
-                owner.registry().executableBodyFieldsByType(),
+                owner.registry().exactSourceFieldsByType(),
                 owner.strictPlatformInvocation());
         ResolvedScopeView scope = view.scopeViewAt(JsonPointer.ROOT);
         FrozenNode selected = scope.selected();

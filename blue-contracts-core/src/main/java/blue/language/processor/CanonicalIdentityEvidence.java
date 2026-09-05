@@ -193,28 +193,44 @@ final class CanonicalIdentityEvidence {
             String purpose,
             Set<String> exactFieldPaths,
             Set<String> executableBodyPaths) {
-        Node checked = Objects.requireNonNull(source, "source");
-        ProcessingSnapshotManager manager = Objects.requireNonNull(
-                snapshotManager, "snapshotManager");
-        Set<String> checkedExactPaths = new LinkedHashSet<>(
-                Objects.requireNonNull(exactFieldPaths, "exactFieldPaths"));
-        Set<String> checkedExecutablePaths = new LinkedHashSet<>(
-                Objects.requireNonNull(
-                        executableBodyPaths, "executableBodyPaths"));
-        if (!checkedExactPaths.containsAll(checkedExecutablePaths)) {
-            throw new IllegalArgumentException(
-                    "Executable body paths must be exact Source field paths");
+        validateExactFieldInputs(source, snapshotManager, exactFieldPaths, executableBodyPaths);
+        if (source.isReferenceOnly()) {
+            BlueIdReferenceValidator.validate(source);
+            return source.getBlueId();
         }
-        if (checked.isReferenceOnly()) {
-            BlueIdReferenceValidator.validate(checked);
-            return checked.getBlueId();
-        }
+        return canonicalSnapshotWithExactFields(
+                source, snapshotManager, purpose, exactFieldPaths, executableBodyPaths).blueId();
+    }
 
+    /** Canonical hosted content with the same exact-field ownership as Source. */
+    static Node canonicalSourceWithExactFields(
+            Node source,
+            ProcessingSnapshotManager snapshotManager,
+            String purpose,
+            Set<String> exactFieldPaths,
+            Set<String> executableBodyPaths) {
+        validateExactFieldInputs(source, snapshotManager, exactFieldPaths, executableBodyPaths);
+        if (source.isReferenceOnly()) {
+            BlueIdReferenceValidator.validate(source);
+            return source.clone();
+        }
+        return canonicalSnapshotWithExactFields(source, snapshotManager, purpose,
+                exactFieldPaths, executableBodyPaths).canonicalRoot();
+    }
+
+    private static ResolvedSnapshot canonicalSnapshotWithExactFields(
+            Node source,
+            ProcessingSnapshotManager snapshotManager,
+            String purpose,
+            Set<String> exactFieldPaths,
+            Set<String> executableBodyPaths) {
+        Set<String> checkedExactPaths = new LinkedHashSet<>(exactFieldPaths);
+        Set<String> checkedExecutablePaths = new LinkedHashSet<>(executableBodyPaths);
         Node sourceProjection = NodeToBlueIdInput
-                .stripResolvedBlueIdMetadata(checked.clone());
+                .stripResolvedBlueIdMetadata(source.clone());
         Set<String> presentExactPaths = canonicalizeExactFields(
                 sourceProjection,
-                manager,
+                snapshotManager,
                 purpose,
                 checkedExactPaths,
                 checkedExecutablePaths);
@@ -223,9 +239,22 @@ final class CanonicalIdentityEvidence {
         preservedExactPaths.addAll(presentExactPaths);
         return resolveSourceSnapshot(
                 sourceProjection,
-                manager,
+                snapshotManager,
                 purpose,
-                preservedExactPaths).blueId();
+                preservedExactPaths);
+    }
+
+    private static void validateExactFieldInputs(
+            Node source, ProcessingSnapshotManager snapshotManager,
+            Set<String> exactFieldPaths, Set<String> executableBodyPaths) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(snapshotManager, "snapshotManager");
+        Objects.requireNonNull(exactFieldPaths, "exactFieldPaths");
+        Objects.requireNonNull(executableBodyPaths, "executableBodyPaths");
+        if (!exactFieldPaths.containsAll(executableBodyPaths)) {
+            throw new IllegalArgumentException(
+                    "Executable body paths must be exact Source field paths");
+        }
     }
 
     private static Set<String> canonicalizeExactFields(

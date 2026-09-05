@@ -379,6 +379,12 @@ final class DocumentProcessingRuntime {
                 currentSnapshotManager());
     }
 
+    RuntimeWorkSession newRuntimeWorkSession(
+            LanguageRuntimeAccess languageRuntime, ContractProcessorRegistry registry) {
+        return gasContext.newRuntimeWorkSession(languageRuntime,
+                currentSnapshotManager(), registry);
+    }
+
     void mergeRuntimeGasLedger(GasMeter.ChildGasLedger ledger) {
         gasContext.merge(ledger); }
     /** Returns the invocation-owned gas ledger. */

@@ -72,6 +72,37 @@ final class ExecutableBodyPathCatalog {
                 true);
     }
 
+    /**
+     * Finds runtime-owned fields in a newly constructed complete output.
+     * Unlike selected-scope processing, output validation must not preserve
+     * whole unopened business fields contributed by its type: required values
+     * still have to be present and valid. Every retained catalog path crosses
+     * the reserved contracts edge, including an exact referenced header.
+     */
+    static Set<String> forHostedOutput(
+            Node document,
+            Map<String, List<String>> exactFieldsByType,
+            ProcessingSnapshotManager materializer) {
+        return contractFieldsOnly(fromNodeIncludingTypeContractsForSourceIdentity(
+                document, authoredNodePaths(document), exactFieldsByType, materializer));
+    }
+
+    /** Inherited runtime fields without changing legacy business-field resolution. */
+    static Set<String> fromNodeIncludingTypeContractFields(
+            Node document,
+            Iterable<String> openedScopePaths,
+            Map<String, List<String>> exactFieldsByType,
+            ProcessingSnapshotManager materializer) {
+        return contractFieldsOnly(fromNodeIncludingTypeContracts(
+                document, openedScopePaths, exactFieldsByType, materializer));
+    }
+
+    private static Set<String> contractFieldsOnly(Set<String> paths) {
+        paths.removeIf(path -> !JsonPointer.split(path)
+                .contains(BlueLanguageConstants.OBJECT_CONTRACTS));
+        return paths;
+    }
+
     private static Set<String> fromNodeIncludingTypeContracts(
             Node document,
             Iterable<String> openedScopePaths,
@@ -235,7 +266,7 @@ final class ExecutableBodyPathCatalog {
         FrozenNode checkedRoot = Objects.requireNonNull(
                 canonicalRoot, "canonicalRoot");
         Node document = checkedRoot.toNode();
-        Set<String> preserved = fromNodeDirectContracts(
+        Set<String> preserved = fromNodeIncludingTypeContractFields(
                 document,
                 openedScopePaths,
                 executableBodyFieldsByType,

@@ -42,6 +42,10 @@ final class ProcessorInvocationState {
             documentStepContinuationHook;
     private VerifiedExecutionEvidence executionEvidence;
 
+    ContractProcessorRegistry contractRegistry() {
+        return owner.registry();
+    }
+
     ProcessorInvocationState(DocumentProcessor owner, Node document) {
         this(ProcessorInvocationServices.configured(owner), document);
     }
@@ -165,7 +169,7 @@ final class ProcessorInvocationState {
                 owner.observer(),
                 sharedGasContext,
                 owner.registry()
-                        .executableBodyFieldsByType(),
+                        .exactSourceFieldsByType(),
                 owner.strictPlatformInvocation());
         this.contractRecognitionMeter =
                 new ContractRecognitionMeter(
@@ -279,7 +283,7 @@ final class ProcessorInvocationState {
                 owner.observer(),
                 sharedGasContext,
                 owner.registry()
-                        .executableBodyFieldsByType(),
+                        .exactSourceFieldsByType(),
                 owner.strictPlatformInvocation());
         this.contractRecognitionMeter =
                 new ContractRecognitionMeter(
