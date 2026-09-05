@@ -615,7 +615,7 @@
     {
       "id": "phase-6-collection-paths-and-cohesion",
       "requirement": "blue-language-java-collection-paths-next-phase/CODEX-PROMPT-blue-language-java-final-collection-paths-and-cohesion.md",
-      "rationale": "Approve the exact JVM API changes required by the final collectionPaths protocol amendment and focused Contracts cohesion pass: immutable collection-plan inspection, canonical processor administration and builder surfaces, removal of superseded façade aliases and runtime patch entry points, and rebinding the unchanged SourceProviderEnvironment field to the corrected top-level release package identity.",
+      "rationale": "Approve the exact JVM API changes required by the final collectionPaths protocol amendment and focused Contracts cohesion pass: immutable collection-plan inspection, canonical processor administration and builder surfaces, removal of superseded fa\u00e7ade aliases and runtime patch entry points, and rebinding the unchanged SourceProviderEnvironment field to the corrected top-level release package identity.",
       "incompatibleChanges": [
         "method removed/descriptor changed: blue.language.processor.DocumentProcessingRuntime :: applyPatch(Ljava/lang/String;Lblue/language/processor/model/JsonPatch;)Lblue/language/processor/DocumentProcessingRuntime$DocumentUpdateData;",
         "method removed/descriptor changed: blue.language.processor.DocumentProcessingRuntime :: applyPatch(Ljava/lang/String;Lblue/language/processor/model/JsonPatch;Lblue/language/processor/PatchSource;)Lblue/language/processor/DocumentProcessingRuntime$DocumentUpdateData;",
@@ -998,6 +998,17 @@
       "additiveChanges": [
         "public/protected class added: blue.language.processor.closure.ClosureProcessRetryInput",
         "public/protected class added: blue.language.processor.closure.ManagedOccurrenceEvidenceResolution"
+      ]
+    },
+    {
+      "id": "stabilization-definition-and-managed-birth",
+      "requirement": "docs/stabilization-cycle-review.md",
+      "rationale": "Record the reviewed additive definition-validation SPI, which validates fixed constraints without inventing instance payloads, and immutable managed-birth input evidence, which binds exact authored content to a host-reserved fresh lineage without claiming initialization. Existing instance validation and publication checks remain mandatory. LanguageRuntimeAccess.canonicalizeWithEvidence is an additive default within the already approved runtime service class: it returns canonical content and its same-resolution semantic companion, without certifying required instance values or opening opaque cyclic references.",
+      "incompatibleChanges": [],
+      "additiveChanges": [
+        "default interface method added: blue.language.merge.MergingProcessor :: validateDefinition(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "method added: blue.language.merge.processor.SequentialMergingProcessor :: validateDefinition(Lblue/language/model/Node;ZLjava/lang/String;Lblue/language/identity/CanonicalTypeIdentityLookup;)V",
+        "public/protected class added: blue.language.processor.closure.ManagedDocumentBirth"
       ]
     }
   ]

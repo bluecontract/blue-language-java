@@ -638,7 +638,10 @@ class DocumentProcessorSnapshotTransactionTest {
         assertEquals(DirectBlueIdCalculator.calculateBlueId(event),
                 processed.document().getAsText(
                         "/contracts/checkpoint/entries/testChannel/subject/blueId"));
-        assertTrue(manager.cacheSnapshotCalls >= 2);
+        assertTrue(processedDebug.resultingSnapshot().hasCanonicalIdentity());
+        assertFalse(processedDebug.resultingSnapshot().isResolutionComplete());
+        assertEquals(0, manager.cacheSnapshotCalls,
+                "Deferred runtime snapshots must not enter the shared cache");
         assertSnapshotConsistent(processedDebug.resultingSnapshot());
     }
 
@@ -1117,10 +1120,27 @@ class DocumentProcessorSnapshotTransactionTest {
         }
 
         @Override
+        public ResolvedSnapshot fromDocumentPreservingPaths(
+                Node document, Collection<String> preservedPaths) {
+            if (blue == null) {
+                // This synthetic manager never resolves any subtree, so all Source
+                // paths remain intact in its existing canonical/resolved fixture.
+                return fromDocument(document);
+            }
+            fromDocumentCalls++;
+            if (!canonicalIdentityResolution) fromDocumentInputs.add(document.clone());
+            if (fromDocumentCalls == failFromDocumentOnCall)
+                throw new IllegalStateException("snapshot rebuild failed");
+            return blue.getDocumentProcessor().snapshotManager()
+                    .fromDocumentPreservingPaths(document, preservedPaths);
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentTransientPreservingPaths(
-                Node document,
-                Collection<String> preservedPaths) {
-            return fromDocumentTransientForCanonicalIdentity(document);
+                Node document, Collection<String> preservedPaths) {
+            if (blue == null) return fromDocumentTransientForCanonicalIdentity(document);
+            return blue.getDocumentProcessor().snapshotManager()
+                    .fromDocumentTransientPreservingPaths(document, preservedPaths);
         }
 
         @Override

@@ -587,16 +587,25 @@ public final class BlueLanguageRuntime implements NodeResolver,
 
     @Override
     public Node canonicalize(Node source) {
+        return canonicalizeWithEvidence(source).canonicalRoot();
+    }
+
+    @Override
+    public ResolvedSnapshot canonicalizeWithEvidence(Node source) {
         return call(() -> {
             Node preprocessed = rawPreprocess(
                     Objects.requireNonNull(source, "source").clone());
             if (preprocessed.isReferenceOnly()) {
-                return preprocessed;
+                FrozenNode reference = FrozenNode.fromNode(preprocessed);
+                return new ResolvedSnapshot(reference, reference, reference.blueId());
             }
             TypeEvidenceResolution definition = merger(nodeProvider)
                     .resolveTypeDeclarationEvidence(preprocessed, NO_LIMITS);
-            return new blue.language.identity.CanonicalIdentityInputBuilder().build(
+            Node canonical = new blue.language.identity.CanonicalIdentityInputBuilder().build(
                     definition.resolvedRoot().toNode(), preprocessed,
+                    definition.canonicalTypeIdentities());
+            return ResolvedSnapshot.withCanonicalTypeIdentities(
+                    FrozenNode.fromNode(canonical), definition.resolvedRoot(),
                     definition.canonicalTypeIdentities());
         });
     }

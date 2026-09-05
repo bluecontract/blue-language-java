@@ -705,6 +705,27 @@ class SelectedScopeContentBlueIdFailFirstTest {
         }
 
         @Override
+        public FrozenNode materializeVerifiedExactReference(FrozenNode reference) {
+            return delegate.materializeVerifiedExactReference(reference);
+        }
+
+        @Override
+        public blue.language.merge.TypeEvidenceResolution materializeVerifiedTypeReference(FrozenNode reference) {
+            return delegate.materializeVerifiedTypeReference(reference);
+        }
+
+        @Override
+        public blue.language.identity.CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(Node declaration) {
+            return delegate.resolveTypeDeclarationIdentity(declaration);
+        }
+
+        @Override
+        public blue.language.identity.CanonicalTypeIdentityEvidence resolveTypeDeclarationIdentity(
+                Node declaration, blue.language.runtime.LanguageProcessing.ExactResolutionOverlay overlay) {
+            return delegate.resolveTypeDeclarationIdentity(declaration, overlay);
+        }
+
+        @Override
         public String calculateScopeContentBlueId(String scopePath,
                                                   FrozenNode selectedScope,
                                                   ResolvedSnapshot capturedDocumentSnapshot) {

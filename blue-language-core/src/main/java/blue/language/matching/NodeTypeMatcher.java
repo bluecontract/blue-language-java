@@ -65,19 +65,36 @@ public class NodeTypeMatcher {
         }
 
         try {
-            Node targetPatternNode = runtime.preprocessForMatching(
-                    targetType.clone());
-            ResolutionLimits matchingLimits = matchingLimits(globalLimits, targetPatternNode);
-            MatchingCandidate resolved = resolveForMatching(
-                    node, matchingLimits);
-            FrozenNode targetPattern = FrozenNode.fromResolvedNode(targetPatternNode);
-            return matcherFor(
-                    globalLimits,
-                    resolved.canonicalTypeIdentities)
-                    .matchesType(resolved.node, targetPattern);
+            return matchesTypeOrThrow(node, targetType, globalLimits);
         } catch (RuntimeException ex) {
             return false;
         }
+    }
+
+    /**
+     * Matches exact authored content while propagating unavailable or invalid
+     * provider evidence to a hosted caller. Resolution remains target-driven.
+     *
+     * @param node canonical authored candidate
+     * @param targetType authored type or shape pattern
+     * @param globalLimits caller resolution limits, or null for no extra limit
+     * @return whether the established candidate satisfies the pattern
+     * @throws RuntimeException when candidate or required evidence is invalid or unavailable
+     */
+    public boolean matchesTypeOrThrow(Node node, Node targetType,
+                                      ResolutionLimits globalLimits) {
+        if (targetType == null) return true;
+        if (node == null) return false;
+        Node targetPatternNode = runtime.preprocessForMatching(
+                targetType.clone());
+        ResolutionLimits matchingLimits = matchingLimits(globalLimits, targetPatternNode);
+        MatchingCandidate resolved = resolveForMatching(
+                node, matchingLimits);
+        FrozenNode targetPattern = FrozenNode.fromResolvedNode(targetPatternNode);
+        return matcherFor(
+                globalLimits,
+                resolved.canonicalTypeIdentities)
+                .matchesType(resolved.node, targetPattern);
     }
 
     /**

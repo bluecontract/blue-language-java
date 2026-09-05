@@ -118,6 +118,7 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
         }
 
         if (normalized.getProperties() != null) {
+            boolean explicitlyEmpty = normalized.getProperties().isEmpty();
             Map<String, Node> properties = new LinkedHashMap<>();
             for (Map.Entry<String, Node> entry : normalized.getProperties().entrySet()) {
                 Node child = normalizeObjectField(entry.getValue(), append(path, entry.getKey()));
@@ -127,7 +128,7 @@ public class NormalizeListPlaceholders implements TransformationProcessor {
             }
             if (properties.isEmpty()) {
                 normalized.properties((Map<String, Node>) null);
-                if (Nodes.isEmptyNode(normalized)) {
+                if (explicitlyEmpty || Nodes.isEmptyNode(normalized)) {
                     normalized.properties(properties);
                 }
             } else {

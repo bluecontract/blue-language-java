@@ -83,9 +83,9 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 795,
+    "productionSourceCount": 800,
     "productionResourceCount": 816,
-    "productionSourcePathIdentity": "sha256:a883799e0bb8e037853cc95e3da153017471364af62a2182d86a6460cf576187",
+    "productionSourcePathIdentity": "sha256:df4873fc14752e46ad33a475ea6643a2575aee8ac570a9615bbfcea1b201832d",
     "productionResourcePathIdentity": "sha256:ac3d9ad2d124e84dc7e9d156d341ff7acdc5610ab66fb3e86249b23fae60fb3b"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
@@ -1960,6 +1960,13 @@
       "targetPackage": "blue.language.processor"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/OpaqueCyclicMemberPathCatalog.java",
+      "currentPackage": "blue.language.processor",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/OpaqueCyclicMemberPathCatalog.java",
+      "targetPackage": "blue.language.processor"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/ParticipatingClosurePreflight.java",
       "currentPackage": "blue.language.processor",
       "targetModule": ":blue-contracts-core",
@@ -3255,6 +3262,13 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentBirth.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentBirth.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentGraph.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
@@ -3371,6 +3385,13 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessingCause.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProspectiveBirthRetry.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ProspectiveBirthRetry.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {
@@ -4424,6 +4445,13 @@
       "targetPackage": "blue.language.merge.processor"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/processor/EnumConstraintMembership.java",
+      "currentPackage": "blue.language.merge.processor",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/processor/EnumConstraintMembership.java",
+      "targetPackage": "blue.language.merge.processor"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/merge/processor/ExclusiveItemsOrValueChecker.java",
       "currentPackage": "blue.language.merge.processor",
       "targetModule": ":blue-language-core",
@@ -4449,6 +4477,13 @@
       "currentPackage": "blue.language.merge.processor",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/merge/processor/ListProcessor.java",
+      "targetPackage": "blue.language.merge.processor"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/merge/processor/ScalarConstraintPayload.java",
+      "currentPackage": "blue.language.merge.processor",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/merge/processor/ScalarConstraintPayload.java",
       "targetPackage": "blue.language.merge.processor"
     },
     {

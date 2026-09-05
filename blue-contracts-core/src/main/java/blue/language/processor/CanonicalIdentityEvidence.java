@@ -137,7 +137,7 @@ final class CanonicalIdentityEvidence {
         Node checked = Objects.requireNonNull(source, "source");
         return sourceBlueId(
                 checked,
-                snapshotManager,
+                snapshotManager == null ? null : snapshotManager.forValueIdentity(),
                 purpose,
                 ExecutableBodyPathCatalog.processorStatePatchEffectPaths(
                         checked));
@@ -288,12 +288,12 @@ final class CanonicalIdentityEvidence {
             Node canonicalValue = executableBodyPaths.contains(path)
                     ? canonicalSourceInput(
                             exactValue,
-                            snapshotManager,
+                            snapshotManager.forValueIdentity(),
                             purpose + " executable field " + path,
                             preservedWithinValue)
                     : canonicalPartialSourceInput(
                             exactValue,
-                            snapshotManager,
+                            snapshotManager.forValueIdentity(),
                             purpose + " exact header field " + path);
             NodePathEditor.put(sourceProjection, path, canonicalValue);
         }
@@ -312,7 +312,7 @@ final class CanonicalIdentityEvidence {
      * resolution, and canonical identity reconstruction while correctly
      * treating the retained value as declaration-shaped evidence.</p>
      */
-    private static Node canonicalPartialSourceInput(
+    static Node canonicalPartialSourceInput(
             Node source,
             ProcessingSnapshotManager snapshotManager,
             String purpose) {

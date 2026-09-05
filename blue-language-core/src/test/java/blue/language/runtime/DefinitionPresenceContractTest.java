@@ -2,12 +2,53 @@ package blue.language.runtime;
 
 import blue.language.codec.BlueFormat;
 import blue.language.model.Node;
+import blue.language.merge.ResolvedSnapshot;
+import blue.language.model.Nodes;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.preprocess.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 final class DefinitionPresenceContractTest {
+    @Test
+    void shouldRetainInlineDefinitionEvidenceWithoutInventingRequiredValues() {
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            Node source = source(language, "type:\n  name: Local output type\n  request:\n    type: Text\n    schema: {required: true}\n");
+            ResolvedSnapshot prepared = language.processing().runtimeAccess()
+                    .canonicalizeWithEvidence(source);
+            assertTrue(prepared.frozenCanonicalRoot().getType().isReferenceOnly());
+            assertEquals("Local output type", prepared.frozenResolvedRoot().getType().getName());
+            assertNull(prepared.resolvedRoot().getProperties().get("request").getValue());
+            assertEquals(language.identity().directBlueId(prepared.canonicalRoot()), prepared.blueId());
+            assertThrows(IllegalArgumentException.class,
+                    () -> language.resolution().resolve(source));
+        }
+    }
+
+    @Test
+    void shouldPreserveExplicitTypedObjectPayloadAcrossPreprocessing() {
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            Node scalarObject = Nodes.emptyObject().type(new Node()
+                    .blueId(BlueLanguageConstants.TEXT_TYPE_BLUE_ID));
+            Node preprocessed = language.preprocessing().preprocess(scalarObject);
+            assertNotNull(preprocessed.getProperties());
+            assertTrue(preprocessed.getProperties().isEmpty());
+            assertThrows(IllegalArgumentException.class,
+                    () -> language.resolution().resolveDefinition(preprocessed));
+            assertThrows(IllegalArgumentException.class,
+                    () -> language.resolution().resolve(preprocessed));
+            Node dictionaryObject = Nodes.emptyObject().type(new Node()
+                    .blueId(BlueLanguageConstants.DICTIONARY_TYPE_BLUE_ID));
+            assertDoesNotThrow(() -> language.resolution().resolve(
+                    language.preprocessing().preprocess(dictionaryObject)));
+            Node declaration = language.preprocessing().preprocess(
+                    source(language, "type: Text\nabsent: null\n"));
+            assertNull(declaration.getProperties());
+            assertDoesNotThrow(() -> language.resolution().resolveDefinition(declaration));
+        }
+    }
+
     @Test
     void shouldRetainRequiredChildObligationWhenPreparingDefinition() {
         // given

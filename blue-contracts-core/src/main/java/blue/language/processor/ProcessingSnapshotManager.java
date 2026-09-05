@@ -24,6 +24,17 @@ import java.util.Objects;
 public interface ProcessingSnapshotManager {
 
     /**
+     * Borrows the same exact provider evidence for a nested Source value.
+     * Enclosing managed Root path bindings do not apply to that value.
+     * Root identity and publication callers must retain the original manager.
+     *
+     * @return borrowed value view; it must not be closed separately
+     */
+    default ProcessingSnapshotManager forValueIdentity() {
+        return this;
+    }
+
+    /**
      * Resolves and publishes an immutable snapshot for an authored document.
      *
      * @param document authored mutable document

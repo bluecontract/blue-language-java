@@ -214,6 +214,19 @@ public final class BlueContracts implements AutoCloseable {
     }
 
     /**
+     * Prepares preprocessed processing Source under this runtime's registered
+     * exact-field semantics without initializing or executing the document.
+     *
+     * @param source preprocessed Source, including a verified ordinary Root reference
+     * @return strict canonical processing content
+     * @throws IllegalStateException when this service is closed or evidence is unavailable
+     * @throws IllegalArgumentException when Source or a cyclic-member Root is invalid
+     */
+    public Node canonicalizeProcessingSource(Node source) {
+        return call(() -> processor.administration().canonicalizeProcessingSource(source));
+    }
+
+    /**
      * Returns the configured subscription-surface projection service.
      *
      * @return lifecycle-bound read-only projection service

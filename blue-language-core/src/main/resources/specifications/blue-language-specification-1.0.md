@@ -3421,7 +3421,7 @@ The canonical fixture package is part of the Blue Language 1.0 conformance relea
 Its fixture-package identity is:
 
 ```text
-sha256:83a0d7ec99d711577d6c08962b922aedd342d858a9bf12560ade790692d08cae
+sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e
 ```
 
 The canonical core-registry package identity bound by this fixture package is:

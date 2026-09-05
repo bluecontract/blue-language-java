@@ -48,7 +48,7 @@ public class BasicTypesVerifier implements MergingProcessor {
                     target.getType(), nodeProvider, nodeResolver, typeIdentities);
             if (target.getItems() != null
                     || blue.language.model.Nodes.hasObjectPayload(target)) {
-                throw new IllegalArgumentException("Node of type \"" + target.getType().getName() +
+                throw new IllegalArgumentException("payload kinds conflict: Node of type \"" + target.getType().getName() +
                                                    "\" (which extends basic type \"" + basicTypeName +
                                                    "\") must not have items or properties.");
             }

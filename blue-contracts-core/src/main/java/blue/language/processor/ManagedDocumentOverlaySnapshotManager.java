@@ -60,6 +60,14 @@ final class ManagedDocumentOverlaySnapshotManager
     }
 
     @Override
+    public ProcessingSnapshotManager forValueIdentity() {
+        return expectedManagedBlueIdsByPath.isEmpty() ? this
+                : new ManagedDocumentOverlaySnapshotManager(
+                        delegate.forValueIdentity(), exactNodesByBlueId,
+                        Collections.<String, String>emptyMap(), exactResolutionOverlay);
+    }
+
+    @Override
     public ResolvedSnapshot fromDocument(Node document) {
         return expectedManagedBlueIdsByPath.isEmpty()
                 ? delegate.fromDocument(document)

@@ -591,15 +591,17 @@ final class ContractContributionResolver {
             Set<String> exactSourceFields,
             Set<String> exactFieldPaths,
             Set<String> executableBodyPaths) {
+        ProcessingSnapshotManager valueManager = snapshotManager == null
+                ? null : snapshotManager.forValueIdentity();
         return snapshotManager == null || exactSourceFields.isEmpty()
                 ? CanonicalIdentityEvidence.sourceBlueId(
                         exactSource,
-                        snapshotManager,
+                        valueManager,
                         "Exact contract contribution")
                 : CanonicalIdentityEvidence
                         .sourceBlueIdWithCanonicalExactFields(
                                 exactSource,
-                                snapshotManager,
+                                valueManager,
                                 "Exact contract contribution",
                                 exactFieldPaths,
                                 executableBodyPaths);

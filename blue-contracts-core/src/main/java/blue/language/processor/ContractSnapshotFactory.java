@@ -71,10 +71,13 @@ final class ContractSnapshotFactory {
             return;
         }
         Node sourceProjection = exactEventPattern.clone();
-        String identity = CanonicalIdentityEvidence.sourceBlueId(
-                sourceProjection,
-                snapshotManager,
-                "Effective contract event pattern");
+        String identity = snapshotManager == null
+                ? CanonicalIdentityEvidence.sourceBlueId(
+                        sourceProjection, null, "Effective contract event pattern")
+                : blue.language.identity.DirectBlueIdCalculator.calculateBlueId(
+                        CanonicalIdentityEvidence.canonicalPartialSourceInput(
+                                sourceProjection, snapshotManager.forValueIdentity(),
+                                "Effective contract event pattern"));
         snapshot.dispatchField(
                         EffectiveContractSnapshotConstants.DispatchField.EVENT,
                         identity)

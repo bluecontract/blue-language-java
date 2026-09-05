@@ -362,6 +362,10 @@ files:
   role: support
   sha256: 097733a85812a4845cd7f699cf5f798b18359f45984d064c8af6e5df84121c36
   bytes: 256
+- path: preprocessing/registry/manifest.yaml
+  role: support
+  sha256: 572295001dce50893de283c88df4edb688b40b695873dd81438573a5ab7bc4b2
+  bytes: 775
 - path: provider/F_all_language_vectors_pass.yaml
   role: behavior-fixture
   sha256: 5fa9b1e78ada4c9781b947fd1a546d4ad2d635526865feacdb0768d33e2c58f7
@@ -778,4 +782,4 @@ packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
-packageIdentity: sha256:ad5c4a611cae6b8caea5fca98305146c03b2a6ff3815905dc6e371aae611098c
+packageIdentity: sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e

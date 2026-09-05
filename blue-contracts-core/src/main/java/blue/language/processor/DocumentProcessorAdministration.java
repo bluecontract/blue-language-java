@@ -7,6 +7,7 @@ import blue.language.processor.model.MarkerContract;
 import blue.language.runtime.LanguageRuntimeAccess;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 
 /**
@@ -245,6 +246,41 @@ public final class DocumentProcessorAdministration {
                 ContractBundle bundle = processor.contractLoader().load(
                         snapshot, scopePath);
                 return bundle.markers();
+            } finally {
+                sequence.releaseTransientState();
+            }
+        }
+    }
+
+    /**
+     * Canonicalizes preprocessed processing Source without executing lifecycle work.
+     * The Root retains instance validation; only registered contract fields use
+     * their declared exact header or executable Source semantics.
+     *
+     * @param source preprocessed authored Source or a verified top-level reference
+     * @return strict canonical content with registered exact fields preserved
+     * @throws IllegalStateException when exact evidence cannot be established
+     * @throws IllegalArgumentException when Source or a cyclic-member Root is invalid
+     */
+    public Node canonicalizeProcessingSource(Node source) {
+        Node checked = Objects.requireNonNull(source, "source").clone();
+        try (DocumentProcessorLifecycle.ReadScope ignored =
+                     lifecycle.openRead(processor.registry())) {
+            ProcessingSnapshotManager manager = processor.scopeIdentitySnapshotManager();
+            if (manager == null) {
+                throw new IllegalStateException(
+                        "Processing Source canonicalization requires a verified ProcessingSnapshotManager");
+            }
+            ProcessingSnapshotManager sequence = manager.transientSequence();
+            try {
+                Node admitted = new ProcessingInputAdmission(sequence, true)
+                        .materializeTopLevel(checked, "Processing Source").node();
+                Set<String> exactFields = ExecutableBodyPathCatalog.forHostedOutput(
+                        admitted, processor.registry().exactSourceFieldsByType(), sequence);
+                Set<String> executableFields = ExecutableBodyPathCatalog.forHostedOutput(
+                        admitted, processor.registry().executableBodyFieldsByType(), sequence);
+                return CanonicalIdentityEvidence.canonicalSourceWithExactFields(
+                        admitted, sequence, "Processing Source", exactFields, executableFields);
             } finally {
                 sequence.releaseTransientState();
             }

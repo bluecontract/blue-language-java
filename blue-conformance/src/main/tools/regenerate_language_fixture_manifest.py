@@ -133,7 +133,7 @@ def build_manifest(
         path
         for path in fixture_root.rglob("*")
         if path.is_file()
-        and path.name not in {"manifest.yaml", "manifest.yml"}
+        and path != current_path
     )
     files: list[dict[str, Any]] = []
     seen_ids: set[str] = set()

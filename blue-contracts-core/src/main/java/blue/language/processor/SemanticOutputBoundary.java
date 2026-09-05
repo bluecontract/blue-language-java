@@ -155,15 +155,18 @@ public final class SemanticOutputBoundary {
     }
 
     private Node canonicalizeOutput(Node output) {
-        if (snapshotManager != null && contractRegistry != null) {
-            Set<String> exactFields = ExecutableBodyPathCatalog.forHostedOutput(
-                    output, contractRegistry.exactSourceFieldsByType(), snapshotManager);
-            if (!exactFields.isEmpty()) {
-                Set<String> executableFields = ExecutableBodyPathCatalog.forHostedOutput(
-                        output, contractRegistry.executableBodyFieldsByType(), snapshotManager);
-                return CanonicalIdentityEvidence.canonicalSourceWithExactFields(output,
-                        snapshotManager, "Hosted runtime output", exactFields, executableFields);
-            }
+        if (snapshotManager != null) {
+            ProcessingSnapshotManager valueManager = snapshotManager.forValueIdentity();
+            Set<String> exactFields = contractRegistry == null
+                    ? java.util.Collections.<String>emptySet()
+                    : ExecutableBodyPathCatalog.forHostedOutput(
+                            output, contractRegistry.exactSourceFieldsByType(), valueManager);
+            Set<String> executableFields = contractRegistry == null
+                    ? java.util.Collections.<String>emptySet()
+                    : ExecutableBodyPathCatalog.forHostedOutput(
+                            output, contractRegistry.executableBodyFieldsByType(), valueManager);
+            return CanonicalIdentityEvidence.canonicalSourceWithExactFields(output,
+                    valueManager, "Hosted runtime output", exactFields, executableFields);
         }
         return languageRuntime.canonicalize(output);
     }

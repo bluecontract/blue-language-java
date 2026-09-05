@@ -555,6 +555,75 @@ final class CanonicalIdentityAuthoritativeResolutionTest {
     }
 
     @Test
+    void shouldKeepRootBindingsWhileNestedValuesAndHostedOutputUseExactOverlay() {
+        Node parent = new Node()
+                .name("Overlay parent")
+                .properties(
+                        "requiredText",
+                        new Node()
+                                .type(new Node().blueId(
+                                        BlueLanguageConstants.TEXT_TYPE_BLUE_ID))
+                                .schema(new Schema().required(true)));
+        String parentBlueId = DirectBlueIdCalculator.calculateBlueId(parent);
+        Node child = new Node()
+                .name("Overlay child")
+                .type(new Node().blueId(parentBlueId));
+        Node source = new Node().type(child.clone()).properties(
+                "requiredText", new Node().value("present"));
+        CountingMissingProvider ambient =
+                new CountingMissingProvider(parentBlueId);
+
+        try (BlueLanguage expectedLanguage = BlueLanguage.builder()
+                .nodeProvider(blueId -> parentBlueId.equals(blueId)
+                        ? Collections.singletonList(parent.clone())
+                        : Collections.<Node>emptyList())
+                .build();
+             LanguageProcessing.Scope expectedScope =
+                     expectedLanguage.processing().openScope();
+             BlueLanguage actualLanguage = BlueLanguage.builder()
+                     .nodeProvider(ambient)
+                     .build();
+             LanguageProcessing.Scope actualScope =
+                     actualLanguage.processing().openScope()) {
+            String expected = expectedScope.resolveTransient(source).blueId();
+            ProcessingSnapshotManager manager =
+                    new ManagedDocumentOverlaySnapshotManager(
+                            new LanguageProcessingSnapshotManager(actualScope),
+                            new ManagedDocumentResolutionOverlay(
+                                    Collections.singletonMap(
+                                            parentBlueId, parent),
+                                    Collections.singletonMap("/peer", parentBlueId),
+                                    Collections.emptyMap()));
+
+            assertThrows(InvalidExecutionEvidenceException.class,
+                    () -> manager.fromDocumentTransientForCanonicalIdentity(source));
+            ResolvedSnapshot actual = manager.forValueIdentity()
+                    .fromDocumentTransientForCanonicalIdentity(source);
+            assertEquals(expected, CanonicalIdentityEvidence.executableBodyBlueId(
+                    source, manager, "nested executable value"));
+            GasMeter gas = new GasMeter(GasSchedule.contracts10());
+            RuntimeWorkSession session = new RuntimeWorkSession(
+                    gas, RuntimeWorkSession.Mode.PROCESSING);
+            try {
+                SemanticOutputBoundary boundary = new SemanticOutputBoundary(
+                        session, actualLanguage.processing().runtimeAccess(), manager, gas.semantic());
+                assertEquals(expected, boundary.admit(source).blueId(),
+                        "ordinary hosted values without contract fields retain the overlay");
+            } finally {
+                session.close();
+            }
+            assertThrows(InvalidExecutionEvidenceException.class,
+                    () -> manager.fromDocumentTransientForCanonicalIdentity(source));
+            assertThrows(InvalidExecutionEvidenceException.class,
+                    () -> manager.fromDocumentTransientForCanonicalIdentity(source.clone()
+                            .properties("peer", new Node().value("forged"))));
+
+            assertEquals(expected, actual.blueId());
+            assertEquals(0, ambient.requestedReads.get());
+        }
+    }
+
+    @Test
     void shouldIgnoreMixedResolvedBlueIdWhenCanonicalizingAuthoredType() {
         Node semanticType = new Node()
                 .name("Authored inline type")
@@ -605,14 +674,21 @@ final class CanonicalIdentityAuthoritativeResolutionTest {
                             new ManagedDocumentResolutionOverlay(
                                     Collections.singletonMap(
                                             memberBlueId, resolvedMember),
-                                    Collections.emptyMap(),
+                                    Collections.singletonMap("/peer", memberBlueId),
                                     Collections.singletonMap(
                                             finalization.masterBlueId(), proof)));
 
             assertEquals(
                     memberBlueId,
-                    manager.resolveTypeDeclarationIdentity(
+                    manager.forValueIdentity().resolveTypeDeclarationIdentity(
                             new Node().blueId(memberBlueId)).blueId());
+            Node value = new Node().type(new Node().blueId(memberBlueId))
+                    .properties("tag", new Node().value("present"));
+            assertThrows(InvalidExecutionEvidenceException.class,
+                    () -> manager.fromDocumentTransientForCanonicalIdentity(value));
+            ResolvedSnapshot valueSnapshot = manager.forValueIdentity()
+                    .fromDocumentTransientForCanonicalIdentity(value);
+            assertEquals(memberBlueId, valueSnapshot.canonicalRoot().getType().getBlueId());
             assertEquals(0, ambient.requestedReads.get(),
                     "proof-bearing overlay must precede ambient content");
         }

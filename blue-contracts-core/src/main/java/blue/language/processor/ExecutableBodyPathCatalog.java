@@ -83,6 +83,7 @@ final class ExecutableBodyPathCatalog {
             Node document,
             Map<String, List<String>> exactFieldsByType,
             ProcessingSnapshotManager materializer) {
+        if (exactFieldsByType.isEmpty()) return new LinkedHashSet<>();
         return contractFieldsOnly(fromNodeIncludingTypeContractsForSourceIdentity(
                 document, authoredNodePaths(document), exactFieldsByType, materializer));
     }
@@ -93,6 +94,7 @@ final class ExecutableBodyPathCatalog {
             Iterable<String> openedScopePaths,
             Map<String, List<String>> exactFieldsByType,
             ProcessingSnapshotManager materializer) {
+        if (exactFieldsByType.isEmpty()) return new LinkedHashSet<>();
         return contractFieldsOnly(fromNodeIncludingTypeContracts(
                 document, openedScopePaths, exactFieldsByType, materializer));
     }
@@ -319,13 +321,7 @@ final class ExecutableBodyPathCatalog {
     }
 
     static Set<String> opaqueCyclicMemberPaths(Node document) {
-        Set<String> result = new LinkedHashSet<>();
-        collectOpaqueCyclicMemberPaths(
-                document,
-                JsonPointer.ROOT,
-                result,
-                new IdentityHashMap<Node, Boolean>());
-        return result;
+        return OpaqueCyclicMemberPathCatalog.find(document);
     }
 
     static Set<String> ordinaryReferencePaths(Node document) {
@@ -809,54 +805,6 @@ final class ExecutableBodyPathCatalog {
                     addBodyPath(path, entry.getKey(), field, result);
                 }
             }
-        }
-    }
-
-    private static void collectOpaqueCyclicMemberPaths(
-            Node node,
-            String path,
-            Set<String> result,
-            IdentityHashMap<Node, Boolean> visited) {
-        if (node == null) {
-            return;
-        }
-        if (node.isReferenceOnly()) {
-            if (BlueIds.hasCyclicMemberSeparator(node.getBlueId())) {
-                result.add(path);
-            }
-            return;
-        }
-        if (visited.put(node, Boolean.TRUE) != null) {
-            return;
-        }
-        try {
-            if (node.getItems() != null) {
-                for (int index = 0; index < node.getItems().size(); index++) {
-                    collectOpaqueCyclicMemberPaths(
-                            node.getItems().get(index),
-                            JsonPointer.append(path, String.valueOf(index)),
-                            result,
-                            visited);
-                }
-            }
-            if (node.getProperties() != null) {
-                for (Map.Entry<String, Node> entry
-                        : node.getProperties().entrySet()) {
-                    collectOpaqueCyclicMemberPaths(
-                            entry.getValue(),
-                            JsonPointer.append(path, entry.getKey()),
-                            result,
-                            visited);
-                }
-            }
-            collectOpaqueCyclicMemberPaths(
-                    node.getContracts(),
-                    JsonPointer.append(
-                            path, ProcessorContractConstants.KEY_CONTRACTS),
-                    result,
-                    visited);
-        } finally {
-            visited.remove(node);
         }
     }
 
