@@ -34,8 +34,11 @@ final class DevelopmentVerificationOrchestrationTest {
                 .stream().map(Task::getPath).collect(java.util.stream.Collectors.toSet()));
         Set<String> fast = graph(project.getTasks().getByName("fastVerify"));
         assertTrue(fast.containsAll(Set.of(":developmentPreflight", ":verifySpecificationMirrors",
-                ":verifyAggregateReleaseManifest", ":verifyBuildScriptShape",
+                ":verifySourceDevelopment", ":verifyBuildScriptShape",
                 ":languageComponentTest", ":contractsComponentTest")));
+        assertFalse(fast.contains(":verifyAggregateReleaseManifest"));
+        assertTrue(graph(project.getTasks().getByName("candidatePreflight"))
+                .contains(":verifyAggregateReleaseManifest"));
         for (String name : new String[] {":test", ":clean", ":build", ":releaseVerify",
                 ":releaseConformanceTest", ":finalQualityVerify", ":rcVerify",
                 ":generateDocumentationReferences", ":stagePublications"}) {

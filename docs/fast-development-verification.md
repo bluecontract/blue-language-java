@@ -283,3 +283,23 @@ or immutable artifact/consumer release verification. Their graphs were inspected
 without executing them, to preserve Task A's priority and frozen evidence. The
 existing development consumer/example tests are not a substitute for those
 release checks.
+# Campaign B2: source and candidate boundaries
+
+`developmentPreflight` and `fastVerify` now check authoritative source inventories,
+digests, nested package identities, YAML manifest syntax, Markdown title/fence/conflict
+structure and primary/mirror agreement. Markdown examples contain pseudocode and are
+not all parsed as executable YAML. These gates allow only specification hash/size
+bindings in an otherwise valid aggregate to be pending. They print
+`PENDING_GENERATED_BINDINGS` and never certify a candidate, consumer tuple or release.
+
+Run `./gradlew developmentPreflight -PbluePythonExecutable=/usr/local/bin/python3`
+for source work. Run `./gradlew candidatePreflight
+-PbluePythonExecutable=/usr/local/bin/python3` for strict cheap candidate consistency.
+The existing `verifyAggregateReleaseManifest`, `releaseVerify`, `rcVerify` and
+`finalQualityVerify` remain strict and complete; candidate preflight does not replace
+their tests. No command regenerates or captures golden artifacts implicitly.
+
+The source allowance was exercised with the actual Language specification and mirror
+from Task D commit `cc5e06ef9dbe782bf4d667368db1a9954ecb86df` in a disposable copy:
+source verification succeeded and reported the exact pending digest; strict aggregate
+verification rejected that same copy. Registry/fixture drift remains an error.

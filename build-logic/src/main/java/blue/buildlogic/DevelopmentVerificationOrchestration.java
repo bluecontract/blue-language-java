@@ -39,10 +39,22 @@ final class DevelopmentVerificationOrchestration {
                 }
             });
         });
+        project.getTasks().register("verifySourceDevelopment", org.gradle.api.tasks.Exec.class, task -> {
+            task.setGroup("verification");
+            task.setDescription("Checks source integrity and reports pending specification bindings without certifying a package.");
+            task.commandLine(project.getProviders().gradleProperty("bluePythonExecutable").orElse("python3").get(),
+                    "blue-conformance/src/main/tools/verify_source_development.py",
+                    "--repository-root", project.getRootDir().getAbsolutePath());
+        });
+        project.getTasks().register("candidatePreflight", task -> {
+            task.setGroup("verification");
+            task.setDescription("Strict cheap candidate checks; does not replace complete release verification.");
+            task.dependsOn("developmentPreflight", "verifyAggregateReleaseManifest");
+        });
         TaskProvider<Task> preflight = project.getTasks().register("developmentPreflight", task -> {
             task.setGroup("verification");
-            task.setDescription("Checks specification mirrors and aggregate bindings without regeneration.");
-            task.dependsOn(mirrors, "verifyAggregateReleaseManifest", "verifyBuildScriptShape");
+            task.setDescription("Checks source integrity, specification syntax/mirrors and reports pending bindings.");
+            task.dependsOn(mirrors, "verifySourceDevelopment", "verifyBuildScriptShape");
         });
 
         registerTest(project, "focusedTest").configure(task -> {
