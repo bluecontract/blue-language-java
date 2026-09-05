@@ -227,6 +227,20 @@ public final class BlueContracts implements AutoCloseable {
     }
 
     /**
+     * Resolves preprocessed processing Source for read-only host projections.
+     * Registered declarations and executable bodies keep their exact field roles;
+     * ordinary document values retain completed-instance validation.
+     *
+     * @param source preprocessed processing Source
+     * @return resolved document with phase-owned fields preserved
+     * @throws IllegalArgumentException when Source is invalid
+     * @throws IllegalStateException when closed or exact evidence is unavailable
+     */
+    public Node resolveProcessingSource(Node source) {
+        return call(() -> processor.administration().resolveProcessingSource(source));
+    }
+
+    /**
      * Returns the configured subscription-surface projection service.
      *
      * @return lifecycle-bound read-only projection service

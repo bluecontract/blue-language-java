@@ -470,23 +470,8 @@ final class EffectiveFragmentationCatalogBuilder {
                 if (typeBlueId == null) {
                     continue;
                 }
-                List<String> deferredFields =
-                        new ArrayList<>(
-                                registry.executableBodyFields(
-                                        typeBlueId));
-                Class<?> contractClass =
-                        typeResolver.resolveClass(typeBlueId);
-                if (contractClass != null
-                        && HandlerContract.class
-                        .isAssignableFrom(
-                                contractClass)
-                        && !deferredFields.contains(
-                        EffectiveContractSnapshotConstants
-                                .DispatchField.EVENT)) {
-                    deferredFields.add(
-                            EffectiveContractSnapshotConstants
-                                    .DispatchField.EVENT);
-                }
+                List<String> deferredFields = registry.exactSourceFieldsByType()
+                        .getOrDefault(typeBlueId, Collections.<String>emptyList());
                 for (String field : deferredFields) {
                     executableBodyPaths.add(
                             JsonPointer.append(

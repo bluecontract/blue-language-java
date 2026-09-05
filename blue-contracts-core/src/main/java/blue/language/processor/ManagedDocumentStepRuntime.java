@@ -286,7 +286,7 @@ public final class ManagedDocumentStepRuntime implements AutoCloseable {
                 null,
                 owner.observer(),
                 sharedGasContext,
-                owner.registry().executableBodyFieldsByType(),
+                owner.registry().exactSourceFieldsByType(),
                 owner.strictPlatformInvocation());
         try (GasMeter.AttributionScope ignored =
                      sharedGasContext.withAttribution(

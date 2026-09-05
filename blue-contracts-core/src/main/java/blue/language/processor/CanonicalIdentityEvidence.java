@@ -218,7 +218,7 @@ final class CanonicalIdentityEvidence {
                 exactFieldPaths, executableBodyPaths).canonicalRoot();
     }
 
-    private static ResolvedSnapshot canonicalSnapshotWithExactFields(
+    static ResolvedSnapshot canonicalSnapshotWithExactFields(
             Node source,
             ProcessingSnapshotManager snapshotManager,
             String purpose,

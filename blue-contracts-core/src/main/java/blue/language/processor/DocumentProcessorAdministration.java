@@ -263,6 +263,23 @@ public final class DocumentProcessorAdministration {
      * @throws IllegalArgumentException when Source or a cyclic-member Root is invalid
      */
     public Node canonicalizeProcessingSource(Node source) {
+        return processingSourceSnapshot(source).canonicalRoot();
+    }
+
+    /**
+     * Resolves processing Source for inspection, retaining registered declarations
+     * and executable bodies in their exact authored form.
+     *
+     * @param source preprocessed processing Source
+     * @return resolved document with phase-owned fields preserved
+     * @throws IllegalArgumentException when Source is invalid
+     * @throws IllegalStateException when exact evidence is unavailable
+     */
+    public Node resolveProcessingSource(Node source) {
+        return processingSourceSnapshot(source).resolvedRoot();
+    }
+
+    private blue.language.merge.ResolvedSnapshot processingSourceSnapshot(Node source) {
         Node checked = Objects.requireNonNull(source, "source").clone();
         try (DocumentProcessorLifecycle.ReadScope ignored =
                      lifecycle.openRead(processor.registry())) {
@@ -279,7 +296,7 @@ public final class DocumentProcessorAdministration {
                         admitted, processor.registry().exactSourceFieldsByType(), sequence);
                 Set<String> executableFields = ExecutableBodyPathCatalog.forHostedOutput(
                         admitted, processor.registry().executableBodyFieldsByType(), sequence);
-                return CanonicalIdentityEvidence.canonicalSourceWithExactFields(
+                return CanonicalIdentityEvidence.canonicalSnapshotWithExactFields(
                         admitted, sequence, "Processing Source", exactFields, executableFields);
             } finally {
                 sequence.releaseTransientState();

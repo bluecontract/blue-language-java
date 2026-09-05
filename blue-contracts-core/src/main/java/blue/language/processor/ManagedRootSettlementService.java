@@ -758,7 +758,7 @@ final class ManagedRootSettlementService {
                 owner.snapshotManager(),
                 owner.observer(),
                 sharedGasContext,
-                owner.registry().executableBodyFieldsByType(),
+                owner.registry().exactSourceFieldsByType(),
                 owner.strictPlatformInvocation());
         ResolvedScopeView scope = runtime.scopeViewAt(JsonPointer.ROOT);
         owner.contractLoader().preflightSelectedContractHeaders(scope.selected());

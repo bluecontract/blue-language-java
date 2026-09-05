@@ -851,6 +851,41 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
+    void shouldPreserveRegisteredRequiredRequestDeclarationAcrossSnapshots() {
+        Fixture fixture = new Fixture();
+        Node document = fixture.document();
+        Node request = new Node().properties("amount", new Node()
+                .type(new Node().blueId(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                .schema(new blue.language.model.Schema().required(true)));
+        document.getContracts().getProperties().get("run")
+                .properties("request", request);
+        try (Blue blue = fixture.blue()) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
+            Node canonical = processor.administration().canonicalizeProcessingSource(document);
+            EffectiveContractSnapshot handler = contract(processor.administration()
+                    .effectiveFragmentationCatalog(canonical), "/", "run");
+            assertTrue(handler.headerFields().get("request").property("amount")
+                    .getSchema().getRequiredValue());
+            assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical),
+                    DirectBlueIdCalculator.calculateBlueId(processor.administration()
+                            .canonicalizeProcessingSource(canonical)));
+            Node resolved = processor.administration().resolveProcessingSource(document);
+            assertTrue(resolved.getContracts().getProperties().get("run")
+                    .getProperties().get("request").getProperties().get("amount")
+                    .getSchema().getRequiredValue());
+            Node invalidFixed = document.clone();
+            invalidFixed.getContracts().getProperties().get("run")
+                    .getProperties().get("request").getProperties().get("amount")
+                    .value("wrong kind");
+            assertThrows(IllegalArgumentException.class, () -> processor.administration()
+                    .canonicalizeProcessingSource(invalidFixed));
+            Node ordinaryRequest = new Node().properties("request", request.clone());
+            assertThrows(IllegalArgumentException.class, () -> processor.administration()
+                    .resolveProcessingSource(ordinaryRequest));
+        }
+    }
+
+    @Test
     void shouldKeepReferencedHandlerEventMatcherAsExactColdHeaderEdge() {
         // given
         Fixture fixture = new Fixture();
@@ -1299,6 +1334,11 @@ class EffectiveFragmentationCatalogTest {
     public static final class CatalogHandler
             extends HandlerContract {
         private Node program;
+        private Node request;
+
+        public Node getRequest() { return request; }
+        public void setRequest(Node request) { this.request = request; }
+
         private String label;
 
         public Node getProgram() {
