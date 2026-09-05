@@ -52,9 +52,10 @@ class ProcessingSnapshotProviderPatchTest {
                 Collections.emptyMap(), true);
         String before = blue.nodeToJson(runtime.document());
         // when
-        org.junit.jupiter.api.Assertions.assertThrows(ProcessorFailureException.class,
-                () -> runtime.applyPatch("/", JsonPatch.replace("/money/val", new Node().value("wrong"))));
+        org.junit.jupiter.api.function.Executable invalidPatch = () -> runtime.applyPatch(
+                "/", JsonPatch.replace("/money/val", new Node().value("wrong")));
         // then
+        org.junit.jupiter.api.Assertions.assertThrows(ProcessorFailureException.class, invalidPatch);
         assertEquals(before, blue.nodeToJson(runtime.document()));
     }
 
