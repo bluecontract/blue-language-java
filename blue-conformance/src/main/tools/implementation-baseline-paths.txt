@@ -377,6 +377,7 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/FrozenContaini
 blue-contracts-core/src/main/java/blue/language/processor/closure/GasTraceEntry.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/GraphChange.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/LocalDocumentStepResult.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentBirth.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentGraph.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentInitializationEligibility.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedDocumentSnapshot.java
@@ -394,6 +395,7 @@ blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedTransit
 blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedDemandDiscovery.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessEmbeddedSurfaceReconciler.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ProcessingCause.java
+blue-contracts-core/src/main/java/blue/language/processor/closure/ProspectiveBirthRetry.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/PublicEventOccurrence.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/RejectedCharge.java
 blue-contracts-core/src/main/java/blue/language/processor/closure/ResultingDocument.java
