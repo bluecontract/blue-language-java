@@ -19,6 +19,8 @@ import blue.language.resolve.ResolutionLimits;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -111,8 +113,13 @@ final class LanguageRuntimeLimitedResolution {
                 if (!budget.tryAcquire(blueId)) {
                     throw new ReferenceExpansionLimitException(blueId);
                 }
-                NodeProviderResult result = nodeProvider
-                        .fetchResultByBlueId(blueId);
+                NodeProviderResult result = budget.evidence.get(blueId);
+                if (result == null) {
+                    result = nodeProvider.fetchResultByBlueId(blueId);
+                    // Detached ancestry/enum probes share one invocation's
+                    // evidence and budget, including defensive result copies.
+                    budget.evidence.put(blueId, result);
+                }
                 budget.providerOutcome = result.outcome();
                 if (result.outcome() != NodeProviderOutcome.FOUND) {
                     budget.outstandingBlueIds.add(blueId);
@@ -171,6 +178,7 @@ final class LanguageRuntimeLimitedResolution {
         private final Set<String> outstandingBlueIds =
                 new LinkedHashSet<>();
         private NodeProviderOutcome providerOutcome;
+        private final Map<String, NodeProviderResult> evidence = new LinkedHashMap<>();
 
         private ReferenceBudget(int maximum) {
             this.maximum = maximum;

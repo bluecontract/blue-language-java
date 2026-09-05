@@ -756,8 +756,12 @@ public class NodeDeserializerTest {
 
     @Test
     public void shouldValidateEnumReferenceSyntaxAtTheExactReferenceBoundary() {
-        for (String id : new String[]{"abc", "this#0"}) {
+        // given
+        String[] ids = {"abc", "this#0"};
+        // when
+        for (String id : ids) {
             Node parsed = YAML_MAPPER.readValue("schema:\n  enum:\n    - blueId: " + id, Node.class);
+            // then
             IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
                     () -> BlueIdReferenceValidator.validate(parsed));
             assertTrue(failure.getMessage().contains("/schema/enum/0/blueId"));

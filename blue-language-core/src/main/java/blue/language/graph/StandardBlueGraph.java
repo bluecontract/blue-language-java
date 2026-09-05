@@ -27,7 +27,7 @@ public final class StandardBlueGraph implements BlueGraph {
      * Creates a graph service for one runtime configuration.
      *
      * @param nodeProvider verified provider selected by the runtime
-     * @param resolver complete resolver used to validate specialization
+     * @param resolver resolver used to validate definition-compatible specialization
      */
     public StandardBlueGraph(
             NodeProvider nodeProvider, NodeResolver resolver) {

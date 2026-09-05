@@ -21,6 +21,23 @@ class FrozenSchemaMatcherTest {
             CanonicalTypeIdentityLookup.incomplete());
 
     @Test
+    void shouldRejectMalformedLoneNumericBoundsBeforeAbsentPayloadDeferral() {
+        // given
+        Node malformed = new Node().value("5");
+        Schema[] schemas = {new Schema().minimum(malformed), new Schema().maximum(malformed),
+                new Schema().exclusiveMinimum(malformed), new Schema().exclusiveMaximum(malformed)};
+        FrozenNode absent = FrozenNode.fromResolvedNode(new Node().type(
+                new Node().blueId(blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID)));
+        // when
+        boolean validAbsent = matcher.matches(absent, new Schema().exclusiveMinimum(BigDecimal.ONE));
+        // then
+        for (Schema schema : schemas) {
+            assertFalse(matcher.matches(absent, schema));
+        }
+        assertTrue(validAbsent);
+    }
+
+    @Test
     void shouldCountUnicodeCodePointsForLengthConstraints() {
         // given
         FrozenNode candidate = FrozenNode.fromResolvedNode(

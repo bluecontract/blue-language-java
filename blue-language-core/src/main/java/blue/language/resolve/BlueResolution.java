@@ -14,6 +14,8 @@ public interface BlueResolution {
      * Enforces completed-value presence and payload obligations regardless of
      * inline/reference spelling. Use {@link #resolveDefinition(Node)} when
      * preparing a declaration with obligations for future instances.
+     * Pure references remain opaque unless their content is demanded by
+     * type/schema constraints; success does not certify an unfetched target.
      *
      * @param source authored Source Document
      * @return completely resolved value
@@ -37,6 +39,8 @@ public interface BlueResolution {
 
     /**
      * Resolves demanded content without conflating incomplete with absent.
+     * An established result covers the demanded semantic closure only. A pure
+     * reference at the root can be established without certifying its target.
      *
      * @param source authored Source Document
      * @param limits semantic-demand and reference-expansion limits

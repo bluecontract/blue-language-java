@@ -201,7 +201,11 @@ public final class ConformanceEngine implements AutoCloseable {
 
     /**
      * Resolves a defensive clone and captures a conformance failure as data.
-     * A null node is conformant.
+     * A null node is conformant. The input must already be preprocessed.
+     * Pure references can be accepted without fetching their targets; this
+     * result does not certify undemanded content. Failures include unavailable
+     * evidence: this legacy boolean result cannot distinguish it from invalid
+     * content. Use the runtime's limited resolution for structured outcomes.
      *
      * @param node node to check, or {@code null}
      * @return conformance result
@@ -448,7 +452,7 @@ public final class ConformanceEngine implements AutoCloseable {
         TypeEvidenceResolution resolution = new Merger(
                 mergingProcessor,
                 nodeProvider,
-                resolvedReferenceCache).resolveTypeEvidence(
+                resolvedReferenceCache).resolveTypeDeclarationEvidence(
                 candidate.clone(),
                 ResolutionLimits.NO_LIMITS);
         FrozenNode resolvedParent = resolution.resolvedRoot().getType();

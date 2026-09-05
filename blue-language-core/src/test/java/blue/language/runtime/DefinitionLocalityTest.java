@@ -107,6 +107,38 @@ final class DefinitionLocalityTest {
         }
     }
 
+    @Test
+    void shouldBoundProviderReadsAcrossLongEnumAncestryProbes() {
+        // given
+        BasicNodeProvider content = new BasicNodeProvider();
+        AtomicInteger reads = new AtomicInteger();
+        try (BlueLanguage language = BlueLanguage.builder().nodeProvider(id -> {
+            reads.incrementAndGet();
+            return content.fetchByBlueId(id);
+        }).build()) {
+            Node domain = language.preprocessing().preprocess(source(language, "name: Finite domain\ntype: Text\n"));
+            content.addSingleNodes(domain);
+            String id = language.identity().directBlueId(domain);
+            java.util.List<Node> bare = new java.util.ArrayList<>();
+            java.util.List<Node> typed = new java.util.ArrayList<>();
+            for (int entry = 0; entry < 96; entry++) {
+                bare.add(new Node().value("v" + entry));
+                typed.add(new Node().type(new Node().blueId(id)).value("v" + entry));
+            }
+            Node parent = new Node().type(new Node().blueId(id))
+                    .schema(new blue.language.model.Schema().enumValues(bare));
+            Node value = new Node().type(parent).value("v0")
+                    .schema(new blue.language.model.Schema().enumValues(typed));
+            // when
+            BlueOperationResult<Node> result = language.resolution().resolveLimited(value,
+                    BlueOperationLimits.UNLIMITED.withMaxReferenceExpansions(1));
+            // then
+            assertEquals(BlueOperationOutcome.ESTABLISHED, result.outcome());
+            assertEquals(96, result.requireEstablished().getSchema().getEnum().size());
+            assertTrue(reads.get() <= 1, "provider reads=" + reads.get());
+        }
+    }
+
     private static Node source(BlueLanguage language, String yaml) {
         return language.codec().parseSource(yaml, BlueFormat.YAML);
     }

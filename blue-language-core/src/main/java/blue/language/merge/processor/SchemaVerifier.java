@@ -280,6 +280,12 @@ public class SchemaVerifier implements MergingProcessor {
                 KEY_MAX_FIELDS,
                 schema.getMaxFieldsExact());
 
+        for (Node bound : java.util.Arrays.asList(schema.getMinimum(), schema.getMaximum(),
+                schema.getExclusiveMinimum(), schema.getExclusiveMaximum())) {
+            if (bound != null) {
+                ScalarConstraintPayload.numericValue(bound, typeIdentities);
+            }
+        }
         verifyNumericBounds(schema.getMinimum(), schema.getMaximum(), false, typeIdentities);
         verifyNumericBounds(schema.getMinimum(), schema.getExclusiveMaximum(), true, typeIdentities);
         verifyNumericBounds(schema.getExclusiveMinimum(), schema.getMaximum(), true, typeIdentities);

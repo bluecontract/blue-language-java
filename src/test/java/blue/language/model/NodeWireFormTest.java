@@ -204,7 +204,7 @@ public class NodeWireFormTest {
         Schema schema = new Schema()
                 .required(true)
                 .minLength(
-                        new Node().name("Min smth").value(5)
+                        new Node().value(5)
                 )
                 .maxLength(10)
                 .minimum(new BigDecimal("1.0"))

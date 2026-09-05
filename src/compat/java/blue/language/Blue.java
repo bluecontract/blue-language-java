@@ -581,11 +581,14 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             Node preprocessed = preprocess(node.clone());
             Merger merger = languageMerger(
                     mergingProcessor, nodeProvider, resolvedReferenceCache);
-            return merger.resolveSnapshot(
-                    preprocessed,
-                    combineWithGlobalLimits(NO_LIMITS))
-                    .canonicalRoot()
-                    .toNode();
+            if (preprocessed.isReferenceOnly()) {
+                return preprocessed;
+            }
+            TypeEvidenceResolution definition = merger.resolveTypeDeclarationEvidence(
+                    preprocessed, combineWithGlobalLimits(NO_LIMITS));
+            return new blue.language.identity.CanonicalIdentityInputBuilder().build(
+                    definition.resolvedRoot().toNode(), preprocessed,
+                    definition.canonicalTypeIdentities());
         } finally {
             endDirectCacheOperation();
         }
@@ -620,9 +623,11 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
             Node preprocessed = preprocess(node.clone());
             Merger merger = languageMerger(
                     mergingProcessor, nodeProvider, resolvedReferenceCache);
-            SnapshotResolution resolution = merger.resolveSnapshot(
-                    preprocessed,
-                    combineWithGlobalLimits(NO_LIMITS));
+            if (preprocessed.isReferenceOnly()) {
+                return preprocessed;
+            }
+            TypeEvidenceResolution resolution = merger.resolveTypeDeclarationEvidence(
+                    preprocessed, combineWithGlobalLimits(NO_LIMITS));
             return new MinimizedOverlayBuilder().build(
                     resolution.resolvedRoot(),
                     resolution.canonicalTypeIdentities());
@@ -2421,7 +2426,7 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
                     mergingProcessor,
                     nodeProvider,
                     resolvedReferenceCache)
-                    .resolveTypeEvidence(
+                    .resolveTypeDeclarationEvidence(
                             preprocess(request),
                             combineWithGlobalLimits(NO_LIMITS));
             Node completed = resolution.resolvedRoot().toNode();

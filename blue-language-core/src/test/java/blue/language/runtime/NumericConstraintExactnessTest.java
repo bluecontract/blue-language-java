@@ -80,6 +80,46 @@ final class NumericConstraintExactnessTest {
         }
     }
 
+    @Test
+    void shouldSelectTheStrongerMixedTypeBoundBeforePayloadValidation() {
+        // given
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            Node binary = decimal("1e23");
+            Node strongerMinimum = integer("100000000000000000000000");
+            Node parent = new Node().schema(new Schema().minimum(binary));
+            Node child = new Node().type(parent).schema(new Schema().minimum(strongerMinimum));
+            // when
+            Node prepared = language.resolution().resolveDefinition(child);
+            // then
+            assertEquals(strongerMinimum.getValue(), prepared.getSchema().getMinimum().getValue());
+            assertThrows(IllegalArgumentException.class, () -> language.resolution().resolve(
+                    child.clone().value(new BigDecimal("1e23"))));
+            assertDoesNotThrow(() -> language.resolution().resolve(child.clone().value(strongerMinimum.getValue())));
+        }
+    }
+
+    @Test
+    void shouldPreserveExplicitLargeIntegerAndCustomEnumInSimpleSchemaWireForm() {
+        // given
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            Node bound = integer("9007199254740993");
+            Node schema = new Node().schema(new Schema().minimum(bound));
+            String customId = language.identity().directBlueId(new Node().name("Custom scalar"));
+            Node customEnum = new Node().schema(new Schema().enumValues(java.util.Collections.singletonList(
+                    new Node().type(new Node().blueId(customId)).value("x"))));
+            // when
+            String numericJson = language.codec().writeSimple(schema, blue.language.codec.BlueFormat.JSON);
+            String enumJson = language.codec().writeSimple(customEnum, blue.language.codec.BlueFormat.JSON);
+            // then
+            Node numericRoundTrip = language.codec().parseSource(numericJson, blue.language.codec.BlueFormat.JSON);
+            Node enumRoundTrip = language.codec().parseSource(enumJson, blue.language.codec.BlueFormat.JSON);
+            assertEquals(bound.getValue(), numericRoundTrip.getSchema().getMinimum().getValue());
+            assertEquals(INTEGER_TYPE_BLUE_ID, numericRoundTrip.getSchema().getMinimum().getType().getBlueId());
+            assertEquals(customId, enumRoundTrip.getSchema().getEnum().get(0).getType().getBlueId());
+            assertEquals(language.identity().directBlueId(customEnum), language.identity().directBlueId(enumRoundTrip));
+        }
+    }
+
     private static Node integer(String value) {
         return new Node().type(new Node().blueId(INTEGER_TYPE_BLUE_ID)).value(new BigInteger(value));
     }

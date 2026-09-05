@@ -21,6 +21,7 @@ import blue.language.merge.ResolvedSnapshot;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 
@@ -130,8 +131,16 @@ final class RuntimeBlueGraph implements BlueGraph {
 
     @Override
     public Node specialize(Node type, Node overlay) {
-        return runtime.admitted(
-                () -> delegate.specialize(type, overlay));
+        return runtime.admitted(() -> {
+            Objects.requireNonNull(type, blue.language.model.wire.BlueLanguageConstants.OBJECT_TYPE);
+            Objects.requireNonNull(overlay, "overlay");
+            if (overlay.getType() != null) {
+                throw new IllegalArgumentException("specialization overlay must not already declare type");
+            }
+            Node specialization = overlay.clone().type(type.clone());
+            runtime.resolveDefinition(specialization);
+            return specialization;
+        });
     }
 }
 

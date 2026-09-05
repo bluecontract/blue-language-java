@@ -169,9 +169,11 @@ public final class NodeWireForm {
         if (node.getSchema() != null) {
             result.put(OBJECT_SCHEMA,
                     SchemaWireForm.get(node.getSchema(),
+                            // SchemaWireForm chooses permitted scalar sugar;
+                            // entries it keeps explicit must retain their type.
                             child -> get(
                                     child,
-                                    strategy,
+                                    OFFICIAL,
                                     appendPath(path, OBJECT_SCHEMA))));
         }
         if (node.getContracts() != null) {

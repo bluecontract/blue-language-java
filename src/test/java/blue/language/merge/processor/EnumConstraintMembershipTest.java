@@ -35,14 +35,17 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldSatisfyBareAndExplicitTextEntriesWithoutLosingCustomIdentity() {
-        // Given a completed custom Text scalar and its exact identity.
+        // given
+        // A completed custom Text scalar and its exact identity.
         Fixture fixture = new Fixture();
         TypeEvidenceResolution proof = fixture.complete(fixture.gender, "female");
         Node candidate = proof.resolvedRoot().toNode();
         String before = ScalarNodeIdentity.resolvedBlueId(
                 candidate, proof.canonicalTypeIdentities());
 
-        // When enum membership is evaluated, then only the allowed payload matches.
+        // when
+        // Enum membership is evaluated, then only the allowed payload matches.
+        // then
         assertTrue(matches(candidate, scalar("female"), proof));
         assertTrue(matches(candidate, typed(TEXT_TYPE_BLUE_ID, "female"), proof));
         assertFalse(matches(candidate, scalar("male"), proof));
@@ -58,13 +61,16 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldAcceptSubtypeForCustomEntryButRejectParentAndUnrelatedType() {
-        // Given one explicit custom domain and completed subtype/sibling values.
+        // given
+        // One explicit custom domain and completed subtype/sibling values.
         Fixture fixture = new Fixture();
         Node entry = typed(fixture.genderId, "female");
         TypeEvidenceResolution narrow = fixture.complete(fixture.narrow, "female");
         TypeEvidenceResolution unrelated = fixture.complete(fixture.unrelated, "female");
 
-        // When testing membership, then the subtype restriction remains effective.
+        // when
+        // Testing membership, then the subtype restriction remains effective.
+        // then
         assertTrue(matches(narrow.resolvedRoot().toNode(), entry, narrow));
         assertFalse(matches(unrelated.resolvedRoot().toNode(), entry, unrelated));
         assertFalse(EnumConstraintMembership.matches(scalar("female"), entry,
@@ -73,12 +79,15 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldNotWidenExactValueReferenceToSubtypeValues() {
-        // Given an exact value reference and a value with a narrower declared type.
+        // given
+        // An exact value reference and a value with a narrower declared type.
         Fixture fixture = new Fixture();
         TypeEvidenceResolution narrow = fixture.complete(fixture.narrow, "female");
         Node reference = ref(ScalarNodeIdentity.blueId(typed(fixture.genderId, "female")));
 
-        // When testing the reference, then exact scalar identity is required.
+        // when
+        // Testing the reference, then exact scalar identity is required.
+        // then
         assertTrue(EnumConstraintMembership.matches(typed(fixture.genderId, "female"),
                 reference, CanonicalTypeIdentityLookup.incomplete()));
         assertFalse(matches(narrow.resolvedRoot().toNode(), reference, narrow));
@@ -86,11 +95,14 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldPreserveLargeIntegersAndSeparateIntegerDoubleAndQuotedText() {
-        // Given exact integers beyond binary64 precision and distinct primitive kinds.
+        // given
+        // Exact integers beyond binary64 precision and distinct primitive kinds.
         BigInteger huge = new BigInteger("900719925474099312345678901234567890");
         CanonicalTypeIdentityLookup none = CanonicalTypeIdentityLookup.incomplete();
 
-        // When comparing enum payloads, then primitive kinds and all integer digits survive.
+        // when
+        // Comparing enum payloads, then primitive kinds and all integer digits survive.
+        // then
         assertTrue(EnumConstraintMembership.matches(scalar(huge), scalar(huge), none));
         assertFalse(EnumConstraintMembership.matches(scalar(huge), scalar(huge.add(BigInteger.ONE)), none));
         assertFalse(EnumConstraintMembership.matches(scalar(BigInteger.ONE), scalar(BigDecimal.ONE), none));
@@ -101,9 +113,12 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldNotInferMissingCustomAncestryFromPayloadOrName() {
-        // Given unavailable custom ancestry and a name resembling a core type.
+        // given
+        // Unavailable custom ancestry and a name resembling a core type.
         Fixture fixture = new Fixture();
-        // When evidence is absent, then no primitive membership may be inferred.
+        // when
+        // Evidence is absent, then no primitive membership may be inferred.
+        // then
         assertThrows(IllegalStateException.class, () -> EnumConstraintMembership.matches(
                 typed(fixture.genderId, "female"), scalar("female"),
                 CanonicalTypeIdentityLookup.incomplete()));
@@ -119,12 +134,15 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldRetainNarrowerCustomDomainWhenIntersectingInEitherOrder() {
-        // Given broad and custom domains with the same payload.
+        // given
+        // Broad and custom domains with the same payload.
         Fixture fixture = new Fixture();
         Node bare = scalar("female");
         Node custom = typed(fixture.genderId, "female");
 
-        // When intersecting either order, then the narrower declared type survives.
+        // when
+        // Intersecting either order, then the narrower declared type survives.
+        // then
         assertEquals(fixture.genderId, fixture.intersect(bare, custom).get(0).getType().getBlueId());
         assertEquals(fixture.genderId, fixture.intersect(custom, bare).get(0).getType().getBlueId());
         Node narrower = typed(fixture.narrowId, "female");
@@ -134,9 +152,12 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldRejectUnrelatedTypesPayloadsAndNumericKindsInIntersection() {
-        // Given restrictions with no common subtype/payload member.
+        // given
+        // Restrictions with no common subtype/payload member.
         Fixture fixture = new Fixture();
-        // When intersected, then each restriction pair is empty.
+        // when
+        // Intersected, then each restriction pair is empty.
+        // then
         assertTrue(fixture.intersect(typed(fixture.genderId, "female"),
                 typed(fixture.unrelatedId, "female")).isEmpty());
         assertTrue(fixture.intersect(scalar("female"), scalar("male")).isEmpty());
@@ -146,15 +167,18 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldKeepCustomRestrictionsAndNormalizeOrderAndExactDuplicates() {
-        // Given redundant membership domains with distinct declared identities.
+        // given
+        // Redundant membership domains with distinct declared identities.
         Fixture fixture = new Fixture();
         Node bare = scalar("female");
         Node custom = typed(fixture.genderId, "female");
-        // When source enum normalization sorts and removes exact duplicates.
+        // when
+        // Source enum normalization sorts and removes exact duplicates.
         List<Node> first = SchemaEnumCanonicalizer.canonicalize(Arrays.asList(custom, bare, custom));
         List<Node> second = SchemaEnumCanonicalizer.canonicalize(Arrays.asList(bare, custom));
 
-        // Then explicit custom restrictions retain their own source identity.
+        // Explicit custom restrictions retain their own source identity.
+        // then
         assertEquals(2, first.size());
         assertEquals(SchemaEnumCanonicalizer.canonicalKey(first.get(0)),
                 SchemaEnumCanonicalizer.canonicalKey(second.get(0)));
@@ -166,13 +190,16 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldKeepSingletonRestrictionWhenIntersectingExactReferences() {
-        // Given verified exact custom scalar content.
+        // given
+        // Verified exact custom scalar content.
         Fixture fixture = new Fixture();
         Node genderValue = typed(fixture.genderId, "female");
         fixture.provider.addSingleNodes(genderValue);
         Node exact = ref(ScalarNodeIdentity.blueId(genderValue));
 
-        // When intersected with a domain, then its exact identity remains the restriction.
+        // when
+        // Intersected with a domain, then its exact identity remains the restriction.
+        // then
         assertEquals(exact.getBlueId(), fixture.intersect(exact, scalar("female")).get(0).getBlueId());
         assertEquals(exact.getBlueId(), fixture.intersect(scalar("female"), exact).get(0).getBlueId());
         assertTrue(fixture.intersect(exact, scalar("male")).isEmpty());
@@ -182,13 +209,16 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldRequireReferenceContentForIntersectionAndAcceptLaterProvision() {
-        // Given an exact scalar reference whose provider content is initially missing.
+        // given
+        // An exact scalar reference whose provider content is initially missing.
         Fixture fixture = new Fixture();
         Node value = typed(fixture.genderId, "female");
         Node unavailable = ref(ScalarNodeIdentity.blueId(value));
-        // When evidence is absent, then intersection cannot be certified.
+        // when
+        // Evidence is absent, then intersection cannot be certified.
+        // then
         assertThrows(RuntimeException.class, () -> fixture.intersect(unavailable, scalar("female")));
-        // When the same provider receives it, then a later operation succeeds.
+        // The same provider receives it, then a later operation succeeds.
         fixture.provider.addSingleNodes(value);
         assertEquals(unavailable.getBlueId(), fixture.intersect(unavailable, scalar("female"))
                 .get(0).getBlueId());
@@ -196,7 +226,8 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldUseConstrainedDefinitionAndCustomNarrowingWithoutSampleValues() {
-        // Given constrained Gender and a subtype with an explicit Gender enum entry.
+        // given
+        // Constrained Gender and a subtype with an explicit Gender enum entry.
         Fixture fixture = new Fixture();
         Node gender = fixture.gender.clone().schema(new Schema().enumValues(
                 Arrays.asList(scalar("female"), scalar("male"))));
@@ -207,10 +238,12 @@ class EnumConstraintMembershipTest {
         String femaleId = DirectBlueIdCalculator.calculateBlueId(female);
         fixture.provider.addSingleNodes(female);
 
-        // When preparing the subtype as a declaration.
+        // when
+        // Preparing the subtype as a declaration.
         TypeEvidenceResolution declaration = fixture.merger.resolveTypeDeclarationEvidence(
                 female.clone(), ResolutionLimits.NO_LIMITS);
-        // Then no sample is inserted, and actual instances enforce retained obligations.
+        // No sample is inserted, and actual instances enforce retained obligations.
+        // then
         assertNull(declaration.resolvedRoot().getValue());
         assertEquals(genderId, declaration.resolvedRoot().toNode().getSchema()
                 .getEnum().get(0).getType().getBlueId());
@@ -223,7 +256,8 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldRejectInvalidFixedCustomEnumValue() {
-        // Given an enum entry contradicting the fixed value of its custom type.
+        // given
+        // An enum entry contradicting the fixed value of its custom type.
         Fixture fixture = new Fixture();
         Node fixed = fixture.gender.clone().name("FixedFemale").value("female");
         String fixedId = DirectBlueIdCalculator.calculateBlueId(fixed);
@@ -231,7 +265,9 @@ class EnumConstraintMembershipTest {
         Node invalidDefinition = new Node().type(ref(TEXT_TYPE_BLUE_ID))
                 .schema(new Schema().enumValues(Collections.singletonList(typed(fixedId, "male"))));
 
-        // When preparing the declaration, then the fixed-value contradiction fails.
+        // when
+        // Preparing the declaration, then the fixed-value contradiction fails.
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> fixture.merger.resolveTypeDeclarationEvidence(
                         invalidDefinition, ResolutionLimits.NO_LIMITS));
@@ -239,11 +275,14 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldRejectAuthoredEnumMetadataBeforeTypeCompletion() {
-        // Given authored enum metadata outside the scalar-entry grammar.
+        // given
+        // Authored enum metadata outside the scalar-entry grammar.
         Fixture fixture = new Fixture();
         Node malformed = new Node().type(ref(TEXT_TYPE_BLUE_ID)).schema(new Schema()
                 .enumValues(Collections.singletonList(typed(fixture.genderId, "female").name("label"))));
-        // When parsing or resolving, then the invalid authored shape is rejected.
+        // when
+        // Parsing or resolving, then the invalid authored shape is rejected.
+        // then
         assertThrows(IllegalArgumentException.class,
                 () -> fixture.merger.resolveTypeDeclarationEvidence(malformed, ResolutionLimits.NO_LIMITS));
         assertThrows(IllegalArgumentException.class,
@@ -252,27 +291,33 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldParseCustomTypedAndExactReferenceEnumEntries() {
-        // Given actual custom type and exact scalar identities.
+        // given
+        // Actual custom type and exact scalar identities.
         Fixture fixture = new Fixture();
         String scalarId = ScalarNodeIdentity.blueId(typed(fixture.genderId, "female"));
-        // When their supported enum entry forms are parsed.
+        // when
+        // Their supported enum entry forms are parsed.
         Node parsed = YAML_MAPPER.readValue("type: Text\nschema:\n  enum:\n"
                 + "    - type:\n        blueId: " + fixture.genderId + "\n      value: female\n"
                 + "    - blueId: " + scalarId + "\n", Node.class);
-        // Then both references are retained exactly.
+        // Both references are retained exactly.
+        // then
         assertEquals(fixture.genderId, parsed.getSchema().getEnum().get(0).getType().getBlueId());
         assertEquals(scalarId, parsed.getSchema().getEnum().get(1).getBlueId());
     }
 
     @Test
     void shouldRejectProvablyDisjointPrimitiveEnumWithoutAnySample() {
-        // Given declarations whose enum entries all have a different known primitive kind.
+        // given
+        // Declarations whose enum entries all have a different known primitive kind.
         Fixture fixture = new Fixture();
         Node textWithIntegerEnum = new Node().type(ref(TEXT_TYPE_BLUE_ID))
                 .schema(new Schema().enumValues(Collections.singletonList(scalar(BigInteger.ONE))));
         Node integerWithDoubleEnum = new Node().type(ref(INTEGER_TYPE_BLUE_ID))
                 .schema(new Schema().enumValues(Collections.singletonList(scalar(BigDecimal.ONE))));
-        // When preparing definitions, then these cheap contradictions fail without a payload.
+        // when
+        // Preparing definitions, then these cheap contradictions fail without a payload.
+        // then
         assertThrows(IllegalArgumentException.class, () -> fixture.merger.resolveTypeDeclarationEvidence(
                 textWithIntegerEnum, ResolutionLimits.NO_LIMITS));
         assertThrows(IllegalArgumentException.class, () -> fixture.merger.resolveTypeDeclarationEvidence(
@@ -285,19 +330,23 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldDeferOpaqueEnumReferencesDuringDeclarationDomainConsistency() {
-        // Given an opaque enum reference with no provider content.
+        // given
+        // An opaque enum reference with no provider content.
         Fixture fixture = new Fixture();
         Node scalarReference = ref(ScalarNodeIdentity.blueId(typed(fixture.genderId, "female")));
         Node definition = new Node().type(ref(TEXT_TYPE_BLUE_ID))
                 .schema(new Schema().enumValues(Arrays.asList(scalar(BigInteger.ONE), scalarReference)));
 
-        // When checking known-domain consistency, then unknown evidence is deferred.
+        // when
+        // Checking known-domain consistency, then unknown evidence is deferred.
+        // then
         assertDoesNotThrow(() -> fixture.merger.resolveTypeDeclarationEvidence(definition, ResolutionLimits.NO_LIMITS));
     }
 
     @Test
     void shouldRespectPublicReferenceExpansionBudgetForEnumIntersectionEvidence() {
-        // Given an intersection requiring both a type and an exact scalar reference.
+        // given
+        // An intersection requiring both a type and an exact scalar reference.
         Node gender = new Node().name("Gender").type(ref(TEXT_TYPE_BLUE_ID))
                 .schema(new Schema().enumValues(Arrays.asList(scalar("female"), scalar("male"))));
         String genderId = DirectBlueIdCalculator.calculateBlueId(gender);
@@ -306,9 +355,11 @@ class EnumConstraintMembershipTest {
         BasicNodeProvider provider = new BasicNodeProvider(gender, female);
         Node instance = female.clone().schema(new Schema().enumValues(Collections.singletonList(ref(femaleId))));
         try (BlueLanguage language = BlueLanguage.builder().nodeProvider(provider).build()) {
-            // When the public operation has insufficient or sufficient expansion budget.
+            // when
+            // The public operation has insufficient or sufficient expansion budget.
             BlueOperationLimits one = BlueOperationLimits.demandedPath("").withMaxReferenceExpansions(1);
-            // Then detached enum evidence work shares that same budget.
+            // Detached enum evidence work shares that same budget.
+            // then
             assertEquals(BlueOperationOutcome.INCOMPLETE,
                     language.resolution().resolveLimited(instance, one).outcome());
             assertEquals(BlueOperationOutcome.ESTABLISHED,
@@ -318,7 +369,8 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldInterpretCustomIntegerCanonicalStringWithoutChangingIdentity() {
-        // Given a custom Integer with its canonical large-integer string spelling.
+        // given
+        // A custom Integer with its canonical large-integer string spelling.
         Fixture fixture = new Fixture();
         BigInteger huge = new BigInteger("900719925474099312345678901234567890");
         Node integerType = new Node().name("LargeInteger").type(ref(INTEGER_TYPE_BLUE_ID));
@@ -328,7 +380,9 @@ class EnumConstraintMembershipTest {
         Node candidate = proof.resolvedRoot().toNode();
         String exactId = ScalarNodeIdentity.resolvedBlueId(candidate, proof.canonicalTypeIdentities());
 
-        // When membership uses the proven primitive domain, then exact stored content stays intact.
+        // when
+        // Membership uses the proven primitive domain, then exact stored content stays intact.
+        // then
         assertTrue(matches(candidate, scalar(huge), proof));
         assertFalse(matches(candidate, scalar(huge.toString()), proof));
         assertEquals(huge.toString(), candidate.getRawValue());
@@ -339,13 +393,16 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldNotTreatFullDocumentReferenceWithMetadataAsScalarIdentitySingleton() {
-        // Given a full document reference whose identity includes a label.
+        // given
+        // A full document reference whose identity includes a label.
         Fixture fixture = new Fixture();
         Node labeled = scalar("female").name("Label");
         fixture.provider.addSingleNodes(labeled);
         Node documentReference = ref(DirectBlueIdCalculator.calculateBlueId(labeled));
 
-        // When used as an exact scalar enum restriction, then it has no matching scalar identity.
+        // when
+        // Used as an exact scalar enum restriction, then it has no matching scalar identity.
+        // then
         assertFalse(EnumConstraintMembership.matches(labeled, documentReference,
                 CanonicalTypeIdentityLookup.incomplete()));
         assertTrue(fixture.intersect(documentReference, scalar("female")).isEmpty());
@@ -353,7 +410,8 @@ class EnumConstraintMembershipTest {
 
     @Test
     void shouldMakeIntersectionCommutativeAndEquivalentToConjunctionForSampledDomains() {
-        // Given primitive, custom, subtype and sibling restrictions and completed candidates.
+        // given
+        // Primitive, custom, subtype and sibling restrictions and completed candidates.
         Fixture fixture = new Fixture();
         List<Node> entries = Arrays.asList(scalar("female"), scalar("male"),
                 typed(fixture.genderId, "female"), typed(fixture.narrowId, "female"),
@@ -365,11 +423,13 @@ class EnumConstraintMembershipTest {
                 fixture.complete(new Node().blueId(TEXT_TYPE_BLUE_ID), "female"),
                 fixture.complete(new Node().blueId(TEXT_TYPE_BLUE_ID), "male"));
 
-        // When every pair is intersected, then order and conjunction agree for every candidate.
+        // when
+        // Every pair is intersected, then order and conjunction agree for every candidate.
         for (Node left : entries) {
             for (Node right : entries) {
                 List<Node> intersection = fixture.intersect(left, right);
                 List<Node> reversed = fixture.intersect(right, left);
+                // then
                 assertEquals(intersection.size(), reversed.size());
                 if (!intersection.isEmpty()) {
                     assertEquals(SchemaEnumCanonicalizer.canonicalKey(intersection.get(0)),

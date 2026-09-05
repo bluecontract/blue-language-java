@@ -1179,7 +1179,7 @@ where `MASTER` is the plain BlueId of the ordered cyclic set list and `index` is
 
 ## 8. Types, Overlays, and Subtyping
 
-> **Task D proposal, pending campaign review.** Sections 8.1.1 and 9.2.5 and the domain-membership amendments to §§9.8–9.9 below are development-candidate rules, not an approved release contract. They distinguish definition preparation from completed-value certification without introducing a second node model or changing exact scalar identity. Release bindings must be regenerated and reviewed before integration is published.
+> **Task D/D2 development candidate, pending campaign review.** Sections 8.1.1 and 9.2.5 and the domain-membership amendments to §§9.8–9.9 below are development-candidate rules, not an approved release contract. They distinguish definition preparation from completed-value certification without introducing a second node model or changing exact scalar identity. Release bindings must be regenerated and reviewed before integration is published.
 
 ### 8.1 Any node can be a type (normative)
 
@@ -1500,6 +1500,12 @@ A missing payload is not by itself an invalid definition, and is not by itself a
 During completed-value certification the root exists, so root `required` is trivially satisfied; this does not supply a scalar or list payload for another keyword. A root containing only metadata can therefore satisfy `required`, while the same payload-free root with an effective `enum` or `minLength` fails completed-value validation. These results apply equally to inline and referenced type bodies.
 
 An absent optional child and its required descendants remain inactive until the existing semantic-presence rules establish that child. An authored type-only child is not a supplied scalar. Exact empty objects, empty lists, supplied payloads, and fixed inherited subtrees preserve their existing presence behavior. Preparing a definition MUST NOT create dummy children or values to satisfy any obligation. Definition context applies to ordinary child and `contracts` declaration paths and to item/key/value type metadata; it does not authorize treating a completed runtime value as a declaration merely because it lacks `value`.
+
+Definition admission checks every applicable bound against any supplied or inherited fixed payload, including an empty object, empty list, or a nonempty prefix. A list/object prefix below its minimum is rejected even if a later specialization could extend it. A payload-free declaration instead retains that bound. This conservative admission rule applies at root, ordinary child, contract declaration, and item/key/value metadata positions and across inline, reference, and imported forms.
+
+Consistency checking is local, not a general satisfiability solver. All pairs of present numeric lower/upper bounds are compared exactly; equal endpoints are contradictory if either bound is exclusive. Declaration-only ordinary children do not alone supply fixed object payload for admission. Thus a required declaration-only field combined with `maxFields: 0` can be prepared, but cannot pass completed resolution when that required field is supplied. Successful preparation does not assert that any completing instance exists.
+
+A pure reference can establish its exact reference identity and pass reference-shape admission without establishing target conformance. Complete resolution and snapshots retain pure references unless type/schema demands require their content; completion describes the requested semantic closure. To certify an exact referenced target, first demand and verify that target content, then run completed resolution. Limited results MUST preserve missing/unavailable evidence and budget exhaustion as incomplete, and invalid provider evidence as invalid. A warm identity/representation cache MUST NOT replace the current invocation's validation obligations.
 
 ### 9.3 Presence
 
