@@ -13,7 +13,7 @@ test fork while another checkout is performing release verification.
 
 ```bash
 # One existing regression, with an explicit selected/executed inventory.
-./gradlew focusedTest --tests 'blue.language.identity.BlueIdsTest.shouldRecognizePotentialBlueIds' --max-workers=1 --no-parallel
+./gradlew focusedTest --tests 'blue.language.processor.SelectedExecutableBodyCapabilityTest.shouldKeepReferencedAuthoredBodySeparateFromInheritedFields' --max-workers=1 --no-parallel
 
 # List the complete manifest inventory, without executing fixture assertions.
 ./gradlew listLanguageConformanceCases --max-workers=1 --no-parallel

@@ -33,7 +33,7 @@ Package ownership is derived from production Java source files. Only top-level p
 | `blue.language.preprocess` | 19 | present |
 | `blue.language.preprocess.provider` | 2 | present |
 | `blue.language.processor` | 127 | present |
-| `blue.language.processor.closure` | 61 | present |
+| `blue.language.processor.closure` | 62 | present |
 | `blue.language.processor.model` | 19 | present |
 | `blue.language.processor.registry` | 4 | present |
 | `blue.language.processor.util` | 4 | present |
@@ -444,6 +444,7 @@ Package ownership is derived from production Java source files. Only top-level p
 - `blue.language.processor.closure.GasTraceEntry`
 - `blue.language.processor.closure.GraphChange`
 - `blue.language.processor.closure.LocalDocumentStepResult`
+- `blue.language.processor.closure.ManagedDocumentBirth`
 - `blue.language.processor.closure.ManagedDocumentGraph`
 - `blue.language.processor.closure.ManagedDocumentSnapshot`
 - `blue.language.processor.closure.ManagedDocumentTransitionReceipt`
