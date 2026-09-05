@@ -3913,7 +3913,7 @@ If a typo or editorial issue is found after publication and it does not change s
 
 ```yaml
 name: Text
-description: >
+description: >-
   Core Blue Language 1.0 primitive scalar representing Unicode text. Text
   values are exact Unicode code-point sequences after parsing. Blue Language
   performs no Unicode normalization, case folding, locale-sensitive collation,
@@ -3927,7 +3927,7 @@ description: >
 
 ```yaml
 name: Integer
-description: >
+description: >-
   Core Blue Language 1.0 primitive scalar for exact mathematical integer
   values. Integer values are arbitrary precision in the language model.
   Unquoted integer tokens are portable only in the safe JSON numeric integer
@@ -3943,7 +3943,7 @@ description: >
 
 ```yaml
 name: Double
-description: >
+description: >-
   Core Blue Language 1.0 primitive scalar for finite IEEE 754 binary64
   floating-point values. NaN, positive Infinity, and negative Infinity are
   invalid Blue values. Double parsing uses round-to-nearest, ties-to-even
@@ -3960,7 +3960,7 @@ description: >
 
 ```yaml
 name: Boolean
-description: >
+description: >-
   Core Blue Language 1.0 primitive scalar with exactly two values: true and
   false. Blue Language defines no truthiness conversion for Boolean values.
   Only the literal parsed boolean values true and false are Boolean values.
@@ -3971,7 +3971,7 @@ description: >
 
 ```yaml
 name: Dictionary
-description: >
+description: >-
   Core Blue Language 1.0 object-map collection type. A Dictionary is encoded
   as a Blue object node whose ordinary child fields represent direct keys
   when those keys do not collide with reserved language fields. Direct object
@@ -3994,7 +3994,7 @@ description: >
 
 ```yaml
 name: List
-description: >
+description: >-
   Core Blue Language 1.0 ordered collection type. Surface array form and
   wrapped items form are equivalent authoring forms. Order and multiplicity
   are preserved. List BlueId calculation uses a domain-separated streaming
