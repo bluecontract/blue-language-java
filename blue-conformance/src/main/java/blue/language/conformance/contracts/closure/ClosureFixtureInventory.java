@@ -28,7 +28,7 @@ final class ClosureFixtureInventory {
     static final String FIXTURE_ROOT = ROOT + "fixtures/";
     static final String MANIFEST = FIXTURE_ROOT + "manifest.yaml";
     static final String PACKAGE_IDENTITY =
-            "sha256:4c04a92450e782ec5ee834545c19bacc7c3372484cecc21c73942648cf26e182";
+            "sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436";
     static final int CLOSURE_FIXTURE_COUNT = 98;
     static final int EXTERNAL_PROCESS_FIXTURE_COUNT = 30;
     static final int MANAGED_REVISION_PROCESS_FIXTURE_COUNT = 5;
