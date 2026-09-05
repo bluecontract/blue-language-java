@@ -7,6 +7,9 @@ from pathlib import Path
 from copy import deepcopy
 import hashlib
 import json
+import shutil
+import subprocess
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -40,6 +43,29 @@ def write_yaml(root: Path, relative: str, value: object) -> None:
 
 
 class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.legacy_temporary = tempfile.TemporaryDirectory(prefix="classifier-legacy-")
+        cls.addClassCleanup(cls.legacy_temporary.cleanup)
+        cls.legacy_root = Path(cls.legacy_temporary.name).resolve()
+        archive = Path(__file__).parent / "migration/classify-legacy-e1aeeb9-inputs.tar.gz"
+        if hashlib.sha256(archive.read_bytes()).hexdigest() != "a03fd9eaf74880708e043658fd715f29c325a02afd9968fc991aba714df33edc":
+            raise AssertionError("historical e1aeeb9 source/fixture inputs changed")
+        with tarfile.open(archive) as source:
+            for member in source.getmembers():
+                if member.isfile():
+                    path = cls.legacy_root / member.name
+                    if not path.resolve().is_relative_to(cls.legacy_root):
+                        raise AssertionError("historical input escaped its root")
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(source.extractfile(member).read())
+        cls.legacy_resources = (cls.legacy_root
+            / "blue-conformance/src/main/resources/blue-contracts-closure-1.0")
+        cls.legacy_release = yaml.safe_load(
+            (cls.legacy_resources / "release-manifest.yaml").read_text())
+        cls.legacy_paths = tuple(entry["path"] for entry in
+            cls.legacy_release["languageDependency"]["inputImplementationBaseline"])
 
     def test_reviewed_implementation_baseline_input_is_exact(self) -> None:
         data = classifier.IMPLEMENTATION_BASELINE_INPUT_PATH.read_bytes()
@@ -405,7 +431,7 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
     def test_exact_cevo_fixtures_are_allowed_and_semantic_mutations_fail(self) -> None:
         samples = tuple(sorted(classifier.APPROVED_CEVO_FIXTURE_IDENTITIES))
         for relative in samples:
-            source = RESOURCE_ROOT / relative
+            source = self.legacy_resources / relative
             with self.subTest(relative=relative, mutation="none"):
                 row = classifier.classify_added_file(relative, source)
                 self.assertFalse(row["unexpected"])
@@ -645,7 +671,9 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
     def test_release_manifest_accepts_only_the_reviewed_specification_rebind(
         self,
     ) -> None:
-        with tempfile.TemporaryDirectory(prefix="identity-delta-test-") as name:
+        with tempfile.TemporaryDirectory(prefix="identity-delta-test-") as name, patch.object(
+            classifier, "IMPLEMENTATION_BASELINE_SOURCE_PATHS", self.legacy_paths
+        ):
             package_root = Path(name)
             constructors = package_root / "identity-constructors.yaml"
             constructors.write_text("constructors: reviewed\n", encoding="utf-8")
@@ -655,13 +683,9 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
                     classifier.APPROVED_IMPLEMENTATION_BASELINE_BEFORE
                 )
             ]
-            current_baseline = [
-                {
-                    "path": path,
-                    "sha256": classifier.sha256(REPOSITORY_ROOT / path),
-                }
-                for path in IMPLEMENTATION_BASELINE_SOURCE_PATHS
-            ]
+            current_baseline = deepcopy(
+                self.legacy_release["languageDependency"]["inputImplementationBaseline"]
+            )
             before = {
                 "specificationDocument": {"sha256": "old-specification"},
                 "languageDependency": {
@@ -792,52 +816,75 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
     def test_approved_release_source_pins_match_current_sources(
         self,
     ) -> None:
+        self.assert_release_source_pins(
+            self.legacy_root,
+            classifier.APPROVED_CONTRACTS_SPECIFICATION_SHA256,
+            {field: transition[1] for field, transition in
+             classifier.APPROVED_LANGUAGE_DEPENDENCY_TRANSITION.items()},
+            classifier.APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY,
+            self.legacy_paths,
+        )
+        current = yaml.safe_load((RESOURCE_ROOT / "release-manifest.yaml").read_text())
+        self.assert_release_source_pins(
+            REPOSITORY_ROOT, current["specificationDocument"]["sha256"],
+            current["languageDependency"],
+            classifier.implementation_baseline_aggregate_identity(
+                IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+                {entry["path"]: entry["sha256"] for entry in
+                 current["languageDependency"]["inputImplementationBaseline"]},
+            ),
+            IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+        )
+
+    def assert_release_source_pins(
+        self, source_root: Path, contracts_digest: str,
+        dependency: dict[str, object], aggregate_identity: str,
+        source_paths: tuple[str, ...],
+    ) -> None:
         contracts_specification = (
-            REPOSITORY_ROOT
+            source_root
             / "blue-contracts-core/src/main/resources/specifications/"
             "blue-contracts-and-processor-specification-1.0.md"
         )
         self.assertEqual(
-            classifier.APPROVED_CONTRACTS_SPECIFICATION_SHA256,
+            contracts_digest,
             classifier.sha256(contracts_specification),
         )
         language_specification = (
-            REPOSITORY_ROOT
+            source_root
             / "blue-language-core/src/main/resources/specifications/"
             "blue-language-specification-1.0.md"
         )
         language_digest = classifier.sha256(language_specification)
         self.assertEqual(
-            classifier.APPROVED_LANGUAGE_DEPENDENCY_TRANSITION[
-                "specificationSha256"
-            ][1],
+            dependency["specificationSha256"],
             language_digest,
         )
         baseline_by_path = {
             path: {
                 "path": path,
-                "sha256": classifier.sha256(REPOSITORY_ROOT / path),
+                "sha256": classifier.sha256(source_root / path),
             }
-            for path in IMPLEMENTATION_BASELINE_SOURCE_PATHS
+            for path in source_paths
         }
         aggregate_input = {
             "domain": classifier.IMPLEMENTATION_BASELINE_AGGREGATE_DOMAIN,
             "files": [
                 baseline_by_path[path]
-                for path in IMPLEMENTATION_BASELINE_SOURCE_PATHS
+                for path in source_paths
             ],
         }
         independently_calculated_aggregate = "sha256:" + hashlib.sha256(
             classifier.jcs_dumps(aggregate_input)
         ).hexdigest()
         self.assertEqual(
-            classifier.APPROVED_IMPLEMENTATION_BASELINE_AGGREGATE_IDENTITY,
+            aggregate_identity,
             independently_calculated_aggregate,
         )
         self.assertEqual(
             independently_calculated_aggregate,
             classifier.implementation_baseline_aggregate_identity(
-                IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+                source_paths,
                 {path: entry["sha256"] for path, entry in baseline_by_path.items()},
             ),
         )
@@ -845,12 +892,12 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
             (
                 "cyclicSetFinalizerBaselineIdentity",
                 "blue-language-cyclic-set-finalizer-baseline/1.0",
-                source_paths_for_role(CYCLIC_FINALIZER),
+                tuple(p for p in source_paths if p.split("/")[0] in {"blue-language-core", "blue-language-model"}),
             ),
             (
                 "cyclicSetProofVerifierBaselineIdentity",
                 "blue-language-cyclic-set-proof-verifier-baseline/1.0",
-                source_paths_for_role(CYCLIC_PROOF_VERIFIER),
+                tuple(p for p in source_paths if p.split("/")[0] in {"blue-language-core", "blue-language-model"}),
             ),
         )
         for field, domain, paths in identity_expectations:
@@ -865,11 +912,11 @@ class ClassifyFixtureIdentityDeltaTest(unittest.TestCase):
                 classifier.jcs_dumps(identity_input)
             ).hexdigest()
             self.assertEqual(
-                classifier.APPROVED_LANGUAGE_DEPENDENCY_TRANSITION[field][1],
+                dependency[field],
                 actual_identity,
             )
         self.assertEqual(
-            IMPLEMENTATION_BASELINE_SOURCE_PATHS,
+            source_paths,
             tuple(baseline_by_path),
         )
 

@@ -1,0 +1,142 @@
+diff --git a/fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml b/fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml
+index e8f3cf4f300c2813fb654353e04f00a1a230edc6..9f128cce036b2fa13ee488488a4cb7ac36568149 100644
+--- a/fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml
++++ b/fixtures/closure/c-evt-collection-07-closure-work-order-inline-cold.yaml
+@@ -4,8 +4,7 @@ vectors:
+ - C-EVT-COLLECTION-07
+ category: admission
+ operation: admit-closure
+-description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection
+-  paths, and queue/gas evidence across representation and physical provider modes.
++description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection paths, and queue/gas evidence across representation and physical provider modes.
+ releaseManifest: ../../release-manifest.yaml
+ input:
+   graphGeneration: 1
+diff --git a/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml b/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml
+index 3617cbce05c23bea61df1c3a8e82accb00eece7d..4b0ce0110c497ba1c5051503a03e73704e53b500 100644
+--- a/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml
++++ b/fixtures/closure/c-evt-collection-07-closure-work-order-inline-warm.yaml
+@@ -4,8 +4,7 @@ vectors:
+ - C-EVT-COLLECTION-07
+ category: admission
+ operation: admit-closure
+-description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection
+-  paths, and queue/gas evidence across representation and physical provider modes.
++description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection paths, and queue/gas evidence across representation and physical provider modes.
+ releaseManifest: ../../release-manifest.yaml
+ input:
+   graphGeneration: 1
+diff --git a/fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml b/fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml
+index 1831d5c7100e9c2e579ca74ce4ea25c1fab9c7a5..d55513bcf07841831bc0f5b7bbb116af91a2c7e4 100644
+--- a/fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml
++++ b/fixtures/closure/c-evt-collection-07-closure-work-order-reference-cold.yaml
+@@ -4,8 +4,7 @@ vectors:
+ - C-EVT-COLLECTION-07
+ category: admission
+ operation: admit-closure
+-description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection
+-  paths, and queue/gas evidence across representation and physical provider modes.
++description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection paths, and queue/gas evidence across representation and physical provider modes.
+ releaseManifest: ../../release-manifest.yaml
+ input:
+   graphGeneration: 1
+diff --git a/fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml b/fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml
+index bc8e689706b807a06933bca5e1bbffbe184fed69..d31599ac90617ba1ffec9e8f82d5832382d7e4b4 100644
+--- a/fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml
++++ b/fixtures/closure/c-evt-collection-07-closure-work-order-reference-warm.yaml
+@@ -4,8 +4,7 @@ vectors:
+ - C-EVT-COLLECTION-07
+ category: admission
+ operation: admit-closure
+-description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection
+-  paths, and queue/gas evidence across representation and physical provider modes.
++description: Native closure delivery preserves Node and Collection channel order, exact event filtering, escaped collection paths, and queue/gas evidence across representation and physical provider modes.
+ releaseManifest: ../../release-manifest.yaml
+ input:
+   graphGeneration: 1
+diff --git a/fixtures/manifest.yaml b/fixtures/manifest.yaml
+index 6d1e4f10089a01a9c49a2aff9429f15633eaf56f..5ec30ed147641cf3e0d5c48692da2cd772fdfd98 100644
+--- a/fixtures/manifest.yaml
++++ b/fixtures/manifest.yaml
+@@ -592,26 +592,26 @@ files:
+   - C-EVO-23
+ - path: closure/c-evt-collection-07-closure-work-order-inline-cold.yaml
+   role: closure-fixture
+-  sha256: a82a3f5e76c2fd25017f0494f65e631f84b01f6b0bdfaea831c4ab5dc5def97c
+-  bytes: 344391
++  sha256: 4971e37e14b363627a0ce8830f0a4fdc0a65bf3c6a1ccfb9a0d7143af0a667f9
++  bytes: 344389
+   vectors:
+   - C-EVT-COLLECTION-07
+ - path: closure/c-evt-collection-07-closure-work-order-inline-warm.yaml
+   role: closure-fixture
+-  sha256: b9590af56481e42ca3a7a1a88884f58507e36c16839c4c65de1564a88175627f
+-  bytes: 344389
++  sha256: e1722b334d4ec8932f022e74b812139096c6bd74575468136c02e8683fef0571
++  bytes: 344387
+   vectors:
+   - C-EVT-COLLECTION-07
+ - path: closure/c-evt-collection-07-closure-work-order-reference-cold.yaml
+   role: closure-fixture
+-  sha256: 922c68b031d6ab7d383381102f06028d0e151867bc3a4e97bfe5846713b49f47
+-  bytes: 343850
++  sha256: 14f97ff23235588229191824b9fbc5fb28120cd632dd502abcc65f5cdcd07c67
++  bytes: 343848
+   vectors:
+   - C-EVT-COLLECTION-07
+ - path: closure/c-evt-collection-07-closure-work-order-reference-warm.yaml
+   role: closure-fixture
+-  sha256: 3f75322209bfef282036778c9dd0a7e5a76da24a1683cd4771f404fb2218d7e9
+-  bytes: 343852
++  sha256: 5e8e463a3557c811e4fbf077c8046d5f8d969eed48eb08c1b4c138d6488cc79f
++  bytes: 343850
+   vectors:
+   - C-EVT-COLLECTION-07
+ - path: closure/fl-adm-01-root-patch-event.yaml
+@@ -1878,4 +1878,4 @@ packageIdentityAlgorithm:
+   digest: sha256
+   encoding: RFC 8785 canonical JSON encoded as UTF-8
+   normalization: packageIdentity is null before hashing
+-packageIdentity: sha256:a84bbb688d247e65411204b5b52046fe481f255a22b3f9ee0c82dd6afe36f4a0
++packageIdentity: sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436
+diff --git a/registry/manifest.yaml b/registry/manifest.yaml
+index 566395a05af4faf5efa7cef75d188a507fa4698a..a12a6f1a9111534ced60c72eca0ae6419b7aa7f2 100644
+--- a/registry/manifest.yaml
++++ b/registry/manifest.yaml
+@@ -2,7 +2,7 @@ registry: blue-contracts-runtime
+ registryKind: runtime-type
+ specificationVersion: '1.0'
+ languageVersion: '1.0'
+-fixturePackageIdentity: sha256:a84bbb688d247e65411204b5b52046fe481f255a22b3f9ee0c82dd6afe36f4a0
++fixturePackageIdentity: sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436
+ entries:
+ - key: Channel
+   path: Channel.blue
+diff --git a/release-manifest.yaml b/release-manifest.yaml
+index 1c47c8967d650cebd8d39a09368401ab9d7de893..63fa7848cb0185db2ce43e9b78303a1b633ff3f3 100644
+--- a/release-manifest.yaml
++++ b/release-manifest.yaml
+@@ -421,7 +421,7 @@ languageDependency:
+   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningContextFactory.java
+     sha256: 69a4250f4c528903e7e6857e418cf028d05d2c1c73d9731443285c5331aef741
+   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningEngine.java
+-    sha256: 53c787b5d621db0ee0fd3486539fbf88956b958a6cedebdbd3cd15c5e212da9e
++    sha256: ceca918eeefe30c1d709e67858006b3caf1cb059f3dcc9a9c99976c2d13bd8cb
+   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPlanningPathInspection.java
+     sha256: f93d36ec5bdbb068bb75f20d5fb15a6abc9a55e6ca91950f00d9c8eef9d141e9
+   - path: blue-contracts-core/src/main/java/blue/language/processor/PatchPreflight.java
+@@ -1483,7 +1483,7 @@ identityConstructors:
+   status: normative
+ fixturePackage:
+   path: fixtures/manifest.yaml
+-  packageIdentity: sha256:a84bbb688d247e65411204b5b52046fe481f255a22b3f9ee0c82dd6afe36f4a0
++  packageIdentity: sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436
+   vectorCount: 182
+   fixtureCount: 295
+ oraclePackage:
+@@ -1512,4 +1512,4 @@ releaseIdentityAlgorithm:
+   digest: sha256
+   encoding: RFC 8785 canonical JSON encoded as UTF-8
+   normalization: releaseIdentity is null before hashing
+-releaseIdentity: sha256:9bec8c4c6cd97b5323e0a51fc085e99a727c700bb4b5eeef804bb9ea0874d9ff
++releaseIdentity: sha256:b112c1995934700899762b741610c3d306ecd10205fa643bdaa30b28fecf6643

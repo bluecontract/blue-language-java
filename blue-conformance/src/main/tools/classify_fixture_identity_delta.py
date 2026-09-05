@@ -941,10 +941,34 @@ def approved_release_manifest_transition(
     return normalized == before
 
 
+
+TYPED_PATCH_REVIEW_INPUT_PATH = (
+    Path(__file__).resolve().parent / "migration" / "classify-typed-patch-transition.json"
+)
+TYPED_PATCH_REVIEW_INPUT_SHA256 = "b644d1544bec0ad74150fbfc66cedbdb887dd6b234c5e79d64aa7fef75436969"
+
+
+def reviewed_typed_patch_transition(
+    before_files: dict[str, Path], after_files: dict[str, Path]
+) -> dict[str, Any] | None:
+    """Select only the reviewed pair of complete immutable package inventories."""
+    data = TYPED_PATCH_REVIEW_INPUT_PATH.read_bytes()
+    if hashlib.sha256(data).hexdigest() != TYPED_PATCH_REVIEW_INPUT_SHA256:
+        raise ClassificationFailure("reviewed typed-patch baseline bytes changed")
+    review = json.loads(data)
+    before_inventory = {path: sha256(file) for path, file in before_files.items()}
+    after_inventory = {path: sha256(file) for path, file in after_files.items()}
+    if (before_inventory != review["before"]["files"]
+            or after_inventory != review["after"]["files"]):
+        return None
+    return review
+
+
 def cevo_release_integrity_violations(
     before_root: Path,
     after_root: Path,
     after_files: dict[str, Path],
+    reviewed_transition: dict[str, Any] | None = None,
 ) -> list[str]:
     release_present = bool(set(after_files) & set(APPROVED_CEVO_FIXTURE_IDENTITIES))
     if not release_present:
@@ -967,7 +991,12 @@ def cevo_release_integrity_violations(
             f"unexpected={sorted(actual_added - expected_added)}"
         )
     for relative in sorted(expected_added & set(after_files)):
-        if not approved_cevo_added_fixture(relative, after_files[relative]):
+        reviewed_fixture = (
+            reviewed_transition is not None
+            and sha256(after_files[relative])
+            == reviewed_transition["after"]["files"].get(relative)
+        )
+        if not reviewed_fixture and not approved_cevo_added_fixture(relative, after_files[relative]):
             violations.append(f"C-EVO fixture content drifted: {relative}")
     scripted = after_files.get("registry/ScriptedOperation.blue")
     if scripted is None or sha256(scripted) != APPROVED_SCRIPTED_OPERATION_SHA256:
@@ -1011,12 +1040,22 @@ def cevo_release_integrity_violations(
             expected_fixture_manifest["packageIdentity"],
         ):
             violations.append("registry reverse fixture binding is invalid")
-        if not approved_release_manifest_transition(
-            after_root,
-            before_release,
-            after_release,
-            expected_fixture_manifest,
-            after_registry,
+        reviewed_release = (
+            reviewed_transition is not None
+            and before_release.get("releaseIdentity")
+            == reviewed_transition["before"]["releaseIdentity"]
+            and after_release.get("releaseIdentity")
+            == reviewed_transition["after"]["releaseIdentity"]
+            and package_identity(after_release, "releaseIdentity")
+            == after_release.get("releaseIdentity")
+            and after_release.get("fixturePackage", {}).get("packageIdentity")
+            == expected_fixture_manifest["packageIdentity"]
+            and after_release.get("contractsRegistry", {}).get("packageIdentity")
+            == after_registry["packageIdentity"]
+        )
+        if not reviewed_release and not approved_release_manifest_transition(
+            after_root, before_release, after_release,
+            expected_fixture_manifest, after_registry,
         ):
             violations.append("release manifest bindings or identity are invalid")
     except (ClassificationFailure, KeyError, OSError, TypeError, ValueError) as failure:
@@ -1378,8 +1417,9 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
     cevo_release_present = bool(
         set(after_files) & set(APPROVED_CEVO_FIXTURE_IDENTITIES)
     )
+    reviewed_transition = reviewed_typed_patch_transition(before_files, after_files)
     integrity_violations = cevo_release_integrity_violations(
-        before_root, after_root, after_files
+        before_root, after_root, after_files, reviewed_transition
     )
     if cevo_release_present and not integrity_violations:
         for row in rows:
@@ -1392,6 +1432,11 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
                 if category != UNEXPECTED
             ]
             row.pop("reason", None)
+            if reviewed_transition is not None:
+                row["categories"] = [SPEC]
+                for difference in row["differences"]:
+                    difference["category"] = SPEC
+                row["reviewedTransition"] = reviewed_transition["id"]
     elif integrity_violations:
         rows.append(
             {
@@ -1416,6 +1461,15 @@ def classify(before_root: Path, after_root: Path) -> dict[str, Any]:
         "summary": {category: counts[category] for category in CATEGORIES},
         "unexpectedCount": sum(1 for row in rows if row["unexpected"]),
         "approvedCorrections": approved_corrections(rows, after_files),
+        "reviewedBaselineTransition": None if reviewed_transition is None else {
+            "id": reviewed_transition["id"],
+            "rationale": reviewed_transition["rationale"],
+            "reviewInputSha256": TYPED_PATCH_REVIEW_INPUT_SHA256,
+            "beforeSourceCommit": reviewed_transition["before"]["sourceCommit"],
+            "afterSourceCommit": reviewed_transition["after"]["sourceCommit"],
+            "closedInventoryFiles": len(after_files),
+            "executableFixturesUnchanged": reviewed_transition["executableFixtureCount"],
+        },
         "files": rows,
     }
 
@@ -1502,6 +1556,12 @@ def markdown_report(report: dict[str, Any]) -> str:
     )
     for category in CATEGORIES:
         lines.append(f"| `{category}` | {report['summary'][category]} |")
+    reviewed = report.get("reviewedBaselineTransition")
+    if reviewed:
+        lines.extend(["", "## Reviewed baseline transition", "", reviewed["rationale"],
+                      "", f"- Exact review input: `{reviewed['reviewInputSha256']}`",
+                      f"- Before source: `{reviewed['beforeSourceCommit']}`",
+                      f"- After source: `{reviewed['afterSourceCommit']}`"])
     corrections = report.get("approvedCorrections", [])
     if corrections:
         lines.extend(["", "## Approved bounded corrections", ""])
