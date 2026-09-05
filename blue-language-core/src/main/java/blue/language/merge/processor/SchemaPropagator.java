@@ -8,7 +8,6 @@ import blue.language.merge.NodeResolver;
 import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.identity.CanonicalTypeIdentityLookup;
-import blue.language.identity.EnumConstraintMembership;
 import blue.language.identity.ScalarNodeIdentity;
 import blue.language.identity.SchemaEnumCanonicalizer;
 import blue.language.merge.TypeEvidenceResolution;
@@ -60,11 +59,11 @@ public class SchemaPropagator implements MergingProcessor {
         propagateRequired(sourceSchema, targetSchema);
         propagateMinLength(sourceSchema, targetSchema);
         propagateMaxLength(sourceSchema, targetSchema);
-        propagateMinimum(sourceSchema, targetSchema);
-        propagateMaximum(sourceSchema, targetSchema);
-        propagateExclusiveMinimum(sourceSchema, targetSchema);
-        propagateExclusiveMaximum(sourceSchema, targetSchema);
-        propagateMultipleOf(sourceSchema, targetSchema);
+        propagateMinimum(sourceSchema, targetSchema, typeIdentities);
+        propagateMaximum(sourceSchema, targetSchema, typeIdentities);
+        propagateExclusiveMinimum(sourceSchema, targetSchema, typeIdentities);
+        propagateExclusiveMaximum(sourceSchema, targetSchema, typeIdentities);
+        propagateMultipleOf(sourceSchema, targetSchema, typeIdentities);
         propagateMinItems(sourceSchema, targetSchema);
         propagateMaxItems(sourceSchema, targetSchema);
         propagateUniqueItems(sourceSchema, targetSchema);
@@ -90,30 +89,29 @@ public class SchemaPropagator implements MergingProcessor {
                 node -> target.maxLength(node));
     }
 
-    private void propagateMinimum(Schema source, Schema target) {
-        propagateMinValue(source.getMinimum(), source.getMinimumValue(),
-                target.getMinimumValue(),
-                node -> target.minimum(node));
+    private void propagateMinimum(Schema source, Schema target, CanonicalTypeIdentityLookup identities) {
+        propagateNumericBound(source.getMinimum(), target.getMinimum(), true, identities, target::minimum);
     }
 
-    private void propagateMaximum(Schema source, Schema target) {
-        propagateMaxValue(source.getMaximum(), source.getMaximumValue(),
-                target.getMaximumValue(),
-                node -> target.maximum(node));
+    private void propagateMaximum(Schema source, Schema target, CanonicalTypeIdentityLookup identities) {
+        propagateNumericBound(source.getMaximum(), target.getMaximum(), false, identities, target::maximum);
     }
 
-    private void propagateExclusiveMinimum(Schema source, Schema target) {
-        propagateMinValue(source.getExclusiveMinimum(),
-                source.getExclusiveMinimumValue(),
-                target.getExclusiveMinimumValue(),
-                node -> target.exclusiveMinimum(node));
+    private void propagateExclusiveMinimum(Schema source, Schema target, CanonicalTypeIdentityLookup identities) {
+        propagateNumericBound(source.getExclusiveMinimum(), target.getExclusiveMinimum(), true, identities, target::exclusiveMinimum);
     }
 
-    private void propagateExclusiveMaximum(Schema source, Schema target) {
-        propagateMaxValue(source.getExclusiveMaximum(),
-                source.getExclusiveMaximumValue(),
-                target.getExclusiveMaximumValue(),
-                node -> target.exclusiveMaximum(node));
+    private void propagateExclusiveMaximum(Schema source, Schema target, CanonicalTypeIdentityLookup identities) {
+        propagateNumericBound(source.getExclusiveMaximum(), target.getExclusiveMaximum(), false, identities, target::exclusiveMaximum);
+    }
+
+    private void propagateNumericBound(Node source, Node target, boolean minimum,
+                                       CanonicalTypeIdentityLookup identities, Consumer<Node> setter) {
+        if (source != null && (target == null
+                || (minimum ? ScalarConstraintPayload.compare(source, target, identities) > 0
+                : ScalarConstraintPayload.compare(source, target, identities) < 0))) {
+            setter.accept(source.clone());
+        }
     }
 
     private void propagateRequired(Schema source, Schema target) {
@@ -155,28 +153,17 @@ public class SchemaPropagator implements MergingProcessor {
         }
     }
 
-    private void propagateMultipleOf(Schema source, Schema target) {
+    private void propagateMultipleOf(Schema source, Schema target, CanonicalTypeIdentityLookup identities) {
         Node sourceNode = source.getMultipleOf();
         Node targetNode = target.getMultipleOf();
-        BigDecimal sourceMultipleOf = source.getMultipleOfValue();
-        BigDecimal targetMultipleOf = target.getMultipleOfValue();
-        if (sourceMultipleOf != null && targetMultipleOf != null) {
-            if (sourceNode.getValue() instanceof BigInteger
-                    && targetNode.getValue() instanceof BigInteger) {
-                BigInteger left = ((BigInteger) targetNode.getValue()).abs();
-                BigInteger right = ((BigInteger) sourceNode.getValue()).abs();
-                BigInteger lcm = left.signum() == 0 || right.signum() == 0
-                        ? BigInteger.ZERO
-                        : left.divide(left.gcd(right)).multiply(right);
-                target.multipleOf(typedMergedNumber(
-                        lcm, INTEGER_TYPE_BLUE_ID, targetNode, sourceNode));
-            } else {
-                target.multipleOf(typedMergedNumber(
-                        LeastCommonMultiple.lcm(
-                                targetMultipleOf, sourceMultipleOf),
-                        DOUBLE_TYPE_BLUE_ID, targetNode, sourceNode));
-            }
-        } else if (sourceMultipleOf != null) {
+        if (sourceNode != null && targetNode != null) {
+            Number lcm = ScalarConstraintPayload.leastCommonMultiple(
+                    ScalarConstraintPayload.numericValue(targetNode, identities),
+                    ScalarConstraintPayload.numericValue(sourceNode, identities));
+            target.multipleOf(typedMergedNumber(lcm,
+                    lcm instanceof BigInteger ? INTEGER_TYPE_BLUE_ID : DOUBLE_TYPE_BLUE_ID,
+                    targetNode, sourceNode));
+        } else if (sourceNode != null) {
             target.multipleOf(sourceNode.clone());
         }
     }

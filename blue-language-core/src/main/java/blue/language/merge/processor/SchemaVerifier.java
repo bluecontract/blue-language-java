@@ -11,8 +11,6 @@ import blue.language.model.Schema;
 import blue.language.model.Node;
 import blue.language.identity.CanonicalTypeIdentityLookup;
 import blue.language.identity.DirectBlueIdCalculator;
-import blue.language.identity.ScalarConstraintPayload;
-import blue.language.identity.EnumConstraintMembership;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -66,7 +64,7 @@ public class SchemaVerifier implements MergingProcessor {
         if (schema == null)
             return;
 
-        verifyWellFormed(schema);
+        verifyWellFormed(schema, typeIdentities);
         verifyDeclaredApplicability(schema, target, nodeProvider, nodeResolver, typeIdentities);
     }
 
@@ -189,7 +187,7 @@ public class SchemaVerifier implements MergingProcessor {
             return;
         }
         try {
-            verifyWellFormed(schema);
+            verifyWellFormed(schema, typeIdentities);
             onCompletedValidation(node, path);
             verifyValue(
                     schema,
@@ -224,10 +222,10 @@ public class SchemaVerifier implements MergingProcessor {
         }
         verifyMinLength(schema.getMinLengthExact(), target);
         verifyMaxLength(schema.getMaxLengthExact(), target);
-        verifyMinimum(schema.getMinimumValue(), target, typeIdentities);
-        verifyMaximum(schema.getMaximumValue(), target, typeIdentities);
-        verifyExclusiveMinimum(schema.getExclusiveMinimumValue(), target, typeIdentities);
-        verifyExclusiveMaximum(schema.getExclusiveMaximumValue(), target, typeIdentities);
+        verifyMinimum(schema.getMinimum(), target, typeIdentities);
+        verifyMaximum(schema.getMaximum(), target, typeIdentities);
+        verifyExclusiveMinimum(schema.getExclusiveMinimum(), target, typeIdentities);
+        verifyExclusiveMaximum(schema.getExclusiveMaximum(), target, typeIdentities);
         verifyMultipleOf(schema.getMultipleOfValue(), schema.getMultipleOf(), target, typeIdentities);
         verifyMinItems(schema.getMinItemsExact(), target);
         verifyMaxItems(schema.getMaxItemsExact(), target);
@@ -254,7 +252,7 @@ public class SchemaVerifier implements MergingProcessor {
                 || schema.getEnum() != null;
     }
 
-    private void verifyWellFormed(Schema schema) {
+    private void verifyWellFormed(Schema schema, CanonicalTypeIdentityLookup typeIdentities) {
         if (schema.getEnum() != null && schema.getEnum().isEmpty()) {
             throw new IllegalArgumentException("Schema enum has no allowed values.");
         }
@@ -282,8 +280,10 @@ public class SchemaVerifier implements MergingProcessor {
                 KEY_MAX_FIELDS,
                 schema.getMaxFieldsExact());
 
-        verifyMinimumLessThanOrEqualMaximum(schema.getMinimumValue(), schema.getMaximumValue());
-        verifyExclusiveMinimumLessThanExclusiveMaximum(schema.getExclusiveMinimumValue(), schema.getExclusiveMaximumValue());
+        verifyNumericBounds(schema.getMinimum(), schema.getMaximum(), false, typeIdentities);
+        verifyNumericBounds(schema.getMinimum(), schema.getExclusiveMaximum(), true, typeIdentities);
+        verifyNumericBounds(schema.getExclusiveMinimum(), schema.getMaximum(), true, typeIdentities);
+        verifyNumericBounds(schema.getExclusiveMinimum(), schema.getExclusiveMaximum(), true, typeIdentities);
         verifyMultipleOfKeyword(schema.getMultipleOfValue());
     }
 
@@ -299,15 +299,13 @@ public class SchemaVerifier implements MergingProcessor {
         }
     }
 
-    private void verifyMinimumLessThanOrEqualMaximum(BigDecimal minimum, BigDecimal maximum) {
-        if (minimum != null && maximum != null && minimum.compareTo(maximum) > 0) {
-            throw new IllegalArgumentException("Schema keyword \"minimum\" must be less than or equal to \"maximum\".");
-        }
-    }
-
-    private void verifyExclusiveMinimumLessThanExclusiveMaximum(BigDecimal exclusiveMinimum, BigDecimal exclusiveMaximum) {
-        if (exclusiveMinimum != null && exclusiveMaximum != null && exclusiveMinimum.compareTo(exclusiveMaximum) >= 0) {
-            throw new IllegalArgumentException("Schema keyword \"exclusiveMinimum\" must be less than \"exclusiveMaximum\".");
+    private void verifyNumericBounds(Node lower, Node upper, boolean exclusive,
+                                     CanonicalTypeIdentityLookup identities) {
+        if (lower != null && upper != null) {
+            int comparison = ScalarConstraintPayload.compare(lower, upper, identities);
+            if (comparison > 0 || exclusive && comparison == 0) {
+                throw new IllegalArgumentException("Schema numeric lower and upper bounds are incompatible.");
+            }
         }
     }
 
@@ -352,7 +350,7 @@ public class SchemaVerifier implements MergingProcessor {
         return value.codePointCount(0, value.length());
     }
 
-    private void verifyMinimum(BigDecimal minimum, Node node,
+    private void verifyMinimum(Node minimum, Node node,
                                CanonicalTypeIdentityLookup typeIdentities) {
         if (minimum == null) {
             return;
@@ -361,13 +359,13 @@ public class SchemaVerifier implements MergingProcessor {
         if (value == null) {
             return;
         }
-        BigDecimal valueDecimal = new BigDecimal(value.toString());
-        if (valueDecimal.compareTo(minimum) < 0) {
+        if (ScalarConstraintPayload.exact(value).compareTo(ScalarConstraintPayload.exact(
+                ScalarConstraintPayload.numericValue(minimum, typeIdentities))) < 0) {
             throw new IllegalArgumentException("Value " + value + " is less than the minimum value of " + minimum + ".");
         }
     }
 
-    private void verifyMaximum(BigDecimal maximum, Node node,
+    private void verifyMaximum(Node maximum, Node node,
                                CanonicalTypeIdentityLookup typeIdentities) {
         if (maximum == null) {
             return;
@@ -376,13 +374,13 @@ public class SchemaVerifier implements MergingProcessor {
         if (value == null) {
             return;
         }
-        BigDecimal valueDecimal = new BigDecimal(value.toString());
-        if (valueDecimal.compareTo(maximum) > 0) {
+        if (ScalarConstraintPayload.exact(value).compareTo(ScalarConstraintPayload.exact(
+                ScalarConstraintPayload.numericValue(maximum, typeIdentities))) > 0) {
             throw new IllegalArgumentException("Value " + value + " is greater than the maximum value of " + maximum + ".");
         }
     }
 
-    private void verifyExclusiveMinimum(BigDecimal exclusiveMinimum, Node node,
+    private void verifyExclusiveMinimum(Node exclusiveMinimum, Node node,
                                         CanonicalTypeIdentityLookup typeIdentities) {
         if (exclusiveMinimum == null) {
             return;
@@ -391,13 +389,13 @@ public class SchemaVerifier implements MergingProcessor {
         if (value == null) {
             return;
         }
-        BigDecimal valueDecimal = new BigDecimal(value.toString());
-        if (valueDecimal.compareTo(exclusiveMinimum) <= 0) {
+        if (ScalarConstraintPayload.exact(value).compareTo(ScalarConstraintPayload.exact(
+                ScalarConstraintPayload.numericValue(exclusiveMinimum, typeIdentities))) <= 0) {
             throw new IllegalArgumentException("Value " + value + " is less than or equal to the exclusive minimum value of " + exclusiveMinimum + ".");
         }
     }
 
-    private void verifyExclusiveMaximum(BigDecimal exclusiveMaximum, Node node,
+    private void verifyExclusiveMaximum(Node exclusiveMaximum, Node node,
                                         CanonicalTypeIdentityLookup typeIdentities) {
         if (exclusiveMaximum == null) {
             return;
@@ -406,8 +404,8 @@ public class SchemaVerifier implements MergingProcessor {
         if (value == null) {
             return;
         }
-        BigDecimal valueDecimal = new BigDecimal(value.toString());
-        if (valueDecimal.compareTo(exclusiveMaximum) >= 0) {
+        if (ScalarConstraintPayload.exact(value).compareTo(ScalarConstraintPayload.exact(
+                ScalarConstraintPayload.numericValue(exclusiveMaximum, typeIdentities))) >= 0) {
             throw new IllegalArgumentException("Value " + value + " is greater than or equal to the exclusive maximum value of " + exclusiveMaximum + ".");
         }
     }

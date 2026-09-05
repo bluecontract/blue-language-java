@@ -1,4 +1,6 @@
-package blue.language.identity;
+package blue.language.merge.processor;
+
+import blue.language.identity.*;
 
 import blue.language.merge.Merger;
 import blue.language.merge.TypeEvidenceResolution;

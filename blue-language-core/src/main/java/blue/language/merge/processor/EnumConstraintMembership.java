@@ -1,4 +1,6 @@
-package blue.language.identity;
+package blue.language.merge.processor;
+
+import blue.language.identity.*;
 
 import blue.language.model.Node;
 
@@ -19,7 +21,7 @@ import static blue.language.model.wire.BlueLanguageConstants.*;
  * exact scalar identity. This operation never changes either input and never
  * fetches content. Completed custom ancestry needs resolver-issued evidence.</p>
  */
-public final class EnumConstraintMembership {
+final class EnumConstraintMembership {
 
     private EnumConstraintMembership() {
     }
@@ -33,7 +35,7 @@ public final class EnumConstraintMembership {
      * @return whether the candidate satisfies the restriction
      * @throws IllegalStateException when required type ancestry is unavailable
      */
-    public static boolean matches(
+    static boolean matches(
             Node candidate, Node entry, CanonicalTypeIdentityLookup identities) {
         if (candidate == null || candidate.getValue() == null) {
             return false;
@@ -83,7 +85,7 @@ public final class EnumConstraintMembership {
      * @param right second scalar
      * @return whether primitive kinds and canonical payloads agree
      */
-    public static boolean samePayload(Node left, Node right) {
+    static boolean samePayload(Node left, Node right) {
         if (left.getValue() == null || right.getValue() == null) {
             return false;
         }

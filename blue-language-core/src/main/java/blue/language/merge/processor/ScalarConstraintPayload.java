@@ -1,4 +1,6 @@
-package blue.language.identity;
+package blue.language.merge.processor;
+
+import blue.language.identity.*;
 
 import blue.language.model.Node;
 import blue.language.model.value.BlueNumbers;
@@ -17,7 +19,7 @@ import static blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_I
  * Primitive numeric views for constraints, separate from exact scalar identity.
  * These operations never fetch content or change a node's type or raw payload.
  */
-public final class ScalarConstraintPayload {
+final class ScalarConstraintPayload {
 
     private ScalarConstraintPayload() {
     }
@@ -31,7 +33,7 @@ public final class ScalarConstraintPayload {
      * @throws IllegalArgumentException when the payload has no numeric kind
      * @throws IllegalStateException when required type ancestry is unavailable
      */
-    public static Number numericValue(
+    static Number numericValue(
             Node node, CanonicalTypeIdentityLookup typeIdentities) {
         Object value = node.getValue();
         Node type = node.getType();
@@ -76,24 +78,71 @@ public final class ScalarConstraintPayload {
      * @throws IllegalArgumentException when an argument is not a canonical
      *         numeric kind or the divisor is nonpositive
      */
-    public static boolean isMultipleOf(Number value, Number divisor) {
-        if (!(value instanceof BigInteger) && !(value instanceof BigDecimal)
-                || !(divisor instanceof BigInteger) && !(divisor instanceof BigDecimal)) {
-            throw wrongKind();
-        }
-        BigDecimal decimalDivisor = divisor instanceof BigInteger
-                ? new BigDecimal((BigInteger) divisor)
-                : (BigDecimal) divisor;
-        if (decimalDivisor.signum() <= 0) {
+    static boolean isMultipleOf(Number value, Number divisor) {
+        BigDecimal exactDivisor = exact(divisor);
+        if (exactDivisor.signum() <= 0) {
             throw new IllegalArgumentException("multipleOf must be greater than zero");
         }
+        return exact(value).remainder(exactDivisor).signum() == 0;
+    }
+
+    // BigDecimal payloads are canonical binary64 views. Its shortest decimal
+    // spelling is not the numeric value used by schema arithmetic.
+    static BigDecimal exact(Number value) {
         if (value instanceof BigInteger) {
-            BigDecimal exactDivisor = divisor instanceof BigInteger
-                    ? decimalDivisor : new BigDecimal(divisor.doubleValue());
-            return new BigDecimal((BigInteger) value)
-                    .remainder(exactDivisor).signum() == 0;
+            return new BigDecimal((BigInteger) value);
         }
-        return BlueNumbers.isExactBinary64Multiple(value, decimalDivisor);
+        if (value instanceof BigDecimal) {
+            return new BigDecimal(value.doubleValue());
+        }
+        throw wrongKind();
+    }
+
+    static int compare(Node left, Node right, CanonicalTypeIdentityLookup identities) {
+        return exact(numericValue(left, identities))
+                .compareTo(exact(numericValue(right, identities)));
+    }
+
+    static Number leastCommonMultiple(Number left, Number right) {
+        Fraction a = new Fraction(exact(left));
+        Fraction b = new Fraction(exact(right));
+        if (a.numerator.signum() <= 0 || b.numerator.signum() <= 0) {
+            throw new IllegalArgumentException("multipleOf must be greater than zero");
+        }
+        BigInteger numerator = a.numerator.divide(a.numerator.gcd(b.numerator))
+                .multiply(b.numerator);
+        BigInteger denominator = a.denominator.gcd(b.denominator);
+        BigInteger divisor = numerator.gcd(denominator);
+        numerator = numerator.divide(divisor);
+        denominator = denominator.divide(divisor);
+        if (left instanceof BigInteger && right instanceof BigInteger) {
+            return numerator;
+        }
+        BigDecimal rational = new BigDecimal(numerator).divide(new BigDecimal(denominator));
+        double candidate = rational.doubleValue();
+        if (Double.isFinite(candidate) && new BigDecimal(candidate).compareTo(rational) == 0) {
+            return BigDecimal.valueOf(candidate);
+        }
+        // An unrepresentable dyadic LCM has no nonzero binary64 multiples.
+        // Its Integer members are precisely the multiples of the reduced
+        // numerator. This is equivalent over Integer and finite Double values.
+        return numerator;
+    }
+
+    private static final class Fraction {
+        private final BigInteger numerator;
+        private final BigInteger denominator;
+
+        private Fraction(BigDecimal value) {
+            BigInteger unscaled = value.unscaledValue();
+            BigInteger scale = BigInteger.TEN.pow(Math.max(0, value.scale()));
+            if (value.scale() < 0) {
+                unscaled = unscaled.multiply(BigInteger.TEN.pow(-value.scale()));
+            }
+            BigInteger gcd = unscaled.gcd(scale);
+            numerator = unscaled.divide(gcd);
+            denominator = scale.divide(gcd);
+        }
     }
 
     private static IllegalArgumentException wrongKind() {

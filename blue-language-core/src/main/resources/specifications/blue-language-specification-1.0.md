@@ -1586,6 +1586,8 @@ If multiple numeric constraints appear in the type chain, the value must satisfy
 
 For `Double` `multipleOf`, both the tested value and the `multipleOf` constraint are interpreted as their exact IEEE 754 binary64 rational values after parsing. A Double value `v` satisfies `multipleOf: m` iff `m > 0` and the exact rational quotient `v / m` is an integer. Implementations MUST NOT use epsilon comparisons, decimal string rounding, host-language modulo on binary floating point, or implementation-specific approximation.
 
+For a merged `multipleOf` containing a Double constraint, implementations MUST compute the positive rational LCM exactly. Let its reduced form be `n / 2^t`. If that rational is representable as a finite binary64 value, the effective keyword is that Double. Otherwise the effective keyword is the Integer `n`. This latter normalization preserves all admitted Integer and finite Double members: no nonzero binary64 multiple of the unrepresentable reduced rational exists, while its Integer members are exactly the multiples of `n`. This rule concerns effective schema normalization; it does not change the identity or kind of an authored scalar. Both-Integer constraints retain the Integer LCM rule above.
+
 For cross-type numeric comparisons, an `Integer` value is interpreted as an exact rational integer. A `Double` bound or value is interpreted as its exact IEEE 754 binary64 rational value. Comparison between Integer and Double uses exact rational comparison.
 
 A numeric token that cannot be parsed to a finite IEEE 754 binary64 value under §2.4 is invalid before schema evaluation.
