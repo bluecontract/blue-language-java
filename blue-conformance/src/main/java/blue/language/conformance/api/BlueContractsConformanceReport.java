@@ -60,7 +60,7 @@ public final class BlueContractsConformanceReport {
             "blue-language-contracts-embedded-modules-collection-paths";
     /** Canonical identity declared by the exact supplied package manifest. */
     public static final String RELEASE_PACKAGE_IDENTITY =
-            "sha256:79ffad3b72c936b968adea0846a4d151f19a8dfebb4ccb7c0c9cc296107e1004";
+            "sha256:77cc722ee42f462b2f0846ba773738a9d65ee5d5eef1707c85c36ca8e9fe5faa";
     /** Exact Language registry package identity. */
     public static final String LANGUAGE_REGISTRY_PACKAGE_IDENTITY =
             "sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321";

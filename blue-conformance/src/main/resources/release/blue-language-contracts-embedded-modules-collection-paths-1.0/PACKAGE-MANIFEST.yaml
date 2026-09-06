@@ -1036,7 +1036,7 @@ files:
   sha256: 31d532f363bb33e347edde6f42fb85dd65e1e34893771499facfb05729dd12e2
   bytes: 411
 - path: conformance/contracts/registry/manifest.yaml
-  sha256: 45b6bd682696083faff361b2e5a5aceb2256fe9592c3b4081defd15e1b466835
+  sha256: 043941428f11dea64ed441659130d361815921f13ee9737fc2cec7b3e62cfe12
   bytes: 7554
 - path: conformance/contracts/representation/fixtures/repeated-identity-next-revision.json
   sha256: bb0277ca70cc2796a5489401bffbbaa8586c76a076182f87f02feaa3ad48ca7f
@@ -1665,4 +1665,4 @@ files:
 - path: specifications/blue-language-specification-1.0.md
   sha256: 77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144
   bytes: 217483
-packageIdentity: sha256:79ffad3b72c936b968adea0846a4d151f19a8dfebb4ccb7c0c9cc296107e1004
+packageIdentity: sha256:77cc722ee42f462b2f0846ba773738a9d65ee5d5eef1707c85c36ca8e9fe5faa
