@@ -88,6 +88,26 @@ final class ExecutableBodyPathCatalog {
                 document, authoredNodePaths(document), exactFieldsByType, materializer));
     }
 
+    private static Set<String> directAuthoredContractFields(
+            Node document,
+            Map<String, List<String>> exactFieldsByType,
+            ProcessingSnapshotManager materializer) {
+        Set<String> result = new LinkedHashSet<>();
+        if (exactFieldsByType.isEmpty()) return result;
+        for (String path : authoredNodePaths(document)) {
+            Node node = JsonPointer.ROOT.equals(path)
+                    ? document : NodePathEditor.getOrNull(document, path);
+            if (node == null || node.getContracts() == null) continue;
+            if (node.getContracts().isReferenceOnly()) {
+                result.add(JsonPointer.append(path, BlueLanguageConstants.OBJECT_CONTRACTS));
+                continue;
+            }
+            collectDirectContracts(node, JsonPointer.split(path),
+                    exactFieldsByType, result, materializer, true);
+        }
+        return result;
+    }
+
     /** Inherited runtime fields without changing legacy business-field resolution. */
     static Set<String> fromNodeIncludingTypeContractFields(
             Node document,
@@ -273,9 +293,9 @@ final class ExecutableBodyPathCatalog {
                 openedScopePaths,
                 executableBodyFieldsByType,
                 checkedManager);
-        // Patches may activate or insert scopes outside the entry selection.
-        // Registered declarations retain exact Source form in those scopes too.
-        preserved.addAll(forHostedOutput(
+        // Canonical snapshots retain direct declarations on inactive scopes,
+        // without opening unrelated business types or their ancestor chains.
+        preserved.addAll(directAuthoredContractFields(
                 document, executableBodyFieldsByType, checkedManager));
         if (!preserved.isEmpty()) {
             preserved.addAll(processorStateReferencePaths(
@@ -311,9 +331,9 @@ final class ExecutableBodyPathCatalog {
                 checkedManager);
         preserved.addAll(ordinaryReferencePaths(
                 document, openedScopePaths));
-        // Patches may activate or insert scopes outside the entry selection.
-        // Registered declarations retain exact Source form in those scopes too.
-        preserved.addAll(forHostedOutput(
+        // Canonical snapshots retain direct declarations on inactive scopes,
+        // without opening unrelated business types or their ancestor chains.
+        preserved.addAll(directAuthoredContractFields(
                 document, executableBodyFieldsByType, checkedManager));
         if (!preserved.isEmpty()) {
             preserved.addAll(processorStateReferencePaths(
