@@ -387,6 +387,16 @@ final class ListOverlayMerger {
         limits.enterPathSegment(segment, child);
         engine.enterValidationPath(segment, expansionAllowed);
         try {
+            if (child.isReferenceOnly() && itemType != null) {
+                /* Keep the authored reference pure. Its inherited slot type is
+                 * resolver-side context, so merge into a typed target to make
+                 * the existing exact-reference validator prove compatibility.
+                 * Missing required content remains a materialization failure. */
+                Node target = engine.resolve(
+                        new Node().type(itemType.clone()), limits);
+                engine.merge(target, child, limits);
+                return target;
+            }
             return engine.resolve(
                     applyCompletedItemType(child, itemType),
                     limits);

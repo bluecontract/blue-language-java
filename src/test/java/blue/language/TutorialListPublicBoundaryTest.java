@@ -181,6 +181,59 @@ final class TutorialListPublicBoundaryTest {
         }
     }
 
+    @Test
+    void shouldRejectIncompatibleReplacementRegardlessOfInlineOrReferenceEncoding() {
+        // given
+        blue.language.preprocess.provider.BasicNodeProvider provider =
+                new blue.language.preprocess.provider.BasicNodeProvider();
+        provider.addSingleNodes(new Node().name("Tutorial incompatible object")
+                .properties("amount", new Node().value(3)));
+        String exact = provider.getBlueIdByName("Tutorial incompatible object");
+        try (BlueLanguage language = BlueLanguage.builder().nodeProvider(provider).build()) {
+            String prefix = "type: {type: List, items: [A, B]}\nitems: [{$pos: 1, $replace: ";
+            // when
+            Node inline = source(language, prefix + "{amount: 3}}]\n");
+            Node reference = source(language, prefix + "{blueId: " + exact + "}}]\n");
+            // then
+            assertThrows(IllegalArgumentException.class, () -> language.resolution().resolve(inline));
+            assertThrows(IllegalArgumentException.class, () -> language.resolution().resolve(reference));
+        }
+    }
+
+    @Test
+    void shouldRequireUnavailableReplacementContentWhenTheSlotHasAType() {
+        // given
+        String missing = "4bcw6sKGddkWPs28vrgwXvT8Qi9Qy4TPWPYnvheTZ5Yb";
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            // when
+            Node replacement = source(language,
+                    "type: {type: List, items: [A, B]}\nitems: [{$pos: 1, $replace: {blueId: "
+                            + missing + "}}]\n");
+            // then
+            assertThrows(IllegalArgumentException.class,
+                    () -> language.resolution().resolve(replacement));
+        }
+    }
+
+    @Test
+    void shouldPreserveCompatibleExactTextReplacementIdentity() {
+        // given
+        blue.language.preprocess.provider.BasicNodeProvider provider =
+                new blue.language.preprocess.provider.BasicNodeProvider();
+        provider.addSingleNodes(new Node().name("Tutorial replacement Text").value("C"));
+        String exact = provider.getBlueIdByName("Tutorial replacement Text");
+        try (BlueLanguage language = BlueLanguage.builder().nodeProvider(provider).build()) {
+            // when
+            Node canonical = language.identity().canonicalIdentityInput(source(language,
+                    "type: {type: List, items: [A, B]}\nitems: [{$pos: 1, $replace: {blueId: "
+                            + exact + "}}]\n"));
+            // then
+            assertEquals(2, canonical.getItems().size());
+            assertTrue(canonical.getItems().get(1).isReferenceOnly());
+            assertEquals(exact, canonical.getItems().get(1).getBlueId());
+        }
+    }
+
     private static Node source(BlueLanguage language, String yaml) {
         return language.codec().parseSource(yaml, BlueFormat.YAML);
     }
