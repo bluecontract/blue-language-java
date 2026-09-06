@@ -1,6 +1,7 @@
 package blue.language.conformance.contracts.representation;
 
 import blue.language.identity.DirectBlueIdCalculator;
+import blue.language.model.wire.BlueLanguageConstants;
 import blue.language.model.Node;
 import blue.language.model.NodePathEditor;
 import blue.language.processor.ChannelProcessor;
@@ -68,7 +69,7 @@ public final class HistoricalRepresentationConformanceCli {
         if (args.length != 1) throw new IllegalArgumentException("Expected output report path");
         verifyPackage();
         ObjectNode report = UncheckedObjectMapper.JSON_MAPPER.createObjectNode();
-        report.put("schema", "blue-contracts-representation-conformance-report/1");
+        report.put(BlueLanguageConstants.OBJECT_SCHEMA, "blue-contracts-representation-conformance-report/1");
         report.put("packageIdentity", PACKAGE_IDENTITY);
         com.fasterxml.jackson.databind.node.ArrayNode cases = report.putArray("cases");
         for (String file : Arrays.asList("repeated-identity.json", "repeated-identity-next-revision.json")) {
@@ -77,7 +78,7 @@ public final class HistoricalRepresentationConformanceCli {
                 if (stream == null) throw new IllegalStateException("Missing representation fixture " + file);
                 input = UncheckedObjectMapper.JSON_MAPPER.readTree(stream);
             }
-            assertEquals("blue-contracts-representation-sequence-fixture/1", input.path("schema").textValue());
+            assertEquals("blue-contracts-representation-sequence-fixture/1", input.path(BlueLanguageConstants.OBJECT_SCHEMA).textValue());
             assertTrue(Arrays.equals(new int[]{0, 1, 0, 2}, UncheckedObjectMapper.JSON_MAPPER.convertValue(
                     input.path("sourceValues"), int[].class)), "Unexpected authored source history");
             ObjectNode result = execute(input);
@@ -528,7 +529,7 @@ public final class HistoricalRepresentationConformanceCli {
     private static void verifyPackage() throws Exception {
         ObjectNode manifest = (ObjectNode) UncheckedObjectMapper.JSON_MAPPER.readTree(
                 resource("/blue-contracts-representation-1.0/manifest.json"));
-        assertEquals("blue-contracts-representation-conformance-package/1", manifest.path("schema").textValue());
+        assertEquals("blue-contracts-representation-conformance-package/1", manifest.path(BlueLanguageConstants.OBJECT_SCHEMA).textValue());
         assertEquals("PROPOSED_NOT_RELEASED", manifest.path("status").textValue());
         assertEquals(PACKAGE_IDENTITY, manifest.path("packageIdentity").textValue());
         ObjectNode identityValue = manifest.deepCopy();

@@ -4,11 +4,11 @@
   "physicalExtractionCommit": "1e9985f6bd8fa0bc93811814c99d565935133d25",
   "packageRelocationCommit": "1f799962ef715c9488ae5bde77338993a114022a",
   "inventory": {
-    "publicProductionTypeCount": 536,
-    "publicTypeIdentity": "sha256:8ce30e46e22efc0470346fd9d63625ff0c907c208b149ff6145831a4bd0b91c0",
+    "publicProductionTypeCount": 542,
+    "publicTypeIdentity": "sha256:42e973ebe855cbaebb67751d47a74b797f0fb62e30a169140b971534a4955a77",
     "classificationCounts": {
       "compatible-relocation-through-aggregate-facade": 200,
-      "internal-type-removed-from-public-surface": 273,
+      "internal-type-removed-from-public-surface": 279,
       "new-supported-api-spi": 63
     }
   },
@@ -521,6 +521,39 @@
       "currentArtifact": "blue.language:blue-conformance",
       "targetModule": ":blue-conformance",
       "targetType": "blue.language.conformance.contracts.closure.ClosureFixtureConformance",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/representation/HistoricalRepresentationConformanceCli.java",
+      "currentArtifact": "blue.language:blue-conformance",
+      "targetModule": ":blue-conformance",
+      "targetType": "blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Probe",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/representation/HistoricalRepresentationConformanceCli.java",
+      "currentArtifact": "blue.language:blue-conformance",
+      "targetModule": ":blue-conformance",
+      "targetType": "blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Probe",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Source",
+      "sourcePath": "blue-conformance/src/main/java/blue/language/conformance/contracts/representation/HistoricalRepresentationConformanceCli.java",
+      "currentArtifact": "blue.language:blue-conformance",
+      "targetModule": ":blue-conformance",
+      "targetType": "blue.language.conformance.contracts.representation.HistoricalRepresentationConformanceCli$Source",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",
@@ -4733,6 +4766,39 @@
       "currentArtifact": "blue.language:blue-contracts-core",
       "targetModule": ":blue-contracts-core",
       "targetType": "blue.language.processor.closure.ManagedOccurrenceEvidenceResolution",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedRepresentationCause",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCause.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedRepresentationCause",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedRepresentationCursor",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCursor.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedRepresentationCursor",
+      "previousTypes": [],
+      "relocationHistory": [],
+      "classification": "internal-type-removed-from-public-surface",
+      "reason": "Fixture implementation or legacy adapter becomes module-internal."
+    },
+    {
+      "type": "blue.language.processor.closure.ManagedRepresentationTransition",
+      "sourcePath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationTransition.java",
+      "currentArtifact": "blue.language:blue-contracts-core",
+      "targetModule": ":blue-contracts-core",
+      "targetType": "blue.language.processor.closure.ManagedRepresentationTransition",
       "previousTypes": [],
       "relocationHistory": [],
       "classification": "internal-type-removed-from-public-surface",

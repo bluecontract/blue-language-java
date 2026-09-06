@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 802,
-    "productionResourceCount": 817,
-    "productionSourcePathIdentity": "sha256:93ced0188b4341970066779d45a05a458d6a59d02139b1f108d29b79088501d9",
-    "productionResourcePathIdentity": "sha256:6c480234806f71830a5389de393570b11fe2ed1bcd15f24e9f65281da2487224"
+    "productionSourceCount": 807,
+    "productionResourceCount": 820,
+    "productionSourcePathIdentity": "sha256:99cd56186e57758233a3072d56b73ff6188c9b822327b728cc59e4a88587796d",
+    "productionResourcePathIdentity": "sha256:1664587821c739163b7449385af9c1e362392c05c966af93a47dbef282d8f238"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -586,6 +586,13 @@
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/package-info.java",
       "targetPackage": "blue.language.conformance.contracts"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/representation/HistoricalRepresentationConformanceCli.java",
+      "currentPackage": "blue.language.conformance.contracts.representation",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/java/blue/language/conformance/contracts/representation/HistoricalRepresentationConformanceCli.java",
+      "targetPackage": "blue.language.conformance.contracts.representation"
     },
     {
       "currentPath": "blue-conformance/src/main/java/blue/language/conformance/runner/BlueContractsConformanceSuiteRunner.java",
@@ -3304,6 +3311,13 @@
       "targetPackage": "blue.language.processor.closure"
     },
     {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedHistoryStep.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedHistoryStep.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
       "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceBinding.java",
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
@@ -3329,6 +3343,27 @@
       "currentPackage": "blue.language.processor.closure",
       "targetModule": ":blue-contracts-core",
       "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedOccurrenceTargetVerifier.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCause.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCause.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCursor.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationCursor.java",
+      "targetPackage": "blue.language.processor.closure"
+    },
+    {
+      "currentPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationTransition.java",
+      "currentPackage": "blue.language.processor.closure",
+      "targetModule": ":blue-contracts-core",
+      "targetPath": "blue-contracts-core/src/main/java/blue/language/processor/closure/ManagedRepresentationTransition.java",
       "targetPackage": "blue.language.processor.closure"
     },
     {
@@ -8580,6 +8615,21 @@
       "currentPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-contracts-closure-1.0/release-manifest.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-representation-1.0/fixtures/repeated-identity-next-revision.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-representation-1.0/fixtures/repeated-identity-next-revision.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-representation-1.0/fixtures/repeated-identity.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-representation-1.0/fixtures/repeated-identity.json"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-contracts-representation-1.0/manifest.json",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-contracts-representation-1.0/manifest.json"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/HARNESS.md",
