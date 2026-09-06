@@ -1025,6 +1025,98 @@ require the empty array and its recomputed empty-snapshot identity.
 
 A cyclic-set member identity MUST NOT be used as a top-level external event.
 
+### 2.3a Historical representation reconciliation (proposed amendment)
+
+This section is a proposed, separately versioned extension. Its cause and
+position records are not accepted by an unamended Contracts 1.0 processor.
+`ManagedRevisionCause` retains its exact `toEpoch = fromEpoch + 1` rule.
+
+A `ManagedRepresentationCause` processes exactly one previously committed,
+same-epoch transition permitted by §5.7.1. Its wire discriminator is
+`managed-representation`; its evidence schema is
+`blue-managed-representation-step/1`. It is processor-managed work, not a
+Handler operation, a Timeline Entry, a source-business replay, or an identity
+alias. Distinct BlueIds remain distinct exact values.
+
+The cause contains the following closed evidence:
+
+- `targetOccurrenceIdentity`, `childDocumentId`, and non-negative `sourceEpoch`;
+- exact `beforeBlueId`, `afterBlueId`, complete `afterDocument`, and the
+  complete cyclic witness exactly when the successor is a cyclic member;
+- `beforePositionIdentity` and `afterPositionIdentity`;
+- one complete committed representation-position receipt and its original
+  managed transition receipt, original input/result evidence and commit
+  companion; and
+- one immutable catch-up target: either the predecessor position of the next
+  numbered source receipt, or a captured terminal representation position.
+
+A position is **not** `(epoch, BlueId)`. A representation-position receipt
+binds domain `blue-managed-representation-position/1`, source DocumentId,
+epoch, immutable numbered-epoch anchor receipt identity, exact predecessor
+position identity, exact before/after BlueIds, original transition receipt
+identity, original invocation identity, original input/output closure
+identities and original commit-companion identity. Its position identity is
+SHA-256 over that domain and the canonical complete record. For Coordination, `anchorReceiptIdentity` is the immutable Coordination
+managed-epoch receipt identity. `nextRevisionReceiptIdentity` names the
+Contracts managed-transition receipt of the next numbered revision; the
+unchanged complete Coordination receipt independently binds that Contracts
+receipt and its exact predecessor. The two receipt domains are distinct and
+must never be substituted for one another. The position of
+an immutable numbered epoch starts at its Coordination receipt identity. Subsequent
+representation positions are ordered by their predecessor links. A numbered
+successor separately binds the final predecessor representation position in
+the host's history-position evidence; its original numbered receipt is not
+rewritten.
+
+The authoritative host retains that order in the same atomic publication
+which installs the original result. It must authenticate membership against
+its durable committed publication record, and verify the complete original
+result and companion, exact source lineage, input/output epochs, receipt,
+current-head predecessor fence and transition position. A newly recomputed
+record hash, equal epoch, equal endpoint, source-WORK diagnostic, eventless
+receipt, or standalone cyclic proof is insufficient authority. Existing
+retained data may be upgraded only from the complete original committed
+publication evidence and original ordered transition inventory. An absent or
+ambiguous predecessor is an explicit evidence failure, never inferred from
+endpoint equality or a later return to an earlier BlueId.
+
+The original transition must qualify for the *existing narrow* §5.7.1
+exception: the selected inactive historical occurrence and its source-path
+reconciliation/activation are proved; the authoritative historical target has
+no local body change; the complete body difference is explained by verified
+same-lineage active-reference finalization; and no target Root event is
+emitted. Input/output source epoch, lineage, lifecycle, exact body identity,
+complete binding inventories and companion must agree. Actual local writes,
+source events, lifecycle changes, unrelated containing-spine changes, omitted
+inventory rows or unproved content are rejected. The original publisher must
+retain sufficient classification evidence; observing zero events is not a
+substitute for that evidence.
+
+An inactive occurrence gains optional `pendingRepresentationPosition`, a
+closed cursor record with exactly `anchorReceiptIdentity`, `positionIdentity`,
+`targetPositionIdentity`, and nullable `nextRevisionReceiptIdentity`. The three
+non-null identities and any next-revision identity are SHA-256 identities.
+The complete record is included in the occurrence-binding-set and closure
+identity. Existing rows with that field absent retain their existing wire
+form and identities. The first representation cause must authenticate its
+numbered-epoch anchor and the row's exact historical value. Each successful
+representation step advances only `positionIdentity`; the anchor, target and
+next receipt remain frozen throughout the chain. The
+next step must match this field as well as the unchanged historical epoch,
+source path, occurrence identity, activation generation, target lineage and
+exact predecessor BlueId. A later X → Y → X therefore has two distinguishable
+X positions. Identity equality cannot skip either transition. A subsequent
+numbered revision verifies the completed predecessor position against its
+host-authenticated immutable source-receipt anchor and clears the optional
+representation position while advancing the existing epoch cursor by one.
+
+All supplied identity assertions are recomputed and all original durable
+commit assertions independently authenticated before execution. Missing
+named exact values produce ordinary exact-value demands. Missing, forged,
+wrong-lineage, wrong-epoch, incorrectly anchored, reordered or incomplete
+commit/position evidence fails closed. There is no general history-gap
+allowance and no cause containing a hidden transition list.
+
 ### 2.4 Processing Environment
 
 One attempt is evaluated under a fixed environment containing:
@@ -3871,6 +3963,68 @@ For the next canonical work occurrence `W` targeting document `D`:
 A document step never enumerates documents that contain `D`. Reverse delivery
 is performed by the orchestrator from the verified occurrence index after the
 step returns.
+
+### 7.5a Applying one historical representation step (proposed amendment)
+
+A valid `ManagedRepresentationCause` creates exactly one ordinary
+`CONTAINING_REFERENCE_UPDATE` work for the containing source document. It
+validates the selected exact predecessor, admits the complete historical
+successor and its cyclic proof, and rewrites the one source path through the
+same isolated step runtime used by §7.5. Root scope opening, participating
+contracts, patch/managed-path validation, exact identity reconstruction,
+`containingReferenceUpdated`, binding verification, affected acyclic/cyclic
+finalization and containing-spine work use their existing actual portable
+gas operations and limits. The new position and proof fields are closed admission evidence. Their
+Phase-A validation and host durable-membership verification follow the existing
+boundary for input evidence and host resources (§D.15); they are not invented
+portable counters. Establishing new or changed Blue content inside the invocation
+uses the existing metered identity formulas. Successor cyclic witnesses retain
+the existing canonical-byte limits and ordinary metered proof admission. No synthetic gas ledger, free reconstruction, new source
+initialization or replay of the original source's Root events is permitted.
+
+At the immediate after-patch boundary the occurrence's exact target and
+binding are updated; `pendingHistoricalEpoch` is unchanged and
+`pendingRepresentationPosition` advances to the authenticated successor.
+The occurrence remains inactive. The complete consumer reference change,
+position, binding and graph/component effects are one atomic invocation.
+Ordinary Document Update reactions and their real effects run to quiescence.
+The authoritative current child is never overwritten with historical bytes.
+Its epoch follows §5.7.1, including the existing narrow target exception;
+all genuine local changes and non-exempt containing changes retain their
+required epochs. Failure or gas rollback restores all input heads, positions,
+bindings, history, events and graph state. Retrying committed work reconciles
+the exact retained commit identity and does not repeat downstream effects.
+
+For an intermediate chain the goal is the exact predecessor position of the
+next immutable numbered source receipt, captured before traversal. Each
+invocation consumes its one next representation transition. After its last
+position is reached, the next invocation is the unchanged +1-epoch
+`ManagedRevisionCause`. It must match the next immutable receipt's exact
+predecessor. Processing never substitutes the newest live source for that
+intermediate goal. Newly created reference-only revisions cannot enlarge the
+captured intermediate chain. Real later source work remains behind the
+existing no-overtake barrier and timestamp frontier.
+
+A representation-only tail with no later numbered receipt uses a distinct
+captured terminal-position target. Its historical transitions are likewise
+consumed one at a time. At the captured terminal position, and only then,
+perform the existing §7.5 terminal same-lineage reconciliation to the latest
+quiescent authoritative identity and activate the edge atomically. This
+terminal action does not chase newly generated representation positions as
+another historical chain. A real advancing source epoch must be accounted
+for by ordinary barrier extension and numbered revision processing; it may
+not be suppressed as representation churn. The captured position, cursor,
+next-work identity and terminal target survive crash/restart exactly.
+
+Required conformance includes the saved-original figure-eight, the unchanged
+three-node bound, join/split and duplicate-chord owners; two intermediate
+representation transitions; X → Y → X followed by an immutable revision;
+representation-only tail; missing/forged/misordered/wrong-position/wrong-lineage/
+wrong-epoch/incomplete companion and cyclic-proof negatives; local-change and
+source-event misclassification negatives; per-step gas rollback; response loss,
+crash and fresh restart; and no duplicate initialization/source/downstream
+event occurrences. Pair reconnect is a separate required owner. No amended
+fixture alone establishes RC acceptance.
 
 ### 7.6 Applying one Handler result
 

@@ -65,8 +65,8 @@ final class ManagedTransitionReceiptAssembler {
 
     private static String originalCauseIdentity(ProcessingCause cause) {
         ProcessingCause selected = Objects.requireNonNull(cause, "cause");
-        if (selected instanceof ManagedRevisionCause) {
-            return ((ManagedRevisionCause) selected)
+        if (selected instanceof ManagedHistoryStep) {
+            return ((ManagedHistoryStep) selected)
                     .originalSourceCauseIdentity();
         }
         return selected.causeIdentity();

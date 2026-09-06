@@ -194,9 +194,9 @@ public final class TentativeResolutionContext {
                         component.completeCyclicProof());
             }
         }
-        if (invocation.cause() instanceof ManagedRevisionCause) {
-            ManagedRevisionCause revision =
-                    (ManagedRevisionCause) invocation.cause();
+        if (invocation.cause() instanceof ManagedHistoryStep) {
+            ManagedHistoryStep revision =
+                    (ManagedHistoryStep) invocation.cause();
             for (ManagedOccurrenceBinding binding : forwardBindings) {
                 if (binding.occurrenceIdentity().equals(
                             revision.targetOccurrenceIdentity())

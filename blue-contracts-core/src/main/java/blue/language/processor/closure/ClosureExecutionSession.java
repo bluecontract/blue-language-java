@@ -262,8 +262,8 @@ final class ClosureExecutionSession
                 == ProcessingCause.Kind.EXTERNAL) {
             executeExternalCause();
         } else {
-            executeManagedRevisionCause(
-                    (ManagedRevisionCause) input.cause());
+            executeManagedHistoryStep(
+                    (ManagedHistoryStep) input.cause());
         }
 
         completePendingTerminations();
@@ -382,8 +382,8 @@ final class ClosureExecutionSession
         drainCausalWork();
     }
 
-    private void executeManagedRevisionCause(
-            ManagedRevisionCause cause) {
+    private void executeManagedHistoryStep(
+            ManagedHistoryStep cause) {
         requireWorkOccurrenceCount(1L);
         ManagedOccurrenceBinding target = managedRevisionTarget(cause);
         ManagedDocumentSnapshot source = currentSnapshot.managedDocument(
@@ -394,7 +394,7 @@ final class ClosureExecutionSession
                 0L,
                 WorkKind.CONTAINING_REFERENCE_UPDATE,
                 source.documentId(),
-                "managed-revision",
+                cause instanceof ManagedRepresentationCause ? "managed-representation" : "managed-revision",
                 null,
                 null,
                 scopeIdentity,
@@ -440,7 +440,7 @@ final class ClosureExecutionSession
     }
 
     private void deliverManagedRevisionEvents(
-            ManagedRevisionCause cause) {
+            ManagedHistoryStep cause) {
         if (!cause.sourceTransitionReceipt().isPresent()) {
             return;
         }
@@ -474,7 +474,7 @@ final class ClosureExecutionSession
     }
 
     private ManagedOccurrenceBinding managedRevisionTarget(
-            ManagedRevisionCause cause) {
+            ManagedHistoryStep cause) {
         for (ManagedOccurrenceBinding binding : currentBindings) {
             if (binding.occurrenceIdentity().equals(
                     cause.targetOccurrenceIdentity())) {
@@ -502,7 +502,9 @@ final class ClosureExecutionSession
                     || (input.cause().kind()
                                     != ProcessingCause.Kind.EXTERNAL
                             && input.cause().kind()
-                                    != ProcessingCause.Kind.MANAGED_REVISION)) {
+                                    != ProcessingCause.Kind.MANAGED_REVISION
+                            && input.cause().kind()
+                                    != ProcessingCause.Kind.MANAGED_REPRESENTATION)) {
                 throw new ClosureCapabilityGapException(
                         "PROCESS_CAUSE_UNSUPPORTED",
                         "The concrete engine accepts external or one managed "
@@ -514,8 +516,7 @@ final class ClosureExecutionSession
                         "EXTERNAL_DIRECT_DELIVERY_REQUIRED",
                         "The first concrete engine lane requires one accepted direct delivery");
             }
-            if (input.cause().kind()
-                            == ProcessingCause.Kind.MANAGED_REVISION
+            if (input.cause() instanceof ManagedHistoryStep
                     && !input.directDeliveries().isEmpty()) {
                 throw new IllegalArgumentException(
                         "Managed revision must not carry direct deliveries");
@@ -549,8 +550,8 @@ final class ClosureExecutionSession
     private boolean isRetainedManagedRevisionSource(
             DocumentId documentId) {
         return executionMode == ExecutionMode.PROCESSING
-                && input.cause() instanceof ManagedRevisionCause
-                && ((ManagedRevisionCause) input.cause())
+                && input.cause() instanceof ManagedHistoryStep
+                && ((ManagedHistoryStep) input.cause())
                         .childDocumentId().equals(documentId);
     }
 
@@ -1501,14 +1502,14 @@ final class ClosureExecutionSession
 
     private void chargeManagedRevisionReceiptPatch(
             ClosureWorkOccurrence work) {
-        if (!(input.cause() instanceof ManagedRevisionCause)
+        if (!(input.cause() instanceof ManagedHistoryStep)
                 || managedRevisionReceiptReconciled
                 || work.kind()
                         != WorkKind.CONTAINING_REFERENCE_UPDATE) {
             return;
         }
-        ManagedRevisionCause revision =
-                (ManagedRevisionCause) input.cause();
+        ManagedHistoryStep revision =
+                (ManagedHistoryStep) input.cause();
         if (!work.sourceOccurrenceIdentity().equals(
                 revision.causeIdentity())) {
             return;
@@ -1536,12 +1537,14 @@ final class ClosureExecutionSession
 
     private boolean shouldActivateManagedRevision(
             ClosureWorkOccurrence work) {
-        if (!(input.cause() instanceof ManagedRevisionCause)
+        if (!(input.cause() instanceof ManagedHistoryStep)
                 || managedRevisionActivationCompleted) {
             return false;
         }
-        ManagedRevisionCause revision =
-                (ManagedRevisionCause) input.cause();
+        ManagedHistoryStep revision =
+                (ManagedHistoryStep) input.cause();
+        if (revision instanceof ManagedRepresentationCause
+                && !((ManagedRepresentationCause) revision).terminalPositionReached()) return false;
         return work.kind() == WorkKind.CONTAINING_REFERENCE_UPDATE
                 && work.sourceOccurrenceIdentity().equals(
                         revision.causeIdentity())
@@ -1551,8 +1554,8 @@ final class ClosureExecutionSession
 
     private List<FinalizationUpdate> activateManagedRevision(
             ClosureWorkOccurrence work) {
-        ManagedRevisionCause revision =
-                (ManagedRevisionCause) input.cause();
+        ManagedHistoryStep revision =
+                (ManagedHistoryStep) input.cause();
         ManagedOccurrenceBinding target = managedRevisionTarget(revision);
         ManagedDocumentSnapshot child = currentSnapshot.managedDocument(
                 revision.childDocumentId());
@@ -1954,7 +1957,7 @@ final class ClosureExecutionSession
                 : occurrence.containingTargets) {
             if (occurrence.imported) {
                 requireManagedRevisionEventTarget(
-                        (ManagedRevisionCause) input.cause(),
+                        (ManagedHistoryStep) input.cause(),
                         frozen.directBinding(),
                         occurrence);
             } else {
@@ -2000,13 +2003,13 @@ final class ClosureExecutionSession
     }
 
     private void requireManagedRevisionEventTarget(
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ManagedOccurrenceBinding frozen) {
         requireManagedRevisionEventTarget(revision, frozen, null);
     }
 
     private void requireManagedRevisionEventTarget(
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ManagedOccurrenceBinding frozen,
             EmittedOccurrence importedEvent) {
         verifyFrozenEventBinding(frozen);
@@ -2094,7 +2097,7 @@ final class ClosureExecutionSession
     }
 
     private boolean exactManagedRevisionRetirementSuccessor(
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ManagedOccurrenceBinding frozen,
             ManagedOccurrenceBinding successor) {
         verifyFrozenEventBinding(successor);
@@ -2126,7 +2129,7 @@ final class ClosureExecutionSession
 
     private boolean isExactManagedRevisionReceiptEvent(
             EmittedOccurrence occurrence,
-            ManagedRevisionCause revision) {
+            ManagedHistoryStep revision) {
         if (!occurrence.imported
                 || !revision.sourceTransitionReceipt().isPresent()) {
             return false;
@@ -2150,7 +2153,7 @@ final class ClosureExecutionSession
     }
 
     private boolean sameManagedLocalRepresentation(
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ManagedDocumentSnapshot authoritative) {
         Node retained = revision.afterDocument();
         Node current = authoritative.document();
@@ -2645,7 +2648,7 @@ final class ClosureExecutionSession
                 owner,
                 owner.targetDocumentId(),
                 false,
-                input.cause() instanceof ManagedRevisionCause
+                input.cause() instanceof ManagedHistoryStep
                         ? "managed-revision.topology-change"
                         : "work." + owner.ordinal()
                                 + ".topology-change");
@@ -2683,7 +2686,7 @@ final class ClosureExecutionSession
     private void chargeManagedRevisionAncestorRewrites(
             ClosureWorkOccurrence owner,
             List<FinalizationUpdate> updates) {
-        if (!(input.cause() instanceof ManagedRevisionCause)
+        if (!(input.cause() instanceof ManagedHistoryStep)
                 || activateManagedRevision) {
             return;
         }
@@ -2745,9 +2748,9 @@ final class ClosureExecutionSession
                     sourceBodies.get(binding.sourceDocumentId()),
                     binding.sourcePath());
             boolean selectedActivation = activateManagedRevision
-                    && input.cause() instanceof ManagedRevisionCause
+                    && input.cause() instanceof ManagedHistoryStep
                     && binding.occurrenceIdentity().equals(
-                            ((ManagedRevisionCause) input.cause())
+                            ((ManagedHistoryStep) input.cause())
                                     .targetOccurrenceIdentity());
             if (!sameNode(before, staged) || selectedActivation) {
                 reconcilesHistoricalRow = true;
@@ -2795,14 +2798,14 @@ final class ClosureExecutionSession
     private boolean isImportedManagedRevisionSourceReceiptBoundary(
             DocumentId documentId,
             ClosureWorkOccurrence owner) {
-        if (!(input.cause() instanceof ManagedRevisionCause)
+        if (!(input.cause() instanceof ManagedHistoryStep)
                 || !managedRevisionActivationCompleted
                 || importedManagedEventDeliveryDepth <= 0
                 || owner.kind() != WorkKind.EMBEDDED_EVENT) {
             return false;
         }
-        ManagedRevisionCause revision =
-                (ManagedRevisionCause) input.cause();
+        ManagedHistoryStep revision =
+                (ManagedHistoryStep) input.cause();
         return documentId.equals(revision.childDocumentId())
                 && !documentId.equals(owner.targetDocumentId())
                 && isExactManagedRevisionReceiptEvent(owner, revision);
@@ -2938,9 +2941,9 @@ final class ClosureExecutionSession
                 currentSnapshot.managedDocuments();
         ArrayList<ManagedOccurrenceBinding> working =
                 new ArrayList<ManagedOccurrenceBinding>();
-        ManagedRevisionCause revision = input.cause()
-                instanceof ManagedRevisionCause
-                ? (ManagedRevisionCause) input.cause()
+        ManagedHistoryStep revision = input.cause()
+                instanceof ManagedHistoryStep
+                ? (ManagedHistoryStep) input.cause()
                 : null;
         boolean receiptEventReclassification = false;
         for (ManagedOccurrenceBinding binding : currentBindings) {
@@ -3019,7 +3022,7 @@ final class ClosureExecutionSession
 
     private ManagedOccurrenceBinding managedRevisionReceiptEventRetirement(
             ManagedOccurrenceBinding binding,
-            ManagedRevisionCause revision,
+            ManagedHistoryStep revision,
             ClosureWorkOccurrence owner) {
         if (owner == null
                 || owner.kind() != WorkKind.EMBEDDED_EVENT
@@ -3086,7 +3089,7 @@ final class ClosureExecutionSession
 
     private boolean isExactManagedRevisionReceiptEvent(
             ClosureWorkOccurrence owner,
-            ManagedRevisionCause revision) {
+            ManagedHistoryStep revision) {
         if (!revision.sourceTransitionReceipt().isPresent()
                 || owner.eventBlueId() == null
                 || owner.occurrenceOrdinal() == null) {
@@ -3356,7 +3359,7 @@ final class ClosureExecutionSession
 
     private ManagedOccurrenceBinding reconcileManagedRevision(
             ManagedOccurrenceBinding binding,
-            ManagedRevisionCause revision) {
+            ManagedHistoryStep revision) {
         Node value = NodePathEditor.getOrNull(
                 latestBodies.get(binding.sourceDocumentId()),
                 binding.sourcePath());
@@ -3393,6 +3396,12 @@ final class ClosureExecutionSession
                 installedBlueId,
                 caughtUp,
                 caughtUp ? null : Long.valueOf(revision.toEpoch()));
+        if (!caughtUp && revision instanceof ManagedRepresentationCause) {
+            ManagedRepresentationCause representation = (ManagedRepresentationCause) revision;
+            reconciled = reconciled.withRepresentationCursor(new ManagedRepresentationCursor(
+                    representation.transition().anchorReceiptIdentity(), representation.transition().positionIdentity(),
+                    representation.targetPositionIdentity(), representation.nextRevisionReceiptIdentity()));
+        }
         if (!binding.occurrenceIdentity().equals(
                 reconciled.occurrenceIdentity())) {
             throw new IllegalStateException(
@@ -3556,7 +3565,7 @@ final class ClosureExecutionSession
                 continue;
             }
             boolean managedRevisionWork = input.cause()
-                    instanceof ManagedRevisionCause
+                    instanceof ManagedHistoryStep
                     && boundary.kind()
                             == TentativeFinalization.Boundary.Kind.WORK;
             if (managedRevisionWork) {

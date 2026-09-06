@@ -243,8 +243,8 @@ final class ClosureInvocationVerifier {
             }
             externalEventIdentityEvidence = verifyExternalEvent(
                     external, runtimeAccess);
-        } else if (selected instanceof ManagedRevisionCause) {
-            ManagedRevisionCause revision = (ManagedRevisionCause) selected;
+        } else if (selected instanceof ManagedHistoryStep) {
+            ManagedHistoryStep revision = (ManagedHistoryStep) selected;
             Optional<CyclicSetProof> cyclicProof =
                     revision.afterCyclicProof();
             if (cyclicProof.isPresent()) {

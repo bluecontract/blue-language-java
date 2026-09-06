@@ -14,7 +14,7 @@ import java.util.Optional;
  * invocation evidence.  The proof is required exactly for a cyclic-member
  * {@code afterBlueId}; an ordinary successor has no proof.</p>
  */
-public final class ManagedRevisionCause extends ProcessingCause {
+public final class ManagedRevisionCause extends ProcessingCause implements ManagedHistoryStep {
 
     private final String targetOccurrenceIdentity;
     private final DocumentId childDocumentId;

@@ -104,6 +104,15 @@ final class ClosureIdentityService {
                 "toEpoch", "beforeBlueId", "afterBlueId",
                 "originalSourceCauseIdentity",
                 "sourceRevisionReceiptIdentity"),
+        MANAGED_REPRESENTATION_POSITION(
+                "blue-managed-representation-position/1",
+                "documentId", "epoch", "anchorReceiptIdentity", "predecessorPositionIdentity",
+                "beforeBlueId", "afterBlueId", "transitionReceiptIdentity", "originalInvocationIdentity",
+                "inputClosureIdentity", "outputClosureIdentity", "commitCompanionIdentity"),
+        MANAGED_REPRESENTATION_CAUSE(
+                "blue-managed-representation-step/1",
+                "targetOccurrenceIdentity", "representationPositionIdentity", "targetPositionIdentity",
+                "nextRevisionReceiptIdentity"),
         ADMISSION_CANDIDATE(
                 "blue-contracts-admission-candidate/1.0",
                 "kind", "evidence"),
@@ -582,6 +591,8 @@ final class ClosureIdentityService {
                         admission.triggeringEventBlueId(),
                         admission.parentTransitionIdentity(),
                         admission.policyIdentity());
+            case MANAGED_REPRESENTATION:
+                return ((ManagedRepresentationCause) selected).recomputedIdentity();
             case MANAGED_REVISION:
                 ManagedRevisionCause revision =
                         (ManagedRevisionCause) selected;
@@ -705,6 +716,9 @@ final class ClosureIdentityService {
             value.put("active", Boolean.valueOf(selected.active()));
             value.put("pendingHistoricalEpoch",
                     selected.pendingHistoricalEpoch());
+            if (selected.pendingRepresentationCursor() != null) {
+                value.put("pendingRepresentationPosition", selected.pendingRepresentationCursor().identityValue());
+            }
             values.add(value);
         }
         return identity(Constructor.OCCURRENCE_BINDING_SET, values);
@@ -1033,6 +1047,16 @@ final class ClosureIdentityService {
                 return;
             case MANAGED_REVISION_CAUSE:
                 validateRevision(requireObject(value, OBJECT_VALUE), true);
+                return;
+            case MANAGED_REPRESENTATION_POSITION:
+            case MANAGED_REPRESENTATION_CAUSE:
+                Map<String, Object> representation = requireObject(value, OBJECT_VALUE);
+                for (String field : constructor.fields) {
+                    if (field.equals("documentId")) requireNonEmptyText(representation, field);
+                    else if (field.equals("epoch")) requireSafeInteger(representation, field);
+                    else if (field.endsWith("BlueId")) ClosureValueSupport.requireBlueId(requireNonEmptyText(representation, field), field);
+                    else requireSha256(representation, field, field.equals("nextRevisionReceiptIdentity"));
+                }
                 return;
             case EXTERNAL_CAUSE:
                 validateExternalCause(requireObject(value, OBJECT_VALUE));
@@ -1426,9 +1450,15 @@ final class ClosureIdentityService {
         String previousBinding = null;
         for (Object itemValue : items) {
             Map<String, Object> item = requireObject(itemValue, "binding");
-            requireExactFields(item, Arrays.asList(
-                    "occurrenceIdentity", "bindingIdentity", "active",
-                    "pendingHistoricalEpoch"));
+            List<String> fields = new ArrayList<String>(Arrays.asList(
+                    "occurrenceIdentity", "bindingIdentity", "active", "pendingHistoricalEpoch"));
+            if (item.containsKey("pendingRepresentationPosition")) {
+                fields.add("pendingRepresentationPosition");
+                Map<String, Object> cursor = requireObject(item.get("pendingRepresentationPosition"), "representation cursor");
+                requireExactFields(cursor, Arrays.asList("anchorReceiptIdentity", "positionIdentity", "targetPositionIdentity", "nextRevisionReceiptIdentity"));
+                for (String field : cursor.keySet()) requireSha256(cursor, field, field.equals("nextRevisionReceiptIdentity"));
+            }
+            requireExactFields(item, fields);
             String occurrence = requireSha256(item,
                     "occurrenceIdentity", false);
             String binding = requireSha256(item, "bindingIdentity", false);
