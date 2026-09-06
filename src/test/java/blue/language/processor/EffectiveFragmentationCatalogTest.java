@@ -901,6 +901,78 @@ class EffectiveFragmentationCatalogTest {
     }
 
     @Test
+    void shouldCatalogInactiveNestedDeclarationsWithoutCompletingMatchers() {
+        // given
+        Fixture fixture = new Fixture();
+        Node child = fixture.document();
+        child.getContracts().getProperties().get("run")
+                .properties("event", new Node().type(new Node().blueId(
+                        RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED)))
+                .properties("request", new Node().properties("amount", new Node()
+                        .type(new Node().blueId(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                        .schema(new blue.language.model.Schema().required(true))));
+        Node document = new Node().properties("inactive", child);
+        fixture.content.remove(fixture.programBlueId);
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            DocumentProcessorAdministration administration =
+                    blue.getDocumentProcessor().administration();
+            Node canonical = administration.canonicalizeProcessingSource(document);
+            fixture.providerRequests.clear();
+            EffectiveFragmentationCatalog catalog =
+                    administration.effectiveFragmentationCatalog(canonical);
+
+            // then
+            assertFalse(catalog.effectiveContractsByScope().containsKey("/inactive"));
+            assertFalse(fixture.providerRequests.contains(fixture.programBlueId));
+            assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical),
+                    catalog.rootBlueId());
+            assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
+                    canonical.getNode("/inactive/contracts/run/event/type").getBlueId());
+        }
+    }
+
+    @Test
+    void shouldRejectInvalidFixedValuesInInactiveRegisteredDeclarations() {
+        // given
+        Fixture fixture = new Fixture();
+        Node child = fixture.document();
+        child.getContracts().getProperties().get("run")
+                .properties("request", new Node().properties("amount", new Node()
+                        .type(new Node().blueId(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                        .schema(new blue.language.model.Schema().required(true))
+                        .value("wrong kind")));
+        Node document = new Node().properties("inactive", child);
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            // then
+            assertThrows(IllegalArgumentException.class, () -> blue.getDocumentProcessor()
+                    .administration().effectiveFragmentationCatalog(document));
+        }
+    }
+
+    @Test
+    void shouldRequireCompletedOrdinaryEventsOutsideRegisteredDeclarations() {
+        // given
+        Fixture fixture = new Fixture();
+        Node document = new Node().properties("inactive", new Node()
+                .properties("event", new Node().type(new Node().blueId(
+                        RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED))
+                        .properties("document", new Node()
+                                .type(new Node().blueId(BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                                .schema(new blue.language.model.Schema().required(true)))));
+
+        // when
+        try (Blue blue = fixture.blue()) {
+            // then
+            assertThrows(IllegalArgumentException.class, () -> blue.getDocumentProcessor()
+                    .administration().effectiveFragmentationCatalog(document));
+        }
+    }
+
+    @Test
     void shouldKeepReferencedHandlerEventMatcherAsExactColdHeaderEdge() {
         // given
         Fixture fixture = new Fixture();

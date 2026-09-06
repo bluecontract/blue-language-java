@@ -86,12 +86,18 @@ final class EffectiveFragmentationCatalogBuilder {
                 discovery.discover(
                         admitted.node(),
                         participatingScopePaths);
-                ResolvedSnapshot snapshot =
-                        sequence
-                                .fromDocumentTransientPreservingPaths(
-                                        admitted.node(),
-                                        discovery
-                                                .executableBodyPaths());
+                // Nested authored contracts retain declaration-shaped exact
+                // fields before they become participating scopes. Use the same
+                // field ownership and fixed-value validation as hosted Source;
+                // catalog recognition below still opens only selected scopes.
+                Set<String> exactFields = ExecutableBodyPathCatalog.forHostedOutput(
+                        admitted.node(), registry.exactSourceFieldsByType(), sequence);
+                exactFields.addAll(discovery.executableBodyPaths());
+                Set<String> executableFields = ExecutableBodyPathCatalog.forHostedOutput(
+                        admitted.node(), registry.executableBodyFieldsByType(), sequence);
+                ResolvedSnapshot snapshot = CanonicalIdentityEvidence.canonicalSnapshotWithExactFields(
+                        admitted.node(), sequence, "Fragmentation catalog Root",
+                        exactFields, executableFields);
                 CatalogPass pass = catalog(
                         sequence,
                         snapshot,
