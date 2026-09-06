@@ -39,6 +39,62 @@ final class IndexedDeliveryEvaluatorTest {
             ExternalOrderKey.of(Arrays.asList(4, "source", 2));
 
     @Test
+    void shouldBindProcessingRootWithInactiveNestedEventDeclaration() {
+        // given
+        Node accepted = channel(0, true, true, false);
+        Node matcher = new Node().properties("amount", new Node()
+                .type(new Node().blueId(
+                        blue.language.model.wire.BlueLanguageConstants.INTEGER_TYPE_BLUE_ID))
+                .schema(new blue.language.model.Schema().required(true)));
+        Node handlerType = new Node().name("Inactive Indexed Handler")
+                .type(new Node().blueId(
+                        blue.language.processor.registry.RuntimeBlueIds.HANDLER));
+        String handlerId = DirectBlueIdCalculator.calculateBlueId(handlerType);
+        Node nested = new Node().contracts(new Node().properties("onEvent", new Node()
+                .type(new Node().blueId(handlerId))
+                .properties("channel", new Node().value("lifecycle"))
+                .properties("event", matcher)));
+        Node root = root("accepted", accepted).properties("inactive", nested);
+        NodeProvider provider = blueId -> CHANNEL_TYPE_BLUE_ID.equals(blueId)
+                ? Collections.singletonList(CHANNEL_TYPE.clone())
+                : handlerId.equals(blueId) ? Collections.singletonList(handlerType.clone()) : null;
+        HandlerProcessor<blue.language.processor.model.HandlerContract> inactiveHandler =
+                new HandlerProcessor<blue.language.processor.model.HandlerContract>() {
+                    @Override
+                    public Class<blue.language.processor.model.HandlerContract> contractType() {
+                        return blue.language.processor.model.HandlerContract.class;
+                    }
+                    @Override
+                    public void execute(blue.language.processor.model.HandlerContract contract,
+                            ProcessorExecutionContext context) {
+                        throw new AssertionError("Inactive handler must not execute");
+                    }
+                };
+        try (Blue language = new Blue(provider);
+             DocumentProcessor processor = DocumentProcessor.Builder
+                     .from(language.getDocumentProcessor())
+                     .registerContractProcessor(CHANNEL_TYPE_BLUE_ID, CHANNEL_TYPE,
+                             new IndexedTestChannelProcessor())
+                     .registerContractProcessor(handlerId, handlerType, inactiveHandler).build()) {
+            Node canonical = processor.administration().canonicalizeProcessingSource(root);
+
+            // when
+            IndexedDeliveryPreparation preparation = processor.administration()
+                    .indexedDeliveryEvaluator().prepare(canonical, event(), ROOT_REVISION,
+                            EVENT_ORDER, Collections.singletonList(interval("accepted", accepted, null)),
+                            Collections.singletonList(ExternalSubscriptionOccurrenceKey.of("/", "accepted")));
+
+            // then
+            assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical),
+                    preparation.deliveryPlan().verifiedBinding().rootBlueId());
+            assertEquals(1, preparation.deliveryPlan().deliveries().size());
+            assertEquals("accepted", preparation.deliveryPlan().deliveries().get(0).channelKey());
+            assertEquals(Collections.singletonList(ExternalSubscriptionOccurrenceKey.of("/", "accepted")),
+                    diagnosticOccurrences(preparation));
+        }
+    }
+
+    @Test
     void shouldPrepareDeliveriesAndDiagnosticsFromCompleteSurface() {
         // given
         Node candidateOnly = channel(0, false, false, false);

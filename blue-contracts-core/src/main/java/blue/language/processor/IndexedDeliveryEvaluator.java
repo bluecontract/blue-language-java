@@ -1,7 +1,6 @@
 package blue.language.processor;
 
 import blue.language.identity.BlueIds;
-import blue.language.identity.NodeToBlueIdInput;
 import blue.language.model.Node;
 import blue.language.runtime.LanguageRuntimeAccess;
 
@@ -189,29 +188,12 @@ public final class IndexedDeliveryEvaluator {
                         SNAPSHOT_GENERATION_EXPIRED);
             }
             requireReleasedGasSchedule();
-            final Set<String> rootIdentityPreservedPaths =
-                    snapshotManager != null
-                            ? ExecutableBodyPathCatalog
-                                    .fromNodeIncludingTypeContracts(
-                                            exactRoot,
-                                            activeScopePaths,
-                                            processor.registry()
-                                                    .exactSourceFieldsByType(),
-                                            snapshotManager)
-                            : Collections.<String>emptySet();
-            final String rootBlueId =
-                    sourceBlueId(
-                            exactRoot,
-                            languageRuntime,
-                            snapshotManager,
-                            "Indexed delivery Root identity",
-                            rootIdentityPreservedPaths);
-            final String eventBlueId =
-                    sourceBlueId(
-                            exactEvent,
-                            languageRuntime,
-                            snapshotManager,
-                            "Indexed delivery event identity");
+            final DocumentProcessorProcessingSupport.SourceIdentityBinding identities =
+                    new DocumentProcessorProcessingSupport(processor)
+                            .sourceIdentities(exactRoot, exactEvent,
+                                    languageRuntime, snapshotManager);
+            final String rootBlueId = identities.rootBlueId();
+            final String eventBlueId = identities.eventBlueId();
             ProcessingInputAdmission admission =
                     new ProcessingInputAdmission(snapshotManager, true);
             ProcessingInputAdmission.AdmittedNode admittedRoot =
@@ -456,45 +438,4 @@ public final class IndexedDeliveryEvaluator {
         }
     }
 
-    private String sourceBlueId(
-            Node source,
-            LanguageRuntimeAccess languageRuntime,
-            ProcessingSnapshotManager snapshotManager,
-            String purpose) {
-        return sourceBlueId(
-                source,
-                languageRuntime,
-                snapshotManager,
-                purpose,
-                Collections.<String>emptySet());
-    }
-
-    private String sourceBlueId(
-            Node source,
-            LanguageRuntimeAccess languageRuntime,
-            ProcessingSnapshotManager snapshotManager,
-            String purpose,
-            Set<String> additionalPreservedPaths) {
-        if (source.isReferenceOnly()) {
-            return source.getBlueId();
-        }
-        /*
-         * Indexed evaluation must bind against the same registered-extension
-         * provider graph that will admit the Root and event.
-         */
-        if (snapshotManager != null) {
-            return CanonicalIdentityEvidence.sourceBlueId(
-                    source,
-                    snapshotManager,
-                    purpose,
-                    additionalPreservedPaths);
-        }
-        if (languageRuntime != null) {
-            return languageRuntime.calculateSourceDocumentBlueId(
-                    NodeToBlueIdInput.stripResolvedBlueIdMetadata(
-                            source.clone()));
-        }
-        return CanonicalIdentityEvidence.sourceBlueId(
-                source, null, purpose);
-    }
 }
