@@ -234,6 +234,36 @@ final class TutorialListPublicBoundaryTest {
         }
     }
 
+    @Test
+    void shouldRejectScalarReplacementWithIncompatibleExplicitOrInferredType() {
+        // given
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            String prefix = "type: {type: List, items: [A]}\nitems: [{$pos: 0, $replace: ";
+            // when
+            Node inferred = source(language, prefix + "7}]\n");
+            Node explicit = source(language, prefix + "{type: Integer, value: 7}}]\n");
+            // then
+            assertThrows(IllegalArgumentException.class, () -> language.resolution().resolve(inferred));
+            assertThrows(IllegalArgumentException.class, () -> language.resolution().resolve(explicit));
+        }
+    }
+
+    @Test
+    void shouldRetainInheritedSlotSchemaAcrossWholeValueReplacement() {
+        // given
+        try (BlueLanguage language = BlueLanguage.builder().build()) {
+            String prefix = "type: {type: List, items: [{type: Integer, value: 1, schema: {minimum: 0}}]}\n"
+                    + "items: [{$pos: 0, $replace: ";
+            // when
+            Node valid = source(language, prefix + "2}]\n");
+            Node invalid = source(language, prefix + "-1}]\n");
+            // then
+            assertEquals(new java.math.BigInteger("2"),
+                    language.resolution().resolve(valid).getItems().get(0).getValue());
+            assertThrows(IllegalArgumentException.class, () -> language.resolution().resolve(invalid));
+        }
+    }
+
     private static Node source(BlueLanguage language, String yaml) {
         return language.codec().parseSource(yaml, BlueFormat.YAML);
     }

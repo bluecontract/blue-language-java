@@ -429,7 +429,7 @@ class LabelOverrideProvenanceEdgeTest {
     }
 
     @Test
-    void shouldFixedItemTypePreventsPlainAndPositionedRelabeling() {
+    void shouldAppendPlainItemWhileFixedInheritedPositionRejectsRelabeling() {
         // given
         Blue blue = new Blue();
         Node holderType = blue.yamlToNode(String.join("\n",
@@ -443,7 +443,7 @@ class LabelOverrideProvenanceEdgeTest {
         Node plain = blue.yamlToNode(String.join("\n",
                 "entries:",
                 "  items:",
-                "    - name: Illegal Plain Item"))
+                "    - name: Appended Item"))
                 .type(holderType.clone());
         Node positioned = blue.yamlToNode(String.join("\n",
                 "entries:",
@@ -455,7 +455,12 @@ class LabelOverrideProvenanceEdgeTest {
 
         // then
 
-        assertFixedValueConflict(() -> blue.resolve(plain));
+        Node resolved = blue.resolve(plain);
+        assertEquals(2, resolved.getAsNode("/entries").getItems().size());
+        assertEquals("Generic Item", resolved.getAsNode("/entries/0").getName());
+        assertEquals("value", resolved.getAsText("/entries/0/fixed"));
+        assertEquals("Appended Item", resolved.getAsNode("/entries/1").getName());
+        assertEquals("value", resolved.getAsText("/entries/1/fixed"));
         assertFixedValueConflict(() -> blue.resolve(positioned));
     }
 

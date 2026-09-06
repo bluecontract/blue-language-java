@@ -273,7 +273,8 @@ final class ListOverlayMerger {
             ResolutionLimits limits,
             Node itemType) {
         Node resolved = resolveListChild(
-                source, limits, String.valueOf(position), itemType);
+                source, limits, String.valueOf(position), itemType,
+                targetChildren.get(position).getSchema(), true);
         if (resolved != null) {
             targetChildren.set(position, resolved);
         }
@@ -374,6 +375,12 @@ final class ListOverlayMerger {
 
     private Node resolveListChild(
             Node child, ResolutionLimits limits, String segment, Node itemType) {
+        return resolveListChild(child, limits, segment, itemType, null, false);
+    }
+
+    private Node resolveListChild(
+            Node child, ResolutionLimits limits, String segment,
+            Node itemType, Schema inheritedSchema, boolean replacement) {
         if (child.getPreviousBlueId() != null || child.getPosition() != null) {
             throw new IllegalArgumentException(
                     "List control items must be consumed before resolving list children.");
@@ -387,13 +394,16 @@ final class ListOverlayMerger {
         limits.enterPathSegment(segment, child);
         engine.enterValidationPath(segment, expansionAllowed);
         try {
-            if (child.isReferenceOnly() && itemType != null) {
-                /* Keep the authored reference pure. Its inherited slot type is
-                 * resolver-side context, so merge into a typed target to make
-                 * the existing exact-reference validator prove compatibility.
-                 * Missing required content remains a materialization failure. */
-                Node target = engine.resolve(
-                        new Node().type(itemType.clone()), limits);
+            if ((child.isReferenceOnly() && itemType != null)
+                    || (replacement && (itemType != null || inheritedSchema != null))) {
+                /* Replacement changes the value, not its inherited type or
+                 * schema constraints. Keep those constraints on a fresh target;
+                 * ordinary merge validation also checks explicit child types
+                 * and materializes exact references when proof is required. */
+                Node context = new Node();
+                if (itemType != null) context.type(itemType.clone());
+                if (inheritedSchema != null) context.schema(inheritedSchema.clone());
+                Node target = engine.resolve(context, limits);
                 engine.merge(target, child, limits);
                 return target;
             }
