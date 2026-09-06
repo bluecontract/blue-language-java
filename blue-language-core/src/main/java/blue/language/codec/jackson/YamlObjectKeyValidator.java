@@ -6,6 +6,7 @@ import java.util.Deque;
 import java.util.regex.Pattern;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.error.YAMLException;
 import org.yaml.snakeyaml.events.CollectionEndEvent;
 import org.yaml.snakeyaml.events.CollectionStartEvent;
 import org.yaml.snakeyaml.events.Event;
@@ -20,6 +21,14 @@ final class YamlObjectKeyValidator {
     private YamlObjectKeyValidator() { }
 
     static void validate(String source) {
+        try {
+            validateEvents(source);
+        } catch (YAMLException invalidSyntax) {
+            throw new UncheckedObjectMapper.JsonException(invalidSyntax);
+        }
+    }
+
+    private static void validateEvents(String source) {
         Deque<Container> containers = new ArrayDeque<>();
         // Parse events only: no YAML object construction, implicit Java types,
         // alias expansion, or provider reads occur at this syntax boundary.

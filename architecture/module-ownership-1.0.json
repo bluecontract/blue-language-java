@@ -83,10 +83,10 @@
     }
   ],
   "inventory": {
-    "productionSourceCount": 800,
-    "productionResourceCount": 816,
-    "productionSourcePathIdentity": "sha256:df4873fc14752e46ad33a475ea6643a2575aee8ac570a9615bbfcea1b201832d",
-    "productionResourcePathIdentity": "sha256:ac3d9ad2d124e84dc7e9d156d341ff7acdc5610ab66fb3e86249b23fae60fb3b"
+    "productionSourceCount": 802,
+    "productionResourceCount": 817,
+    "productionSourcePathIdentity": "sha256:93ced0188b4341970066779d45a05a458d6a59d02139b1f108d29b79088501d9",
+    "productionResourcePathIdentity": "sha256:6c480234806f71830a5389de393570b11fe2ed1bcd15f24e9f65281da2487224"
   },
   "ownershipRule": "Every production file is owned at its conventional module path; root source redirection is forbidden.",
   "sources": [
@@ -3780,10 +3780,24 @@
       "targetPackage": "blue.language.codec"
     },
     {
+      "currentPath": "blue-language-core/src/main/java/blue/language/codec/jackson/BlueYamlStringQuotingChecker.java",
+      "currentPackage": "blue.language.codec.jackson",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/codec/jackson/BlueYamlStringQuotingChecker.java",
+      "targetPackage": "blue.language.codec.jackson"
+    },
+    {
       "currentPath": "blue-language-core/src/main/java/blue/language/codec/jackson/UncheckedObjectMapper.java",
       "currentPackage": "blue.language.codec.jackson",
       "targetModule": ":blue-language-core",
       "targetPath": "blue-language-core/src/main/java/blue/language/codec/jackson/UncheckedObjectMapper.java",
+      "targetPackage": "blue.language.codec.jackson"
+    },
+    {
+      "currentPath": "blue-language-core/src/main/java/blue/language/codec/jackson/YamlObjectKeyValidator.java",
+      "currentPackage": "blue.language.codec.jackson",
+      "targetModule": ":blue-language-core",
+      "targetPath": "blue-language-core/src/main/java/blue/language/codec/jackson/YamlObjectKeyValidator.java",
       "targetPackage": "blue.language.codec.jackson"
     },
     {
@@ -9371,6 +9385,11 @@
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_noncanonical_inherited_integer_rejected.yaml",
       "targetModule": ":blue-conformance",
       "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_noncanonical_inherited_integer_rejected.yaml"
+    },
+    {
+      "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_pos_without_inherited_prefix_rejected.yaml",
+      "targetModule": ":blue-conformance",
+      "targetPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_pos_without_inherited_prefix_rejected.yaml"
     },
     {
       "currentPath": "blue-conformance/src/main/resources/blue-language-1.0/fixtures/resolver/R_positional_canonical_final_payload.yaml",

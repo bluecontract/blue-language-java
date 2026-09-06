@@ -689,12 +689,12 @@ public class NodeToObjectConverterTest {
                                     "    name: Betty\n" +
                                     "    yearsOfExperience: 12\n" +
                                     "team3:\n" +
-                                    "  1:\n" +
+                                    "  '1':\n" +
                                     "    type:\n" +
                                     "      blueId: Doctor-BlueId\n" +
                                     "    name: Adam\n" +
                                     "    specialization: surgeon\n" +
-                                    "  2:\n" +
+                                    "  '2':\n" +
                                     "    type:\n" +
                                     "      blueId: Nurse-BlueId\n" +
                                     "    name: Betty\n" +

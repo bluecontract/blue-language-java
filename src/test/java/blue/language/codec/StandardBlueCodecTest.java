@@ -120,4 +120,29 @@ final class StandardBlueCodecTest {
         }
     }
 
+    @Test
+    void shouldKeepMalformedFlowSyntaxInsideTheJsonExceptionBoundary() {
+        // given
+        String source = "value: [\n";
+
+        // when
+        Executable parsing = () -> codec.parseSource(source, BlueFormat.YAML);
+
+        // then
+        assertThrows(blue.language.codec.jackson.UncheckedObjectMapper.JsonException.class, parsing);
+    }
+
+    @Test
+    void shouldKeepUnterminatedQuoteInsideTheJsonExceptionBoundary() {
+        // given
+        String source = "value: \"unfinished\n";
+
+        // when
+        Executable parsing = () -> codec.parseSource(source, BlueFormat.YAML);
+
+        // then
+        assertThrows(blue.language.codec.jackson.UncheckedObjectMapper.JsonException.class, parsing);
+    }
+
+
 }
