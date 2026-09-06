@@ -58,14 +58,16 @@ change, and use the full release procedure when preparing a release.
 wildcard. Every token must match. Empty tokens, unknown tokens, unsupported
 wildcards, and duplicate/empty fixture inventories fail. Overlapping selections
 are deduplicated and retain manifest order. Omitting the property on the focused
-task fails; omitting it on the listing task lists all 184 cases. Listing says
+task fails; omitting it on the listing task lists all 185 cases. Listing says
 `LIST ONLY` and is not a test result.
 
 The old `BlueLanguageConformanceFixtureTest` factory eagerly called the complete
 runner before returning dynamic tests. It now validates the same complete
 metadata, selects entries, and defers `runFixture(entry, completeInventory)` to
 each dynamic executable. The full factory without a selector still contains
-all 184 cases. Production fixture runners and assertions are unchanged.
+all 185 cases. The additional case retains the original invalid no-prefix
+List source as an explicit negative; Source and canonical inputs are declared
+separately, with unchanged independent output and rejection assertions.
 
 `F_all_language_vectors_pass` is itself a suite assertion. It intentionally
 executes its declared `B_`/`R_` prerequisites through the original executor.

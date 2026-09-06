@@ -237,10 +237,18 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
 
     static void runResolveVariants(JsonNode spec) {
         for (JsonNode variant : requireArray(spec, FixtureField.VARIANTS)) {
-            Node source = variant.has(FixtureField.SOURCE)
-                    ? readNode(variant.get(FixtureField.SOURCE))
-                    : readNode(requirePresent(variant, "overlay"));
-            attachBaselineType(source, spec);
+            boolean canonical = variant.has(FixtureField.CANONICAL_INPUT);
+            int inputs = (variant.has(FixtureField.SOURCE) ? 1 : 0)
+                    + (variant.has("overlay") ? 1 : 0) + (canonical ? 1 : 0);
+            if (inputs != 1) {
+                throw new IllegalArgumentException(
+                        "Resolve variant requires exactly one source, overlay or canonicalInput.");
+            }
+            Node source = canonical ? readNode(variant.get(FixtureField.CANONICAL_INPUT))
+                    : variant.has(FixtureField.SOURCE)
+                            ? readNode(variant.get(FixtureField.SOURCE))
+                            : readNode(variant.get("overlay"));
+            if (!canonical) attachBaselineType(source, spec);
             runExpectedVariant(spec, variant, source);
         }
     }
@@ -282,7 +290,9 @@ abstract class BlueConformanceResolutionOperations extends BlueConformanceGraphO
                 new LanguageFixtureRuntime(provider.provider);
         Node actual;
         try {
-            actual = blue.resolve(blue.preprocess(source));
+            actual = variant.has(FixtureField.CANONICAL_INPUT)
+                    ? blue.resolveCanonicalInput(source)
+                    : blue.resolve(blue.preprocess(source));
         } catch (RuntimeException failure) {
             if (!variant.hasNonNull(FixtureField.EXPECTED_ERROR_CATEGORY)) {
                 throw failure;

@@ -60,7 +60,15 @@ Preprocess, resolve the effective type chain, merge overlays, validate schemas a
 
 ### `resolveVariants`
 
-Apply the same parent, declaration, provider, or base inputs to every variant independently and check each variant's expected validity, result, or error.
+Each variant declares exactly one of `source`, `overlay`, or `canonicalInput`.
+For `source` and `overlay`, attach the shared parent/declaration/base and use
+Source preprocessing and resolution. For `canonicalInput`, resolve the complete
+exact canonical value as supplied: no Source preprocessing and no implicit
+parent attachment. Its type references must be exact and its required content
+must be verified through the declared provider. Shared provider inputs apply
+to each variant independently. Check every expected validity, result or exact
+error category. The field selects the public input boundary; no fixture ID,
+list length or prefix comparison selects it implicitly.
 
 ### `resolveLimited`
 

@@ -8,7 +8,7 @@ compilation into one reproducible receipt.
 flowchart TD
     Clean["clean build with SOURCE_DATE_EPOCH"] --> Marker["clean-build evidence"]
     Marker --> Verify["releaseVerify / finalQualityVerify"]
-    Fixtures["184 Language + 295 Contracts fixtures"] --> Verify
+    Fixtures["185 Language + 295 Contracts fixtures"] --> Verify
     Tests["unit, integration, locality, gas traces"] --> Verify
     API["module API baselines + migration ledger"] --> Verify
     Archives["JAR/source replicas + source ZIP"] --> Verify
@@ -62,7 +62,7 @@ A separate consumer build has no `includeBuild`, project substitution or Maven
 Local. Gradle resolves the `blue.language` group exclusively from this sealed
 repository, with no remote fallback. It enforces Java 8 artifact bytecode and
 allowed POM edges, resolves all six coordinates, and exercises the aggregate
-parse/write entry points. The 184 Language and 295 Contracts fixture suites
+parse/write entry points. The 185 Language and 295 Contracts fixture suites
 remain mandatory source conformance gates. The disposable publication task may
 delete only `build/staging-deploy`; it never deletes or overwrites the
 repository already handed to a downstream consumer. From a clean checkout,

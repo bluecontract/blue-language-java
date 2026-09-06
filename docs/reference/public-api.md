@@ -9,20 +9,20 @@ This distribution inventory is derived from Java 8 class artifacts. Descriptors 
 | Module | Types | Methods | Fields | Total entries |
 | --- | ---: | ---: | ---: | ---: |
 | `blue-conformance` | 24 | 178 | 68 | 270 |
-| `blue-contracts-core` | 302 | 1988 | 675 | 2965 |
-| `blue-language-core` | 164 | 893 | 97 | 1154 |
+| `blue-contracts-core` | 302 | 1989 | 675 | 2966 |
+| `blue-language-core` | 164 | 895 | 97 | 1156 |
 | `blue-language-ipfs` | 3 | 6 | 0 | 9 |
 | `blue-language-java` | 3 | 42 | 0 | 45 |
 | `blue-language-mapping` | 25 | 107 | 1 | 133 |
 | `blue-language-model` | 23 | 216 | 80 | 319 |
-| **Distribution** | **544** | **3430** | **921** | **4895** |
+| **Distribution** | **544** | **3433** | **921** | **4898** |
 
 ## blue-conformance
 
 ```text
 field blue.language.conformance.api.BlueConformanceReport#BLUE_SPEC_SOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0-final-implementation-baseline"
 field blue.language.conformance.api.BlueConformanceReport#FIXTURE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-1.0/fixtures/manifest.yaml"
-field blue.language.conformance.api.BlueConformanceReport#FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e"
+field blue.language.conformance.api.BlueConformanceReport#FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:ad02fe844cfa9bde6134c855190145ccfdbd803f449e02482193b1f03ccbe436"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_GAS_MANIFEST_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="54310113bbfc0c6529802fa134a40d7131a4c72e52ccd11d16b20733db60bad8"
 field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_GAS_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:03219c42eb3696ef8727fe8ae226c8a5eb4a6126859ba744f571d892c409626a"
@@ -32,14 +32,14 @@ field blue.language.conformance.api.BlueContractsConformanceReport#CONTRACTS_SPE
 field blue.language.conformance.api.BlueContractsConformanceReport#FIXTURE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts-closure-1.0/fixtures/manifest.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#FIXTURE_ROOT_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-contracts-closure-1.0/fixtures/"
 field blue.language.conformance.api.BlueContractsConformanceReport#GAS_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue/language/processor/contracts-gas-1.0.yaml"
-field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e"
+field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_FIXTURE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695"
 field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_REGISTRY_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321"
 field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_SPECIFICATION_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="specifications/blue-language-specification-1.0.md"
 field blue.language.conformance.api.BlueContractsConformanceReport#LANGUAGE_SPECIFICATION_SHA256 descriptor=Ljava/lang/String; access=public,static,final signature=- constant="77b48506ff7b5ddbab26b98ce9e060e943cb3babf1e6f5511085bbb3c31c4144"
 field blue.language.conformance.api.BlueContractsConformanceReport#REGISTRY_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="registry/blue-contracts-1.0/manifest.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_MANIFEST_RESOURCE descriptor=Ljava/lang/String; access=public,static,final signature=- constant="release/blue-language-contracts-embedded-modules-collection-paths-1.0/PACKAGE-MANIFEST.yaml"
 field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_NAME descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-contracts-embedded-modules-collection-paths"
-field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:0b94e3ad61b650abb4b249eeb51d910ef93ec25133d3717cf90714c07032148a"
+field blue.language.conformance.api.BlueContractsConformanceReport#RELEASE_PACKAGE_IDENTITY descriptor=Ljava/lang/String; access=public,static,final signature=- constant="sha256:b2477354910cde66b7c06b51956df98f0873d57033a5e7fa8e5e301096bd5e64"
 field blue.language.conformance.api.BlueContractsFixtureCategory#ADMISSION descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueContractsFixtureCategory#ATOMICITY descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueContractsFixtureCategory#CHK descriptor=Lblue/language/conformance/api/BlueContractsFixtureCategory; access=public,static,final,enum signature=- constant=-
@@ -85,9 +85,9 @@ field blue.language.conformance.api.BlueFixtureCategory#SCHEMA descriptor=Lblue/
 field blue.language.conformance.api.BlueFixtureCategory#SERIALIZATION descriptor=Lblue/language/conformance/api/BlueFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueFixtureCategory#SPECIALIZATION descriptor=Lblue/language/conformance/api/BlueFixtureCategory; access=public,static,final,enum signature=- constant=-
 field blue.language.conformance.api.BlueReleaseConformanceReport#CONTRACTS_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=295
-field blue.language.conformance.api.BlueReleaseConformanceReport#LANGUAGE_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=184
+field blue.language.conformance.api.BlueReleaseConformanceReport#LANGUAGE_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=185
 field blue.language.conformance.api.BlueReleaseConformanceReport#SCHEMA descriptor=Ljava/lang/String; access=public,static,final signature=- constant="blue-language-java-release-conformance-report/1.0"
-field blue.language.conformance.api.BlueReleaseConformanceReport#TOTAL_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=479
+field blue.language.conformance.api.BlueReleaseConformanceReport#TOTAL_FIXTURE_COUNT descriptor=I access=public,static,final signature=- constant=480
 method blue.language.conformance.api.BlueConformanceFailure#<init> descriptor=(Ljava/lang/String;Lblue/language/conformance/api/BlueFixtureCategory;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V access=public signature=- throws=-
 method blue.language.conformance.api.BlueConformanceFailure#<init> descriptor=(Ljava/lang/String;Lblue/language/conformance/api/BlueFixtureCategory;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lblue/language/api/BlueLanguageErrorCategory;)V access=public signature=- throws=-
 method blue.language.conformance.api.BlueConformanceFailure#getCategory descriptor=()Lblue/language/conformance/api/BlueFixtureCategory; access=public signature=- throws=-
@@ -1838,6 +1838,7 @@ method blue.language.processor.ProcessingSnapshotManager#cacheSnapshot descripto
 method blue.language.processor.ProcessingSnapshotManager#calculateScopeContentBlueId descriptor=(Ljava/lang/String;Lblue/language/snapshot/FrozenNode;Lblue/language/merge/ResolvedSnapshot;)Ljava/lang/String; access=public signature=- throws=-
 method blue.language.processor.ProcessingSnapshotManager#forValueIdentity descriptor=()Lblue/language/processor/ProcessingSnapshotManager; access=public signature=- throws=-
 method blue.language.processor.ProcessingSnapshotManager#forkTransientSequence descriptor=()Lblue/language/processor/ProcessingSnapshotManager; access=public signature=- throws=-
+method blue.language.processor.ProcessingSnapshotManager#fromCanonicalTransient descriptor=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public signature=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.processor.ProcessingSnapshotManager#fromDocument descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.processor.ProcessingSnapshotManager#fromDocumentPreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.processor.ProcessingSnapshotManager#fromDocumentTransient descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public signature=- throws=-
@@ -4093,6 +4094,7 @@ method blue.language.runtime.BlueLanguageRuntime#preprocessing descriptor=()Lblu
 method blue.language.runtime.BlueLanguageRuntime#preprocessingAliases descriptor=()Ljava/util/Map; access=public signature=()Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>; throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolution descriptor=()Lblue/language/resolve/BlueResolution; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolve descriptor=(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/model/Node; access=public signature=- throws=-
+method blue.language.runtime.BlueLanguageRuntime#resolveCanonicalSnapshotPreservingPaths descriptor=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public signature=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolveTypeDeclarationIdentity descriptor=(Lblue/language/model/Node;)Lblue/language/identity/CanonicalTypeIdentityEvidence; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolveTypeDeclarationIdentity descriptor=(Lblue/language/model/Node;Lblue/language/runtime/LanguageProcessing$ExactResolutionOverlay;)Lblue/language/identity/CanonicalTypeIdentityEvidence; access=public signature=- throws=-
 method blue.language.runtime.BlueLanguageRuntime#resolveTypeEvidence descriptor=(Lblue/language/model/Node;Lblue/language/resolve/ResolutionLimits;)Lblue/language/merge/TypeEvidenceResolution; access=public signature=- throws=-
@@ -4123,6 +4125,7 @@ method blue.language.runtime.LanguageProcessing$Scope#materializeVerifiedExactRe
 method blue.language.runtime.LanguageProcessing$Scope#newConformanceEngine descriptor=()Lblue/language/conformance/ConformanceEngine; access=public signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#publish descriptor=(Lblue/language/merge/ResolvedSnapshot;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolve descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
+method blue.language.runtime.LanguageProcessing$Scope#resolveCanonicalTransient descriptor=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public signature=(Lblue/language/snapshot/FrozenNode;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolvePreservingPaths descriptor=(Lblue/language/model/Node;Ljava/util/Collection;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=(Lblue/language/model/Node;Ljava/util/Collection<Ljava/lang/String;>;)Lblue/language/merge/ResolvedSnapshot; throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolveTransient descriptor=(Lblue/language/model/Node;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-
 method blue.language.runtime.LanguageProcessing$Scope#resolveTransientForCanonicalIdentity descriptor=(Lblue/language/model/Node;Lblue/language/runtime/LanguageProcessing$ExactResolutionOverlay;)Lblue/language/merge/ResolvedSnapshot; access=public,abstract signature=- throws=-

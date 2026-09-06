@@ -49,7 +49,7 @@ final class SemanticBaselineSupport {
     static final String LOCALITY_EVIDENCE_SCHEMA =
             "blue-language-locality-evidence/1.0";
     static final String SHA_256_PREFIX = "sha256:";
-    static final int LANGUAGE_FIXTURE_COUNT = 184;
+    static final int LANGUAGE_FIXTURE_COUNT = 185;
     static final int CONTRACTS_FIXTURE_COUNT = 295;
     static final int GAS_FIXTURE_COUNT = 71;
     static final int RELEASE_FIXTURE_COUNT =

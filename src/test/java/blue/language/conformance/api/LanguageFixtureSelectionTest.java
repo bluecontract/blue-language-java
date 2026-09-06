@@ -136,7 +136,7 @@ final class LanguageFixtureSelectionTest {
         List<String> completeIds = ids(LanguageFixtureSelection.select(inventory, "*"));
 
         // then
-        assertEquals(184, cases.size());
+        assertEquals(185, cases.size());
         assertEquals(BlueConformanceReport.loadFixtureIds(), completeIds);
         assertEquals(completeIds, cases.stream().map(DynamicTest::getDisplayName)
                 .collect(Collectors.toList()));

@@ -1,0 +1,12 @@
+id: R_pos_without_inherited_prefix_rejected
+category: Resolution
+operation: resolve
+description: positional replacement cannot address an absent inherited element
+source:
+  type:
+    blueId: 85ip88snCGrgUNdi1rUFqqAxcxwVGKV2g4LjsKoyKmXK
+  items:
+  - $pos: 0
+    value: A
+  - value: B
+expectedErrorCategory: ListControlViolation

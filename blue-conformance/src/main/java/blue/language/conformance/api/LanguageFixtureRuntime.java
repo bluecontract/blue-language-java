@@ -65,6 +65,13 @@ final class LanguageFixtureRuntime implements AutoCloseable {
         return runtime.resolution().resolve(source);
     }
 
+    /** Resolves exact canonical input without Source preprocessing or parent attachment. */
+    public Node resolveCanonicalInput(Node canonical) {
+        return runtime.resolveCanonicalSnapshotPreservingPaths(
+                blue.language.snapshot.FrozenNode.fromNode(canonical),
+                Collections.emptyList()).resolvedRoot();
+    }
+
     /** Prepares a definition without certifying an instance payload. */
     public Node resolveDefinition(Node source) {
         return runtime.resolution().resolveDefinition(source);

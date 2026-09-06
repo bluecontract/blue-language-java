@@ -216,6 +216,7 @@
 - id: R15
   fixtures:
   - R_positional_reorder_or_remove_rejected
+  - R_pos_without_inherited_prefix_rejected
 - id: R16
   fixtures:
   - R_minimized_overlay_round_trip

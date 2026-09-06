@@ -3,13 +3,13 @@ specificationVersion: '1.0'
 schemaVersion: blue-language-fixture/1.0
 registryPackageIdentity: sha256:5c7a48fd3437182a2b6c43255c96e58c81e9872b4a3c150906b831812925a321
 vectorCount: 150
-behaviorFixtureCount: 184
+behaviorFixtureCount: 185
 gasFixtureCount: 0
 files:
 - path: HARNESS.md
   role: support
-  sha256: be0440a8484385ec7d9d7c22f31ed285d1912d655ad9ba0ffe7571f6459b1eca
-  bytes: 14933
+  sha256: 8d2415587aaeb7b6e74fcb3c92bdf37f5657bb41d960f60ccb8ab2fc616ab99d
+  bytes: 15456
 - path: README.md
   role: support
   sha256: a110099c94b5def40e9995500dee3592e9bc31ab0100f40f5bc9ae4fd85a2f22
@@ -496,8 +496,8 @@ files:
   bytes: 671
 - path: resolver/R_canonical_overlay_no_previous_no_pos.yaml
   role: behavior-fixture
-  sha256: 87a01acd3526e7fecbf75354f27ae3cfae3a3a29bd484052c6ae1bd52e45fc77
-  bytes: 438
+  sha256: 6f23ac2d961eb5a2ff3b5a085f6f89469b5c8819f42d093c005e05714e24cfe4
+  bytes: 639
 - path: resolver/R_canonicalization_deterministic_for_same_resolved_view.yaml
   role: behavior-fixture
   sha256: 5ace623bc384fcb14557954f5c7630a197c0db1b4501c1803de4b85ac43c2b93
@@ -646,6 +646,10 @@ files:
   role: behavior-fixture
   sha256: 2c86ab53e6803d1fd6c0969ff722059bce64d1327ff1fb74568df665dae2ceb7
   bytes: 205
+- path: resolver/R_pos_without_inherited_prefix_rejected.yaml
+  role: behavior-fixture
+  sha256: 487c7fc60fcff6a10d1d3375f7e245cd623af947f3babc6003ae1da6d9eb5e50
+  bytes: 327
 - path: resolver/R_positional_canonical_final_payload.yaml
   role: behavior-fixture
   sha256: 2d27905db8b371681f3e6b4ea883995cbf972f79389eb5b6bd871024f53cc41e
@@ -660,8 +664,8 @@ files:
   bytes: 297
 - path: resolver/R_positional_reorder_or_remove_rejected.yaml
   role: behavior-fixture
-  sha256: ad47beabf9caaabc798979ed10d23e3f6ef9de518a10fb31aa8b7c4d4713aa44
-  bytes: 369
+  sha256: 19dd4aba8997b4376ee142e7fd618f00a3a8e82be60dde4696bd33d0eb2830e0
+  bytes: 743
 - path: resolver/R_previous_anchor_mismatch.yaml
   role: behavior-fixture
   sha256: 37bf04ea74080392a9c0c9ed5f15290e68252b5777b48e8a8a2b46c989af34f6
@@ -776,10 +780,10 @@ files:
   bytes: 1574
 - path: vector-coverage.yaml
   role: support
-  sha256: be3c616c490a2eec6a629ab28d3ad5b5315aef50237de99eeff4b7f6fe114fb4
-  bytes: 13176
+  sha256: 0bf6016400f6e28296b8cfc4b3cc1d2445ebcc14bf9a0bb63391fdfc4c3d1f38
+  bytes: 13220
 packageIdentityAlgorithm:
   digest: sha256
   encoding: UTF-8 canonical JSON with sorted keys
   normalization: packageIdentity is null before hashing
-packageIdentity: sha256:2b305ecf1fabcdd7990868e8453d7d77647bef4131de64064f6f6d4e42a6e60e
+packageIdentity: sha256:f323e169fc2e18d918686cf5cb8843dd6b8ce7e81fd9484e2921ce554b004695

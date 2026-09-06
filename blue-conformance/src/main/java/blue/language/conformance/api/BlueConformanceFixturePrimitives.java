@@ -137,6 +137,7 @@ abstract class BlueConformanceFixturePrimitives {
      * fixture handling is named here.</p>
      */
     static final class FixtureField {
+        static final String CANONICAL_INPUT = "canonicalInput";
 
         static final String ALSO_DIFFERENT_FROM = "alsoDifferentFrom";
         static final String ALSO_EQUIVALENT_TO = "alsoEquivalentTo";
@@ -309,7 +310,7 @@ abstract class BlueConformanceFixturePrimitives {
             FIXTURE_ROOT + "preprocessing/registry/";
     static final String PREPROCESSING_REGISTRY_MANIFEST_RESOURCE =
             PREPROCESSING_REGISTRY_ROOT + "manifest.yaml";
-    static final int EXPECTED_BEHAVIOR_FIXTURE_COUNT = 184;
+    static final int EXPECTED_BEHAVIOR_FIXTURE_COUNT = 185;
 
     static final Set<String> OPERATIONS = immutableSet(
             FixtureOperation.ASSERT_VIEW_PATH,
