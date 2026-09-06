@@ -20,6 +20,7 @@ import java.util.Map;
 
 import static blue.language.processor.FailureCapture.captureFailure;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -936,6 +937,37 @@ class EffectiveFragmentationCatalogTest {
                     .getSchema().getRequiredValue());
             assertEquals(RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED,
                     canonical.getNode("/inactive/contracts/run/event/type").getBlueId());
+        }
+    }
+
+    @Test
+    void shouldPreserveInactiveMatcherIdentityDuringCanonicalPatchResolution() {
+        // given
+        Fixture fixture = new Fixture();
+        Node child = fixture.document();
+        child.getContracts().getProperties().get("run")
+                .properties("event", new Node().type(new Node().blueId(
+                        RuntimeBlueIds.DOCUMENT_PROCESSING_INITIATED)));
+        Node document = new Node().properties("inactive", child);
+        try (Blue blue = fixture.blue()) {
+            DocumentProcessor processor = blue.getDocumentProcessor();
+            Node canonical = processor.administration().canonicalizeProcessingSource(document);
+            // when
+            for (boolean strict : new boolean[] {false, true}) {
+                blue.language.merge.ResolvedSnapshot snapshot = strict
+                        ? ExecutableBodyPathCatalog.resolveCanonicalTransientIncludingTypeContracts(
+                                processor.scopeIdentitySnapshotManager(), FrozenNode.fromNode(canonical),
+                                Collections.singleton("/"), processor.registry().exactSourceFieldsByType())
+                        : ExecutableBodyPathCatalog.resolveCanonicalTransient(
+                                processor.scopeIdentitySnapshotManager(), FrozenNode.fromNode(canonical),
+                                Collections.singleton("/"), processor.registry().exactSourceFieldsByType());
+                // then
+                assertEquals(DirectBlueIdCalculator.calculateBlueId(canonical), snapshot.blueId());
+                assertEquals(snapshot.blueId(), processor.administration()
+                        .effectiveFragmentationCatalog(snapshot.canonicalRoot()).rootBlueId());
+                assertNull(snapshot.canonicalRoot()
+                        .getNode("/inactive/contracts/run/event").getProperties());
+            }
         }
     }
 

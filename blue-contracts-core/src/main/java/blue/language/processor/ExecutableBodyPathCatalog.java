@@ -273,6 +273,10 @@ final class ExecutableBodyPathCatalog {
                 openedScopePaths,
                 executableBodyFieldsByType,
                 checkedManager);
+        // Patches may activate or insert scopes outside the entry selection.
+        // Registered declarations retain exact Source form in those scopes too.
+        preserved.addAll(forHostedOutput(
+                document, executableBodyFieldsByType, checkedManager));
         if (!preserved.isEmpty()) {
             preserved.addAll(processorStateReferencePaths(
                     document, openedScopePaths));
@@ -307,6 +311,10 @@ final class ExecutableBodyPathCatalog {
                 checkedManager);
         preserved.addAll(ordinaryReferencePaths(
                 document, openedScopePaths));
+        // Patches may activate or insert scopes outside the entry selection.
+        // Registered declarations retain exact Source form in those scopes too.
+        preserved.addAll(forHostedOutput(
+                document, executableBodyFieldsByType, checkedManager));
         if (!preserved.isEmpty()) {
             preserved.addAll(processorStateReferencePaths(
                     document, openedScopePaths));
