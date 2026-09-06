@@ -539,7 +539,9 @@ class ListControlFormsTest {
         Node resolved = new Blue(nodeProvider).resolve(derived);
 
         // then
-        assertEquals(null, resolved.getItems().get(0).getValue());
+        // The inherited Text constraint requires verified materialization;
+        // the exact reference identity remains the original source identity.
+        assertEquals("R", resolved.getItems().get(0).getValue());
         assertEquals(referenceBlueId, resolved.getItems().get(0).getBlueId());
     }
 

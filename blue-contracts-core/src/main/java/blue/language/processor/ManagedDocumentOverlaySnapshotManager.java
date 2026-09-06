@@ -76,6 +76,12 @@ final class ManagedDocumentOverlaySnapshotManager
     }
 
     @Override
+    public ResolvedSnapshot fromCanonicalTransient(
+            FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+        return delegate.fromCanonicalTransient(canonicalRoot, union(preservedPaths));
+    }
+
+    @Override
     public ResolvedSnapshot fromDocumentTransient(Node document) {
         return expectedManagedBlueIdsByPath.isEmpty()
                 ? delegate.fromDocumentTransient(document)

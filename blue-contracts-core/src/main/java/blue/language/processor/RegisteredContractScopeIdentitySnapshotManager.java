@@ -76,6 +76,12 @@ final class RegisteredContractScopeIdentitySnapshotManager
     }
 
     @Override
+    public ResolvedSnapshot fromCanonicalTransient(
+            FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+        return languageRuntime.resolveCanonicalSnapshotPreservingPaths(canonicalRoot, preservedPaths);
+    }
+
+    @Override
     public ResolvedSnapshot fromDocumentTransient(Node document) {
         return languageRuntime.snapshots().resolve(document);
     }

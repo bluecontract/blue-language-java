@@ -208,6 +208,25 @@ final class RuntimeLanguageProcessing extends NodeProviderWrapper
         }
 
         @Override
+        public ResolvedSnapshot resolveCanonicalTransient(
+                FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+            return call(() -> withResolutionCache(cache -> {
+                FrozenNode canonical = Objects.requireNonNull(canonicalRoot, "canonicalRoot");
+                Set<String> paths = canonicalPreservedPaths(preservedPaths);
+                ResolutionLimits limits = paths.isEmpty() ? ResolutionLimits.NO_LIMITS
+                        : ResolutionLimits.allOf(ResolutionLimits.NO_LIMITS,
+                                ResolutionLimits.deferringReferencesAt(paths));
+                ResolvedSnapshot snapshot = ResolvedSnapshot.fromResolverResult(
+                        merger(scopeNodeProvider, cache).resolveSnapshot(canonical, limits));
+                if (paths.isEmpty()) return snapshot;
+                Node resolved = snapshot.resolvedRoot();
+                restorePreservedPaths(resolved, canonical.toNode(), paths, true);
+                return ResolvedSnapshot.withDeferredResolution(canonical,
+                        cache.freezeResolved(resolved), snapshot.canonicalTypeIdentities());
+            }));
+        }
+
+        @Override
         public ResolvedSnapshot resolveTransientForCanonicalIdentity(
                 Node document,
                 ExactResolutionOverlay exactResolutionOverlay) {
@@ -949,11 +968,22 @@ final class RuntimeLanguageProcessing extends NodeProviderWrapper
             Node resolved,
             Node source,
             Set<String> paths) {
+        restorePreservedPaths(resolved, source, paths, false);
+    }
+
+    private static void restorePreservedPaths(
+            Node resolved, Node source, Set<String> paths, boolean canonicalInput) {
         for (String path : paths) {
             Node preserved = NodePathEditor.getOrNull(source, path);
             if (preserved != null) {
-                NodePathEditor.put(
-                        resolved, path, preserved.clone());
+                Node retained = preserved.clone();
+                if (canonicalInput) {
+                    // Canonical projection can compact core scalar types. Restore
+                    // their parsed representation without expanding references or
+                    // interpreting the retained executable body as Source input.
+                    retained = new blue.language.preprocess.InferBasicTypesForUntypedValues().process(retained);
+                }
+                NodePathEditor.put(resolved, path, retained);
             }
         }
     }

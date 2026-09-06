@@ -421,6 +421,17 @@ class ResolvedSnapshotPatchTransactionTest {
         }
 
         @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                blue.language.snapshot.FrozenNode canonicalRoot,
+                java.util.Collection<String> preservedPaths) {
+            inputs.add(canonicalRoot.toNode());
+            if (failResolution) {
+                throw new IllegalStateException("patch value resolution failed");
+            }
+            return blue.loadSnapshot(canonicalRoot.toNode());
+        }
+
+        @Override
         public ResolvedSnapshot applyPatch(ResolvedSnapshot snapshot, JsonPatch patch) {
             throw new AssertionError("snapshot-selected writes must rebuild through fromDocument");
         }

@@ -302,12 +302,18 @@ final class ExecutableBodyPathCatalog {
                     document, openedScopePaths));
         }
         preserved.addAll(opaqueCyclicMemberPaths(document));
-        if (preserved.isEmpty()) {
-            return checkedManager.fromDocumentTransient(document);
+        // Older Source-backed processing snapshots retain an explicitly
+        // non-canonical frozen lane. Only a strict canonical lane may enter
+        // canonical resolution; Source controls keep their original role.
+        ResolvedSnapshot snapshot;
+        if (checkedRoot.isStrictCanonical()) {
+            snapshot = checkedManager.fromCanonicalTransient(checkedRoot, preserved);
+        } else {
+            snapshot = preserved.isEmpty()
+                    ? checkedManager.fromDocumentTransient(document)
+                    : checkedManager.fromDocumentTransientPreservingPaths(document, preserved);
         }
-        return forceDeferredResolution(
-                checkedManager.fromDocumentTransientPreservingPaths(
-                        document, preserved));
+        return preserved.isEmpty() ? snapshot : forceDeferredResolution(snapshot);
     }
 
     /**
@@ -340,12 +346,18 @@ final class ExecutableBodyPathCatalog {
                     document, openedScopePaths));
         }
         preserved.addAll(opaqueCyclicMemberPaths(document));
-        if (preserved.isEmpty()) {
-            return checkedManager.fromDocumentTransient(document);
+        // Older Source-backed processing snapshots retain an explicitly
+        // non-canonical frozen lane. Only a strict canonical lane may enter
+        // canonical resolution; Source controls keep their original role.
+        ResolvedSnapshot snapshot;
+        if (checkedRoot.isStrictCanonical()) {
+            snapshot = checkedManager.fromCanonicalTransient(checkedRoot, preserved);
+        } else {
+            snapshot = preserved.isEmpty()
+                    ? checkedManager.fromDocumentTransient(document)
+                    : checkedManager.fromDocumentTransientPreservingPaths(document, preserved);
         }
-        return forceDeferredResolution(
-                checkedManager.fromDocumentTransientPreservingPaths(
-                        document, preserved));
+        return preserved.isEmpty() ? snapshot : forceDeferredResolution(snapshot);
     }
 
     static Set<String> opaqueCyclicMemberPaths(Node document) {

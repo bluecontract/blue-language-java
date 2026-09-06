@@ -90,6 +90,23 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                     91, "deep-locality", 1));
 
     @Test
+    void shouldRetainImmutableSelectedBodyThroughCanonicalReferenceProcessing() {
+        // given
+        Variant variant = new Variant(BodyForm.INLINE, EntryMode.PURE_REFERENCES,
+                CacheMode.COLD, BatchMode.UNBATCHED);
+        // when
+        Run run = execute(variant);
+        FrozenNode before = run.inputSnapshot.frozenResolvedRoot().at(
+                contractPath(run.scenario.leafPath, SELECTED_HANDLER) + "/result");
+        FrozenNode after = run.debug.resultingSnapshot().frozenResolvedRoot().at(
+                contractPath(run.scenario.leafPath, SELECTED_HANDLER) + "/result");
+        // then
+        assertTrue(before.sameResolvedStructure(after),
+                "Selected body structure changed across canonical processing");
+        assertDefinitiveLocalityProof(run);
+    }
+
+    @Test
     void shouldVerifyDeepGraphHasSemanticParityAndPhysicalLocalityAcrossRepresentationsAndProviders() {
         // given
         List<Variant> variants = Variant.requiredMatrix();
@@ -3441,6 +3458,13 @@ class DeepGraphPhysicalLocalityIntegrationTest {
         }
 
         @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+            return intern(delegate.fromCanonicalTransient(
+                    canonicalRoot, union(preservedPaths)));
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentTransientForCanonicalIdentity(
                 Node document) {
             return intern(delegate
@@ -3611,11 +3635,11 @@ class DeepGraphPhysicalLocalityIntegrationTest {
                     FrozenNode.fromResolvedNode(
                             snapshot.resolvedRoot(),
                             structuralInterner);
-            return ResolvedSnapshot.withSource(
-                    snapshot.frozenSourceRoot(),
-                    resolved,
-                    snapshot.canonicalTypeIdentities(),
-                    snapshot.isResolutionComplete());
+            return ProcessingSnapshotEvidence.create(
+                    snapshot.isSourceBacked() ? snapshot.frozenSourceRoot()
+                            : snapshot.frozenCanonicalRoot(),
+                    resolved, snapshot.isResolutionComplete(), snapshot.isSourceBacked(),
+                    false, snapshot.canonicalTypeIdentities());
         }
     }
 

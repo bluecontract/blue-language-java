@@ -6,6 +6,7 @@ import blue.language.Blue;
 import blue.language.provider.NodeProvider;
 import blue.language.provider.NodeProviderResult;
 import blue.language.model.Node;
+import blue.language.model.NodeWireForm;
 import blue.language.model.Nodes;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.registry.RuntimeBlueIds;
@@ -221,7 +222,7 @@ class ScopeSourceProjectionTest {
                         + "  mergePolicy: positional\n"
                         + "  items:\n"
                         + "    - A\n"
-                        + "    - B");
+                        + "    - {}");
         Node referenced = new Node()
                 .name("Replacement Entry")
                 .properties("payload", text("verified"));
@@ -351,7 +352,11 @@ class ScopeSourceProjectionTest {
                 captured.canonicalAt("/child").blueId();
 
         // then
-        assertEquals(expected, snapshotProjection.contentBlueId());
+        assertEquals(expected, snapshotProjection.contentBlueId(),
+                () -> "Expected standalone=" + NodeWireForm.get(
+                        blue.resolveToSnapshot(standaloneChild.clone()).canonicalRoot())
+                        + "; projected=" + NodeWireForm.get(
+                        snapshotProjection.standaloneSnapshot().canonicalRoot()));
         assertTrue(snapshotProjection.standaloneSnapshot().frozenResolvedRoot()
                 .sameResolvedStructure(captured.resolvedAt("/child")));
         assertScopeInitializationIdentity(
@@ -645,7 +650,7 @@ class ScopeSourceProjectionTest {
         provider.addSingleNodes(referenced);
         String referencedBlueId = provider.getBlueIdByName(referenced.getName());
 
-        List<Node> previousItems = Arrays.asList(text("old-a"), text("old-b"));
+        List<Node> previousItems = Arrays.asList(Nodes.emptyObject(), text("old-b"));
         String previousBlueId = DirectBlueIdCalculator.calculateBlueId(previousItems);
         provider.addList(previousItems);
 

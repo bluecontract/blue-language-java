@@ -3074,6 +3074,36 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         }
 
         @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+            operationStamp();
+            Set<String> paths = canonicalPreservedPaths(preservedPaths);
+            if (sequenceReferenceCache != null) {
+                return resolveCanonicalProcessingSnapshot(canonicalRoot, paths, sequenceReferenceCache);
+            }
+            ResolvedReferenceCache oneShot = resolvedReferenceCache.transientChild();
+            try {
+                return resolveCanonicalProcessingSnapshot(canonicalRoot, paths, oneShot);
+            } finally {
+                oneShot.close();
+            }
+        }
+
+        private ResolvedSnapshot resolveCanonicalProcessingSnapshot(
+                FrozenNode canonicalRoot, Set<String> paths, ResolvedReferenceCache cache) {
+            ResolutionLimits selectedLimits = paths.isEmpty() ? limits
+                    : ResolutionLimits.allOf(limits, ResolutionLimits.deferringReferencesAt(paths));
+            SnapshotResolution resolution = languageMerger(
+                    snapshotMergingProcessor, snapshotNodeProvider, cache)
+                    .resolveSnapshot(canonicalRoot, selectedLimits);
+            if (paths.isEmpty()) return ResolvedSnapshot.fromResolverResult(resolution);
+            Node resolved = resolution.resolvedRoot().toNode();
+            restorePreservedPaths(resolved, canonicalRoot.toNode(), paths, true);
+            return ResolvedSnapshot.withDeferredResolution(canonicalRoot,
+                    cache.freezeResolved(resolved), resolution.canonicalTypeIdentities());
+        }
+
+        @Override
         public ResolvedSnapshot fromDocumentTransient(Node document) {
             CacheGenerationStamp stamp = operationStamp();
             ResolvedSnapshot cached = cachedProcessingSnapshotFor(
@@ -3713,10 +3743,21 @@ public class Blue implements NodeResolver, LanguageRuntimeAccess,
         if (paths == null || paths.isEmpty()) {
             return;
         }
+        restorePreservedPaths(resolved, source, paths, false);
+    }
+
+    private void restorePreservedPaths(
+            Node resolved, Node source, Set<String> paths, boolean canonicalInput) {
         for (String path : paths) {
             Node preserved = NodePathEditor.getOrNull(source, path);
             if (preserved != null) {
-                NodePathEditor.put(resolved, path, preserved.clone());
+                Node retained = preserved.clone();
+                if (canonicalInput) {
+                    // Match canonical scalar wire parsing, without Source merge
+                    // or reference expansion inside the retained body.
+                    retained = new blue.language.preprocess.InferBasicTypesForUntypedValues().process(retained);
+                }
+                NodePathEditor.put(resolved, path, retained);
             }
         }
     }

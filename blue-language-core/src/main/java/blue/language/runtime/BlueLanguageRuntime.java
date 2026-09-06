@@ -537,6 +537,21 @@ public final class BlueLanguageRuntime implements NodeResolver,
     }
 
     /**
+     * Resolves canonical processing input while retaining selected exact paths.
+     *
+     * @param canonicalRoot strict canonical processing state
+     * @param preservedPaths exact subtrees retained without semantic expansion
+     * @return transient snapshot from the canonical input role
+     * @throws IllegalStateException if this runtime is closed
+     */
+    public ResolvedSnapshot resolveCanonicalSnapshotPreservingPaths(
+            FrozenNode canonicalRoot, java.util.Collection<String> preservedPaths) {
+        try (LanguageProcessing.Scope scope = processing.openScope()) {
+            return scope.resolveCanonicalTransient(canonicalRoot, preservedPaths);
+        }
+    }
+
+    /**
      * Returns whether close has released runtime-owned state.
      *
      * @return {@code true} after terminal shutdown

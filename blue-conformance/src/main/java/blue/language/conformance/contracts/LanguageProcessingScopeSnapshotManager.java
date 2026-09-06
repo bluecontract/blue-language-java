@@ -41,6 +41,12 @@ final class LanguageProcessingScopeSnapshotManager
     }
 
     @Override
+    public ResolvedSnapshot fromCanonicalTransient(
+            FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+        return scope.resolveCanonicalTransient(canonicalRoot, preservedPaths);
+    }
+
+    @Override
     public ResolvedSnapshot fromDocumentTransient(Node document) {
         return scope.resolveTransient(document);
     }

@@ -500,14 +500,18 @@ class PatchImpactIncrementalResolutionTest {
         // when
         JsonPatch patch = JsonPatch.replace("/status", new Node().value("confirmed"));
         incremental.applyPatch("/", patch);
-        oracle.applyPatch("/", patch);
+        IllegalStateException mismatch = FailureCapture.captureFailure(
+                () -> oracle.applyPatch("/", patch));
 
         // then
         assertEquals(1L, metrics.snapshot().counter("incrementalSnapshotResolutions"));
         assertEquals(0L, metrics.snapshot().counter("fullSnapshotFallbacks"));
+        assertTrue(mismatch.getMessage().contains("Canonical and resolved roots do not match"));
+        assertSnapshotEquals(wrappedBlue, base, oracle.snapshot());
         assertNotEquals(wrappedBlue.nodeToJson(oracle.snapshot().resolvedRoot()),
                 wrappedBlue.nodeToJson(incremental.snapshot().resolvedRoot()),
-                "Language trusts request-aware capabilities and does not run an expensive dishonesty oracle");
+                "The explicit full oracle rejects dishonest canonical evidence and rolls back; "
+                        + "the advertised incremental capability still avoids that expensive oracle");
     }
 
 
@@ -739,6 +743,14 @@ class PatchImpactIncrementalResolutionTest {
         public ResolvedSnapshot fromDocumentTransient(Node document) {
             fullResolutions++;
             return blue.resolveToSnapshot(document);
+        }
+
+        @Override
+        public ResolvedSnapshot fromCanonicalTransient(
+                FrozenNode canonicalRoot, java.util.Collection<String> preservedPaths) {
+            // This independent oracle deliberately performs complete resolution.
+            fullResolutions++;
+            return blue.loadSnapshot(canonicalRoot.toNode());
         }
 
         @Override

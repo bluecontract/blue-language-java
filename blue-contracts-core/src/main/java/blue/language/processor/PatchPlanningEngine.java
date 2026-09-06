@@ -133,6 +133,27 @@ final class PatchPlanningEngine {
                         planning.canonicalTypeIdentities());
     }
 
+    private static void normalizeCanonicalListScalars(Node root) {
+        java.util.Deque<Node> pending = new java.util.ArrayDeque<>();
+        pending.push(root);
+        while (!pending.isEmpty()) {
+            Node node = pending.pop();
+            if (node.getItems() != null) {
+                for (Node item : node.getItems()) {
+                    if (item.getValue() != null && item.getType() == null) {
+                        Node scalar = blue.language.codec.jackson.UncheckedObjectMapper.JSON_MAPPER.convertValue(
+                                blue.language.identity.NodeToBlueIdInput.get(new Node().value(item.getValue())),
+                                Node.class);
+                        item.type(scalar.getType());
+                    }
+                    pending.push(item);
+                }
+            }
+            if (node.getProperties() != null) pending.addAll(node.getProperties().values());
+            if (node.getContracts() != null) pending.push(node.getContracts());
+        }
+    }
+
     BatchPatchResult planAtomic(List<JsonPatch> patches, boolean buildUpdates) {
         if (initialCanonicalRoot == null || initialResolvedRoot == null) {
             throw new IllegalStateException("Atomic planning roots were not retained");
@@ -407,6 +428,28 @@ final class PatchPlanningEngine {
                     ProcessingMetricId.FULL_CANONICAL_ROOT_MATERIALIZATIONS, 1L);
             ProcessingObservations.record(metrics,
                     ProcessingMetricId.FULL_FROZEN_ROOT_TO_NODE_MATERIALIZATIONS, 1L);
+            if (finalSourceBacked) {
+                // An exact runtime replacement already produced the desired
+                // final List in the resolved lane. Reusing the patched Source
+                // bytes would append that full list to its inherited prefix.
+                // Project once after the whole atomic batch, using only the
+                // resolver-issued type evidence retained by this patch plan.
+                finalCanonical = CanonicalIdentityEvidence.projectResolvedGraph(
+                        finalResolved.toNode(), finalCanonical.toNode(),
+                        canonicalIdentityEvidence.forResolvedGraph(finalResolved));
+                FrozenNode projected = finalCanonical;
+                // Full canonical List elements have standalone scalar identity;
+                // field overlays may instead inherit their type from a parent.
+                // Normalize only compact List scalars, leaving those inherited
+                // property-type omissions intact.
+                Node normalized = projected.toNode();
+                normalizeCanonicalListScalars(normalized);
+                finalCanonical = FrozenNode.fromNode(normalized);
+                if (!projected.blueId().equals(finalCanonical.blueId())) {
+                    throw new IllegalStateException("Canonical normalization changed patch identity");
+                }
+                finalSourceBacked = false;
+            }
             FrozenNode authoritativeInput = finalCanonical;
             boolean authoritativeInputSourceBacked = finalSourceBacked;
             ResolvedSnapshot authoritative = strictPlatformInvocation

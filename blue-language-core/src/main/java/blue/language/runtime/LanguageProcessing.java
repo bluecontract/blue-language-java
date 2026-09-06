@@ -259,6 +259,23 @@ public interface LanguageProcessing {
         ResolvedSnapshot resolveTransient(Node document);
 
         /**
+         * Resolves an exact canonical processing state without treating its
+         * complete lists as authored append overlays or publishing the result.
+         *
+         * @param canonicalRoot strict canonical input
+         * @param preservedPaths exact subtrees whose semantic demands are deferred
+         * @return transient canonical-backed snapshot
+         * @throws UnsupportedOperationException when canonical input is unsupported
+         */
+        default ResolvedSnapshot resolveCanonicalTransient(
+                FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+            Objects.requireNonNull(canonicalRoot, "canonicalRoot");
+            Objects.requireNonNull(preservedPaths, "preservedPaths");
+            throw new UnsupportedOperationException(
+                    "This processing scope cannot resolve canonical input");
+        }
+
+        /**
          * Resolves one complete authored document against operation-local
          * exact evidence followed by this scope's provider graph.
          *

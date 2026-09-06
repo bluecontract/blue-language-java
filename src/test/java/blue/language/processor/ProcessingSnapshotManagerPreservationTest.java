@@ -66,6 +66,20 @@ class ProcessingSnapshotManagerPreservationTest {
         assertEquals(0, manager.transientCalls);
     }
 
+    @Test
+    void shouldRejectUnsupportedCanonicalRoleWithoutFallingBackToSource() {
+        // given
+        CountingManager manager = new CountingManager();
+        blue.language.snapshot.FrozenNode canonical = blue.language.snapshot.FrozenNode.fromNode(
+                new Node().value("canonical"));
+        // when
+        UnsupportedOperationException failure = FailureCapture.captureFailure(
+                () -> manager.fromCanonicalTransient(canonical, Collections.emptyList()));
+        // then
+        assertNotNull(failure);
+        assertEquals(0, manager.fromDocumentCalls);
+    }
+
     private static class CountingManager
             implements ProcessingSnapshotManager {
         private int fromDocumentCalls;

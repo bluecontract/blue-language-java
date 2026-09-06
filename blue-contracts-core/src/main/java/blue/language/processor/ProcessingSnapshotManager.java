@@ -55,6 +55,23 @@ public interface ProcessingSnapshotManager {
     }
 
     /**
+     * Resolves a complete canonical input without reinterpreting full lists as
+     * Source append overlays. This role must survive every manager decorator.
+     *
+     * @param canonicalRoot strict canonical processing state
+     * @param preservedPaths exact subtrees whose demands remain deferred
+     * @return transient canonical-backed snapshot
+     * @throws UnsupportedOperationException if this manager lacks canonical resolution
+     */
+    default ResolvedSnapshot fromCanonicalTransient(
+            FrozenNode canonicalRoot, Collection<String> preservedPaths) {
+        Objects.requireNonNull(canonicalRoot, "canonicalRoot");
+        Objects.requireNonNull(preservedPaths, "preservedPaths");
+        throw new UnsupportedOperationException(
+                "This ProcessingSnapshotManager cannot resolve canonical input");
+    }
+
+    /**
      * Performs an unmasked transient resolution for an operation that must
      * establish the document's canonical identity and complete resolver-issued
      * effective-type identity evidence.

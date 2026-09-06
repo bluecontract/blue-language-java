@@ -597,7 +597,21 @@ final class ResolutionEngine implements NodeResolver {
     }
 
     private boolean hasListControls(Node node) {
-        return listOverlayMerger.hasListControls(node);
+        // A nested Source overlay still needs the containing inherited field
+        // context. Resolving it in isolation consumes its controls and turns
+        // the full result into a second plain-item append on reattachment.
+        java.util.Deque<Node> pending = new java.util.ArrayDeque<>();
+        java.util.Set<Node> visited = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<Node, Boolean>());
+        pending.push(node);
+        while (!pending.isEmpty()) {
+            Node current = pending.pop();
+            if (!visited.add(current) || current.isReferenceOnly()) continue;
+            if (listOverlayMerger.hasListControls(current)) return true;
+            if (current.getProperties() != null) pending.addAll(current.getProperties().values());
+            if (current.getItems() != null) pending.addAll(current.getItems());
+        }
+        return false;
     }
 
     void mergeObjectWithContribution(Node target,
